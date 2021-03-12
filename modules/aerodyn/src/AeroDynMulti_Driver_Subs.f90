@@ -40,6 +40,7 @@ module AeroDynMulti_Driver_Subs
 
    integer(IntKi), parameter :: idHubMotionConstant  = 0
    integer(IntKi), parameter :: idHubMotionVariable  = 1
+   integer(IntKi), parameter :: idHubMotionStateTS   = 2 !<<< Used internally, with idAnalysisTimeD
    integer(IntKi), parameter, dimension(2) :: idHubMotionVALID  = (/idHubMotionConstant, idHubMotionVariable/)
 
    integer(IntKi), parameter :: idBldMotionConstant = 0
@@ -61,6 +62,10 @@ module AeroDynMulti_Driver_Subs
    integer(IntKi), parameter :: idAnalysisCombi   = 3
    integer(IntKi), parameter, dimension(3) :: idAnalysisVALID  = (/idAnalysisRegular, idAnalysisTimeD, idAnalysisCombi/)
 
+   interface ReadDelimFile
+      module procedure ReadDelimFileSiKi
+      module procedure ReadDelimFileR8Ki
+   end interface
 
 contains
 
@@ -126,9 +131,12 @@ subroutine DvrM_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
       ! Do nothing
       call WrScr('Running analysis type 1: one simulation')
    else if (dvr%analysisType==idAnalysisTimeD) then
-      ! Do nothing, let's see
       call WrScr('Running analysis type 2: one simulation, one turbine, prescribed time series')
-      STOP
+      ! We use "Constant" motion, but the data is changed at each time step..
+      dvr%WT(1)%motionType        = idBldMotionConstant
+      dvr%WT(1)%nac%motionType    = idNacMotionConstant
+      dvr%WT(1)%hub%motionType    = idHubMotionConstant ! NOTE: we change it back after validate inputs..
+      dvr%WT(1)%bld(:)%motionType = idBldMotionConstant ! Change if needed
    else
       print*,'------------------------------------------------------------------------------'
       call WrScr('Running combined case '//trim(num2lstr(iCase))//'/'//trim(num2lstr(dvr%numCases)))
@@ -150,9 +158,14 @@ subroutine DvrM_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
       ! TODO TODO //out%Root
       dvr%out%root = trim(dvr%root)//'.'//trim(num2lstr(iCase))
    endif
+   dvr%numSteps = ceiling(dvr%tMax/dvr%dt)
 
    ! Validate the inputs
    call ValidateInputs(dvr, errStat2, errMsg2) ; if(Failed()) return     
+
+   if (dvr%analysisType==idAnalysisTimeD) then
+      dvr%WT(1)%hub%motionType  = idHubMotionStateTS ! This option is not available to the user
+   endif
 
    ! --- Initialize meshes
    if (iCase==1) then
@@ -201,7 +214,6 @@ subroutine DvrM_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    END DO              
 
    ! --- Initialize outputs
-   dvr%numSteps = ceiling(dvr%tMax/dvr%dt)
    call DvrM_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize VTK
@@ -791,10 +803,10 @@ end subroutine CreatePointMesh
 !> Set the motion of the different structural meshes
 !! "ED_CalcOuput"
 subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
-   integer(IntKi)              , intent(in   ) :: nt            ! time step number
-   type(DvrM_SimData), target,   intent(in   ) :: dvr       ! Driver data 
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)              , intent(in   ) :: nt       !< time step number
+   type(DvrM_SimData), target,   intent(inout) :: dvr      !< Driver data 
+   integer(IntKi)              , intent(  out) :: errStat  !< Status of error message
+   character(*)                , intent(  out) :: errMsg   !< Error message if ErrStat /= ErrID_None
    ! local variables
    integer(intKi)          :: j             ! loop counter for nodes
    integer(intKi)          :: k             ! loop counter for blades
@@ -807,14 +819,41 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
    real(ReKi) :: nacMotion(3)  ! Yaw, yaw speed, yaw acc
    real(ReKi) :: basMotion(18) ! Base motion
    real(ReKi) :: bldMotion(3)  ! Pitch, Pitch speed, Pitch Acc
+   real(ReKi) :: timeState(5)  ! HWindSpeed, PLExp, RotSpeed, Pitch, yaw
+   real(ReKi) :: rotSpeedPrev  ! Used for backward compatibility
    real(R8Ki) :: orientation(3,3)
    real(R8Ki) :: orientation_loc(3,3)
-   real(DbKi) :: time
+   real(DbKi) :: time, timePrev
+   integer :: timeIndex
    type(WTData), pointer :: wt ! Alias to shorten notation
    errStat = ErrID_None
    errMsg  = ""
 
-   time = dvr%dT * nt
+   time     = dvr%dt * nt
+   timePrev = min( max(1,nt-1), dvr%numSteps) * dvr%dt
+
+   ! --- Set time dependent variables
+   if(dvr%analysisType == idAnalysisTimeD) then
+      ! Getting current time values by interpolation
+      ! timestate = HWindSpeed, PLExp, RotSpeed, Pitch, yaw
+      call interpTimeValue(dvr%timeSeries, time, dvr%iTimeSeries, timeState)
+      ! Set wind at this time
+      dvr%HWindSpeed = timeState(1)
+      dvr%PLexp      = timeState(2)
+      !! Set motion at this time
+      dvr%WT(1)%hub%rotSpeed = timeState(3)     ! rad/s
+      dvr%WT(1)%bld(:)%pitch = timeState(4)     ! rad
+      dvr%WT(1)%nac%yaw      = timeState(5)     ! rad
+      ! Getting previous RotSpeed value by interpolation
+      dvr%iTimeSeries=max(dvr%iTimeSeries-2,1) ! approximate
+      call interpTimeValue(dvr%timeSeries, timePrev, dvr%iTimeSeries, timeState)
+      rotSpeedPrev = timeState(3)   ! old 
+      ! KEEP ME: what was used in previous AeroDyn driver
+      ! timeIndex    = min( max(1,nt+1), dvr%numSteps)
+      ! timeState    = dvr%timeSeries(timeIndex,2:)
+      ! timeState_nt = dvr%timeSeries(nt,2:)
+      ! rotSpeedPrev = timeState_nt(3)
+   endif
 
    ! --- Update motion
    do iWT=1,dvr%numTurbines
@@ -884,7 +923,14 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
       ! Hub rotation around x
       if (wt%hub%motionType == idHubMotionConstant) then
          ! save the azimuth at t (not t+dt) for output to file:
-         wt%hub%azimuth = MODULO(REAL(dvr%dT*(nt-1)*wt%hub%rotSpeed, ReKi) * R2D, 360.0_ReKi )
+         wt%hub%azimuth = modulo(REAL(dvr%dT*(nt-1)*wt%hub%rotSpeed, ReKi) * R2D, 360.0_ReKi )
+         ! if (nt <= 0) then
+         !    wt%hub%azimuth = modulo(REAL(dvr%dT * (nt-1) * wt%hub%rotSpeed, ReKi) * R2D, 360.0_ReKi ) ! deg
+         ! else if (nt==1) then
+         !    wt%hub%azimuth = 0.0_ReKi
+         ! else
+         !    wt%hub%azimuth = MODULO( wt%hub%azimuth +  real(dvr%dt*wt%hub%rotSpeed*R2D, ReKi), 360.0_ReKi ) ! add a delta angle to the previous azimuth
+         ! endif
          wt%hub%rotAcc  = 0.0_ReKi
       else if (wt%hub%motionType == idHubMotionVariable) then
          call interpTimeValue(wt%hub%motion, time, wt%hub%iMotion, hubMotion)
@@ -892,6 +938,18 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
          wt%hub%rotSpeed  = hubMotion(2)
          wt%hub%rotAcc    = hubMotion(2)
          wt%hub%azimuth = MODULO(hubMotion(1)*R2D, 360.0_ReKi )
+
+      else if (wt%hub%motionType == idHubMotionStateTS) then
+         ! NOTE: match AeroDyndriver for backward compatibility
+         if (nt <= 0) then
+            wt%hub%azimuth = modulo( real( dvr%dt * (nt-1) * wt%hub%rotSpeed, ReKi) * R2D, 360.0_ReKi )
+         else
+            if (nt==1) then
+               wt%hub%azimuth = 0.0_ReKi
+            else
+               wt%hub%azimuth = modulo( wt%hub%azimuth + REAL(dvr%dt * rotSpeedPrev, ReKi) * R2D, 360.0_ReKi ) ! add a delta angle to the previous azimuth
+            end if
+         end if
       else
          print*,'Unknown hun motion type, should never happen'
          STOP
@@ -1139,6 +1197,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    logical                      :: echo   
    real(ReKi)                   :: hubRad_ReKi
    real(DbKi)                   :: caseArray(10)
+   real(DbKi), allocatable      :: timeSeries_Db(:,:)                       ! Temporary array to hold combined-case input parameters. For backward compatibility..
    integer(IntKi)               :: errStat2                                 ! Temporary Error status
    character(ErrMsgLen)         :: errMsg2                                  ! Temporary Err msg
    type(FileInfoType) :: FileInfo_In   !< The derived type for holding the file information.
@@ -1397,11 +1456,13 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    if (dvr%AnalysisType==idAnalysisTimeD) then
       call ParseVar(FileInfo_In, CurLine, 'TimeAnalysisFileName', Line, errStat2, errMsg2, unEc); if(Failed()) return
       call ReadDelimFile(Line, 6, dvr%timeSeries, errStat2, errMsg2); if(Failed()) return
+      dvr%timeSeries(:,4) = real(dvr%timeSeries(:,4)*RPM2RPS, ReKi) ! rad/s
+      dvr%timeSeries(:,5) = real(dvr%timeSeries(:,5)*D2R    , ReKi) ! rad
+      dvr%timeSeries(:,6) = real(dvr%timeSeries(:,6)*D2R    , ReKi) ! rad
       if (dvr%timeSeries(size(dvr%timeSeries,1),1)<dvr%tMax) then
          call WrScr('Warning: maximum time in time series file smaller than simulation time, last values will be repeated. File: '//trim(Line))
       endif
-      print*,'TODO TIME SERIES'
-      STOP
+      dvr%iTimeSeries=1
    else
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
   endif
@@ -1484,7 +1545,7 @@ subroutine setSimpleMotion(wt, rotSpeed, bldPitch, nacYaw, DOF, amplitude, frequ
    wt%nac%motionType    = idNacMotionConstant
    wt%nac%yaw           = nacYaw* PI /180._ReKi ! deg 2 rad
    wt%hub%motionType    = idHubMotionConstant
-   wt%hub%rotSpeed      = rotSpeed*Pi/30._ReKi ! rpm 2 rad/s
+   wt%hub%rotSpeed      = rotSpeed*RPM2RPS     ! rpm 2 rad/s
    wt%bld(:)%motionType = idBldMotionConstant
    wt%bld(:)%pitch      = bldPitch * Pi /180._ReKi ! deg 2 rad
 end subroutine setSimpleMotion
@@ -1513,6 +1574,11 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    if (Check(.not.(ANY((/0,1/) == dvr%compInflow) ), 'CompInflow needs to be 0 or 1')) return
 
    if (Check(.not.(ANY(idAnalysisVALID == dvr%analysisType    )), 'Analysis type not supported: '//trim(Num2LStr(dvr%analysisType)) )) return
+   
+   if (dvr%analysisType==idAnalysisTimeD .or. dvr%analysisType==idAnalysisCombi) then
+      if (Check( dvr%CompInflow/=0, 'CompInflow needs to be 0 when analysis type is '//trim(Num2LStr(dvr%analysisType)))) return
+   endif
+
 
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)
@@ -1676,10 +1742,10 @@ subroutine DvrM_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
 end subroutine DvrM_InitializeOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Read a delimited file with one line of header
-subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg)
+subroutine ReadDelimFileSiKi(Filename, nCol, Array, errStat, errMsg)
    character(len=*),                        intent(in)  :: Filename
    integer,                                 intent(in)  :: nCol
-   real(ReKi), dimension(:,:), allocatable, intent(out) :: Array
+   real(SiKi), dimension(:,:), allocatable, intent(out) :: Array
    integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
    character(*)           ,                 intent(out) :: errMsg  ! Error message if ErrStat /= ErrID_None
    integer              :: UnIn, i, j, nLine
@@ -1688,29 +1754,22 @@ subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg)
    character(ErrMsgLen) :: errMsg2       ! temporary Error message
    ErrStat = ErrID_None
    ErrMsg  = ""
-
    call GetNewUnit(UnIn) 
    call OpenFInpFile(UnIn, Filename, errStat2, errMsg2); if(Failed()) return 
-
    ! Count number of lines
    nLine = line_count(UnIn)
-
-   allocate(Array(nLine-1, nCol))
-
+   allocate(Array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; if(Failed())return
    ! Read header
    read(UnIn, *, IOSTAT=errStat2) line
    errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename)
    if(Failed()) return
-
    do I = 1,nLine-1
       read (UnIn,*,IOSTAT=errStat2) (Array(I,J), J=1,nCol)
       errMsg2 = ' Error reading line '//trim(Num2LStr(I+1))//' of file: '//trim(Filename)
       if(Failed()) return
    end do  
    close(UnIn) 
-
 contains
-
    logical function Failed()
       CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile' )
       Failed = errStat >= AbortErrLev
@@ -1718,31 +1777,68 @@ contains
          if ((UnIn)>0) close(UnIn)
       endif
    end function Failed
+end subroutine ReadDelimFileSiKi
 
-    !> Counts number of lines in a file
-    integer function line_count(iunit)
-        integer, intent(in) :: iunit
-        character(len=2048) :: line
-        ! safety for infinite loop..
-        integer :: i
-        integer, parameter :: nline_max=100000000 ! 100 M
-        line_count=0
-        do i=1,nline_max 
-            line=''
-            read(iunit,'(A)',END=100)line
-            line_count=line_count+1
-        enddo
-        if (line_count==nline_max) then
-            print*,'Error: maximum number of line exceeded for line_count'
-            STOP
-        endif
-    100 if(len(trim(line))>0) then
-            line_count=line_count+1
-        endif
-        rewind(iunit)
-        return
-    end function
-end subroutine ReadDelimFile
+!> Read a delimited file with one line of header
+subroutine ReadDelimFileR8Ki(Filename, nCol, Array, errStat, errMsg)
+   character(len=*),                        intent(in)  :: Filename
+   integer,                                 intent(in)  :: nCol
+   real(R8Ki), dimension(:,:), allocatable, intent(out) :: Array
+   integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
+   character(*)           ,                 intent(out) :: errMsg  ! Error message if ErrStat /= ErrID_None
+   integer              :: UnIn, i, j, nLine
+   character(len= 2048) :: line
+   integer(IntKi)       :: errStat2      ! local status of error message
+   character(ErrMsgLen) :: errMsg2       ! temporary Error message
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   call GetNewUnit(UnIn) 
+   call OpenFInpFile(UnIn, Filename, errStat2, errMsg2); if(Failed()) return 
+   ! Count number of lines
+   nLine = line_count(UnIn)
+   allocate(Array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; if(Failed())return
+   ! Read header
+   read(UnIn, *, IOSTAT=errStat2) line
+   errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename)
+   if(Failed()) return
+   do I = 1,nLine-1
+      read (UnIn,*,IOSTAT=errStat2) (Array(I,J), J=1,nCol)
+      errMsg2 = ' Error reading line '//trim(Num2LStr(I+1))//' of file: '//trim(Filename)
+      if(Failed()) return
+   end do  
+   close(UnIn) 
+contains
+   logical function Failed()
+      CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile' )
+      Failed = errStat >= AbortErrLev
+      if (Failed) then
+         if ((UnIn)>0) close(UnIn)
+      endif
+   end function Failed
+end subroutine ReadDelimFileR8Ki
+!> Counts number of lines in a file
+integer function line_count(iunit)
+   integer, intent(in) :: iunit
+   character(len=2048) :: line
+   ! safety for infinite loop..
+   integer :: i
+   integer, parameter :: nline_max=100000000 ! 100 M
+   line_count=0
+   do i=1,nline_max 
+      line=''
+      read(iunit,'(A)',END=100)line
+      line_count=line_count+1
+   enddo
+   if (line_count==nline_max) then
+      print*,'Error: maximum number of line exceeded for line_count'
+      STOP
+   endif
+100 if(len(trim(line))>0) then
+      line_count=line_count+1
+   endif
+   rewind(iunit)
+   return
+ end function
 !> Perform linear interpolation of an array, where first column is assumed to be ascending time values
 !! First value is used for times before, and last value is used for time beyond
 subroutine interpTimeValue(array, time, iLast, values)

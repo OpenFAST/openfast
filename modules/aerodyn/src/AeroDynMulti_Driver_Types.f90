@@ -228,7 +228,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: numSteps      !< number of steps in this case [-]
     INTEGER(IntKi)  :: numCases      !< number of steps in this case [-]
     TYPE(DvrM_Case) , DIMENSION(:), ALLOCATABLE  :: Cases      !< table of cases to run when AnalysisType=2 [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: timeSeries      !< Times sires inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: timeSeries      !< Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw [-]
+    INTEGER(IntKi)  :: iTimeSeries      !< Stored index to optimize time interpolation [-]
     character(1024)  :: root      !< Output file rootname [-]
     TYPE(DvrM_Outputs)  :: out      !< data for driver output file [-]
   END TYPE DvrM_SimData
@@ -6547,6 +6548,7 @@ IF (ALLOCATED(SrcDvrM_SimDataData%timeSeries)) THEN
   END IF
     DstDvrM_SimDataData%timeSeries = SrcDvrM_SimDataData%timeSeries
 ENDIF
+    DstDvrM_SimDataData%iTimeSeries = SrcDvrM_SimDataData%iTimeSeries
     DstDvrM_SimDataData%root = SrcDvrM_SimDataData%root
       CALL ADM_Dvr_Copydvrm_outputs( SrcDvrM_SimDataData%out, DstDvrM_SimDataData%out, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
@@ -6679,6 +6681,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! timeSeries upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%timeSeries)  ! timeSeries
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! iTimeSeries
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%root)  ! root
       Int_BufSz   = Int_BufSz + 3  ! out: size of buffers for each call to pack subtype
       CALL ADM_Dvr_Packdvrm_outputs( Re_Buf, Db_Buf, Int_Buf, InData%out, ErrStat2, ErrMsg2, .TRUE. ) ! out 
@@ -6854,6 +6857,8 @@ ENDIF
         END DO
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%iTimeSeries
+    Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%root)
       IntKiBuf(Int_Xferred) = ICHAR(InData%root(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -7079,6 +7084,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%iTimeSeries = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%root)
       OutData%root(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1

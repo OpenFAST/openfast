@@ -167,7 +167,8 @@ typedef   ^                         ^            DbKi                    tMax   
 typedef   ^                         ^            IntKi                   numSteps         -      -     -   "number of steps in this case" "-"
 typedef   ^                         ^            IntKi                   numCases         -      -     -   "number of steps in this case" "-"
 typedef   ^                         ^            DvrM_Case               Cases           {:}     -     -   "table of cases to run when AnalysisType=2" "-"
-typedef   ^                         ^            ReKi                    timeSeries       ::     -     -   "Times sires inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw" "-"
+typedef   ^                         ^            ReKi                    timeSeries       ::     -     -   "Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw" "-"
+typedef   ^                         ^            IntKi                   iTimeSeries      -      -     -   "Stored index to optimize time interpolation" -
 typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
 typedef   ^                         ^            DvrM_Outputs            out              -      -     -   "data for driver output file" "-"
 
