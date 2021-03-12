@@ -18,7 +18,8 @@
 !
 !**********************************************************************************************************************************
 program AeroDynMulti_Driver
-   use AeroDynMulti_Driver_Subs, only: dat, DvrM_Init, DvrM_TimeStep, DvrM_CleanUp
+   use AeroDynMulti_Driver_Subs, only: dat, DvrM_Init, DvrM_InitCase, DvrM_TimeStep, DvrM_CleanUp, DvrM_EndCase
+   use AeroDynMulti_Driver_Subs, only: idAnalysisRegular, idAnalysisTimeD, idAnalysisCombi
    use NWTC_IO
    use NWTC_Num, only: RunTimes, SimStatus, SimStatus_FirstTime
    implicit none   
@@ -32,31 +33,47 @@ program AeroDynMulti_Driver
    REAL(DbKi)                       :: t_final         ! global-loop time marker
    REAL(DbKi)                       :: TiLstPrn      ! The simulation time of the last print (to file) [(s)]
    integer :: nt !< loop counter (for time step)
+   integer(IntKi) :: iCase ! loop counter (for driver case)
    CALL DATE_AND_TIME ( Values=StrtTime )                 ! Let's time the whole simulation
    CALL CPU_TIME ( UsrTime1 )                             ! Initial time (this zeros the start time when used as a MATLAB function)
    UsrTime1 = MAX( 0.0_ReKi, UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
 
-   call DvrM_Init(dat%DvrData, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
-   dat%initialized=.true.
+   call DvrM_Init(dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
 
-   ! Init of time estimator
-   t_global=0.0_DbKi
-   t_final=dat%DvrData%numSteps*dat%DvrData%dt
-   call SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, t_final )
+   do iCase= 1,dat%dvr%numCases
 
-   do nt = 1, dat%DvrData%numSteps
-
-      call DvrM_TimeStep(nt, dat%DvrData, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
-
-      ! Time update to screen
-      t_global=nt*dat%DvrData%dt
-      if (mod( nt + 1, 10 )==0) call SimStatus(TiLstPrn, PrevClockTime, t_global, t_final)
-
-   end do !nt=1,numSteps
-
-   ! display runtime to screen
-   call RunTimes(StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global)
+      ! Initial case
+      call DvrM_InitCase(iCase, dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
+      dat%initialized=.true.
    
+      ! Init of time estimator
+      t_global=0.0_DbKi
+      t_final=dat%dvr%numSteps*dat%dvr%dt
+      if (dat%dvr%analysisType/=idAnalysisCombi) then
+         call SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, t_final )
+      endif
+
+      ! One time loop
+      do nt = 1, dat%dvr%numSteps
+         call DvrM_TimeStep(nt, dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
+         ! Time update to screen
+         t_global=nt*dat%dvr%dt
+         if (dat%dvr%analysisType/=idAnalysisCombi) then
+            if (mod( nt + 1, 10 )==0) call SimStatus(TiLstPrn, PrevClockTime, t_global, t_final)
+         endif
+      end do !nt=1,numSteps
+
+      if (dat%dvr%analysisType/=idAnalysisCombi) then
+         ! display runtime to screen
+         call RunTimes(StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global)
+      else
+         call WrScr('')
+      endif
+
+      call DvrM_EndCase(dat%dvr, dat%AD, dat%IW, dat%initialized, dat%errStat, dat%errMsg); call CheckError()
+
+   enddo ! Loop on cases
+
    call DvrM_End()
 contains
 !................................   
@@ -73,7 +90,7 @@ contains
       integer(IntKi)       :: errStat2      ! local status of error message
       character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
 
-      call DvrM_CleanUp(dat%DvrData, dat%AD, dat%IW, dat%initialized, errStat2, errMsg2)
+      call DvrM_CleanUp(dat%dvr, dat%AD, dat%IW, dat%initialized, errStat2, errMsg2)
       CALL SetErrStat(errStat2, errMsg2, dat%errStat, dat%errMsg, 'DvrM_End')
 
       if (dat%errStat >= AbortErrLev) then      
