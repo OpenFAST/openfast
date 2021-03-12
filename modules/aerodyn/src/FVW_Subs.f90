@@ -924,12 +924,14 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          ErrMsg ='Regularization determination method not implemented' 
       endif
 
-      call WrScr(' - Regularization parameters:')
-      write(*,'(A,2F8.4)') '    BladeReg (min/max): ', minval(x%W(iW)%Eps_NW(:, :, 1)), maxval(x%W(iW)%Eps_NW(:, :, 1))
-      if (p%nNWMax>1) then
-         write(*,'(A,2F8.4)')    '    WakeReg (min/max) : ', minval(x%W(iW)%Eps_NW(:,:, 2)), maxval(x%W(iW)%Eps_NW(:,:, 2))
+      if (iW==1) then
+      call WrScr(' - OLAF regularization parameters (for wing 1):')
+         write(*,'(A,2F8.4)') '    BladeReg (min/max): ', minval(x%W(iW)%Eps_NW(:, :, 1)), maxval(x%W(iW)%Eps_NW(:, :, 1))
+         if (p%nNWMax>1) then
+            write(*,'(A,2F8.4)')    '    WakeReg (min/max) : ', minval(x%W(iW)%Eps_NW(:,:, 2)), maxval(x%W(iW)%Eps_NW(:,:, 2))
+         endif
+         write(*,'(A,2F8.4)') '    k = alpha delta nu: ', CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
       endif
-      write(*,'(A,2F8.4)') '    k = alpha delta nu: ', CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
    enddo ! Loop on wings
 
 end subroutine FVW_InitRegularization

@@ -21,7 +21,7 @@ module FVW
 
    PRIVATE
 
-   type(ProgDesc), parameter  :: FVW_Ver = ProgDesc( 'FVW', '', '' )
+   type(ProgDesc), parameter  :: FVW_Ver = ProgDesc( 'OLAF', '', '' )
 
    public   :: FVW_Init             ! Initialization routine
    public   :: FVW_End
@@ -454,9 +454,6 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    do iW=1,p%nWings
       nBldPerRot(p%W(iW)%iRotor) = nBldPerRot(p%W(iW)%iRotor)+1
       p%Bld2Wings(p%W(iW)%iRotor, nBldPerRot(p%W(iW)%iRotor)) = iW
-   enddo
-   do iW=1,p%nRotors
-      print*,'Bld 2 Wing',p%Bld2Wings(iW,:)
    enddo
 
 end subroutine FVW_SetParametersFromInputs
