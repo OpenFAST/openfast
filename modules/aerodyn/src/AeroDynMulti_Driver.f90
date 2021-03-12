@@ -66,8 +66,6 @@ program AeroDynMulti_Driver
       if (dat%dvr%analysisType/=idAnalysisCombi) then
          ! display runtime to screen
          call RunTimes(StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global)
-      else
-         call WrScr('')
       endif
 
       call DvrM_EndCase(dat%dvr, dat%AD, dat%IW, dat%initialized, dat%errStat, dat%errMsg); call CheckError()

@@ -78,8 +78,6 @@ subroutine DvrM_Init(dvr, AD, IW, errStat,errMsg )
    CHARACTER(1000)      :: inputFile     ! String to hold the file name.
    CHARACTER(200)       :: git_commit    ! String containing the current git commit hash
    CHARACTER(20)        :: FlagArg       ! flag argument from command line
-   integer(IntKi)       :: j, iWT                                                             !< 
-   type(AD_InitOutputType) :: InitOutData_AD    ! Output data from initialization
    errStat = ErrID_None
    errMsg  = ""
 
@@ -119,9 +117,6 @@ subroutine DvrM_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
-   CHARACTER(1000)      :: inputFile     ! String to hold the file name.
-   CHARACTER(200)       :: git_commit    ! String containing the current git commit hash
-   CHARACTER(20)        :: FlagArg       ! flag argument from command line
    integer(IntKi)       :: j, iWT                                                             !< 
    type(AD_InitOutputType) :: InitOutData_AD    ! Output data from initialization
    errStat = ErrID_None
@@ -133,11 +128,10 @@ subroutine DvrM_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    else if (dvr%analysisType==idAnalysisTimeD) then
       ! Do nothing, let's see
       call WrScr('Running analysis type 2: one simulation, one turbine, prescribed time series')
-      print*,'special Init for time d'
       STOP
    else
       print*,'------------------------------------------------------------------------------'
-      call WrScr('Running combined Case '//trim(num2lstr(iCase)))
+      call WrScr('Running combined case '//trim(num2lstr(iCase))//'/'//trim(num2lstr(dvr%numCases)))
       ! Set time
       dvr%dT   = dvr%Cases(iCase)%dT
       dvr%tMax = dvr%Cases(iCase)%tMax
@@ -166,26 +160,28 @@ subroutine DvrM_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    endif
 
    ! --- Initialize driver-only outputs
-   if (allocated(dvr%out%unOutFile))      deallocate(dvr%out%unOutFile)
-   if (allocated(dvr%out%WriteOutputHdr)) deallocate(dvr%out%WriteOutputHdr)
-   if (allocated(dvr%out%WriteOutputUnt)) deallocate(dvr%out%WriteOutputUnt)
    if (allocated(dvr%out%storage))        deallocate(dvr%out%storage)
-   allocate(dvr%out%unOutFile(dvr%numTurbines))
+   if (iCase==1) then
+      ! Ouput channels are constant for all cases
+      dvr%out%nDvrOutputs = 1  ! 
+      allocate(dvr%out%WriteOutputHdr(1+dvr%out%nDvrOutputs))
+      allocate(dvr%out%WriteOutputUnt(1+dvr%out%nDvrOutputs))
+      dvr%out%WriteOutputHdr(1) = 'Time'
+      dvr%out%WriteOutputUnt(1) = '(s)'
+      dvr%out%WriteOutputHdr(1+1) = 'Azimuth'
+      dvr%out%WriteOutputUnt(1+1) = '(deg)'
+      ! TODO add more: HWindSpeed, RotSpeed, Yaw, BldPitch
+      allocate(dvr%out%unOutFile(dvr%numTurbines))
+   endif
    dvr%out%unOutFile = -1
-   dvr%out%nDvrOutputs = 1  ! 
-   allocate(dvr%out%WriteOutputHdr(1+dvr%out%nDvrOutputs))
-   allocate(dvr%out%WriteOutputUnt(1+dvr%out%nDvrOutputs))
-   dvr%out%WriteOutputHdr(1) = 'Time'
-   dvr%out%WriteOutputUnt(1) = '(s)'
-   dvr%out%WriteOutputHdr(1+1) = 'Azimuth'
-   dvr%out%WriteOutputUnt(1+1) = '(deg)'
-   ! TODO add more: HWindSpeed, RotSpeed, Yaw, BldPitch
 
    ! --- Initialize aerodyn 
-   call Init_AeroDyn(dvr, AD, dvr%dt, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
+   call Init_AeroDyn(iCase, dvr, AD, dvr%dt, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
-   call Init_InflowWind(dvr, IW, AD%u(1), AD%OtherState, dvr%dt, errStat2, errMsg2); if(Failed()) return
+   if (iCase==1) then
+      call Init_InflowWind(dvr, IW, AD%u(1), AD%OtherState, dvr%dt, errStat2, errMsg2); if(Failed()) return
+   endif
 
    ! --- Initialize meshes
    if (iCase==1) then
@@ -312,16 +308,8 @@ subroutine DvrM_EndCase(dvr, AD, IW, initialized, errStat, errMsg)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          enddo
       endif
-
-      ! End modules
-      call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
-      call InflowWind_End( IW%u(1), IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    end if
    initialized=.false.
-
-   ! TODO, optimize
-   call ADM_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
-   call ADM_Dvr_DestroyInflowWind_Data(IW     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
 end subroutine DvrM_EndCase
 
@@ -343,6 +331,14 @@ subroutine DvrM_CleanUp(dvr, AD, IW, initialized, errStat, errMsg)
    errMsg  = ''
 
    call DvrM_EndCase(dvr, AD, IW, initialized, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+
+   ! End modules
+   call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+   call InflowWind_End( IW%u(1), IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+
+   call ADM_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+   call ADM_Dvr_DestroyInflowWind_Data(IW     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+
    call ADM_Dvr_DestroyDvrM_SimData   (dvr ,    errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
 end subroutine DvrM_CleanUp
@@ -350,7 +346,8 @@ end subroutine DvrM_CleanUp
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize aerodyn module based on driver data
-subroutine Init_AeroDyn(dvr, AD, dt, InitOutData, errStat, errMsg)
+subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
+   integer(IntKi)              , intent(in   ) :: iCase
    type(DvrM_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
    real(DbKi),                   intent(inout) :: dt            ! interval
@@ -365,53 +362,66 @@ subroutine Init_AeroDyn(dvr, AD, dt, InitOutData, errStat, errMsg)
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
    type(WTData), pointer :: wt ! Alias to shorten notation
+   logical :: needInit
    errStat = ErrID_None
    errMsg  = ''
 
-
-   allocate(InitInData%rotors(dvr%numTurbines), stat=errStat) 
-   if (errStat/=0) then
-      call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_AeroDyn' )
-      call Cleanup()
-      return
-   end if
-
-   InitInData%InputFile = dvr%AD_InputFile
-   InitInData%RootName  = dvr%out%Root
-   InitInData%Gravity   = 9.80665_ReKi
-
-
-   do iWT=1,dvr%numTurbines
-      wt => dvr%WT(iWT)
-
-      InitInData%rotors(iWT)%NumBlades = wt%numBlades
-
-      ! set initialization data:
-      call AllocAry(InitInData%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
-      call AllocAry(InitInData%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
-
-      if (wt%HAWTprojection) then
-         InitInData%rotors(iWT)%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
-      else
-         InitInData%rotors(iWT)%AeroProjMod = 1
+   needInit=.False.
+   if (iCase==1) then
+      needInit=.True.
+   else
+      ! UA does not like changes of dt
+      if ( .not. EqualRealNos(AD%p%DT, dt) ) then
+         call WrScr('Info: dt is changing between cases, AeroDyn will be re-initialized')
+         call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn'); if(Failed()) return
+         !call ADM_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         needInit=.true.
       endif
-      InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
-      InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+   endif
 
-      do k=1,wt%numBlades
-         InitInData%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
-         InitInData%rotors(iWT)%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
-      end do
-   enddo
- 
-   call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
-      
-   ! Add writeoutput units and headers to driver.
-   ! NOTE: we assume that they are the same output variables for all rotors
-   ! The alternative is that the driver save different units and headers
-   call concatOutputs(dvr, InitOutData%rotors(1)%WriteOutputHdr, InitOutData%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+   if (needInit) then
+      ! --- Set init data
+      allocate(InitInData%rotors(dvr%numTurbines), stat=errStat) 
+      if (errStat/=0) then
+         call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_AeroDyn' )
+         call Cleanup()
+         return
+      end if
+      InitInData%InputFile = dvr%AD_InputFile
+      InitInData%RootName  = dvr%out%Root
+      InitInData%Gravity   = 9.80665_ReKi
+      ! Init data per rotor
+      do iWT=1,dvr%numTurbines
+         wt => dvr%WT(iWT)
+         InitInData%rotors(iWT)%NumBlades = wt%numBlades
+         call AllocAry(InitInData%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
+         call AllocAry(InitInData%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
+         if (wt%HAWTprojection) then
+            InitInData%rotors(iWT)%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
+         else
+            InitInData%rotors(iWT)%AeroProjMod = 1
+         endif
+         InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
+         InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+         do k=1,wt%numBlades
+            InitInData%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
+            InitInData%rotors(iWT)%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
+         end do
+      enddo
+      ! --- Call AD_init
+      call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
 
-   dvr%out%AD_ver = InitOutData%ver
+      if (iCase==1) then
+         ! Add writeoutput units and headers to driver, same for all cases and rotors!
+         call concatOutputs(dvr, InitOutData%rotors(1)%WriteOutputHdr, InitOutData%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+      endif
+
+      dvr%out%AD_ver = InitOutData%ver
+
+   else
+      ! --- Reinit
+      call AD_ReInit(AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%m, dt, errStat2, errMsg2); if(Failed()) return
+   endif
 
    call cleanup()
 contains

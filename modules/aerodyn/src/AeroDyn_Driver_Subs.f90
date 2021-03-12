@@ -102,16 +102,16 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
-
-   allocate(InitInData%rotors(1), stat=errStat) 
-   if (errStat/=0) then
-      call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, RoutineName )
-      call Cleanup()
-      return
-   end if
       
    
    if (iCase.EQ.1) then
+
+      allocate(InitInData%rotors(1), stat=errStat) 
+      if (errStat/=0) then
+         call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, RoutineName )
+         call Cleanup()
+         return
+      end if
    
       InitInData%InputFile      = DvrData%AD_InputFile
       InitInData%RootName       = DvrData%outFileData%Root
