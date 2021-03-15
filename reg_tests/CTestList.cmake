@@ -175,6 +175,7 @@ of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;se
 
 # FAST Farm regression tests
 ff_regression("TSinflow"  "fastfarm")
+ff_regression("LESinflow"  "fastfarm")
 
 # AeroDyn regression tests
 ad_regression("ad_timeseries_shutdown"      "aerodyn;bem")
