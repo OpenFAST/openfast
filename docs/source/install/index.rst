@@ -172,8 +172,8 @@ compiling are given in :ref:`cmake_unix` and :ref:`cmake_windows`.
 Generally, the steps required to compile are:
 
 1. Install Dependencies (Section :numref:`dependencies`)
-2. Configure the build system (Visual Studio - :numref:`vs_windows`, CMake - :numref:`understanding_cmake`)
-3. Compile and test binaries (Visual Studio - :numref:`vs_windows`,  CMake - :numref:`cmake_unix` and :numref:`cmake_windows` )
+2. Configure the build system (Visual Studio: :numref:`vs_windows`, CMake: :numref:`understanding_cmake`)
+3. Compile and test binaries (Visual Studio: :numref:`vs_windows`,  CMake: :numref:`cmake_unix` and :numref:`cmake_windows` )
 
 .. _dependencies:
 
@@ -511,13 +511,16 @@ proceed with configuring OpenFAST. The CMake project is well developed for
 Linux and macOS systems, so the default settings should work as given.
 These settings should only be changed when a custom build is required.
 
-The procedure for configuring CMake and compiling with GNU Make on Linux
-and macOS systems is given below.
+The full procedure for installing dependencies, configuring CMake and 
+compiling with GNU Make on Linux and macOS systems is given below.
 
 .. code-block:: bash
 
+    # For Ubuntu Linux, this installs all dependencies
+    apt install git cmake libblas-dev liblapack-dev gfortran-10 g++
+
     # For macOS using Homebrew, this installs all dependencies
-    brew install 
+    brew install git cmake make openblas gcc
 
     # Clone the repository from GitHub using git
     git clone https://github.com/OpenFAST/OpenFAST.git
@@ -547,10 +550,14 @@ and macOS systems is given below.
     ./glue-codes/openfast/openfast -v
     ./modules/hydrodyn/hydrodyn_driver -v
 
+    # Move the binaries and other run-time files to the install location
+    # The default is `openfast/install`
+    make install
+
 .. tip::
 
-    Compile in parallel by adding "-jN" where N is the number of parallel
-    processes to use
+    Compile in parallel by adding "-jN" to the ``make`` command where N is
+    the number of parallel processes to use; i.e. ``make -j4 openfast``.
 
 This will build the OpenFAST project in the ``build`` directory. Binaries are
 located in ``openfast/build/glue-codes/`` and ``openfast/build/modules/``. Since
