@@ -1350,7 +1350,7 @@ MODULE AeroDyn_IO
   INTEGER,  PARAMETER          :: BAeroMx(4)  = (/B1AeroMx,  B2AeroMx,  B3AeroMx, B4AeroMx/)                                                   ! x-component of total blade root aero moment
   INTEGER,  PARAMETER          :: BAeroMy(4)  = (/B1AeroMy,  B2AeroMy,  B3AeroMy, B4AeroMy/)                                                   ! y-component of total blade root aero moment
   INTEGER,  PARAMETER          :: BAeroMz(4)  = (/B1AeroMz,  B2AeroMz,  B3AeroMz, B4AeroMz/)                                                   ! z-component of total blade root aero moment 
-  INTEGER,  PARAMETER          :: BAeroPwr(4) = (/B1AeroMz,  B2AeroMz,  B3AeroMz, B4AeroMz/)                                                   ! z-component of total blade root aero moment 
+  INTEGER,  PARAMETER          :: BAeroPwr(4) = (/B1AeroPwr,  B2AeroPwr,  B3AeroPwr, B4AeroPwr/)                                                   ! z-component of total blade root aero moment 
    
    INTEGER,  PARAMETER          :: BNVUndx(9, 3) = RESHAPE( (/ &      ! undisturbed wind velocity (x component)
                                      B1N1VUndx,B1N2VUndx,B1N3VUndx,B1N4VUndx,B1N5VUndx,B1N6VUndx,B1N7VUndx,B1N8VUndx,B1N9VUndx, &
