@@ -60,6 +60,7 @@ typedef   ^                         ^             DbKi                   InputTi
 #
 # ..... Data for driver simulation .......................................................................................................
 typedef   ^                        Dvr_SimData   character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
+typedef   ^                         ^            IntKi                   MHK              -      -     -   "MHK turbine type (switch) {0=Not an MHK turbine, 1=Fixed MHK turbine, 2=Floating MHK turbine}" "-"
 typedef   ^                         ^            IntKi                   numBlades        -      -     -   "number of blades on turbine" "-"
 typedef   ^                         ^            ReKi                    hubRad           -      -     -   "Hub radius" "m"
 typedef   ^                         ^            ReKi                    hubHt            -      -     -   "Hub height" "m"
@@ -70,5 +71,5 @@ typedef   ^                         ^            IntKi                   NumCase
 typedef   ^                         ^            Dvr_Case                Cases           {:}     -     -   "table of cases to run" "-"
 typedef   ^                         ^            Dvr_OutputFile          OutFileData      -      -     -   "data for driver output file" "-"
 #typedef  ^                         ^            AeroDyn_Data            AD               -      -     -   "data for the AeroDyn module"
-#typedef   ^                         ^            Dvr_RootInfo            RootForceMom     3      -     -   "blade root forces and moments (blade coords)" "-"
+#typedef  ^                         ^            Dvr_RootInfo            RootForceMom     3      -     -   "blade root forces and moments (blade coords)" "-"
 

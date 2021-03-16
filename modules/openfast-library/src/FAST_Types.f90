@@ -159,6 +159,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: CompSub      !< Compute sub-structural dynamics (switch) {Module_None; Module_HD} [-]
     INTEGER(IntKi)  :: CompMooring      !< Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca} [-]
     INTEGER(IntKi)  :: CompIce      !< Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD} [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine} [-]
     LOGICAL  :: UseDWM      !< Use the DWM module in AeroDyn [-]
     LOGICAL  :: Linearize      !< Linearization analysis (flag) [-]
     CHARACTER(1024)  :: EDFile      !< The name of the ElastoDyn input file [-]
@@ -177,7 +178,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: n_ChkptTime      !< Number of time steps between writing checkpoint files [-]
     INTEGER(IntKi)  :: n_DT_Out      !< Number of time steps between writing a line in the time-marching output files [-]
     INTEGER(IntKi)  :: n_VTKTime      !< Number of time steps between writing VTK files [-]
-    INTEGER(IntKi)  :: TurbineType      !< Type_LandBased, Type_Offshore_Fixed, or Type_Offshore_Floating [-]
+    INTEGER(IntKi)  :: TurbineType      !< Type_LandBased, Type_Offshore_Fixed, Type_Offshore_Floating, Type_MHK_Fixed, or Type_MHK_Floating [-]
     LOGICAL  :: WrBinOutFile      !< Write a binary output file? (.outb) [-]
     LOGICAL  :: WrTxtOutFile      !< Write a text (formatted) output file? (.out) [-]
     INTEGER(IntKi)  :: WrBinMod      !< If writing binary, which file format is to be written [1, 2, or 3] [-]
@@ -2123,6 +2124,7 @@ ENDIF
     DstParamData%CompSub = SrcParamData%CompSub
     DstParamData%CompMooring = SrcParamData%CompMooring
     DstParamData%CompIce = SrcParamData%CompIce
+    DstParamData%MHK = SrcParamData%MHK
     DstParamData%UseDWM = SrcParamData%UseDWM
     DstParamData%Linearize = SrcParamData%Linearize
     DstParamData%EDFile = SrcParamData%EDFile
@@ -2255,6 +2257,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! CompSub
       Int_BufSz  = Int_BufSz  + 1  ! CompMooring
       Int_BufSz  = Int_BufSz  + 1  ! CompIce
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! UseDWM
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%EDFile)  ! EDFile
@@ -2423,6 +2426,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%CompMooring
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompIce
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseDWM, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -2714,6 +2719,8 @@ ENDIF
     OutData%CompMooring = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%CompIce = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%UseDWM = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseDWM)
     Int_Xferred = Int_Xferred + 1

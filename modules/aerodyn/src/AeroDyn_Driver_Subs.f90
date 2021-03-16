@@ -115,6 +115,7 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
    
       InitInData%InputFile      = DvrData%AD_InputFile
       InitInData%RootName       = DvrData%outFileData%Root
+      InitInData%MHK            = DvrData%MHK
       InitInData%rotors(1)%NumBlades      = DvrData%numBlades
       InitInData%Gravity        = 9.80665_ReKi
       InitInData%Linearize      = .false.
@@ -498,6 +499,14 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    IF ( PathIsRelative( DvrData%AD_InputFile ) ) DvrData%AD_InputFile = TRIM(PriPath)//TRIM(DvrData%AD_InputFile)
 
    
+      ! Read the feature-switches-and-flags section.
+
+   call ReadCom ( unIn, fileName, 'the feature-switches-and-flags subtitle', errStat2, errMsg2, UnEc )
+      call setErrStat( errStat2, ErrMsg2, errStat, ErrMsg, RoutineName )
+   call ReadVar ( unIn, fileName, DvrData%MHK, 'MHK', 'MHK turbine type (switch)', errStat2, errMsg2, UnEc )
+      call setErrStat( errStat2, ErrMsg2, errStat, ErrMsg, RoutineName )
+
+
       ! Read the turbine-data section.
 
    call ReadCom ( unIn, fileName, 'the turbine-data subtitle', errStat2, errMsg2, UnEc )
@@ -820,7 +829,10 @@ subroutine ValidateInputs(DvrData, errStat, errMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   
+      ! Feature Switches and Flags:
+   if ( DvrData%MHK /= 0 .and. DvrData%MHK /= 1 .and. DvrData%MHK /= 2 ) call SetErrStat( ErrID_Fatal, "MHK switch must be 0, 1, or 2.", ErrStat, ErrMsg, RoutineName )
+   if ( DvrData%MHK == 2) call SetErrStat( ErrID_Fatal, "Functionality to model a floating MHK turbine has not yet been implemented.", ErrStat, ErrMsg, RoutineName )
+
       ! Turbine Data:
    if ( DvrData%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
 !   if ( DvrData%numBlades > 3 ) call SetErrStat( ErrID_Fatal, "There can be no more than 3 blades (numBlades).", ErrStat, ErrMsg, RoutineName)

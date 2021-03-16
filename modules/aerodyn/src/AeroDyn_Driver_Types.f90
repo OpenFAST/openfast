@@ -87,6 +87,7 @@ IMPLICIT NONE
 ! =========  Dvr_SimData  =======
   TYPE, PUBLIC :: Dvr_SimData
     character(1024)  :: AD_InputFile      !< Name of AeroDyn input file [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type (switch) {0=Not an MHK turbine, 1=Fixed MHK turbine, 2=Floating MHK turbine} [-]
     INTEGER(IntKi)  :: numBlades      !< number of blades on turbine [-]
     REAL(ReKi)  :: hubRad      !< Hub radius [m]
     REAL(ReKi)  :: hubHt      !< Hub height [m]
@@ -1843,6 +1844,7 @@ ENDDO
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstDvr_SimDataData%AD_InputFile = SrcDvr_SimDataData%AD_InputFile
+    DstDvr_SimDataData%MHK = SrcDvr_SimDataData%MHK
     DstDvr_SimDataData%numBlades = SrcDvr_SimDataData%numBlades
     DstDvr_SimDataData%hubRad = SrcDvr_SimDataData%hubRad
     DstDvr_SimDataData%hubHt = SrcDvr_SimDataData%hubHt
@@ -1925,6 +1927,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%AD_InputFile)  ! AD_InputFile
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! numBlades
       Re_BufSz   = Re_BufSz   + 1  ! hubRad
       Re_BufSz   = Re_BufSz   + 1  ! hubHt
@@ -2004,6 +2007,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%AD_InputFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%numBlades
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%hubRad
@@ -2120,6 +2125,8 @@ ENDIF
       OutData%AD_InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%numBlades = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%hubRad = ReKiBuf(Re_Xferred)

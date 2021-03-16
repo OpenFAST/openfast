@@ -51,6 +51,7 @@ typedef	^	InitInputType	LOGICAL	UsePrimaryInputFile	-	.TRUE.	-	"Read input file 
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravity force" Nm/s^2
+typedef ^   InitInputType   IntKi   MHK     -   -   -   "MHK turbine type switch"   -
 
 
 
