@@ -2362,13 +2362,13 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          end do ! k=blades
       end if
 
-      ! If the Buoyancy flag is True, check that the buoyancy coefficients are > 0.
+      ! If the Buoyancy flag is True, check that the blade buoyancy coefficients are >= 0.
       if ( InputFileData%Buoyancy )  then
          do k=1,NumBl(iR)
             do j=1,InputFileData%rotors(iR)%BladeProps(k)%NumBlNds
-               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCb(j) <= 0.0_ReKi )  then
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCb(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
-                                 //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
             end do ! j=nodes
          end do ! k=blades
@@ -2378,9 +2378,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       ! .............................
       ! check tower mesh data:
       ! .............................
-   if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero ) then
+   if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero .or. InputFileData%Buoyancy ) then
       
-         
          ! Check that the tower diameter is > 0.
       do iR = 1,size(NumBl)
          if (InputFileData%rotors(iR)%NumTwrNds < 2) call SetErrStat( ErrID_Fatal, 'There must be at least two nodes on the tower.',ErrStat, ErrMsg, RoutineName )
@@ -2398,10 +2397,47 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
                exit
             end if
          end do ! j=nodes
+
+         ! If the Buoyancy flag is True, check that the tower buoyancy coefficients are >= 0.
+         if ( InputFileData%Buoyancy )  then
+            do j=1,InputFileData%rotors(iR)%NumTwrNds
+               if ( InputFileData%rotors(iR)%TwrCb(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+            end do ! j=nodes
+         end if
       end do ! iR rotor
             
    end if
+
+      ! .............................
+      ! check hub mesh data:
+      ! .............................
+   if ( InputFileData%Buoyancy )  then
+
+         ! Check that the hub volume is >= 0.
+      do iR = 1,size(NumBl)
+         if ( InputFileData%rotors(iR)%VolHub < 0.0_ReKi )  then
+            call SetErrStat( ErrID_Fatal, 'The hub volume must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+         endif
+      end do ! iR rotor
    
+   end if
+
+      ! .............................
+      ! check nacelle mesh data:
+      ! .............................
+   if ( InputFileData%Buoyancy )  then
+
+         ! Check that the nacelle volume is >= 0.
+      do iR = 1,size(NumBl)
+         if ( InputFileData%rotors(iR)%VolNac < 0.0_ReKi )  then
+            call SetErrStat( ErrID_Fatal, 'The nacelle volume must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+         endif
+      end do ! iR rotor
+
+   end if
+
       ! .............................
       ! check outputs:
       ! .............................
