@@ -358,7 +358,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, i
                DO IdxBlade=1,p%BldNd_BladesOut
                   iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Re(IdxNode)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Re(IdxNode) / 1.0E6
                      OutIdx = OutIdx + 1
                   END DO
                END DO

@@ -1879,7 +1879,7 @@ CONTAINS
 
             m%AllOuts( BNVrel( beta,k) ) = m_AD%FVW%W(iW)%BN_Vrel(j)
             m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * m_AD%FVW%W(iW)%BN_Vrel(j)**2
-            m%AllOuts( BNRe(   beta,k) ) = m_AD%FVW%W(iW)%BN_Re(j)
+            m%AllOuts( BNRe(   beta,k) ) = m_AD%FVW%W(iW)%BN_Re(j)  / 1.0E6
             m%AllOuts( BNM(    beta,k) ) = m_AD%FVW%W(iW)%BN_Vrel(j) / p%SpdSound
 
             m%AllOuts( BNVIndx(beta,k) ) = -m_AD%FVW%W(iW)%BN_UrelWind_s(1,j) * m_AD%FVW%W(iW)%BN_AxInd(j)
