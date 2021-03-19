@@ -65,7 +65,7 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
    ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
 end subroutine FAST_AllocateTurbines
-
+!==================================================================================================================================
 subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_DeallocateTurbines')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
@@ -82,7 +82,7 @@ subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Deal
    ErrStat_c = ErrID_None
    ErrMsg_c = C_NULL_CHAR
 end subroutine
-
+!==================================================================================================================================
 subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
@@ -469,8 +469,8 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumBl_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumBlElem_c      
-   TYPE(OpFM_InputType_C), INTENT(  OUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),INTENT(  OUT) :: OpFM_Output_to_FAST
+   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_InputType_C),   INTENT(INOUT) :: SC_Input_from_FAST
    TYPE(SC_OutputType_C),  INTENT(INOUT) :: SC_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
@@ -523,8 +523,8 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
       NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
       NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
    ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN  
-      NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%BladeMotion)
-      NumBlElem_c = Turbine(iTurb)%AD%Input(1)%BladeMotion(1)%Nnodes
+      NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
+      NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
    ELSE
       NumBl_c     = 0
       NumBlElem_c = 0
@@ -574,8 +574,8 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    INTEGER(C_INT),         INTENT(  OUT) :: numElementsPerBlade_c
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(  OUT) :: n_t_global_c      
-   TYPE(OpFM_InputType_C), INTENT(  OUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),INTENT(  OUT) :: OpFM_Output_to_FAST
+   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_InputType_C),   INTENT(INOUT) :: SC_Input_from_FAST
    TYPE(SC_OutputType_C),  INTENT(INOUT) :: SC_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
@@ -607,8 +607,8 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    n_t_global_c  = n_t_global
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine(iTurb)%y_FAST%numOuts )) ! includes time
-   numBlades_c   = Turbine(iTurb)%ad%p%numblades
-   numElementsPerBlade_c = Turbine(iTurb)%ad%p%numblnds ! I'm not sure if FASTv8 can handle different number of blade nodes for each blade.
+   numBlades_c   = Turbine(iTurb)%ad%p%rotors(1)%numblades
+   numElementsPerBlade_c = Turbine(iTurb)%ad%p%rotors(1)%numblnds ! I'm not sure if FASTv8 can handle different number of blade nodes for each blade.
    dt_c          = Turbine(iTurb)%p_FAST%dt      
       
    ErrStat_c     = ErrStat

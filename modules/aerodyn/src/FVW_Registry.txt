@@ -43,7 +43,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               DbKi                             DTaero        -  - -   "Time interval for calls calculations"   s
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
-# Parametesr output options
+# Parameter output options
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               DbKi                             DTvtk         -  - -   "DT between vtk writes" s
@@ -165,7 +165,6 @@ typedef    ^                    ^               Reki                            
 typedef  FVW/FVW           OtherStateType       IntKi                            NULL              -  -  - "Number of active near wake panels"      -
 # TODO UA
 typedef   ^                       ^             UA_OtherStateType                UA                -  -  -  "other states for UnsteadyAero"        -
-typedef   ^                       ^             Logical                          UA_Flag       {:}{:}  - -  "logical flag indicating whether to use UnsteadyAero"        -
 
 
 #.......... InitInputType ......
