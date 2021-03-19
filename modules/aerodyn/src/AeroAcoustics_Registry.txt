@@ -20,17 +20,14 @@ usefrom     AirfoilInfo_Registry.txt
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Blade Input file data .....................................................................................................
-typedef     AeroAcoustics/AA    AA_BladePropsType    IntKi               NumBlNds         -     -     -     "Number of blade nodes used in the analysis"     -
-typedef     ^                   AA_BladePropsType    ReKi                TEThick         {:}    -     -     ""     -
-typedef     ^                   AA_BladePropsType    ReKi                StallStart         {:}    -     -     ""     -
-typedef     ^                   AA_BladePropsType    ReKi                TEAngle         {:}    -     -     ""     -
-typedef     ^                   AA_BladePropsType    ReKi                AerCent         {:}    -     -     ""     -
+typedef     AeroAcoustics/AA    AA_BladePropsType    ReKi                TEThick          -    -     -     ""     -
+typedef     ^                   AA_BladePropsType    ReKi                TEAngle          -    -     -     ""     -
 #
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef     AeroAcoustics/AA    InitInputType        CHARACTER(1024)     InputFile        -     -     -     "Name of the input file"     -
 typedef     ^                   InitInputType        IntKi               NumBlades        -     -     -     "Number of blades on the turbine"
-typedef     ^                   InitInputType        IntKi               NumBlNds         -     -     -     "Number of blades on the turbine"
+typedef     ^                   InitInputType        IntKi               NumBlNds         -     -     -     "Number of blade nodes"
 typedef     ^                   InitInputType        CHARACTER(1024)     RootName         -     -     -     "RootName for writing output files"     -
 typedef     ^                   InitInputType        ReKi                BlSpn           {:}{:}    -     -     "Span at blade node"     m
 typedef     ^                   InitInputType        ReKi                BlChord         {:}{:}    -     -     "Chord at blade node"     m
@@ -80,7 +77,8 @@ typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfi
 typedef     ^                   AA_InputFile         CHARACTER(1024)     TICalcTabFile    -     -     -     "Name of the file containing the table for incident turbulence intensity" -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     FTitle           -     -     -     "File Title: the 2nd line of the input file, which contains a description of its contents" -
 typedef     ^                   AA_InputFile         DBKi                AAStart         -     -     -     "Time after which to calculate AA"     s
-typedef     ^                   AA_InputFile         ReKi                z0_AA           -     -     -     "Surface roughness"     -
+typedef     ^                   AA_InputFile         ReKi                Lturb           -     -     -      "Turbulent lengthscale in Amiet model"     -
+typedef     ^                   AA_InputFile         ReKi                AvgV            -     -      -     "Average wind speed to compute incident turbulence intensity"  m    
 typedef     ^                   AA_InputFile         ReKi                ReListBL            {:}    -     -     ""          
 typedef     ^                   AA_InputFile         ReKi                AoAListBL           {:}    -     -     ""         deg
 typedef     ^                   AA_InputFile         ReKi                Pres_DispThick         {:}{:}{:}    -     -     ""         
@@ -185,7 +183,8 @@ typedef     ^                   ParameterType        IntKi               total_s
 typedef     ^                   ParameterType        IntKi               total_sampleTI            -      -     -     "Total FFT Sample amount for dissipation calculation"     -
 typedef     ^                   ParameterType        IntKi               AA_Bl_Prcntge           -      -     -     "The Percentage of the Blade which the noise is calculated"     %
 typedef     ^                   ParameterType        IntKi               startnode               -      -     -     "Corersponding node to the noise calculation percentage of the blade"     -
-typedef     ^                   ParameterType        ReKi                z0_aa                   -     -      -     "Surface roughness"  m    
+typedef     ^                   ParameterType        ReKi                Lturb                   -     -      -     "Turbulent lengthscale in Amiet model"  m    
+typedef     ^                   ParameterType        ReKi                AvgV                   -     -      -     "Average wind speed to compute incident turbulence intensity"  m    
 typedef     ^                   ParameterType        ReKi                dz_turb_in                  -     -      -     ""  m    
 typedef     ^                   ParameterType        ReKi                dy_turb_in                  -     -      -     ""  m    
 typedef     ^                   ParameterType        ReKi                TI_Grid_In          {:}{:}    -     -     ""         

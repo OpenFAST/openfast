@@ -95,6 +95,7 @@ CONTAINS
          ! Display the version for this module.
 
       !CALL DispNVD ( AFI_Ver )
+      p%FileName = InitInput%FileName ! store this for error messages later (e.g., in UA)
 
       CALL AFI_ValidateInitInput(InitInput, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -247,17 +248,24 @@ CONTAINS
 
 
       do iTable = 1, p%NumTabs
+               ! We need to deal with constant data.
+         IF ( p%Table(iTable)%ConstData )  THEN
+
+            CALL SetErrStat ( ErrID_FATAL, 'The part to deal with constant data in AFI_Init is not written yet!', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
+            RETURN
+
+         END IF
+         
             ! Allocate the arrays to hold spline coefficients.
 
-         allocate ( p%Table(iTable)%SplineCoefs( p%Table(iTable)%NumAlf-1 &
-                  , NumCoefs, 0:3 ), STAT=ErrStat2 )
+         allocate ( p%Table(iTable)%SplineCoefs( p%Table(iTable)%NumAlf-1, size(p%Table(iTable)%Coefs,2), 0:3 ), STAT=ErrStat2 )
          if ( ErrStat2 /= 0 )  then
             call SetErrStat ( ErrStat2, 'Error allocating memory for the SplineCoefs array.', ErrStat, ErrMsg, RoutineName )
             call Cleanup()
             return
          end if
 
-            
             ! Compute the one set of coefficients of the piecewise polynomials for the irregularly-spaced data.
             ! Unlike the 2-D interpolation in which we use diffent knots for each airfoil coefficient, we can do
             ! the 1-D stuff all at once.
@@ -297,26 +305,6 @@ CONTAINS
          end if
             
       end do
-
-
-         ! Compute the spline coefficients of the piecewise cubic polynomials for the irregularly-spaced airfoil data in each file.
-         ! Unless the data are constant.
-
-      DO Co=1,NumCoefs
-            
-            ! We use 1D cubic spline interpolation if the data are not constant.
-         IF ( p%Table(1)%ConstData )  THEN
-
-               ! We need to deal with constant data.
-
-            CALL SetErrStat ( ErrID_FATAL, 'The part to deal with constant data in AFI_Init is not written yet!', ErrStat, ErrMsg, RoutineName )
-            CALL Cleanup()
-            RETURN
-
-         ENDIF ! p%Table(1)%ConstData
-
-      END DO ! Co
-
 
       CALL Cleanup ( )
 
@@ -364,7 +352,7 @@ CONTAINS
    END SUBROUTINE AFI_ValidateInitInput
   
    !=============================================================================
-   SUBROUTINE ReadAFfile ( AFfile, NumCoefs, InCol_Alfa, InCol_Cl, InCol_Cd, InCol_Cm, InCol_Cpmin, p &
+   SUBROUTINE ReadAFfile ( AFfile, NumCoefsIn, InCol_Alfa, InCol_Cl, InCol_Cd, InCol_Cm, InCol_Cpmin, p &
                          , ErrStat, ErrMsg, UnEc )
 
 
@@ -379,7 +367,7 @@ CONTAINS
       INTEGER(IntKi),    INTENT(IN)           :: InCol_Cm                      ! The airfoil-table input column for pitching-moment coefficient.
       INTEGER(IntKi),    INTENT(IN)           :: InCol_Cpmin                   ! The airfoil-table input column for minimum pressure coefficient.
       INTEGER(IntKi),    INTENT(  OUT)        :: ErrStat                       ! Error status.
-      INTEGER(IntKi),    INTENT(INOUT)        :: NumCoefs                      ! The number of aerodynamic coefficients to be stored.
+      INTEGER(IntKi),    INTENT(IN   )        :: NumCoefsIn                    ! The number of aerodynamic coefficients to be stored.
 
       INTEGER,           INTENT(IN)           :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.      CHARACTER(*), INTENT(IN)               :: AFfile                        ! The file to be read.
 
@@ -404,6 +392,7 @@ CONTAINS
       LOGICAL                                 :: BadVals                       ! A flag that indicates if the values in a table are invalid.
 
       TYPE (FileInfoType)                     :: FileInfo                      ! The derived type for holding the file information.
+      INTEGER(IntKi)                          :: NumCoefsTab                   ! The number of aerodynamic coefficients to be stored for this table.
 
       INTEGER(IntKi)                          :: DefaultInterpOrd              ! value of default interp order
       INTEGER(IntKi)                          :: ErrStat2                      ! Error status local to this routine.
@@ -415,6 +404,7 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
       defaultStr = ""
+
       ! Getting parent folder of airfoils data (e.g. "Arifoils/")
       CALL GetPath( AFFile, PriPath )
          ! Process the (possibly) nested set of files.  This copies the decommented contents of
@@ -523,6 +513,7 @@ CONTAINS
       ENDIF
 
       DO iTable=1,p%NumTabs
+         NumCoefsTab = NumCoefsIn  ! Reset this counter for each table
 
          CALL ParseVar ( FileInfo, CurLine, 'Re', p%Table(iTable)%Re, ErrStat2, ErrMsg2, UnEc )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -575,7 +566,7 @@ CONTAINS
 
                CALL ParseVar ( FileInfo, CurLine, 'C_nalpha', p%Table(iTable)%UA_BL%C_nalpha, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
+              
 !>>> add after this feature gets tested better:
 !               CALL ParseVar ( FileInfo, CurLine, 'C_lalpha', p%Table(iTable)%UA_BL%C_lalpha, ErrStat2, ErrMsg2, UnEc )
 !                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -666,8 +657,8 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
                CALL ParseVarWDefault ( FileInfo, CurLine, 'filtCutOff', p%Table(iTable)%UA_BL%filtCutOff, 0.5_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   
-               p%ColUAf = NumCoefs + 1 ! column for f_st
-               NumCoefs = p%ColUAf + 1 ! precompute f_st and cl_fs for the HGM model
+               p%ColUAf    = NumCoefsIn + 1 ! column for f_st
+               NumCoefsTab = p%ColUAf    + 1 ! precompute f_st and cl_fs for the HGM model
                
                IF (ErrStat >= AbortErrLev) THEN
                   CALL Cleanup()
@@ -712,7 +703,7 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
             RETURN
          ENDIF
 
-         ALLOCATE ( p%Table(iTable)%Coefs( p%Table(iTable)%NumAlf, NumCoefs ), STAT=ErrStat2 )
+         ALLOCATE ( p%Table(iTable)%Coefs( p%Table(iTable)%NumAlf, NumCoefsTab ), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 )  THEN
             CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for p%Table%Coefs.', ErrStat, ErrMsg, RoutineName )
             CALL Cleanup()
@@ -751,7 +742,7 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
             IF ( .NOT. EqualRealNos( p%Table(iTable)%Alpha(NumAlf), Pi ) )  THEN
                BadVals = .TRUE.
             ENDIF
-            DO Coef=1,NumCoefs
+            DO Coef=1,NumCoefsTab
                IF ( .NOT. EqualRealNos( p%Table(iTable)%Coefs(1,Coef), p%Table(iTable)%Coefs(NumAlf,Coef) ) )  THEN
                   BadVals = .TRUE.
                ENDIF
@@ -767,7 +758,13 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
 
       ENDDO ! iTable
 
-
+      DO iTable=1,p%NumTabs
+         if ( .not. p%Table(iTable)%InclUAdata )  then
+            p%ColUAf = 0 ! in case some tables have UA data and others don't; this is not set on a per-table basis
+            exit ! exit loop
+         end if
+      ENDDO ! iTable
+      
       CALL Cleanup( )
 
       RETURN
@@ -804,7 +801,8 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
       col_clFs = ColUAf + 1
 
       if ( p%InclUAdata )  then
-         
+         p%UA_BL%UACutout_blend = max(0.0_ReKi, p%UA_BL%UACutout - 5.0_ReKi*D2R) ! begin turning off 5 degrees before (or at 0 degrees)
+      
          if (EqualRealNos(p%UA_BL%c_lalpha,0.0_ReKi)) then
             p%Coefs(:,ColUAf)   = 0.0_ReKi                           ! Eq. 59
             p%Coefs(:,col_clFs) = p%Coefs(:,ColCl)                   ! Eq. 61

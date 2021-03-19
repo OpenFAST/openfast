@@ -791,7 +791,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
             else 
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = -m%FVW%BN_UrelWind_s(1,IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m%FVW%BN_UrelWind_s(1,IdxNode,IdxBlade)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -864,27 +864,39 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
 
          CASE ( BldNd_UA_Flag )
             if (p%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     IF ( OtherState%BEMT%UA_Flag(IdxNode, IdxBlade) ) THEN
-                        y%WriteOutput( OutIdx ) = 1.0_ReKi
-                     ELSE
-                        y%WriteOutput( OutIdx ) = 0.0_ReKi
-                     ENDIF
-                     OutIdx = OutIdx + 1
+               IF (p%BEMT%UA_Flag) THEN
+                  DO IdxBlade=1,p%BldNd_BladesOut
+                     DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                        y%WriteOutput( OutIdx ) = m%BEMT%UA%weight(IdxNode, IdxBlade)
+                        OutIdx = OutIdx + 1
+                     ENDDO
                   ENDDO
-               ENDDO
+               ELSE
+                  DO IdxBlade=1,p%BldNd_BladesOut
+                     DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                        y%WriteOutput( OutIdx ) = 0.0_ReKi
+                        OutIdx = OutIdx + 1
+                     ENDDO
+                  ENDDO
+               END IF
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     IF ( OtherState%FVW%UA_Flag(IdxNode, IdxBlade) ) THEN
-                        y%WriteOutput( OutIdx ) = 1.0_ReKi
-                     ELSE
-                        y%WriteOutput( OutIdx ) = 0.0_ReKi
-                     ENDIF
-                     OutIdx = OutIdx + 1
+               IF (m%FVW%UA_Flag) THEN
+                  DO IdxBlade=1,p%BldNd_BladesOut
+                     DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                        y%WriteOutput( OutIdx ) = m%FVW%m_UA%weight(IdxNode, IdxBlade)
+                        OutIdx = OutIdx + 1
+                     ENDDO
                   ENDDO
-               ENDDO
+               ELSE
+                  DO IdxBlade=1,p%BldNd_BladesOut
+                     DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                        y%WriteOutput( OutIdx ) = 0.0_ReKi
+                        OutIdx = OutIdx + 1
+                     ENDDO
+                  ENDDO
+               END IF
+               
+
             endif
       
             ! CpMin
@@ -1076,13 +1088,12 @@ END SUBROUTINE Calc_WriteAllBldNdOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates and sets the parameters for the nodal outputs.
-SUBROUTINE AllBldNdOuts_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
+SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
 
       ! Passed variables:
 
-   TYPE(AD_InitInputType),       intent(IN   )  :: InitInp          !< Input data for initialization routine, out is needed because of copy below
    TYPE(AD_InputFile),           INTENT(IN   )  :: InputFileData    !< Data stored in the module's input file
    TYPE(AD_ParameterType),       INTENT(INOUT)  :: p                !< Parameters
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          !< Error status of the operation

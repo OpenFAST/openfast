@@ -32,14 +32,6 @@ MODULE NWTC_Library_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE SysSubs
 IMPLICIT NONE
-
-  TYPE NWTC_RandomNumber_ParameterType
-     INTEGER(IntKi)              :: pRNG
-     INTEGER(IntKi)              :: RandSeed(3)         ! The array that holds the initial random seeds for the 3 components.
-     INTEGER(IntKi), allocatable :: RandSeedAry(:)      ! The array that holds the random seeds.
-     CHARACTER(6)                :: RNG_type            ! Type of Random Number Generator to use
-  END TYPE NWTC_RandomNumber_ParameterType
-
 ! =========  ProgDesc  =======
   TYPE, PUBLIC :: ProgDesc
     CHARACTER(99)  :: Name      !< Name of the program or module [-]
@@ -54,8 +46,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumChans      !< Number of output channels in this binary file (not including the time channel) [-]
     INTEGER(IntKi)  :: NumRecs      !< Number of records (rows) of data in the file [-]
     REAL(DbKi)  :: TimeStep      !< Time step for evenly-spaced data in the output file (when NumRecs is not allo [-]
-    CHARACTER(20) , DIMENSION(:), ALLOCATABLE  :: ChanNames      !< Strings describing the names of the channels from the binary file (including the time channel) [-]
-    CHARACTER(20) , DIMENSION(:), ALLOCATABLE  :: ChanUnits      !< Strings describing the units of the channels from the binary file (including the time channel) [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChanNames      !< Strings describing the names of the channels from the binary file (including the time channel) [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChanUnits      !< Strings describing the units of the channels from the binary file (including the time channel) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Data      !< numeric data (rows and columns) from the binary file, including the time channel [-]
   END TYPE FASTdataType
 ! =======================
@@ -74,7 +66,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FileLine 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FileIndx 
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: FileList 
-    CHARACTER(512) , DIMENSION(:), ALLOCATABLE  :: Lines 
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: Lines 
   END TYPE FileInfoType
 ! =======================
 ! =========  Quaternion  =======
@@ -82,6 +74,14 @@ IMPLICIT NONE
     REAL(ReKi)  :: q0 
     REAL(ReKi) , DIMENSION(1:3)  :: v 
   END TYPE Quaternion
+! =======================
+! =========  NWTC_RandomNumber_ParameterType  =======
+  TYPE, PUBLIC :: NWTC_RandomNumber_ParameterType
+    INTEGER(IntKi)  :: pRNG 
+    INTEGER(IntKi) , DIMENSION(1:3)  :: RandSeed 
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: RandSeedAry 
+    CHARACTER(6)  :: RNG_type 
+  END TYPE NWTC_RandomNumber_ParameterType
 ! =======================
 CONTAINS
 
@@ -1253,206 +1253,206 @@ ENDIF
  END SUBROUTINE NWTC_Library_UnPackQuaternion
 
  SUBROUTINE NWTC_Library_CopyNWTC_RandomNumber_ParameterType( SrcNWTC_RandomNumber_ParameterTypeData, DstNWTC_RandomNumber_ParameterTypeData, CtrlCode, ErrStat, ErrMsg )
-  TYPE(NWTC_RandomNumber_ParameterType), INTENT(IN) :: SrcNWTC_RandomNumber_ParameterTypeData
-  TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: DstNWTC_RandomNumber_ParameterTypeData
-  INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   TYPE(NWTC_RandomNumber_ParameterType), INTENT(IN) :: SrcNWTC_RandomNumber_ParameterTypeData
+   TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: DstNWTC_RandomNumber_ParameterTypeData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyNWTC_RandomNumber_ParameterType'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstNWTC_RandomNumber_ParameterTypeData%pRNG = SrcNWTC_RandomNumber_ParameterTypeData%pRNG
+    DstNWTC_RandomNumber_ParameterTypeData%RandSeed = SrcNWTC_RandomNumber_ParameterTypeData%RandSeed
+IF (ALLOCATED(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN
+  i1_l = LBOUND(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry,1)
+  i1_u = UBOUND(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry,1)
+  IF (.NOT. ALLOCATED(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN 
+    ALLOCATE(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry = SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry
+ENDIF
+    DstNWTC_RandomNumber_ParameterTypeData%RNG_type = SrcNWTC_RandomNumber_ParameterTypeData%RNG_type
+ END SUBROUTINE NWTC_Library_CopyNWTC_RandomNumber_ParameterType
+
+ SUBROUTINE NWTC_Library_DestroyNWTC_RandomNumber_ParameterType( NWTC_RandomNumber_ParameterTypeData, ErrStat, ErrMsg )
+  TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: NWTC_RandomNumber_ParameterTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-  INTEGER(IntKi)                 :: i,j,k
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyNWTC_RandomNumber_ParameterType'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyNWTC_RandomNumber_ParameterType'
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-   DstNWTC_RandomNumber_ParameterTypeData%pRNG = SrcNWTC_RandomNumber_ParameterTypeData%pRNG
-   DstNWTC_RandomNumber_ParameterTypeData%RandSeed = SrcNWTC_RandomNumber_ParameterTypeData%RandSeed
-IF (ALLOCATED(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN
- i1_l = LBOUND(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry,1)
- i1_u = UBOUND(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry,1)
- IF (.NOT. ALLOCATED(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN 
-   ALLOCATE(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry(i1_l:i1_u),STAT=ErrStat2)
-   IF (ErrStat2 /= 0) THEN 
-     CALL SetErrStat(ErrID_Fatal, 'Error allocating DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   END IF
- END IF
-   DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry = SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry
-ENDIF
-   DstNWTC_RandomNumber_ParameterTypeData%RNG_type = SrcNWTC_RandomNumber_ParameterTypeData%RNG_type
-END SUBROUTINE NWTC_Library_CopyNWTC_RandomNumber_ParameterType
-
-SUBROUTINE NWTC_Library_DestroyNWTC_RandomNumber_ParameterType( NWTC_RandomNumber_ParameterTypeData, ErrStat, ErrMsg )
- TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: NWTC_RandomNumber_ParameterTypeData
- INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
- CHARACTER(*),    INTENT(  OUT) :: ErrMsg
- CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyNWTC_RandomNumber_ParameterType'
- INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
- ErrStat = ErrID_None
- ErrMsg  = ""
 IF (ALLOCATED(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN
- DEALLOCATE(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)
+  DEALLOCATE(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)
 ENDIF
-END SUBROUTINE NWTC_Library_DestroyNWTC_RandomNumber_ParameterType
+ END SUBROUTINE NWTC_Library_DestroyNWTC_RandomNumber_ParameterType
 
-SUBROUTINE NWTC_Library_PackNWTC_RandomNumber_ParameterType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
- REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
- REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
- INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
- TYPE(NWTC_RandomNumber_ParameterType),  INTENT(IN) :: InData
- INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
- CHARACTER(*),     INTENT(  OUT) :: ErrMsg
- LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-   ! Local variables
- INTEGER(IntKi)                 :: Re_BufSz
- INTEGER(IntKi)                 :: Re_Xferred
- INTEGER(IntKi)                 :: Db_BufSz
- INTEGER(IntKi)                 :: Db_Xferred
- INTEGER(IntKi)                 :: Int_BufSz
- INTEGER(IntKi)                 :: Int_Xferred
- INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
- LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
- INTEGER(IntKi)                 :: ErrStat2
- CHARACTER(ErrMsgLen)           :: ErrMsg2
- CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_PackNWTC_RandomNumber_ParameterType'
-! buffers to store subtypes, if any
- REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
- REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
- INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+ SUBROUTINE NWTC_Library_PackNWTC_RandomNumber_ParameterType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(NWTC_RandomNumber_ParameterType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_PackNWTC_RandomNumber_ParameterType'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
- OnlySize = .FALSE.
- IF ( PRESENT(SizeOnly) ) THEN
-   OnlySize = SizeOnly
- ENDIF
-   !
- ErrStat = ErrID_None
- ErrMsg  = ""
- Re_BufSz  = 0
- Db_BufSz  = 0
- Int_BufSz  = 0
-     Int_BufSz  = Int_BufSz  + 1  ! pRNG
-     Int_BufSz  = Int_BufSz  + SIZE(InData%RandSeed)  ! RandSeed
- Int_BufSz   = Int_BufSz   + 1     ! RandSeedAry allocated yes/no
- IF ( ALLOCATED(InData%RandSeedAry) ) THEN
-   Int_BufSz   = Int_BufSz   + 2*1  ! RandSeedAry upper/lower bounds for each dimension
-     Int_BufSz  = Int_BufSz  + SIZE(InData%RandSeedAry)  ! RandSeedAry
- END IF
-     Int_BufSz  = Int_BufSz  + 1*LEN(InData%RNG_type)  ! RNG_type
- IF ( Re_BufSz  .GT. 0 ) THEN 
-    ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+      Int_BufSz  = Int_BufSz  + 1  ! pRNG
+      Int_BufSz  = Int_BufSz  + SIZE(InData%RandSeed)  ! RandSeed
+  Int_BufSz   = Int_BufSz   + 1     ! RandSeedAry allocated yes/no
+  IF ( ALLOCATED(InData%RandSeedAry) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! RandSeedAry upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%RandSeedAry)  ! RandSeedAry
+  END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%RNG_type)  ! RNG_type
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+    IntKiBuf(Int_Xferred) = InData%pRNG
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%RandSeed,1), UBOUND(InData%RandSeed,1)
+      IntKiBuf(Int_Xferred) = InData%RandSeed(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+  IF ( .NOT. ALLOCATED(InData%RandSeedAry) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RandSeedAry,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RandSeedAry,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%RandSeedAry,1), UBOUND(InData%RandSeedAry,1)
+        IntKiBuf(Int_Xferred) = InData%RandSeedAry(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    DO I = 1, LEN(InData%RNG_type)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%RNG_type(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+ END SUBROUTINE NWTC_Library_PackNWTC_RandomNumber_ParameterType
+
+ SUBROUTINE NWTC_Library_UnPackNWTC_RandomNumber_ParameterType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_UnPackNWTC_RandomNumber_ParameterType'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+    OutData%pRNG = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%RandSeed,1)
+    i1_u = UBOUND(OutData%RandSeed,1)
+    DO i1 = LBOUND(OutData%RandSeed,1), UBOUND(OutData%RandSeed,1)
+      OutData%RandSeed(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RandSeedAry not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%RandSeedAry)) DEALLOCATE(OutData%RandSeedAry)
+    ALLOCATE(OutData%RandSeedAry(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-      RETURN
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%RandSeedAry.', ErrStat, ErrMsg,RoutineName)
+       RETURN
     END IF
- END IF
- IF ( Db_BufSz  .GT. 0 ) THEN 
-    ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
- END IF
- IF ( Int_BufSz  .GT. 0 ) THEN 
-    ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
- END IF
- IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
- Re_Xferred  = 1
- Db_Xferred  = 1
- Int_Xferred = 1
-
-   IntKiBuf(Int_Xferred) = InData%pRNG
-   Int_Xferred = Int_Xferred + 1
-   DO i1 = LBOUND(InData%RandSeed,1), UBOUND(InData%RandSeed,1)
-     IntKiBuf(Int_Xferred) = InData%RandSeed(i1)
-     Int_Xferred = Int_Xferred + 1
-   END DO
- IF ( .NOT. ALLOCATED(InData%RandSeedAry) ) THEN
-   IntKiBuf( Int_Xferred ) = 0
-   Int_Xferred = Int_Xferred + 1
- ELSE
-   IntKiBuf( Int_Xferred ) = 1
-   Int_Xferred = Int_Xferred + 1
-   IntKiBuf( Int_Xferred    ) = LBOUND(InData%RandSeedAry,1)
-   IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RandSeedAry,1)
-   Int_Xferred = Int_Xferred + 2
-
-     DO i1 = LBOUND(InData%RandSeedAry,1), UBOUND(InData%RandSeedAry,1)
-       IntKiBuf(Int_Xferred) = InData%RandSeedAry(i1)
-       Int_Xferred = Int_Xferred + 1
-     END DO
- END IF
-   DO I = 1, LEN(InData%RNG_type)
-     IntKiBuf(Int_Xferred) = ICHAR(InData%RNG_type(I:I), IntKi)
-     Int_Xferred = Int_Xferred + 1
-   END DO ! I
-END SUBROUTINE NWTC_Library_PackNWTC_RandomNumber_ParameterType
-
-SUBROUTINE NWTC_Library_UnPackNWTC_RandomNumber_ParameterType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
- REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
- REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
- INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
- TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: OutData
- INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
- CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-   ! Local variables
- INTEGER(IntKi)                 :: Buf_size
- INTEGER(IntKi)                 :: Re_Xferred
- INTEGER(IntKi)                 :: Db_Xferred
- INTEGER(IntKi)                 :: Int_Xferred
- INTEGER(IntKi)                 :: i
- INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
- INTEGER(IntKi)                 :: ErrStat2
- CHARACTER(ErrMsgLen)           :: ErrMsg2
- CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_UnPackNWTC_RandomNumber_ParameterType'
-! buffers to store meshes, if any
- REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
- REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
- INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-   !
- ErrStat = ErrID_None
- ErrMsg  = ""
- Re_Xferred  = 1
- Db_Xferred  = 1
- Int_Xferred  = 1
-   OutData%pRNG = IntKiBuf(Int_Xferred)
-   Int_Xferred = Int_Xferred + 1
-   i1_l = LBOUND(OutData%RandSeed,1)
-   i1_u = UBOUND(OutData%RandSeed,1)
-   DO i1 = LBOUND(OutData%RandSeed,1), UBOUND(OutData%RandSeed,1)
-     OutData%RandSeed(i1) = IntKiBuf(Int_Xferred)
-     Int_Xferred = Int_Xferred + 1
-   END DO
- IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RandSeedAry not allocated
-   Int_Xferred = Int_Xferred + 1
- ELSE
-   Int_Xferred = Int_Xferred + 1
-   i1_l = IntKiBuf( Int_Xferred    )
-   i1_u = IntKiBuf( Int_Xferred + 1)
-   Int_Xferred = Int_Xferred + 2
-   IF (ALLOCATED(OutData%RandSeedAry)) DEALLOCATE(OutData%RandSeedAry)
-   ALLOCATE(OutData%RandSeedAry(i1_l:i1_u),STAT=ErrStat2)
-   IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%RandSeedAry.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-   END IF
-     DO i1 = LBOUND(OutData%RandSeedAry,1), UBOUND(OutData%RandSeedAry,1)
-       OutData%RandSeedAry(i1) = IntKiBuf(Int_Xferred)
-       Int_Xferred = Int_Xferred + 1
-     END DO
- END IF
-   DO I = 1, LEN(OutData%RNG_type)
-     OutData%RNG_type(I:I) = CHAR(IntKiBuf(Int_Xferred))
-     Int_Xferred = Int_Xferred + 1
-   END DO ! I
-END SUBROUTINE NWTC_Library_UnPackNWTC_RandomNumber_ParameterType
+      DO i1 = LBOUND(OutData%RandSeedAry,1), UBOUND(OutData%RandSeedAry,1)
+        OutData%RandSeedAry(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    DO I = 1, LEN(OutData%RNG_type)
+      OutData%RNG_type(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+ END SUBROUTINE NWTC_Library_UnPackNWTC_RandomNumber_ParameterType
 
 END MODULE NWTC_Library_Types
 !ENDOFREGISTRYGENERATEDFILE

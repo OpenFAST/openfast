@@ -65,8 +65,8 @@ CONTAINS
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
       REAL(ReKi)                                   :: Pos(3)         ! array for setting absolute fairlead positions in mesh
-      REAL(ReKi)                                   :: TransMat(3,3)  ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
-      REAL(ReKi), ALLOCATABLE                      :: FairTensIC(:,:)! array of size Nfairs, 3 to store three latest fairlead tensions of each line
+      REAL(DbKi)                                   :: TransMat(3,3)  ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
+      REAL(DbKi), ALLOCATABLE                      :: FairTensIC(:,:)! array of size Nfairs, 3 to store three latest fairlead tensions of each line
       CHARACTER(20)                                :: TempString     ! temporary string for incidental use
       INTEGER(IntKi)                               :: ErrStat2       ! Error status of the operation
       CHARACTER(ErrMsgLen)                         :: ErrMsg2        ! Error message if ErrStat2 /= ErrID_None
@@ -126,6 +126,7 @@ CONTAINS
 
       ! cycle through Connects and identify Connect types
       DO I = 1, p%NConnects
+               
          TempString = m%ConnectList(I)%type
          CALL Conv2UC(TempString)
          if (TempString == 'FIXED') then
@@ -258,9 +259,9 @@ CONTAINS
          u%PtFairleadDisplacement%TranslationDisp(3,i) = InitInp%PtfmInit(3) + Transmat(1,3)*Pos(1) + Transmat(2,3)*Pos(2) + TransMat(3,3)*Pos(3) - Pos(3)
 
          ! set velocity of each node to zero
-         u%PtFairleadDisplacement%TranslationVel(1,i) = 0.0_ReKi
-         u%PtFairleadDisplacement%TranslationVel(2,i) = 0.0_ReKi
-         u%PtFairleadDisplacement%TranslationVel(3,i) = 0.0_ReKi
+         u%PtFairleadDisplacement%TranslationVel(1,i) = 0.0_DbKi
+         u%PtFairleadDisplacement%TranslationVel(2,i) = 0.0_DbKi
+         u%PtFairleadDisplacement%TranslationVel(3,i) = 0.0_DbKi
          
          !print *, 'Fairlead ', i, ' z TranslationDisp at start is ', u%PtFairleadDisplacement%TranslationDisp(3,i)
          !print *, 'Fairlead ', i, ' z Position at start is ', u%PtFairleadDisplacement%Position(3,i)
@@ -299,16 +300,16 @@ CONTAINS
          m%ConnectList(I)%r(1) = m%ConnectList(I)%conX
          m%ConnectList(I)%r(2) = m%ConnectList(I)%conY
          m%ConnectList(I)%r(3) = m%ConnectList(I)%conZ
-         m%ConnectList(I)%rd(1) = 0.0_ReKi
-         m%ConnectList(I)%rd(2) = 0.0_ReKi
-         m%ConnectList(I)%rd(3) = 0.0_ReKi
+         m%ConnectList(I)%rd(1) = 0.0_DbKi
+         m%ConnectList(I)%rd(2) = 0.0_DbKi
+         m%ConnectList(I)%rd(3) = 0.0_DbKi
       END DO
 
       ! then do it for fairlead types
       DO I = 1,p%NFairs
          DO J = 1, 3
             m%ConnectList(m%FairIdList(I))%r(J)  = u%PtFairleadDisplacement%Position(J,I) + u%PtFairleadDisplacement%TranslationDisp(J,I)
-            m%ConnectList(m%FairIdList(I))%rd(J) = 0.0_ReKi
+            m%ConnectList(m%FairIdList(I))%rd(J) = 0.0_DbKi
          END DO
       END DO
 
@@ -328,11 +329,30 @@ CONTAINS
 
 
       ! --------------------------------------------------------------------
+      ! size active tensioning inputs arrays based on highest channel number read from input file for now <<<<<<<
+      ! --------------------------------------------------------------------
+      
+      ! find the highest channel number
+      N = 0
+      DO I = 1, p%NLines
+         IF ( m%LineList(I)%CtrlChan > N ) then
+            N = m%LineList(I)%CtrlChan       
+         END IF
+      END DO   
+      
+      ! allocate the input arrays
+      ALLOCATE ( u%DeltaL(N), u%DeltaLdot(N), STAT = ErrStat2 )
+      
+
+      ! --------------------------------------------------------------------
       ! go through lines and initialize internal node positions using Catenary()
       ! --------------------------------------------------------------------
       DO I = 1, p%NLines
 
          N = m%LineList(I)%N ! for convenience
+         
+         !TODO: apply any initial adjustment of line length from active tensioning <<<<<<<<<<<<
+         ! >>> maybe this should be skipped <<<<
 
          ! set end node positions and velocities from connect objects
          m%LineList(I)%r(:,N) = m%ConnectList(m%LineList(I)%FairConnect)%r
@@ -350,7 +370,7 @@ CONTAINS
          DO J = 1, N-1
            DO K = 1, 3
              x%states(m%LineStateIndList(I) + 3*N-3 + 3*J-3 + K-1 ) = m%LineList(I)%r(K,J) ! assign position
-             x%states(m%LineStateIndList(I)         + 3*J-3 + K-1 ) = 0.0_ReKi ! assign velocities (of zero)
+             x%states(m%LineStateIndList(I)         + 3*J-3 + K-1 ) = 0.0_DbKi ! assign velocities (of zero)
            END DO
          END DO
 
@@ -387,7 +407,7 @@ CONTAINS
       ! initialize fairlead tension memory at zero
       DO J = 1,p%NFairs
          DO I = 1, 3
-            FairTensIC(J,I) = 0.0_ReKi
+            FairTensIC(J,I) = 0.0_DbKi
          END DO
       END DO
 
@@ -712,11 +732,11 @@ CONTAINS
       ! clear connection force and mass values
       DO L = 1, p%NConnects
         DO J = 1,3
-          m%ConnectList(L)%Ftot(J) = 0.0_ReKi
-          m%ConnectList(L)%Ftot(J) = 0.0_ReKi
+          m%ConnectList(L)%Ftot(J) = 0.0_DbKi
+          m%ConnectList(L)%Ftot(J) = 0.0_DbKi
           DO K = 1,3
-            m%ConnectList(L)%Mtot(K,J) = 0.0_ReKi
-            m%ConnectList(L)%Mtot(K,J) = 0.0_ReKi
+            m%ConnectList(L)%Mtot(K,J) = 0.0_DbKi
+            m%ConnectList(L)%Mtot(K,J) = 0.0_DbKi
           END DO
         END DO
       END DO
@@ -729,6 +749,33 @@ CONTAINS
          END DO
       END DO
 
+      ! apply line length changes from active tensioning if applicable
+      DO L = 1, p%NLines
+         IF (m%LineList(L)%CtrlChan > 0) then
+            
+            ! do a bounds check to prohibit excessive segment length changes (until a method to add/remove segments is created)
+            IF ( u%DeltaL(m%LineList(L)%CtrlChan) > m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
+                ErrStat = ErrID_Fatal
+                ErrMsg  = ' Active tension command will make a segment longer than the limit of twice its original length.'
+                print *, u%DeltaL(m%LineList(L)%CtrlChan), " is an increase of more than ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
+                print *, u%DeltaL
+                print*, m%LineList(L)%CtrlChan
+                RETURN
+            END IF
+            IF ( u%DeltaL(m%LineList(L)%CtrlChan) < -0.5 * m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
+             ErrStat = ErrID_Fatal
+                ErrMsg  = ' Active tension command will make a segment shorter than the limit of half its original length.'
+                print *, u%DeltaL(m%LineList(L)%CtrlChan), " is a reduction of more than half of ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
+                print *, u%DeltaL
+                print*, m%LineList(L)%CtrlChan
+                RETURN
+            END IF                
+            
+            ! for now this approach only acts on the fairlead end segment, and assumes all segment lengths are otherwise equal size
+            m%LineList(L)%l( m%LineList(L)%N) = m%LineList(L)%UnstrLen/m%LineList(L)%N + u%DeltaL(m%LineList(L)%CtrlChan)       
+            m%LineList(L)%ld(m%LineList(L)%N) =                                       u%DeltaLdot(m%LineList(L)%CtrlChan)       
+         END IF
+      END DO      
 
       ! do Line force and acceleration calculations, also add end masses/forces to respective Connects
       DO L = 1, p%NLines
@@ -769,33 +816,33 @@ CONTAINS
       !======================================================================
       SUBROUTINE DoLineRHS (X, Xd, t, Line, LineProp, FairFtot, FairMtot, AnchFtot, AnchMtot)
 
-         Real(ReKi), INTENT( IN )      :: X(:)           ! state vector, provided
-         Real(ReKi), INTENT( INOUT )   :: Xd(:)          ! derivative of state vector, returned ! cahnged to INOUT
+         Real(DbKi), INTENT( IN )      :: X(:)           ! state vector, provided
+         Real(DbKi), INTENT( INOUT )   :: Xd(:)          ! derivative of state vector, returned ! cahnged to INOUT
          Real(DbKi), INTENT (IN)       :: t              ! instantaneous time
          TYPE(MD_Line), INTENT (INOUT) :: Line           ! label for the current line, for convenience
          TYPE(MD_LineProp), INTENT(IN) :: LineProp       ! the single line property set for the line of interest
-         Real(ReKi), INTENT(INOUT)     :: FairFtot(:)    ! total force on Connect top of line is attached to
-         Real(ReKi), INTENT(INOUT)     :: FairMtot(:,:)  ! total mass of Connect top of line is attached to
-         Real(ReKi), INTENT(INOUT)     :: AnchFtot(:)    ! total force on Connect bottom of line is attached to
-         Real(ReKi), INTENT(INOUT)     :: AnchMtot(:,:)  ! total mass of Connect bottom of line is attached to
+         Real(DbKi), INTENT(INOUT)     :: FairFtot(:)    ! total force on Connect top of line is attached to
+         Real(DbKi), INTENT(INOUT)     :: FairMtot(:,:)  ! total mass of Connect top of line is attached to
+         Real(DbKi), INTENT(INOUT)     :: AnchFtot(:)    ! total force on Connect bottom of line is attached to
+         Real(DbKi), INTENT(INOUT)     :: AnchMtot(:,:)  ! total mass of Connect bottom of line is attached to
 
 
          INTEGER(IntKi)                :: I              ! index of segments or nodes along line
          INTEGER(IntKi)                :: J              ! index
          INTEGER(IntKi)                :: K              ! index
          INTEGER(IntKi)                :: N              ! number of segments in line
-         Real(ReKi)                    :: d              ! line diameter
-         Real(ReKi)                    :: rho            ! line material density [kg/m^3]
-         Real(ReKi)                    :: Sum1           ! for summing squares
-         Real(ReKi)                    :: m_i            ! node mass
-         Real(ReKi)                    :: v_i            ! node submerged volume
-         Real(ReKi)                    :: Vi(3)          ! relative water velocity at a given node
-         Real(ReKi)                    :: Vp(3)          ! transverse relative water velocity component at a given node
-         Real(ReKi)                    :: Vq(3)          ! tangential relative water velocity component at a given node
-         Real(ReKi)                    :: SumSqVp        !
-         Real(ReKi)                    :: SumSqVq        !
-         Real(ReKi)                    :: MagVp          !
-         Real(ReKi)                    :: MagVq          !
+         Real(DbKi)                    :: d              ! line diameter
+         Real(DbKi)                    :: rho            ! line material density [kg/m^3]
+         Real(DbKi)                    :: Sum1           ! for summing squares
+         Real(DbKi)                    :: m_i            ! node mass
+         Real(DbKi)                    :: v_i            ! node submerged volume
+         Real(DbKi)                    :: Vi(3)          ! relative water velocity at a given node
+         Real(DbKi)                    :: Vp(3)          ! transverse relative water velocity component at a given node
+         Real(DbKi)                    :: Vq(3)          ! tangential relative water velocity component at a given node
+         Real(DbKi)                    :: SumSqVp        !
+         Real(DbKi)                    :: SumSqVq        !
+         Real(DbKi)                    :: MagVp          !
+         Real(DbKi)                    :: MagVq          !
 
 
          N = Line%N                      ! for convenience
@@ -822,17 +869,17 @@ CONTAINS
 
          ! calculate instantaneous (stretched) segment lengths and rates << should add catch here for if lstr is ever zero
          DO I = 1, N
-            Sum1 = 0.0_ReKi
+            Sum1 = 0.0_DbKi
             DO J = 1, 3
                Sum1 = Sum1 + (Line%r(J,I) - Line%r(J,I-1)) * (Line%r(J,I) - Line%r(J,I-1))
             END DO
             Line%lstr(I) = sqrt(Sum1)                                  ! stretched segment length
 
-            Sum1 = 0.0_ReKi
+            Sum1 = 0.0_DbKi
             DO J = 1, 3
                Sum1 = Sum1 + (Line%r(J,I) - Line%r(J,I-1))*(Line%rd(J,I) - Line%rd(J,I-1))
             END DO
-            Line%lstrd(I) = Sum1/Line%lstr(I)                          ! strain rate of segment
+            Line%lstrd(I) = Sum1/Line%lstr(I)                          ! segment stretched length rate of change
 
     !       Line%V(I) = Pi/4.0 * d*d*Line%l(I)                        !volume attributed to segment
          END DO
@@ -880,20 +927,20 @@ CONTAINS
          ! loop through the segments
          DO I = 1, N
 
-            ! line tension
+            ! line tension, inherently including possibility of dynamic length changes in l term
             IF (Line%lstr(I)/Line%l(I) > 1.0) THEN
                DO J = 1, 3
                   Line%T(J,I) = LineProp%EA *( 1.0/Line%l(I) - 1.0/Line%lstr(I) ) * (Line%r(J,I)-Line%r(J,I-1))
                END DO
             ELSE
                DO J = 1, 3
-                  Line%T(J,I) = 0.0_ReKi                              ! cable can't "push"
+                  Line%T(J,I) = 0.0_DbKi                              ! cable can't "push"
                END DO
             END if
 
-            ! line internal damping force  (this now uses a line-specific BA value (Line%BA vs. LineProp%BA), to support calculation of individual line BAs based on desired damping ratio)
+            ! line internal damping force based on line-specific BA value, including possibility of dynamic length changes in l and ld terms
             DO J = 1, 3
-               Line%Td(J,I) = Line%BA* ( Line%lstrd(I) / Line%l(I) ) * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)  ! note new form of damping coefficient, BA rather than Cint
+               Line%Td(J,I) = Line%BA* ( Line%lstrd(I) -  Line%lstr(I)*Line%ld(I)/Line%l(I) )/Line%l(I)  * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)
             END DO
          END DO
 
@@ -917,8 +964,8 @@ CONTAINS
             END DO
 
             ! decomponse relative flow into components
-            SumSqVp = 0.0_ReKi                                         ! start sums of squares at zero
-            SumSqVq = 0.0_ReKi
+            SumSqVp = 0.0_DbKi                                         ! start sums of squares at zero
+            SumSqVq = 0.0_DbKi
             DO J = 1, 3
                Vq(J) = DOT_PRODUCT( Vi , Line%q(:,I) ) * Line%q(J,I);   ! tangential relative flow component
                Vp(J) = Vi(J) - Vq(J)                                    ! transverse relative flow component
@@ -962,7 +1009,7 @@ CONTAINS
 
                END IF
             ELSE
-               Line%B(3,I) = 0.0_ReKi
+               Line%B(3,I) = 0.0_DbKi
             END IF
 
             ! total forces
@@ -988,7 +1035,7 @@ CONTAINS
             DO J=1,3
 
                ! calculate RHS constant (premultiplying force vector by inverse of mass matrix  ... i.e. rhs = S*Forces)
-               Sum1 = 0.0_ReKi                               ! reset temporary accumulator
+               Sum1 = 0.0_DbKi                               ! reset temporary accumulator
                DO K = 1, 3
                  Sum1 = Sum1 + Line%S(K,J,I) * Line%F(K,I)   ! matrix-vector multiplication [S i]{Forces i}  << double check indices
                END DO ! K
@@ -1020,8 +1067,8 @@ CONTAINS
 
          ! This subroutine is for the "Connect" type of Connections only.  Other types don't have their own state variables.
       
-         Real(ReKi),       INTENT( IN )    :: X(:)           ! state vector for this connect, provided
-         Real(ReKi),       INTENT( OUT )   :: Xd(:)          ! derivative of state vector for this connect, returned
+         Real(DbKi),       INTENT( IN )    :: X(:)           ! state vector for this connect, provided
+         Real(DbKi),       INTENT( OUT )   :: Xd(:)          ! derivative of state vector for this connect, returned
          Real(DbKi),       INTENT (IN)     :: t              ! instantaneous time
          Type(MD_Connect), INTENT (INOUT)  :: Connect        ! Connect number
 
@@ -1029,7 +1076,7 @@ CONTAINS
          !INTEGER(IntKi)             :: I         ! index of segments or nodes along line
          INTEGER(IntKi)             :: J         ! index
          INTEGER(IntKi)             :: K         ! index
-         Real(ReKi)                 :: Sum1      ! for adding things
+         Real(DbKi)                 :: Sum1      ! for adding things
 
          ! When this sub is called, the force and mass contributions from the attached Lines should already have been added to
          ! Fto and Mtot by the Line RHS function.  Also, any self weight, buoyancy, or external forcing should have already been
@@ -1041,7 +1088,7 @@ CONTAINS
 
             DO J = 1,3
                Xd(3+J) = X(J)        ! velocities - these are unused in integration
-               Xd(J) = 0.0_ReKi           ! accelerations - these are unused in integration
+               Xd(J) = 0.0_DbKi           ! accelerations - these are unused in integration
             END DO
          ELSE
             ! from state values, get r and rdot values
@@ -1063,7 +1110,7 @@ CONTAINS
 
          DO J = 1,3
             ! RHS constant - (premultiplying force vector by inverse of mass matrix  ... i.e. rhs = S*Forces
-            Sum1 = 0.0_ReKi   ! reset accumulator
+            Sum1 = 0.0_DbKi   ! reset accumulator
             DO K = 1, 3
                Sum1 = Sum1 + Connect%S(K,J) * Connect%Ftot(K)   !  matrix multiplication [S i]{Forces i}
             END DO
@@ -1241,12 +1288,14 @@ CONTAINS
    
          CALL MD_Input_ExtrapInterp(u, utimes, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
             
-         CALL MD_CalcContStateDeriv( (t + 0.5_ReKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+         CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
          DO J = 1, Nx
             x%states(J) = x%states(J) + dtM*dxdt%states(J)
          END DO
 
          t = t + dtM  ! update time
+         
+         !print *, " In TimeStep t=", t, ",  L1N8Pz=", M%LineList(1)%r(3,8), ", dL1=", u_interp%DeltaL(1)
 
          !----------------------------------------------------------------------------------
 
@@ -1288,7 +1337,7 @@ CONTAINS
 
    !=======================================================================
    SUBROUTINE SetupLine (Line, LineProp, rhoW, ErrStat, ErrMsg)
-      ! calculate initial profile of the line using quasi-static model
+      ! allocate arrays in line object
 
       TYPE(MD_Line), INTENT(INOUT)       :: Line          ! the single line object of interest
       TYPE(MD_LineProp), INTENT(INOUT)   :: LineProp      ! the single line property set for the line of interest
@@ -1319,7 +1368,7 @@ CONTAINS
       END IF
 
       ! allocate segment scalar quantities
-      ALLOCATE ( Line%l(N), Line%lstr(N), Line%lstrd(N), Line%V(N), STAT = ErrStat )
+      ALLOCATE ( Line%l(N), Line%ld(N), Line%lstr(N), Line%lstrd(N), Line%V(N), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating segment scalar quantity arrays.'
          !CALL CleanUp()
@@ -1329,6 +1378,7 @@ CONTAINS
       ! assign values for l and V
       DO J=1,N
          Line%l(J) = Line%UnstrLen/REAL(N, DbKi)
+         Line%ld(J)= 0.0_DbKi
          Line%V(J) = Line%l(J)*0.25*Pi*LineProp%d*LineProp%d
       END DO
 
@@ -1352,8 +1402,8 @@ CONTAINS
       ! set gravity and bottom contact forces to zero initially (because the horizontal components should remain at zero)
       DO J = 0,N
          DO K = 1,3
-            Line%W(K,J) = 0.0_ReKi
-            Line%B(K,J) = 0.0_ReKi
+            Line%W(K,J) = 0.0_DbKi
+            Line%B(K,J) = 0.0_DbKi
          END DO
       END DO
 
@@ -1406,22 +1456,22 @@ CONTAINS
       INTEGER,           INTENT(   INOUT )   :: ErrStat     ! returns a non-zero value when an error occurs
       CHARACTER(*),      INTENT(   INOUT )   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      REAL(ReKi)                             :: COSPhi      ! Cosine of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
-      REAL(ReKi)                             :: SINPhi      ! Sine   of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
-      REAL(ReKi)                             :: XF          ! Horizontal distance between anchor and fairlead of the current mooring line (meters)
-      REAL(ReKi)                             :: ZF          ! Vertical   distance between anchor and fairlead of the current mooring line (meters)
+      REAL(DbKi)                             :: COSPhi      ! Cosine of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
+      REAL(DbKi)                             :: SINPhi      ! Sine   of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
+      REAL(DbKi)                             :: XF          ! Horizontal distance between anchor and fairlead of the current mooring line (meters)
+      REAL(DbKi)                             :: ZF          ! Vertical   distance between anchor and fairlead of the current mooring line (meters)
       INTEGER(4)                             :: I           ! Generic index
       INTEGER(4)                             :: J           ! Generic index
 
 
       INTEGER(IntKi)                         :: ErrStat2      ! Error status of the operation
       CHARACTER(ErrMsgLen)                   :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
-      REAL(ReKi)                             :: WetWeight
-      REAL(ReKi)                             :: SeabedCD = 0.0_ReKi
-      REAL(ReKi)                             :: TenTol = 0.0001_ReKi
-      REAL(ReKi), ALLOCATABLE                :: LSNodes(:)
-      REAL(ReKi), ALLOCATABLE                :: LNodesX(:)
-      REAL(ReKi), ALLOCATABLE                :: LNodesZ(:)
+      REAL(DbKi)                             :: WetWeight
+      REAL(DbKi)                             :: SeabedCD = 0.0_DbKi
+      REAL(DbKi)                             :: TenTol = 0.0001_DbKi
+      REAL(DbKi), ALLOCATABLE                :: LSNodes(:)
+      REAL(DbKi), ALLOCATABLE                :: LNodesX(:)
+      REAL(DbKi), ALLOCATABLE                :: LNodesZ(:)
       INTEGER(IntKi)                         :: N
 
 
@@ -1440,8 +1490,8 @@ CONTAINS
              ZF         =         Line%r(3,N) - Line%r(3,0)
 
              IF ( XF == 0.0 )  THEN  ! .TRUE. if the current mooring line is exactly vertical; thus, the solution below is ill-conditioned because the orientation is undefined; so set it such that the tensions and nodal positions are only vertical
-                COSPhi  = 0.0_ReKi
-                SINPhi  = 0.0_ReKi
+                COSPhi  = 0.0_DbKi
+                SINPhi  = 0.0_DbKi
              ELSE                    ! The current mooring line must not be vertical; use simple trigonometry
                 COSPhi  =       ( Line%r(1,N) - Line%r(1,0) )/XF
                 SINPhi  =       ( Line%r(2,N) - Line%r(2,0) )/XF
@@ -1474,7 +1524,7 @@ CONTAINS
         END IF
 
         ! Assign node arc length locations
-        LSNodes(1) = 0.0_ReKi
+        LSNodes(1) = 0.0_DbKi
         DO I=2,N
           LSNodes(I) = LSNodes(I-1) + Line%l(I-1)  ! note: l index is because line segment indices start at 1
         END DO
@@ -1512,9 +1562,9 @@ CONTAINS
           CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitializeLine')
 
           DO J = 0,Line%N ! Loop through all nodes per line where the line position and tension can be output
-             Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, ReKi)/REAL(N, ReKi)
-             Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, ReKi)/REAL(N, ReKi)
-             Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, ReKi)/REAL(N, ReKi)
+             Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
+             Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
+             Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
           ENDDO
       ENDIF
 
@@ -1571,21 +1621,21 @@ CONTAINS
 
          INTEGER(4), INTENT(IN   )    :: N                                               ! Number of nodes where the line position and tension can be output (-)
 
-         REAL(ReKi), INTENT(IN   )    :: CB_In                                           ! Coefficient of seabed static friction drag (a negative value indicates no seabed) (-)
-         REAL(ReKi), INTENT(IN   )    :: EA_In                                           ! Extensional stiffness of line (N)
-     !    REAL(ReKi), INTENT(  OUT)    :: HA_In                                           ! Effective horizontal tension in line at the anchor   (N)
-     !    REAL(ReKi), INTENT(INOUT)    :: HF_In                                           ! Effective horizontal tension in line at the fairlead (N)
-         REAL(ReKi), INTENT(IN   )    :: L_In                                            ! Unstretched length of line (meters)
-         REAL(ReKi), INTENT(IN   )    :: s_In     (N)                                    ! Unstretched arc distance along line from anchor to each node where the line position and tension can be output (meters)
-     !    REAL(ReKi), INTENT(  OUT)    :: Te_In    (N)                                    ! Effective line tensions at each node (N)
-         REAL(ReKi), INTENT(IN   )    :: Tol_In                                          ! Convergence tolerance within Newton-Raphson iteration specified as a fraction of tension (-)
-     !    REAL(ReKi), INTENT(  OUT)    :: VA_In                                           ! Effective vertical   tension in line at the anchor   (N)
-     !    REAL(ReKi), INTENT(INOUT)    :: VF_In                                           ! Effective vertical   tension in line at the fairlead (N)
-         REAL(ReKi), INTENT(IN   )    :: W_In                                            ! Weight of line in fluid per unit length (N/m)
-         REAL(ReKi), INTENT(  OUT)    :: X_In     (N)                                    ! Horizontal locations of each line node relative to the anchor (meters)
-         REAL(ReKi), INTENT(IN   )    :: XF_In                                           ! Horizontal distance between anchor and fairlead (meters)
-         REAL(ReKi), INTENT(  OUT)    :: Z_In     (N)                                    ! Vertical   locations of each line node relative to the anchor (meters)
-         REAL(ReKi), INTENT(IN   )    :: ZF_In                                           ! Vertical   distance between anchor and fairlead (meters)
+         REAL(DbKi), INTENT(IN   )    :: CB_In                                           ! Coefficient of seabed static friction drag (a negative value indicates no seabed) (-)
+         REAL(DbKi), INTENT(IN   )    :: EA_In                                           ! Extensional stiffness of line (N)
+     !    REAL(DbKi), INTENT(  OUT)    :: HA_In                                           ! Effective horizontal tension in line at the anchor   (N)
+     !    REAL(DbKi), INTENT(INOUT)    :: HF_In                                           ! Effective horizontal tension in line at the fairlead (N)
+         REAL(DbKi), INTENT(IN   )    :: L_In                                            ! Unstretched length of line (meters)
+         REAL(DbKi), INTENT(IN   )    :: s_In     (N)                                    ! Unstretched arc distance along line from anchor to each node where the line position and tension can be output (meters)
+     !    REAL(DbKi), INTENT(  OUT)    :: Te_In    (N)                                    ! Effective line tensions at each node (N)
+         REAL(DbKi), INTENT(IN   )    :: Tol_In                                          ! Convergence tolerance within Newton-Raphson iteration specified as a fraction of tension (-)
+     !    REAL(DbKi), INTENT(  OUT)    :: VA_In                                           ! Effective vertical   tension in line at the anchor   (N)
+     !    REAL(DbKi), INTENT(INOUT)    :: VF_In                                           ! Effective vertical   tension in line at the fairlead (N)
+         REAL(DbKi), INTENT(IN   )    :: W_In                                            ! Weight of line in fluid per unit length (N/m)
+         REAL(DbKi), INTENT(  OUT)    :: X_In     (N)                                    ! Horizontal locations of each line node relative to the anchor (meters)
+         REAL(DbKi), INTENT(IN   )    :: XF_In                                           ! Horizontal distance between anchor and fairlead (meters)
+         REAL(DbKi), INTENT(  OUT)    :: Z_In     (N)                                    ! Vertical   locations of each line node relative to the anchor (meters)
+         REAL(DbKi), INTENT(IN   )    :: ZF_In                                           ! Vertical   distance between anchor and fairlead (meters)
              INTEGER,                      INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
              CHARACTER(*),                 INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -2087,13 +2137,13 @@ CONTAINS
             !   convert the output arguments back into the default precision for real
             !   numbers:
 
-         !HA_In    = REAL( HA   , ReKi )  !mth: for this I only care about returning node positions
-         !HF_In    = REAL( HF   , ReKi )
-         !Te_In(:) = REAL( Te(:), ReKi )
-         !VA_In    = REAL( VA   , ReKi )
-         !VF_In    = REAL( VF   , ReKi )
-         X_In (:) = REAL( X (:), ReKi )
-         Z_In (:) = REAL( Z (:), ReKi )
+         !HA_In    = REAL( HA   , DbKi )  !mth: for this I only care about returning node positions
+         !HF_In    = REAL( HF   , DbKi )
+         !Te_In(:) = REAL( Te(:), DbKi )
+         !VA_In    = REAL( VA   , DbKi )
+         !VF_In    = REAL( VF   , DbKi )
+         X_In (:) = REAL( X (:), DbKi )
+         Z_In (:) = REAL( Z (:), DbKi )
 
       END SUBROUTINE Catenary
       !=======================================================================
@@ -2111,16 +2161,16 @@ CONTAINS
    ! return unit vector (u) in direction from r1 to r2
    !=======================================================================
    SUBROUTINE UnitVector( u, r1, r2 )
-      REAL(ReKi), INTENT(OUT)   :: u(:)
-      REAL(ReKi), INTENT(IN)    :: r1(:)
-      REAL(ReKi), INTENT(IN)    :: r2(:)
+      REAL(DbKi), INTENT(OUT)   :: u(:)
+      REAL(DbKi), INTENT(IN)    :: r1(:)
+      REAL(DbKi), INTENT(IN)    :: r2(:)
 
-      REAL(ReKi)                :: Length
+      REAL(DbKi)                :: Length
 
       u = r2 - r1
       Length = TwoNorm(u)
 
-      if ( .NOT. EqualRealNos(length, 0.0_ReKi ) ) THEN
+      if ( .NOT. EqualRealNos(length, 0.0_DbKi ) ) THEN
         u = u / Length
       END IF
 
@@ -2131,11 +2181,11 @@ CONTAINS
    !compute the inverse of a 3-by-3 matrix m
    !=======================================================================
    SUBROUTINE Inverse3by3( Minv, M )
-      Real(ReKi), INTENT(OUT)   :: Minv(:,:)  ! returned inverse matrix
-      Real(ReKi), INTENT(IN)    :: M(:,:)     ! inputted matrix
+      Real(DbKi), INTENT(OUT)   :: Minv(:,:)  ! returned inverse matrix
+      Real(DbKi), INTENT(IN)    :: M(:,:)     ! inputted matrix
 
-      Real(ReKi)                :: det        ! the determinant
-      Real(ReKi)                :: invdet     ! inverse of the determinant
+      Real(DbKi)                :: det        ! the determinant
+      Real(DbKi)                :: invdet     ! inverse of the determinant
 
       det = M(1, 1) * (M(2, 2) * M(3, 3) - M(3, 2) * M(2, 3)) - &
             M(1, 2) * (M(2, 1) * M(3, 3) - M(2, 3) * M(3, 1)) + &
