@@ -2222,6 +2222,7 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          !@mhall:  :::: ensure all arrays needed for the wave grid to MoorDyn are allocated in the WaveMod=0 case too ::::
          ALLOCATE ( InitOut%WaveElevMD  (0:InitOut%NStepWave, WaveGrid_nx*WaveGrid_ny), STAT=ErrStatTmp )
+         InitOut%WaveElevMD = 0.0_DbKi  ! zero it
          ! ::::: end :::::
          
          IF ( ErrStat >= AbortErrLev ) RETURN

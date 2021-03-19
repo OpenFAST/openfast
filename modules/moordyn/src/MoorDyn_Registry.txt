@@ -18,7 +18,7 @@ include Registry_NWTC_Library.txt
 typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -999.9 -   "gravity constant"   "[m/s^2]"
 typedef   ^           ^                ReKi               rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
 typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
-typedef   ^           ^                ReKi               PtfmInit      {6}  -      -   "initial position of platform"     -
+typedef   ^           ^                ReKi               PtfmInit      {:}{:}  -      -   "initial position of platform(s) shape: 6, nTurbines"     -
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
 typedef   ^           ^                CHARACTER(1024)    RootName       -   -      -   "RootName for writing output files"              -
 typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
@@ -38,6 +38,12 @@ typedef   ^       ^                    ReKi         WaveAcc                     
 typedef   ^       ^                    ReKi         WavePDyn                         {:}{:}     -        -         ""    -
 typedef   ^       ^                    ReKi         WaveElev                         {:}{:}     -        -         ""    -
 typedef   ^       ^                    DbKi         WaveTime                         {:}        -        -         "Should this be double precision?"    -
+
+# nvm # Farm-level simulation inputs - these are passed by FAST.Farm - the arrays are populated from the individual turbine-level MoorDyn instances
+# nvm typedef   ^       ^                    MeshType     FarmCoupledKinematics  {:}    -    -   "array of input kinematics meshes from each of the turbine-level MoorDyn instances"  "[m, m/s]"
+# nvm typedef   ^       ^                    IntKi        FarmNCpldBodies        {:}    -    -   ""             ""
+# nvm typedef   ^       ^                    IntKi        FarmNCpldRods          {:}    -    -   ""             ""
+# nvm typedef   ^       ^                    IntKi        FarmNCpldCons          {:}    -    -   "number of Fairlead Connections"             ""
 
 
 
@@ -160,6 +166,7 @@ typedef  ^            ^                DbKi               CaEnd          -      
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
 typedef  ^            ^                DbKi               roll           -       -  -   "roll relative to vertical"         "deg"
 typedef  ^            ^                DbKi               pitch          -       -  -   "pitch relative to vertical"        "deg"
+typedef  ^            ^                DbKi               h0             -       -  -   "submerged length of rod axis, distance along rod centerline from end A to the waterplane (0 <= h0 <= L)"        "m"
 typedef  ^            ^                DbKi               r            {:}{:}    -  -   "node positions"    -
 typedef  ^            ^                DbKi               rd           {:}{:}    -  -   "node velocities"  -
 typedef  ^            ^                DbKi               q            {3}       -  -   "tangent vector for rod as a whole"  -
@@ -299,6 +306,7 @@ typedef   ^       ^                    IntKi               RodStateIsN      {:} 
 typedef   ^       ^                    IntKi               BodyStateIs1     {:}  -  -   "starting index of each body's states in state vector"                 ""
 typedef   ^       ^                    IntKi               BodyStateIsN     {:}  -  -   "ending index of each body's states in state vector"                 ""
 typedef   ^       ^                    IntKi               Nx                -   -  -   "number of states and size of state vector"                 ""
+typedef   ^       ^                    IntKi               WaveTi            -   -  -   "current interpolation index for wave time series data"                 ""
 typedef   ^       ^           MD_ContinuousStateType       xTemp             -   -  -   "contains temporary state vector used in integration (put here so it's only allocated once)"
 typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"
 typedef   ^       ^                    DbKi                zeros6           {6}  -  -   "array of zeros for convenience"
@@ -335,6 +343,7 @@ typedef   ^       ^                    MD_OutParmType      OutParam       {:}   
 typedef   ^       ^                    CHARACTER(1)        Delim          -     -    -   "Column delimiter for output text files"     -
 typedef   ^       ^                    IntKi               MDUnOut        -     -    -   "Unit number of main output file"
 typedef   ^       ^                    IntKi               WaterKin       -     -    -   "Flag for whether or how to consider water kinematics"
+typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0"
 
 typedef   ^       ^                    DbKi         ux                 {:}{:}{:}{:} -  -   "water velocities time series at each grid point"            -
 typedef   ^       ^                    DbKi         uy                 {:}{:}{:}{:} -  -   "water velocities time series at each grid point"            -
@@ -351,9 +360,12 @@ typedef   ^       ^                    DbKi         tWave              {:}      
 
 
 # ============================== Inputs ============================================================================================================================================
-typedef   ^       InputType            MeshType     CoupledKinematics      -      -  -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
+#typedef   ^       InputType            MeshType     CoupledKinematics      -      -  -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
+typedef   ^       InputType            MeshType     CoupledKinematics      {:}    -  -   "array of meshes for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
 typedef   ^       ^                    ReKi         DeltaL                 {:}    -  -   "change in line length command for each channel"       "[m]"
 typedef   ^       ^                    ReKi         DeltaLdot              {:}    -  -   "rate of change of line length command for each channel"       "[m]"
+
+
 #typedef   ^       ^                    DbKi         U                      {:}{:} -  -   "water velocities at each node"            -
 #typedef   ^       ^                    DbKi         Ud                     {:}{:} -  -   "water accelerations at each node"            -
 #typedef   ^       ^                    DbKi         zeta                   {:}    -  -   "water surface elevations above each node"            -
@@ -362,5 +374,6 @@ typedef   ^       ^                    ReKi         DeltaLdot              {:}  
 
 ## ============================== Outputs ============================================================================================================================================
 typedef   ^       OutputType           MeshType     CoupledLoads          -    -    -   "point mesh for fairlead forces in X,Y,Z"         "[N]"
+>>> should this be an array?
 #typedef   ^       ^                    DbKi         rAll                   {:}{:} -    -   "Mesh of all point positions: bodies, rods, points, line internal nodes"   -
 typedef   ^       ^                    ReKi         WriteOutput            {:}   -    -   "output vector returned to glue code" ""

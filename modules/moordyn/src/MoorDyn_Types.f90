@@ -180,6 +180,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: time      !< current time [[s]]
     REAL(DbKi)  :: roll      !< roll relative to vertical [deg]
     REAL(DbKi)  :: pitch      !< pitch relative to vertical [deg]
+    REAL(DbKi)  :: h0      !< submerged length of rod axis, distance along rod centerline from end A to the waterplane (0 <= h0 <= L) [m]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: r      !< node positions [-]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: rd      !< node velocities [-]
     REAL(DbKi) , DIMENSION(1:3)  :: q      !< tangent vector for rod as a whole [-]
@@ -328,6 +329,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BodyStateIs1      !< starting index of each body's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BodyStateIsN      !< ending index of each body's states in state vector []
     INTEGER(IntKi)  :: Nx      !< number of states and size of state vector []
+    INTEGER(IntKi)  :: WaveTi      !< current interpolation index for wave time series data []
     TYPE(MD_ContinuousStateType)  :: xTemp      !< contains temporary state vector used in integration (put here so it's only allocated once) [-]
     TYPE(MD_ContinuousStateType)  :: xdTemp      !< contains temporary state derivative vector used in integration (put here so it's only allocated once) [-]
     REAL(DbKi) , DIMENSION(1:6)  :: zeros6      !< array of zeros for convenience [-]
@@ -2258,6 +2260,7 @@ ENDIF
     DstRodData%time = SrcRodData%time
     DstRodData%roll = SrcRodData%roll
     DstRodData%pitch = SrcRodData%pitch
+    DstRodData%h0 = SrcRodData%h0
 IF (ALLOCATED(SrcRodData%r)) THEN
   i1_l = LBOUND(SrcRodData%r,1)
   i1_u = UBOUND(SrcRodData%r,1)
@@ -2657,6 +2660,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! time
       Db_BufSz   = Db_BufSz   + 1  ! roll
       Db_BufSz   = Db_BufSz   + 1  ! pitch
+      Db_BufSz   = Db_BufSz   + 1  ! h0
   Int_BufSz   = Int_BufSz   + 1     ! r allocated yes/no
   IF ( ALLOCATED(InData%r) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! r upper/lower bounds for each dimension
@@ -2853,6 +2857,8 @@ ENDIF
     DbKiBuf(Db_Xferred) = InData%roll
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%pitch
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%h0
     Db_Xferred = Db_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%r) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3358,6 +3364,8 @@ ENDIF
     OutData%roll = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%pitch = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%h0 = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! r not allocated
     Int_Xferred = Int_Xferred + 1
@@ -7066,6 +7074,7 @@ IF (ALLOCATED(SrcMiscData%BodyStateIsN)) THEN
     DstMiscData%BodyStateIsN = SrcMiscData%BodyStateIsN
 ENDIF
     DstMiscData%Nx = SrcMiscData%Nx
+    DstMiscData%WaveTi = SrcMiscData%WaveTi
       CALL MD_CopyContState( SrcMiscData%xTemp, DstMiscData%xTemp, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -7473,6 +7482,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%BodyStateIsN)  ! BodyStateIsN
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Nx
+      Int_BufSz  = Int_BufSz  + 1  ! WaveTi
       Int_BufSz   = Int_BufSz + 3  ! xTemp: size of buffers for each call to pack subtype
       CALL MD_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%xTemp, ErrStat2, ErrMsg2, .TRUE. ) ! xTemp 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -8066,6 +8076,8 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%Nx
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveTi
     Int_Xferred = Int_Xferred + 1
       CALL MD_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%xTemp, ErrStat2, ErrMsg2, OnlySize ) ! xTemp 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -8856,6 +8868,8 @@ ENDIF
       END DO
   END IF
     OutData%Nx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WaveTi = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1

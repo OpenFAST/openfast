@@ -28,6 +28,7 @@ MODULE MoorDyn_IO
 
   PRIVATE
 
+   INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
   INTEGER, PARAMETER :: nCoef = 30  ! maximum number of entries to allow in nonlinear coefficient lookup tables
   ! it would be nice if the above worked for everything, but I think it needs to also be matched in the Registry
@@ -63,17 +64,22 @@ MODULE MoorDyn_IO
   INTEGER, PARAMETER             :: FX        =   11
   INTEGER, PARAMETER             :: FY        =   12
   INTEGER, PARAMETER             :: FZ        =   13
-  INTEGER, PARAMETER             :: Pitch     =   14
-  INTEGER, PARAMETER             :: Roll      =   15
-  INTEGER, PARAMETER             :: Yaw       =   16
+  INTEGER, PARAMETER             :: MX        =   14
+  INTEGER, PARAMETER             :: MY        =   15
+  INTEGER, PARAMETER             :: MZ        =   16
+  INTEGER, PARAMETER             :: Pitch     =   17
+  INTEGER, PARAMETER             :: Roll      =   18
+  INTEGER, PARAMETER             :: Yaw       =   19
+  INTEGER, PARAMETER             :: Sub       =   20
 
   ! List of units corresponding to the quantities parameters for QTypes
-  CHARACTER(ChanLen), PARAMETER :: UnitList(0:16) =  (/ &
+  CHARACTER(ChanLen), PARAMETER :: UnitList(0:20) =  (/ &
                                "(s)       ","(m)       ","(m)       ","(m)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s2)    ","(m/s2)    ","(m/s2)    ", &
                                "(N)       ","(N)       ","(N)       ","(N)       ", &
-                               "(deg)     ","(deg)     ","(deg)     "/)
+                               "(Nm)      ","(Nm)      ","(Nm)      ", &
+                               "(deg)     ","(deg)     ","(deg)     ","(frac)    "/)
 
   CHARACTER(28), PARAMETER  :: OutPFmt = "( I4, 3X,A 10,1 X, A10 )"   ! Output format parameter output list.
   CHARACTER(28), PARAMETER  :: OutSFmt = "ES10.3E2"
@@ -357,23 +363,21 @@ CONTAINS
 
       ! fairlead tension case (updated) <<<<<<<<<<<<<<<<<<<<<<<<<<< these are not currently working - need new way to find ObjID
       IF (let1 == 'FAIRTEN') THEN
-        p%OutParam(I)%OType = 2                                     ! connection object type
+        p%OutParam(I)%OType = 1                                     ! connection object type
         p%OutParam(I)%QType = Ten                                   ! tension quantity type
         p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
-        READ (num1,*) oID                                ! this is the line number
-        p%OutParam(I)%ObjID = m%LineList(oID)%FairConnect           ! get the connection ID of the fairlead
-        p%OutParam(I)%NodeID = -1                                   ! not used.    m%LineList(oID)%N  ! specify node N (fairlead)
-        print *, "WARNING - FAIRTEN and ANCHTEN results aren't supported yet in MD v2"
-
+        READ (num1,*) oID                                           ! this is the line number
+        p%OutParam(I)%ObjID  = oID                                  ! record the ID of the line
+        p%OutParam(I)%NodeID = m%LineList(oID)%N                    ! specify node N (end B, fairlead)
+        
       ! achor tension case
       ELSE IF (let1 == 'ANCHTEN') THEN
-        p%OutParam(I)%OType = 2                                     ! connectoin object type
+        p%OutParam(I)%OType = 1                                     ! connectoin object type
         p%OutParam(I)%QType = Ten                                   ! tension quantity type
         p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
-        READ (num1,*) oID                                ! this is the line number
-        p%OutParam(I)%ObjID = m%LineList(oID)%AnchConnect           ! get the connection ID of the fairlead
-        p%OutParam(I)%NodeID = -1                                   ! not used.    m%LineList(oID)%0  ! specify node 0 (anchor)
-        print *, "WARNING - FAIRTEN and ANCHTEN results aren't supported yet in MD v2"
+        READ (num1,*) oID                                           ! this is the line number
+        p%OutParam(I)%ObjID  = oID                                  ! record the ID of the line
+        p%OutParam(I)%NodeID = 0                                    ! specify node 0 (end A, anchor)
 
       ! more general case
       ELSE
@@ -462,7 +466,7 @@ CONTAINS
           p%OutParam(I)%Units = UnitList(FY)
         ELSE IF (qVal == 'FZ') THEN
           p%OutParam(I)%QType = FZ
-          p%OutParam(I)%Units = UnitList(FZ)
+          p%OutParam(I)%Units = UnitList(FZ)   ! <<<< should add moments as well <<<<
         ELSE IF (qVal == 'ROLL') THEN
           p%OutParam(I)%QType = Roll
           p%OutParam(I)%Units = UnitList(Roll)
@@ -472,6 +476,9 @@ CONTAINS
         ELSE IF (qVal == 'YAW') THEN
           p%OutParam(I)%QType = Yaw
           p%OutParam(I)%Units = UnitList(Yaw)
+        ELSE IF (qVal == 'SUB') THEN
+          p%OutParam(I)%QType = Sub
+          p%OutParam(I)%Units = UnitList(Sub)
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
           CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Quantity type not recognized.')
@@ -708,7 +715,7 @@ CONTAINS
                           + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(7:9)) &
                                 + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
                                   
-            PRINT *, LineNumOuts, " output channels"
+            if (wordy > 2) PRINT *, LineNumOuts, " output channels"
 
             Frmt = '(A10,'//TRIM(Int2LStr(1 + LineNumOuts))//'(A1,A12))'   ! should evenutally use user specified format?
             !Frmt = '(A10,'//TRIM(Int2LStr(3+3*m%LineList(I)%N))//'(A1,A12))'
@@ -862,7 +869,7 @@ CONTAINS
                           + (m%RodList(I)%N + 1)*SUM(m%RodList(I)%OutFlagList(10:11)) &
                                 + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(12:18))
                                   
-            PRINT *, RodNumOuts, " output channels"
+            if (wordy > 2) PRINT *, RodNumOuts, " output channels"
 
             Frmt = '(A10,'//TRIM(Int2LStr(1 + RodNumOuts))//'(A1,A12))'   ! should evenutally use user specified format?
             !Frmt = '(A10,'//TRIM(Int2LStr(3+3*m%RodList(I)%N))//'(A1,A12))'
@@ -1108,8 +1115,8 @@ CONTAINS
                   CASE (VelZ)
                     y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity
                   CASE (Ten)
-                    y%WriteOutput(I) = TwoNorm(m%LineList(p%OutParam(I)%ObjID)%T(:,p%OutParam(I)%NodeID))  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
-                    ! ^^^^^^^^^^^^^^^^^^^^^^^^ The above should be changed to give a node-specific output including weight, as is done in the C version <<<<
+                    y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), p%OutParam(I)%NodeID, p)  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
+                    
                   CASE DEFAULT
                     y%WriteOutput(I) = 0.0_ReKi
                     ErrStat = ErrID_Warn
@@ -1166,9 +1173,11 @@ CONTAINS
                   CASE (FZ)
                      y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(3)  ! total force in z
                   CASE (Roll)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%roll                       ! rod roll
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%roll*180.0/pi  ! rod roll
                   CASE (Pitch)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%pitch                      ! rod pitch
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%pitch*180.0/pi ! rod pitch
+                  CASE (Sub)
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%h0 / m%RodList(p%OutParam(I)%ObjID)%UnstrLen ! rod submergence
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
@@ -1196,11 +1205,11 @@ CONTAINS
                   CASE (FZ)
                      y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%F6net(3)  ! total force in z
                   CASE (Roll)
-                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(4)                   ! roll
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(4)*180.0/pi  ! roll
                   CASE (Pitch)
-                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(5)                   ! pitch
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(5)*180.0/pi  ! pitch
                   CASE (Yaw)
-                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(6)                   ! yaw
+                     y%WriteOutput(I) = m%BodyList(p%OutParam(I)%ObjID)%r6(6)*180.0/pi  ! yaw
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
@@ -1516,6 +1525,34 @@ CONTAINS
 
    END SUBROUTINE MDIO_WriteOutputs
    !----------------------------------------------------------------------------------------============
+
+
+   ! get tension at any node including fairlead or anchor (accounting for weight in these latter cases)
+   !--------------------------------------------------------------
+   FUNCTION Line_GetNodeTen(Line, i, p) result(NodeTen)
+
+      TYPE(MD_Line),          INTENT(IN   )  :: Line           ! label for the current line, for convenience
+      INTEGER(IntKi),         INTENT(IN   )  :: i              ! node index to get tension at
+      TYPE(MD_ParameterType), INTENT(IN   )  :: p              ! Parameters
+      REAL(DbKi)                             :: NodeTen        ! returned calculation of tension at node   
+      
+      INTEGER(IntKi)                   :: J      
+      REAL(DbKi)                       :: Tmag_squared   
+   
+      if (i==0) then
+         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i) + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
+      else if (i==Line%N) then                          
+         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i) + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
+      else 
+         Tmag_squared = 0.0_DbKi 
+         DO J=1,3
+            Tmag_squared = Tmag_squared + 0.25*(Line%T(J,i) + Line%Td(J,i) + Line%T(J,i+1) + Line%Td(J,i+1))**2   ! take average of tension in adjacent segments 
+         END DO
+         NodeTen = sqrt(Tmag_squared) 
+      end if
+
+   END FUNCTION Line_GetNodeTen
+   !--------------------------------------------------------------
 
 
 END MODULE MoorDyn_IO

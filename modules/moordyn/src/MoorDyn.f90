@@ -29,8 +29,9 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a3', '20 Jan. 2020' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a8', '15 Feb. 2021' )
 
+   INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
    PUBLIC :: MD_Init
    PUBLIC :: MD_UpdateStates
@@ -113,7 +114,7 @@ CONTAINS
       CHARACTER(25)                 :: let3
       
       REAL(DbKi)                    :: tempArray(6)
-      REAL(ReKi)                    :: rRef(6)
+      REAL(ReKi)                    :: rRef(6)             ! used to pass positions to mesh (real type precision)
       REAL(DbKi)                    :: rRefDub(3)
       
       ! for reading output channels
@@ -136,6 +137,9 @@ CONTAINS
       CALL DispNVD( MD_ProgDesc )
       InitOut%Ver = MD_ProgDesc
 
+      CALL WrScr('   This is an alpha version of MoorDyn-F v2, with significant input file changes from v1.')  
+      CALL WrScr('   Copyright: (C) 2021 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
+
 
       !---------------------------------------------------------------------------------------------
       !                   Get all the inputs taken care of
@@ -151,6 +155,25 @@ CONTAINS
 
       p%RootName = TRIM(InitInp%RootName)//'.MD'  ! all files written from this module will have this root name
 
+      ! Check for farm-level inputs (indicating that this MoorDyn isntance is being run from FAST.Farm)
+      !intead of below, check first dimension of PtfmInit
+      !p%nTurbines = SIZE(InitInp%FarmCoupledKinematics)  ! the number of turbines in the array (0 indicates a regular OpenFAST simulation with 1 turbine)
+      !
+      !IF (p%nTurbines > 0) then
+      !   WrScr('   >>> MoorDyn is running in array mode <<< ')
+      !   
+      !   ! copy over the meshes to be this instance's array of mesh inputs (a duplicate)
+      !   ! >>> initialize array u%FarmCoupledKinematics                 
+      !   ! >>> copy each mesh from InitInp%FarmCoupledKinematics into it
+      !       ! CALL MeshCopy ( SrcMesh  = InitInp%FarmCoupledKinematics, DestMesh = u%FarmCoupledKinematics, CtrlCode = MESH_SIBLING, IOS=COMPONENT_OUTPUT, Force=.TRUE.,  Moment=.TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
+      !   
+      !   !   OR instead of copying the meshes, could just make empty meshes, then populate with exactly the elements needed at the farm level
+      !   !InitInp%FarmNCpldBodies      
+      !   !InitInp%FarmNCpldRods        
+      !   !InitInp%FarmNCpldCons        
+      !   
+      !END IF
+      
       !---------------------------------------------------------------------------------------------
       !            read input file and create cross-referenced mooring system objects
       !---------------------------------------------------------------------------------------------
@@ -176,10 +199,10 @@ CONTAINS
          END IF
 
 
-      !CALL WrScr( '  MD_Init: Opening MoorDyn input file:  '//FileName )
+      CALL WrScr( '   Reading MoorDyn input file: '//FileName )
 
 
-		
+
 		! ----------------- go through file contents a first time, counting each entry -----------------------
 		
       i = 0
@@ -216,7 +239,7 @@ CONTAINS
                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO	
 
-            else if ((INDEX(Line, "BODY LIST") > 0 ) .or. (INDEX(Line, "BODY PROPERTIES") > 0 )) then
+            else if ((INDEX(Line, "BODIES") > 0 ) .or. (INDEX(Line, "BODY LIST") > 0 ) .or. (INDEX(Line, "BODY PROPERTIES") > 0 )) then
 
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -229,7 +252,7 @@ CONTAINS
                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO		
 
-            else if ((INDEX(Line, "ROD LIST") > 0) .or. (INDEX(Line, "ROD PROPERTIES") > 0)) then ! if rod properties header
+            else if ((INDEX(Line, "RODS") > 0 ) .or. (INDEX(Line, "ROD LIST") > 0) .or. (INDEX(Line, "ROD PROPERTIES") > 0)) then ! if rod properties header
 
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -242,7 +265,7 @@ CONTAINS
                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO	
 
-            else if ( (INDEX(Line, "CONNECTION PROPERTIES") > 0) .or. (INDEX(Line, "NODE PROPERTIES") > 0) ) then ! if node properties header
+            else if ((INDEX(Line, "POINTS") > 0 ) .or. (INDEX(Line, "CONNECTION PROPERTIES") > 0) .or. (INDEX(Line, "NODE PROPERTIES") > 0) .or. (INDEX(Line, "POINT PROPERTIES") > 0) .or. (INDEX(Line, "POINT LIST") > 0) ) then ! if node properties header
 
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -255,7 +278,7 @@ CONTAINS
                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO
 
-            else if (INDEX(Line, "LINE PROPERTIES") > 0) then ! if line properties header
+            else if ((INDEX(Line, "LINES") > 0 ) .or. (INDEX(Line, "LINE PROPERTIES") > 0) .or. (INDEX(Line, "LINE LIST") > 0) ) then ! if line properties header
 
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -270,7 +293,7 @@ CONTAINS
 
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
 
-               print *, "   Reading failure conditions: ";
+               IF (wordy > 1) print *, "   Reading failure conditions: ";
                
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -315,12 +338,12 @@ CONTAINS
 		
       p%nConnectsExtra = p%nConnects + 2*p%nLines    ! set maximum number of connections, accounting for possible detachment of each line end and a connection for that
 		
-      print *, "Identified ", p%nLineTypes  , "LineTypes in input file."
-      print *, "Identified ", p%nRodTypes   , "RodTypes in input file."
-      print *, "Identified ", p%nBodies     , "Bodies in input file."
-      print *, "Identified ", p%nRods       , "Rods in input file."
-      print *, "Identified ", p%nConnects   , "Connections in input file."
-      print *, "Identified ", p%nLines      , "Lines in input file."
+      IF (wordy > 0) print *, "  Identified ", p%nLineTypes  , "LineTypes in input file."
+      IF (wordy > 0) print *, "  Identified ", p%nRodTypes   , "RodTypes in input file."
+      IF (wordy > 0) print *, "  Identified ", p%nBodies     , "Bodies in input file."
+      IF (wordy > 0) print *, "  Identified ", p%nRods       , "Rods in input file."
+      IF (wordy > 0) print *, "  Identified ", p%nConnects   , "Connections in input file."
+      IF (wordy > 0) print *, "  Identified ", p%nLines      , "Lines in input file."
 
 
 
@@ -390,7 +413,7 @@ CONTAINS
             !-------------------------------------------------------------------------------------------
             if ( ( INDEX(Line, "LINE DICTIONARY") > 0) .or. ( INDEX(Line, "LINE TYPES") > 0) ) then ! if line dictionary header
                
-               print *, "Reading line types"
+               IF (wordy > 0) print *, "Reading line types"
                
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -405,7 +428,7 @@ CONTAINS
                    ! parse out entries: Name  Diam MassDenInAir EA cIntDamp >>EI(new)<<  Can  Cat Cdn  Cdt 
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
                       m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
-                      m%LineTypeList(l)%Can, m%LineTypeList(l)%Cat, m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Cdt
+                      m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat
                    
                     IF ( ErrStat2 /= ErrID_None ) THEN
                       CALL SetErrStat( ErrID_Fatal, 'Failed to process line type inputs of entry '//trim(Num2LStr(l))//'. Check formatting and correct number of columns.', ErrStat, ErrMsg, RoutineName )
@@ -443,7 +466,7 @@ CONTAINS
             !-------------------------------------------------------------------------------------------
             else if ( (INDEX(Line, "ROD DICTIONARY") > 0) .or. ( INDEX(Line, "ROD TYPES") > 0) ) then ! if rod dictionary header
                
-               print *, "Reading rod types"
+               IF (wordy > 0) print *, "Reading rod types"
                
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -458,8 +481,10 @@ CONTAINS
                    ! parse out entries: Name  Diam MassDenInAir Can  Cat Cdn  Cdt 
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
-                         m%RodTypeList(l)%Can, m%RodTypeList(l)%Cat, m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Cdt, &
-                         m%RodTypeList(l)%CaEnd, m%RodTypeList(l)%CdEnd   
+                         m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd   
+                         
+                      m%RodTypeList(l)%Cdt = 0.0_DbKi ! not used
+                      m%RodTypeList(l)%Cat = 0.0_DbKi ! not used
                    END IF
 
                    ! specify IdNum of rod type for error checking
@@ -476,7 +501,7 @@ CONTAINS
 
 
             !-------------------------------------------------------------------------------------------
-            else if ((INDEX(Line, "BODY LIST") > 0 ) .or. (INDEX(Line, "BODY PROPERTIES") > 0 )) then
+            else if ((INDEX(Line, "BODIES") > 0 ) .or. (INDEX(Line, "BODY LIST") > 0 ) .or. (INDEX(Line, "BODY PROPERTIES") > 0 )) then
 
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -488,13 +513,13 @@ CONTAINS
                   !read into a line
                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
 
-                  ! parse out entries: Node Type X Y Z M V FX FY FZ CdA Ca 
+                  ! parse out entries: Name/ID X0 Y0 Z0 r0 p0 y0 Xcg Ycg Zcg M  V  IX IY IZ CdA-x,y,z Ca-x,y,z
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) tempString1, &
                         tempArray(1), tempArray(2), tempArray(3), tempArray(4), tempArray(5), tempArray(6), &
                         m%BodyList(l)%rCG(1), m%BodyList(l)%rCG(2), m%BodyList(l)%rCG(3), &
-                        m%BodyList(l)%bodyM, m%BodyList(l)%bodyV, m%BodyList(l)%bodyI(1), m%BodyList(l)%bodyI(2), m%BodyList(l)%bodyI(3), &
-                        m%BodyList(l)%bodyCdA(1), m%BodyList(l)%bodyCa(1)
+                        m%BodyList(l)%bodyM, m%BodyList(l)%bodyV, &
+                        m%BodyList(l)%bodyI(1), m%BodyList(l)%bodyCdA(1), m%BodyList(l)%bodyCa(1)
                   END IF
 
                   IF ( ErrStat2 /= 0 ) THEN
@@ -507,13 +532,13 @@ CONTAINS
                   
 
 
-                  !----------- process body type (not considering input fixed bodies for now, only the GroundBody) -----------------
+                  !----------- process body type -----------------
 							
                   call DecomposeString(tempString1, let1, num1, let2, num2, let3)
                   	
                   READ(num1, *) m%BodyList(l)%IdNum   ! convert to int, representing parent body index
                                           
-							if ((let2 == "COUPLED") .or. (let2 == "VESSEL")) then    ! if a coupled body
+							if ((let2 == "COUPLED") .or. (let2 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
                      
                      m%BodyList(l)%typeNum = -1
                      p%nCpldBodies=p%nCpldBodies+1  ! add this rod to coupled list                          
@@ -547,14 +572,11 @@ CONTAINS
                      RETURN
                   END IF
                   
-                  ! set initial velocity to zero
-                  m%BodyList(l)%v6 = 0.0_DbKi
                   
-                  !also set number of attached rods and points to zero initially
-                  m%BodyList(l)%nAttachedC = 0
-                  m%BodyList(l)%nAttachedR = 0
-
-                  ! if there was a body setup function, it would get called here, but I don't think it's needed.                  
+                  ! set up body
+                  CALL Body_Setup( m%BodyList(l), tempArray, p%rhoW, ErrStat2, ErrMsg2)
+                     CALL CheckError( ErrStat2, ErrMsg2 )
+                     IF (ErrStat >= AbortErrLev) RETURN
 
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL SetErrStat( ErrID_Fatal, 'Failed to read data for body '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
@@ -562,15 +584,15 @@ CONTAINS
                      RETURN
                   END IF
                   
-                  print *, "Set up body ", l, " of type ",  m%BodyList(l)%typeNum
+                  IF (wordy > 1) print *, "Set up body ", l, " of type ",  m%BodyList(l)%typeNum
 
                END DO
                
                
             !-------------------------------------------------------------------------------------------
-            else if ((INDEX(Line, "ROD LIST") > 0) .or. (INDEX(Line, "ROD PROPERTIES") > 0)) then ! if rod properties header
+            else if ((INDEX(Line, "RODS") > 0 ) .or. (INDEX(Line, "ROD LIST") > 0) .or. (INDEX(Line, "ROD PROPERTIES") > 0)) then ! if rod properties header
 
-               print *, "Reading rods"
+               IF (wordy > 0) print *, "Reading Rods"
                
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -646,14 +668,14 @@ CONTAINS
                          return
                   end if
                   
-                  else if ((let1 == "VESSEL") .or. (let1 == "VES")) then    ! if a rigidly coupled rod, add to list and add 
+                  else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a rigidly coupled rod, add to list and add 
                      m%RodList(l)%typeNum = -2            
 
                      p%nCpldRods=p%nCpldRods+1     ! add this rod to coupled list                 				 	
                      
                      m%CpldRodIs(p%nCpldRods) = l
                  
-                  else if ((let1 == "VESSELPINNED") .or. (let1 == "VESPIN")) then  ! if a pinned coupled rod, add to list and add 
+                  else if ((let1 == "VESSELPINNED") .or. (let1 == "VESPIN") .or. (let1 == "COUPLEDPINNED") .or. (let1 == "CPLDPIN")) then  ! if a pinned coupled rod, add to list and add 
                      m%RodList(l)%typeNum = -1
                      
                      p%nCpldRods=p%nCpldRods+1  ! add
@@ -736,7 +758,7 @@ CONTAINS
                      IF (ErrStat >= AbortErrLev) RETURN
                      
                   ! note: Rod was already added to its respective parent body if type > 0
-							
+                  
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL SetErrStat( ErrID_Fatal, 'Failed to read rod data for Rod '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
@@ -748,9 +770,9 @@ CONTAINS
 
 
             !-------------------------------------------------------------------------------------------
-            else if ( (INDEX(Line, "CONNECTION PROPERTIES") > 0) .or. (INDEX(Line, "NODE PROPERTIES") > 0) ) then ! if node properties header
+            else if ((INDEX(Line, "POINTS") > 0 ) .or. (INDEX(Line, "CONNECTION PROPERTIES") > 0) .or. (INDEX(Line, "NODE PROPERTIES") > 0) .or. (INDEX(Line, "POINT PROPERTIES") > 0) .or. (INDEX(Line, "POINT LIST") > 0) ) then ! if node properties header
                
-               print *, "Reading connections"
+               IF (wordy > 0) print *, "Reading Points"
                
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -766,8 +788,13 @@ CONTAINS
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%ConnectList(l)%IdNum, tempString1, tempArray(1), &
                         tempArray(2), tempArray(3), m%ConnectList(l)%conM, &
-                        m%ConnectList(l)%conV, m%ConnectList(l)%conFX, m%ConnectList(l)%conFY, &
-                        m%ConnectList(l)%conFZ, m%ConnectList(l)%conCdA, m%ConnectList(l)%conCa
+                        m%ConnectList(l)%conV, m%ConnectList(l)%conCdA, m%ConnectList(l)%conCa
+                        
+                     ! not used
+                     m%ConnectList(l)%conFX = 0.0_DbKi 
+                     m%ConnectList(l)%conFY = 0.0_DbKi
+                     m%ConnectList(l)%conFZ = 0.0_DbKi
+                        
                   END IF
                   
 
@@ -811,12 +838,12 @@ CONTAINS
                             return
                      end if
                   
-                  else if ((let1 == "VESSEL") .or. (let1 == "VES")) then    ! if a fairlead, add to list and add 
+                  else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a fairlead, add to list and add 
                      m%ConnectList(l)%typeNum = -1
                      p%nCpldCons=p%nCpldCons+1  ! add this rod to coupled list                          
                      m%CpldConIs(p%nCpldCons) = l
 
-                     ! this is temporary for backwards compatibility >>>>> will need to update for more versatile coupling >>>>
+                     ! this is temporary for backwards compatibility >>>>> will need to update for more versatile coupling >>>>   <<<<<<< this looks pretty good. Make sure it's done only once - either here or near end of init. Same for Rods and bodies.
                      CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
 
                      ! set initial node position, including adjustments due to initial platform rotations and translations  <<< could convert to array math
@@ -837,7 +864,12 @@ CONTAINS
                      
                      m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
                      
-                     
+                  else if ((let1 = 'TURBINE') .or. (let1 == "T")) then
+                     ! iTurbine = num1
+                     ! >>> nvm: this is where we could identify the element index in the corresponding mesh in u%FarmCoupledKinematics(iTurbine) for this coupled point
+                     !          nvm:   using info from InitInp%FarmNCpldBodies, InitInp%FarmNCpldRods, !InitInp%FarmNCpldCons  
+                     ! >>> nvm: Then store iTurbine and the element index IN THIS POINT OBJECT, for easy use with input and output meshes! <<<
+                     ! >>> Do all the initialization stuff as is done with normal coupled points. 
 
                   else 
                      CALL SetErrStat( ErrID_Severe,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
@@ -873,14 +905,14 @@ CONTAINS
                      RETURN
                   END IF
                   
-                  print *, "Set up connection ", l, " of type ",  m%ConnectList(l)%typeNum
+                  IF (wordy > 0) print *, "Set up Point ", l, " of type ",  m%ConnectList(l)%typeNum
 
                END DO   ! l = 1,p%nRods
 
             !-------------------------------------------------------------------------------------------
-            else if (INDEX(Line, "LINE PROPERTIES") > 0) then ! if line properties header
+            else if ((INDEX(Line, "LINES") > 0 ) .or. (INDEX(Line, "LINE PROPERTIES") > 0) .or. (INDEX(Line, "LINE LIST") > 0) ) then ! if line properties header
 
-               print *, "Reading lines"
+               IF (wordy > 0) print *, "Reading Lines"
                
                ! skip following two lines (label line and unit line)
                read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
@@ -1050,7 +1082,7 @@ CONTAINS
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
 
-               print *, "   Reading failure conditions: (not implemented yet) ";
+               IF (wordy > 0) print *, "   Reading failure conditions: (not implemented yet) ";
                
                ! TODO: add stuff <<<<<<<<
 
@@ -1069,7 +1101,7 @@ CONTAINS
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "OPTIONS") > 0) then ! if options header
 
-               print *, "Reading options"
+               IF (wordy > 0) print *, "Reading Options"
                
                ! (don't skip any lines)
                
@@ -1124,7 +1156,7 @@ CONTAINS
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "OUTPUT") > 0) then ! if output header
 
-               print *, "Reading outputs"
+               IF (wordy > 0) print *, "Reading Outputs"
                
                ! (don't skip any lines)
                         
@@ -1205,12 +1237,11 @@ CONTAINS
       !          Connect mooring system together and make necessary allocations
       !-------------------------------------------------------------------------------------------------
 
-      CALL WrNR( '   Created mooring system.  ' )
+      CALL WrNr('   Created mooring system: ' )
 
 !     p%NAnchs = 0   ! this is the number of "fixed" type Connections. <<<<<<<<<<<<<<
 
-
-!      CALL WrScr(trim(Num2LStr(p%nCpldCons))//' fairleads, '//trim(Num2LStr(p%NAnchs))//' anchors, '//trim(Num2LStr(p%nFreeCons))//' connects.')
+      CALL WrScr(trim(Num2LStr(p%nLines))//' lines, '//trim(Num2LStr(p%NConnects))//' points, '//trim(Num2LStr(p%nRods))//' rods, '//trim(Num2LStr(p%nBodies))//' bodies.')
 
 
 
@@ -1228,25 +1259,25 @@ CONTAINS
  !        END IF
  !     END DO
 
-   print *, "nLineTypes     = ",p%nLineTypes    
-   print *, "nRodTypes      = ",p%nRodTypes     
-   print *, "nConnects      = ",p%nConnects     
-   print *, "nConnectsExtra = ",p%nConnectsExtra
-   print *, "nBodies        = ",p%nBodies       
-   print *, "nRods          = ",p%nRods         
-   print *, "nLines         = ",p%nLines        
-   print *, "nFails         = ",p%nFails        
-   print *, "nFreeBodies    = ",p%nFreeBodies   
-   print *, "nFreeRods      = ",p%nFreeRods     
-   print *, "nFreeCons      = ",p%nFreeCons     
-   print *, "nCpldBodies    = ",p%nCpldBodies   
-   print *, "nCpldRods      = ",p%nCpldRods     
-   print *, "nCpldCons      = ",p%nCpldCons     
-   print *, "NConns         = ",p%NConns        
-   print *, "NAnchs         = ",p%NAnchs              
+   IF (wordy > 1) print *, "nLineTypes     = ",p%nLineTypes    
+   IF (wordy > 1) print *, "nRodTypes      = ",p%nRodTypes     
+   IF (wordy > 1) print *, "nConnects      = ",p%nConnects     
+   IF (wordy > 1) print *, "nConnectsExtra = ",p%nConnectsExtra
+   IF (wordy > 1) print *, "nBodies        = ",p%nBodies       
+   IF (wordy > 1) print *, "nRods          = ",p%nRods         
+   IF (wordy > 1) print *, "nLines         = ",p%nLines        
+   IF (wordy > 1) print *, "nFails         = ",p%nFails        
+   IF (wordy > 1) print *, "nFreeBodies    = ",p%nFreeBodies   
+   IF (wordy > 1) print *, "nFreeRods      = ",p%nFreeRods     
+   IF (wordy > 1) print *, "nFreeCons      = ",p%nFreeCons     
+   IF (wordy > 1) print *, "nCpldBodies    = ",p%nCpldBodies   
+   IF (wordy > 1) print *, "nCpldRods      = ",p%nCpldRods     
+   IF (wordy > 1) print *, "nCpldCons      = ",p%nCpldCons     
+   IF (wordy > 1) print *, "NConns         = ",p%NConns        
+   IF (wordy > 1) print *, "NAnchs         = ",p%NAnchs              
       
-   print *, "FreeConIs are ", m%FreeConIs
-   print *, "CpldConIs are ", m%CpldConIs
+   IF (wordy > 2) print *, "FreeConIs are ", m%FreeConIs
+   IF (wordy > 2) print *, "CpldConIs are ", m%CpldConIs
 
 
       !------------------------------------------------------------------------------------
@@ -1309,7 +1340,7 @@ CONTAINS
       ! the number of states is Nx
       m%Nx = Nx
       
-      print *, "allocating state vectors to size ", Nx
+      IF (wordy > 0) print *, "allocating state vectors to size ", Nx
 
       ! allocate state vector and temporary state vectors based on size just calculated
       ALLOCATE ( x%states(m%Nx), m%xTemp%states(m%Nx), m%xdTemp%states(m%Nx), STAT = ErrStat )
@@ -1361,7 +1392,7 @@ CONTAINS
       IF (ErrStat >= AbortErrLev) RETURN
             
       ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then connections
-      ! NOTE: InitInp%PtfmInit should be replaced by specific values for each coupled body/rod/connect at some point <<<<<
+      ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation -- below or where the objects are first created <<<<
       
       J = 0 ! this is the counter through the mesh points
       
@@ -1397,7 +1428,8 @@ CONTAINS
          CALL MeshPositionNode(u%CoupledKinematics, J, rRef, ErrStat2, ErrMsg2)  ! defaults to identity orientation matrix
          u%CoupledKinematics%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
          CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)
-         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), tempArray, m%zeros6, m%zeros6, 0.0_DbKi, m%LineList) 
+         
+         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), DBLE(rRef), m%zeros6, m%zeros6, 0.0_DbKi, m)
       END DO 
 
       DO l = 1,p%nCpldCons   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
@@ -1411,7 +1443,7 @@ CONTAINS
 
          ! lastly, do this to set the attached line endpoint positions:
          rRefDub = rRef(1:3)
-         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m%LineList)
+         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
       END DO 
 
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -1432,9 +1464,9 @@ CONTAINS
                       CtrlCode = MESH_SIBLING,             IOS      = COMPONENT_OUTPUT, &
                       Force=.TRUE.,  Moment=.TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
 
-      !CALL MeshCommit ( y%CoupledLoads, ErrStat, ErrMsg )
-      !   CALL CheckError( ErrStat2, ErrMsg2 )
-      !   IF (ErrStat >= AbortErrLev) RETURN
+      
+      ! >>>>>> ensure the output mesh includes all elements from u%(Farm)CoupledKinematics, OR make a seperate array of output meshes for each turbine <<<<<<<<<
+      
 
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
@@ -1459,6 +1491,9 @@ CONTAINS
       
       
       ! ----------------------------- Arrays for wave kinematics -----------------------------
+      
+      m%WaveTi = 1   ! set initial wave grid time interpolation index to 1 to start with
+      
   !   :::::::::::::: BELOW WILL BE USED EVENTUALLY WHEN WAVE INFO IS AN INPUT ::::::::::::::::::
   !   ! The rAll array contains all nodes or reference points in the system 
   !   ! (x,y,z global coordinates for each) in the order of bodies, rods, points, internal line nodes.      
@@ -1755,12 +1790,12 @@ CONTAINS
       
       ! Go through independent (including pinned) Rods and write the coordinates to the state vector
       DO l = 1,p%nFreeRods
-         CALL Rod_Initialize(m%RodList(m%FreeRodIs(l)), x%states(m%RodStateIs1(l):m%RodStateIsN(l)), m%LineList)
+         CALL Rod_Initialize(m%RodList(m%FreeRodIs(l)), x%states(m%RodStateIs1(l):m%RodStateIsN(l)), m)
       END DO
 
       ! Go through independent connections (Connects) and write the coordinates to the state vector and set positions of attached line ends
       DO l = 1, p%nFreeCons
-         CALL Connect_Initialize(m%ConnectList(m%FreeConIs(l)), x%states(m%ConStateIs1(l) : m%conStateIsN(l)), m%LineList)
+         CALL Connect_Initialize(m%ConnectList(m%FreeConIs(l)), x%states(m%ConStateIs1(l) : m%conStateIsN(l)), m)
       END DO
 
 
@@ -1779,10 +1814,10 @@ CONTAINS
          CALL Line_Initialize( m%LineList(l), m%LineTypeList(m%LineList(l)%PropsIdNum), p%rhoW ,  ErrStat2, ErrMsg2)
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
-            IF (ErrStat >= ErrId_Warn) CALL WrScr("   Catenary solver failed for one or more lines.  Using linear node spacing.")  ! make this statement more accurate
+            !IF (ErrStat >= ErrId_Warn) CALL WrScr("   Note: Catenary pre-solver was unsuccessful for one or more lines so started with linear node spacing instead.")  ! make this statement more accurate
 
-!         print *, "Line ", l, " with NumSegs =", N
-!         print *, "its states range from index ", m%LineStateIs1(l), " to ", m%LineStateIsN(l)
+         IF (wordy > 2) print *, "Line ", l, " with NumSegs =", N
+         IF (wordy > 2) print *, "its states range from index ", m%LineStateIs1(l), " to ", m%LineStateIsN(l)
 
          ! assign the resulting internal node positions to the integrator initial state vector! (velocities leave at 0)
          DO I = 1, N-1
@@ -1807,12 +1842,13 @@ CONTAINS
       ! --------------------------------------------------------------------
 
 
-      
-!      print *,"Done setup of the system (before any dynamic relaxation. State vector is as follows:"
-      
-!      DO I = 1, m%Nx
-!         print *, x%states(I)
-
+      IF (wordy > 2) THEN      
+         print *,"Done setup of the system (before any dynamic relaxation. State vector is as follows:"
+         
+         DO I = 1, m%Nx
+            print *, x%states(I)
+         END DO
+      END IF
 
 !      ! try writing output for troubleshooting purposes (TEMPORARY)
 !      CALL MDIO_WriteOutputs(-1.0_DbKi, p, m, y, ErrStat, ErrMsg)
@@ -1829,7 +1865,7 @@ CONTAINS
       ! only do this if TMaxIC > 0
       if (InitInp%TMaxIC > 0.0_DbKi) then
 
-         CALL WrScr("   Finalizing ICs using dynamic relaxation."//NewLine)  ! newline because next line writes over itself
+         CALL WrScr("   Finalizing initial conditions using dynamic relaxation."//NewLine)  ! newline because next line writes over itself
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
          DO I = 1, p%nLineTypes
@@ -1881,8 +1917,11 @@ CONTAINS
                END DO
                
                IF (ErrStat == ErrID_Fatal) THEN
-                  print *, "NaN detected at time ", t, " during IC gen. Here is the state vector: "
-                  print *, x%states
+                  print *, "NaN detected at time ", t, " during MoorDyn's dynamic relaxation process."
+                  IF (wordy > 1) THEN
+                     print *, "Here is the state vector: "
+                     print *, x%states
+                  END IF
                   EXIT
                END IF
 
@@ -1962,6 +2001,7 @@ CONTAINS
       xd%dummy    = 0
       z%dummy     = 0      
       
+      CALL WrScr('   MoorDyn initialization completed.')
       
       ! TODO: add feature for automatic water depth increase based on max anchor depth!
 
@@ -2121,8 +2161,11 @@ CONTAINS
          END DO
          
          IF (ErrStat == ErrID_Fatal) THEN
-            print *, "NaN detected at time ", t2, ". Here is the state vector: "
-            print *, x%states
+            print *, "NaN detected at time ", t2, " in MoorDyn."
+            IF (wordy > 1) THEN
+               print *, ". Here is the state vector: "
+               print *, x%states
+            END IF
             EXIT
          END IF
       
@@ -2149,8 +2192,11 @@ CONTAINS
       END DO
       
       IF (ErrStat == ErrID_Fatal) THEN
-         print *, "NaN detected at time ", t2, ". Here is the state vector: "
-         print *, x%states
+         print *, "NaN detected at time ", t2, " in MoorDyn."
+         IF (wordy > 1) THEN
+            print *, ". Here is the state vector: "
+            print *, x%states
+         END IF
       END IF
 
    CONTAINS
@@ -2284,14 +2330,14 @@ CONTAINS
             
       DO l = 1,p%nCpldRods
          J = J + 1
-         CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l)), F6net, m%LineList, p)
+         CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l)), F6net, m, p)
          y%CoupledLoads%Force( :,J) = F6net(1:3)
          y%CoupledLoads%Moment(:,J) = F6net(4:6)
       END DO
       
       DO l = 1,p%nCpldCons
          J = J + 1
-         CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l)), F6net(1:3), m%LineList, p)
+         CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l)), F6net(1:3), m, p)
          y%CoupledLoads%Force(:,J) = F6net(1:3)
       END DO
       
@@ -2441,7 +2487,8 @@ CONTAINS
       DO l = 1,p%nCpldBodies
          J = J + 1
          r6_in(1:3) = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
-         r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics%Orientation(:,:,J) ) )
+         !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics%Orientation(:,:,J) ) )
+         r6_in(4:6) = EulerExtract( u%CoupledKinematics%Orientation(:,:,J) )   ! <<< changing back
          v6_in(1:3) = u%CoupledKinematics%TranslationVel(:,J)
          v6_in(4:6) = u%CoupledKinematics%RotationVel(:,J)
          a6_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
@@ -2461,7 +2508,7 @@ CONTAINS
          a6_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
          a6_in(4:6) = u%CoupledKinematics%RotationAcc(:,J)
       
-         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), r6_in, v6_in, a6_in, t, m%LineList)
+         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), r6_in, v6_in, a6_in, t, m)
  		
       END DO
       
@@ -2472,12 +2519,21 @@ CONTAINS
          r_in  = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
          rd_in = u%CoupledKinematics%TranslationVel(:,J)
          a_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
-         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l)), r_in, rd_in, a_in, t, m%LineList)
+         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l)), r_in, rd_in, a_in, t, m)
          
          !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
          !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
          
       END DO
+      
+      
+      ! >>>>> in theory I would repeat the above but for each turbine in the case of array use here <<<<<
+      !  DO I = 1,p%nTurbines
+      !     J = 0?
+      !     other logic?
+      !     nvm: need to get kinematics from entries in u%FarmCoupledKinematics(I)%Position etc.
+      !     nvm: using knowledge of p%meshIndex or something
+      !   in theory might also support individual line tensioning control commands from turbines this way too, or maybe it's supercontroller level (not a short term problem though)
       
       
       ! apply line length changes from active tensioning if applicable
@@ -2489,16 +2545,16 @@ CONTAINS
                 ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment longer than the limit of twice its original length.'
                 print *, u%DeltaL(m%LineList(L)%CtrlChan), " is an increase of more than ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
-                print *, u%DeltaL
-                print*, m%LineList(L)%CtrlChan
+                IF (wordy > 0) print *, u%DeltaL
+                IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
             END IF
             IF ( u%DeltaL(m%LineList(L)%CtrlChan) < -0.5 * m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
              ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment shorter than the limit of half its original length.'
                 print *, u%DeltaL(m%LineList(L)%CtrlChan), " is a reduction of more than half of ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
-                print *, u%DeltaL
-                print*, m%LineList(L)%CtrlChan
+                IF (wordy > 0) print *, u%DeltaL
+                IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
             END IF                
 
@@ -2559,14 +2615,14 @@ CONTAINS
       
       ! give independent or pinned rods' latest state variables (kinematics will also be assigned to attached line ends)
       DO l = 1,p%nFreeRods
-         CALL Rod_SetState(m%RodList(m%FreeRodIs(l)), x%states(m%RodStateIs1(l):m%RodStateIsN(l)), t, m%LineList)
+         CALL Rod_SetState(m%RodList(m%FreeRodIs(l)), x%states(m%RodStateIs1(l):m%RodStateIsN(l)), t, m)
       END DO
       
       ! give Connects (independent connections) latest state variable values (kinematics will also be assigned to attached line ends)
       DO l = 1,p%nFreeCons
   !       Print *, "calling SetState for free connection, con#", m%FreeConIs(l), " with state range: ", m%ConStateIs1(l), "-", m%ConStateIsN(l)
          !K=K+1
-         CALL Connect_SetState(m%ConnectList(m%FreeConIs(l)), x%states(m%ConStateIs1(l):m%ConStateIsN(l)), t, m%LineList)
+         CALL Connect_SetState(m%ConnectList(m%FreeConIs(l)), x%states(m%ConStateIs1(l):m%ConStateIsN(l)), t, m)
       END DO
       
       ! give Lines latest state variable values for internal nodes
@@ -2578,18 +2634,18 @@ CONTAINS
          
       ! calculate line dynamics (and calculate line forces and masses attributed to connections)
       DO l = 1,p%nLines
-         CALL Line_GetStateDeriv(m%LineList(l), dxdt%states(m%LineStateIs1(l):m%LineStateIsN(l)), p)  !dt might also be passed for fancy friction models
+         CALL Line_GetStateDeriv(m%LineList(l), dxdt%states(m%LineStateIs1(l):m%LineStateIsN(l)), m, p)  !dt might also be passed for fancy friction models
       END DO
       
       ! calculate connect dynamics (including contributions from attached lines
       ! as well as hydrodynamic forces etc. on connect object itself if applicable)
       DO l = 1,p%nFreeCons
-         CALL Connect_GetStateDeriv(m%ConnectList(m%FreeConIs(l)), dxdt%states(m%ConStateIs1(l):m%ConStateIsN(l)), m%LineList, p)
+         CALL Connect_GetStateDeriv(m%ConnectList(m%FreeConIs(l)), dxdt%states(m%ConStateIs1(l):m%ConStateIsN(l)), m, p)
       END DO
       
       ! calculate dynamics of independent Rods 
       DO l = 1,p%nFreeRods
-         CALL Rod_GetStateDeriv(m%RodList(m%FreeRodIs(l)), dxdt%states(m%RodStateIs1(l):m%RodStateIsN(l)), m%LineList, p)
+         CALL Rod_GetStateDeriv(m%RodList(m%FreeRodIs(l)), dxdt%states(m%RodStateIs1(l):m%RodStateIsN(l)), m, p)
       END DO
       
       ! calculate dynamics of Bodies
@@ -2608,11 +2664,11 @@ CONTAINS
  !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
  !               in other words are the below good enough or do I need to call _getCoupledFOrce??
       
-         CALL Connect_DoRHS(m%ConnectList(m%CpldConIs(l)), m%LineList, p)
+         CALL Connect_DoRHS(m%ConnectList(m%CpldConIs(l)), m, p)
       END DO
       
       DO l = 1,p%nCpldRods
-         CALL Rod_DoRHS(m%RodList(m%CpldRodIs(l)), m%LineList, p)
+         CALL Rod_DoRHS(m%RodList(m%CpldRodIs(l)), m, p)
          ! NOTE: this won't compute net loads on Rod. Need Rod_GetNetForceAndMass for that. Change? <<<<
       END DO
       
@@ -2906,6 +2962,7 @@ CONTAINS
       INTEGER(4)                         :: J             ! Generic index
       INTEGER(4)                         :: K             ! Generic index
       INTEGER(IntKi)                     :: N
+      REAL(DbKi)                         :: temp
 
       N = Line%N  ! number of segments in this line (for code readability)
 
@@ -2929,14 +2986,14 @@ CONTAINS
          ! - we assume desired damping coefficient is zeta = -LineProp%BA
          ! - highest axial vibration mode of a segment is wn = sqrt(k/m) = 2N/UnstrLen*sqrt(EA/w)
          Line%BA = -LineProp%BA * Line%UnstrLen / Line%N * SQRT(LineProp%EA * LineProp%w)
-      !  print *, 'Based on zeta, BA set to ', Line%BA
+         IF (wordy > 1) print *, 'Based on zeta, BA set to ', Line%BA
          
-      !  print *, 'Negative BA input detected, treating as -zeta.  For zeta = ', -LineProp%BA, ', setting BA to ', Line%BA
+         IF (wordy > 1) print *, 'Negative BA input detected, treating as -zeta.  For zeta = ', -LineProp%BA, ', setting BA to ', Line%BA
          
       ELSE
          Line%BA = LineProp%BA
-      !  temp = Line%N * Line%BA / Line%UnstrLen * SQRT(1.0/(LineProp%EA * LineProp%w))
-      !  print *, 'BA set as input to ', Line%BA, '. Corresponding zeta is ', temp
+         IF (wordy > 1) temp = Line%N * Line%BA / Line%UnstrLen * SQRT(1.0/(LineProp%EA * LineProp%w))
+         IF (wordy > 1) print *, 'BA set as input to ', Line%BA, '. Corresponding zeta is ', temp
       END IF
       
       !temp = 2*Line%N / Line%UnstrLen * sqrt( LineProp%EA / LineProp%w) / TwoPi
@@ -3772,12 +3829,12 @@ CONTAINS
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Line_GetStateDeriv(Line, Xd, p)  !, FairFtot, FairMtot, AnchFtot, AnchMtot)
+   SUBROUTINE Line_GetStateDeriv(Line, Xd, m, p)  !, FairFtot, FairMtot, AnchFtot, AnchMtot)
 
-      TYPE(MD_Line), INTENT(INOUT)     :: Line          ! the current Line object
-      Real(DbKi),    INTENT(INOUT)     :: Xd(:)         ! state derivative vector section for this line
-      TYPE(MD_ParameterType), INTENT(IN )   :: p       ! Parameters
-      
+      TYPE(MD_Line),          INTENT(INOUT) :: Line    ! the current Line object
+      Real(DbKi),             INTENT(INOUT) :: Xd(:)   ! state derivative vector section for this line
+      TYPE(MD_MiscVarType),   INTENT(INOUT) :: m       ! passing along all mooring objects
+      TYPE(MD_ParameterType), INTENT(IN   ) :: p       ! Parameters
       
    !   Real(DbKi), INTENT( IN )      :: X(:)           ! state vector, provided
    !   Real(DbKi), INTENT( INOUT )   :: Xd(:)          ! derivative of state vector, returned ! cahnged to INOUT
@@ -3854,7 +3911,7 @@ CONTAINS
 
       IF (p%WaterKin > 0)  THEN ! wave kinematics interpolated from global grid in Waves object
          DO i=0,N
-            CALL getWaveKin(p, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i))
+            CALL getWaveKin(p, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, m%WaveTi, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i))
          END DO
       END IF
 
@@ -4011,35 +4068,36 @@ CONTAINS
       ! check for NaNs
       DO J = 1, 6*(N-1)
          IF (Is_NaN(REAL(Xd(J),DbKi))) THEN
-            print *, "NaN detected at time ", Line%time, " in Line ", Line%IdNum, " state derivatives:"
-            print *, Xd
-            
-            
-            
-            print *, "m_i  p%rhoW   v_i Line%Can  Line%Cat"
-            print *, m_i 
-            print *, p%rhoW
-            print *, v_i
-            print *, Line%Can
-            print *, Line%Cat
-            
-            print *, "Line%q"
-            print *, Line%q
-            
-            print *, "Line%r"
-            print *, Line%r
-            
-            
-            print *, "Here is the mass matrix set"
-            print *, Line%M
-            
-            print *, "Here is the inverted mass matrix set"
-            print *, Line%S
-            
-            print *, "Here is the net force set"
-            print *, Line%Fnet
-            
-            
+            print *, "NaN detected at time ", Line%time, " in Line ", Line%IdNum, " in MoorDyn."
+            IF (wordy > 1) THEN
+               print *, "state derivatives:"
+               print *, Xd
+               
+               
+               
+               print *, "m_i  p%rhoW   v_i Line%Can  Line%Cat"
+               print *, m_i 
+               print *, p%rhoW
+               print *, v_i
+               print *, Line%Can
+               print *, Line%Cat
+               
+               print *, "Line%q"
+               print *, Line%q
+               
+               print *, "Line%r"
+               print *, Line%r
+               
+               
+               print *, "Here is the mass matrix set"
+               print *, Line%M
+               
+               print *, "Here is the inverted mass matrix set"
+               print *, Line%S
+               
+               print *, "Here is the net force set"
+               print *, Line%Fnet
+            END IF            
             
             EXIT
          END IF
@@ -4181,6 +4239,7 @@ CONTAINS
    !--------------------------------------------------------------
 
 
+
 !--------------------------------------------------------------
 !            Connection-Specific Subroutines
 !--------------------------------------------------------------
@@ -4190,11 +4249,11 @@ CONTAINS
 
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_Initialize(Connect, states, LineList)
+   SUBROUTINE Connect_Initialize(Connect, states, m)
 
       Type(MD_Connect), INTENT(INOUT)  :: Connect        ! the Connection object
       Real(DbKi),       INTENT(INOUT)  :: states(6)      ! state vector section for this Connection
-      Type(MD_Line),    INTENT(INOUT)  :: LineList(:)    ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
 
       INTEGER(IntKi)                   :: l
 
@@ -4203,8 +4262,8 @@ CONTAINS
       	
          ! pass kinematics to any attached lines so they have initial positions at this initialization stage
          DO l=1,Connect%nAttached
-            print *, "Connect ",  Connect%IdNum, " setting end kinematics of line ", Connect%attached(l), " to ", Connect%r
-            CALL Line_SetEndKinematics(LineList(Connect%attached(l)), Connect%r, Connect%rd, 0.0_DbKi, Connect%Top(l))
+            IF (wordy > 1) print *, "Connect ",  Connect%IdNum, " setting end kinematics of line ", Connect%attached(l), " to ", Connect%r
+            CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, 0.0_DbKi, Connect%Top(l))
          END DO
 
 
@@ -4213,10 +4272,10 @@ CONTAINS
          states(1:3) = Connect%rd
          
          
-         print *, "Initialized Connection ", Connect%IdNum
+         IF (wordy > 0) print *, "Initialized Connection ", Connect%IdNum
       
       else 
-         print *,"   Error: wrong connection type given to Connect_Initialize for number ", Connect%idNum
+         print *,"   Error: wrong Point type given to Connect_Initialize for number ", Connect%idNum
       end if
       
    END SUBROUTINE Connect_Initialize
@@ -4224,14 +4283,15 @@ CONTAINS
 
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_SetKinematics(Connect, r_in, rd_in, a_in, t, LineList)
+   SUBROUTINE Connect_SetKinematics(Connect, r_in, rd_in, a_in, t, m)
 
       Type(MD_Connect), INTENT(INOUT)  :: Connect        ! the Connection object
       Real(DbKi),       INTENT(IN   )  :: r_in( 3)       ! position
       Real(DbKi),       INTENT(IN   )  :: rd_in(3)       ! velocity
       Real(DbKi),       INTENT(IN   )  :: a_in(3)        ! acceleration (only used for coupled connects)
       Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
-      Type(MD_Line),    INTENT(INOUT)  :: LineList(:)    ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
+      
 
       INTEGER(IntKi)                   :: l
 
@@ -4248,7 +4308,7 @@ CONTAINS
                  
          ! pass latest kinematics to any attached lines
          DO l=1,Connect%nAttached
-            CALL Line_SetEndKinematics(LineList(Connect%attached(l)), Connect%r, Connect%rd, t, Connect%Top(l))
+            CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, t, Connect%Top(l))
          END DO
       
      ! else
@@ -4262,12 +4322,12 @@ CONTAINS
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_SetState(Connect, X, t, LineList)
+   SUBROUTINE Connect_SetState(Connect, X, t, m)
 
       Type(MD_Connect),      INTENT(INOUT)  :: Connect        ! the Connection object
       Real(DbKi),            INTENT(IN   )  :: X(:)           ! state vector section for this line
       Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:)    ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
 
       INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
       INTEGER(IntKi)                        :: J              ! index
@@ -4284,18 +4344,19 @@ CONTAINS
            
      ! pass latest kinematics to any attached lines
       DO l=1,Connect%nAttached
-         CALL Line_SetEndKinematics(LineList(Connect%attached(l)), Connect%r, Connect%rd, t, Connect%Top(l))
+         CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, t, Connect%Top(l))
       END DO
       
    END SUBROUTINE Connect_SetState
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_GetStateDeriv(Connect, Xd, LineList, p)
+   SUBROUTINE Connect_GetStateDeriv(Connect, Xd, m, p)
 
       Type(MD_Connect),      INTENT(INOUT)  :: Connect          ! the Connection object
       Real(DbKi),            INTENT(INOUT)  :: Xd(:)            ! state derivative vector section for this line
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:)      ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
+      
       TYPE(MD_ParameterType),INTENT(IN   )  :: p                ! Parameters
       
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
@@ -4308,7 +4369,7 @@ CONTAINS
       Real(DbKi)                            :: S(3,3)           ! inverse mass matrix
 
 
-      CALL Connect_DoRHS(Connect, LineList, p)
+      CALL Connect_DoRHS(Connect, m, p)
                   
 !      // solve for accelerations in [M]{a}={f} using LU decomposition
 !      double M_tot[9];                     // serialize total mass matrix for easy processing
@@ -4336,8 +4397,9 @@ CONTAINS
       ! check for NaNs
       DO J = 1, 6
          IF (Is_NaN(REAL(Xd(J),DbKi))) THEN
-            print *, "NaN detected at time ", Connect%time, " in Connection ",Connect%IdNum, " state derivatives:"
-            print *, Xd
+            print *, "NaN detected at time ", Connect%time, " in Point ",Connect%IdNum, " in MoorDyn."
+            IF (wordy > 1) print *, "state derivatives:"
+            IF (wordy > 1) print *, Xd
             EXIT
          END IF
       END DO
@@ -4346,10 +4408,10 @@ CONTAINS
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Connect_DoRHS(Connect, LineList, p)
+   SUBROUTINE Connect_DoRHS(Connect, m, p)
 
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect        ! the Connection object
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:)    ! array of all the Line objects
+      Type(MD_Connect),      INTENT(INOUT)  :: Connect ! the Connection object      
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m       ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p       ! Parameters
       
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
@@ -4390,7 +4452,7 @@ CONTAINS
       !   
       !   print *, "  attached line ID", m%LineList(Connect%attached(l))%IdNum
          
-         CALL Line_GetEndStuff(LineList(Connect%attached(l)), Fnet_i, Moment_dummy, M_i, Connect%Top(l))
+         CALL Line_GetEndStuff(m%LineList(Connect%attached(l)), Fnet_i, Moment_dummy, M_i, Connect%Top(l))
          
          ! sum quantitites
          Connect%Fnet = Connect%Fnet + Fnet_i
@@ -4432,25 +4494,25 @@ CONTAINS
 
    ! calculate the force including inertial loads on connect that is coupled
    !--------------------------------------------------------------
-   SUBROUTINE Connect_GetCoupledForce(Connect,  Fnet_out, LineList, p)
+   SUBROUTINE Connect_GetCoupledForce(Connect,  Fnet_out, m, p)
    
       Type(MD_Connect),      INTENT(INOUT)  :: Connect     ! the Connect object
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(3) ! force and moment vector about rRef
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:) ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
 
       Real(DbKi)                            :: F_iner(3)   ! inertial force
 
       IF (Connect%typeNum == -1) then
          ! calculate forces and masses of connect
-         CALL Connect_DoRHS(Connect, LineList, p)
+         CALL Connect_DoRHS(Connect, m, p)
 	
          ! add inertial loads as appropriate
          F_iner = -MATMUL(Connect%M, Connect%a)    ! inertial loads
          Fnet_out = Connect%Fnet + F_iner          ! add inertial loads
 
       ELSE
-         print *, "Connect_GetCoupledForce called for wrong (uncoupled) connect type!"
+         print *, "Connect_GetCoupledForce called for wrong (uncoupled) Point type in MoorDyn!"
       END IF
       
    END SUBROUTINE Connect_GetCoupledForce
@@ -4458,19 +4520,19 @@ CONTAINS
 
    ! calculate the force and mass contributions of the connect on the parent body (only for type 3 connects?)
    !--------------------------------------------------------------
-   SUBROUTINE Connect_GetNetForceAndMass(Connect, rRef, Fnet_out, M_out, LineList, p)
+   SUBROUTINE Connect_GetNetForceAndMass(Connect, rRef, Fnet_out, M_out, m, p)
    
       Type(MD_Connect),      INTENT(INOUT)  :: Connect     ! the Connect object
       Real(DbKi),            INTENT(IN   )  :: rRef(3)     ! global coordinates of reference point (i.e. the parent body)
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector about rRef
       Real(DbKi),            INTENT(  OUT)  :: M_out(6,6)  ! mass and inertia matrix about rRef
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:) ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
 
       Real(DbKi)                            :: rRel(  3)   ! position of connection relative to the body reference point (global orientation frame)
 
 
-      CALL Connect_DoRHS(Connect, LineList, p)
+      CALL Connect_DoRHS(Connect, m, p)
 	
       rRel = Connect%r - rRef    ! vector from body reference point to node
 			
@@ -4493,14 +4555,14 @@ CONTAINS
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT( IN )     :: TopOfLine
 
-      Print*, "L", lineID, "->C", Connect%IdNum
+      IF (wordy > 0) Print*, "L", lineID, "->C", Connect%IdNum
       
       IF (Connect%nAttached <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
          Connect%nAttached = Connect%nAttached + 1  ! add the line to the number connected
          Connect%Attached(Connect%nAttached) = lineID
          Connect%Top(Connect%nAttached) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
       ELSE
-         Print*, "too many lines connected!"
+         Print*, "Too many lines connected to Point ", Connect%IdNum, " in MoorDyn!"
       END IF
 
    END SUBROUTINE Connect_AddLine
@@ -4510,7 +4572,7 @@ CONTAINS
    !--------------------------------------------------------------
    SUBROUTINE Connect_RemoveLine(Connect, lineID, TopOfLine, rEnd, rdEnd)
 
-      Type(MD_Connect), INTENT (INOUT)  :: Connect        ! the Connection object
+      Type(MD_Connect), INTENT (INOUT)   :: Connect        ! the Connection object
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT(  OUT)    :: TopOfLine
       REAL(DbKi),       INTENT(INOUT)    :: rEnd(3)
@@ -4567,7 +4629,6 @@ CONTAINS
 
    !-----------------------------------------------------------------------
    SUBROUTINE Rod_Setup(Rod, RodProp, endCoords, rhoW, ErrStat, ErrMsg)
-      ! calculate initial profile of the line using quasi-static model
 
       TYPE(MD_Rod),       INTENT(INOUT)  :: Rod          ! the single rod object of interest
       TYPE(MD_RodProp),   INTENT(INOUT)  :: RodProp      ! the single rod property set for the line of interest
@@ -4597,15 +4658,15 @@ CONTAINS
 
       ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
       ALLOCATE ( Rod%r(3, 0:N), Rod%rd(3, 0:N), STAT = ErrStat )   ! <<<<<< add error checks here
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 1!!!!!!!!!!!!!" 
+      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 1 in MoorDyn" 
      
       ! allocate segment scalar quantities
       ALLOCATE ( Rod%l(N), Rod%V(N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 2!!!!!!!!!!!!!" 
+      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 2 in MoorDyn"
 
       ! allocate water related vectors
       ALLOCATE ( Rod%U(3, 0:N), Rod%Ud(3, 0:N), Rod%zeta(0:N), Rod%PDyn(0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 3!!!!!!!!!!!!!" 
+      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 3 in MoorDyn"
       ! set to zero initially (important of wave kinematics are not being used)
       Rod%U    = 0.0_DbKi
       Rod%Ud   = 0.0_DbKi
@@ -4615,11 +4676,11 @@ CONTAINS
       ! allocate node force vectors
       ALLOCATE ( Rod%W(3, 0:N), Rod%Bo(3, 0:N), Rod%Dp(3, 0:N), Rod%Dq(3, 0:N), Rod%Ap(3, 0:N), &
          Rod%Aq(3, 0:N), Rod%Pd(3, 0:N), Rod%B(3, 0:N), Rod%Fnet(3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 4!!!!!!!!!!!!!" 
+      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 4 in MoorDyn"
       
       ! allocate mass and inverse mass matrices for each node (including ends)
       ALLOCATE ( Rod%M(3, 3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 5!!!!!!!!!!!!!" 
+      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 5 in MoorDyn"
 
 
 
@@ -4669,7 +4730,7 @@ CONTAINS
       
       ! >>> why are the above assignments making l V W and B appear as "undefined pointer/array"s??? <<<
       
-      print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
+      IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
 
       ! need to add cleanup sub <<<
 
@@ -4684,17 +4745,18 @@ CONTAINS
    ! Notes: r6 and v6 must already be set.  
    !        ground- or body-pinned rods have already had setKinematics called to set first 3 elements of r6, v6.
    !--------------------------------------------------------------
-   SUBROUTINE Rod_Initialize(Rod, states, LineList)
+   SUBROUTINE Rod_Initialize(Rod, states, m)
 
       TYPE(MD_Rod),          INTENT(INOUT)  :: Rod          ! the rod object 
       Real(DbKi),            INTENT(INOUT)  :: states(:)    ! state vector section for this line
-      TYPE(MD_Line),         INTENT(INOUT)  :: LineList(:)  ! passing along all mooring objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
+      
 
       INTEGER(IntKi)                        :: l           ! index of segments or nodes along line
       REAL(DbKi)                            :: rRef(3)     ! reference position of mesh node
       REAL(DbKi)                            :: OrMat(3,3)  ! DCM for body orientation based on r6_in
    
-      print *, "initializing Rod ", Rod%idNum
+      IF (wordy > 0) print *, "initializing Rod ", Rod%idNum
 
       ! the r6 and v6 vectors should have already been set
       ! r and rd of ends have already been set by setup function or by parent object   <<<<< right? <<<<<
@@ -4703,7 +4765,7 @@ CONTAINS
       ! Pass kinematics to any attached lines (this is just like what a Connection does, except for both ends)
       ! so that they have the correct initial positions at this initialization stage.
       
-      if (Rod%typeNum >- 2)  CALL Rod_SetDependentKin(Rod, 0.0_DbKi, LineList)  ! don't call this for type -2 coupled Rods as it's already been called
+      if (Rod%typeNum >- 2)  CALL Rod_SetDependentKin(Rod, 0.0_DbKi, m)  ! don't call this for type -2 coupled Rods as it's already been called
 
 
       ! assign the resulting kinematics to its part of the state vector (only matters if it's an independent Rod)
@@ -4732,14 +4794,14 @@ CONTAINS
 
    ! set kinematics for Rods ONLY if they are attached to a body (including a coupled body) or coupled (otherwise shouldn't be called)
    !--------------------------------------------------------------
-   SUBROUTINE Rod_SetKinematics(Rod, r6_in, v6_in, a6_in, t, LineList)
+   SUBROUTINE Rod_SetKinematics(Rod, r6_in, v6_in, a6_in, t, m)
 
       Type(MD_Rod),     INTENT(INOUT)  :: Rod            ! the Rod object
       Real(DbKi),       INTENT(IN   )  :: r6_in(6)       ! 6-DOF position
       Real(DbKi),       INTENT(IN   )  :: v6_in(6)       ! 6-DOF velocity
       Real(DbKi),       INTENT(IN   )  :: a6_in(6)       ! 6-DOF acceleration (only used for coupled rods)
       Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
-      Type(MD_Line),    INTENT(INOUT)  :: LineList(:)    ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects
 
       INTEGER(IntKi)                   :: l
 
@@ -4754,7 +4816,7 @@ CONTAINS
          call ScaleVector(Rod%r6(4:6), 1.0_DbKi, Rod%r6(4:6)); ! enforce direction vector to be a unit vector
          
          ! since this rod has no states and all DOFs have been set, pass its kinematics to dependent Lines
-         CALL Rod_SetDependentKin(Rod, t, LineList)
+         CALL Rod_SetDependentKin(Rod, t, m)
       
       else if (abs(Rod%typeNum) == 1) then ! rod end A pinned to a body, or ground, or coupling point
       
@@ -4768,27 +4830,28 @@ CONTAINS
          ! handled, along with passing kinematics to dependent lines, by separate call to setState
       
       else
-         print *, "Error: Rod_SetKinematics called for a free Rod."  ! <<<
+         print *, "Error: Rod_SetKinematics called for a free Rod in MoorDyn."  ! <<<
       end if
 	
    
       ! update Rod direction unit vector (simply equal to last three entries of r6, presumably these were set elsewhere for pinned Rods)
 		 Rod%q = Rod%r6(4:6)
       
+         
 	   
    END SUBROUTINE Rod_SetKinematics
    !--------------------------------------------------------------
 
    ! pass the latest states to the rod if it has any DOFs/states (then update rod end kinematics including attached lines)
    !--------------------------------------------------------------
-   SUBROUTINE Rod_SetState(Rod, X, t, LineList)
+   SUBROUTINE Rod_SetState(Rod, X, t, m)
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod        ! the Rod object
-      Real(DbKi),            INTENT(IN   )  :: X(:)           ! state vector section for this line
-      Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:)    ! array of all the Line objects
+      Real(DbKi),            INTENT(IN   )  :: X(:)       ! state vector section for this line
+      Real(DbKi),            INTENT(IN   )  :: t          ! instantaneous time
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
 
-      INTEGER(IntKi)                        :: J              ! index
+      INTEGER(IntKi)                        :: J          ! index
    
 
       ! for a free Rod, there are 12 states:
@@ -4818,7 +4881,7 @@ CONTAINS
          Rod%v6(4:6) = X(4:6)                         ! (rotational velocities about unrotated axes) 
          
          
-         CALL Rod_SetDependentKin(Rod, t, LineList)
+         CALL Rod_SetDependentKin(Rod, t, m)
       
       else if (abs(Rod%typeNum) == 1) then                       ! pinned rod type (coupled or attached to something)t previously via setPinKin)
       
@@ -4829,10 +4892,10 @@ CONTAINS
          Rod%v6(4:6) = X(1:3)                    ! (rotational velocities about unrotated axes) 
          
          
-         CALL Rod_SetDependentKin(Rod, t, LineList)
+         CALL Rod_SetDependentKin(Rod, t, m)
       
       else
-         print *, "Error: Rod::setState called for a non-free rod type"   ! <<<
+         print *, "Error: Rod::setState called for a non-free rod type in MoorDyn"   ! <<<
       end if
 
       ! update Rod direction unit vector (simply equal to last three entries of r6)
@@ -4845,11 +4908,11 @@ CONTAINS
    ! Set the Rod end kinematics then set the kinematics of dependent objects (any attached lines).
    ! This also determines the orientation of zero-length rods.
    !--------------------------------------------------------------
-   SUBROUTINE Rod_SetDependentKin(Rod, t, LineList)
+   SUBROUTINE Rod_SetDependentKin(Rod, t, m)
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod            ! the Rod object
       Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:)    ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
 
       INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
       INTEGER(IntKi)                        :: J              ! index
@@ -4874,15 +4937,15 @@ CONTAINS
       !print *, Rod%r(:,0)
       
       if (Rod%N > 0) then  ! set end B nodes only if the rod isn't zero length
-         call transformKinematicsAtoB(Rod%r6(1:3), Rod%r6(4:6), Rod%UnstrLen, Rod%v6, Rod%r(:,N), Rod%rd(:,N))   ! end B    
+         CALL transformKinematicsAtoB(Rod%r6(1:3), Rod%r6(4:6), Rod%UnstrLen, Rod%v6, Rod%r(:,N), Rod%rd(:,N))   ! end B    
       end if
 
       ! pass end node kinematics to any attached lines (this is just like what a Connection does, except for both ends)
       DO l=1,Rod%nAttachedA
-         CALL Line_SetEndKinematics(LineList(Rod%attachedA(l)), Rod%r(:,0), Rod%rd(:,0), t, Rod%TopA(l))
+         CALL Line_SetEndKinematics(m%LineList(Rod%attachedA(l)), Rod%r(:,0), Rod%rd(:,0), t, Rod%TopA(l))
       END DO
       DO l=1,Rod%nAttachedB
-         CALL Line_SetEndKinematics(LineList(Rod%attachedB(l)), Rod%r(:,N), Rod%rd(:,N), t, Rod%TopB(l))
+         CALL Line_SetEndKinematics(m%LineList(Rod%attachedB(l)), Rod%r(:,N), Rod%rd(:,N), t, Rod%TopB(l))
       END DO
 
 
@@ -4891,7 +4954,7 @@ CONTAINS
       
          DO l=1,Rod%nAttachedA
          
-            CALL Line_GetEndSegmentInfo(LineList(Rod%attachedA(l)), qEnd, EIend, dlEnd, Rod%TopA(l))
+            CALL Line_GetEndSegmentInfo(m%LineList(Rod%attachedA(l)), qEnd, EIend, dlEnd, Rod%TopA(l))
             
             qMomentSum = qMomentSum + qEnd*EIend/dlEnd  ! add each component to the summation vector
             
@@ -4899,7 +4962,7 @@ CONTAINS
 
          DO l=1,Rod%nAttachedB
          
-            CALL Line_GetEndSegmentInfo(LineList(Rod%attachedB(l)), qEnd, EIend, dlEnd, Rod%TopB(l))
+            CALL Line_GetEndSegmentInfo(m%LineList(Rod%attachedB(l)), qEnd, EIend, dlEnd, Rod%TopB(l))
             
             qMomentSum = qMomentSum + qEnd*EIend/dlEnd  ! add each component to the summation vector
             
@@ -4911,21 +4974,21 @@ CONTAINS
 
       ! pass Rod orientation to any attached lines (this is just like what a Connection does, except for both ends)
       DO l=1,Rod%nAttachedA
-         CALL Line_SetEndOrientation(LineList(Rod%attachedA(l)), Rod%q, Rod%TopA(l), 0)
+         CALL Line_SetEndOrientation(m%LineList(Rod%attachedA(l)), Rod%q, Rod%TopA(l), 0)
       END DO
       DO l=1,Rod%nAttachedB
-         CALL Line_SetEndOrientation(LineList(Rod%attachedB(l)), Rod%q, Rod%TopB(l), 1)
+         CALL Line_SetEndOrientation(m%LineList(Rod%attachedB(l)), Rod%q, Rod%TopB(l), 1)
       END DO
       
    END SUBROUTINE Rod_SetDependentKin
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Rod_GetStateDeriv(Rod, Xd, LineList, p)
+   SUBROUTINE Rod_GetStateDeriv(Rod, Xd, m, p)
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod              ! the Rod object
       Real(DbKi),            INTENT(INOUT)  :: Xd(:)            ! state derivative vector section for this line
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:)      ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
       TYPE(MD_ParameterType),INTENT(IN   )  :: p                ! Parameters
       
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
@@ -4943,7 +5006,7 @@ CONTAINS
       Real(DbKi)                            :: LU_temp(6,6)     ! temporary matrix for LU decomposition
       
 
-      CALL Rod_GetNetForceAndMass(Rod, Rod%r(:,0), Fnet, M_out, LineList, p)
+      CALL Rod_GetNetForceAndMass(Rod, Rod%r(:,0), Fnet, M_out, m, p)
                   
                   
 
@@ -4996,17 +5059,20 @@ CONTAINS
       ! check for NaNs (should check all state derivatives, not just first 6)
       DO J = 1, 6
          IF (Is_NaN(REAL(Xd(J),DbKi))) THEN
-            print *, "NaN detected at time ", Rod%time, " in Rod ",Rod%IdNum, " state derivatives:"
-            print *, Xd
-            
-            print *, "r0"
-            print *, Rod%r(:,0)
-            print *, "F"
-            print *, Fnet
-            print *, "M"
-            print *, M_out
-            print *, "acc"
-            print *, acc            
+            print *, "NaN detected at time ", Rod%time, " in Rod ",Rod%IdNum
+            IF (wordy > 1) THEN
+               print *, " state derivatives:"
+               print *, Xd
+               
+               print *, "r0"
+               print *, Rod%r(:,0)
+               print *, "F"
+               print *, Fnet
+               print *, "M"
+               print *, M_out
+               print *, "acc"
+               print *, acc            
+            END IF
             
             EXIT
          END IF
@@ -5018,17 +5084,17 @@ CONTAINS
 
    ! calculate the aggregate 3/6DOF rigid-body loads of a coupled rod including inertial loads
    !--------------------------------------------------------------
-   SUBROUTINE Rod_GetCoupledForce(Rod, Fnet_out, LineList, p)
+   SUBROUTINE Rod_GetCoupledForce(Rod, Fnet_out, m, p)
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod         ! the Rod object
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:) ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
       
       Real(DbKi)                            :: F6_iner(6)   ! inertial reaction force
       
       ! do calculations of forces and masses on each rod node
-      CALL Rod_DoRHS(Rod, LineList, p)
+      CALL Rod_DoRHS(Rod, m, p)
 
       ! add inertial loads as appropriate (written out in a redundant way just for clarity, and to support load separation in future)
       ! fixed coupled rod
@@ -5054,19 +5120,19 @@ CONTAINS
 
    ! calculate the aggregate 6DOF rigid-body force and mass data of the rod 
    !--------------------------------------------------------------
-   SUBROUTINE Rod_GetNetForceAndMass(Rod, rRef, Fnet_out, M_out, LineList, p)
+   SUBROUTINE Rod_GetNetForceAndMass(Rod, rRef, Fnet_out, M_out, m, p)
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod         ! the Rod object
       Real(DbKi),            INTENT(IN   )  :: rRef(3)     ! global coordinates of reference point (end A for free Rods)
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector about rRef
       Real(DbKi),            INTENT(  OUT)  :: M_out(6,6)  ! mass and inertia matrix about rRef
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:) ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
       
       Real(DbKi)                 :: rRel(  3)              ! relative position of each node i from rRef      
       
       ! do calculations of forces and masses on each rod node
-      CALL Rod_DoRHS(Rod, LineList, p)
+      CALL Rod_DoRHS(Rod, m, p)
 
       ! note: Some difference from MoorDyn C here. If this function is called by the Rod itself, the reference point must be end A
 
@@ -5091,10 +5157,10 @@ CONTAINS
 
    ! calculate the forces on the rod, including from attached lines
    !--------------------------------------------------------------
-   SUBROUTINE Rod_DoRHS(Rod, LineList, p)
+   SUBROUTINE Rod_DoRHS(Rod, m, p)
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod            ! the Rodion object
-      Type(MD_Line),         INTENT(INOUT)  :: LineList(:)    ! array of all the Line objects
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p              ! Parameters
       
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
@@ -5112,7 +5178,7 @@ CONTAINS
 
       Real(DbKi)                 :: m_i, v_i     ! 
       Real(DbKi)                 :: zeta         ! wave elevation above/below a given node
-      Real(DbKi)                 :: h0           ! distance along rod centerline from end A to the waterplane     
+      !Real(DbKi)                 :: h0           ! distance along rod centerline from end A to the waterplane     
       Real(DbKi)                 :: deltaL       ! submerged length of a given segment
       Real(DbKi)                 :: Lsum         ! cumulative length along rod axis from bottom
       Real(DbKi)                 :: dL           ! length attributed to node
@@ -5173,7 +5239,7 @@ CONTAINS
 
       IF (p%WaterKin == 1)  THEN ! wave kinematics interpolated from global grid in Waves object
          DO i=0,N
-            CALL getWaveKin(p, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i))
+            CALL getWaveKin(p, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, m%WaveTi, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i))
             !F(i) = 1.0 ! set VOF value to one for now (everything submerged - eventually this should be element-based!!!) <<<<
             ! <<<< currently F is not being used and instead a VOF variable is used within the node loop
          END DO
@@ -5194,11 +5260,11 @@ CONTAINS
       zeta = Rod%zeta(N)! just use the wave elevation computed at the location of the top node for now
       
       if ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then    ! check if it's crossing the water plane (should also add some limits to avoid near-horizontals at some point)
-         h0 = (zeta - Rod%r(3,0))/Rod%q(3)                       ! distance along rod centerline from end A to the waterplane
+         Rod%h0 = (zeta - Rod%r(3,0))/Rod%q(3)                       ! distance along rod centerline from end A to the waterplane
       else if (Rod%r(3,0) < zeta) then
-         h0 = 2.0*Rod%UnstrLen                                   ! fully submerged case   <<<<<< remove the 2.0 and double check there are no if statements that get changed <<<<
+         Rod%h0 = Rod%UnstrLen                                   ! fully submerged case   <<<<<< remove the 2.0 and double check there are no if statements that get changed <<<<
       else
-         h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?)
+         Rod%h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?)
       end if
 
    
@@ -5224,10 +5290,10 @@ CONTAINS
          END IF
 
          ! get scalar for submerged portion                  
-         IF (Lsum + dL < h0) THEN    ! if fully submerged 
+         IF (Lsum + dL <= Rod%h0) THEN    ! if fully submerged 
             VOF = 1.0_DbKi
-         ELSE IF (Lsum < h0) THEN    ! if partially below waterline 
-            VOF = (h0 - Lsum)/dL
+         ELSE IF (Lsum < Rod%h0) THEN    ! if partially below waterline 
+            VOF = (Rod%h0 - Lsum)/dL
          ELSE                        ! must be out of water
             VOF = 0.0_DbKi
          END IF
@@ -5328,7 +5394,7 @@ CONTAINS
          ! ------ now add forces, moments, and added mass from Rod end effects (these can exist even if N==0) -------
          
          ! end A
-         IF ((I==0) .and. (h0 > 0.0_ReKi)) THEN    ! if this is end A and it is submerged 
+         IF ((I==0) .and. (Rod%h0 > 0.0_ReKi)) THEN    ! if this is end A and it is submerged 
          
          ! >>> eventually should consider a VOF approach for the ends    hTilt = 0.5*Rod%d/cosPhi <<<
          
@@ -5365,7 +5431,7 @@ CONTAINS
          
          END IF
             
-         IF ((I==N) .and. (h0 > Rod%UnstrLen)) THEN    ! if this end B and it is submerged (note, if N=0, both this and previous if statement are true)
+         IF ((I==N) .and. (Rod%h0 >= Rod%UnstrLen)) THEN    ! if this end B and it is submerged (note, if N=0, both this and previous if statement are true)
          
             ! buoyancy force
             Ftemp = VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g*Rod%r(3,I)
@@ -5419,7 +5485,7 @@ CONTAINS
       ! loop through lines attached to end A
       DO l=1,Rod%nAttachedA
          
-         CALL Line_GetEndStuff(LineList(Rod%attachedA(l)), Fnet_i, Mnet_i, Mass_i, Rod%TopA(l))
+         CALL Line_GetEndStuff(m%LineList(Rod%attachedA(l)), Fnet_i, Mnet_i, Mass_i, Rod%TopA(l))
          
          ! sum quantitites
          Rod%Fnet(:,0)= Rod%Fnet(:,0) + Fnet_i    ! total force
@@ -5431,7 +5497,7 @@ CONTAINS
       ! loop through lines attached to end B
       DO l=1,Rod%nAttachedB
          
-         CALL Line_GetEndStuff(LineList(Rod%attachedB(l)), Fnet_i, Mnet_i, Mass_i, Rod%TopB(l))
+         CALL Line_GetEndStuff(m%LineList(Rod%attachedB(l)), Fnet_i, Mnet_i, Mass_i, Rod%TopB(l))
          
          ! sum quantitites
          Rod%Fnet(:,N)= Rod%Fnet(:,N) + Fnet_i    ! total force
@@ -5523,26 +5589,26 @@ CONTAINS
 
       if (endB==1) then   ! attaching to end B
 
-         Print*, "L", lineID, "->R", Rod%IdNum , "b"
+         IF (wordy > 0) Print*, "L", lineID, "->R", Rod%IdNum , "b"
          
          IF (Rod%nAttachedB <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
             Rod%nAttachedB = Rod%nAttachedB + 1  ! add the line to the number connected
             Rod%AttachedB(Rod%nAttachedB) = lineID
             Rod%TopB(Rod%nAttachedB) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected!"
+            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
          END IF
 
       else              ! attaching to end A
       
-         Print*, "L", lineID, "->R", Rod%IdNum , "a"
+         IF (wordy > 0) Print*, "L", lineID, "->R", Rod%IdNum , "a"
          
          IF (Rod%nAttachedA <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
             Rod%nAttachedA = Rod%nAttachedA + 1  ! add the line to the number connected
             Rod%AttachedA(Rod%nAttachedA) = lineID
             Rod%TopA(Rod%nAttachedA) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
          ELSE
-            Print*, "too many lines connected!"
+            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
          END IF
          
       end if
@@ -5643,6 +5709,60 @@ CONTAINS
 !--------------------------------------------------------------
 
 
+   SUBROUTINE Body_Setup( Body, tempArray, rhoW, ErrStat, ErrMsg)
+
+      TYPE(MD_Body),     INTENT(INOUT)    :: Body          ! the single body object of interest
+      REAL(DbKi),        INTENT(IN)       :: tempArray(6)  ! initial pose of body
+      REAL(DbKi),        INTENT(IN)       :: rhoW
+      INTEGER,           INTENT(INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
+      CHARACTER(*),      INTENT(INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+      INTEGER(4)                          :: J             ! Generic index
+      INTEGER(4)                          :: K             ! Generic index
+      INTEGER(IntKi)                      :: N
+
+      REAL(DbKi)                          :: Mtemp(6,6)   
+
+      ! set initial velocity to zero
+      Body%v6 = 0.0_DbKi
+
+      !also set number of attached rods and points to zero initially
+      Body%nAttachedC = 0
+      Body%nAttachedR = 0
+
+      ! for now take one entry and apply to all three DOFs just using a single entry for all axes <<<<<
+      DO J=2,3
+         Body%BodyI(J)   = Body%BodyI(1)
+         Body%BodyCdA(J) = Body%BodyCdA(1)
+         Body%BodyCa(J)  = Body%BodyCa(1)
+      END DO
+
+      ! set up body initial mass matrix (excluding any rods or attachements)
+      DO J=1,3
+         Mtemp(J,J) = Body%bodyM          ! fill in mass
+         Mtemp(3+J,3+J) = Body%bodyI(J)   ! fill in inertia   
+      END DO
+      
+      CALL TranslateMass6to6DOF(Body%rCG, Mtemp, Body%M0)  ! account for potential CG offset <<< is the direction right? <<<
+        
+      DO J=1,6
+         Body%M0(J,J) = Body%M0(J,J) + Body%bodyV*Body%bodyCa(1) ! add added mass in each direction about ref point (so only diagonals) <<< eventually expand to multi D
+      END DO
+   
+      ! --------------- if this is an independent body (not coupled) ----------
+      ! set initial position and orientation of body from input file 
+      Body%r6 = tempArray
+
+      ! calculate orientation matrix based on latest angles
+      !RotMat(r6[3], r6[4], r6[5], OrMat);
+      Body%OrMat = TRANSPOSE( EulerConstruct( Body%r6(4:6) ) )  ! full Euler angle approach <<<< need to check order 
+
+      IF (wordy > 0) print *, "Set up Body ",Body%IdNum, ", type ", Body%typeNum
+
+      ! need to add cleanup sub <<<
+
+   END SUBROUTINE Body_Setup
+
 !   ! used to initialize bodies that aren't free i.e. don't have states
 !   !--------------------------------------------------------------
 !   SUBROUTINE Body_InitializeUnfree(Body, r6_in, mesh, mesh_index, m)
@@ -5690,7 +5810,7 @@ CONTAINS
    SUBROUTINE Body_Initialize(Body, states, m)
 
       Type(MD_Body),         INTENT(INOUT)  :: Body            ! the Body object
-      Real(DbKi),            INTENT(INOUT)  :: states(6)       ! state vector section for this Body
+      Real(DbKi),            INTENT(INOUT)  :: states(:)       ! state vector section for this Body
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m               ! passing along all mooring objects
 
       INTEGER(IntKi)                        :: l               ! index of segments or nodes along line
@@ -5707,7 +5827,7 @@ CONTAINS
             
       ! If any Rod is fixed to the body (not pinned), initialize it now because otherwise it won't be initialized
       DO l=1, Body%nAttachedR
-         if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates,  m%LineList)
+         if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates,  m)
       END DO
       
       ! Note: Connections don't need any initialization
@@ -5731,7 +5851,7 @@ CONTAINS
             
       ! If any Rod is fixed to the body (not pinned), initialize it now because otherwise it won't be initialized
       DO l=1, Body%nAttachedR
-         if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates,  m%LineList)
+         if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates,  m)
       END DO
       
       ! Note: Connections don't need any initialization
@@ -5831,7 +5951,7 @@ CONTAINS
 
       ! calculate orientation matrix based on latest angles
       !CALL SmllRotTrans('', Body%r6(4), Body%r6(5), Body%r6(6), Body%TransMat, '', ErrStat2, ErrMsg2)
-      Body%OrMat = EulerConstruct( Body%r6(4:6) )  ! full Euler angle approach <<<< need to check order 
+      Body%OrMat = TRANSPOSE( EulerConstruct( Body%r6(4:6) ) ) ! full Euler angle approach <<<< need to check order 
   
       ! set kinematics of any dependent connections
       do l = 1,Body%nAttachedC
@@ -5841,7 +5961,7 @@ CONTAINS
          ! >>> need to add acceleration terms here too? <<<
                   
          ! pass above to the connection and get it to calculate the forces
-         CALL Connect_SetKinematics( m%ConnectList(Body%attachedC(l)), rConnect, rdConnect, m%zeros6(1:3), t, m%LineList)
+         CALL Connect_SetKinematics( m%ConnectList(Body%attachedC(l)), rConnect, rdConnect, m%zeros6(1:3), t, m)
       end do
       
       ! set kinematics of any dependent Rods
@@ -5858,7 +5978,7 @@ CONTAINS
          aRod(4:6) = Body%a6(4:6) 
          
          ! pass above to the rod and get it to calculate the forces
-         CALL Rod_SetKinematics(m%RodList(Body%attachedR(l)), rRod, vRod, aRod, t, m%LineList)
+         CALL Rod_SetKinematics(m%RodList(Body%attachedR(l)), rRod, vRod, aRod, t, m)
       end do
 
    END SUBROUTINE Body_SetDependentKin
@@ -5885,7 +6005,7 @@ CONTAINS
          Fnet_out = Body%F6net + F6_iner        ! add inertial loads
          
       else
-         print *, "ERROR, Body_GetCoupledForce called for wrong (non-coupled) body type!"
+         print *, "ERROR, Body_GetCoupledForce called for wrong (non-coupled) body type in MoorDyn!"
       end if
    
    END SUBROUTINE Body_GetCoupledForce
@@ -5924,8 +6044,9 @@ CONTAINS
       ! check for NaNs (should check all state derivatives, not just first 6)
       DO J = 1, 6
          IF (Is_NaN(REAL(Xd(J),DbKi))) THEN
-            print *, "NaN detected at time ", Body%time, " in Body ",Body%IdNum, " state derivatives:"
-            print *, Xd
+            print *, "NaN detected at time ", Body%time, " in Body ",Body%IdNum, "in MoorDyn,"
+            IF (wordy > 0) print *, "state derivatives:"
+            IF (wordy > 0) print *, Xd
             EXIT
          END IF
       END DO
@@ -5989,7 +6110,7 @@ CONTAINS
       do l = 1,Body%nAttachedC
       
          ! get net force and mass from Connection on body ref point (global orientation)
-         CALL Connect_GetNetForceAndMass( m%ConnectList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m%LineList, p)
+         CALL Connect_GetNetForceAndMass( m%ConnectList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m, p)
          
          ! sum quantitites
          Body%F6net = Body%F6net + F6_i
@@ -6000,7 +6121,7 @@ CONTAINS
       do l=1,Body%nAttachedR
       
          ! get net force and mass from Rod on body ref point (global orientation)
-         CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), F6_i, M6_i, m%LineList, p)
+         CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), F6_i, M6_i, m, p)
          
          ! sum quantitites
          Body%F6net = Body%F6net + F6_i
@@ -6023,14 +6144,14 @@ CONTAINS
       REAL(DbKi),         INTENT(IN   )  :: coords(3)
 
 
-      Print*, "C", connectID, "->B", Body%IdNum
+      IF (wordy > 0) Print*, "C", connectID, "->B", Body%IdNum
       
       IF(Body%nAttachedC < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
          Body%nAttachedC = Body%nAttachedC + 1     ! increment the number connected
          Body%AttachedC(Body%nAttachedC) = connectID
          Body%rConnectRel(:,Body%nAttachedC) = coords  ! store relative position of connect on body
       ELSE
-         Print*, "too many connections attached!"
+         Print*, "too many Points attached to Body ", Body%IdNum, " in MoorDyn!"
       END IF
 
    END SUBROUTINE Body_AddConnect
@@ -6047,7 +6168,7 @@ CONTAINS
       REAL(DbKi)                         :: tempUnitVec(3)
       REAL(DbKi)                         :: dummyLength
 
-      Print*, "R", rodID, "->B", Body%IdNum
+      IF (wordy > 0) Print*, "R", rodID, "->B", Body%IdNum
       
       IF(Body%nAttachedR < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
          Body%nAttachedR = Body%nAttachedR + 1     ! increment the number connected
@@ -6061,7 +6182,7 @@ CONTAINS
          Body%r6RodRel(4:6, Body%nAttachedR) = tempUnitVec
          
       ELSE
-         Print*, "too many rods attached!"
+         Print*, "too many rods attached to Body ", Body%IdNum, " in MoorDyn"
       END IF
 
    END SUBROUTINE Body_AddRod
@@ -6071,7 +6192,7 @@ CONTAINS
    
    
    ! master function to get wave/water kinematics at a given point -- called by each object fro grid-based data
-   SUBROUTINE getWaveKin(p, x, y, z, t, U, Ud, zeta, PDyn)
+   SUBROUTINE getWaveKin(p, x, y, z, t, tindex, U, Ud, zeta, PDyn)
    
       ! note, this whole approach assuems that px, py, and pz are in increasing order
    
@@ -6080,6 +6201,7 @@ CONTAINS
       Real(DbKi),            INTENT (IN   )       :: y
       Real(DbKi),            INTENT (IN   )       :: z
       Real(DbKi),            INTENT (IN   )       :: t
+      INTEGER(IntKi),        INTENT (INOUT)       :: tindex  ! pass time index to try starting from, returns identified time index
       Real(DbKi),            INTENT (INOUT)       :: U(3)
       Real(DbKi),            INTENT (INOUT)       :: Ud(3)
       Real(DbKi),            INTENT (INOUT)       :: zeta
@@ -6092,10 +6214,11 @@ CONTAINS
       Real(DbKi)                 :: qt                    ! used in time step interpolation
    
       
-      CALL getInterpNums(p%px   , x, ix, fx)
-      CALL getInterpNums(p%py   , y, iy, fy)
-      CALL getInterpNums(p%pz   , z, iz, fz)
-      CALL getInterpNums(p%tWave, t, it, ft)
+      CALL getInterpNums(p%px   , x,      1, ix, fx)
+      CALL getInterpNums(p%py   , y,      1, iy, fy)
+      CALL getInterpNums(p%pz   , z,      1, iz, fz)
+      CALL getInterpNums(p%tWave, t, tindex, it, ft)
+      tindex = it
       
       CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)
       
@@ -6108,16 +6231,19 @@ CONTAINS
       CALL calculate4Dinterpolation(p%ay, ix, iy, iz, it, fx, fy, fz, ft, Ud(2) )
       CALL calculate4Dinterpolation(p%az, ix, iy, iz, it, fx, fy, fz, ft, Ud(3) )
       
+      
    END SUBROUTINE
    
    
-   SUBROUTINE getInterpNums(xlist, xin, i, fout)
+   SUBROUTINE getInterpNums(xlist, xin, istart, i, fout)
       
       Real(DbKi),    INTENT (IN   )            :: xlist(:)      ! list of x values
       Real(DbKi),    INTENT (IN   )            :: xin           ! x value to be interpolated
+      Integer(IntKi),INTENT (IN   )            :: istart        ! first lower index to try
       Integer(IntKi),INTENT (  OUT)            :: i             ! lower index to interpolate from
       Real(DbKi),    INTENT (  OUT)            :: fout          ! fraction to return   such that y* = y[i] + fout*(y[i+1]-y[i])
       
+      Integer(IntKi)                           :: i1 = 1  ! the index we'll start at
       Integer(IntKi)                           :: nx
       
       nx = SIZE(xlist)
@@ -6126,12 +6252,15 @@ CONTAINS
          i = 1_IntKi
          fout = 0.0_DbKi
       
-      else if (xin >= xlist(nx)) THEN        ! above highest data point
+      else if (xlist(nx) <= xin) THEN          ! above highest data point
          i = nx
          fout = 0.0_DbKi
       
       else                                     ! within the data range
-         DO i = 1, nx-1
+      
+         IF (xlist(istart) < xin) i1 = istart  ! if istart is below the actual value, start with it instead of starting at 1 to save time
+      
+         DO i = i1, nx-1
          	  IF (xlist(i+1) > xin) THEN
                fout = (xin - xlist(i) )/( xlist(i+1) - xlist(i) )
                exit
@@ -6322,7 +6451,7 @@ CONTAINS
       vecLen   = SQRT(Dot_Product(vec,vec))
       vecLen2D = SQRT(vec(1)**2+vec(2)**2)
       if ( vecLen < 0.000001 ) then
-         print *, "ERROR in GetOrientationAngles" !call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, 'Morison_CalcOutput' )
+         print *, "ERROR in GetOrientationAngles in MoorDyn" !call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, 'Morison_CalcOutput' )
          print *, p1
          print *, p2
          k_hat = 1.0/0.0
