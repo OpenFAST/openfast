@@ -202,7 +202,7 @@ typedef  ^            MD_Line          IntKi              IdNum         -       
 #typedef  ^            ^                CHARACTER(10)      type          -        -  -   "type of line.  should match one of LineProp names"
 typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated line properties"     -
 typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
-typedef  ^            ^                IntKi              CtrlChan      -        -  -   "index of control channel that will drive line active tensioning (0 for none)"   -
+typedef  ^            ^                IntKi              CtrlChan      -        0  -   "index of control channel that will drive line active tensioning (0 for none)"   -
 typedef  ^            ^                IntKi              FairConnect   -        -  -   "IdNum of Connection at fairlead"
 typedef  ^            ^                IntKi              AnchConnect   -        -  -   "IdNum of Connection at anchor"
 typedef  ^            ^                IntKi              N             -        -  -   "The number of elements in the line"              -
@@ -264,6 +264,7 @@ typedef  ^            ^                IntKi              ObjID         -       
 typedef   ^            InitOutputType  CHARACTER(ChanLen)  writeOutputHdr  {:} ""  -   "first line output file contents: output variable names"
 typedef   ^            ^               CHARACTER(ChanLen)  writeOutputUnt  {:} ""  -   "second line of output file contents: units"
 typedef   ^            ^               ProgDesc            Ver              -  ""  -   "this module's name, version, and date"
+typedef   ^            ^               LOGICAL             CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for drive line active tensioning is requested"   -
 
 
 ## ============================== Define Continuous states here: =====================================================================================================================================
@@ -321,6 +322,7 @@ typedef   ^       ^                    IntKi               nConnectsExtra -     
 typedef   ^       ^                    IntKi               nBodies        -     0    -   "number of Body objects"                     ""
 typedef   ^       ^                    IntKi               nRods          -     0    -   "number of Rod objects"                      ""
 typedef   ^       ^                    IntKi               nLines         -     0    -   "number of Line objects"                     ""
+typedef   ^       ^                    IntKi               nCtrlChans     -     0    -   "number of distinct control channels specified for use as inputs"        ""
 typedef   ^       ^                    IntKi               nFails         -     0    -   "number of failure conditions"                     ""
 typedef   ^       ^                    IntKi               nFreeBodies    -     0    -   ""             ""
 typedef   ^       ^                    IntKi               nFreeRods      -     0    -   ""             ""
@@ -360,8 +362,8 @@ typedef   ^       ^                    DbKi         tWave              {:}      
 
 
 # ============================== Inputs ============================================================================================================================================
-#typedef   ^       InputType            MeshType     CoupledKinematics      -      -  -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
-typedef   ^       InputType            MeshType     CoupledKinematics      {:}    -  -   "array of meshes for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
+typedef   ^       InputType            MeshType     CoupledKinematics      -      -  -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
+#typedef   ^       InputType            MeshType     CoupledKinematics      {:}    -  -   "array of meshes for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"  <<<< will use this eventually!
 typedef   ^       ^                    ReKi         DeltaL                 {:}    -  -   "change in line length command for each channel"       "[m]"
 typedef   ^       ^                    ReKi         DeltaLdot              {:}    -  -   "rate of change of line length command for each channel"       "[m]"
 

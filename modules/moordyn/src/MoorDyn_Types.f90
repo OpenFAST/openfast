@@ -38,7 +38,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: g = -999.9      !< gravity constant [[m/s^2]]
     REAL(ReKi)  :: rhoW = -999.9      !< sea density [[kg/m^3]]
     REAL(ReKi)  :: WtrDepth = -999.9      !< depth of water [[m]]
-    REAL(ReKi) , DIMENSION(1:6)  :: PtfmInit      !< initial position of platform [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PtfmInit      !< initial position of platform(s) shape: 6, nTurbines [-]
     CHARACTER(1024)  :: FileName      !< MoorDyn input file [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: Echo      !< echo parameter - do we want to echo the header line describing the input file? [-]
@@ -216,7 +216,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this Line [-]
     INTEGER(IntKi)  :: PropsIdNum      !< the IdNum of the associated line properties [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList      !< array specifying what line quantities should be output (1 vs 0) [-]
-    INTEGER(IntKi)  :: CtrlChan      !< index of control channel that will drive line active tensioning (0 for none) [-]
+    INTEGER(IntKi)  :: CtrlChan = 0      !< index of control channel that will drive line active tensioning (0 for none) [-]
     INTEGER(IntKi)  :: FairConnect      !< IdNum of Connection at fairlead [-]
     INTEGER(IntKi)  :: AnchConnect      !< IdNum of Connection at anchor [-]
     INTEGER(IntKi)  :: N      !< The number of elements in the line [-]
@@ -282,6 +282,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: writeOutputHdr      !< first line output file contents: output variable names [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: writeOutputUnt      !< second line of output file contents: units [-]
     TYPE(ProgDesc)  :: Ver      !< this module's name, version, and date [-]
+    LOGICAL , DIMENSION(:), ALLOCATABLE  :: CableCChanRqst      !< flag indicating control channel for drive line active tensioning is requested [-]
   END TYPE MD_InitOutputType
 ! =======================
 ! =========  MD_ContinuousStateType  =======
@@ -345,6 +346,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nBodies = 0      !< number of Body objects []
     INTEGER(IntKi)  :: nRods = 0      !< number of Rod objects []
     INTEGER(IntKi)  :: nLines = 0      !< number of Line objects []
+    INTEGER(IntKi)  :: nCtrlChans = 0      !< number of distinct control channels specified for use as inputs []
     INTEGER(IntKi)  :: nFails = 0      !< number of failure conditions []
     INTEGER(IntKi)  :: nFreeBodies = 0      !<  []
     INTEGER(IntKi)  :: nFreeRods = 0      !<  []
@@ -367,6 +369,7 @@ IMPLICIT NONE
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     INTEGER(IntKi)  :: MDUnOut      !< Unit number of main output file [-]
     INTEGER(IntKi)  :: WaterKin      !< Flag for whether or how to consider water kinematics [-]
+    INTEGER(IntKi)  :: nTurbines      !< Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0 [-]
     REAL(DbKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: ux      !< water velocities time series at each grid point [-]
     REAL(DbKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uy      !< water velocities time series at each grid point [-]
     REAL(DbKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uz      !< water velocities time series at each grid point [-]
@@ -391,7 +394,6 @@ IMPLICIT NONE
 ! =========  MD_OutputType  =======
   TYPE, PUBLIC :: MD_OutputType
     TYPE(MeshType)  :: CoupledLoads      !< point mesh for fairlead forces in X,Y,Z [[N]]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< output vector returned to glue code []
   END TYPE MD_OutputType
 ! =======================
 CONTAINS
@@ -416,7 +418,20 @@ CONTAINS
     DstInitInputData%g = SrcInitInputData%g
     DstInitInputData%rhoW = SrcInitInputData%rhoW
     DstInitInputData%WtrDepth = SrcInitInputData%WtrDepth
+IF (ALLOCATED(SrcInitInputData%PtfmInit)) THEN
+  i1_l = LBOUND(SrcInitInputData%PtfmInit,1)
+  i1_u = UBOUND(SrcInitInputData%PtfmInit,1)
+  i2_l = LBOUND(SrcInitInputData%PtfmInit,2)
+  i2_u = UBOUND(SrcInitInputData%PtfmInit,2)
+  IF (.NOT. ALLOCATED(DstInitInputData%PtfmInit)) THEN 
+    ALLOCATE(DstInitInputData%PtfmInit(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmInit.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstInitInputData%PtfmInit = SrcInitInputData%PtfmInit
+ENDIF
     DstInitInputData%FileName = SrcInitInputData%FileName
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Echo = SrcInitInputData%Echo
@@ -507,6 +522,9 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(InitInputData%PtfmInit)) THEN
+  DEALLOCATE(InitInputData%PtfmInit)
+ENDIF
 IF (ALLOCATED(InitInputData%WaveVel)) THEN
   DEALLOCATE(InitInputData%WaveVel)
 ENDIF
@@ -562,7 +580,11 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! g
       Re_BufSz   = Re_BufSz   + 1  ! rhoW
       Re_BufSz   = Re_BufSz   + 1  ! WtrDepth
+  Int_BufSz   = Int_BufSz   + 1     ! PtfmInit allocated yes/no
+  IF ( ALLOCATED(InData%PtfmInit) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! PtfmInit upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PtfmInit)  ! PtfmInit
+  END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%FileName)  ! FileName
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! Echo
@@ -628,10 +650,26 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WtrDepth
     Re_Xferred = Re_Xferred + 1
-    DO i1 = LBOUND(InData%PtfmInit,1), UBOUND(InData%PtfmInit,1)
-      ReKiBuf(Re_Xferred) = InData%PtfmInit(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%PtfmInit) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PtfmInit,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PtfmInit,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PtfmInit,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PtfmInit,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%PtfmInit,2), UBOUND(InData%PtfmInit,2)
+        DO i1 = LBOUND(InData%PtfmInit,1), UBOUND(InData%PtfmInit,1)
+          ReKiBuf(Re_Xferred) = InData%PtfmInit(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
     DO I = 1, LEN(InData%FileName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%FileName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -793,12 +831,29 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%WtrDepth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    i1_l = LBOUND(OutData%PtfmInit,1)
-    i1_u = UBOUND(OutData%PtfmInit,1)
-    DO i1 = LBOUND(OutData%PtfmInit,1), UBOUND(OutData%PtfmInit,1)
-      OutData%PtfmInit(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PtfmInit not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PtfmInit)) DEALLOCATE(OutData%PtfmInit)
+    ALLOCATE(OutData%PtfmInit(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmInit.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%PtfmInit,2), UBOUND(OutData%PtfmInit,2)
+        DO i1 = LBOUND(OutData%PtfmInit,1), UBOUND(OutData%PtfmInit,1)
+          OutData%PtfmInit(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
     DO I = 1, LEN(OutData%FileName)
       OutData%FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
@@ -5943,6 +5998,18 @@ ENDIF
       CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcInitOutputData%CableCChanRqst)) THEN
+  i1_l = LBOUND(SrcInitOutputData%CableCChanRqst,1)
+  i1_u = UBOUND(SrcInitOutputData%CableCChanRqst,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%CableCChanRqst)) THEN 
+    ALLOCATE(DstInitOutputData%CableCChanRqst(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CableCChanRqst.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%CableCChanRqst = SrcInitOutputData%CableCChanRqst
+ENDIF
  END SUBROUTINE MD_CopyInitOutput
 
  SUBROUTINE MD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -5961,6 +6028,9 @@ IF (ALLOCATED(InitOutputData%writeOutputUnt)) THEN
   DEALLOCATE(InitOutputData%writeOutputUnt)
 ENDIF
   CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+IF (ALLOCATED(InitOutputData%CableCChanRqst)) THEN
+  DEALLOCATE(InitOutputData%CableCChanRqst)
+ENDIF
  END SUBROUTINE MD_DestroyInitOutput
 
  SUBROUTINE MD_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6026,6 +6096,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! CableCChanRqst allocated yes/no
+  IF ( ALLOCATED(InData%CableCChanRqst) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableCChanRqst upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%CableCChanRqst)  ! CableCChanRqst
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -6115,6 +6190,21 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%CableCChanRqst) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableCChanRqst,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableCChanRqst,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%CableCChanRqst,1), UBOUND(InData%CableCChanRqst,1)
+        IntKiBuf(Int_Xferred) = TRANSFER(InData%CableCChanRqst(i1), IntKiBuf(1))
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE MD_PackInitOutput
 
  SUBROUTINE MD_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6224,6 +6314,24 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableCChanRqst not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CableCChanRqst)) DEALLOCATE(OutData%CableCChanRqst)
+    ALLOCATE(OutData%CableCChanRqst(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableCChanRqst.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%CableCChanRqst,1), UBOUND(OutData%CableCChanRqst,1)
+        OutData%CableCChanRqst(i1) = TRANSFER(IntKiBuf(Int_Xferred), OutData%CableCChanRqst(i1))
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE MD_UnPackInitOutput
 
  SUBROUTINE MD_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
@@ -9002,6 +9110,7 @@ ENDIF
     DstParamData%nBodies = SrcParamData%nBodies
     DstParamData%nRods = SrcParamData%nRods
     DstParamData%nLines = SrcParamData%nLines
+    DstParamData%nCtrlChans = SrcParamData%nCtrlChans
     DstParamData%nFails = SrcParamData%nFails
     DstParamData%nFreeBodies = SrcParamData%nFreeBodies
     DstParamData%nFreeRods = SrcParamData%nFreeRods
@@ -9039,6 +9148,7 @@ ENDIF
     DstParamData%Delim = SrcParamData%Delim
     DstParamData%MDUnOut = SrcParamData%MDUnOut
     DstParamData%WaterKin = SrcParamData%WaterKin
+    DstParamData%nTurbines = SrcParamData%nTurbines
 IF (ALLOCATED(SrcParamData%ux)) THEN
   i1_l = LBOUND(SrcParamData%ux,1)
   i1_u = UBOUND(SrcParamData%ux,1)
@@ -9326,6 +9436,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nBodies
       Int_BufSz  = Int_BufSz  + 1  ! nRods
       Int_BufSz  = Int_BufSz  + 1  ! nLines
+      Int_BufSz  = Int_BufSz  + 1  ! nCtrlChans
       Int_BufSz  = Int_BufSz  + 1  ! nFails
       Int_BufSz  = Int_BufSz  + 1  ! nFreeBodies
       Int_BufSz  = Int_BufSz  + 1  ! nFreeRods
@@ -9371,6 +9482,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Delim)  ! Delim
       Int_BufSz  = Int_BufSz  + 1  ! MDUnOut
       Int_BufSz  = Int_BufSz  + 1  ! WaterKin
+      Int_BufSz  = Int_BufSz  + 1  ! nTurbines
   Int_BufSz   = Int_BufSz   + 1     ! ux allocated yes/no
   IF ( ALLOCATED(InData%ux) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! ux upper/lower bounds for each dimension
@@ -9472,6 +9584,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nLines
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%nCtrlChans
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nFails
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nFreeBodies
@@ -9558,6 +9672,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%MDUnOut
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaterKin
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%nTurbines
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%ux) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -9900,6 +10016,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%nLines = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%nCtrlChans = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%nFails = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nFreeBodies = IntKiBuf(Int_Xferred)
@@ -10001,6 +10119,8 @@ ENDIF
     OutData%MDUnOut = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WaterKin = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%nTurbines = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ux not allocated
     Int_Xferred = Int_Xferred + 1
@@ -10660,7 +10780,6 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyOutput'
@@ -10670,18 +10789,6 @@ ENDIF
       CALL MeshCopy( SrcOutputData%CoupledLoads, DstOutputData%CoupledLoads, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
-  i1_l = LBOUND(SrcOutputData%WriteOutput,1)
-  i1_u = UBOUND(SrcOutputData%WriteOutput,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WriteOutput)) THEN 
-    ALLOCATE(DstOutputData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-ENDIF
  END SUBROUTINE MD_CopyOutput
 
  SUBROUTINE MD_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -10694,9 +10801,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL MeshDestroy( OutputData%CoupledLoads, ErrStat, ErrMsg )
-IF (ALLOCATED(OutputData%WriteOutput)) THEN
-  DEALLOCATE(OutputData%WriteOutput)
-ENDIF
  END SUBROUTINE MD_DestroyOutput
 
  SUBROUTINE MD_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10752,11 +10856,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WriteOutput allocated yes/no
-  IF ( ALLOCATED(InData%WriteOutput) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutput)  ! WriteOutput
-  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -10812,21 +10911,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%WriteOutput) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutput,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutput,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
-        ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
  END SUBROUTINE MD_PackOutput
 
  SUBROUTINE MD_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -10842,7 +10926,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_UnPackOutput'
@@ -10896,24 +10979,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WriteOutput)) DEALLOCATE(OutData%WriteOutput)
-    ALLOCATE(OutData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
-        OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
  END SUBROUTINE MD_UnPackOutput
 
 
@@ -11179,8 +11244,6 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -11197,12 +11260,6 @@ END IF ! check if allocated
    ScaleFactor = t_out / t(2)
       CALL MeshExtrapInterp1(y1%CoupledLoads, y2%CoupledLoads, tin, y_out%CoupledLoads, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
-  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
-    b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
-    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
  END SUBROUTINE MD_Output_ExtrapInterp1
 
 
@@ -11238,8 +11295,6 @@ END IF ! check if allocated
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'MD_Output_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -11262,13 +11317,6 @@ END IF ! check if allocated
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
       CALL MeshExtrapInterp2(y1%CoupledLoads, y2%CoupledLoads, y3%CoupledLoads, tin, y_out%CoupledLoads, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
-  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
-    b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%WriteOutput(i1) + t(3)*y2%WriteOutput(i1) - t(2)*y3%WriteOutput(i1) ) * scaleFactor
-    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
  END SUBROUTINE MD_Output_ExtrapInterp2
 
 END MODULE MoorDyn_Types

@@ -1120,14 +1120,19 @@ CONTAINS
 END SUBROUTINE AssembleKM
 
 !> Map control cable index to control channel index
-subroutine ControlCableMapping(Init, uInit, p, ErrStat, ErrMsg)
+!! Also set the InitOut%CableCChanRqst logical array to indicate which channels were requested
+!!    The array element is set to true for the corresponding requested channel (SD does not need
+!!    to request a contiguous block of channels)
+subroutine ControlCableMapping(Init, uInit, p, InitOut, ErrStat, ErrMsg)
    type(SD_InitType),            intent(in   ) :: Init        !< init
    type(SD_InputType),           intent(inout) :: uInit       !< init input guess
    type(SD_ParameterType),       intent(inout) :: p           !< param
+   type(SD_InitOutputType),      intent(inout) :: InitOut     !< Output for initialization routine
    integer(IntKi),               intent(  out) :: ErrStat     !< Error status of the operation
    character(*),                 intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi)           :: i, nCC, idCProp, iElem !< index, number of controlable cables, id of Cable Prop
+   integer(IntKi)           ::  maxCC                 !< max control chan number
    integer(IntKi)           :: ErrStat2
    character(ErrMsgLen)     :: ErrMsg2
    ErrMsg  = ""
@@ -1135,12 +1140,14 @@ subroutine ControlCableMapping(Init, uInit, p, ErrStat, ErrMsg)
 
    ! --- Count number of Controllable cables
    nCC = 0
+   maxCC = 0
    do i = 1, size(p%ElemProps)
       if (p%ElemProps(i)%eType==idMemberCable) then
          idCProp= p%Elems(i,iMProp)
-         if (Init%PropsC(idCProp, 5 )>0) then
+         if (NINT(Init%PropsC(idCProp, 5 ))>0) then
             !print*,'Cable Element',i,'controllable with channel',Init%PropsC(idCProp, 5 )
             nCC=nCC+1
+            maxCC = max( maxCC, NINT(Init%PropsC(idCProp,5)) )
          endif
       endif
    enddo
@@ -1149,15 +1156,23 @@ subroutine ControlCableMapping(Init, uInit, p, ErrStat, ErrMsg)
    endif
    call AllocAry( p%CtrlElem2Channel, nCC, 2, 'p%CtrlElem2Channel', ErrStat2, ErrMsg2); if(Failed()) return; ! Constant cable force
 
+   ! --- create array for telling calling code which channels are requested  -- leave unallocated if none found!!!
+   if (nCC>0) then
+      if (allocated(InitOut%CableCChanRqst)) deallocate(InitOut%CableCChanRqst)
+      call AllocAry(InitOut%CableCChanRqst, maxCC, 'InitOut%CableCChanRqst', ErrStat2, ErrMsg2); if(Failed()) return;
+      InitOut%CableCChanRqst = .FALSE.    ! Initialize to false
+   endif
+
    ! --- Store mapping 
    nCC = 0
    do i = 1, size(p%ElemProps)
       if (p%ElemProps(i)%eType==idMemberCable) then
          idCProp= p%Elems(i,iMProp)
-         if (Init%PropsC(idCProp, 5 )>0) then
+         if (NINT(Init%PropsC(idCProp, 5 ))>0) then
             nCC=nCC+1
             p%CtrlElem2Channel(nCC, 1) = i ! Element index (in p%Elems and p%ElemProps)
-            p%CtrlElem2Channel(nCC, 2) = Init%PropsC(idCProp,5) ! Control channel
+            p%CtrlElem2Channel(nCC, 2) = NINT(Init%PropsC(idCProp,5),IntKi) ! Control channel
+            InitOut%CableCChanRqst(NINT(Init%PropsC(idCProp, 5 ),IntKi)) = .TRUE.
          endif
       endif
    enddo

@@ -15,31 +15,33 @@
 #
 
 if (GENERATE_TYPES)
-  generate_f90_types(src/TMD_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/TMD_Types.f90)
+  generate_f90_types(src/StrucCtrl_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/StrucCtrl_Types.f90)
   generate_f90_types(src/ServoDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ServoDyn_Types.f90)
 endif()
 
-set(SD_SOURCES
+set(SrvD_SOURCES
   src/BladedInterface.f90
+  src/BladedInterface_EX.f90
   src/UserSubs.f90
   src/PitchCntrl_ACH.f90
-  src/TMD.f90
+  src/StrucCtrl.f90
   src/UserVSCont_KP.f90
   src/ServoDyn.f90
-  src/TMD_Types.f90
+  src/ServoDyn_IO.f90
+  src/StrucCtrl_Types.f90
   src/ServoDyn_Types.f90
 )
 
-add_library(servodynlib ${SD_SOURCES})
+add_library(servodynlib ${SrvD_SOURCES})
 target_link_libraries(servodynlib nwtclibs)
 
 add_executable(servodyn_driver src/ServoDyn_Driver.f90)
 target_link_libraries(servodyn_driver servodynlib nwtclibs ${CMAKE_DL_LIBS})
 
-add_executable(TMD src/TMD_Driver.f90)
-target_link_libraries(TMD servodynlib nwtclibs ${CMAKE_DL_LIBS})
+add_executable(strucctrl_driver src/StrucCtrl_Driver.f90)
+target_link_libraries(strucctrl_driver servodynlib nwtclibs ${CMAKE_DL_LIBS})
 
-install(TARGETS servodynlib servodyn_driver TMD
+install(TARGETS servodynlib servodyn_driver strucctrl_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

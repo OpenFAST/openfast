@@ -117,6 +117,9 @@ CONTAINS
       REAL(ReKi)                    :: rRef(6)             ! used to pass positions to mesh (real type precision)
       REAL(DbKi)                    :: rRefDub(3)
       
+      CHARACTER(500)               :: TempString5          ! long string used to hold CtrlChan inputs
+      INTEGER(IntKi)               :: TempIDnums(100)      ! array to hold IdNums of controlled lines for each CtrlChan
+      
       ! for reading output channels
       CHARACTER(ChanLen),ALLOCATABLE :: OutList(:)          ! array of output channel request (moved here from InitInput)
       INTEGER                       :: MaxAryLen = 1000    ! Maximum length of the array being read
@@ -291,6 +294,21 @@ CONTAINS
                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                END DO
 
+            else if (INDEX(Line, "CONTROL") > 0) then ! if failure conditions header
+
+               IF (wordy > 1) print *, "   Reading control channels: ";
+               
+               ! skip following two lines (label line and unit line)
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               
+               ! find how many elements of this type there are
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  p%nCtrlChans = p%nCtrlChans + 1
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               END DO
+               
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
 
                IF (wordy > 1) print *, "   Reading failure conditions: ";
@@ -768,7 +786,6 @@ CONTAINS
                END DO   ! l = 1,p%nRods
 
 
-
             !-------------------------------------------------------------------------------------------
             else if ((INDEX(Line, "POINTS") > 0 ) .or. (INDEX(Line, "CONNECTION PROPERTIES") > 0) .or. (INDEX(Line, "NODE PROPERTIES") > 0) .or. (INDEX(Line, "POINT PROPERTIES") > 0) .or. (INDEX(Line, "POINT LIST") > 0) ) then ! if node properties header
                
@@ -817,8 +834,7 @@ CONTAINS
                      
                      m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
                      
-                     CALL Body_AddConnect(m%GroundBody, l, tempArray(1:3))   ! add connection l to Ground body
-                     
+                     CALL Body_AddConnect(m%GroundBody, l, tempArray(1:3))   ! add connection l to Ground body                     
 								
 						   else if (let1 == "BODY") then ! attached to a body
                      if (len_trim(num1) > 0) then                     
@@ -844,12 +860,13 @@ CONTAINS
                      m%CpldConIs(p%nCpldCons) = l
 
                      ! this is temporary for backwards compatibility >>>>> will need to update for more versatile coupling >>>>   <<<<<<< this looks pretty good. Make sure it's done only once - either here or near end of init. Same for Rods and bodies.
-                     CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
+                     ! NOTE: second index would be used for multi-turbine couplings in FAST.Farm
+                     CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,1),InitInp%PtfmInit(5,1),InitInp%PtfmInit(6,1), OrMat, '', ErrStat2, ErrMsg2)
 
                      ! set initial node position, including adjustments due to initial platform rotations and translations  <<< could convert to array math
-                     m%ConnectList(l)%r(1) = InitInp%PtfmInit(1) + OrMat(1,1)*tempArray(1) + OrMat(2,1)*tempArray(2) + OrMat(3,1)*tempArray(3)
-                     m%ConnectList(l)%r(2) = InitInp%PtfmInit(2) + OrMat(1,2)*tempArray(1) + OrMat(2,2)*tempArray(2) + OrMat(3,2)*tempArray(3)
-                     m%ConnectList(l)%r(3) = InitInp%PtfmInit(3) + OrMat(1,3)*tempArray(1) + OrMat(2,3)*tempArray(2) + OrMat(3,3)*tempArray(3)
+                     m%ConnectList(l)%r(1) = InitInp%PtfmInit(1,1) + OrMat(1,1)*tempArray(1) + OrMat(2,1)*tempArray(2) + OrMat(3,1)*tempArray(3)
+                     m%ConnectList(l)%r(2) = InitInp%PtfmInit(2,1) + OrMat(1,2)*tempArray(1) + OrMat(2,2)*tempArray(2) + OrMat(3,2)*tempArray(3)
+                     m%ConnectList(l)%r(3) = InitInp%PtfmInit(3,1) + OrMat(1,3)*tempArray(1) + OrMat(2,3)*tempArray(2) + OrMat(3,3)*tempArray(3)
                  
                   else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
                      m%ConnectList(l)%typeNum = 0
@@ -864,13 +881,13 @@ CONTAINS
                      
                      m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
                      
-                  else if ((let1 = 'TURBINE') .or. (let1 == "T")) then
+                  else if ((let1 == "TURBINE") .or. (let1 == "T")) then
+                     print *, 'FUTURE FAST.Farm feature'
                      ! iTurbine = num1
                      ! >>> nvm: this is where we could identify the element index in the corresponding mesh in u%FarmCoupledKinematics(iTurbine) for this coupled point
                      !          nvm:   using info from InitInp%FarmNCpldBodies, InitInp%FarmNCpldRods, !InitInp%FarmNCpldCons  
                      ! >>> nvm: Then store iTurbine and the element index IN THIS POINT OBJECT, for easy use with input and output meshes! <<<
                      ! >>> Do all the initialization stuff as is done with normal coupled points. 
-
                   else 
                      CALL SetErrStat( ErrID_Severe,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
                      return
@@ -929,7 +946,9 @@ CONTAINS
                      READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
                         m%LineList(l)%N, tempString2, tempString3, LineOutString
                   END IF
-
+                  
+                  !note: m%LineList(I)%CtrlChan should aready be initialized to zero as per the registry
+                  
                   ! identify index of line type
                   DO J = 1,p%nLineTypes
                      IF (trim(tempString1) == trim(m%LineTypeList(J)%name)) THEN
@@ -1080,6 +1099,70 @@ CONTAINS
 
 
             !-------------------------------------------------------------------------------------------
+            else if (INDEX(Line, "CONTROL") > 0) then ! if control inputs header
+
+               IF (wordy > 0) print *, "   Reading control inputs";
+               
+               ! TODO: add stuff <<<<<<<<
+
+               ! skip following two lines (label line and unit line)
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               
+               ! process each line
+               DO l = 1,p%nCtrlChans
+                  
+                  !read into a line
+                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+
+                   ! parse out entries:        CtrlChan, LineIdNums
+                  IF (ErrStat2 == 0) THEN
+                     READ(Line,*,IOSTAT=ErrStat2) Itemp, TempString5
+                  END IF
+                  
+                  ! split the line IDs specified for this channel and apply to those lines
+                  N = count(transfer(TempString5, 'a', len(TempString5)) == ",") + 1   ! number of line IDs given
+                  !N = COUNT([(TempString5(i:i),i=1,len(TempString5))].eq.',')  + 1
+                  read(TempString5, *) TempIDnums(1:N)                                   ! parse out each line ID
+                  
+                  DO J = 1,N
+                     if (TempIDnums(J) <= p%nLines) then      ! ensure line ID is in range
+                        if (m%LineList( TempIDnums(J) )%CtrlChan == 0) then      ! ensure line doesn't already have a CtrlChan assigned 
+                           m%LineList( TempIDnums(J) )%CtrlChan = Itemp
+                           print *, 'Assigned Line ', TempIDnums(J), ' assigned control channel ', Itemp
+                        else
+                           print *, 'Error: Line ', TempIDnums(J), ' already is assigned to control channel ', m%LineList( TempIDnums(J) )%CtrlChan, ' so cannot also be assigned to channel ', Itemp 
+                        end if                     
+                     else
+                        print *, 'Error: Line ID ', TempIDnums(J), ' of CtrlChan ', Itemp, ' is out of range' 
+                     end if
+                  
+                  END DO
+                  
+               END DO
+               
+                          
+! character :: string*30 = "1,10,123,15,654,12"
+! integer :: n, iarray(100)
+! n = count(transfer(string, 'a', len(string)) == ",")
+! read(string, *) iarray(1:n+1) ! N+1 because one more int than comma
+! print *, 'nvalues=', n+1
+! print '(i10)', iarray(1:n+1)
+! 
+! 
+! 
+! character(len=100) :: string = 'This;is;a test;hello;world!'
+! integer :: n
+! character(80), allocatable :: strarray(:)
+! n = count(transfer(string, 'a', len(string)) == ";")
+! allocate(strarray(n+1))
+! read(string, *) strarray(1:n+1) !N+1 because one more parts than semicolon
+! print *, 'nvalues=', n+1
+! print '(a)', strarray(1:n+1)
+
+
+
+            !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
 
                IF (wordy > 0) print *, "   Reading failure conditions: (not implemented yet) ";
@@ -1096,8 +1179,13 @@ CONTAINS
                   !read into a line
                   READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
                   
+                  
+                     READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
+                        m%LineList(l)%N, tempString2, tempString3, LineOutString
+                  
                END DO
-
+               
+               
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "OPTIONS") > 0) then ! if options header
 
@@ -1266,6 +1354,7 @@ CONTAINS
    IF (wordy > 1) print *, "nBodies        = ",p%nBodies       
    IF (wordy > 1) print *, "nRods          = ",p%nRods         
    IF (wordy > 1) print *, "nLines         = ",p%nLines        
+   IF (wordy > 1) print *, "nCtrlChans     = ",p%nCtrlChans        
    IF (wordy > 1) print *, "nFails         = ",p%nFails        
    IF (wordy > 1) print *, "nFreeBodies    = ",p%nFreeBodies   
    IF (wordy > 1) print *, "nFreeRods      = ",p%nFreeRods     
@@ -1477,17 +1566,33 @@ CONTAINS
       ! size active tensioning inputs arrays based on highest channel number read from input file for now <<<<<<<
       
       ! find the highest channel number
-      J = 0
+      N = 0
       DO I = 1, p%NLines
-         IF ( m%LineList(I)%CtrlChan > J ) then
-            J = m%LineList(I)%CtrlChan       
+         IF ( m%LineList(I)%CtrlChan > N ) then
+            N = m%LineList(I)%CtrlChan       
          END IF
       END DO   
-
-      ! allocate the input arrays
-      ALLOCATE ( u%DeltaL(J), u%DeltaLdot(J), STAT = ErrStat2 )
       
+      ! note: it would be nice to just have input arrays of the number of control channels used, rather than from 1 up to N (the highest CtrlChan)
       
+      ! allocate the input arrays (if any requested)
+      if (N > 0) then
+         call AllocAry( u%DeltaL, N, 'u%DeltaL', ErrStat2, ErrMsg2 )
+            call CheckError( ErrStat2, ErrMsg2 )
+            if (ErrStat >= AbortErrLev) return
+            u%DeltaL =  0.0_ReKi
+         call AllocAry( u%DeltaLdot, N, 'u%DeltaLdot', ErrStat2, ErrMsg2 )
+            call CheckError( ErrStat2, ErrMsg2 )
+            if (ErrStat >= AbortErrLev) return
+            u%DeltaLdot =  0.0_ReKi
+         call AllocAry( InitOut%CableCChanRqst, N, 'CableCChanRqst', ErrStat2, ErrMsg2 )
+            call CheckError( ErrStat2, ErrMsg2 )
+            if (ErrStat >= AbortErrLev) return
+         InitOut%CableCChanRqst = .FALSE.    ! Initialize to false
+         do J=1,p%NLines
+            if (m%LineList(J)%CtrlChan > 0)  InitOut%CableCChanRqst(m%LineList(J)%CtrlChan) = .TRUE.  ! set the flag of the corresponding channel to true
+         enddo
+      endif
       
       
       ! ----------------------------- Arrays for wave kinematics -----------------------------
