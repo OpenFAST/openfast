@@ -187,17 +187,7 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
       ! initialize variables:   
    n_t_global = 0
 
-#ifdef SIMULINK_DirectFeedThrough   
-   IF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
-      ErrStat_c = ErrID_Fatal
-      ErrMsg  = "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR
-      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
-      RETURN
-   END IF
 
-   CALL FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, Turbine(iTurb)%m_FAST)
-
-#endif      
    !...............................................................................................................................
    ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................  
