@@ -12,7 +12,7 @@ The following solution files are available for code development on Windows using
    - Structural: 
      - [BeamDyn driver](BeamDyn/BeamDyn-w-registry.sln)
      - [SubDyn driver](SubDyn/SubDyn.sln)
-   - Wind/Wave conditions
+   - Wind/Wave conditions:
       - [TurbSim](TurbSim/TurbSim.sln) Generates wind files
       - [InflowWind driver](InflowWind/InflowWind_driver.sln) Reads and interpolates existing wind files
       - [HydroDyn driver](HydroDyn/HydroDynDriver.sln)

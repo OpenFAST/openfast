@@ -95,6 +95,7 @@ contains
                 !form='UNFORMATTED',access='SEQUENTIAL',action='WRITE',convert='BIG_ENDIAN',recordtype='STREAM',buffered='YES',
                !print*,'Not available for this compiler' !COMPAQ-COMPILER
                !STOP !COMPAQ-COMPILER
+!bjj: CONVERT is non-standard, so maybe this should be part of Sys*.f90? Like OpenUnfInpBEFile()?
                 open(unit = mvtk%vtk_unit,file= trim(adjustl(filename)),form='UNFORMATTED',access = 'stream',& !OTHER-COMPILER
                     action = 'WRITE',convert= 'BIG_ENDIAN',iostat=iostatvar,status='replace') !OTHER-COMPILER
             else
