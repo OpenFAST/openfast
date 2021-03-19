@@ -51,7 +51,17 @@ set(IFW_SOURCES
 add_library(ifwlib ${IFW_SOURCES})
 target_link_libraries(ifwlib nwtclibs)
 
+# LINUX
 add_library(ifw_c_lib driver/IFW_C.f90)
+
+# MAC
+# add_library(ifw_c_lib SHARED driver/IFW_C.f90 ${IFW_SOURCES})
+# set_target_properties(ifw_c_lib PROPERTIES PREFIX "" SUFFIX ".dylib")
+
+# WINDOWS
+# add_library(ifw_c_lib SHARED driver/IFW_C.f90 ${IFW_SOURCES})
+# set_target_properties(ifw_c_lib PROPERTIES PREFIX "" SUFFIX ".dll")
+
 target_link_libraries(ifw_c_lib ifwlib)
 
 set(IFW_DRIVER_SOURCES

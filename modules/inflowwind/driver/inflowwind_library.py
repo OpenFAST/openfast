@@ -113,7 +113,7 @@ class InflowWindLibAPI(CDLL):
         for i, p in enumerate(positions_flat):
             positions_flat_c[i] = c_float(p)
 
-        velocities_flat_c = (c_float * (3 * self.numWindPts)(0.0, )
+        velocities_flat_c = (c_float * (3 * self.numWindPts))(0.0, )
 
         outputChannelValues_c = (c_float * self._numChannels.value)(0.0, )
 
