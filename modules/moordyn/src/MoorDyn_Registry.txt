@@ -18,7 +18,8 @@ include Registry_NWTC_Library.txt
 typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -999.9 -   "gravity constant"   "[m/s^2]"
 typedef   ^           ^                ReKi               rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
 typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
-typedef   ^           ^                ReKi               PtfmInit      {:}{:}  -      -   "initial position of platform(s) shape: 6, nTurbines"     -
+typedef   ^           ^                ReKi               PtfmInit      {:}  -      -   "initial position of platform(s) originally size 6"     -
+#typedef   ^           ^                ReKi               PtfmInit      {:}{:}  -      -   "initial position of platform(s) shape: 6, nTurbines"     -
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
 typedef   ^           ^                CHARACTER(1024)    RootName       -   -      -   "RootName for writing output files"              -
 typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
@@ -376,6 +377,6 @@ typedef   ^       ^                    ReKi         DeltaLdot              {:}  
 
 ## ============================== Outputs ============================================================================================================================================
 typedef   ^       OutputType           MeshType     CoupledLoads          -    -    -   "point mesh for fairlead forces in X,Y,Z"         "[N]"
->>> should this be an array?
-#typedef   ^       ^                    DbKi         rAll                   {:}{:} -    -   "Mesh of all point positions: bodies, rods, points, line internal nodes"   -
 typedef   ^       ^                    ReKi         WriteOutput            {:}   -    -   "output vector returned to glue code" ""
+# should CoupledLoads be an array?
+#typedef   ^       ^                    DbKi         rAll                   {:}{:} -    -   "Mesh of all point positions: bodies, rods, points, line internal nodes"   -
