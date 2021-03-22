@@ -882,8 +882,11 @@ SUBROUTINE Fill_CONTROL_vars( t, u, p, ErrMsgSz, dll_data )
       dll_data%ShaftBrakeStatusBinaryFlag = 0   ! no brakes deployed
       dll_data%HSSBrDeployed = .false.
       
-      dll_data%PrevBlPitch(1:p%NumBl) = p%BlPitchInit
-      dll_data%BlPitchCom(1:p%NumBl)  = p%BlPitchInit
+      dll_data%PrevBlPitch(:) = 0.0_ReKi ! Harcoded to size 3
+      dll_data%BlPitchCom(:)  = 0.0_ReKi ! Harcoded to size 3
+      dll_data%BlAirfoilCom(:)= 0.0_ReKi ! Harcoded to size 3
+      dll_data%PrevBlPitch(1:p%NumBl) = p%BlPitchInit(1:p%NumBl)
+      dll_data%BlPitchCom(1:p%NumBl)  = p%BlPitchInit(1:p%NumBl)
    end if
    
    call Fill_avrSWAP( t, u, p, ErrMsgSz, dll_data ) ! we'll set the avrSWAP variable, for the legacy version of the DLL, too.
@@ -972,7 +975,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
 
    ELSE !IF ( p%Ptch_Cntrl == GH_DISCON_PITCH_CONTROL_COLLECTIVE )  THEN ! Collective pitch control
 !> * Record 45: Demanded pitch angle (Collective pitch) (rad)
-      dll_data%BlPitchCom       = dll_data%avrSWAP(45)                ! Demanded pitch angle (Collective pitch) (rad)
+      dll_data%BlPitchCom(:)   = dll_data%avrSWAP(45)                ! Demanded pitch angle (Collective pitch) (rad)
       
 !> * Record 46, demanded pitch rate (Collective pitch), is ingored since record 10 is set to 0 by ServoDyn indicating pitch position actuator
 
