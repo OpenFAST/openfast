@@ -118,7 +118,8 @@ contains
         ! allocate arrays
         call AllocAry(p%qp%mmm, p%nqp, p%elem_total, 'qp_mmm', ErrStat, ErrMsg)
         call AllocAry(p%qp%mEta, 3, p%nqp, p%elem_total, 'qp_RR0mEta', ErrStat, ErrMsg)
-        call AllocAry(p%Mass0_QP, 6, 6, p%nqp*p%elem_total, 'Mass0_QP', ErrStat, ErrMsg)
+        call AllocAry(p%Mass0_QP, 6, 6, p%nqp*p%elem_total, 'Mass0_QP', ErrStat, ErrMsg)  ! if called, this allocated in InitializeMassStiffnessMatrices
+        call AllocAry(p%Stif0_QP, 6, 6, p%nqp*p%elem_total, 'Stif0_QP', ErrStat, ErrMsg)  ! if called, this allocated in InitializeMassStiffnessMatrices
         call AllocAry(p%QPtw_Shp_Shp_Jac, p%nqp, p%nodes_per_elem, p%nodes_per_elem, p%elem_total, 'QPtw_Shp_Shp_Jac', ErrStat, ErrMsg)
         call AllocAry(p%QPtw_ShpDer_ShpDer_Jac, p%nqp, p%nodes_per_elem, p%nodes_per_elem, p%elem_total, 'QPtw_ShpDer_ShpDer_Jac', ErrStat, ErrMsg)
         call AllocAry(p%QPtw_Shp_ShpDer, p%nqp, p%nodes_per_elem, p%nodes_per_elem, 'QPtw_Shp_ShpDer', ErrStat, ErrMsg)
@@ -131,8 +132,19 @@ contains
         call AllocAry(p%Jacobian, p%nqp, p%elem_total, 'Jacobian', ErrStat, ErrMsg)
         call AllocAry(p%uuN0, p%dof_node, p%nodes_per_elem, p%elem_total,'uuN0', ErrStat, ErrMsg)
 
+        call AllocAry(p%uu0, p%dof_node, p%nqp,   p%elem_total,'uu0', ErrStat, ErrMsg)
+        call AllocAry(p%E10, p%dof_node/2, p%nqp, p%elem_total,'E10', ErrStat, ErrMsg)
+        call AllocAry(p%rrN0, p%dof_node/2, p%nodes_per_elem, p%elem_total,'rrN0', ErrStat, ErrMsg)
+
+        CALL AllocAry(p%node_elem_idx,p%elem_total,2,'start and end node numbers of elements in p%node_total sized arrays',ErrStat,ErrMsg)
+
         ! construct arrays
         p%qp%mmm = 1.0
+
+        DO i=1,p%elem_total
+           p%node_elem_idx(i,1) =  (i-1)*(p%nodes_per_elem-1) + 1           ! First node in element
+           p%node_elem_idx(i,2) =   i   *(p%nodes_per_elem-1) + 1           ! Last node in element
+        ENDDO
 
         do j=1, p%elem_total
             do i=1, p%nqp
@@ -143,9 +155,9 @@ contains
 
     end function
    
-    type(BD_MiscVarType) function simpleMiscVarType(nqp, nelem) RESULT(m)
+    type(BD_MiscVarType) function simpleMiscVarType(nqp, dof_node, elem_total, nodes_per_elem) RESULT(m)
         
-        integer, intent(in)  :: nqp, nelem
+        integer, intent(in)  :: nqp, elem_total, dof_node, nodes_per_elem
         integer              :: i, j
         integer              :: ErrStat
         character(1024)      :: ErrMsg
@@ -155,14 +167,31 @@ contains
         ! fixed size arrays
         
         ! allocate arrays
-        call AllocAry(m%qp%Fg, 6, nqp, nelem, 'qp_Fg', ErrStat, ErrMsg)
-        call AllocAry(m%qp%RR0, 3, 3, nqp, nelem, 'qp_RR0', ErrStat, ErrMsg)
-        call AllocAry(m%qp%RR0mEta, 3, nqp, nelem, 'qp_RR0mEta', ErrStat, ErrMsg)
-        call AllocAry(m%DistrLoad_QP, 6, nqp, nelem, 'DistrLoad_QP', ErrStat, ErrMsg)
-        call AllocAry(m%qp%rho, 3, 3, nqp, nelem, 'qp_rho', ErrStat, ErrMsg)
-        
+        call AllocAry(m%qp%Fg, 6, nqp, elem_total, 'qp_Fg', ErrStat, ErrMsg)
+        call AllocAry(m%qp%RR0, 3, 3, nqp, elem_total, 'qp_RR0', ErrStat, ErrMsg)
+        call AllocAry(m%qp%RR0mEta, 3, nqp, elem_total, 'qp_RR0mEta', ErrStat, ErrMsg)
+        call AllocAry(m%DistrLoad_QP, 6, nqp, elem_total, 'DistrLoad_QP', ErrStat, ErrMsg)
+
+        CALL AllocAry(m%qp%uuu, dof_node  ,nqp,elem_total, 'm%qp%uuu displacement at quadrature point',ErrStat,ErrMsg)
+        CALL AllocAry(m%qp%uup, dof_node/2,nqp,elem_total, 'm%qp%uup displacement prime at quadrature point',ErrStat,ErrMsg)
+
+         ! E1, kappa -- used in force calculations
+        CALL AllocAry(m%qp%E1,    dof_node/2,nqp,elem_total, 'm%qp%E1    at quadrature point',ErrStat,ErrMsg)
+        CALL AllocAry(m%qp%kappa, dof_node/2,nqp,elem_total, 'm%qp%kappa at quadrature point',ErrStat,ErrMsg)
+        CALL AllocAry(m%qp%RR0,   3,3,       nqp,elem_total, 'm%qp%RR0 at quadrature point',ErrStat,ErrMsg)
+        CALL AllocAry(m%qp%Stif,  6,6,       nqp,elem_total, 'm%qp%Stif at quadrature point',ErrStat,ErrMsg)
+
+        CALL AllocAry(m%qp%RR0mEta, dof_node/2, nqp, elem_total, 'm%qp%RRo times p%qp%mEta at quadrature point',ErrStat,ErrMsg)
+        call AllocAry(m%qp%rho, 3, 3, nqp, elem_total, 'qp_rho', ErrStat, ErrMsg)
+        CALL AllocAry(m%qp%betaC, 6,6, nqp,elem_total, 'm%qp%betaC at quadrature point',ErrStat,ErrMsg)
+       
+        CALL AllocAry(m%qp%Fc, dof_node, nqp, elem_total, 'm%qp%Fc at quadrature point',ErrStat,ErrMsg)
+        CALL AllocAry(m%qp%Fd, dof_node, nqp, elem_total, 'm%qp%Fd at quadrature point',ErrStat,ErrMsg)
+
+        CALL AllocAry(m%Nrrr, dof_node/2, nodes_per_elem, elem_total,'Nrrr: rotation parameters relative to root',  ErrStat,ErrMsg)
+
         ! construct arrays
-        do j=1, nelem
+        do j=1, elem_total
             do i=1, nqp
                 m%qp%RR0(:,:,i,j) = identity()
                 m%qp%RR0mEta(:,i,j) = (/ 0.0, 0.0, 0.0 /)
@@ -232,6 +261,23 @@ contains
         i%kp_coordinate(1,:) = (/ 0.000000, 0.000000,  0.0000, 0.00000 /)  !  {:}{:} - - "Key point coordinates array" -
         i%kp_coordinate(2,:) = (/ 0.000000, 0.000000,  5.0000, 0.00000 /)
         i%kp_coordinate(3,:) = (/ 0.000000, 0.000000, 10.0000, 0.00000 /)
+        
+    end function
+
+    type(BD_ContinuousStateType) function simpleContinuousStateType(node_total, nodes_per_elem, elem_total) RESULT(x)
+        
+        integer, intent(in)  :: node_total,nodes_per_elem, elem_total
+        integer              :: j
+        integer              :: ErrStat
+        character(1024)      :: ErrMsg
+        
+        ! scalars
+        
+        ! fixed size arrays
+        
+        ! allocate arrays
+        call AllocAry(x%q,    6, node_total, 'Displacement/Rotation Nodal DOF', ErrStat, ErrMsg)
+        call AllocAry(x%dqdt, 6, node_total, 'Velocity Nodal DOF', ErrStat, ErrMsg)
         
     end function
     

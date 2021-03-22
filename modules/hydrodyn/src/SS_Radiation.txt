@@ -11,23 +11,24 @@
 # column 10: Units
 ###################################################################################################################################
 
-typedef SS_Radiation/SS_Rad   InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file" -
-typedef   ^                 	^           ReKi	    DOFs      {1}{6} - -   "Vector with enable platf. DOFs" "m/s or rad/s"
+typedef SS_Radiation/SS_Rad   InitInputType       CHARACTER(1024) InputFile        -     - -  "Name of the input file" -
+typedef ^                     ^                   ReKi            enabledDOFs     {:}    - -  "Vector with enable platf. DOFs" (m/s or rad/s)
+typedef ^                     ^                   IntKi           NBody            -     - -  "Number of WAMIT bodies for this State Space model" -
+typedef ^                     ^                   R8Ki            PtfmRefztRot    {:}    - -  "The rotation about zt of the body reference frame(s) from xt/yt" radians 
 
-typedef   ^              InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {7} - -  "Header of the output" -
-typedef   ^              InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {7} - -  "Units of the output" -
+typedef ^                     InitOutputType      CHARACTER(ChanLen)   WriteOutputHdr  {:}    - -  "Header of the output" -
+typedef ^                     InitOutputType      CHARACTER(ChanLen)   WriteOutputUnt  {:}    - -  "Units of the output" -
 
 typedef   ^              ContinuousStateType R8Ki     x             {:} - -  "Continuous States" -
 
-
-typedef   ^              DiscreteStateType   SiKi     DummyDiscState - - -  "" -
+typedef ^                     DiscreteStateType   SiKi            DummyDiscState   -     - -  "" -
 
 # Define constraint states here:
-typedef   ^              ConstraintStateType SiKi     DummyConstrState - - - "" -
+typedef ^                     ConstraintStateType SiKi            DummyConstrState -     - - "" -
 
 # Define any data that are other states, including integer or logical states here:
-typedef   ^              OtherStateType           IntKi                        n     -  - - "Current Time step" -
-typedef   ^              ^                        SS_Rad_ContinuousStateType   xdot {4} - - "Old Values of dxdt to used by the solver (multistep method)" -
+typedef ^                     OtherStateType      IntKi                        n     -  - - "Current Time step" -
+typedef ^                     ^                   SS_Rad_ContinuousStateType   xdot {4} - - "Old Values of dxdt to used by the solver (multistep method)" -
 
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -40,21 +41,22 @@ typedef    ^              MiscVarType          SiKi     DummyMiscVar - - -  "Rem
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
-typedef   ^              ParameterType DbKi     DT     - - - "Time step" seconds
-typedef   ^               ^            ReKi     A      {:}{:} - - "A matrix" -
-typedef   ^               ^            ReKi     B      {:}{:} - - "B matrix" -
-typedef   ^               ^            ReKi     C      {:}{:} - - "C matrix" -
-typedef   ^               ^            INTEGER  N       -     - - "Number of states" -
-typedef   ^               ^            INTEGER  spdof  {6}    - - "States per dof" -
+typedef ^                     ParameterType       DbKi            DT              -     - - "Time step" (s)
+typedef ^                     ^                   ReKi            A              {:}{:} - - "A matrix" -
+typedef ^                     ^                   ReKi            B              {:}{:} - - "B matrix" -
+typedef ^                     ^                   ReKi            C              {:}{:} - - "C matrix" -
+typedef ^                     ^                   INTEGER         numStates       -     0 - "Number of states" -
+typedef ^                     ^                   INTEGER         spdof          {:}    - - "States per dof" -
+typedef ^                     ^                   IntKi           NBody           -     - - "Number of WAMIT bodies for this State Space model" -
 
 # ..... Inputs .............................
 # Define inputs that are contained on the mesh here:
-typedef   ^             InputType      ReKi dq {6} - -   "Body velocities" -
+typedef ^                     InputType           ReKi            dq             {:}    - - "Body velocities" -
 
 
 # ..... Outputs ............................
-typedef   ^             OutputType           ReKi y  {6} - -   "Force" -
-typedef   ^             ^                    ReKi WriteOutput {7} - -   "output Data" "kN" -
+typedef ^                     OutputType          ReKi            y              {:}    - - "Force" -
+typedef ^                     ^                   ReKi            WriteOutput    {:}    - - "output Data" (kN)
 
 
 

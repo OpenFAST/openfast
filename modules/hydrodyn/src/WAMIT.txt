@@ -17,12 +17,20 @@ usefrom   Conv_Radiation.txt
 usefrom   SS_Radiation.txt
 usefrom   SS_Excitation.txt
 usefrom   Waves.txt
-param     WAMIT/WAMIT                  unused                        INTEGER                  MaxWAMITOutputs                      -         18        -         ""    -
-typedef   WAMIT/WAMIT                  InitInputType                 ReKi                     PtfmVol0                        -          -        -         ""    -
+param     WAMIT/WAMIT                  unused                        INTEGER                  MaxWAMITOutputs                 -         18        -         ""    -
+typedef   ^                            InitInputType                 INTEGER                  NBody                           -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+typedef   ^                            ^                             INTEGER                  NBodyMod                        -          -        -         "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
+typedef   ^                            ^                             ReKi                     Gravity                         -          -        -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
+typedef   ^                            ^                             SiKi                     WtrDpth                         -          -        -         "Water depth (positive-valued)"    m
+typedef   ^                            ^                             ReKi                     PtfmVol0                        {:}        -        -         ""    -
 typedef   ^                            ^                             LOGICAL                  HasWAMIT                        -          -        -         ".TRUE. if using WAMIT model, .FALSE. otherwise"    -
 typedef   ^                            ^                             ReKi                     WAMITULEN                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     PtfmCOBxt                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     PtfmCOByt                       -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     PtfmRefxt                       {:}        -        -         "The xt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1 ]"  (m)
+typedef   ^                            ^                             ReKi                     PtfmRefyt                       {:}        -        -         "The yt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1 ]"  (m)
+typedef   ^                            ^                             ReKi                     PtfmRefzt                       {:}        -        -         "The zt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ]"  (m)
+typedef   ^                            ^                             R8Ki                     PtfmRefztRot                    {:}        -        -         "The rotation about zt of the body reference frame(s) from xt/yt" radians 
+typedef   ^                            ^                             ReKi                     PtfmCOBxt                       {:}        -        -         ""    -
+typedef   ^                            ^                             ReKi                     PtfmCOByt                       {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  RdtnMod                         -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
 typedef   ^                            ^                             DbKi                     RdtnTMax                        -          -        -         ""    -
@@ -49,10 +57,7 @@ typedef   ^                            ^                             INTEGER    
 #
 #
 # Define outputs from the initialization routine here:
-#
-#typedef   ^                            InitOutputType                MeshType                 OutputMesh                      -          -        -         ""  -
-typedef   ^                            InitOutputType                CHARACTER(ChanLen)        WriteOutputHdr                   {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(ChanLen)        WriteOutputUnt                   {:}        -        -         ""    -
+typedef   ^                            InitOutputType                ReKi                      NULLVAL                        -          -        -         ""  -
 #
 #
 # ..... States ....................................................................................................................
@@ -88,11 +93,10 @@ typedef   ^                            ^                             Conv_Rdtn_O
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef   ^                            MiscVarType                   INTEGER                  LastIndWave                     -              -         -         ""   -
-typedef   ^                            ^                             ReKi                     F_HS                            {6}            -         -         "local variable in CalcOutput:Total load contribution from hydrostatics, including the effects of waterplane area and the center of buoyancy"   "(N, N-m)"
-typedef   ^                            ^                             ReKi                     F_Waves1                        {6}            -         -         "local variable in CalcOutput:Total load contribution from incident waves (i.e., the diffraction problem)"   "(N, N-m)"
-typedef   ^                            ^                             ReKi                     F_Rdtn                          {6}            -         -         "local variable in CalcOutput:Total load contribution from wave radiation damping (i.e., the diffraction problem)"   "(N, N-m)"
-typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {6}            -         -         "local variable in CalcOutput:set to zero because this is calculated in HydroDyn now"   -
-typedef   ^                            ^                             ReKi                     F_PtfmAM                        {6}            -         -         "local variable in CalcOutput:"   -
+typedef   ^                            ^                             ReKi                     F_HS                            {:}            -         -         "local variable in CalcOutput:Total load contribution from hydrostatics, including the effects of waterplane area and the center of buoyancy"   "(N, N-m)"
+typedef   ^                            ^                             ReKi                     F_Waves1                        {:}            -         -         "local variable in CalcOutput:Total load contribution from incident waves (i.e., the diffraction problem)"   "(N, N-m)"
+typedef   ^                            ^                             ReKi                     F_Rdtn                          {:}            -         -         "local variable in CalcOutput:Total load contribution from wave radiation damping (i.e., the diffraction problem)"   "(N, N-m)"
+typedef   ^                            ^                             ReKi                     F_PtfmAM                        {:}            -         -         "local variable in CalcOutput:"   -
 typedef   ^                            ^                             SS_Rad_MiscVarType       SS_Rdtn                         -              -         -         ""   -
 typedef   ^                            ^                             SS_Rad_InputType         SS_Rdtn_u                       -              -         -         ""   -
 typedef   ^                            ^                             SS_Rad_OutputType        SS_Rdtn_y                       -              -         -         ""   -
@@ -107,30 +111,22 @@ typedef   ^                            ^                             Conv_Rdtn_O
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                            ParameterType                 ReKi                     HdroAdMsI                {6}{6}     -         -         ""  (sec)
-typedef   ^                            ^                             ReKi                     HdroSttc                 {6}{6}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     PtfmVol0                 -          -         -         ""        -
-typedef   ^                            ^                             ReKi                     PtfmCOBxt                -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     PtfmCOByt                -          -        -         ""    -
+typedef   ^                            ParameterType                 INTEGER                  NBody                    -          -         -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+typedef   ^                            ^                             INTEGER                  NBodyMod                 -          -         -         "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
+typedef   ^                            ^                             ReKi                     F_HS_Moment_Offset       {:}{:}     -         -         "The offset moment due to the COB being offset from the WAMIT body's local location {matrix 3xNBody}" N-m
+typedef   ^                            ^                             SiKi                     HdroAdMsI                {:}{:}     -         -         ""  (sec)
+typedef   ^                            ^                             SiKi                     HdroSttc                 {:}{:}     -         -         ""        -
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
+typedef   ^                            ^                             INTEGER                  ExctnMod                 -          -        -          ""        -
 typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     RhoXg                    -          -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveTime                 {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NStepWave                -          -         -         ""        -
 typedef   ^                            ^                             Conv_Rdtn_ParameterType  Conv_Rdtn                -          -         -         ""        -
 typedef   ^                            ^                             SS_Rad_ParameterType     SS_Rdtn                  -          -         -         ""        -
 typedef   ^                            ^                             SS_Exc_ParameterType     SS_Exctn                 -          -         -         ""        -
 typedef   ^                            ^                             DbKi                     DT                       -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmSgF                  -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmSwF                  -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmHvF                  -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmRF                   -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmPF                   -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmYF                   -          -         -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                 {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                  -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOutAll                -          -         -         ""    -
+typedef   ^                            ^                             INTEGER                  NumOutAll                -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                   -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                  -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                    -          -         -         ""        -
@@ -140,10 +136,9 @@ typedef   ^                            ^                             INTEGER    
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
-typedef   ^                            InputType                     MeshType                 Mesh                     -         -         -         "Displacements at the WAMIT reference point in the inertial frame" -
+typedef   ^                            InputType                     MeshType                 Mesh                    -          -         -         "Displacements at the WAMIT reference point in the inertial frame" -
 #
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef   ^                            OutputType                   MeshType                 Mesh                     -         -         -         "Loads at the WAMIT reference point in the inertial frame" -
-typedef   ^                            ^                            ReKi                     WriteOutput              {:}       -         -         ""  -
+typedef   ^                            OutputType                   MeshType                 Mesh                     -           -         -         "Loads at the WAMIT reference point in the inertial frame" -

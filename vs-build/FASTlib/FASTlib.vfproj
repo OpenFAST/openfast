@@ -122,11 +122,11 @@
 		<Filter Name="Aero">
 		<Filter Name="AeroDyn">
 		<Filter Name="AeroAcoustics">
-        <File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics.f90" />
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics_IO.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics_TNO.f90"/></Filter>
 		<Filter Name="FVW">
-        <File RelativePath="..\..\modules\aerodyn\src\FVW.f90" />
+		<File RelativePath="..\..\modules\aerodyn\src\FVW.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\FVW_BiotSavart.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\FVW_IO.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\FVW_Subs.f90"/>
@@ -967,9 +967,7 @@
 		<File RelativePath="..\..\modules\hydrodyn\src\UserWaves.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2_Output.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/>
-		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Output.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\Waves.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\Waves2.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\Waves2_Output.f90"/></Filter>
@@ -1456,11 +1454,9 @@
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="" Description="" Outputs=""/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="" Description="" Outputs=""/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\modules\map\src\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1574,8 +1570,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1602,8 +1596,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1628,8 +1620,6 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -1657,8 +1647,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1683,8 +1671,6 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -1711,8 +1697,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1737,8 +1721,6 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -1765,8 +1747,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1791,8 +1771,6 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -1819,8 +1797,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1845,8 +1821,6 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -1873,8 +1847,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1899,8 +1871,6 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -1927,8 +1897,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -1953,8 +1921,6 @@
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -1981,8 +1947,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -2003,8 +1967,8 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\NWTC_SLATEC.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\NWTC_ScaLAPACK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\NWTC_ScaLAPACK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\NWTC_SLATEC.f90"/></Filter>
 		<Filter Name="RanLux">
 		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="RegistryFiles">
@@ -2114,32 +2078,32 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\servodyn\src\TMD_Registry.txt">
+		<File RelativePath="..\..\modules\servodyn\src\StrucCtrl_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\modules\servodyn\src\TMD_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\servodyn\src\TMD_Types.f90">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\servodyn\src\StrucCtrl_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -2151,7 +2115,8 @@
 		<File RelativePath="..\..\modules\servodyn\src\BladedInterface.F90"/>
 		<File RelativePath="..\..\modules\servodyn\src\PitchCntrl_ACH.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\ServoDyn.f90"/>
-		<File RelativePath="..\..\modules\servodyn\src\TMD.f90"/>
+		<File RelativePath="..\..\modules\servodyn\src\ServoDyn_IO.f90"/>
+		<File RelativePath="..\..\modules\servodyn\src\StrucCtrl.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\UserSubs.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\UserVSCont_KP.f90"/></Filter>
 		<Filter Name="SubDyn">
@@ -2190,10 +2155,14 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\subdyn\src\qsort_c_module.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\FEM.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\IntegerList.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SD_FEM.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn.f90"/>
-		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output.f90"/></Filter>
+		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output_Params.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Tests.f90"/>
+		<File RelativePath="..\..\modules\subdyn\src\Yaml.f90"/></Filter>
 		<Filter Name="Super Controller">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\supercontroller\src\SuperController_Registry.txt">

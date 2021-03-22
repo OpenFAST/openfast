@@ -564,7 +564,41 @@ end if
    end do
    
    if (ErrStat >= AbortErrLev) RETURN
+    
+   ! Mesh mapping data for integrating load over entire blade:
+   allocate( m%B_L_2_R_P(p%NumBlades), Stat = ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal, "Error allocating B_L_2_R_P mapping structure.", errStat, errMsg, RoutineName )
+         return
+      end if
+   allocate( m%BladeRootLoad(p%NumBlades), Stat = ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Fatal, "Error allocating BladeRootLoad mesh array.", errStat, errMsg, RoutineName )
+         return
+      end if    
 
+   do k=1,p%NumBlades
+      call MeshCopy (  SrcMesh  = u%BladeRootMotion(k)  &
+                     , DestMesh = m%BladeRootLoad(k)    &
+                     , CtrlCode = MESH_SIBLING          &
+                     , IOS      = COMPONENT_OUTPUT      &
+                     , force    = .TRUE.                &
+                     , moment   = .TRUE.                &
+                     , ErrStat  = ErrStat2              &
+                     , ErrMess  = ErrMsg2               )
+   
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )          
+   end do  !k=blades
+   
+   if (ErrStat >= AbortErrLev) RETURN
+   
+   do k=1,p%NumBlades
+      CALL MeshMapCreate( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':B_L_2_R_P('//TRIM(Num2LStr(K))//')' )
+   end do  !k=blades
+   
+   if (ErrStat >= AbortErrLev) RETURN
+   
    ! 
    if (p%NumTwrNds > 0) then
       m%W_Twr = 0.0_ReKi
@@ -639,7 +673,18 @@ subroutine Init_y(y, u, p, errStat, errMsg)
       y%TowerLoad%nnodes = 0
    end if
 
+      call MeshCopy ( SrcMesh  = u%NacelleMotion  &
+                    , DestMesh = y%NacelleLoad    &
+                    , CtrlCode = MESH_SIBLING     &
+                    , IOS      = COMPONENT_OUTPUT &
+                    , force    = .TRUE.           &
+                    , moment   = .TRUE.           &
+                    , ErrStat  = ErrStat2         &
+                    , ErrMess  = ErrMsg2          )
    
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+         if (ErrStat >= AbortErrLev) RETURN         
+         
    allocate( y%BladeLoad(p%numBlades), stat=ErrStat2 )
    if (errStat2 /= 0) then
       call SetErrStat( ErrID_Fatal, 'Error allocating y%BladeLoad.', ErrStat, ErrMsg, RoutineName )      
@@ -716,6 +761,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       
    u%InflowOnBlade = 0.0_ReKi
    u%UserProp      = 0.0_ReKi
+   u%InflowOnNacelle = 0.0_ReKi
    
       ! Meshes for motion inputs (ElastoDyn and/or BeamDyn)
          !................
@@ -789,7 +835,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
             
    call MeshCommit(u%HubMotion, errStat2, errMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':HubMotion' )
             
    if (errStat >= AbortErrLev) return
 
@@ -828,7 +874,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
             
       call MeshCommit(u%BladeRootMotion(k), errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':BladeRootMotion' )
             
       if (errStat >= AbortErrLev) return
 
@@ -898,7 +944,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       end do !j
             
       call MeshCommit(u%BladeMotion(k), errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':BladeMotion'//trim(num2lstr(k)) )
             
       if (errStat >= AbortErrLev) return
 
@@ -912,6 +958,39 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
                
    
    end do !k=numBlades
+   
+   
+   
+      !................
+      ! Nacelle
+      !................
+      call MeshCreate ( BlankMesh = u%NacelleMotion &
+                       ,IOS       = COMPONENT_INPUT &
+                       ,Nnodes    = 1               &
+                       ,ErrStat   = ErrStat2        &
+                       ,ErrMess   = ErrMsg2         &
+                       ,Orientation     = .true.    &
+                       ,TranslationDisp = .true.    &
+                       ,TranslationVel  = .true.    &
+                      )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      if (errStat >= AbortErrLev) return
+            
+         ! set node initial position/orientation
+      position = InitInp%HubPosition
+      position(1:2) = 0
+      call MeshPositionNode(u%NacelleMotion, 1, position, errStat2, errMsg2, orient=InitInp%NacelleOrientation)
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      call MeshConstructElement( u%NacelleMotion, ELEMENT_POINT, errStat2, errMsg2, p1=1 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      call MeshCommit(u%NacelleMotion, errStat2, errMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            
+      if (errStat >= AbortErrLev) return
+
    
    
 end subroutine Init_u
@@ -954,7 +1033,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 
    p%CompAA = InputFileData%CompAA
    
- ! p%numBlades        = InitInp%numBlades    ! this was set earlier because it was necessary
+   ! NOTE: In the following we use InputFileData%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, 
+   !       but if AD changes this, then it must be handled in the Glue-code linearization code, too (and elsewhere?) !
    p%NumBlNds         = InputFileData%BladeProps(1)%NumBlNds
    if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero) then
       p%NumTwrNds     = 0
@@ -1280,7 +1360,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    if (CalcWriteOutput) then
       if (p%NumOuts > 0) then
          call Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat2, ErrMsg2 )   
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    
          !...............................................................................................................................   
          ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -1298,6 +1378,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       call Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if
+      
    
    
 end subroutine AD_CalcOutput
@@ -4201,6 +4282,7 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end do
    
       FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      FieldMask(MASKID_Orientation) = .true.
       FieldMask(MASKID_TRANSLATIONVel)  = .true.
       FieldMask(MASKID_RotationVel) = .true.
       FieldMask(MASKID_TRANSLATIONAcc) = .true.
@@ -4223,7 +4305,29 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             index = index + 1
          end do            
       end do
+
+      do k=1,p%NumBlades
+         do j = 1, size(u%UserProp,1) ! Number of nodes for a blade
+            u_op(index) = u%UserProp(j,k)
+            index = index + 1
+         end do
+      end do
       
+                  ! I'm not including this in the linearization yet
+         !do i=1,u%NacelleMotion%NNodes ! 1 or 0
+         !   do j=1,3
+         !      u_op(index) = u%InflowOnNacelle(j)
+         !      index = index + 1
+         !   end do
+         !end do
+         !
+         !do i=1,u%HubMotion%NNodes ! 1
+         !   do j=1,3
+         !      u_op(index) = u%InflowOnHub(j)
+         !      index = index + 1
+         !   end do
+         !end do
+         
    END IF
 
    IF ( PRESENT( y_op ) ) THEN
@@ -4235,8 +4339,8 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end if
       
       
-      
-      index = 1               
+
+      index = 1
       call PackLoadMesh(y%TowerLoad, y_op, index)
       do k=1,p%NumBlades
          call PackLoadMesh(y%BladeLoad(k), y_op, index)                  
@@ -4284,7 +4388,7 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       if (p%BEMT%UA%lin_nx>0) then
          do j=1,p%NumBlades ! size(x%BEMT%UA%element,2)
             do i=1,p%NumBlNds ! size(x%BEMT%UA%element,1)
-               do k=1,size(x%BEMT%UA%element(i,j)%x)
+               do k=1,4 !size(x%BEMT%UA%element(i,j)%x) !linearize only first 4 states (5th is vortex)
                   x_op(index) = x%BEMT%UA%element(i,j)%x(k)
                   index = index + 1
                end do
@@ -4337,7 +4441,7 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       if (p%BEMT%UA%lin_nx>0) then
          do j=1,p%NumBlades ! size(dxdt%BEMT%UA%element,2)
             do i=1,p%NumBlNds ! size(dxdt%BEMT%UA%element,1)
-               do k=1,size(dxdt%BEMT%UA%element(i,j)%x)
+               do k=1,4 !size(dxdt%BEMT%UA%element(i,j)%x) don't linearize 5th state
                   dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(k)
                   index = index + 1
                end do
@@ -4436,6 +4540,14 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    do k=1,3
       AllOut( BAzimuth(k)) = .true.
       AllOut( BPitch  (k)) = .true.
+
+      !   AllOut( BAeroFx( k)) = .true.
+      !   AllOut( BAeroFy( k)) = .true.
+      !   AllOut( BAeroFz( k)) = .true.
+      !   AllOut( BAeroMx( k)) = .true.
+      !   AllOut( BAeroMy( k)) = .true.
+      !   AllOut( BAeroMz( k)) = .true.
+
       do j=1,9
          AllOut(BNVUndx(j,k)) = .true.
          AllOut(BNVUndy(j,k)) = .true.
@@ -4518,7 +4630,8 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    nu = u%TowerMotion%NNodes * 9            & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities at each node
       + u%hubMotion%NNodes   * 9            & ! 3 Translation Displacements + 3 orientations + 3 Rotation velocities at each node
       + size( u%InflowOnBlade)              &
-      + size( u%InflowOnTower)
+      + size( u%InflowOnTower)              & !note that we are not passing the inflow on nacelle or hub here
+      + size( u%UserProp)
 
    do i=1,p%NumBlades
       nu = nu + u%BladeMotion(i)%NNodes * 15 & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities + 3 Rotation velocities + 3 TranslationAcc at each node
@@ -4646,11 +4759,20 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
       end do !j      
    end do !i
    
+   !Module/Mesh/Field: u%UserProp(:,:) = 29,30,31;
    
+   do k=1,size(u%UserProp,2) ! p%NumBlades         
+      do i=1,size(u%UserProp,1) ! numNodes
+            p%Jac_u_indx(index,1) =  28 + k
+            p%Jac_u_indx(index,2) =  1 !component index:  this is a scalar, so 1, but is never used
+            p%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1     
+      end do !i
+   end do !k
       !......................................
       ! default perturbations, p%du:
       !......................................
-   call allocAry( p%du, 28, 'p%du', ErrStat2, ErrMsg2) ! 28 = number of unique values in p%Jac_u_indx(:,1)
+   call allocAry( p%du, 31, 'p%du', ErrStat2, ErrMsg2) ! 31 = number of unique values in p%Jac_u_indx(:,1)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    perturb = 2*D2R
@@ -4684,9 +4806,10 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    do k=1,p%NumBlades
       p%du(24 + k) = perturb_b(k)         ! u%InflowOnBlade(:,:,k) = 24 + k
    end do      
-   p%du(28) = perturb_t                   ! u%InflowOnTower(:,:) = 22
-  
-         
+   p%du(28) = perturb_t                   ! u%InflowOnTower(:,:) = 28
+   do k=1,p%NumBlades 
+      p%du(28+k) = perturb                ! u%UserProp(:,:) = 29,30,31
+   end do      
       !.....................
       ! get names of linearized inputs
       !.....................
@@ -4700,7 +4823,9 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
 
    InitOut%IsLoad_u   = .false. ! None of AeroDyn's inputs are loads
    InitOut%RotFrame_u = .false.
-      
+   do k=0,p%NumBlades*p%NumBlNds-1
+      InitOut%RotFrame_u(nu - k ) = .true.   ! UserProp(:,:)
+   end do  
    index = 1
    FieldMask = .false.
    FieldMask(MASKID_TRANSLATIONDISP) = .true.
@@ -4740,6 +4865,13 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    do i=1,p%NumTwrNds
       do j=1,3
          InitOut%LinNames_u(index) = UVW(j)//'-component inflow on tower node '//trim(num2lstr(i))//', m/s'
+         index = index + 1
+      end do
+   end do
+
+   do k=1,p%NumBlades
+      do i=1,p%NumBlNds
+            InitOut%LinNames_u(index) = 'User property on blade '//trim(num2lstr(k))//', node '//trim(num2lstr(i))//', -'
          index = index + 1
       end do
    end do
@@ -4962,7 +5094,12 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       
    CASE (28) !Module/Mesh/Field: u%InflowOnTower(:,:)   = 28;
       u%InflowOnTower(fieldIndx,node) = u%InflowOnTower(fieldIndx,node) + du * perturb_sign
-      
+   CASE (29) !Module/Mesh/Field: u%UserProp(:,1)   = 29; 
+      u%UserProp(node,1) = u%UserProp(node,1) + du * perturb_sign
+   CASE (30) !Module/Mesh/Field: u%UserProp(:,2)   = 30; 
+      u%UserProp(node,2) = u%UserProp(node,2) + du * perturb_sign
+   CASE (31) !Module/Mesh/Field: u%UserProp(:,3)   = 31; 
+      u%UserProp(node,3) = u%UserProp(node,3) + du * perturb_sign
    END SELECT
       
 END SUBROUTINE Perturb_u
@@ -4997,7 +5134,8 @@ SUBROUTINE Perturb_x( p, n, perturb_sign, x, dx )
       endif
    
    else
-      call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), size(x%BEMT%UA%element(1,1)%x), Blade, BladeNode, StateIndex )
+      !call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), size(x%BEMT%UA%element(1,1)%x), Blade, BladeNode, StateIndex )
+      call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), 4, Blade, BladeNode, StateIndex )
       x%BEMT%UA%element(BladeNode,Blade)%x(StateIndex) = x%BEMT%UA%element(BladeNode,Blade)%x(StateIndex) + dx * perturb_sign
    
    end if
@@ -5102,8 +5240,8 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
    
       do j=1,size(x_p%BEMT%UA%element,2) ! number of blades
          do i=1,size(x_p%BEMT%UA%element,1) ! number of nodes per blade
-            dX(indx_first:indx_first+3) = x_p%BEMT%UA%element(i,j)%x - x_m%BEMT%UA%element(i,j)%x
-            indx_first = indx_first + size(x_p%BEMT%UA%element(i,j)%x) ! = index_first += 4
+            dX(indx_first:indx_first+3) = x_p%BEMT%UA%element(i,j)%x(1:4) - x_m%BEMT%UA%element(i,j)%x(1:4)
+            indx_first = indx_first + 4 ! = index_first += 4
          end do
       end do
 
