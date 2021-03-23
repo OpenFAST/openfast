@@ -196,7 +196,7 @@ end subroutine AD_SetInitOut
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, defAirDens, defKinVisc, defSpdSound, defPatm, defPvap, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    type(AD_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
@@ -215,6 +215,11 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
                                                                 !!   Input is the suggested time from the glue code;
                                                                 !!   Output is the actual coupling interval that will be used
                                                                 !!   by the glue code.
+   real(ReKi),                   intent(in   ) :: defAirDens    !< Default air density from the driver; may be overwritten
+   real(ReKi),                   intent(in   ) :: defKinVisc    !< Default kinematic viscosity from the driver; may be overwritten
+   real(ReKi),                   intent(in   ) :: defSpdSound   !< Default speed of sound from the driver; may be overwritten
+   real(ReKi),                   intent(in   ) :: defPatm       !< Default atmospheric pressure from the driver; may be overwritten
+   real(ReKi),                   intent(in   ) :: defPvap       !< Default vapor pressure from the driver; may be overwritten
    type(AD_InitOutputType),      intent(  out) :: InitOut       !< Output for initialization routine
    integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
    character(*),                 intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
@@ -302,7 +307,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    ! call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
-   CALL ParsePrimaryFileInfo( PriPath, InitInp%InputFile, p%RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+   CALL ParsePrimaryFileInfo( PriPath, InitInp%InputFile, p%RootName, NumBlades, interval, defAirDens, defKinVisc, defSpdSound, defPatm, defPvap, &
+                              FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
       if (Failed()) return;
 
       ! -----------------------------------------------------------------
@@ -1110,7 +1116,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%KinVisc          = InputFileData%KinVisc
    p%Patm             = InputFileData%Patm
    p%Pvap             = InputFileData%Pvap
-   p%FluidDepth       = InputFileData%FluidDepth
    p%SpdSound         = InputFileData%SpdSound
    
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
@@ -1468,16 +1473,16 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, Er
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          call AA_CalcOutput(t, m%AA_u, p%AA, x%AA, xd%AA,  z%AA, OtherState%AA,  m%AA_y, m%AA, errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end if  
-
-      call AD_CavtCrit(u, p, m, errStat2, errMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-   endif
+      end if   
+   endif 
 
    if ( p%TwrAero ) then
       call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    endif
+
+   call AD_CavtCrit(u, p, m, errStat2, errMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)    
    
 end subroutine RotCalcOutput
 
@@ -1503,7 +1508,7 @@ subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
                if (ErrStat >= AbortErrLev) return
       
             SigmaCavit= -1* m%BEMT_y%Cpmin(i,j) ! Local cavitation number on node j                                               
-            SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%FluidDepth - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
+            SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%WtrDpth - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
                                                                         
                if ( (SigmaCavitCrit < SigmaCavit) .and. (.not. (m%CavitWarnSet(i,j)) ) ) then     
                     call WrScr( NewLine//'Cavitation occurred at blade '//trim(num2lstr(j))//' and node '//trim(num2lstr(i))//'.' )
@@ -2317,12 +2322,11 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InitInp%MHK == 0 .and. InputFileData%Buoyancy) call SetErrStat ( ErrID_Fatal, 'Buoyancy can only be calculated for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == 1 .and. InputFileData%CompAA .or. InitInp%MHK == 2 .and. InputFileData%CompAA) call SetErrStat ( ErrID_Fatal, 'The aeroacoustics module cannot be used with an MHK turbine.', ErrStat, ErrMsg, RoutineName )
 
-   if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The density of the working fluid must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%KinVisc <= 0.0) call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%CavitCheck .and. InputFileData%Pvap <= 0.0) call SetErrStat ( ErrID_Fatal, 'The vapour pressure (Pvap) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%CavitCheck .and. InputFileData%Patm <= 0.0) call SetErrStat ( ErrID_Fatal, 'The atmospheric pressure (Patm)  must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%CavitCheck .and. InputFileData%FluidDepth <= 0.0) call SetErrStat ( ErrID_Fatal, 'Fluid depth (FluidDepth) must be greater than zero', ErrStat, ErrMsg, RoutineName )
 
       
    

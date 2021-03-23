@@ -1,11 +1,19 @@
 -----  AeroDyn MultiBlade Driver Input File  --------------------------------------
 Vertical axis driver input file
 -----  Input Configuration  ----------------------------------------------------
-True          Echo         -  Echo input parameters to "<rootname>.ech"?
+True          Echo            -  Echo input parameters to "<rootname>.ech"?
+          0   MHK             - MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}
          10   TMax            - Total run time (s)
         0.1   DT              - Recommended module time step (s)
-"AD.dat"      AD_InputFile -  Name of the primary AeroDyn input file
-"IW.dat"      IW_InputFile -  Name of the primary AeroDyn input file
+"AD.dat"      AD_InputFile    -  Name of the primary AeroDyn input file
+"IW.dat"      IW_InputFile    -  Name of the primary AeroDyn input file
+----- Environmental Conditions --------------------------------------------------
+       1025   FldDens         - Density of working fluid (kg/m^3)
+ 1.4639E-05   KinVisc         - Kinematic viscosity of working fluid (m^2/s)
+      333.3   SpdSound        - Speed of sound in air (m/s)
+     101325   Patm            - Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+       2000   Pvap            - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+        150   WtrDpth         - Water depth (m)
 ----- Turbine Data  -----------------------------------------------------------
 1              NumTurbines - Number of turbines
 ====== Turbine 1 ================================================================

@@ -184,7 +184,7 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    dvr%out%unOutFile = -1
 
    ! --- Initialize aerodyn 
-   call Init_AeroDyn(iCase, dvr, AD, dvr%dt, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
+   call Init_AeroDyn(iCase, dvr, AD, dvr%dt, dvr%FldDens, dvr%KinVisc, dvr%SpdSound, dvr%Patm, dvr%Pvap, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
    if (iCase==1) then
@@ -362,11 +362,16 @@ end subroutine Dvr_CleanUp
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize aerodyn module based on driver data
-subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
+subroutine Init_AeroDyn(iCase, dvr, AD, dt, defFldDens, defKinVisc, defSpdSound, defPatm, defPvap, InitOutData, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: iCase
    type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
    real(DbKi),                   intent(inout) :: dt            ! interval
+   real(ReKi),                   intent(in   ) :: defFldDens    !< Default air density from the driver; may be overwritten
+   real(ReKi),                   intent(in   ) :: defKinVisc    !< Default kinematic viscosity from the driver; may be overwritten
+   real(ReKi),                   intent(in   ) :: defSpdSound   !< Default speed of sound from the driver; may be overwritten
+   real(ReKi),                   intent(in   ) :: defPatm       !< Default atmospheric pressure from the driver; may be overwritten
+   real(ReKi),                   intent(in   ) :: defPvap       !< Default vapor pressure from the driver; may be overwritten
    type(AD_InitOutputType),      intent(  out) :: InitOutData   ! Output data for initialization
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -406,6 +411,7 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
       InitInData%InputFile = dvr%AD_InputFile
       InitInData%RootName  = dvr%out%Root
       InitInData%Gravity   = 9.80665_ReKi
+      InitInData%MHK       = dvr%MHK
       ! Init data per rotor
       do iWT=1,dvr%numTurbines
          wt => dvr%WT(iWT)
@@ -425,7 +431,8 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
          end do
       enddo
       ! --- Call AD_init
-      call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, defFldDens, defKinVisc, defSpdSound, defPatm, defPvap, &
+                   InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
 
       if (iCase==1) then
          ! Add writeoutput units and headers to driver, same for all cases and rotors!
@@ -1251,10 +1258,20 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       call ParseVar(FileInfo_In, CurLine, 'Echo', echo, errStat2, errMsg2, UnEc); if (Failed()) return
    endif
 
+   call ParseVar(FileInfo_In, CurLine, "MHK"         , dvr%MHK         , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "analysisType", dvr%analysisType, errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "tMax"        , dvr%tMax            , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "dt"          , dvr%dt          , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "AeroFile"    , dvr%AD_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
+
+   ! --- Environmental conditions
+   call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "FldDens"     , dvr%FldDens , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "KinVisc"     , dvr%KinVisc , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "SpdSound"    , dvr%SpdSound, errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "Patm"        , dvr%Patm    , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "Pvap"        , dvr%Pvap    , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "WtrDpth"     , dvr%WtrDpth , errStat2, errMsg2, unEc); if (Failed()) return
 
    ! --- Inflow data
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
@@ -1599,6 +1616,9 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
+   if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
+   if (dvr%MHK == 2) call SetErrStat(ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName)
+   
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',ErrStat, ErrMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%compInflow) ), 'CompInflow needs to be 0 or 1')) return
 
@@ -1608,6 +1628,7 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
       if (Check( dvr%CompInflow/=0, 'CompInflow needs to be 0 when analysis type is '//trim(Num2LStr(dvr%analysisType)))) return
    endif
 
+   if (dvr%WtrDpth < 0.0_ReKi) call SetErrStat(ErrID_Fatal, 'WtrDpth must not be negative.', ErrStat, ErrMsg, RoutineName)
 
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)

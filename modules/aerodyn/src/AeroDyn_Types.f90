@@ -161,7 +161,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure [Pa]
-    REAL(ReKi)  :: FluidDepth      !< Submerged hub depth [m]
     REAL(ReKi)  :: SpdSound      !< Speed of sound [m/s]
     INTEGER(IntKi)  :: SkewMod      !< Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0] [-]
     REAL(ReKi)  :: SkewModFactor      !< Constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
@@ -323,7 +322,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure [Pa]
-    REAL(ReKi)  :: FluidDepth      !< Submerged hub height [m]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
     INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -4168,7 +4167,6 @@ ENDIF
     DstInputFileData%KinVisc = SrcInputFileData%KinVisc
     DstInputFileData%Patm = SrcInputFileData%Patm
     DstInputFileData%Pvap = SrcInputFileData%Pvap
-    DstInputFileData%FluidDepth = SrcInputFileData%FluidDepth
     DstInputFileData%SpdSound = SrcInputFileData%SpdSound
     DstInputFileData%SkewMod = SrcInputFileData%SkewMod
     DstInputFileData%SkewModFactor = SrcInputFileData%SkewModFactor
@@ -4341,7 +4339,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
       Re_BufSz   = Re_BufSz   + 1  ! Patm
       Re_BufSz   = Re_BufSz   + 1  ! Pvap
-      Re_BufSz   = Re_BufSz   + 1  ! FluidDepth
       Re_BufSz   = Re_BufSz   + 1  ! SpdSound
       Int_BufSz  = Int_BufSz  + 1  ! SkewMod
       Re_BufSz   = Re_BufSz   + 1  ! SkewModFactor
@@ -4492,8 +4489,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%Patm
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Pvap
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%FluidDepth
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%SpdSound
     Re_Xferred = Re_Xferred + 1
@@ -4743,8 +4738,6 @@ ENDIF
     OutData%Patm = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Pvap = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%FluidDepth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%SpdSound = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -10485,7 +10478,7 @@ ENDIF
     DstRotParameterTypeData%Gravity = SrcRotParameterTypeData%Gravity
     DstRotParameterTypeData%Patm = SrcRotParameterTypeData%Patm
     DstRotParameterTypeData%Pvap = SrcRotParameterTypeData%Pvap
-    DstRotParameterTypeData%FluidDepth = SrcRotParameterTypeData%FluidDepth
+    DstRotParameterTypeData%WtrDpth = SrcRotParameterTypeData%WtrDpth
     DstRotParameterTypeData%AeroProjMod = SrcRotParameterTypeData%AeroProjMod
     DstRotParameterTypeData%NumOuts = SrcRotParameterTypeData%NumOuts
     DstRotParameterTypeData%RootName = SrcRotParameterTypeData%RootName
@@ -10720,7 +10713,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Re_BufSz   = Re_BufSz   + 1  ! Patm
       Re_BufSz   = Re_BufSz   + 1  ! Pvap
-      Re_BufSz   = Re_BufSz   + 1  ! FluidDepth
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
       Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -11023,7 +11016,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Pvap
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%FluidDepth
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AeroProjMod
     Int_Xferred = Int_Xferred + 1
@@ -11437,7 +11430,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%Pvap = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%FluidDepth = ReKiBuf(Re_Xferred)
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%AeroProjMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

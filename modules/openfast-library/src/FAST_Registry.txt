@@ -118,6 +118,16 @@ typedef	^	FAST_ParameterType	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {
 typedef	^	FAST_ParameterType	IntKi	MHK	        -	-	-	"MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}"	-
 typedef	^	FAST_ParameterType	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
 typedef	^	FAST_ParameterType	LOGICAL	Linearize	-	-	-	"Linearization analysis (flag)"	-
+# Environmental conditions:
+typedef ^   FAST_ParameterType  ReKi    Gravity	    -	-	-	"Gravitational acceleration" m/s^2
+typedef ^   FAST_ParameterType  ReKi    AirDens     -   -   -   "Air density" kg/m^3
+typedef ^   FAST_ParameterType  ReKi    WtrDens     -   -   -   "Water density" kg/m^3
+typedef ^   FAST_ParameterType  ReKi    KinVisc     -   -   -   "Kinematic viscosity of working fluid" m^2/s
+typedef ^   FAST_ParameterType  ReKi    SpdSound    -   -   -   "Speed of sound in air" m/s
+typedef ^   FAST_ParameterType  ReKi    Patm        -   -   -   "Atmospheric pressure" Pa
+typedef ^   FAST_ParameterType  ReKi    Pvap        -   -   -   "Vapour pressure of working fluid" Pa
+typedef ^   FAST_ParameterType  ReKi    WtrDpth     -   -   -   "Water depth" m
+typedef ^   FAST_ParameterType  ReKi    MSL2SWL     -   -   -   "Offset between still-water level and mean sea level" m
 # Input file names:
 typedef	^	FAST_ParameterType	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn input file"	-
 typedef	^	FAST_ParameterType	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
