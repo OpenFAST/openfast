@@ -34,6 +34,9 @@ PROGRAM HydroDynDriver
    TYPE HD_Drvr_InitInput
       LOGICAL                 :: Echo
       REAL(ReKi)              :: Gravity
+      REAL(ReKi)              :: WtrDens
+      REAL(ReKi)              :: WtrDpth
+      REAL(ReKi)              :: MSL2SWL
       CHARACTER(1024)         :: HDInputFile
       CHARACTER(1024)         :: OutRootName
       LOGICAL                 :: Linearize
@@ -299,7 +302,7 @@ PROGRAM HydroDynDriver
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
-   CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
+   CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, drvrInitInp%WtrDens, drvrInitInp%WtrDpth, drvrInitInp%MSL2SWL, InitOutData, ErrStat, ErrMsg )
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
       call HD_DvrCleanup()
@@ -778,6 +781,41 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       RETURN
    END IF
 
+      ! WtrDens - Water density.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%WtrDens, 'WtrDens', 'Water density', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read WtrDens parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+      ! WtrDpth - Water depth.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%WtrDpth, 'WtrDpth', 'Water depth', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read WtrDpth parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+      ! MSL2SWL - Offset between still-water level and mean sea level.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%MSL2SWL, 'MSL2SWL', 'Offset between still-water level and mean sea level', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read MSL2SWL parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
    
    !-------------------------------------------------------------------------------------------------
    ! HYDRODYN section

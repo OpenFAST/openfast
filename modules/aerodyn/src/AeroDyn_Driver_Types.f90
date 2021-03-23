@@ -219,6 +219,13 @@ IMPLICIT NONE
     character(1024)  :: IW_InputFile      !< Name of InfloWind input file [-]
     INTEGER(IntKi)  :: MHK      !< MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine} [-]
     INTEGER(IntKi)  :: AnalysisType      !< 0=Steady Wind, 1=InflowWind [-]
+    REAL(ReKi)  :: FldDens      !< Density of working fluid [kg/m^3]
+    REAL(ReKi)  :: KinVisc      !< Kinematic viscosity of working fluid [m^2/s]
+    REAL(ReKi)  :: SpdSound      !< Speed of sound in air [m/s]
+    REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
+    REAL(ReKi)  :: Pvap      !< Vapour pressure of working fluid [Pa]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: CompInflow      !< 0=Steady Wind, 1=InflowWind [-]
     REAL(ReKi)  :: HWindSpeed      !< RefHeight Wind speed [-]
     REAL(ReKi)  :: RefHt      !< RefHeight [-]
@@ -6550,6 +6557,13 @@ ENDIF
     DstDvr_SimDataData%IW_InputFile = SrcDvr_SimDataData%IW_InputFile
     DstDvr_SimDataData%MHK = SrcDvr_SimDataData%MHK
     DstDvr_SimDataData%AnalysisType = SrcDvr_SimDataData%AnalysisType
+    DstDvr_SimDataData%FldDens = SrcDvr_SimDataData%FldDens
+    DstDvr_SimDataData%KinVisc = SrcDvr_SimDataData%KinVisc
+    DstDvr_SimDataData%SpdSound = SrcDvr_SimDataData%SpdSound
+    DstDvr_SimDataData%Patm = SrcDvr_SimDataData%Patm
+    DstDvr_SimDataData%Pvap = SrcDvr_SimDataData%Pvap
+    DstDvr_SimDataData%WtrDpth = SrcDvr_SimDataData%WtrDpth
+    DstDvr_SimDataData%MSL2SWL = SrcDvr_SimDataData%MSL2SWL
     DstDvr_SimDataData%CompInflow = SrcDvr_SimDataData%CompInflow
     DstDvr_SimDataData%HWindSpeed = SrcDvr_SimDataData%HWindSpeed
     DstDvr_SimDataData%RefHt = SrcDvr_SimDataData%RefHt
@@ -6679,6 +6693,13 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%IW_InputFile)  ! IW_InputFile
       Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! AnalysisType
+      Re_BufSz   = Re_BufSz   + 1  ! FldDens
+      Re_BufSz   = Re_BufSz   + 1  ! KinVisc
+      Re_BufSz   = Re_BufSz   + 1  ! SpdSound
+      Re_BufSz   = Re_BufSz   + 1  ! Patm
+      Re_BufSz   = Re_BufSz   + 1  ! Pvap
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! CompInflow
       Re_BufSz   = Re_BufSz   + 1  ! HWindSpeed
       Re_BufSz   = Re_BufSz   + 1  ! RefHt
@@ -6799,6 +6820,20 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AnalysisType
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%FldDens
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%KinVisc
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%SpdSound
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Patm
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Pvap
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompInflow
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%HWindSpeed
@@ -6997,6 +7032,20 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%AnalysisType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%FldDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%KinVisc = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SpdSound = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Patm = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Pvap = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%CompInflow = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%HWindSpeed = ReKiBuf(Re_Xferred)
