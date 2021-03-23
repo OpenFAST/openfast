@@ -55,7 +55,7 @@ parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help=
 
 args = parser.parse_args()
 
-caseName = args.caseName[0][3:] 
+caseName = args.caseName[0]
 executable = args.executable[0]
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
@@ -111,6 +111,11 @@ if not os.path.isdir(testBuildDirectory):
     for file in glob.glob(os.path.join(inputsDirectory,"*")):
         if os.path.isdir(file):
             continue # we don't do subfolders for now
+        try:
+            if os.path.splitext(file)[1] in ['.out','.outb']:
+                continue # we don't copy reference out files
+        except IndexError:
+            pass
         filename = file.split(os.path.sep)[-1]
         shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
 
