@@ -87,24 +87,53 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
+
+# Special case, copy the BAR Baseline files
+dst = os.path.join(buildDirectory, "BAR_Baseline")
+src = os.path.join(moduleDirectory, "BAR_Baseline")
+if not os.path.isdir(dst):
+    shutil.copytree(src, dst)
+else:
+    names = os.listdir(src)
+    for name in names:
+        srcname = os.path.join(src, name)
+        dstname = os.path.join(dst, name)
+        if os.path.isdir(srcname):
+            if not os.path.isdir(dstname):
+                shutil.copytree(srcname, dstname)
+        else:
+            shutil.copy2(srcname, dstname)
+
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
 if not os.path.isdir(testBuildDirectory):
     os.makedirs(testBuildDirectory)
-    for file in glob.glob(os.path.join(inputsDirectory,"ad_*inp")):
+    for file in glob.glob(os.path.join(inputsDirectory,"*")):
+        if os.path.isdir(file):
+            continue # we don't do subfolders for now
         filename = file.split(os.path.sep)[-1]
         shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
+
+
     
 ### Run aerodyn on the test case
 if not noExec:
-    caseInputFile = os.path.join(testBuildDirectory, "ad_driver.inp")
+    caseInputFile = os.path.join(testBuildDirectory, "Main_"+caseName + ".dvr")
     returnCode = openfastDrivers.runAerodynDriverCase(caseInputFile, executable)
     if returnCode != 0:
         rtl.exitWithError("")
     
-### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, "ad_driver.out")
-baselineOutFile = os.path.join(targetOutputDirectory, "ad_driver.out")
+###Build the filesystem navigation variables for running the regression test
+# For multiple turbines, test turbine 2, for combined cases, test case 4 
+localOutFileWT2 = os.path.join(testBuildDirectory, "Main_" + caseName + ".WT2.outb")
+localOutFileCase4 = os.path.join(testBuildDirectory, "Main_" + caseName + ".4.outb")
+if os.path.exists(localOutFileWT2) :
+    localOutFile=localOutFileWT2
+elif os.path.exists(localOutFileCase4) :
+    localOutFile=localOutFileCase4
+else:
+    localOutFile = os.path.join(testBuildDirectory, "Main_" + caseName + ".outb")
+baselineOutFile = os.path.join(targetOutputDirectory, os.path.basename(localOutFile))
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
