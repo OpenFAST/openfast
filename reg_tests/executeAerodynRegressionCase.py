@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
@@ -92,7 +92,13 @@ if not os.path.isdir(inputsDirectory):
 dst = os.path.join(buildDirectory, "BAR_Baseline")
 src = os.path.join(moduleDirectory, "BAR_Baseline")
 if not os.path.isdir(dst):
-    shutil.copytree(src, dst)
+    try:
+        shutil.copytree(src, dst)
+    except:
+        # This can fail if two processes are copying the file at the same time
+        print('>>> Copy failed')
+        import time
+        time.sleep(1)
 else:
     names = os.listdir(src)
     for name in names:

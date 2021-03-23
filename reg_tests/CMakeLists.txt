@@ -43,7 +43,7 @@ if(BUILD_OPENFAST_CPP_API)
 endif()
 
 # Set the AeroDyn executable configuration option and default
-set(CTEST_AERODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/aerodyn_driver" CACHE FILEPATH "Specify the AeroDyn driver executable to use in testing.")
+set(CTEST_AERODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/aerodyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the AeroDyn driver executable to use in testing.")
 
 # Set the BeamDyn executable configuration option and default
 set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/beamdyn/beamdyn_driver" CACHE FILEPATH "Specify the BeamDyn driver executable to use in testing.")
