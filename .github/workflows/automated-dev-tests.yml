@@ -121,6 +121,7 @@ jobs:
   compile-all-single-precision:
     # Test if single precision compile completes.
     # Compiles all targets excluding tests.
+    # Run with the OpenFAST registry generating the types files.
     # Do not run the test suite.
 
     runs-on: ubuntu-20.04
@@ -139,6 +140,7 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DDOUBLE_PRECISION:BOOL=OFF \
+            -DGENERATE_TYPES:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build all
         working-directory: ${{runner.workspace}}/build
