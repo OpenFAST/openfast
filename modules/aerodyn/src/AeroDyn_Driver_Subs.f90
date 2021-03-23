@@ -1314,7 +1314,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
          if (dvr%AnalysisType==idAnalysisRegular) then
             if (wt%motionType==idBaseMotionGeneral) then
-               call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2); if(Failed()) return
+               call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
                wt%iMotion=1
                if (wt%motion(size(wt%motion,1),1)<dvr%tMax) then
                   call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%motionFileName))
@@ -1399,7 +1399,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
          wt%frequency = wt%frequency * 2 *pi ! Hz to rad/s
          if (wt%motionType==idBaseMotionGeneral) then
-            call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2); if(Failed()) return
+            call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
             wt%iMotion=1
             if (wt%motion(size(wt%motion,1),1)<dvr%tMax) then
                call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%motionFileName))
@@ -1414,7 +1414,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             call ParseVar(FileInfo_In, CurLine, 'nacMotionFilename'//sWT, wt%nac%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
             wt%nac%yaw = wt%nac%yaw * Pi/180_ReKi ! yaw stored in rad
             if (wt%nac%motionType==idNacMotionVariable) then
-               call ReadDelimFile(wt%nac%motionFilename, 4, wt%nac%motion, errStat2, errMsg2); if(Failed()) return
+               call ReadDelimFile(wt%nac%motionFilename, 4, wt%nac%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
                wt%nac%iMotion=1
                if (wt%nac%motion(size(wt%nac%motion,1),1)<dvr%tMax) then
                   call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%nac%motionFileName))
@@ -1428,7 +1428,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             call ParseVar(FileInfo_In, CurLine, 'rotMotionFilename'//sWT, wt%hub%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
             wt%hub%rotSpeed = wt%hub%rotSpeed * Pi/30_ReKi ! speed stored in rad/s 
             if (wt%hub%motionType==idHubMotionVariable) then
-               call ReadDelimFile(wt%hub%motionFilename, 4, wt%hub%motion, errStat2, errMsg2); if(Failed()) return
+               call ReadDelimFile(wt%hub%motionFilename, 4, wt%hub%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
                wt%hub%iMotion=1
                if (wt%hub%motion(size(wt%hub%motion,1),1)<dvr%tMax) then
                   call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%hub%motionFileName))
@@ -1450,7 +1450,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             enddo
             do iB=1,wt%numBlades
                if (wt%bld(iB)%motionType==idBldMotionVariable) then
-                  call ReadDelimFile(wt%bld(iB)%motionFilename, 4, wt%bld(iB)%motion, errStat2, errMsg2); if(Failed()) return
+                  call ReadDelimFile(wt%bld(iB)%motionFilename, 4, wt%bld(iB)%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
                   wt%bld(iB)%iMotion=1
                   if (wt%bld(iB)%motion(size(wt%bld(iB)%motion,1),1)<dvr%tMax) then
                      call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%bld(iB)%motionFileName))
@@ -1484,7 +1484,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
    if (dvr%AnalysisType==idAnalysisTimeD) then
       call ParseVar(FileInfo_In, CurLine, 'TimeAnalysisFileName', Line, errStat2, errMsg2, unEc); if(Failed()) return
-      call ReadDelimFile(Line, 6, dvr%timeSeries, errStat2, errMsg2); if(Failed()) return
+      call ReadDelimFile(Line, 6, dvr%timeSeries, errStat2, errMsg2, priPath=priPath); if(Failed()) return
       dvr%timeSeries(:,4) = real(dvr%timeSeries(:,4)*RPM2RPS, ReKi) ! rad/s
       dvr%timeSeries(:,5) = real(dvr%timeSeries(:,5)*D2R    , ReKi) ! rad
       dvr%timeSeries(:,6) = real(dvr%timeSeries(:,6)*D2R    , ReKi) ! rad
@@ -1892,23 +1892,31 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yAD, yIW, errStat, errMsg)
       
 end subroutine Dvr_WriteOutputs
 !> Read a delimited file with one line of header
-subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines)
+subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, priPath)
    character(len=*),                        intent(in)  :: Filename
    integer,                                 intent(in)  :: nCol
    real(ReKi), dimension(:,:), allocatable, intent(out) :: Array
    integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
    character(*)           ,                 intent(out) :: errMsg  ! Error message if ErrStat /= ErrID_None
-   integer(IntKi), optional ,               intent(in ) :: nHeaderLines
+   integer(IntKi), optional,                intent(in ) :: nHeaderLines
+   character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
    integer              :: UnIn, i, j, nLine, nHead
    character(len= 2048) :: line
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! temporary Error message
+   character(len=2048) :: Filename_Loc   ! filename local to this function
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   Filename_Loc = Filename
+   if (present(priPath)) then
+      if (PathIsRelative(Filename_Loc)) Filename_Loc = trim(PriPath)//trim(Filename)
+   endif
+
+
    ! Open file
    call GetNewUnit(UnIn) 
-   call OpenFInpFile(UnIn, Filename, errStat2, errMsg2); if(Failed()) return 
+   call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); if(Failed()) return 
    ! Count number of lines
    nLine = line_count(UnIn)
    allocate(Array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; if(Failed())return
@@ -1917,13 +1925,13 @@ subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines)
    if (present(nHeaderLines)) nHead = nHeaderLines
    do i=1,nHead
       read(UnIn, *, IOSTAT=errStat2) line
-      errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename)
+      errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename_Loc)
       if(Failed()) return
    enddo
    ! Read data
    do I = 1,nLine-1
       read (UnIn,*,IOSTAT=errStat2) (Array(I,J), J=1,nCol)
-      errMsg2 = ' Error reading line '//trim(Num2LStr(I+1))//' of file: '//trim(Filename)
+      errMsg2 = ' Error reading line '//trim(Num2LStr(I+1))//' of file: '//trim(Filename_Loc)
       if(Failed()) return
    end do  
    close(UnIn) 
