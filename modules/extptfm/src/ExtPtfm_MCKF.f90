@@ -211,9 +211,11 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
       CALL AllocAry(InitOut%RotFrame_y, 6+p%NumOuts , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%LinNames_x, 2*p%nCB     , 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%RotFrame_x, 2*p%nCB     , 'RotFrame_x', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%DerivOrder_x, 2*p%nCB   , 'DerivOrd_x', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%LinNames_u, N_INPUTS    , 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%RotFrame_u, N_INPUTS    , 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%IsLoad_u  , N_INPUTS    , 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
+      InitOut%DerivOrder_x(:)=2
       ! LinNames_y
       do I=1,3; 
           InitOut%LinNames_y(I)   = 'Interface node '//XYZ(I)//' force, N' 

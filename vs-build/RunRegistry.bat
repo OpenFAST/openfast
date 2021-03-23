@@ -67,6 +67,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\MAP_Fortran_Registry.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
 GOTO checkError
 
+:MAP_Fortran
+SET CURR_LOC=%MAP_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap 
+GOTO checkError
+
 :FAST
 SET CURR_LOC=%FAST_Loc%
 SET Output_Loc=%CURR_LOC%
@@ -98,7 +104,7 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
-:TMD
+:StrucCtrl
 :ServoDyn
 SET CURR_LOC=%SrvD_Loc%
 SET Output_Loc=%CURR_LOC%
@@ -117,6 +123,7 @@ GOTO checkError
 :IfW_BladedFFWind
 :IfW_UserWind
 :IfW_4Dext
+:IfW_FFWind_Base
 :IfW_UniformWind
 SET CURR_LOC=%IfW_Loc%
 SET Output_Loc=%CURR_LOC%
@@ -180,60 +187,16 @@ SET Output_Loc=%CURR_LOC%
 GOTO checkError
 
 :HydroDyn
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Current
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Waves
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Waves2
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :SS_Excitation
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :SS_Radiation
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Conv_Radiation
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :WAMIT
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :WAMIT2
-SET CURR_LOC=%HD_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
-GOTO checkError
-
 :Morison
+
 SET CURR_LOC=%HD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"

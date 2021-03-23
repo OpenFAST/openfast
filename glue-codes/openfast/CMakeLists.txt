@@ -14,10 +14,19 @@
 # limitations under the License.
 #
 
-add_executable(openfast
-  src/FAST_Prog.f90)
+add_executable(openfast src/FAST_Prog.f90)
 target_link_libraries(openfast openfast_postlib foamfastlib)
 set_property(TARGET openfast PROPERTY LINKER_LANGUAGE Fortran)
+
+string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
+string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
+if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
+  # With variable tracking enabled, the compile step frequently aborts on large modules and
+  # restarts with this option off. Disabling in Release mode avoids this problem when compiling with
+  # full optimizations, but leaves it enabled for RelWithDebInfo which adds both -O2 and -g flags.
+  # https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
+  set_source_files_properties(src/FAST_Prog.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
+endif()
 
 install(TARGETS openfast
   RUNTIME DESTINATION bin)

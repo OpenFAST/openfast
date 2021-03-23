@@ -377,6 +377,7 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    integer(IntKi),             intent(  out) :: ErrStat       !< Error status of the operation
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
+   character(1024)          :: rootDir, baseName  ! Simulation root dir and basename
    !integer(IntKi)          :: ErrStat2
    !character(ErrMsgLen)    :: ErrMsg2
    character(*), parameter :: RoutineName = 'FVW_SetParametersFromInputs'
@@ -388,6 +389,9 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    p%DTaero       = InitInp%DTaero          ! AeroDyn Time step
    p%KinVisc      = InitInp%KinVisc         ! Kinematic air viscosity
    p%RootName     = InitInp%RootName        ! Rootname for outputs
+   call GetPath( p%RootName, rootDir, baseName ) 
+   p%VTK_OutFileRoot = trim(rootDir) // 'vtk_fvw'  ! Directory for VTK outputs
+   p%VTK_OutFileBase = trim(rootDir) // 'vtk_fvw' // PathSep // trim(baseName) ! Basename for VTK files
    ! Set indexing to AFI tables -- this is set from the AD15 calling code.
    call AllocAry(p%AFindx,size(InitInp%AFindx,1),size(InitInp%AFindx,2),'AFindx',ErrStat,ErrMsg)
    p%AFindx = InitInp%AFindx     ! Copying in case AD15 still needs these
@@ -414,7 +418,7 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%IntMethod            = InputFileData%IntMethod
    p%CirculationMethod    = InputFileData%CirculationMethod
    p%CircSolvConvCrit     = InputFileData%CircSolvConvCrit
-   p%CircSolvRelaxation   = InputFileData%CircSolvRelaxation
+   p%CircSolvRelaxation   = InputFileData%CircSolvRelaxation 
    p%CircSolvMaxIter      = InputFileData%CircSolvMaxIter
    p%FreeWakeStart        = InputFileData%FreeWakeStart
    p%CircSolvPolar        = InputFileData%CircSolvPolar
@@ -463,7 +467,7 @@ end subroutine FVW_ToString
 !> This routine is called at the end of the simulation.
 subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
-   type(FVW_InputType),             intent(inout)  :: u(:)        !< System inputs
+   type(FVW_InputType),allocatable, intent(inout)  :: u(:)        !< System inputs
    type(FVW_ParameterType),         intent(inout)  :: p           !< Parameters
    type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Continuous states
    type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Discrete states
@@ -481,10 +485,13 @@ subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
    ! Close files here:
+   
    ! Destroy the input data:
-   do i=1,size(u)
-      call FVW_DestroyInput( u(i), ErrStat, ErrMsg )
-   enddo
+   if (allocated(u)) then
+      do i=1,size(u)
+         call FVW_DestroyInput( u(i), ErrStat, ErrMsg )
+      enddo
+   endif
 
    ! Destroy the parameter data:
    call FVW_DestroyParam( p, ErrStat, ErrMsg )
@@ -499,9 +506,6 @@ subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ! Destroy the output data:
    call FVW_DestroyOutput( y, ErrStat, ErrMsg )
 
-#ifdef UA_OUTS
-   CLOSE(69)
-#endif
 end subroutine FVW_End
 
 
@@ -964,24 +968,23 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat,
          m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
       endif
       if (m%FirstCall) then
-         call MKDIR('vtk_fvw')
+         call MKDIR(p%VTK_OutFileRoot)
       endif
       if ( ( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon )  then
          m%VTKlastTime = t
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
             ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
-            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
                      HubOrientation=real(u%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
          endif
          if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
             ! Global coordinate system, ALL VTK will be exported in global
-            call WrVTK_FVW(p, x, z, m, 'vtk_fvw/'//trim(p%RootName)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
          endif
       endif
    endif
-
-
+   
 contains
 
    logical function Failed()
@@ -994,7 +997,6 @@ end subroutine FVW_CalcOutput
 ! --- UA related, should be merged with AeroDyn 
 !----------------------------------------------------------------------------------------------------------------------------------   
 subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, ErrStat, ErrMsg )
-   use UnsteadyAero, only: UA_Init, UA_TurnOff_param
    type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data, temporary, for UA..
    type(FVW_InitInputType),         intent(inout)  :: InitInp     !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
    real(DbKi),                      intent(inout)  :: interval    !< time interval  
@@ -1014,53 +1016,32 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
    character(ErrMsgLen)   :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
-
+   
    m%UA_Flag=InitInp%UA_Flag
    ! --- Condensed version of BEMT_Init_Otherstate
-   allocate ( OtherState%UA_Flag( InitInp%numBladeNodes, InitInp%NumBlades ), STAT = ErrStat2 )
-   OtherState%UA_Flag=m%UA_Flag
    if ( m%UA_Flag ) then
       ErrMsg2='Unsteady aerodynamic (`AFAeroMod>1`) cannot be used with the free wake code (`WakeMod=3`) for now.'; ErrStat2=ErrID_Fatal;
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_Init_Wrapper'); return
 
       ! ---Condensed version of "BEMT_Set_UA_InitData"
       allocate(Init_UA_Data%c(InitInp%numBladeNodes,InitInp%numBlades), STAT = errStat2)
-      do j = 1,InitInp%NumBlades; do i = 1,InitInp%numBladeNodes;
+      do j = 1,InitInp%NumBlades
+         do i = 1,InitInp%numBladeNodes
             Init_UA_Data%c(i,j)      = p%chord(i,j) ! NOTE: InitInp chord move-allocd to p
-      end do; end do
+         end do
+      end do
       Init_UA_Data%dt              = interval          
-      Init_UA_Data%OutRootName     = ''
+      Init_UA_Data%OutRootName     = 'Debug.UA'
       Init_UA_Data%numBlades       = InitInp%NumBlades 
       Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
-      Init_UA_Data%NumOuts         = 0
       Init_UA_Data%UAMod           = InitInp%UAMod  
       Init_UA_Data%Flookup         = InitInp%Flookup
-      Init_UA_Data%a_s             = InitInp%a_s ! m/s  
+      Init_UA_Data%a_s             = InitInp%a_s ! m/s
+      Init_UA_Data%ShedEffect      = .False. ! Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
+      
       ! --- UA init
       call UA_Init( Init_UA_Data, u_UA, m%p_UA, x%UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
-      m%p_UA%ShedEffect=.False. !< Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
-      ! --- Condensed version of "BEMT_CheckInitUA"
-      do j = 1,InitInp%numBlades; do i = 1,InitInp%numBladeNodes; ! Loop over blades and nodes
-         call UA_TurnOff_param(m%p_UA, AFInfo(p%AFindx(i,j)), ErrStat2, ErrMsg2)
-         if (ErrStat2 /= ErrID_None) then
-            call WrScr( 'Warning: Turning off Unsteady Aerodynamics because '//trim(ErrMsg2)//' BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
-            OtherState%UA_Flag(i,j) = .false.
-         end if
-      end do; end do;
-#ifdef UA_OUTS   
-      CALL OpenFOutFile ( 69, 'Debug.UA.out', errStat, errMsg ); IF (ErrStat >= AbortErrLev) RETURN
-      WRITE (69,'(/,A)')  'This output information was generated by FVW'// ' on '//CurDate()//' at '//CurTime()//'.'
-      WRITE (69,'(:,A20)', ADVANCE='no' ) 'Time'
-      do i=1,size(InitOutData_UA%WriteOutputHdr)
-         WRITE (69,'(:,A20)', ADVANCE='no' )  trim(InitOutData_UA%WriteOutputHdr(i))
-      end do  
-      write (69,'(A)')    ' '
-      WRITE (69,'(:,A20)', ADVANCE='no' ) '(s)'
-      do i=1,size(InitOutData_UA%WriteOutputUnt)
-         WRITE (69,'(:,A20)', ADVANCE='no' )  trim(InitOutData_UA%WriteOutputUnt(i))
-      end do  
-      write (69,'(A)')    ' '   
-#endif
+
       call UA_DestroyInput( u_UA, ErrStat2, ErrMsg2 ); if(Failed())return
       call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 ); if(Failed())return
       call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 ); if(Failed())return
@@ -1080,7 +1061,7 @@ end subroutine  UA_Init_Wrapper
 
 subroutine UA_UpdateState_Wrapper(AFInfo, t, n, u, p, x, xd, OtherState, m, ErrStat, ErrMsg )
    use FVW_VortexTools, only: interpextrap_cp2node
-   use UnsteadyAero, only: UA_UpdateStates, UA_TurnOff_input
+   use UnsteadyAero, only: UA_UpdateStates
    type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data, temporary, for UA..
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    integer(IntKi),                  intent(in   )  :: n           !< time step  
@@ -1129,34 +1110,25 @@ subroutine UA_UpdateState_Wrapper(AFInfo, t, n, u, p, x, xd, OtherState, m, ErrS
          endif
 
          do i = 1,p%nSpan+1 
-            ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node      
-            if (OtherState%UA_Flag(i,j) .and. n > 0) then
-               !! ....... compute inputs to UA ...........
-               ! NOTE: To be consistent with CalcOutput we take Vwind_ND that was set using m%DisturbedInflow from AeroDyn.. 
-               ! This is not clean, but done to be consistent, waiting for AeroDyn to handle UA
-               call AlphaVrel_Generic(u%WingsMesh(j)%Orientation(1:3,1:3,i), u%WingsMesh(j)%TranslationVel(1:3,i),  Vind_node(:,i), m%Vwnd_ND(:,i,j), &
-                                       p%KinVisc, p%Chord(i,j), u_UA(k)%U, u_UA(k)%alpha, u_UA(k)%Re)
-               ! FIX ME: this is copied 3 times!!!!
-               u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
-               u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
-               u_UA%omega = 0.0_ReKi ! FIX ME!!!! dot_product( u%BladeMotion(j)%RotationVel(   :,i), m%WithoutSweepPitchTwist(3,:,i,j) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
-               u_UA(k)%UserProp = 0 ! u1%UserProp(i,j) ! TODO
+            !! ....... compute inputs to UA ...........
+            ! NOTE: To be consistent with CalcOutput we take Vwind_ND that was set using m%DisturbedInflow from AeroDyn.. 
+            ! This is not clean, but done to be consistent, waiting for AeroDyn to handle UA
+            call AlphaVrel_Generic(u%WingsMesh(j)%Orientation(1:3,1:3,i), u%WingsMesh(j)%TranslationVel(1:3,i),  Vind_node(:,i), m%Vwnd_ND(:,i,j), &
+                                    p%KinVisc, p%Chord(i,j), u_UA(k)%U, u_UA(k)%alpha, u_UA(k)%Re)
+            ! FIX ME: this is copied 3 times!!!!
+            u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
+            u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
+            u_UA%omega = 0.0_ReKi ! FIX ME!!!! dot_product( u%BladeMotion(j)%RotationVel(   :,i), m%WithoutSweepPitchTwist(3,:,i,j) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+            u_UA(k)%UserProp = 0 ! u1%UserProp(i,j) ! TODO
                
-               !! ....... check inputs to UA ...........
-               call UA_TurnOff_input(m%p_UA, AFInfo(p%AFIndx(i,j)), u_UA(k), ErrStat2, ErrMsg2)
-               if (ErrStat2 /= ErrID_None) then
-                  OtherState%UA_Flag(i,j) = .FALSE.
-                  call WrScr( 'Warning: Turning off dynamic stall due to '//trim(ErrMsg2)//' '//trim(NodeText(i,j)))
-               else
-                 ! COMPUTE: xd%UA, OtherState%UA
-                 call UA_UpdateStates( i, j, t, n, u_UA, uTimes, m%p_UA, x%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%m_UA, ErrStat2, ErrMsg2 )
-                 if (ErrStat2 /= ErrID_None) then
-                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'//trim(NodeText(i,j)))
-                     call WrScr(trim(ErrMsg))
-                    if (ErrStat >= AbortErrLev) return
-                 end if
-               end if
+            ! COMPUTE: xd%UA, OtherState%UA
+            call UA_UpdateStates( i, j, t, n, u_UA, uTimes, m%p_UA, x%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%m_UA, ErrStat2, ErrMsg2 )
+            if (ErrStat2 /= ErrID_None) then
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'//trim(NodeText(i,j)))
+               call WrScr(trim(ErrMsg))
+               if (ErrStat >= AbortErrLev) return
             end if
+
          end do
       end do
       call UA_DestroyInput( u_UA(k), ErrStat2, ErrMsg2 ); 

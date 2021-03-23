@@ -51,6 +51,8 @@ static int NumAddInputs = 0;  // number of additional inputs
 static int NumOutputs = 1;
 static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
+static int ErrStat2 = 0;
+static char ErrMsg2[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static int n_t_global = -2;  // counter to determine which fixed-step simulation time we are at currently (start at -2 for initialization)
 static int AbortErrLev = ErrID_Fatal;      // abort error level; compare with NWTC Library
@@ -197,8 +199,9 @@ static void mdlInitializeSizes(SimStruct *S)
     /*  ---------------------------------------------  */
     //   strcpy(InputFileName, "../../CertTest/Test01.fst");
        FAST_AllocateTurbines(&nTurbines, &ErrStat, ErrMsg);
-       FAST_Sizes(&iTurb, &TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
+       if (checkError(S)) return;
 
+       FAST_Sizes(&iTurb, &TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
        n_t_global = -1;
        if (checkError(S)) return;
 
@@ -447,7 +450,10 @@ static void mdlTerminate(SimStruct *S)
       FAST_End(&iTurb, &tr);
       n_t_global = -2;
    }  
-
+   FAST_DeallocateTurbines(&ErrStat2, ErrMsg2);
+   if (ErrStat2 != ErrID_None){
+      ssPrintf("\n%s\n", ErrMsg2);
+   }
 }
 
 

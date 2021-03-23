@@ -123,10 +123,10 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     CHARACTER(ErrMsgLen)    :: ErrMsg2         ! temporary Error message if ErrStat /    = ErrID_None
     INTEGER(IntKi)          :: ErrStat2        ! temporary Error status of the operation
     INTEGER(IntKi)          :: simcou,coun     ! simple loop  counter
-    INTEGER(IntKi)          :: I,J,whichairfoil,K
+    INTEGER(IntKi)          :: I,J,whichairfoil,K,i1_1,i10_1,i1_2,i10_2,iLE
     character(*), parameter :: RoutineName = 'SetParameters'
-    LOGICAL                 :: tr,tri,exist
-    REAL(ReKi)              :: val1,val2,f2,f4,lefttip,rightip,jumpreg
+    LOGICAL                 :: tr,tri,exist,LE_flag
+    REAL(ReKi)              :: val1,val10,f2,f4,lefttip,rightip,jumpreg, dist1, dist10
     ! Initialize variables for this routine
     ErrStat  = ErrID_None
     ErrMsg   = ""
@@ -156,14 +156,18 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%KinVisc          = InitInp%KinVisc
     p%SpdSound         = InitInp%SpdSound
     p%HubHeight        = InitInp%HubHeight
-    p%z0_AA            = InputFileData%z0_AA
+    p%Lturb            = InputFileData%Lturb
     p%dy_turb_in       = InputFileData%dy_turb_in
     p%dz_turb_in       = InputFileData%dz_turb_in
     p%NrObsLoc         = InputFileData%NrObsLoc
     p%FTitle           = InputFileData%FTitle
 
-    call AllocAry(p%TI_Grid_In,size(InputFileData%TI_Grid_In,1), size(InputFileData%TI_Grid_In,2),  'p%TI_Grid_In', errStat2, errMsg2); if(Failed()) return
-    p%TI_Grid_In=InputFileData%TI_Grid_In
+    IF ((InputFileData%TICalcMeth==1)) THEN
+        call AllocAry(p%TI_Grid_In,size(InputFileData%TI_Grid_In,1), size(InputFileData%TI_Grid_In,2),  'p%TI_Grid_In', errStat2, errMsg2); if(Failed()) return
+        p%TI_Grid_In=InputFileData%TI_Grid_In
+    ENDIF
+
+    p%AvgV=InputFileData%AvgV
 
     ! Copy AFInfo into AA module
     ! TODO Allocate AFInfo   and AFindx variables (DONE AND DONE) 
@@ -241,18 +245,19 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     call AllocAry(p%StallStart,p%NumBlNds,p%NumBlades,'p%StallStart',ErrStat2,ErrMsg2); if(Failed()) return
     p%StallStart(:,:) = 0.0_ReKi
 
-    do i=1,p%NumBlades
-        p%TEThick(:,i) = InputFileData%BladeProps(i)%TEThick(:)    ! 
-        p%TEAngle(:,i) = InputFileData%BladeProps(i)%TEAngle(:)    ! 
+     do i=1,p%NumBlades    
         do j=1,p%NumBlNds
-           whichairfoil       = p%BlAFID(j,i)
-           if(p%AFInfo(whichairfoil)%NumTabs /=1 ) then
-              call SetErrStat(ErrID_Fatal, 'Number of airfoil tables within airfoil file different than 1, which is not supported.', ErrStat2, ErrMsg2, RoutineName )
-              if(Failed()) return
-           endif
-           p%StallStart(j,i)  = p%AFInfo(whichairfoil)%Table(1)%UA_BL%alpha1*180/PI ! approximate stall angle of attack [deg] (alpha1 in [rad])
+            whichairfoil = p%BlAFID(j,i)
+            p%TEThick(j,i) = InputFileData%BladeProps(whichairfoil)%TEThick
+            p%TEAngle(j,i) = InputFileData%BladeProps(whichairfoil)%TEAngle
+            
+            if(p%AFInfo(whichairfoil)%NumTabs /=1 ) then
+                call SetErrStat(ErrID_Fatal, 'Number of airfoil tables within airfoil file different than 1, which is not supported.', ErrStat2, ErrMsg2, RoutineName )
+                if(Failed()) return
+            endif
+            p%StallStart(j,i)  = p%AFInfo(whichairfoil)%Table(1)%UA_BL%alpha1*180/PI ! approximate stall angle of attack [deg] (alpha1 in [rad])
         enddo
-    end do
+    enddo
 
     call AllocAry(p%BlSpn,       p%NumBlNds, p%NumBlades, 'p%BlSpn'  , ErrStat2, ErrMsg2); if(Failed()) return
     call AllocAry(p%BlChord,     p%NumBlNds, p%NumBlades, 'p%BlChord', ErrStat2, ErrMsg2); if(Failed()) return
@@ -340,60 +345,63 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         if(Failed()) return
     endif
 
-    ! If simplified guidati is on, calculate the airfoil thickness from input airfoil coordinates
+    ! If simplified guidati is on, calculate the airfoil thickness at 1% and at 10% chord from input airfoil coordinates
     IF (p%IInflow .EQ. 2) THEN
-        ! Calculate the Thickness @ 1% chord and  @ 10% chord (normalized thickness)
         call AllocAry(p%AFThickGuida,2,size(p%AFInfo),  'p%AFThickGuida', errStat2, errMsg2); if(Failed()) return
         p%AFThickGuida=0.0_Reki
 
         DO k=1,size(p%AFInfo) ! for each airfoil interpolation 
-            tri=.true.;tr=.true.;
-            do i=2,size(p%AFInfo(k)%X_Coord)
-                if ( (p%AFInfo(k)%X_Coord(i)+p%AFInfo(k)%Y_Coord(i)) .eq. 0) then
-                    !print*,i
-                    goto 174
-                endif
-                if ( p%AFInfo(k)%X_Coord(i) .eq. 0.1) then
-                    val1=p%AFInfo(k)%Y_Coord(i)
-                elseif (  (p%AFInfo(k)%X_Coord(i) .lt. 0.1) .and. (tri) ) then
-                    val1=(  abs(p%AFInfo(k)%X_Coord(i-1)-0.1)*p%AFInfo(k)%Y_Coord(i) + &
-                        abs(p%AFInfo(k)%X_Coord(i)-0.1)*p%AFInfo(k)%Y_Coord(i-1))/ &
-                        (abs(p%AFInfo(k)%X_Coord(i-1)-0.1)+abs(p%AFInfo(k)%X_Coord(i)-0.1))
 
-                    tri=.false.        
-                elseif (p%AFInfo(k)%X_Coord(i) .eq. 0.01) then
-                    val2=p%AFInfo(k)%Y_Coord(i)
-                elseif (  (p%AFInfo(k)%X_Coord(i) .lt. 0.01) .and.  (tr) ) then
-                    val2=(  abs(p%AFInfo(k)%X_Coord(i-1)-0.01)*p%AFInfo(k)%Y_Coord(i) + &
-                        abs(p%AFInfo(k)%X_Coord(i)-0.01)*p%AFInfo(k)%Y_Coord(i-1))/ &
-                        (abs(p%AFInfo(k)%X_Coord(i-1)-0.01)+abs(p%AFInfo(k)%X_Coord(i)-0.01))
-                    tr=.false.
-                endif 
-            enddo
+            ! IF ((MIN(p%AFInfo(k)%X_Coord) < 0.) .or. (MAX(p%AFInfo(k)%X_Coord) > 0.)) THEN
+            !     call SetErrStat ( ErrID_Fatal,'The coordinates of airfoil '//trim(num2lstr(k))//' are mot defined between x=0 and x=1. Code stops.' ,ErrStat, ErrMsg, RoutineName )
+            ! ENDIF
+            
+            ! Flip the flag when LE is found and find index
+            LE_flag = .False.
+            DO i=3,size(p%AFInfo(k)%X_Coord)
+                IF (LE_flag .eqv. .False.) THEN
+                    IF (p%AFInfo(k)%X_Coord(i) - p%AFInfo(k)%X_Coord(i-1) > 0.) THEN
+                        LE_flag = .TRUE.
+                        iLE = i
+                    ENDIF
+                ENDIF
+            ENDDO
 
-            174 tri=.true.;tr=.true.;
-            do j=i,size(p%AFInfo(k)%X_Coord)
-                if ( p%AFInfo(k)%X_Coord(j) .eq. 0.1) then
-                    val1=abs(p%AFInfo(k)%Y_Coord(j)) + abs(val1)
-                elseif (  (p%AFInfo(k)%X_Coord(j) .gt. 0.1) .and. (tri) ) then
-                    val1=abs(val1)+abs((abs(p%AFInfo(k)%X_Coord(j-1)-0.1)*p%AFInfo(k)%Y_Coord(j)+ &
-                        abs(p%AFInfo(k)%X_Coord(j)-0.1)*p%AFInfo(k)%Y_Coord(j-1))/&
-                        (abs(p%AFInfo(k)%X_Coord(j-1)-0.1)+abs(p%AFInfo(k)%X_Coord(j)-0.1)));
-                    tri=.false.        
-                elseif (p%AFInfo(k)%X_Coord(j) .eq. 0.01) then
-                    val2=abs(p%AFInfo(k)%Y_Coord(j)) + abs(val2)
-                elseif (  (p%AFInfo(k)%X_Coord(j) .gt. 0.01) .and.  (tr) ) then
-                    val2=abs(val2)+abs((abs(p%AFInfo(k)%X_Coord(j-1)-0.01)*p%AFInfo(k)%Y_Coord(j)+ &
-                        abs(p%AFInfo(k)%X_Coord(j)-0.01)*p%AFInfo(k)%Y_Coord(j-1))/&
-                        (abs(p%AFInfo(k)%X_Coord(j-1)-0.01)+abs(p%AFInfo(k)%X_Coord(j)-0.01)));
-                    tr=.false.
-                endif    
-            enddo
+            ! From LE toward TE
+            dist1  = ABS( p%AFInfo(k)%X_Coord(iLE) - 0.01)
+            dist10 = ABS( p%AFInfo(k)%X_Coord(iLE) - 0.10)
+            DO i=iLE+1,size(p%AFInfo(k)%X_Coord)
+                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
+                    i1_1 = i
+                    dist1 = ABS(p%AFInfo(k)%X_Coord(i) - 0.01)
+                ENDIF
+                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.1) < dist10) THEN
+                    i10_1 = i
+                    dist10 = ABS(p%AFInfo(k)%X_Coord(i) - 0.1)
+                ENDIF
+            ENDDO
 
-            p%AFThickGuida(1,k)=val2 ! 1  % chord thickness
-            p%AFThickGuida(2,k)=val1 ! 10 % chord thickness
+            ! From TE to LE
+            dist1  = 0.99
+            dist10 = 0.90
+            DO i=1,iLE-1
+                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.01) < dist1) THEN
+                    i1_2 = i
+                    dist1 = ABS(p%AFInfo(k)%X_Coord(i) - 0.01)
+                ENDIF
+                IF (ABS(p%AFInfo(k)%X_Coord(i) - 0.1) < dist10) THEN
+                    i10_2 = i
+                    dist10 = ABS(p%AFInfo(k)%X_Coord(i) - 0.1)
+                ENDIF
+            ENDDO
+
+            val1  = p%AFInfo(k)%Y_Coord(i1_1) - p%AFInfo(k)%Y_Coord(i1_2)
+            val10 = p%AFInfo(k)%Y_Coord(i10_1) - p%AFInfo(k)%Y_Coord(i10_2)
+
+            p%AFThickGuida(1,k)=val1  ! 1  % chord thickness
+            p%AFThickGuida(2,k)=val10 ! 10  % chord thickness
         ENDDO
-    ENDIF ! If simplified guidati is on, calculate the airfoil thickness
+    ENDIF
 
     !! for turbulence intensity calculations on the fly every 5 meter the whole rotor area is divided vertically to store flow fields in each region
     jumpreg=7
@@ -648,7 +656,7 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AA_UpdateStates'
    REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades) :: TEMPSTD  ! temporary standard deviation variable
-   REAL(ReKi)                                   :: tempsingle,tempmean,angletemp,abs_le_x  ! temporary standard deviation variable
+   REAL(ReKi)                                   :: tempsingle,tempmean,angletemp,abs_le_x,ti_vx,U1,U2   ! temporary standard deviation variable
    integer(intKi)                               :: i,j,k,rco, y0_a,y1_a,z0_a,z1_a
    logical    :: exist
    REAL(ReKi) :: yi_a,zi_a,yd_a,zd_a,c00_a,c10_a
@@ -720,8 +728,16 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
                yd_a=yi_a-y0_a
                c00_a=(1.0_ReKi-yd_a)*p%TI_Grid_In(z0_a+1,y0_a+1)+yd_a*p%TI_Grid_In(z0_a+1,y1_a+1)
                c10_a=(1.0_ReKi-yd_a)*p%TI_Grid_In(z1_a+1,y0_a+1)+yd_a*p%TI_Grid_In(z1_a+1,y1_a+1)
-               ! 2 points
-               xd%TIVx(j,i)=(1.0_ReKi-zd_a)*c00_a+zd_a*c10_a
+               
+               ! This is the turbulence intensity of the wind at the location of the blade i at node j
+               ti_vx = (1.0_ReKi-zd_a)*c00_a+zd_a*c10_a
+               ! With some velocity triangles, we convert it into the incident turbulence intensity, i.e. the TI used by the Amiet model
+               U1 = u%Vrel(J,I) 
+               U2 = SQRT((p%AvgV*(1.+ti_vx))**2. + U1**2. - p%AvgV**2.)
+               ! xd%TIVx(j,i)=(U2-U1)/U1
+               xd%TIVx(j,i)=p%AvgV*ti_vx/U1
+               
+               
                if (i.eq.p%NumBlades) then 
                    if (j.eq.p%NumBlNds) then 
                    endif
@@ -1063,8 +1079,8 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                 !--------Turbulent Boundary Layer Trailing Edge Noise----------------------------!
                 IF (   (p%ITURB .EQ. 1) .or. (p%ITURB .EQ. 2) )   THEN
                     CALL TBLTE(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                        elementspan,m%rTEtoObserve(K,J,I), p, j,i,k,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I), &
-                        m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,errStat2,errMsg2 )
+                    elementspan,m%rTEtoObserve(K,J,I), p, j,i,k,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I), &
+                    m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,errStat2,errMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                     IF (p%ITURB .EQ. 2)  THEN
                         m%SPLP=0.0_ReKi;m%SPLS=0.0_ReKi;m%SPLTBL=0.0_ReKi;
@@ -1078,9 +1094,9 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                 !--------Blunt Trailing Edge Noise----------------------------------------------!
                 IF ( p%IBLUNT .EQ. 1 )   THEN                                          
                     CALL BLUNT(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
-                        elementspan,m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
-                        p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,p%StallStart(J,I),errStat2,errMsg2 )
-                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+                    elementspan,m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
+                    p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,p%StallStart(J,I),errStat2,errMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                 ENDIF
                 !--------Tip Noise--------------------------------------------------------------!
                 IF (  (p%ITIP .EQ. 1) .AND. (J .EQ. p%NumBlNds)  ) THEN 
@@ -1317,7 +1333,7 @@ SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     ENDIF
     ! compute directivity function
-    CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
 
     IF (DBARH <= 0) THEN
@@ -1445,7 +1461,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
 
     LOGICAL     :: SWITCH  !!LOGICAL FOR COMPUTATION OF ANGLE OF ATTACK CONTRIBUTION  
 
-  
+
 
     ErrStat = ErrID_None
     ErrMsg  = ""
@@ -1464,7 +1480,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     ! Compute directivity function
     CALL DIRECTL(M,THETA,PHI,DBARL,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-    CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     !      IF (DBARH <= 0) THEN
     !          SPLP = 0.
@@ -1618,7 +1634,7 @@ SUBROUTINE TIPNOIS(ALPHTIP,ALPRAT2,C,U ,THETA,PHI, R,p,SPLTIP, errStat, errMsg)
     ALPTIPP = ABS(ALPHTIP) * ALPRAT2
     M          = U  / p%SpdSound ! MACH NUMBER
     ! Compute directivity function
-    CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     IF (p%ROUND) THEN
         L = .008 * ALPTIPP * C                                    ! Eq 63 from BPM Airfoil Self-noise and Prediction paper   
@@ -1682,7 +1698,6 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
   REAL(ReKi)                   :: Directivity                                     ! Directivity correction factor
   REAL(ReKi)                   :: Frequency_cutoff                                ! Cutoff frequency between
   REAL(ReKi)                   :: LFC                                             ! low-frequency correction factor
-  REAL(ReKi)                   :: LTurb                                           ! turbulence length scale (isotropic integral scale parameter from IEC standard (Von Karman))
   REAL(ReKi)                   :: Mach                                            ! local mach number
   REAL(ReKi)                   :: Sears                                           ! Sears function
   REAL(ReKi)                   :: SPLhigh                                         ! predicted high frequency sound pressure level
@@ -1705,7 +1720,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
    
    ! This part is recently added for height and surface roughness dependent estimation of turbulence intensity and turbulence scales
    !%Lturb=300*(Z/300)^(0.46+0.074*log(p%z0_aa));              !% Gives larger  length scale
-   Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller length scale        ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
+   ! Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller length scale        ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
    ! L_Gammas=0.24+0.096*log10(p%z0_aa)+0.016*(log10(p%z0_aa))**2;   !% Can be computed or just give it a value.    ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
    !tinooisess=L_Gammas*log(30.d0/p%z0_aa)/log(LE_Location/p%z0_aa) !% F.E. 16% is 0.16 which is the correct input for SPLhIgh, no need to divide 100   ! ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
    tinooisess=TINoise
@@ -1713,9 +1728,9 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
    !tinooisess=0.1
    !Ums = (tinooisess*U)**2
    !Ums = (tinooisess*8)**2
-   CALL DIRECTL(Mach,THETA,PHI,DBARL,errStat2,errMsg2) !yes, assume that noise is low-freq in nature because turbulence length scale is large
+   CALL DIRECTL(Mach,THETA,PHI,DBARL,errStat2,errMsg2) ! assume that noise is low-freq in nature because turbulence length scale is large
    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-   CALL DIRECTH(Mach,THETA,PHI,DBARH,errStat2,errMsg2)
+   CALL DIRECTH_LE(Mach,THETA,PHI,DBARH,errStat2,errMsg2) ! Directivity for the leading edge at high frequencies
    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    IF (DBARH <= 0) THEN
       SPLti = 0.
@@ -1729,7 +1744,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
    !*********************************************** Model 1:
    !!! Nafnoise source code version see below 
    Frequency_cutoff = 10*U/PI/Chord
-   Ke = 3.0/(4.0*LTurb) 
+   Ke = 3.0/(4.0*p%Lturb) 
    Beta2 = 1-Mach*Mach
    ALPSTAR = AlphaNoise*PI/180.
 
@@ -1745,10 +1760,10 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
       Khat = WaveNumber/Ke
       ! mu = Mach*WaveNumber*Chord/2.0/Beta2
 
-      SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound**4*LTurb*(d/2.)/ &
+      SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound**4*p%Lturb*(d/2.)/ &
                (RObs*RObs)*(Mach**5)*tinooisess*tinooisess*(Khat**3)* &
                (1+Khat**2)**(-7./3.)*Directivity) + 78.4   ! ref a)
-   !!!   SPLhigh = 10.*LOG10(LTurb*(d/2.)/ &
+   !!!   SPLhigh = 10.*LOG10(p%Lturb*(d/2.)/ &
    !!!                  (RObs*RObs)*(Mach**5)*tinooisess*tinooisess*(WaveNumber**3) &
    !!!                  *(1+WaveNumber**2)**(-7./3.)*Directivity) + 181.3  
    
@@ -1780,7 +1795,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !     ! corresponding line: Ssq = (2.d0*pi*K/Bsq + (1.d0+2.4d0*K/Bsq)**(-1))**(-1);
 !        LFC = 10.d0 * Sears*Mach*WaveNumber**2*Beta2**(-1);
 !      ! corresponding line:  LFC = 10.d0 * Ssq*Ma*K**2*Bsq**(-1);
-!     SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*Lturb*d)/(2*RObs*RObs)
+!     SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*p%Lturb*d)/(2*RObs*RObs)
 !  !   SPLti(I)=SPLti(I)*(Mach**3)*(MeanVnoise**2)*(tinooisess**2)  
 !     SPLti(I)=SPLti(I)*(Mach**3)*(tinooisess**2)                 
 !  !   SPLti(I)=SPLti(I)*(Mach**3)*ufluct**2
@@ -1788,14 +1803,14 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !     SPLti(I)=SPLti(I)*DBARH
 !     SPLti(I)=10*log10(SPLti(I))+58.4
 !      SPLti(I) = SPLti(I) + 10.*LOG10(LFC/(1+LFC))
-!  ! SPLti(I)=10.d0*log10(DBARH*p%AirDens**2*p%SpdSound**2*Lturb*d/2.0*Mach**3*tinooisess**2* &
+!  ! SPLti(I)=10.d0*log10(DBARH*p%AirDens**2*p%SpdSound**2*p%Lturb*d/2.0*Mach**3*tinooisess**2* &
 !  !WaveNumber**3*(1.d0+WaveNumber**2)**(-7.d0/3.d0)/RObs**2)+58.4d0 + 10.d0*log10(LFC/(1+LFC))
 !  ! corresponding line:    SPLti(i)=10.d0*log10(Di_hi_fr*Density**2*co**2*Tbscale*L/2.0*Ma
 !  !     & **3*Tbinten**2*K**3*(1.d0+K**2)**(-7.d0/3.d0)/Distance**2)+58.4d0
 !  !     &    + 10.d0*log10(LFC/(1+LFC));  
 !  !            !% ver2.!
-!  !    Kh = 8.d0*pi*p%FreqList(i)*Lturb/(3.d0*U);
-!  !          SPLti(i) = 10*log10(DBARH*Lturb*0.5*d*Mach**5*tinooisess**2*Kh**3*(1+Kh**2)**(-7/3)/RObs**2) +&
+!  !    Kh = 8.d0*pi*p%FreqList(i)*p%Lturb/(3.d0*U);
+!  !          SPLti(i) = 10*log10(DBARH*p%Lturb*0.5*d*Mach**5*tinooisess**2*Kh**3*(1+Kh**2)**(-7/3)/RObs**2) +&
 !  !              10*log10(10**18.13) + 10*log10(DBARH*LFC/(1+LFC));   
 !  
 !  ENDDO
@@ -1812,7 +1827,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !!!!     ! corresponding line: Ssq = (2.d0*pi*K/Bsq + (1.d0+2.4d0*K/Bsq)**(-1))**(-1);
 !!!!        LFC = 10.d0 * Sears*Mach*WaveNumber**2*Beta2**(-1);
 !!!!      ! corresponding line:  LFC = 10.d0 * Ssq*Ma*K**2*Bsq**(-1);
-!!!!     SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*Lturb*d)/(2*RObs*RObs)
+!!!!     SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*p%Lturb*d)/(2*RObs*RObs)
 !!!!     SPLti(I)=SPLti(I)*(Mach**3)*(MeanVnoise**2)*(tinooisess**2)  
 !!!!     SPLti(I)=(SPLti(I)*(WaveNumber**3)) / ((1+WaveNumber**2)**(7./3.))
 !!!!     SPLti(I)=SPLti(I)*DBARH
@@ -1866,7 +1881,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !!!!!     ----------------------------
 !!      CALL DIRECTL(Mach,THETA,PHI,DBARL,errStat2,errMsg2) !yes, assume that noise is low-freq in nature because turbulence length scale is large
 !!    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-!!      CALL DIRECTH(Mach,THETA,PHI,DBARH,errStat2,errMsg2)
+!!      CALL DIRECTH_LE(Mach,THETA,PHI,DBARH,errStat2,errMsg2)
 !!    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
 !!      IF (DBARH <= 0) THEN
 !!    SPLti = 0.
@@ -1888,7 +1903,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !!   ENDIF
 !!   WaveNumber = PI*p%FreqList(I)*Chord/U
 !!  Beta2 = 1-Mach*Mach
-!!   SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*LTurb*(d/2.)/(RObs*RObs)*(Mach**3)*Ums* &
+!!   SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*p%Lturb*(d/2.)/(RObs*RObs)*(Mach**3)*Ums* &
 !!             (WaveNumber**3)*(1+WaveNumber**2)**(-7./3.)*Directivity) + 58.4
 !!   Sears = 1/(2*PI*WaveNumber/Beta2+1/(1+2.4*WaveNumber/Beta2))
 !!   LFC = 10*Sears*Mach*WaveNumber*WaveNumber/Beta2
@@ -1965,7 +1980,7 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
     HDSTAR  = H / DSTRAVG
     DSTARH = 1. /HDSTAR
     ! Compute directivity function
-    CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     IF (DBARH <= 0) THEN
         SPLBLUNT = 0.
@@ -2164,8 +2179,8 @@ SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal,errStat,errMsg)
     ENDIF
 END SUBROUTINE Thick
 !====================================================================================================
-!> This subroutine computes the high frequency directivity function for the input observer location
-SUBROUTINE DIRECTH(M,THETA,PHI,DBAR, errStat, errMsg)
+!> This subroutine computes the high frequency directivity function for the trailing edge
+SUBROUTINE DIRECTH_TE(M,THETA,PHI,DBAR, errStat, errMsg)
     REAL(ReKi),        INTENT(IN   ) :: THETA      !
     REAL(ReKi),        INTENT(IN   ) :: PHI        !
     REAL(ReKi),        INTENT(IN   ) :: M          !
@@ -2173,7 +2188,7 @@ SUBROUTINE DIRECTH(M,THETA,PHI,DBAR, errStat, errMsg)
     INTEGER(IntKi),    INTENT(  OUT) :: errStat    ! Error status of the operation
     character(*),      INTENT(  OUT) :: errMsg     ! Error message if ErrStat /= ErrID_None
     ! Local variables
-    character(*), parameter :: RoutineName = 'Directh'
+    character(*), parameter :: RoutineName = 'Directh_te'
     real(ReKi)              :: MC
     real(ReKi)              :: DEGRAD
     real(ReKi)              :: PHIR
@@ -2185,7 +2200,30 @@ SUBROUTINE DIRECTH(M,THETA,PHI,DBAR, errStat, errMsg)
     THETAR = THETA * DEGRAD
     PHIR   = PHI * DEGRAD
     DBAR   = 2.*SIN(THETAR/2.)**2.*SIN(PHIR)**2./((1.+M*COS(THETAR))* (1.+(M-MC)*COS(THETAR))**2.)    ! eq B1 in BPM Airfoil Self-noise and Prediction paper
-END SUBROUTINE DirectH
+END SUBROUTINE DIRECTH_TE
+
+!====================================================================================================
+!> This subroutine computes the high frequency directivity function for the leading edge
+SUBROUTINE DIRECTH_LE(M,THETA,PHI,DBAR, errStat, errMsg)
+    REAL(ReKi),        INTENT(IN   ) :: THETA      !
+    REAL(ReKi),        INTENT(IN   ) :: PHI        !
+    REAL(ReKi),        INTENT(IN   ) :: M          !
+    REAL(ReKi),        INTENT(  OUT) :: DBAR       !
+    INTEGER(IntKi),    INTENT(  OUT) :: errStat    ! Error status of the operation
+    character(*),      INTENT(  OUT) :: errMsg     ! Error message if ErrStat /= ErrID_None
+    ! Local variables
+    character(*), parameter :: RoutineName = 'Directh_le'
+    real(ReKi)              :: DEGRAD
+    real(ReKi)              :: PHIR
+    real(ReKi)              :: THETAR
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+    DEGRAD = .017453
+    THETAR = THETA * DEGRAD
+    PHIR   = PHI * DEGRAD
+    DBAR   = 2.*COS(THETAR/2.)**2.*SIN(PHIR)**2./(1.+M*COS(THETAR))**3. 
+END SUBROUTINE DIRECTH_LE
+
 !====================================================================================================
 !> This subroutine computes the high frequency directivity function for the input observer location
 ! Paper: 
@@ -2210,7 +2248,7 @@ SUBROUTINE DIRECTL(M,THETA,PHI,DBAR, errStat, errMsg)
     THETAR = THETA * DEGRAD
     PHIR   = PHI * DEGRAD
     DBAR = (SIN(THETAR)*SIN(PHIR))**2/(1.+M*COS(THETAR))**4                   ! eq B2 in BPM Airfoil Self-noise and Prediction paper
-END SUBROUTINE DirectL
+END SUBROUTINE DIRECTL
 !==================================================================================================================================!
 !===============================  Simplified Guidati Inflow Turbulence Noise Addition =============================================!
 !==================================================================================================================================!
@@ -2294,7 +2332,7 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     Mach = U  / p%SpdSound
 
     ! Directivity function
-    CALL DIRECTH(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsgn, RoutineName )
  
     do i_omega = 1,n_freq

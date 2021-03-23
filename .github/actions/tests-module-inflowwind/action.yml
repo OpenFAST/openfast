@@ -1,0 +1,9 @@
+name: 'InflowWind module tests'
+description: 'Run tests specific to the InflowWind module'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+runs:
+  using: "composite"
+  steps: 
+    - run: ctest -VV -R inflowwind_utest
+      working-directory: ${{runner.workspace}}/build
+      shell: bash

@@ -1318,6 +1318,13 @@ MODULE AeroDyn_IO
    INTEGER,  PARAMETER          :: BAzimuth(3) = (/B1Azimuth,B2Azimuth,B3Azimuth/)                                                     ! azimuth angle 
    INTEGER,  PARAMETER          :: BPitch(3)   = (/B1Pitch,  B2Pitch,  B3Pitch/)                                                       ! pitch 
    
+!   INTEGER,  PARAMETER          :: BAeroFx(3)  = (/B1AeroFx,  B2AeroFx,  B3AeroFx/)                                                   ! x-component of total blade root aero force
+!   INTEGER,  PARAMETER          :: BAeroFy(3)  = (/B1AeroFy,  B2AeroFy,  B3AeroFy/)                                                   ! y-component of total blade root aero force 
+!   INTEGER,  PARAMETER          :: BAeroFz(3)  = (/B1AeroFz,  B2AeroFz,  B3AeroFz/)                                                   ! z-component of total blade root aero force 
+!   INTEGER,  PARAMETER          :: BAeroMx(3)  = (/B1AeroMx,  B2AeroMx,  B3AeroMx/)                                                   ! x-component of total blade root aero moment
+!   INTEGER,  PARAMETER          :: BAeroMy(3)  = (/B1AeroMy,  B2AeroMy,  B3AeroMy/)                                                   ! y-component of total blade root aero moment
+!   INTEGER,  PARAMETER          :: BAeroMz(3)  = (/B1AeroMz,  B2AeroMz,  B3AeroMz/)                                                   ! z-component of total blade root aero moment 
+   
    INTEGER,  PARAMETER          :: BNVUndx(9, 3) = RESHAPE( (/ &      ! undisturbed wind velocity (x component)
                                      B1N1VUndx,B1N2VUndx,B1N3VUndx,B1N4VUndx,B1N5VUndx,B1N6VUndx,B1N7VUndx,B1N8VUndx,B1N9VUndx, &
                                      B2N1VUndx,B2N2VUndx,B2N3VUndx,B2N4VUndx,B2N5VUndx,B2N6VUndx,B2N7VUndx,B2N8VUndx,B2N9VUndx, &
@@ -1538,8 +1545,8 @@ contains
 !! Solely based on AD inputs,  needed for FVW since rLocal is not stored
 PURE REAL(ReKi) FUNCTION Calc_MaxRadius(p, u) result(rmax)
    implicit none
-   TYPE(AD_ParameterType),    INTENT(IN   ) :: p    !< The module parameters
-   TYPE(AD_InputType),        INTENT(IN   ) :: u    !< Inputs
+   TYPE(RotParameterType),    INTENT(IN   ) :: p    !< The module parameters
+   TYPE(RotInputType),        INTENT(IN   ) :: u    !< Inputs
    real(ReKi)     :: y_hat_disk(3), z_hat_disk(3), dr_gl(3), rLocal
    integer(IntKi) :: iB, j
    y_hat_disk = u%HubMotion%Orientation(2,:,1)
@@ -1556,7 +1563,7 @@ END FUNCTION Calc_MaxRadius
 
 !> Rotor speed
 PURE REAL(ReKi) FUNCTION Calc_Omega(u)
-   TYPE(AD_InputType),        INTENT(IN   ) :: u    !< Inputs
+   TYPE(RotInputType),        INTENT(IN   ) :: u    !< Inputs
    Calc_Omega = dot_product(u%HubMotion%RotationVel(:,1), u%HubMotion%Orientation(1,:,1))
 END FUNCTION Calc_Omega
 
@@ -1579,14 +1586,16 @@ END FUNCTION Calc_Chi0
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, ErrStat, ErrMsg )
    
-   TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
-   TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
-   TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
-   TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
-   TYPE(AD_OtherStateType),   INTENT(IN   )  :: OtherState                        ! other states at t (for DBEMT and UA)
-   TYPE(AD_DiscreteStateType),INTENT(IN   )  :: xd                                ! Discrete states
+   TYPE(RotParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
+   TYPE(AD_ParameterType),    INTENT(IN   )  :: p_AD                              ! The module parameters
+   TYPE(RotInputType),        INTENT(IN   )  :: u                                 ! inputs
+   TYPE(RotMiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
+   TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m_AD                              ! misc variables
+   TYPE(RotOutputType),       INTENT(IN   )  :: y                                 ! outputs
+   TYPE(RotOtherStateType),   INTENT(IN   )  :: OtherState                        ! other states at t (for DBEMT and UA)
+   TYPE(RotDiscreteStateType),INTENT(IN   )  :: xd                                ! Discrete states
    integer,                   intent(in   )  :: indx                              ! index into m%BEMT_u(indx) array; 1=t and 2=t+dt (but not checked here)
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
@@ -1629,14 +1638,14 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, xd, indx, ErrStat, ErrMsg )
       
    end do ! out nodes
 
-   if (p%WakeMod /= WakeMod_FVW) then
+   if (p_AD%WakeMod /= WakeMod_FVW) then
       call Calc_WriteOutput_BEMT
    else
       call Calc_WriteOutput_FVW
    endif
 
    ! blade node tower clearance (requires tower influence calculation):
-   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow) then
+   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
       do k=1,p%numBlades
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
@@ -1758,6 +1767,8 @@ CONTAINS
 
       m%AllOuts( RtAeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( RtAeroMxh )
 
+
+
       m%AllOuts( RtTSR ) = m%BEMT_u(indx)%TSR
 
       if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
@@ -1773,6 +1784,21 @@ CONTAINS
          m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
          m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
       end if
+   
+      ! Integrate force/moments over blades by performing mesh transfer to blade root points:
+!      do k=1,min(p%NumBlades,MaxBl)
+!         call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
+!         ! Transform force vector to blade root coordinate system
+!         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
+!         m%AllOuts( BAeroFx(k) ) = tmp(1)
+!         m%AllOuts( BAeroFy(k) ) = tmp(2)
+!         m%AllOuts( BAeroFz(k) ) = tmp(3)
+!         ! Transform moment vector to blade root coordinate system
+!         tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%moment( :,1) )
+!         m%AllOuts( BAeroMx(k) ) = tmp(1)
+!         m%AllOuts( BAeroMy(k) ) = tmp(2)
+!         m%AllOuts( BAeroMz(k) ) = tmp(3)
+!      end do  ! k=blades
 
       m%AllOuts( DBEMTau1 ) = OtherState%BEMT%DBEMT%tau1
       
@@ -1808,39 +1834,39 @@ CONTAINS
             m%AllOuts( BNSTVy( beta,k) ) = tmp(2)
             m%AllOuts( BNSTVz( beta,k) ) = tmp(3)
 
-            m%AllOuts( BNVrel( beta,k) ) = m%FVW%BN_Vrel(j,k)
-            m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * m%FVW%BN_Vrel(j,k)**2
-            m%AllOuts( BNRe(   beta,k) ) = m%FVW%BN_Re(j,k)
-            m%AllOuts( BNM(    beta,k) ) = m%FVW%BN_Vrel(j,k) / p%SpdSound
+            m%AllOuts( BNVrel( beta,k) ) = m_AD%FVW%BN_Vrel(j,k)
+            m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * m_AD%FVW%BN_Vrel(j,k)**2
+            m%AllOuts( BNRe(   beta,k) ) = m_AD%FVW%BN_Re(j,k)
+            m%AllOuts( BNM(    beta,k) ) = m_AD%FVW%BN_Vrel(j,k) / p%SpdSound
 
-            m%AllOuts( BNVIndx(beta,k) ) = -m%FVW%BN_UrelWind_s(1,j,k) * m%FVW%BN_AxInd(j,k)
-            m%AllOuts( BNVIndy(beta,k) ) =  m%FVW%BN_UrelWind_s(2,j,k) * m%FVW%BN_TanInd(j,k)
+            m%AllOuts( BNVIndx(beta,k) ) = -m_AD%FVW%BN_UrelWind_s(1,j,k) * m_AD%FVW%BN_AxInd(j,k)
+            m%AllOuts( BNVIndy(beta,k) ) =  m_AD%FVW%BN_UrelWind_s(2,j,k) * m_AD%FVW%BN_TanInd(j,k)
 
-            m%AllOuts( BNAxInd(beta,k) ) = m%FVW%BN_AxInd(j,k)
-            m%AllOuts( BNTnInd(beta,k) ) = m%FVW%BN_TanInd(j,k)
+            m%AllOuts( BNAxInd(beta,k) ) = m_AD%FVW%BN_AxInd(j,k)
+            m%AllOuts( BNTnInd(beta,k) ) = m_AD%FVW%BN_TanInd(j,k)
 
-            m%AllOuts( BNAlpha(beta,k) ) = m%FVW%BN_alpha(j,k)*R2D
-            m%AllOuts( BNTheta(beta,k) ) = m%FVW%PitchAndTwist(j,k)*R2D
-            m%AllOuts( BNPhi(  beta,k) ) = m%FVW%BN_phi(j,k)*R2D
+            m%AllOuts( BNAlpha(beta,k) ) = m_AD%FVW%BN_alpha(j,k)*R2D
+            m%AllOuts( BNTheta(beta,k) ) = m_AD%FVW%PitchAndTwist(j,k)*R2D
+            m%AllOuts( BNPhi(  beta,k) ) = m_AD%FVW%BN_phi(j,k)*R2D
 !             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D ! TODO
 
 !             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k) ! TODO
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
-            m%AllOuts( BNCl(   beta,k) ) = m%FVW%BN_Cl(j,k)
-            m%AllOuts( BNCd(   beta,k) ) = m%FVW%BN_Cd(j,k)
-            m%AllOuts( BNCm(   beta,k) ) = m%FVW%BN_Cm(j,k)
-            m%AllOuts( BNCx(   beta,k) ) = m%FVW%BN_Cx(j,k)
-            m%AllOuts( BNCy(   beta,k) ) = m%FVW%BN_Cy(j,k)
+            m%AllOuts( BNCl(   beta,k) ) = m_AD%FVW%BN_Cl(j,k)
+            m%AllOuts( BNCd(   beta,k) ) = m_AD%FVW%BN_Cd(j,k)
+            m%AllOuts( BNCm(   beta,k) ) = m_AD%FVW%BN_Cm(j,k)
+            m%AllOuts( BNCx(   beta,k) ) = m_AD%FVW%BN_Cx(j,k)
+            m%AllOuts( BNCy(   beta,k) ) = m_AD%FVW%BN_Cy(j,k)
 
-            ct=cos(m%FVW%PitchAndTwist(j,k))    ! cos(theta)
-            st=sin(m%FVW%PitchAndTwist(j,k))    ! sin(theta)
-            m%AllOuts( BNCn(   beta,k) ) = m%FVW%BN_Cx(j,k)*ct + m%FVW%BN_Cy(j,k)*st
-            m%AllOuts( BNCt(   beta,k) ) =-m%FVW%BN_Cx(j,k)*st + m%FVW%BN_Cy(j,k)*ct
+            ct=cos(m_AD%FVW%PitchAndTwist(j,k))    ! cos(theta)
+            st=sin(m_AD%FVW%PitchAndTwist(j,k))    ! sin(theta)
+            m%AllOuts( BNCn(   beta,k) ) = m_AD%FVW%BN_Cx(j,k)*ct + m_AD%FVW%BN_Cy(j,k)*st
+            m%AllOuts( BNCt(   beta,k) ) =-m_AD%FVW%BN_Cx(j,k)*st + m_AD%FVW%BN_Cy(j,k)*ct
 
-            cp=cos(m%FVW%BN_phi(j,k))
-            sp=sin(m%FVW%BN_phi(j,k))
+            cp=cos(m_AD%FVW%BN_phi(j,k))
+            sp=sin(m_AD%FVW%BN_phi(j,k))
             m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
             m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
             m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
@@ -1849,7 +1875,7 @@ CONTAINS
             m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
             m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
 
-            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p%FVW%Chord(j,k) * m%FVW%BN_Vrel(j,k) * m%FVW%BN_Cl(j,k) ! "Gam" [m^2/s]
+            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%Chord(j,k) * m_AD%FVW%BN_Vrel(j,k) * m_AD%FVW%BN_Cl(j,k) ! "Gam" [m^2/s]
          end do ! nodes
       end do ! blades
 
@@ -1915,16 +1941,18 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the input file
    CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
 
-   TYPE(AD_InputFile),      INTENT(OUT)   :: InputFileData   ! Data stored in the module's input file
+   TYPE(AD_InputFile),      INTENT(INOUT) :: InputFileData   ! Data stored in the module's input file
    INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
 
-   INTEGER(IntKi),          INTENT(IN)    :: NumBlades       ! Number of blades for this model
+   INTEGER(IntKi),          INTENT(IN)    :: NumBlades(:)    ! Number of blades per rotor 
    INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
    CHARACTER(*),            INTENT(OUT)   :: ErrMsg          ! The error message, if an error occurred
 
       ! local variables
 
    INTEGER(IntKi)                         :: I
+   INTEGER(IntKi)                         :: iR              ! Loop on rotor
+   integer(IntKi)                         :: iBld            ! counter on blades
    INTEGER(IntKi)                         :: ErrStat2        ! The error status code
    CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
 
@@ -1939,35 +1967,30 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    UnEcho  = -1
    InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 
-      ! get the primary/platform input-file data
-      ! sets UnEcho, ADBlFile
-   
-   CALL ReadPrimaryFile( InputFileName, InputFileData, ADBlFile, OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
+
+      ! get the blade input-file data
+   iBld=1
+   do iR = 1, size(InputFileData%rotors)
+      
+      ALLOCATE( InputFileData%rotors(iR)%BladeProps( NumBlades(iR) ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
          RETURN
       END IF
-      
-
-      ! get the blade input-file data
-      
-   ALLOCATE( InputFileData%BladeProps( NumBlades ), STAT = ErrStat2 )
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
-      CALL Cleanup()
-      RETURN
-   END IF
-      
-   DO I=1,NumBlades
-      CALL ReadBladeInputs ( ADBlFile(I), InputFileData%BladeProps(I), UnEcho, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-   END DO
+         
+   !FIXME: add options for passing the blade files.  This routine will need restructuring to handle that.
+      DO I=1,NumBlades(iR)
+         CALL ReadBladeInputs ( InputFileData%ADBlFile(I), InputFileData%rotors(iR)%BladeProps(I), UnEcho, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
+         iBld = iBld+1 ! Increment blade counter
+      END DO
    
+   ENDDO ! Loop on rotors
       
 
    CALL Cleanup ( )
@@ -1985,621 +2008,364 @@ CONTAINS
 
 END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnEc, ErrStat, ErrMsg )
-! This routine reads in the primary AeroDyn input file and places the values it reads in the InputFileData structure.
-!   It opens and prints to an echo file if requested.
-!..................................................................................................................................
-
-
-   implicit                        none
+!> This routine parses the input file data stored in FileInfo_In and places it in the InputFileData structure for validating.
+SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
+   implicit    none
 
       ! Passed variables
-   integer(IntKi),     intent(out)     :: UnEc                                ! I/O unit for echo file. If > 0, file is open for writing.
-   integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
+   character(*),                    intent(in   )  :: PriPath           !< primary path
+   CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
+   CHARACTER(*),                    intent(in   )  :: RootName          !< The rootname of the echo file, possibly opened in this routine
+   integer(IntKi),                  intent(in   )  :: NumBlades(:)      !< Number of blades per rotor we expect -- from InitInp
+   real(DBKi),                      intent(in   )  :: interval          !< timestep
+   type(AD_InputFile),              intent(inout)  :: InputFileData     !< All the data in the AD15 primary input file
+   type(FileInfoType),              intent(in   )  :: FileInfo_In       !< The derived type for holding the file information.
+   integer(IntKi),                  intent(  out)  :: UnEc              !< The local unit number for this module's echo file
+   integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
+   CHARACTER(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
 
-   character(*),       intent(out)     :: ADBlFile(MaxBl)                     ! name of the files containing blade inputs
-   character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
-   character(*),       intent(out)     :: ErrMsg                              ! Error message
-   character(*),       intent(in)      :: OutFileRoot                         ! The rootname of the echo file, possibly opened in this routine
-
-   type(AD_InputFile), intent(inout)   :: InputFileData                       ! All the data in the AeroDyn input file
-   
       ! Local variables:
-   real(ReKi)                    :: TmpAry(3)                                 ! array to help read tower properties table
-   integer(IntKi)                :: I                                         ! loop counter
-   integer(IntKi)                :: UnIn                                      ! Unit number for reading file
-     
-   integer(IntKi)                :: ErrStat2, IOS                             ! Temporary Error status
-   logical                       :: Echo                                      ! Determines if an echo file should be written
-   character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
-   character(ErrMsgLen)          :: ErrMsg_NoAllBldNdOuts                     ! Temporary Error message
-   character(1024)               :: PriPath                                   ! Path name of the primary file
-   character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-   character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-   character(*), parameter       :: RoutineName = 'ReadPrimaryFile'
-   
-   
-      ! Initialize some variables:
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-      
-   UnEc = -1
-   Echo = .FALSE.   
-   CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-   
+   integer(IntKi)                                  :: i                 !< generic counter
+   integer(IntKi)                                  :: iR                !< Loop on rotors
+   integer(IntKi)                                  :: numBladesTot      !< total number of blades
+   integer(IntKi)                                  :: ErrStat2, IOS     !< Temporary Error status
+   character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
+   character(ErrMsgLen)                            :: ErrMsg_NoAllBldNdOuts
+   integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
+   real(ReKi)                                      :: TmpRe4(4)         !< temporary 4 number array for reading values in
+
+   character(1024)                                 :: FTitle            ! "File Title": the 2nd line of the input file, which contains a description of its contents
+   character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
+
+   ! Initialization
+   ErrStat  =  0
+   ErrMsg   =  ""
+   UnEc   = -1     ! Echo file unit.  >0 when used
+
 
    CALL AllocAry( InputFileData%OutList, MaxOutPts, "Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
+
       ! Allocate array for holding the list of node outputs
    CALL AllocAry( InputFileData%BldNd_OutList, BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-     
-      ! Get an available unit number for the file.
 
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   numBladesTot=sum(NumBlades)
 
-      ! Open the Primary input file.
+   !-------------------------------------------------------------------------------------------------
+   ! General settings
+   !-------------------------------------------------------------------------------------------------
 
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-                  
-      
-   ! Read the lines up/including to the "Echo" simulation control variable
-   ! If echo is FALSE, don't write these lines to the echo file. 
-   ! If Echo is TRUE, rewind and write on the second try.
-   
-   I = 1 !set the number of times we've read the file
-   DO 
-   !----------- HEADER -------------------------------------------------------------
-   
-      CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-      CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-   
-   
-   !----------- GENERAL OPTIONS ----------------------------------------------------
-   
-      CALL ReadCom( UnIn, InputFile, 'Section Header: General Options', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-         ! Echo - Echo input to "<RootName>.AD.ech".
-   
-      CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo flag', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   
-      IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
-   
-         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
-      
-      I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
-   
-      CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, AD_Ver )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-   
-      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(AD_Ver%Name)//' primary input file "'//TRIM( InputFile )//'":'
-         
-      REWIND( UnIn, IOSTAT=ErrStat2 )  
-         IF (ErrStat2 /= 0_IntKi ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(InputFile)//'".', ErrStat, ErrMsg, RoutineName )
-            CALL Cleanup()
-            RETURN
-         END IF         
-      
-   END DO    
+   CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
+   call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
 
-   IF (NWTC_VerboseLevel == NWTC_Verbose) THEN
-      CALL WrScr( ' Heading of the '//TRIM(AD_Ver%Name)//' input file: ' )      
-      CALL WrScr( '   '//TRIM( FTitle ) )
-   END IF
-   
-   
+   if ( InputFileData%Echo ) then
+      CALL OpenEcho ( UnEc, TRIM(RootName)//'.ech', ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      WRITE(UnEc, '(A)') 'Echo file for AeroDyn 15 primary input file: '//trim(InputFile)
+      ! Write the first three lines into the echo file
+      WRITE(UnEc, '(A)') FileInfo_In%Lines(1)
+      WRITE(UnEc, '(A)') FileInfo_In%Lines(2)
+      WRITE(UnEc, '(A)') FileInfo_In%Lines(3)
+
+      CurLine = 4
+      call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+   endif
+
+
       ! DTAero - Time interval for aerodynamic calculations {or default} (s):
-   Line = ""
-   CALL ReadVar( UnIn, InputFile, Line, "DTAero", "Time interval for aerodynamic calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-      CALL Conv2UC( Line )
-      IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTAero
-         READ( Line, *, IOSTAT=IOS) InputFileData%DTAero
-            CALL CheckIOS ( IOS, InputFile, 'DTAero', NumType, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END IF   
-      
-      ! WakeMod - Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%WakeMod, "WakeMod", "Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ParseVarWDefault ( FileInfo_In, CurLine, "DTAero", InputFileData%DTAero, interval, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! WakeMod - Type of wake/induction model (switch) {0=none, 1=BEMT, 2=DBEMT, 3=OLAF}  [WakeMod cannot be 2 or 3 when linearizing]
+   call ParseVar( FileInfo_In, CurLine, "WakeMod", InputFileData%WakeMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! AFAeroMod - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
+   call ParseVar( FileInfo_In, CurLine, "AFAeroMod", InputFileData%AFAeroMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! TwrPotent - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+   call ParseVar( FileInfo_In, CurLine, "TwrPotent", InputFileData%TwrPotent, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! TwrShadow - Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}
+   call ParseVar( FileInfo_In, CurLine, "TwrShadow", InputFileData%TwrShadow, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! TwrAero - Calculate tower aerodynamic loads? (flag)
+   call ParseVar( FileInfo_In, CurLine, "TwrAero", InputFileData%TwrAero, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! FrozenWake - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
+   call ParseVar( FileInfo_In, CurLine, "FrozenWake", InputFileData%FrozenWake, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! CavitCheck - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
+   call ParseVar( FileInfo_In, CurLine, "CavitCheck", InputFileData%CavitCheck, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! CompAA - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
+   call ParseVar( FileInfo_In, CurLine, "CompAA", InputFileData%CompAA, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! AA_InputFile - Aeroacoustics input file
+   call ParseVar( FileInfo_In, CurLine, "AA_InputFile", InputFileData%AA_InputFile, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      IF ( PathIsRelative( InputFileData%AA_InputFile ) ) InputFileData%AA_InputFile = TRIM(PriPath)//TRIM(InputFileData%AA_InputFile)
 
-      ! AFAeroMod - Type of airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%AFAeroMod, "AFAeroMod", "Type of airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !======  Environmental Conditions  ===================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! AirDens - Air density (kg/m^3)
+   call ParseVar( FileInfo_In, CurLine, "AirDens", InputFileData%AirDens, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! KinVisc - Kinematic air viscosity (m^2/s)
+   call ParseVar( FileInfo_In, CurLine, "KinVisc", InputFileData%KinVisc, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! SpdSound - Speed of sound (m/s)
+   call ParseVar( FileInfo_In, CurLine, "SpdSound", InputFileData%SpdSound, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! Patm - Atmospheric pressure (Pa) [used only when CavitCheck=True]
+   call ParseVar( FileInfo_In, CurLine, "Patm", InputFileData%Patm, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! Pvap - Vapour pressure of fluid (Pa) [used only when CavitCheck=True]
+   call ParseVar( FileInfo_In, CurLine, "Pvap", InputFileData%Pvap, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! FluidDepth - Water depth above mid-hub height (m) [used only when CavitCheck=True]
+   call ParseVar( FileInfo_In, CurLine, "FluidDepth", InputFileData%FluidDepth, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
 
-      ! TwrPotent - Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (switch) :
-   CALL ReadVar( UnIn, InputFile, InputFileData%TwrPotent, "TwrPotent", "Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3]
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! SkewMod - Type of skewed-wake correction model (switch) {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0 or 3]
+   call ParseVar( FileInfo_In, CurLine, "SkewMod", InputFileData%SkewMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0 or 3]
+   call ParseVarWDefault( FileInfo_In, CurLine, "SkewModFactor", InputFileData%SkewModFactor, (15.0_ReKi * pi / 32.0_ReKi), ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! TipLoss - Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0 or 3]
+   call ParseVar( FileInfo_In, CurLine, "TipLoss", InputFileData%TipLoss, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! HubLoss - Use the Prandtl hub-loss model? (flag) [unused when WakeMod=0 or 3]
+   call ParseVar( FileInfo_In, CurLine, "HubLoss", InputFileData%HubLoss, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! TanInd - Include tangential induction in BEMT calculations? (flag) [unused when WakeMod=0 or 3]
+   call ParseVar( FileInfo_In, CurLine, "TanInd", InputFileData%TanInd, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! AIDrag - Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod=0 or 3]
+   call ParseVar( FileInfo_In, CurLine, "AIDrag", InputFileData%AIDrag, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! TIDrag - Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod=0,3 or TanInd=FALSE]
+   call ParseVar( FileInfo_In, CurLine, "TIDrag", InputFileData%TIDrag, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! IndToler - Convergence tolerance for BEMT nonlinear solve residual equation {or "default"} (-) [unused when WakeMod=0 or 3]
+   if (ReKi==SiKi) then
+      call ParseVarWDefault( FileInfo_In, CurLine, "IndToler", InputFileData%IndToler, real(5E-5,ReKi), ErrStat2, ErrMsg2, UnEc )
+   else
+      call ParseVarWDefault( FileInfo_In, CurLine, "IndToler", InputFileData%IndToler, real(5D-10,ReKi), ErrStat2, ErrMsg2, UnEc )
+   end if
+      if (Failed()) return
+      ! MaxIter - Maximum number of iteration steps (-) [unused when WakeMod=0]
+   call ParseVar( FileInfo_In, CurLine, "MaxIter", InputFileData%MaxIter, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
 
-      ! TwrShadow - Calculate tower influence on wind based on downstream tower shadow? (flag) :
-   CALL ReadVar( UnIn, InputFile, InputFileData%TwrShadow, "TwrShadow", "Calculate tower influence on wind based on downstream tower shadow? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! TwrAero - Calculate tower aerodynamic loads? (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TwrAero, "TwrAero", "Calculate tower aerodynamic loads? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! FrozenWake - Assume frozen wake during linearization? (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%FrozenWake, "FrozenWake", "Assume frozen wake during linearization? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-            
-      ! CavitCheck - Perform cavitation check? (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%CavitCheck, "CavitCheck", "Perform cavitation check? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-       ! AddedMass - Include added mass effects? (flag):
-!   CALL ReadVar( UnIn, InputFile, InputFileData%AddedMass, "AddedMass", "Include added mass effects? (flag)", ErrStat2, ErrMsg2, UnEc)
-     ! CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! CompAA - Compute AeroAcoustics? (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%CompAA, "CompAA", "Compute AeroAcoustics? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-    
-      ! AA_Inputfile
-   CALL ReadVar ( UnIn, InputFile, InputFileData%AA_InputFile, "AA_Inputfile", "AeroAcoustics Input filename", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   IF ( PathIsRelative( InputFileData%AA_InputFile ) ) InputFileData%AA_InputFile = TRIM(PriPath)//TRIM(InputFileData%AA_InputFile)
-      
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-            
-   !----------- ENVIRONMENTAL CONDITIONS -------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Environmental Conditions', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! AirDens - Air density (kg/m^3):
-   CALL ReadVar( UnIn, InputFile, InputFileData%AirDens, "AirDens", "Air density (kg/m^3)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !======  Dynamic Blade-Element/Momentum Theory Options  ============================================== [used only when WakeMod=2]
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! DBEMT_Mod - Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1} (-) [used only when WakeMod=2]
+   call ParseVar( FileInfo_In, CurLine, "DBEMT_Mod", InputFileData%DBEMT_Mod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! tau1_const - Time constant for DBEMT (s) [used only when WakeMod=2 and DBEMT_Mod=1]
+   call ParseVar( FileInfo_In, CurLine, "tau1_const", InputFileData%tau1_const, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
 
-      ! KinVisc - Kinematic air viscosity (m^2/s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%KinVisc, "KinVisc", "Kinematic air viscosity (m^2/s)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
+   call ParseVar( FileInfo_In, CurLine, "OLAFInputFileName", InputFileData%FVWFileName, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      IF ( PathIsRelative( InputFileData%FVWFileName ) ) InputFileData%FVWFileName = TRIM(PriPath)//TRIM(InputFileData%FVWFileName)
 
-      ! SpdSound - Speed of sound (m/s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SpdSound, "SpdSound", "Speed of sound (m/s)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-     ! Patm - Atmospheric pressure (Pa):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Patm, "Patm", "Atmospheric pressure (Pa)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-           
-     ! Pvap - Vapour pressure of fluid (Pa):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Pvap, "Pvap", "Vapour pressure of fluid (Pa)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 
-      ! FluidDepth - Water depth above mid-hub height (m) - used for caviation check:
-   CALL ReadVar( UnIn, InputFile, InputFileData%FluidDepth, "FluidDepth", "Water depth above mid-hub height (MHK only, for cavitation check) (m)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-      
+   !======  Beddoes-Leishman Unsteady Airfoil Aerodynamics Options  ===================================== [used only when AFAeroMod=2]
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]
+   call ParseVar( FileInfo_In, CurLine, "UAMod", InputFileData%UAMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
+   call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%FLookup, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
 
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
-   !----------- BLADE-ELEMENT/MOMENTUM THEORY OPTIONS ------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Blade-Element/Momentum Theory Options', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! SkewMod - Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} (-) [unused when WakeMod={0|3}]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%SkewMod, "SkewMod", "Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} (-) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or default is 15/32*pi} (-) [used only when WakeMod/={0|3} and SkewMod=2]:
-   Line = ""
-   CALL ReadVar( UnIn, InputFile, Line, "SkewModFactor", "Constant used in Pitt/Peters skewed wake model {or default} (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-      CALL Conv2UC( Line )
-      IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the default value 15.0_ReKi * pi / 32.0_ReKi
-         READ( Line, *, IOSTAT=IOS) InputFileData%SkewModFactor
-            CALL CheckIOS ( IOS, InputFile, 'SkewModFactor', NumType, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ELSE
-         InputFileData%SkewModFactor = 15.0_ReKi * pi / 32.0_ReKi
-      END IF
-      
-      
-      ! TipLoss - Use the Prandtl tip-loss model? (flag) [unused when WakeMod={0|3}]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%TipLoss, "TipLoss", "Use the Prandtl tip-loss model? (flag) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! HubLoss - Use the Prandtl hub-loss model? (flag) [unused when WakeMod={0|3}]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%HubLoss, "HubLoss", "Use the Prandtl hub-loss model? (flag) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! TanInd - Include tangential induction in BEMT calculations? (flag) [unused when WakeMod={0|3}]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%TanInd, "TanInd", "Include tangential induction in BEMT calculations? (flag) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! AIDrag - Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod={0|3}]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%AIDrag, "AIDrag", "Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! TIDrag - Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod={0|3} or TanInd=FALSE]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%TIDrag, "TIDrag", "Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod={0|3} or TanInd=FALSE]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! IndToler - Convergence tolerance for BEM induction factors (or "default"] (-) [unused when WakeMod={0|3}]:
-   Line = ""
-   CALL ReadVar( UnIn, InputFile, Line, "IndToler", "Convergence tolerance for BEM induction factors (-) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-      CALL Conv2UC( Line )
-      IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise set the value based on ReKi precision
-         READ( Line, *, IOSTAT=IOS) InputFileData%IndToler
-            CALL CheckIOS ( IOS, InputFile, 'IndToler', NumType, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      else
-         if (ReKi==SiKi) then
-            InputFileData%IndToler = 5E-5
-         else
-            InputFileData%IndToler = 5D-10
-         end if
-      END IF   
-      
-            
-      ! MaxIter - Maximum number of iteration steps [unused when WakeMod={0|3}] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%MaxIter, "MaxIter", "Maximum number of iteration steps (-) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
-      
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-   
-         
-   !----------- DYNAMIC BLADE-ELEMENT/MOMENTUM THEORY OPTIONS ------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Dynamic Blade-Element/Momentum Theory Options', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-      ! DBEMT_Mod - Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1} (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%DBEMT_Mod, "DBEMT_Mod", "Type of dynamic BEMT (DBEMT) model {0=none, 1=constant tau1, 2=time-dependent tau1} (-) [used only when WakeMod=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-      ! tau1_const - time constant for DBEMT (s) [used only when WakeMod=2 and DBEMT_Mod=1]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%tau1_const, "tau1_const", "time constant for DBEMT (s) [used only when WakeMod=2 and DBEMT_Mod=1]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-   
-   !----------- FREE VORTEX WAKE (FVW) THEORY OPTIONS ------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Free Vortex Wake (FVW) Theory Options', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadVar ( UnIn, InputFile, InputFileData%FVWFileName, 'FVWFile', 'FVW input file name', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   IF ( PathIsRelative( InputFileData%FVWFileName ) ) InputFileData%FVWFileName = TRIM(PriPath)//TRIM(InputFileData%FVWFileName)
-
-
-   !----------- BEDDOES-LEISHMAN UNSTEADY AIRFOIL AERODYNAMICS OPTIONS -------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Beddoes-Leishman Unsteady Airfoil Aerodynamics Options', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%FLookup, "FLookup", "Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   
-      ! UACutout - Angle-of-attack beyond which unsteady aerodynamics are disabled (deg)
-!   CALL ReadVar( UnIn, InputFile, InputFileData%UACutout, "UACutout", "Angle-of-attack beyond which unsteady aerodynamics are disabled (deg)", ErrStat2, ErrMsg2, UnEc)
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-                  
-   !----------- AIRFOIL INFORMATION ------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Airfoil Information', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      ! AFTabMod - Interpolation method for multiple airfoil tables (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%AFTabMod, "AFTabMod", "Interpolation method for multiple airfoil tables (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! InCol_Alfa - The column in the airfoil tables that contains the angle of attack (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Alfa, "InCol_Alfa", "The column in the airfoil tables that contains the angle of attack (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! InCol_Cl - The column in the airfoil tables that contains the lift coefficient (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Cl, "InCol_Cl", "The column in the airfoil tables that contains the lift coefficient (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! InCol_Cd - The column in the airfoil tables that contains the drag coefficient (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Cd, "InCol_Cd", "The column in the airfoil tables that contains the drag coefficient (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! InCol_Cm - The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Cm, "InCol_Cm", "The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! InCol_Cpmin - The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Cpmin, "InCol_Cpmin", "The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      ! NumAFfiles - Number of airfoil files used (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NumAFfiles, "NumAFfiles", "Number of airfoil files used (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
+   !======  Airfoil Information =========================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! AFTabMod - Interpolation method for multiple airfoil tables {1=1D interpolation on AoA (first table only); 2=2D interpolation on AoA and Re; 3=2D interpolation on AoA and UserProp} (-)
+   call ParseVar( FileInfo_In, CurLine, "AFTabMod", InputFileData%AFTabMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! InCol_Alfa - The column in the airfoil tables that contains the angle of attack (-)
+   call ParseVar( FileInfo_In, CurLine, "InCol_Alfa", InputFileData%InCol_Alfa, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! InCol_Cl - The column in the airfoil tables that contains the lift coefficient (-)
+   call ParseVar( FileInfo_In, CurLine, "InCol_Cl", InputFileData%InCol_Cl, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! InCol_Cd - The column in the airfoil tables that contains the drag coefficient (-)
+   call ParseVar( FileInfo_In, CurLine, "InCol_Cd", InputFileData%InCol_Cd, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! InCol_Cm - The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column (-)
+   call ParseVar( FileInfo_In, CurLine, "InCol_Cm", InputFileData%InCol_Cm, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! InCol_Cpmin - The column in the airfoil tables that contains the Cpmin coefficient; use zero if there is no Cpmin column (-)
+   call ParseVar( FileInfo_In, CurLine, "InCol_Cpmin", InputFileData%InCol_Cpmin, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! NumAFfiles - Number of airfoil files used (-)
+   call ParseVar( FileInfo_In, CurLine, "NumAFfiles", InputFileData%NumAFfiles, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
          ! Allocate space to hold AFNames
       ALLOCATE( InputFileData%AFNames(InputFileData%NumAFfiles), STAT=ErrStat2)
          IF (ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, "Error allocating AFNames.", ErrStat, ErrMsg, RoutineName)
-            CALL Cleanup()
-            RETURN
+            ErrStat2=ErrID_Fatal
+            ErrMsg2 = "Error allocating AFNames."
+            if (Failed()) return
          END IF
-               
-      ! AFNames - Airfoil file names (NumAFfiles lines) (quoted strings):
-   DO I = 1,InputFileData%NumAFfiles            
-      CALL ReadVar ( UnIn, InputFile, InputFileData%AFNames(I), 'AFNames('//TRIM(Num2Lstr(I))//')', 'Airfoil '//TRIM(Num2Lstr(I))//' file name', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ! AFNames - Airfoil file names (NumAFfiles lines) (quoted strings): -- NOTE: this line may not have a keyname with it
+   DO I = 1,InputFileData%NumAFfiles         ! ParseChVar allows empty keynames.
+      call ParseVar( FileInfo_In, CurLine, "", InputFileData%AFNames(I), ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
       IF ( PathIsRelative( InputFileData%AFNames(I) ) ) InputFileData%AFNames(I) = TRIM(PriPath)//TRIM(InputFileData%AFNames(I))
-   END DO      
-             
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
-   !----------- ROTOR/BLADE PROPERTIES  --------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Rotor/Blade Properties', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! UseBlCm - Include aerodynamic pitching moment in calculations? (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%UseBlCm, "UseBlCm", "Include aerodynamic pitching moment in calculations? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-      IF (.not. InputFileData%UseBlCm) InputFileData%InCol_Cm = 0  ! don't use cm column is UseBlCm is false
-            
-   !   ! NumBlNds - Number of blade nodes used in the analysis (-):
-   !CALL ReadVar( UnIn, InputFile, InputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
-   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !   IF ( ErrStat >= AbortErrLev ) RETURN
-      
-      ! ADBlFile - Names of files containing distributed aerodynamic properties for each blade (see AD_BladeInputFile type):
-   DO I = 1,size(ADBlFile)
-      CALL ReadVar ( UnIn, InputFile, ADBlFile(I), 'ADBlFile('//TRIM(Num2Lstr(I))//')', 'Name of file containing distributed aerodynamic properties for blade '//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( PathIsRelative( ADBlFile(I) ) ) ADBlFile(I) = TRIM(PriPath)//TRIM(ADBlFile(I))
-   END DO      
-      
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
-   !----------- TOWER INFLUENCE AND AERODYNAMICS  ----------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Tower Influence and Aerodynamics', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! NumTwrNds - Number of tower nodes used in the analysis (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NumTwrNds, "NumTwrNds", "Number of tower nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-      
-   !....... tower properties ...................
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Tower Property Channels', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Tower Property Units', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! allocate space for tower inputs:
-   CALL AllocAry( InputFileData%TwrElev,  InputFileData%NumTwrNds, 'TwrElev',  ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( InputFileData%TwrDiam, InputFileData%NumTwrNds, 'TwrDiam', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( InputFileData%TwrCd, InputFileData%NumTwrNds, 'TwrCd', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! Return on error if we didn't allocate space for the next inputs
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-            
-   DO I=1,InputFileData%NumTwrNds
-      call ReadAry ( UnIn, InputFile, TmpAry,  3, 'TwrNds',  'Properties for tower node ' &
-                     //trim( Int2LStr( I ) )//'.', errStat2, errMsg2, UnEc )
-         call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-            
-      InputFileData%TwrElev(I) = TmpAry( 1)
-      InputFileData%TwrDiam(I) = TmpAry( 2)
-      InputFileData%TwrCd(I)   = TmpAry( 3)      
    END DO
-               
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-                  
-   !----------- OUTPUTS  -----------------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! SumPrint - Generate a summary file listing input options and interpolated properties to <rootname>.AD.sum? (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SumPrint, "SumPrint", "Generate a summary file listing input options and interpolated properties to <rootname>.AD.sum? (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! NBlOuts - Number of blade node outputs [0 - 9] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NBlOuts, "NBlOuts", "Number of blade node outputs [0 - 9] (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !======  Rotor/Blade Properties  =====================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! UseBlCm - Include aerodynamic pitching moment in calculations?  (flag)
+   call ParseVar( FileInfo_In, CurLine, "UseBlCm", InputFileData%UseBlCm, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! Allocate space for AD blade file names -- MaxBl is usually set to 3, but if we specify more blades, this will work still.
+   call AllocAry( InputFileData%ADBlFile, max(MaxBl,NumBladesTot), 'ADBlFile', ErrStat2, ErrMsg2)
+      if (Failed()) return
+   do I =1,size(InputFileData%ADBlFile)  ! We expect MaxBl blade file lines.  We may want to revisit this idea later if we allow more thn 3 blades
+      call ParseVar( FileInfo_In, CurLine, "", InputFileData%ADBlFile(i), ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+      IF ( PathIsRelative( InputFileData%ADBlFile(I) ) ) InputFileData%ADBlFile(I) = TRIM(PriPath)//TRIM(InputFileData%ADBlFile(I))
+   enddo
 
-      IF ( InputFileData%NBlOuts > SIZE(InputFileData%BlOutNd) ) THEN
-         CALL SetErrStat( ErrID_Warn, ' Warning: number of blade output nodes exceeds '//&
-                           TRIM(Num2LStr(SIZE(InputFileData%BlOutNd))) //'.', ErrStat, ErrMsg, RoutineName )
-         InputFileData%NBlOuts = SIZE(InputFileData%BlOutNd)
-      END IF
-      
+   !======  Tower Influence and Aerodynamics ============================================================= [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
+
+   do iR = 1,size(NumBlades) ! Loop on rotors
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+         ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
+      call ParseVar( FileInfo_In, CurLine, "NumTwrNds", InputFileData%rotors(iR)%NumTwrNds, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+         !TwrElev        TwrDiam        TwrCd
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Tower Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+         !(m)              (m)           (-)
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Tower Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+         ! Allocate space for tower table
+      CALL AllocAry( InputFileData%rotors(iR)%TwrElev,  InputFileData%rotors(iR)%NumTwrNds, 'TwrElev',  ErrStat2, ErrMsg2)
+         if (Failed()) return
+      CALL AllocAry( InputFileData%rotors(iR)%TwrDiam, InputFileData%rotors(iR)%NumTwrNds, 'TwrDiam', ErrStat2, ErrMsg2)
+         if (Failed()) return
+      CALL AllocAry( InputFileData%rotors(iR)%TwrCd, InputFileData%rotors(iR)%NumTwrNds, 'TwrCd', ErrStat2, ErrMsg2)
+         if (Failed()) return
+      CALL AllocAry( InputFileData%rotors(iR)%TwrTI, InputFileData%rotors(iR)%NumTwrNds, 'TwrTI', ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+      do I=1,InputFileData%rotors(iR)%NumTwrNds
+         call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe4, 4, ErrStat2, ErrMsg2, UnEc )
+            if (Failed()) return;
+         InputFileData%rotors(iR)%TwrElev(I) = TmpRe4( 1)
+         InputFileData%rotors(iR)%TwrDiam(I) = TmpRe4( 2)
+         InputFileData%rotors(iR)%TwrCd(I)   = TmpRe4( 3)
+         InputFileData%rotors(iR)%TwrTI(I)   = TmpRe4( 4)
+      end do
+   enddo
+
+   !======  Outputs  ====================================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! SumPrint - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)
+   call ParseVar( FileInfo_In, CurLine, "SumPrint", InputFileData%SumPrint, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! NBlOuts - Number of blade node outputs [0 - 9] (-)
+   call ParseVar( FileInfo_In, CurLine, "NBlOuts", InputFileData%NBlOuts, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! Make sure we don't try to read in more than will fit in the pre-allocated BlOutNd array
+   if ( InputFileData%NBlOuts > SIZE(InputFileData%BlOutNd) ) THEN
+      CALL SetErrStat( ErrID_Warn, ' Warning: number of blade output nodes exceeds '//&
+                        TRIM(Num2LStr(SIZE(InputFileData%BlOutNd))) //'.', ErrStat, ErrMsg, RoutineName )
+      InputFileData%NBlOuts = SIZE(InputFileData%BlOutNd)
+   endif
       ! BlOutNd - Blade nodes whose values will be output (-):
-   CALL ReadAry( UnIn, InputFile, InputFileData%BlOutNd, InputFileData%NBlOuts, "BlOutNd", "Blade nodes whose values will be output (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
-      ! NTwOuts - Number of tower node outputs [0 - 9] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NTwOuts, "NTwOuts", "Number of tower node outputs [0 - 9] (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ParseAry( FileInfo_In, CurLine, "BlOutNd", InputFileData%BlOutNd, InputFileData%NBlOuts, ErrStat2, ErrMsg2, UnEc)
 
-      IF ( InputFileData%NTwOuts > SIZE(InputFileData%TwOutNd) ) THEN
-         CALL SetErrStat( ErrID_Warn, ' Warning: number of tower output nodes exceeds '//&
-                           TRIM(Num2LStr(SIZE(InputFileData%TwOutNd))) //'.', ErrStat, ErrMsg, RoutineName )
-         InputFileData%NTwOuts = SIZE(InputFileData%TwOutNd)
-      END IF
-      
+      ! NTwOuts - Number of blade node outputs [0 - 9] (-)
+   call ParseVar( FileInfo_In, CurLine, "NTwOuts", InputFileData%NTwOuts, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! Make sure we don't try to read in more than will fit in the pre-allocated TwOutNd array
+   if ( InputFileData%NTwOuts > SIZE(InputFileData%TwOutNd) ) THEN
+      CALL SetErrStat( ErrID_Warn, ' Warning: number of blade output nodes exceeds '//&
+                        TRIM(Num2LStr(SIZE(InputFileData%TwOutNd))) //'.', ErrStat, ErrMsg, RoutineName )
+      InputFileData%NTwOuts = SIZE(InputFileData%TwOutNd)
+   endif
       ! TwOutNd - Tower nodes whose values will be output (-):
-   CALL ReadAry( UnIn, InputFile, InputFileData%TwOutNd, InputFileData%NTwOuts, "TwOutNd", "Tower nodes whose values will be output (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-                  
-   !----------- OUTLIST  -----------------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! OutList - List of user-requested output channels (-):
-   CALL ReadOutputList ( UnIn, InputFile, InputFileData%OutList, InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
+   call ParseAry( FileInfo_In, CurLine, "TwOutNd", InputFileData%TwOutNd, InputFileData%NTwOuts, ErrStat2, ErrMsg2, UnEc)
 
-      ! Return on error at end of section
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-                  
-   !---------------------- END OF FILE -----------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%OutList, &
+            InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return;
 
-
-
-   !----------- OUTLIST  -----------------------------------------------------------
+   !======  Nodal Outputs  ==============================================================================
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
-   ErrMsg_NoAllBldNdOuts='Nodal output section of AeroDyn input file not found or improperly formatted.'
+      ! Expecting at least 5 more lines in the input file for this section
+   if (FileInfo_In%NumLines < CurLine + 5) then
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = ''
+      if (FailedNodal()) return;
+   endif
 
-   !----------- OUTLIST for BldNd -----------------------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
-   IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
-      CALL Cleanup()
-      RETURN  
-   ENDIF 
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
 
-
-      ! Number of blade nodes to output:  will modify this at some point for arrays
+      ! BldNd_BladesOut - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
       ! TODO:  In a future release, allow this to be an array of N blade numbers (change BldNd_BladesOut to an array if we do that).
       !        Will likely require reading this line in as a string (BldNd_BladesOut_Str) and parsing it
-   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
-   IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
-      CALL Cleanup()
-      RETURN  
-   ENDIF 
-
-
-      ! Which blades to output for:  will add this at some point
+   call ParseVar( FileInfo_In, CurLine, "BldNd_BladesOut", InputFileData%BldNd_BladesOut, ErrStat2, ErrMsg2, UnEc )
+      if (FailedNodal()) return
+      ! BldNd_BlOutNd - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
       ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
-   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
-   IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
-      CALL Cleanup()
-      RETURN  
-   ENDIF 
+   call ParseVar( FileInfo_In, CurLine, "BldNd_BlOutNd", InputFileData%BldNd_BlOutNd_Str, ErrStat2, ErrMsg2, UnEc )
+      if (FailedNodal()) return
+      ! OutList - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
 
+   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%BldNd_OutList, &
+            InputFileData%BldNd_NumOuts, 'BldNd_OutList', "List of user-requested output nodal channel groups", ErrStat2, ErrMsg2, UnEc )
+         if (FailedNodal()) return;
 
-      ! Section header for outlist
-   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
-   IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
-      CALL Cleanup()
-      RETURN  
-   ENDIF 
-     
- 
-      ! OutList - List of user-requested output channels at each node(-):
-   CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
-   IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
-      call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
-      CALL Cleanup()
-      RETURN  
-   ENDIF 
-
-
- 
-   !---------------------- END OF FILE -----------------------------------------
-      
-   CALL Cleanup( )
    RETURN
-
-
 CONTAINS
-   !...............................................................................................................................
-   SUBROUTINE Cleanup()
-   ! This subroutine cleans up any local variables and closes input files
-   !...............................................................................................................................
-
-   IF (UnIn > 0) CLOSE ( UnIn )
-
-   END SUBROUTINE Cleanup
-   !...............................................................................................................................
-END SUBROUTINE ReadPrimaryFile      
+   !-------------------------------------------------------------------------------------------------
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ParsePrimaryFileInfo' )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) then
+         if (UnEc  > -1_IntKi)      CLOSE( UnEc )
+      endif
+   end function Failed
+   logical function FailedNodal()
+      ErrMsg_NoAllBldNdOuts='AD15 Nodal Outputs: Nodal output section of AeroDyn input file not found or improperly formatted. Skipping nodal outputs.'
+      if (ErrStat2 >= AbortErrLev ) then
+         InputFileData%BldNd_BladesOut = 0
+         InputFileData%BldNd_NumOuts = 0
+         call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
+      endif
+      FailedNodal = ErrStat2 >= AbortErrLev
+   end function FailedNodal
+   !-------------------------------------------------------------------------------------------------
+END SUBROUTINE ParsePrimaryFileInfo
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
 ! This routine reads a blade input file.
@@ -2736,12 +2502,13 @@ CONTAINS
 
 END SUBROUTINE ReadBladeInputs      
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
+SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
 ! This routine generates the summary file, which contains a summary of input file options.
 
       ! passed variables
    TYPE(AD_InputFile),        INTENT(IN)  :: InputFileData                        ! Input-file data
-   TYPE(AD_ParameterType),    INTENT(IN)  :: p                                    ! Parameters
+   TYPE(RotParameterType),    INTENT(IN)  :: p                                    ! Parameters
+   TYPE(AD_ParameterType),    INTENT(IN)  :: p_AD                                 ! Parameters
    TYPE(AD_InputType),        INTENT(IN)  :: u                                    ! inputs 
    TYPE(AD_OutputType),       INTENT(IN)  :: y                                    ! outputs
    INTEGER(IntKi),            INTENT(OUT) :: ErrStat
@@ -2771,7 +2538,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
 
    WRITE (UnSu,'(/,A)') '======  General Options  ============================================================================'
    ! WakeMod
-   select case (p%WakeMod)
+   select case (p_AD%WakeMod)
       case (WakeMod_BEMT)
          Msg = 'Blade-Element/Momentum Theory'
       case (WakeMod_DBEMT)
@@ -2783,7 +2550,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
       case default      
          Msg = 'unknown'      
    end select   
-   WRITE (UnSu,Ec_IntFrmt) p%WakeMod, 'WakeMod', 'Type of wake/induction model: '//TRIM(Msg)
+   WRITE (UnSu,Ec_IntFrmt) p_AD%WakeMod, 'WakeMod', 'Type of wake/induction model: '//TRIM(Msg)
 
    
    ! AFAeroMod
@@ -2813,13 +2580,18 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
    
    
    ! TwrShadow
-   if (p%TwrShadow) then
-      Msg = 'Yes'
-   else
-      Msg = 'No'
-   end if   
-   WRITE (UnSu,Ec_LgFrmt) p%TwrShadow, 'TwrShadow', 'Calculate tower influence on wind based on downstream tower shadow? '//TRIM(Msg)
-   
+   select case (p%TwrShadow)
+      case (TwrShadow_Powles)
+         Msg = 'Powles tower shadow model'
+      case (TwrShadow_Eames)
+         Msg = 'Eames tower shadow model with TI values from the table' 
+      case (TwrShadow_none)
+         Msg = 'none'      
+      case default      
+         Msg = 'unknown'      
+   end select
+   WRITE (UnSu,Ec_IntFrmt) p%TwrShadow, 'TwrShadow', 'Calculate tower influence on wind based on downstream tower shadow: '//TRIM(Msg)
+    
    
    ! TwrAero
    if (p%TwrAero) then
@@ -2830,7 +2602,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
    WRITE (UnSu,Ec_LgFrmt) p%TwrAero, 'TwrAero', 'Calculate tower aerodynamic loads? '//TRIM(Msg)
 
 
-   if (p%WakeMod/=WakeMod_none) then
+   if (p_AD%WakeMod/=WakeMod_none) then
       WRITE (UnSu,'(A)') '======  Blade-Element/Momentum Theory Options  ======================================================'
       
       ! SkewMod 
@@ -2894,7 +2666,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
       ! MaxIter 
       
       
-      if (p%WakeMod == WakeMod_DBEMT) then
+      if (p_AD%WakeMod == WakeMod_DBEMT) then
          select case (InputFileData%DBEMT_Mod)
             case (DBEMT_tauConst)
                Msg = 'constant tau1'
@@ -3007,7 +2779,7 @@ END SUBROUTINE AD_PrintSum
 !! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
 !! 
 !! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 31-Aug-2020 13:14:21.
-SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
+SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    IMPLICIT                        NONE
@@ -3015,7 +2787,8 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       ! Passed variables
 
    CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list out user-requested outputs
-   TYPE(AD_ParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   TYPE(RotParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   TYPE(AD_ParameterType),    INTENT(INOUT)  :: p_AD                              !< The module parameters
    INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
    CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
 
@@ -3499,9 +3272,10 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
 
 !   ..... Developer must add checking for invalid inputs here: .....
+
    !bjj: do we want to avoid outputting this if we haven't used tower aero?
    
-   if ( p%TwrPotent == TwrPotent_none .and. .not. p%TwrShadow ) then
+   if ( p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none ) then
       
          ! BNClrnc is set only when we're computing the tower influence
       do i = 1,size(BNClrnc,2)  ! all blades (need to do this in a loop because we need the index of InvalidOutput to be an array of rank one)
@@ -3510,7 +3284,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       
    end if
       
-   if (p%WakeMod /= WakeMod_DBEMT) then
+   if (p_AD%WakeMod /= WakeMod_DBEMT) then
       InvalidOutput( DBEMTau1 ) = .true.
    end if
    
@@ -3571,6 +3345,12 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( BNSgCav(:,i) ) = .true.
       InvalidOutput( BNSigCr(:,i) ) = .true.
       InvalidOutput( BNCpMin(:,i) ) = .true.
+!      InvalidOutput( BAeroFx(  i) ) = .true.
+!      InvalidOutput( BAeroFy(  i) ) = .true.
+!      InvalidOutput( BAeroFz(  i) ) = .true.
+!      InvalidOutput( BAeroMx(  i) ) = .true.
+!      InvalidOutput( BAeroMy(  i) ) = .true.
+!      InvalidOutput( BAeroMz(  i) ) = .true.
                
    END DO
       
