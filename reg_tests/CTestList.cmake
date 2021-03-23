@@ -181,16 +181,16 @@ of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;se
 
 # AeroDyn regression tests
 ad_regression("ad_timeseries_shutdown"      "aerodyn;bem")
-ad_regression("BAR_CombinedCases"           "aerodyn;bem")
-ad_regression("BAR_OLAF"                    "aerodyn;bem")
-ad_regression("BAR_SineMotion"              "aerodyn;bem") # NOTE: Sine Before RNA
-ad_regression("BAR_RNAMotion"               "aerodyn;bem")
-ad_regression("EllipticalWingInf_OLAF"      "aerodyn;bem")
-ad_regression("HelicalWakeInf_OLAF"         "aerodyn;bem")
-ad_regression("Kite_OLAF"                   "aerodyn;bem")
-ad_regression("MultipleHAWT"                "aerodyn;bem")
-ad_regression("QuadRotor_OLAF"              "aerodyn;bem")
-ad_regression("VerticalAxis_OLAF"           "aerodyn;bem")
+ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem")
+ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
+ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
+ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
+ad_regression("ad_EllipticalWingInf_OLAF"   "aerodyn;bem")
+ad_regression("ad_HelicalWakeInf_OLAF"      "aerodyn;bem")
+ad_regression("ad_Kite_OLAF"                "aerodyn;bem")
+ad_regression("ad_MultipleHAWT"             "aerodyn;bem")
+ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
+ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")

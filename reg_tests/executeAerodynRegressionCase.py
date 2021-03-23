@@ -55,7 +55,7 @@ parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help=
 
 args = parser.parse_args()
 
-caseName = args.caseName[0]
+caseName = args.caseName[0][3:] 
 executable = args.executable[0]
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
@@ -118,21 +118,21 @@ if not os.path.isdir(testBuildDirectory):
     
 ### Run aerodyn on the test case
 if not noExec:
-    caseInputFile = os.path.join(testBuildDirectory, "Main_"+caseName + ".dvr")
+    caseInputFile = os.path.join(testBuildDirectory, "ad_driver.dvr")
+    #caseInputFile = os.path.join(testBuildDirectory, caseName + ".dvr")
     returnCode = openfastDrivers.runAerodynDriverCase(caseInputFile, executable)
     if returnCode != 0:
         rtl.exitWithError("")
     
 ###Build the filesystem navigation variables for running the regression test
 # For multiple turbines, test turbine 2, for combined cases, test case 4 
-localOutFileWT2 = os.path.join(testBuildDirectory, "Main_" + caseName + ".WT2.outb")
-localOutFileCase4 = os.path.join(testBuildDirectory, "Main_" + caseName + ".4.outb")
+localOutFile      = os.path.join(testBuildDirectory, "ad_driver.outb")
+localOutFileWT2   = os.path.join(testBuildDirectory, "ad_driver.WT2.outb")
+localOutFileCase4 = os.path.join(testBuildDirectory, "ad_driver.4.outb")
 if os.path.exists(localOutFileWT2) :
     localOutFile=localOutFileWT2
 elif os.path.exists(localOutFileCase4) :
     localOutFile=localOutFileCase4
-else:
-    localOutFile = os.path.join(testBuildDirectory, "Main_" + caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, os.path.basename(localOutFile))
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
