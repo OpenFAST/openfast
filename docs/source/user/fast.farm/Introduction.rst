@@ -303,7 +303,7 @@ wind turbines present), such as the atmospheric boundary layer solver
 (ABLSolver) preprocessor of `SOWFA <https://nwtc.nrel.gov/SOWFA>`__.
 This atmospheric precursor simulation captures more physics than
 synthetic turbulence -- as illustrated in
-:numref:`FF:ABLSolver` including atmospheric stability,
+:numref:`FF:ABLSolver` -- including atmospheric stability,
 wind-farm-wide turbulent length scales, and complex terrain effects.
 
 .. figure:: Pictures/ABLSolver.png

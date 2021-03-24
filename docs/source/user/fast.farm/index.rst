@@ -9,7 +9,7 @@ FAST.Farm User’s Guide and Theory Manual
    OpenFAST.
 
    The documentaiton here was derived from the FAST.Farm users manual by Jason
-   Jonkman and Kelsey Shaler.  E. Branlard, and A. Platt.
+   Jonkman and Kelsey Shaler.
 ..
    Update this link and uncomment when published:
    (`https://www.nrel.gov/docs/fy20osti/75959.pdf

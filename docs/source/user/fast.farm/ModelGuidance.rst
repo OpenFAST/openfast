@@ -363,7 +363,7 @@ repetition of the turbulence box for the duration of the simulation, the
 following equation is recommended:
 
 .. math::
-   \textbf{nx} = 2^{CEILING\big[log_2\left(\frac{V_\text{Hub}\textbf{T\_Max}}{\textbf{dx}}\right)\big]}
+   \textbf{nx} = 2^{CEILING\big[log_2\left(\frac{V_\text{Hub}\textbf{T_Max}}{\textbf{dx}}\right)\big]}
 
 where :math:`CEILING\big[x\big]` rounds :math:`x` to the next highest
 integer. This equation ensures that the turbulence box will not repeat
@@ -532,12 +532,12 @@ upstream to allow for analysis of the ambient inflow. If using a Mann
 box, this value should be 0.
 
 **Y0_Low** -- This quantity must be less than the lowest *Y* location of
-any turbine (**WT_Y\_**). Additional clearance is required to
+any turbine (**WT_Y_**). Additional clearance is required to
 accommodate wake meandering, wake deflection, and spatial averaging used
 in the *AWAE* module. This value may be computed as:
 
 .. math::
-   \textbf{Y0_Low} \le \textbf{WT\_Y\_\text{min}}-3D^\text{Rotor}%}{2}
+   \textbf{Y0_Low} \le \textbf{WT_Y_min}-3D^\text{Rotor}%}{2}
 
 Additional clearance should be allowed for appreciable wake meandering
 and/or yaw. For **Mod_AmbWind** = 2, the synthetic inflow data are
@@ -558,7 +558,7 @@ quantity, the following equation is suggested when using synthetic
 inflow:
 
 .. math::
-   \textbf{DS_Low} = FLOOR\left( \frac{DS_Low\_Desired}{\textbf{DS_High}} \right)*\textbf{DS_High}
+   \textbf{DS_Low} = FLOOR\left( \frac{\textbf{DS_Low_Desired}}{\textbf{DS_High}} \right)*\textbf{DS_High}
 
 Use of this equation is the best way to ensure that **DS_Low** will be a
 multiple integer of **DS_High**, reducing interpolation smoothing.
@@ -590,7 +590,7 @@ on **DS_High** and the desired domain size (*Sdist_High*), where
 *S*\ =\ *X*, *Y*, or *Z*. This integer quantity should be computed as:
 
 .. math::
-   \textbf{NS_High} = \text{CEILING}\left( \frac{Sdist_High}{\textbf{DS_High}}\right)+1
+   \textbf{NS_High} = \text{CEILING}\left( \frac{\textbf{Sdist_High}}{\textbf{DS_High}}\right)+1
 
 **X0_High**, **Y0_High**, **Z0_High** -- These quantities are set for each
 turbine. They should be based on turbine location and set so that the
@@ -872,38 +872,13 @@ along which axis the error has occurred, aiding in debugging.
    standards.
 
 .. [2]
-   When HAWC format is used (**WindType** = 5), :math:`\_u`,
-   :math:`\_v`, :math:`\_w` must be appended to the file names.
+   When HAWC format is used (**WindType** = 5), `_u`,
+   `_v`, `_w` must be appended to the file names.
 
 .. [3]
    The super controller also has as input a placeholder for future
    global (e.g., wind) measurements in addition to commands or
    measurements from the individual turbine controllers. But the global
    inputs are currently null.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -720,34 +720,45 @@ positions of the wake planes, (:math:`\vec{p}_{n_p}^\text{Plane}`) as
 follows:
 
 .. math::
-   \hat{x}_{n_p}^\text{Plane}\left[ n+1 \right]=\left\{
-      \begin{matrix}
-         \frac{\hat{x}_{n_p}^\text{Plane}\left[ n \right]\alpha +\hat{x}^\text{Disk}\left( 1-\alpha \right)}{\left\| \hat{x}_{n_p}^\text{Plane}\left[ n \right]\alpha +\hat{x}^\text{Disk}\left( 1-\alpha \right) \right\|_2} & \textrm{for } n_p=0  \\
+   \hat{x}_{n_p}^\text{Plane}\left[ n+1 \right]=
+      \begin{cases}
+         \frac{\hat{x}_{n_p}^\text{Plane}\left[ n \right]\alpha +\hat{x}^\text{Disk}\left( 1-\alpha \right)}
+            {\left\| \hat{x}_{n_p}^\text{Plane}\left[ n \right]\alpha +\hat{x}^\text{Disk}\left( 1-\alpha \right) \right\|_2} 
+            &\qquad\textrm{for}~n_p=0  \\
          \\
-         \hat{x}_{n_p-1}^\text{Plane}\left[ n \right] & \textrm{for }1\le n_p\le N_p-1  \\
-      \end{matrix}
-   \right.
+         \hat{x}_{n_p-1}^\text{Plane}\left[ n \right] 
+            &\qquad\textrm{for}~1\le n_p\le N_p-1  \\
+      \end{cases}
    :label: eq:6.6
 
-.. math::
-   x_{n_p}^\text{Plane}\left[ n+1 \right]=\left\{
-      \begin{matrix}
-         0 & \textrm{for } n_p=0 \\
-         \\
-         x_{n_p-1}^\text{Plane}\left[ n \right]+|d\hat{x}_{n_p-1}| & \textrm{for } 1\le n_p\le N_p-1 \\
-      \end{matrix}
-   \right.
-   :label: eq:6.7
 
 .. math::
-   \vec{p}_{n_p}^\text{Plane}\left[ n+1 \right]=\left\{
-      \begin{matrix}
-         \vec{p}_{n_p}^\text{Plane}\left[ n \right]\alpha +\left\{ \vec{p}^\text{Hub}\left[ n \right] +\left( C_\text{HWkDfl}^\text{O}+C_\text{HWkDfl}^\text{OY}\ ^\text{Filt}\gamma _{n_p}^\text{YawErr}
-            \left[ n+1 \right] \right)\widehat{XY_{n_p}} \right\}\left( 1-\alpha \right) & for\ n_p=0 \\
-         \vec{p}_{n_p-1}^\text{Plane}\left[ n \right]+\hat{x}_{n_p-1}^\text{Plane}\left[ n \right]\ d\hat{x}_{n_p-1}+\left[ I-\hat{x}_{n_p-1}^\text{Plane}\left[ n \right]{{\left\{ \hat{x}_{n_p-1}^\text{Plane}\left[ n \right] \right\}}^T} \right]\vec{V}_{n_p-1}^\text{Plane}\Delta t &\\ 
-            +\left( \left( C_\text{HWkDfl}^\text{x}+C_\text{HWkDfl}^\text{xY}\ ^\text{Filt}\gamma _{n_p-1}^\text{YawErr}\left[ n \right] \right)d\hat{x}_{n_p-1} \right)\widehat{XY_{n_p-1}}& for\ 1\le n_p\le N_p-1 \\
-      \end{matrix}
-   \right.
+   x_{n_p}^\text{Plane}\left[ n+1 \right]=
+      \begin{cases}
+         0  &\qquad\textrm{for}~n_p=0 \\
+         \\
+         x_{n_p-1}^\text{Plane}\left[ n \right]+|d\hat{x}_{n_p-1}| 
+            &\qquad\textrm{for}~1\le n_p\le N_p-1 \\
+      \end{cases}
+   :label: eq:6.7
+
+
+.. math::
+   \vec{p}_{n_p}^\text{Plane}\left[ n+1 \right]=
+      \begin{cases}
+         \begin{aligned}[l]
+         &\vec{p}_{n_p}^\text{Plane}\left[ n \right]\alpha + \left\{ \vec{p}^\text{Hub}\left[ n \right]\right. \\
+         &\qquad   + \left.\left( C_\text{HWkDfl}^\text{O}+C_\text{HWkDfl}^\text{OY}~^\text{Filt}\gamma _{n_p}^\text{YawErr}\left[ n+1 \right] \right)\widehat{XY_{n_p}} \right\}\left( 1-\alpha \right)
+         \end{aligned}
+         & \textrm{for}~ n_p=0 \\
+         \\
+         \begin{aligned}[l]
+         &\vec{p}_{n_p-1}^\text{Plane}\left[ n \right] + \hat{x}_{n_p-1}^\text{Plane}\left[ n \right]\ d\hat{x}_{n_p-1} \\
+         &\qquad   +\left[ I-\hat{x}_{n_p-1}^\text{Plane}\left[ n \right]{{\left\{ \hat{x}_{n_p-1}^\text{Plane}\left[ n \right] \right\}}^T} \right]\vec{V}_{n_p-1}^\text{Plane}\Delta t    \\
+         &\qquad   +\left( \left( C_\text{HWkDfl}^\text{x}+C_\text{HWkDfl}^\text{xY}\ ^\text{Filt}\gamma _{n_p-1}^\text{YawErr}\left[ n \right] \right)d\hat{x}_{n_p-1} \right)\widehat{XY_{n_p-1}}
+         \end{aligned}
+         & \textrm{for}~ 1\le n_p\le N_p-1 \\
+      \end{cases}
    :label: eq:6.8
 
 where:
@@ -974,11 +985,15 @@ conservation of mass (continuity, Equation :eq:`eq:6.17`) are
 as follows:
 
 .. math::
-   V_x\frac{\partial V_x}{\partial x}+V_r\frac{\partial V_x}{\partial r}=\frac{1}{r}\frac{\partial }{\partial r}\left( r \nu _T\frac{\partial V_x}{\partial r} \right) \textrm{, or equivalently, } r V_x\frac{\partial V_x}{\partial x}+rV_r\frac{\partial V_x}{\partial r}={\nu_T}\frac{\partial V_x}{\partial r}+r{\nu_T}\frac{\partial^2V_x}{\partial r^2}+r\frac{\partial \nu_T}{\partial r}\frac{\partial V_x}{\partial r}
+   \begin{aligned}
+   &   V_x\frac{\partial V_x}{\partial x}+V_r\frac{\partial V_x}{\partial r}=\frac{1}{r}\frac{\partial }{\partial r}\left( r \nu _T\frac{\partial V_x}{\partial r} \right),\\
+   &   \qquad\qquad \textrm{or equivalently, }\\
+   &   r V_x\frac{\partial V_x}{\partial x}+rV_r\frac{\partial V_x}{\partial r}={\nu_T}\frac{\partial V_x}{\partial r}+r{\nu_T}\frac{\partial^2V_x}{\partial r^2}+r\frac{\partial \nu_T}{\partial r}\frac{\partial V_x}{\partial r}
+   \end{aligned}
    :label: eq:6.16
 
 .. math::
-   \frac{\partial V_x}{\partial x}+\frac{1}{r}\frac{\partial}{\partial r} \left(r V_r \right)=0 \textrm{, or equivalently, } V_r+r\frac{\partial V_r}{\partial r}+r\frac{\partial V_x}{\partial x}=0
+   \frac{\partial V_x}{\partial x}+\frac{1}{r}\frac{\partial}{\partial r} \left(r V_r \right)=0\quad \textrm{, or equivalently, }\quad V_r+r\frac{\partial V_r}{\partial r}+r\frac{\partial V_x}{\partial x}=0
    :label: eq:6.17
 
 where :math:`V_x` and :math:`V_r` are the axial and radial velocities in
@@ -1089,27 +1104,25 @@ are user-specified calibration parameters for the functions associated
 with ambient turbulence and the wake shear layer, respectively.
 
 .. math::
-   F_{\nu \text{Amb}}\left( x \right)=\left\{
-      \begin{matrix}
+   F_{\nu \text{Amb}}\left( x \right)=
+      \begin{cases}
          C_{\nu \text{Amb}}^\text{FMin} & \textrm{for } x\le C_{\nu \text{Amb}}^\text{DMin}\ ^\text{Filt}D^\text{Rotor}  \\
          \\
          C_{\nu \text{Amb}}^\text{FMin}+\left( 1-C_{\nu \text{Amb}}^\text{FMin} \right){{\left[ \frac{\frac{x}{^\text{Filt}D^\text{Rotor}}-C_{\nu \text{Amb}}^\text{DMin}}{C_{\nu \text{Amb}}^\text{DMax}-C_{\nu \text{Amb}}^\text{DMin}} \right]}^{C_{\nu \text{Amb}}^\text{Exp}}} & \textrm{for } C_{\nu \text{Amb}}^\text{DMin}\ ^\text{Filt}D^\text{Rotor}<x<C_{\nu \text{Amb}}^\text{DMax}\ ^\text{Filt}D^\text{Rotor}  \\
          \\
          1 & \textrm{for } x\ge C_{\nu \text{Amb}}^\text{DMax}\ ^\text{Filt}D^\text{Rotor}  \\
-      \end{matrix}
-   \right.
+      \end{cases}
    :label: eq:FAmb
 
 .. math::
-   F_{\nu \text{Shr}}\left( x \right)=\left\{
-      \begin{matrix}
+   F_{\nu \text{Shr}}\left( x \right)=
+      \begin{cases}
          C_{\nu \text{Shr}}^\text{FMin} & \textrm{for } x\le C_{\nu \text{Shr}}^\text{DMin}\ ^\text{Filt}D^\text{Rotor} \\
          \\
          C_{\nu \text{Shr}}^\text{FMin}+\left( 1-C_{\nu \text{Shr}}^\text{FMin} \right){{\left[ \frac{\frac{x}{^\text{Filt}D^\text{Rotor}}-C_{\nu \text{Shr}}^\text{DMin}}{C_{\nu \text{Shr}}^\text{DMax}-C_{\nu \text{Shr}}^\text{DMin}} \right]}^{C_{\nu \text{Shr}}^\text{Exp}}} & \textrm{for } C_{\nu \text{Shr}}^\text{DMin}\ ^\text{Filt}D^\text{Rotor}<x<C_{\nu \text{Shr}}^\text{DMax}\ ^\text{Filt}D^\text{Rotor} \\
          \\
          1 & \textrm{for } x\ge C_{\nu \text{Shr}}^\text{DMax}\ ^\text{Filt}D^\text{Rotor} \\
-      \end{matrix}
-   \right.
+      \end{cases}
    :label: eq:FShr
 
 The filter functions of Equations :eq:`eq:FAmb`
@@ -1159,15 +1172,18 @@ these four methods are given in Equation :eq:`eq:DWake`. Here,
 
 .. math::
    D^\text{Wake}\left( x \right)=
-       \left\{ \begin{matrix}
-      ^\text{Filt}D^\text{Rotor} \\ \textrm{for}\ method\,1-rotor\,diameter\\
+      \begin{cases}
+      &^\text{Filt}D^\text{Rotor}\qquad\textrm{for}~\textit{method 1-rotor diameter}\\
       \\
-      MAX\left( ^\text{Filt}D^\text{Rotor},\left\{ 2r|\left( V_x\left( x,r \right)=C_\text{WakeDiam}\ ^\text{FiltDiskAvg}V_x^\text{Wind} \right) \right\} \right) \\ \textrm{for}\ method\,2-velocity\,based\\
+      &MAX\left( ^\text{Filt}D^\text{Rotor},\left\{ 2r|\left( V_x\left( x,r \right)=C_\text{WakeDiam}\ ^\text{FiltDiskAvg}V_x^\text{Wind} \right) \right\} \right)\\
+         &\phantom{^\text{Filt}D^\text{Rotor}}\qquad\textrm{for}~\textit{method 2-velocity based}\\
       \\
-      MAX\left( ^\text{Filt}D^\text{Rotor},\left\{ D^\text{Wake}\left( x \right)|\int\limits_{0}^{\frac{D^\text{Wake}\left( x \right)}{2}}{V_x^\text{Wake}\left( x,r \right)2\pi rdr}=C_\text{WakeDiam}\int\limits_{0}^{\infty }{V_x^\text{Wake}\left( x,r \right)2\pi rdr} \right\} \right)\\\textrm{for}\ method\,3-mass\text{-}flux\,based\\
+      &MAX\left( ^\text{Filt}D^\text{Rotor},\left\{ D^\text{Wake}\left( x \right)|\int\limits_{0}^{\frac{D^\text{Wake}\left( x \right)}{2}}{V_x^\text{Wake}\left( x,r \right)2\pi rdr}=C_\text{WakeDiam}\int\limits_{0}^{\infty }{V_x^\text{Wake}\left( x,r \right)2\pi rdr} \right\} \right)\\
+         &\phantom{^\text{Filt}D^\text{Rotor}}\qquad\textrm{for}~\textit{method 3-mass-flux based}\\
       \\
-      MAX\left( ^\text{Filt}D^\text{Rotor},\left\{ D^\text{Wake}\left( x \right)|\int\limits_{0}^{\frac{D^\text{Wake}\left( x \right)}{2}}{\left( V_x^\text{Wake}\left( x,r \right) \right)^2 2\pi rdr}=C_\text{WakeDiam}\int\limits_{0}^{\infty }{\left( V_x^\text{Wake}\left( x,r \right) \right)^2 2\pi rdr} \right\} \right)\\\textrm{for}\ method\,4-momentum\text{-}flux\,based\\
-   \end{matrix} \right.
+      &MAX\left( ^\text{Filt}D^\text{Rotor},\left\{ D^\text{Wake}\left( x \right)|\int\limits_{0}^{\frac{D^\text{Wake}\left( x \right)}{2}}{\left( V_x^\text{Wake}\left( x,r \right) \right)^2 2\pi rdr}=C_\text{WakeDiam}\int\limits_{0}^{\infty }{\left( V_x^\text{Wake}\left( x,r \right) \right)^2 2\pi rdr} \right\} \right)\\
+         &\phantom{^\text{Filt}D^\text{Rotor}}\qquad\textrm{for}~\textit{method 4-momentum-flux based}\\
+   \end{cases}
    :label: eq:DWake
 
 The momentum and continuity equations are solved numerically in the
@@ -1384,7 +1400,11 @@ the ambient turbulence intensity around each rotor,
 :math:`TI_\text{Amb}`, using Equation :eq:`eq:TI`:
 
 .. math::
-   TI_\text{Amb}=\left. \left( \frac{\sqrt{\frac{1}{3N_{n_p}^\text{Polar}}\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}\left\| \vec{V}_{\text{Amb}_{n^\text{Polar}}}^\text{Low}-\left\{ \frac{1}{N_{n_p}^\text{Polar}}\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}{\vec{V}_{\text{Amb}_{n^\text{Polar}}}^\text{Low}} \right\} \right\|_2^2}}{\left\| \left\{ \frac{1}{N_{n_p}^\text{Polar}}\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}{\vec{V}_{\text{Amb}_{n^\text{Polar}}}^\text{Low}} \right\} \right\|_2} \right) \right|_{n_p=0}
+   TI_\text{Amb}=\left. \left(
+      \frac{\sqrt{\frac{1}{3N_{n_p}^\text{Polar}}\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}\left\| \vec{V}_{\text{Amb}_{n^\text{Polar}}}^\text{Low}-
+            \left\{ \frac{1}{N_{n_p}^\text{Polar}}\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}{\vec{V}_{\text{Amb}_{n^\text{Polar}}}^\text{Low}} \right\} \right\|_2^2}}
+         {\left\| \left\{ \frac{1}{N_{n_p}^\text{Polar}}\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}{\vec{V}_{\text{Amb}_{n^\text{Polar}}}^\text{Low}} \right\} \right\|_2}
+      \right) \right|_{n_p=0}
    :label: eq:TI
 
 The bracketed term in Equation :eq:`eq:TI` is the same as in
@@ -1448,22 +1468,46 @@ and :eq:`eq:VDistLow`, respectively.
 .. math::
    \begin{split}
      & \vec{V}_\text{Dist}^\text{High}=\vec{V}_\text{Amb}^\text{High} \\ 
-    & \quad \quad \,-\left\{ \sqrt{\sum\limits_{n^\text{Wake}=1}^{N^\text{Wake}}{\left\{ \begin{matrix}
-      {{\left( \left\{ \bar{\hat{x}}^{Plane} \right\}^T\left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane} \right\} \right)}^2} & for\,\left( n_{t_{n^\text{Wake}}}\ne n_t \right)  \\
-      0 & otherwise  \\
-   \end{matrix} \right.}} \right\}\bar{\hat{x}}^\text{Plane} \\ 
-    & \quad \quad \,+\sum\limits_{n^\text{Wake}=1}^{N^\text{Wake}}{\left\{ \begin{matrix}
-      \left[ I-\bar{\hat{x}}^\text{Plane}\left\{ \bar{\hat{x}}^\text{Plane} \right\}^T \right]\left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane} \right\} & for\,\left( {n_{t_{n^\text{Wake}}}}\ne n_t \right)  \\
-      {\vec{0}} & otherwise  \\
-   \end{matrix} \right.} \\ 
+    & \quad \quad \,-\left\{ 
+      \sqrt{\sum\limits_{n^\text{Wake}=1}^{N^\text{Wake}}{
+         \begin{cases}
+            {{\left( \left\{ \bar{\hat{x}}^{Plane} \right\}^T
+               \left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+
+                  V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane} \right\} \right)}^2}
+            & \textrm{for}~\left( n_{t_{n^\text{Wake}}}\ne n_t \right)  \\
+            0 & \textrm{otherwise}\\
+         \end{cases}
+         }}
+      \right\}\bar{\hat{x}}^\text{Plane} \\ 
+    & \quad \quad \,+\sum\limits_{n^\text{Wake}=1}^{N^\text{Wake}}{
+      \begin{cases}
+         \left[ I-\bar{\hat{x}}^\text{Plane}\left\{ \bar{\hat{x}}^\text{Plane} \right\}^T \right]
+            \left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+
+               V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane} \right\}
+         & \textrm{for}~\left( {n_{t_{n^\text{Wake}}}}\ne n_t \right)  \\
+         \vec{0} & \textrm{otherwise}  \\
+      \end{cases}
+      } \\ 
    \end{split}
    :label: eq:VDistHigh
 
 .. math::
    \begin{split}
      & \vec{V}_\text{Dist}^\text{Low}=\vec{V}_\text{Amb}^\text{Low} \\ 
-    & \quad \quad \,-\left\{ \sqrt{\sum\limits_{n^\text{Wake}=1}^{N^\text{Wake}}{{\left( {{\left\{ \bar{\hat{x}}^\text{Plane} \right\}}^T}\left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane} \right\} \right)}^2}} \right\}\bar{\hat{x}}^\text{Plane} \\ 
-    & \quad \quad +\sum\limits_{n^\text{Wake}=1}^{N^\text{Wake}}\left[ I-\bar{\hat{x}}^\text{Plane}\left\{ \bar{\hat{x}}^\text{Plane} \right\}^T \right]\left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane} \right\} \\ 
+     & \quad \quad \,-\left\{
+         \sqrt{\sum\limits_{n^\text{Wake}=1}^{N^\text{Wake}}{
+            {\left( {{\left\{
+            \bar{\hat{x}}^\text{Plane} \right\}}^T}
+               \left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+
+                  V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane}
+               \right\}
+            \right)}^2}}
+         \right\}\bar{\hat{x}}^\text{Plane} \\ 
+    & \quad \quad +\sum\limits_{n^\text{Wake}=1}^{N^\text{Wake}}
+         \left[ I-\bar{\hat{x}}^\text{Plane}\left\{ \bar{\hat{x}}^\text{Plane} \right\}^T \right]
+         \left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+
+            V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane}
+         \right\} \\ 
    \end{split}
    :label: eq:VDistLow
 
@@ -1553,7 +1597,9 @@ average of the disturbed wind velocity across the wake plane, using
 Equation :eq:`eq:VnpPlane`.
 
 .. math::
-   \vec{V}_{n_p}^\text{Plane}=\frac{\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}w_{n^\text{Polar}}\vec{V}_{\text{Dist}_{n^\text{Polar}}}^\text{Low}}{\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}{w_{n^\text{Polar}}}}
+   \vec{V}_{n_p}^\text{Plane}=
+      \frac{\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}w_{n^\text{Polar}}\vec{V}_{\text{Dist}_{n^\text{Polar}}}^\text{Low}}
+           {\sum\limits_{n^\text{Polar}=1}^{N_{n_p}^\text{Polar}}{w_{n^\text{Polar}}}}
    :label: eq:VnpPlane
 
 The polar grid on wake plane :math:`n_p` has a uniform radial and
@@ -1590,13 +1636,16 @@ such, three weighted spatial averaging methods have been implemented in
 FAST.Farm, as defined in Equation :eq:`eq:wn`.
 
 .. math::
-   w_{n^\text{Polar}}=\left\{ \begin{matrix}
-      1 & \textrm{for method\,1---uniform}\\
+   w_{n^\text{Polar}}=
+   \begin{cases}
+      1 & \textrm{for}~\textit{method 1-uniform}\\
       \\
-      jinc\left( \frac{r_{n^\text{Polar}}}{C_\text{Meander}D^\text{Wake}} \right) & \textrm{for method\,2---truncated\,jinc}\\
+      jinc\left( \frac{r_{n^\text{Polar}}}{C_\text{Meander}D^\text{Wake}} \right) 
+      & \textrm{for}~\textit{method 2-truncated jinc}\\
       \\
-      jinc\left( \frac{r_{n^\text{Polar}}}{C_\text{Meander}D^\text{Wake}} \right)jinc\left( \frac{r_{n^\text{Polar}}}{2C_\text{Meander}D^\text{Wake}} \right) & \textrm{for method\,3---windowed\,jinc}\\
-   \end{matrix} \right.
+      jinc\left( \frac{r_{n^\text{Polar}}}{C_\text{Meander}D^\text{Wake}} \right)jinc\left( \frac{r_{n^\text{Polar}}}{2C_\text{Meander}D^\text{Wake}} \right)
+      & \textrm{for}~\textit{method 3-windowed jinc}\\
+   \end{cases} 
    :label: eq:wn
 
 The first method is a spatial average with a uniform weighting with a

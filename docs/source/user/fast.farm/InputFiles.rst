@@ -46,7 +46,7 @@ sections:
 
 Each section corresponds to an aspect of the FAST.Farm model -- see the
 subsections below. A sample FAST.Farm primary input file is given in
-Appendix A. Where there is a one-to-one equivalency between an input
+:numref:`FF:APP:Input`. Where there is a one-to-one equivalency between an input
 parameter and a variable in the FAST.Farm theory documented in
 :numref:`FF:Theory`, the variable in
 :numref:`FF:Theory` is shown in parentheses after the input
@@ -690,7 +690,7 @@ following inputs:
    through the **WindVelX**, **WindVelY**, and **WindVelZ** lists above.
    If FAST.Farm encounters an unknown/invalid channel name, it warns the
    users but will remove the suspect channel from the output file.
-   Please refer to Appendix C for a complete list of possible output
+   Please refer to :numref:`FF:APP:Output` for a complete list of possible output
    parameters.
 
 .. _FF:AmbWindVTK:
@@ -704,7 +704,7 @@ the low- and high-resolution domains must be pre-generated. Each of
 these ambient wind data files must follow the `simple legacy serial VTK
 file
 format <https://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf>`__.
-A sample VTK-formatted file is given in Appendix B.
+A sample VTK-formatted file is given in :numref:`FF:APP:Wind`.
 
 FAST.Farm requires that the ambient wind data files be stored in
 specific subdirectories of the directory specified by **WindFilePath**
