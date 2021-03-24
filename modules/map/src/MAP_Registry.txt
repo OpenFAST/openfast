@@ -16,9 +16,9 @@ include Registry_NWTC_Library.txt
 usefrom MAP_Fortran_Registry.txt
 
 ## ============================== Define input types here: ============================================================================================================================================             
-typedef         MAP    InitInputType        DbKi             gravity            -        -999.9               -            "gravity constant"   "[m/s^2]"   
-typedef         ^       ^                   DbKi             sea_density        -        -999.9               -            "sea density"        "[kg/m^3]"
-typedef         ^       ^                   DbKi             depth              -        -999.9               -            "depth of water"     "[m]"    
+typedef         MAP    InitInputType        R8Ki             gravity            -        -999.9               -            "gravity constant"   "[m/s^2]"   
+typedef         ^       ^                   R8Ki             sea_density        -        -999.9               -            "sea density"        "[kg/m^3]"
+typedef         ^       ^                   R8Ki             depth              -        -999.9               -            "depth of water"     "[m]"    
 typedef         ^       ^                   CHARACTER(255)   file_name          -         ""                  -            "MAP input file"
 typedef         ^       ^                   CHARACTER(255)   summary_file_name  -         ""                  -            "MAP summary file name"
 typedef         ^       ^                   CHARACTER(255)   library_input_str  -         ""                  -            "cable library string information (from input file)" 
@@ -36,122 +36,68 @@ typedef         ^       ^                   ProgDesc         Ver                
 typedef         ^       ^                   Lin_InitOutputType  LinInitOut         -          -                  -            "Init Output linearization data (fortran-only)" -
 
 ## ============================== Define Continuous states here: =====================================================================================================================================
-typedef         ^       ContinuousStateType DbKI             dummy              -         -                   -            "Remove this variable if you have continuous states" -
+typedef         ^       ContinuousStateType R8Ki             dummy              -         -                   -            "Remove this variable if you have continuous states" -
 
 
 ## ============================== Define Discrete states here: =====================================================================================================================================
-typedef         ^       DiscreteStateType   DbKi             dummy              -         -                   -            "Remove this variable if you have discrete states" -
+typedef         ^       DiscreteStateType   R8Ki             dummy              -         -                   -            "Remove this variable if you have discrete states" -
 
 
 ## ============================== Define Other states here: =====================================================================================================================================
-typedef        ^        OtherStateType      DbKi             H                 {:}        -                   -            "horizontal line force"   "[N]"  
-typedef        ^        ^                   DbKi             V                 {:}        -                   -            "Vertical line force"     "[N]"
-typedef        ^        ^                   DbKi             Ha                {:}        -                   -            "horizontal line force at anchor"   "[N]"    
-typedef        ^        ^                   DbKi             Va                {:}        -                   -            "Vertical line force at anchor"     "[N]"
-typedef        ^        ^                   DbKi             x                 {:}        -                   -            "x fairlead line position" "[m]"
-typedef        ^        ^                   DbKi             y                 {:}        -                   -            "y fairlead line position" "[m]"
-typedef        ^        ^                   DbKi             z                 {:}        -                   -            "z fairlead line position" "[m]"
-typedef        ^        ^                   DbKi             xa                {:}        -                   -            "x fairlead line position at anchor" "[m]"
-typedef        ^        ^                   DbKi             ya                {:}        -                   -            "y fairlead line position at anchor" "[m]"
-typedef        ^        ^                   DbKi             za                {:}        -                   -            "z fairlead line position at anchor" "[m]"
-typedef        ^        ^                   DbKi             Fx_connect        {:}        -                   -            "horizontal x line force at connect node"  "[N]" 
-typedef        ^        ^                   DbKi             Fy_connect        {:}        -                   -            "horizontal y line force at connect node"  "[N]"
-typedef        ^        ^                   DbKi             Fz_connect        {:}        -                   -            "vertical z line force at connect node"    "[N]" 
-typedef        ^        ^                   DbKi             Fx_anchor         {:}        -                   -            "horizontal x line force at connect node"  "[N]" 
-typedef        ^        ^                   DbKi             Fy_anchor         {:}        -                   -            "horizontal y line force at connect node"  "[N]"
-typedef        ^        ^                   DbKi             Fz_anchor         {:}        -                   -            "vertical z line force at connect node"    "[N]" 
+typedef        ^        OtherStateType      R8Ki             H                 {:}        -                   -            "horizontal line force"   "[N]"  
+typedef        ^        ^                   R8Ki             V                 {:}        -                   -            "Vertical line force"     "[N]"
+typedef        ^        ^                   R8Ki             Ha                {:}        -                   -            "horizontal line force at anchor"   "[N]"    
+typedef        ^        ^                   R8Ki             Va                {:}        -                   -            "Vertical line force at anchor"     "[N]"
+typedef        ^        ^                   R8Ki             x                 {:}        -                   -            "x fairlead line position" "[m]"
+typedef        ^        ^                   R8Ki             y                 {:}        -                   -            "y fairlead line position" "[m]"
+typedef        ^        ^                   R8Ki             z                 {:}        -                   -            "z fairlead line position" "[m]"
+typedef        ^        ^                   R8Ki             xa                {:}        -                   -            "x fairlead line position at anchor" "[m]"
+typedef        ^        ^                   R8Ki             ya                {:}        -                   -            "y fairlead line position at anchor" "[m]"
+typedef        ^        ^                   R8Ki             za                {:}        -                   -            "z fairlead line position at anchor" "[m]"
+typedef        ^        ^                   R8Ki             Fx_connect        {:}        -                   -            "horizontal x line force at connect node"  "[N]" 
+typedef        ^        ^                   R8Ki             Fy_connect        {:}        -                   -            "horizontal y line force at connect node"  "[N]"
+typedef        ^        ^                   R8Ki             Fz_connect        {:}        -                   -            "vertical z line force at connect node"    "[N]" 
+typedef        ^        ^                   R8Ki             Fx_anchor         {:}        -                   -            "horizontal x line force at connect node"  "[N]" 
+typedef        ^        ^                   R8Ki             Fy_anchor         {:}        -                   -            "horizontal y line force at connect node"  "[N]"
+typedef        ^        ^                   R8Ki             Fz_anchor         {:}        -                   -            "vertical z line force at connect node"    "[N]" 
 
 
 ## ============================== Define constraint states here: =====================================================================================================================================
-typedef        ^        ConstraintStateType DbKi             H                 {:}        -                   -            "horizontal line force"   "[N]"  
-typedef        ^        ^                   DbKi             V                 {:}        -                   -            "Vertical line force"     "[N]"
-typedef        ^        ^                   DbKi             x                 {:}        -                   -            "fairlead x displacement"  "[m]"                 
-typedef        ^        ^                   DbKi             y                 {:}        -                   -            "fairlead y displacement"  "[m]"                 
-typedef        ^        ^                   DbKi             z                 {:}        -                   -            "fairlead z displacement"  "[m]"                 
+typedef        ^        ConstraintStateType R8Ki             H                 {:}        -                   -            "horizontal line force"   "[N]"  
+typedef        ^        ^                   R8Ki             V                 {:}        -                   -            "Vertical line force"     "[N]"
+typedef        ^        ^                   R8Ki             x                 {:}        -                   -            "fairlead x displacement"  "[m]"                 
+typedef        ^        ^                   R8Ki             y                 {:}        -                   -            "fairlead y displacement"  "[m]"                 
+typedef        ^        ^                   R8Ki             z                 {:}        -                   -            "fairlead z displacement"  "[m]"                 
 
 
 ## ============================== Parameters ============================================================================================================================================
-typedef         ^        ParameterType       DbKi             g                  -         -                   -            "gravitational constant"                          "[kg/m^2]"
-typedef         ^        ^                   DbKi             depth              -         -                   -            "distance to seabed"                              "[m]"
-typedef         ^        ^                   DbKi             rho_sea            -         -                   -            "density of seawater"                             "[m]"
-typedef         ^        ^                   DbKi             dt                 -         -                   -            "time step coupling interval"                     "[sec]"
-#typedef         ^       ^                   DbKi             Lu                 -         -                   -            "unstretched cable length"                        "[m]"
-#typedef         ^       ^                   DbKi             EA                 -         -                   -            "Axial stiffness"                                 "[N]"
-#typedef         ^       ^                   DbKi             diam               -         -                   -            "cable diameter"                                  "[m]"
-#typedef         ^       ^                   DbKi             cb                 -         -                   -            "cable/seabed friction coefficient"
-#typedef         ^       ^                   DbKi             mu                 -         -                   -            "cable mass denity"                               "[kg/m]"
+typedef         ^        ParameterType       R8Ki             g                  -         -                   -            "gravitational constant"                          "[kg/m^2]"
+typedef         ^        ^                   R8Ki             depth              -         -                   -            "distance to seabed"                              "[m]"
+typedef         ^        ^                   R8Ki             rho_sea            -         -                   -            "density of seawater"                             "[m]"
+typedef         ^        ^                   R8Ki             dt                 -         -                   -            "time step coupling interval"                     "[sec]"
+#typedef         ^       ^                   R8Ki             Lu                 -         -                   -            "unstretched cable length"                        "[m]"
+#typedef         ^       ^                   R8Ki             EA                 -         -                   -            "Axial stiffness"                                 "[N]"
+#typedef         ^       ^                   R8Ki             diam               -         -                   -            "cable diameter"                                  "[m]"
+#typedef         ^       ^                   R8Ki             cb                 -         -                   -            "cable/seabed friction coefficient"
+#typedef         ^       ^                   R8Ki             mu                 -         -                   -            "cable mass denity"                               "[kg/m]"
 typedef          ^       ^                   CHARACTER(255)   InputLines         {500}     -                   -            "input file line for restart"
 typedef          ^       ^                   CHARACTER(1)     InputLineType      {500}     -                   -            "input file line type for restart"
 typedef          ^       ^                   INTEGER          numOuts           -          0                   -            "Number of write outputs" -
-typedef         ^       ^                   Lin_ParamType     LinParams         -          -                  -            "Parameter linearization data (fortran-only)" -
+typedef          ^       ^                   Lin_ParamType    LinParams         -          -                  -             "Parameter linearization data (fortran-only)" -
 
 # ============================== Inputs ============================================================================================================================================    
-typedef         ^       InputType           DbKi             x                 {:}        -                   -            "fairlead x displacement"  "[m]"                 
-typedef         ^       ^                   DbKi             y                 {:}        -                   -            "fairlead y displacement"  "[m]"                 
-typedef         ^       ^                   DbKi             z                 {:}        -                   -            "fairlead z displacement"  "[m]"                 
+typedef         ^       InputType           R8Ki             x                 {:}        -                   -            "fairlead x displacement"  "[m]"                 
+typedef         ^       ^                   R8Ki             y                 {:}        -                   -            "fairlead y displacement"  "[m]"                 
+typedef         ^       ^                   R8Ki             z                 {:}        -                   -            "fairlead z displacement"  "[m]"                 
 typedef         ^       ^                   MeshType         PtFairDisplacement -         -                   -            "position of each fairlead in X,Y,Z"  "[m]"      
 
 
 ## ============================== Outputs ============================================================================================================================================
-typedef        ^        OutputType          DbKi             Fx                 {:}        -                   -            "horizontal line force"   "[N]" 
-typedef        ^        ^                   DbKi             Fy                 {:}        -                   -            "Vertical line force"     "[N]"
-typedef        ^        ^                   DbKi             Fz                 {:}        -                   -            "horizontal line force at anchor"   "[N]"   
+typedef        ^        OutputType          R8Ki             Fx                 {:}        -                   -            "horizontal line force"   "[N]" 
+typedef        ^        ^                   R8Ki             Fy                 {:}        -                   -            "Vertical line force"     "[N]"
+typedef        ^        ^                   R8Ki             Fz                 {:}        -                   -            "horizontal line force at anchor"   "[N]"   
 typedef        ^        ^                   ReKi             WriteOutput        {:}        -                   -            "outpur vector" ""
-typedef        ^        ^                   DbKi             wrtOutput          {:}        -                   -            "outpur vector" ""
+typedef        ^        ^                   R8Ki             wrtOutput          {:}        -                   -            "outpur vector" ""
 typedef        ^        ^                   MeshType         ptFairleadLoad      -         -                   -            "point mesh for forces in X,Y,Z"         "[N]"
 
-
-#####################################################################################################################################
-## These are not necessary to define in the Registry, but are here to generate blank types until we do actually implement the
-## Jacobians in the FAST framework. In the final implementation, they will probably not contain subtypes, but instead be
-## square matrices of type ReKi or DbKi.
-e#####################################################################################################################################
-## ..... Jacobians .................................................................................................................
-## Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
-#typedef   ^               SD_PartialOutputPInputType            SD_InputType            DummyOutput        -     -     -  "If you have output equations and input data, update this variable" -
-#
-## Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
-#typedef   ^               SD_PartialContStatePInputType         SD_InputType            DummyContState     -     -     -  "If you have continuous state equations and input data, update this variable" -
-#
-##Define the Jacobian of the discrete state equations (Xd) with respect to the inputs (u), dXd/du (or Partial Xd / Partial u):
-#typedef   ^               SD_PartialDiscStatePInputType         SD_InputType            DummyDiscState     -     -     -  "If you have discrete state equations and input data, update this variable" -
-#
-## Define the Jacobian of the constraint state equations (Z) with respect to the inputs (u), dZ/du (or Partial Z / Partial u):
-#typedef   ^               SD_PartialConstrStatePInputType       SD_InputType            DummyConstrState   -     -     -  "If you have constraint state equations and input data, update this variable" -
-#
-## Define the Jacobian of the output equations (Y) with respect to the continuous states (x), dY/dx (or Partial Y / Partial x):
-#typedef   ^               SD_PartialOutputPContStateType        SD_ContinuousStateType  DummyOutput        -     -     -  "If you have output equations and continuous states, update this variable" -
-#
-## Define the Jacobian of the continuous state equations (X) with respect to the continuous states (x), dX/dx (or Partial X / Partial x):
-#typedef   ^               SD_PartialContStatePContStateType     SD_ContinuousStateType  DummyContState     -     -     -  "If you have continuous state equations and continuous states, update this variable" -
-#
-## Define the Jacobian of the discrete state equations (Xd) with respect to the continuous states (x), dXd/dx (or Partial Xd / Partial x):
-#typedef   ^               SD_PartialDiscStatePContStateType     SD_ContinuousStateType  DummyDiscState     -     -     -  "If you have discrete state equations and continuous states, update this variable" -
-#
-## Define the Jacobian of the constraint state equations (Z) with respect to the continuous states (x), dZ/dx (or Partial Z / Partial x):
-#typedef   ^               SD_PartialConstrStatePContStateType   SD_ContinuousStateType  DummyConstrState   -     -     -  "If you have constraint state equations and continuous states, update this variable" -
-#
-## Define the Jacobian of the output equations (Y) with respect to the discrete states (xd), dY/dxd (or Partial Y / Partial xd):
-#typedef   ^               SD_PartialOutputPDiscStateType        SD_DiscreteStateType    DummyOutput        -     -     -  "If you have output equations and discrete states, update this variable" -
-#
-## Define the Jacobian of the continuous state equations (X) with respect to the discrete states (xd), dX/dxd (or Partial X / Partial xd):
-#typedef   ^               SD_PartialContStatePDiscStateType     SD_DiscreteStateType    DummyContState     -     -     -  "If you have continuous state equations and discrete states, update this variable" -
-#
-## Define the Jacobian of the discrete state equations (Xd) with respect to the discrete states (xd), dXd/dxd (or Partial Xd / Partial xd):
-#typedef   ^               SD_PartialDiscStatePDiscStateType     SD_DiscreteStateType    DummyDiscState     -     -     -  "If you have discrete state equations and discrete states, update this variable" -
-#
-## Define the Jacobian of the constraint state equations (Z) with respect to the discrete states (xd), dZ/dxd (or Partial Z / Partial xd):
-#typedef   ^               SD_PartialConstrStatePDiscStateType   SD_DiscreteStateType    DummyConstrState   -     -     -  "If you have constraint state equations and discrete states, update this variable" -
-#
-## Define the Jacobian of the output equations (Y) with respect to the constraint states (z), dY/dz (or Partial Y / Partial z):
-#typedef   ^               SD_PartialOutputPConstrStateType      SD_ConstraintStateType  DummyOutput        -     -     -  "If you have output equations and constraint states, update this variable" -
-#
-## Define the Jacobian of the continuous state equations (X) with respect to the constraint states (z), dX/dz (or Partial X / Partial z):
-#typedef   ^               SD_PartialContStatePConstrStateType   SD_ConstraintStateType  DummyContState     -     -     -  "If you have continuous state equations and constraint states, update this variable" -
-#
-## Define the Jacobian of the discrete state equations (Xd) with respect to the constraint states (z), dXd/dz (or Partial Xd / Partial z):
-#typedef   ^               SD_PartialDiscStatePConstrStateType   SD_ConstraintStateType  DummyDiscState     -     -     -  "If you have discrete state equations and constraint states, update this variable" -
-#
-## Define the Jacobian of the constraint state equations (Z) with respect to the constraint states (z), dZ/dz (or Partial Z / Partial z):
-#typedef   ^               SD_PartialConstrStatePConstrStateType SD_ConstraintStateType  DummyConstrState   -     -     -  "If you have constraint state equations and constraint states, update this variable" -
 

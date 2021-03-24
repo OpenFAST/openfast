@@ -36,23 +36,24 @@ usefrom	ExtPtfm_MCKF_Registry.txt
 # Make sure the module identifiers start at 1 and that this order matches the orders in WrOutputLine and FAST_InitOutput!!!
 param	FAST	-	INTEGER	Module_Unknown	-	-1	-	"Unknown"	-
 param	^	-	INTEGER	Module_None	-	0	-	"No module selected"	-
-param	^	-	INTEGER	Module_IfW	-	1	-	"InflowWind"	-
-param	^	-	INTEGER	Module_OpFM	-	2	-	"OpenFOAM"	-
-param	^	-	INTEGER	Module_ED	-	3	-	"ElastoDyn"	-
-param	^	-	INTEGER	Module_BD	-	4	-	"BeamDyn"	-
-param	^	-	INTEGER	Module_AD14	-	5	-	"AeroDyn14"	-
-param	^	-	INTEGER	Module_AD	-	6	-	"AeroDyn"	-
-param	^	-	INTEGER	Module_SrvD	-	7	-	"ServoDyn"	-
-param	^	-	INTEGER	Module_HD	-	8	-	"HydroDyn"	-
-param	^	-	INTEGER	Module_SD	-	9	-	"SubDyn"	-
-param	^	-	INTEGER	Module_ExtPtfm	-	10	-	"External Platform Loading MCKF"	-
-param	^	-	INTEGER	Module_MAP	-	11	-	"MAP (Mooring Analysis Program)"	-
-param	^	-	INTEGER	Module_FEAM	-	12	-	"FEAMooring"	-
-param	^	-	INTEGER	Module_MD	-	13	-	"MoorDyn"	-
-param	^	-	INTEGER	Module_Orca	-	14	-	"OrcaFlex integration (HD/Mooring)"	-
-param	^	-	INTEGER	Module_IceF	-	15	-	"IceFloe"	-
-param	^	-	INTEGER	Module_IceD	-	16	-	"IceDyn"	-
-param	^	-	INTEGER	NumModules	-	16	-	"The number of modules available in FAST"	-
+param	^	-	INTEGER	Module_Glue	-	1	-	"Glue code"	-
+param	^	-	INTEGER	Module_IfW	-	2	-	"InflowWind"	-
+param	^	-	INTEGER	Module_OpFM	-	3	-	"OpenFOAM"	-
+param	^	-	INTEGER	Module_ED	-	4	-	"ElastoDyn"	-
+param	^	-	INTEGER	Module_BD	-	5	-	"BeamDyn"	-
+param	^	-	INTEGER	Module_AD14	-	6	-	"AeroDyn14"	-
+param	^	-	INTEGER	Module_AD	-	7	-	"AeroDyn"	-
+param	^	-	INTEGER	Module_SrvD	-	8	-	"ServoDyn"	-
+param	^	-	INTEGER	Module_HD	-	9	-	"HydroDyn"	-
+param	^	-	INTEGER	Module_SD	-	10	-	"SubDyn"	-
+param	^	-	INTEGER	Module_ExtPtfm	-	11	-	"External Platform Loading MCKF"	-
+param	^	-	INTEGER	Module_MAP	-	12	-	"MAP (Mooring Analysis Program)"	-
+param	^	-	INTEGER	Module_FEAM	-	13	-	"FEAMooring"	-
+param	^	-	INTEGER	Module_MD	-	14	-	"MoorDyn"	-
+param	^	-	INTEGER	Module_Orca	-	15	-	"OrcaFlex integration (HD/Mooring)"	-
+param	^	-	INTEGER	Module_IceF	-	16	-	"IceFloe"	-
+param	^	-	INTEGER	Module_IceD	-	17	-	"IceDyn"	-
+param	^	-	INTEGER	NumModules	-	17	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
@@ -104,6 +105,7 @@ typedef	^	FAST_ParameterType	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An arra
 typedef	^	FAST_ParameterType	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
 typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians"	-
 typedef	^	FAST_ParameterType	IntKi	SizeJac_Opt1	{9}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion;"	-
+#typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc)"	-
 # Feature switches and flags:
 typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM}"	-
@@ -341,6 +343,9 @@ typedef	^	FAST_OutputFileType	FAST_LinFileType	Lin	-	-	-	"linearization data for
 typedef	^	FAST_OutputFileType	IntKi	ActualChanLen	-	-	-	"width of the column headers output in the text and/or binary file"	-
 typedef	^	FAST_OutputFileType	CHARACTER(30)	OutFmt_a	-	-	-	"Format used for text tabular output (except time); combines OutFmt with delim and appropriate spaces"	-
 typedef   ^   FAST_OutputFileType   FAST_LinStateSave   op   -   -   -   "operating points of states and inputs for VTK output of mode shapes"
+typedef	^	FAST_OutputFileType	ReKi	DriverWriteOutput	{5}	-	-	"pitch and tsr for current aero map case, plus error, number of iterations, wind speed"
+#typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputHdr	{:}	-	-	"headers of data output from the driver"
+#typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputUnit	{:}	-	-	"units of data output from the driver"
 
 
 # ..... IceDyn data .......................................................................................................
@@ -599,7 +604,9 @@ typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_SrvD_P_P	{:}	-	-	"Map SubDyn    
 typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BD_L	{:}	-	-	"Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations"
-# ED <-> AD (tower, hub, blade root)
+# ED <-> AD (nacelle, tower, hub, blade root)
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
@@ -615,6 +622,7 @@ typedef	^	FAST_ModuleMapType	ReKi	Jacobian_Opt1	{:}{:}	-	-	"Stored Jacobian in E
 typedef	^	FAST_ModuleMapType	Integer	Jacobian_pivot	{:}	-	-	"Pivot array used for LU decomposition of Jacobian_Opt1"
 typedef	^	FAST_ModuleMapType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"
 # Temporary copies of input meshes (stored here so we don't have to keep allocating/destroying them)
+typedef	^	FAST_ModuleMapType	MeshType	u_ED_NacelleLoads	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh_2	-	-	-	"copy of ED input mesh (used only for temporary storage)"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh_3	-	-	-	"copy of ED input mesh (used only for temporary storage)"
@@ -645,6 +653,20 @@ typedef	^	FAST_ExternInputType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking to
 typedef	^	FAST_ExternInputType	ReKi	LidarFocus	3	-	-	"lidar focus (relative to lidar location)"	m
 typedef	^	FAST_ExternInputType	ReKi	CableDeltaL	{20}	-	-	"Cable control DeltaL"	m
 typedef	^	FAST_ExternInputType	ReKi	CableDeltaLdot	{20}	-	-	"Cable control DeltaLdot"	m/s
+
+# ..... FAST_MiscVarType data .......................................................................................................
+typedef	FAST	FAST_MiscVarType	DbKi	TiLstPrn	-	-	-	"The simulation time of the last print (to file)"	(s)
+typedef	^	FAST_MiscVarType	DbKi	t_global	-	-	-	"Current simulation time (for global/FAST simulation)"	(s)
+typedef	^	FAST_MiscVarType	DbKi	NextJacCalcTime	-	-	-	"Time between calculating Jacobians in the HD-ED and SD-ED simulations"	(s)
+typedef	^	FAST_MiscVarType	ReKi	PrevClockTime	-	-	-	"Clock time at start of simulation in seconds"	(s)
+typedef	^	FAST_MiscVarType	ReKi	UsrTime1	-	-	-	"User CPU time for simulation initialization"	(s)
+typedef	^	FAST_MiscVarType	ReKi	UsrTime2	-	-	-	"User CPU time for simulation (without intialization)"	(s)
+typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including intialization)"
+typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation (after initialization)"
+#typedef	^	FAST_MiscVarType	IntKi	n_t_global	-	-	-	"simulation time step, loop counter for global (FAST) simulation"	(s)
+typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)
+typedef	^	FAST_MiscVarType	FAST_ExternInputType	ExternInput	-	-	-	"external input values"	-
+typedef	^	FAST_MiscVarType	FAST_MiscLinType	Lin	-	-	-	"misc data for linearization analysis"	-
 
 
 # ..... FAST_InitData data .......................................................................................................
@@ -683,20 +705,6 @@ typedef   ^   FAST_InitData    IceD_InitOutputType         OutData_IceD     -  -
 typedef   ^   FAST_InitData    SC_InitInputType             InData_SC       -  -  -  "SC Initialization input data"
 typedef   ^   FAST_InitData    SC_InitOutputType           OutData_SC       -  -  -  "SC Initialization output data"
 
-
-# ..... FAST_MiscVarType data .......................................................................................................
-typedef	FAST	FAST_MiscVarType	DbKi	TiLstPrn	-	-	-	"The simulation time of the last print (to file)"	(s)
-typedef	^	FAST_MiscVarType	DbKi	t_global	-	-	-	"Current simulation time (for global/FAST simulation)"	(s)
-typedef	^	FAST_MiscVarType	DbKi	NextJacCalcTime	-	-	-	"Time between calculating Jacobians in the HD-ED and SD-ED simulations"	(s)
-typedef	^	FAST_MiscVarType	ReKi	PrevClockTime	-	-	-	"Clock time at start of simulation in seconds"	(s)
-typedef	^	FAST_MiscVarType	ReKi	UsrTime1	-	-	-	"User CPU time for simulation initialization"	(s)
-typedef	^	FAST_MiscVarType	ReKi	UsrTime2	-	-	-	"User CPU time for simulation (without intialization)"	(s)
-typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including intialization)"
-typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation (after initialization)"
-#typedef	^	FAST_MiscVarType	IntKi	n_t_global	-	-	-	"simulation time step, loop counter for global (FAST) simulation"	(s)
-typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)
-typedef	^	FAST_MiscVarType	FAST_ExternInputType	ExternInput	-	-	-	"external input values"	-
-typedef	^	FAST_MiscVarType	FAST_MiscLinType	Lin	-	-	-	"misc data for linearization analysis"	-
 
 # ..... FAST External Initialization Input data .......................................................................................................
 typedef	^	FAST_ExternInitType	DbKi	Tmax	-	-1	-	"External code specified Tmax"	s

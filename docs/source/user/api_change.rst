@@ -17,6 +17,14 @@ Many changes were applied to SubDyn input file format. You may consult the follo
 :download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
 and the online SubDyn documentation.
 
+-  ServoDyn
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected
+   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+      module (StC) with updated capabilities and input file.
+
 ============================================= ==== =============== ========================================================================================================================================================================================================
 OpenFAST v2.5.0 to OpenFAST dev 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -45,27 +53,17 @@ ServoDyn                                      61   AfC_Mean                  0  
 ServoDyn                                      61   AfC_Amp                   0   AfC_Amp      - Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]
 ServoDyn                                      61   AfC_Phase                 0   AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]
 ServoDyn                                      65   StCSection         ---------------------- STRUCTURAL CONTROL ---------------------------------------
-ServoDyn                                      66   CompNStC                  0   NumBStC      - Number of blade structural controllers (integer)
-ServoDyn                                      67   CompNStC           "unused"   BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
-ServoDyn                                      68   CompNStC                  0   NumNStC      - Number of nacelle structural controllers (integer)
-ServoDyn                                      69   CompNStC           "unused"   NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
-ServoDyn                                      70   CompNStC                  0   NumTStC      - Number of tower structural controllers (integer)
-ServoDyn                                      71   CompNStC           "unused"   TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
-ServoDyn                                      72   CompNStC                  0   NumSStC      - Number of substructure structural controllers (integer)
-ServoDyn                                      73   CompNStC           "unused"   SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+ServoDyn                                      66   NumBStC                   0   NumBStC      - Number of blade structural controllers (integer)
+ServoDyn                                      67   BStCfiles          "unused"   BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
+ServoDyn                                      68   NumNStC                   0   NumNStC      - Number of nacelle structural controllers (integer)
+ServoDyn                                      69   NStCfiles          "unused"   NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
+ServoDyn                                      70   NumTStC                   0   NumTStC      - Number of tower structural controllers (integer)
+ServoDyn                                      71   TStCfiles          "unused"   TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
+ServoDyn                                      72   NumSStC                   0   NumSStC      - Number of substructure structural controllers (integer)
+ServoDyn                                      73   SStCfiles          "unused"   SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
 ServoDyn                                      74   CablesSection      ---------------------- CABLE CONTROL -------------------------------------------
 ServoDyn                                      75   CCmode                    0   CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
 ============================================= ==== =============== ========================================================================================================================================================================================================
-
--  ServoDyn
-
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
-      module (StC) with updated capabilities and input file.
-
-
 
 ============================================= ====== =============== ======================================================================================================================================================================================================
 Modified in OpenFAST dev
@@ -127,6 +125,13 @@ HydroDyn                                      74   PtfmYF            True       
 OpenFAST v2.4.0 to OpenFAST v2.5.0
 ----------------------------------
 
+-  InflowWind
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected. See :numref:`input_file_overview` for an overview.
+   -  Driver code includes ability to convert between wind types
+
 ============== ==== ================== =============================================================================================================================================================================
 Added in OpenFAST v2.5.0
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -139,18 +144,10 @@ IfW driver     9    WrVTK                false    WrVTK       - Convert all data
 InflowWind     7    VFlowAng                  0   VFlowAng    - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
 
--  InflowWind
-
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  Driver code includes ability to convert between wind types
-
-
-
-
 OpenFAST v2.3.0 to OpenFAST v2.4.0
 ----------------------------------
+
+Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`, :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
 
 ============== ==== ================== =============================================================================================================================================================================
 Added in OpenFAST v2.4.0
@@ -172,19 +169,21 @@ AeroDyn        36   OLAFInputFileName  "Elliptic_OLAF.dat"     OLAFInputFileName
 AirFoilTables  4\*  BL_file            "unused"                BL_file           - The file name including the boundary layer characteristics of the profile. Ignored if the aeroacoustic module is not called.
 ============== ==== ================== =============================================================================================================================================================================
 
+============== ==== ================== ======================================================================================================================================================= =========================
 Modified in OpenFAST v2.4.0
----------------------------
-
-============== ==== ================== =============================================================================================================================================================================
- Module        Line  Flag Name          Example Value
-============== ==== ================== =============================================================================================================================================================================
-AirFoilTables  40\* filtCutOff         "DEFAULT"               filtCutOff        - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives (-) [default = 0.5] 
-============== ==== ================== =============================================================================================================================================================================
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name/Value
+============== ==== ================== ======================================================================================================================================================= =========================
+AirFoilTables  40\* filtCutOff         "DEFAULT"  filtCutOff   - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd deriv (-) [default = 0.5]     [default = 20]
+InflowWind     17   Filename_Uni        "unused"  Filename_Uni - Filename of time series data for uniform wind field.      (-)                                                                  Filename
+InflowWind     18   RefHt_Uni                 90  RefHt_Uni    - Reference height for horizontal wind speed                (m)                                                                  RefHt
+InflowWind     35   RefHt_Hawc                90  RefHt_Hawc   - reference height; the height (in meters) of the vertical center of the grid (m)                                                RefHt
+InflowWind     47   PLExp_Hawc               0.2  PLExp_Hawc   - Power law exponent (-) (used for PL wind profile type only)                                                                    PLExp
+InflowWind     49   XOffset                    0  XOffset      - Initial offset in +x direction (shift of wind box)                                                                             InitPosition(x)
+============== ==== ================== ======================================================================================================================================================= =========================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.
 
-Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`,
-:ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
 
 
 

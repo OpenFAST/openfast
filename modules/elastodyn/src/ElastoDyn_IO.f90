@@ -5047,8 +5047,8 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
          CALL SetErrStat( ErrID_Fatal, 'NumBl must be 1, 2, or 3 for BeamDyn simulations.',ErrStat,ErrMsg,RoutineName)
       END IF
    ELSE
-      IF ( ( InputFileData%NumBl < 2 ) .OR. ( InputFileData%NumBl > MaxBl ) ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'NumBl must be either 2 or 3.',ErrStat,ErrMsg,RoutineName)
+      IF ( ( InputFileData%NumBl < 1 ) .OR. ( InputFileData%NumBl > MaxBl ) ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'NumBl must be 1, 2, or 3.',ErrStat,ErrMsg,RoutineName)
       END IF
    END IF
 
