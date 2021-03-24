@@ -245,7 +245,7 @@ selection of coherence model equations and their associated parameters.
 These models and parameters can either be specified explicitly or left
 as *default* values in TurbSim. When the IEC spatial-coherence model is
 selected, spatial coherence is computed using
-Eq. :eq:`eq:IECCoh` (:raw-latex:`\cite{TurbSim-1}`).
+Eq. :eq:`eq:IECCoh` (:cite:`ff-TurbSim_1`).
 
 .. math::
    Coh_{i,j_K}(f)=exp\left(-a_K\sqrt{\left(\frac{fr}{V_\text{Hub}}\right)^2+(rb_K)^2}~\right)
@@ -256,21 +256,21 @@ where :math:`V_\text{Hub}` is the average wind speed at hub height;
 and :math:`j` for the velocity components :math:`K=u,v,w`; :math:`r` is
 the distance between points :math:`i` and :math:`j`; :math:`a_K` is the
 coherence decrement parameter; and :math:`b_K` is the coherence offset
-parameter. It was discovered in :raw-latex:`\cite{Shaler19-1}` that the
+parameter. It was discovered in :cite:`ff-Shaler19_1` that the
 use of the IEC coherence model with default coherence parameters
 together with the IEC Kaimal spectra results in negligible wake
 meandering. This is because the default v- and w-coherence parameters in
 TurbSim are set such that :math:`a_K` are very large numbers and
 :math:`b_K=0`, effectively resulting in no coherence
-(:math:`Coh_{i,j_K}(f)=0`) (:raw-latex:`\cite{TurbSim-1}`).  [1]_ This
+(:math:`Coh_{i,j_K}(f)=0`) (:cite:`ff-TurbSim_1`).  [1]_ This
 lack of meandering is nonphysical and will have a nonphysical impact on
 the response of downstream turbines. Instead of using the default
 values, the v- and w-coherence parameters were specified
-in :raw-latex:`\cite{Shaler19-1}` to identically equal the u-coherence
+in :cite:`ff-Shaler19_1` to identically equal the u-coherence
 parameters specified in the IEC standard, such that:
 :math:`SCMod2=SCMod3=IEC`; :math:`a_K=12.0` and :math:`b_K=0.00035273`
 m\ :math:`^{-1}`; and
-:math:`CohExp=0.0`. (:raw-latex:`\cite{TurbSim-1}`). Properly setting
+:math:`CohExp=0.0`. (:cite:`ff-TurbSim_1`). Properly setting
 spatial coherence parameters for the transverse wind velocity components
 is necessary to accurately predict wake meandering. It is also important
 to note that, in TurbSim, the :math:`a_K` and :math:`b_K` values must be
@@ -343,7 +343,7 @@ in *InflowWind* with **Mod_AmbWind** = 3, it is required that:
    then be used to generate the high-resolution TurbSim inflow for each
    turbine. The TurbSim user’s manual contains details on how to
    generate a TurbSim inflow using a specified time
-   series :raw-latex:`\cite{TurbSim-1}`.
+   series :cite:`ff-TurbSim_1`.
 
 Mann Model
 ^^^^^^^^^^
@@ -407,7 +407,7 @@ structural response, and resulting wake and load calculations. This
 section summarizes recommendations for discretization values in terms of
 geometry and wind speed that will ensure a converged solution, while
 maximizing computational efficiency. For details on how these
-recommendations were formed, see :raw-latex:`\cite{Shaler19-2}`. Though
+recommendations were formed, see :cite:`ff-Shaler19_2`. Though
 developed for FAST.Farm use, these guidelines are likely applicable to
 any DWM-type model or aeroelastic analysis.
 
@@ -430,7 +430,7 @@ in the low-resolution domain:
 This equation is based on the low-pass cutoff frequency for wake
 meandering
 :math:`\left(\frac{V_\text{Hub}}{C_\text{Meander}D^\text{Wake}}\right)`
-from :raw-latex:`\cite{Larsen08-1}` (in which
+from :cite:`ff-Larsen08_1` (in which
 :math:`C_\text{Meander}=2`, but :math:`C_\text{Meander}` defaults to
 :math:`1.9` in FAST.Farm) and effectively specifies that the highest
 frequency of wake meandering should be resolved by at least :math:`10`
@@ -670,7 +670,7 @@ conditions that can be calibrated to better match experimental data or
 by using an HFM benchmark. Default values have been derived for each
 calibrated parameter based on `SOWFA <https://nwtc.nrel.gov/SOWFA>`__
 simulations for the NREL 5MW turbine
-( :raw-latex:`\cite{Doubrawa18-1}`), but these can be overwritten by the
+( :cite:`ff-Doubrawa18_1`), but these can be overwritten by the
 user.
 
 Super Controller

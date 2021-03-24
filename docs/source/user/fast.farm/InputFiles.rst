@@ -379,7 +379,7 @@ may depend, e.g., on turbine operation or atmospheric conditions that
 can be calibrated to better match experimental data or by using an HFM
 benchmark. Default values have been derived for each calibrated
 parameter based on `SOWFA <https://nwtc.nrel.gov/SOWFA>`__ simulations
-( :raw-latex:`\cite{Doubrawa18-1}`), but these can be overwritten by the
+( :cite:`ff-Doubrawa18_1`), but these can be overwritten by the
 user.
 
 **f_c** [Hz] (:math:`f_c`) is the cutoff (corner) frequency of the

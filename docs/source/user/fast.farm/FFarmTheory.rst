@@ -64,7 +64,7 @@ condition to improve the accuracy of the far-wake solution.
 
 Wake meandering is the large-scale movement of the wake deficit
 transported by large turbulent eddies. This wake-meandering process is
-treated pragmatically in DWM (:raw-latex:`\cite{Larsen08-1}`) by
+treated pragmatically in DWM (:cite:`ff-Larsen08_1`) by
 modeling the meandering as a passive tracer, which transfers the wake
 deficit transversely (horizontally and vertically) to a moving frame of
 reference (MFoR) -- as illustrated in
@@ -77,13 +77,12 @@ from the turbulent mixing in the wake. It is often modeled in DWM by
 scaling up the background (undisturbed) turbulence.
 
 Several variations of DWM have been implemented, e.g., by the Technical
-University of Denmark (:raw-latex:`\cite{Madsen10-1, Madsen16-1}`) and
-the University of
-Massachusetts (:raw-latex:`\cite{Hao14-1, Churchfield15-1, Hao16-1}`).
-Although the exact limitations of existing DWM implementations depend on
-the implementation, specific limitations that are addressed in
-developing FAST.Farm are summarized in :numref:`FF:tab:DWMImprovs`
-and are discussed where appropriate in the next section.
+University of Denmark (:cite:`ff-Madsen10_1,ff-Madsen16_1`) and the University
+of Massachusetts (:cite:`ff-Hao14_1,ff-Churchfield15_1,ff-Hao16_1`).  Although
+the exact limitations of existing DWM implementations depend on the
+implementation, specific limitations that are addressed in developing FAST.Farm
+are summarized in :numref:`FF:tab:DWMImprovs` and are discussed where
+appropriate in the next section.
 
 
 .. table:: Dynamic Wake Meandering Limitations Addressed by FAST.Farm
@@ -171,7 +170,7 @@ FAST.Farm is a nonlinear time-domain multiphysics engineering tool
 composed of multiple submodels, each representing different physics
 domains of the wind farm. FAST.Farm is implemented as open-source
 software that follows the programming requirements of the FAST
-modularization framework (:raw-latex:`\cite{Jonkman13-1}`), whereby the
+modularization framework (:cite:`ff-Jonkman13_1`), whereby the
 submodels are implemented as modules interconnected through a driver
 code. The submodel hierarchy of FAST.Farm is illustrated in
 :numref:`FF:FFarm`. Wake advection, deflection, and meandering;
@@ -241,7 +240,7 @@ discrete time, :math:`t=n\Delta t`, where :math:`t` is time, :math:`n`
 is the discrete-time-step counter, and :math:`\Delta t` is the
 user-specified discrete time step (increment). Thus, the most general
 form of a module in FAST.Farm is simpler than that permitted by the FAST
-modularization framework (:raw-latex:`\cite{Jonkman13-1}`), represented
+modularization framework (:cite:`ff-Jonkman13_1`), represented
 mathematically as: [1]_
 
 .. math::
@@ -318,7 +317,7 @@ updates of each module can be solved in parallel; the output-to-input
 transfer does not require a large nonlinear solve; and overall
 correction steps of the solution are not needed. The lack of a
 correction step is a major simplification of the coupling algorithm used
-within OpenFAST (:raw-latex:`\cite{Sprague14-1, Sprague15-1}`).
+within OpenFAST (:cite:`ff-Sprague14_1,ff-Sprague15_1`).
 Furthermore, the output calculations of the *SC*, *OF*, and *WD* modules
 can be parallelized, followed then by the output calculation of the
 *AWAE* module. [2]_ In parallel mode, parallelization has been
@@ -347,13 +346,13 @@ through variations in nacelle yaw or tilt, as illustrated in
 :numref:`FF:NacYaw`.
 
 .. figure:: Pictures/NacYawControl.png
-   :alt: Nacelle-yaw control used to redirect wakes away from downwind wind turbines. :raw-latex:`\cite{Gebraad16-1}`
+   :alt: Nacelle-yaw control used to redirect wakes away from downwind wind turbines. :cite:`ff-Gebraad16_1`
    :name: FF:NacYaw
    :width: 100%
    :align: center
 
    Nacelle-yaw control used to redirect wakes away from downwind wind
-   turbines. :raw-latex:`\cite{Gebraad16-1}`
+   turbines. :cite:`ff-Gebraad16_1`
 
 The *SC* module of FAST.Farm provides an interface to the super
 controller dynamic library -- essentially identical to the super controller
@@ -544,7 +543,7 @@ that can be calibrated to better match experimental data or HFM, e.g.,
 by running `SOWFA <https://nwtc.nrel.gov/SOWFA>`__ (or equivalent) as a
 benchmark. Default values have been derived for each calibrated
 parameter based on `SOWFA <https://nwtc.nrel.gov/SOWFA>`__
-simulations (:raw-latex:`\cite{Doubrawa18-1}`), but these can be
+simulations (:cite:`ff-Doubrawa18_1`), but these can be
 overwritten by the user of FAST.Farm.
 
 The wake-deficit evolution is solved in discrete time on an axisymmetric
@@ -655,9 +654,9 @@ nacelle-yaw-based wake-redirection (wake-steering) wind farm control.
 
 Mathematically, the low-pass time filter is implemented using a
 recursive, single-pole filter with exponential
-smoothing (:raw-latex:`\cite{Smith06-1}`). The discrete-time recursion
+smoothing (:cite:`ff-Smith06_1`). The discrete-time recursion
 (difference) equation for this filter
-is (:raw-latex:`\cite{Jonkman09-1}`):
+is (:cite:`ff-Jonkman09_1`):
 
 .. math::
    {x^d_{n_p}}\left[ n+1 \right]={x^d_{n_p}}\left[ n \right]\alpha +{u^d}\left[ n \right]\left( 1-\alpha  \right) \qquad \textrm{for } n_p=0
@@ -830,7 +829,7 @@ The consistent output equation corresponding to the low-pass time filter
 of Equation :eq:`eq:disc` is
 :math:`y^d\left[ n \right]={x^d}\left[ n \right]\alpha +{u^d}\left[ n \right]\left( 1-\alpha \right)`,
 i.e., :math:`{Y^d(\quad)}=X^d(\quad)`, or equivalently,
-:math:`y^d\left[ n \right]=x^d\left[ n+1 \right]` (:raw-latex:`\cite{Jonkman09-1}`).
+:math:`y^d\left[ n \right]=x^d\left[ n+1 \right]` (:cite:`ff-Jonkman09_1`).
 However, the output is delayed by one time step (:math:`\Delta t`) to
 avoid having direct feedthrough of input to output within the *WD*
 module, yielding :math:`y^d\left[ n \right]=x^d\left[ n \right]`. This
@@ -943,7 +942,7 @@ wake-velocity deficit, distributed radially
 (:math:`V_{x_{n_p}}^\text{Wake}\left(r\right)`), is derived at the rotor
 disk (:math:`n_p = 0`) by a Gaussian fit to LES solutions at high thrust
 per Equation :eq:`eq:VWake_xAtRotor_High`, as
-derived by :raw-latex:`\cite{Martinez21-1}`. The radial wake deficit is
+derived by :cite:`ff-Martinez21_1`. The radial wake deficit is
 again initialized to zero.
 
 .. math::
@@ -966,7 +965,7 @@ the wake-deficit evolution via the thin shear-layer approximation of the
 Reynolds-averaged Navier-Stokes equations under quasi-steady-state
 conditions in axisymmetric coordinates, with turbulence closure captured
 by using an eddy-viscosity
-formulation (:raw-latex:`\cite{Ainslie88-1}`). The thin shear-layer
+formulation (:cite:`ff-Ainslie88_1`). The thin shear-layer
 approximation drops the pressure term and assumes that the velocity
 gradients are much bigger in the radial direction than in the axial
 direction. With these simplifications, analytical expressions for the
@@ -1067,10 +1066,10 @@ the eddy viscosity on :math:`x` and :math:`r` is explicitly given in
 Equations :eq:`eq:EddyViscosity` to make it clear which
 terms depend on the downwind distance and/or radius. The first term on
 the right-hand side of Equations :eq:`eq:EddyViscosity` is
-similar to that given by :raw-latex:`\cite{Madsen10-1}` with a
+similar to that given by :cite:`ff-Madsen10_1` with a
 characteristic length taken to be the rotor radius,
 :math:`\frac{^\text{Filt}D^\text{Rotor}}{2}`. The second term is similar
-to that given by :raw-latex:`\cite{Keck13-1}`, but without consideration
+to that given by :cite:`ff-Keck13_1`, but without consideration
 of atmospheric shear, which is considered by the *AWAE* module in the
 definition of ambient turbulence -- see :numref:`FF:AWAE` for more
 information. In this second term, the characteristic length is taken to
@@ -1174,7 +1173,7 @@ these four methods are given in Equation :eq:`eq:DWake`. Here,
 The momentum and continuity equations are solved numerically in the
 wake-deficit-increment submodel of the *WD* module using a second-order
 accurate finite-difference method at :math:`n+\frac{1}{2}`, following
-the implicit Crank-Nicolson method (:raw-latex:`\cite{Crank96-1}`).
+the implicit Crank-Nicolson method (:cite:`ff-Crank96_1`).
 Following this method, central differences are used for all derivatives,
 e.g., Equation :eq:`eq:FD` for the momentum equation.
 
@@ -1213,7 +1212,7 @@ known solutions of
 other previously calculated states, e.g.,
 :math:`^\text{FiltDiskAvg}V_{x_{n_p-1}}^\text{Wind}\left[ n \right]`.
 The linear tridiagonal matrix system of equations is solved efficiently
-in FAST.Farm via the Thomas algorithm (:raw-latex:`\cite{Thomas49-1}`).
+in FAST.Farm via the Thomas algorithm (:cite:`ff-Thomas49_1`).
 
 For the continuity equation, a different finite-difference scheme is
 needed because the resulting tridiagonal matrix is not diagonally
@@ -1328,7 +1327,7 @@ time) around each wind turbine and encompassing any turbine
 displacement. The spatial and time resolution of each high-resolution
 domain should be sufficient for accurate aerodynamic load calculations,
 e.g., on the order of the blade chord length and fractions of a
-second (:raw-latex:`\cite{Shaler19-1}`). The high-resolution domains
+second (:cite:`ff-Shaler19_1`). The high-resolution domains
 overlap portions of the low-resolution domain. For simplicity of and to
 minimize computational expense within FAST.Farm, the time step of the
 high-resolution domain must be an integer divisor of the low-resolution
@@ -1424,9 +1423,9 @@ of :numref:`FF:WakeMerg`. In FAST.Farm, the wake-merging
 submodel of the *AWAE* module identifies zones of wake overlap between
 all wakes across the wind farm by finding wake volumes that overlap in
 space. Wake deficits are superimposed in the axial direction based on
-the RSS method (:raw-latex:`\cite{Katic86-1}`); transverse components
+the RSS method (:cite:`ff-Katic86_1`); transverse components
 (radial wake deficits) are superimposed by vector sum. In Katic̀ et
-al. (:raw-latex:`\cite{Katic86-1}`), the RSS method is applied to wakes
+al. (:cite:`ff-Katic86_1`), the RSS method is applied to wakes
 with axial deficits that are uniform across the wake diameter and radial
 deficits are not considered. In contrast, the RSS method in FAST.Farm is
 applied locally at a given wind data point. The RSS method assumes that
@@ -1578,7 +1577,7 @@ Qualitatively, Equation :eq:`eq:VnpPlane` states that the
 advection, deflection, and meandering velocity of each wake plane for
 each turbine is calculated as the weighted spatial average of the
 disturbed wind velocity on the wake plane. Larsen et
-al. (:raw-latex:`\cite{Larsen08-1}`) proposed a uniform spatial average
+al. (:cite:`ff-Larsen08_1`) proposed a uniform spatial average
 where all points within a circle of diameter
 :math:`2D_{n_p}^\text{Wake}` are given equal weight. However, the
 Fourier transform of the circular function in a polar spatial domain
@@ -1633,16 +1632,16 @@ uniform method). A value of :math:`C_\text{Meander}=2`, resulting in a
 polar-grid diameter of :math:`2D^\text{Wake}` and cutoff wave number of
 :math:`\frac{1}{2D^\text{Wake}}`, follows the characteristic dimension
 important to transverse wake meandering proposed by Larsen et
-al. (:raw-latex:`\cite{Larsen08-1}`) :math:`C_\text{Meander}` is
+al. (:cite:`ff-Larsen08_1`) :math:`C_\text{Meander}` is
 included in all methods to enable the user of FAST.Farm to better match
 the meandering to known solutions. Note that the lower the value of
 :math:`C_\text{Meander}`, the more the wake will meander.
 
 .. [1]
    :math:`x^d` and :math:`X^d` are identical to what is described
-   in :raw-latex:`\cite{Jonkman13-1}`. :math:`u^d`, :math:`y^d`, and
+   in :cite:`ff-Jonkman13_1`. :math:`u^d`, :math:`y^d`, and
    :math:`Y^d` are identical to :math:`u`, :math:`y`, and :math:`Y`
-   from :raw-latex:`\cite{Jonkman13-1}`, but are only evaluated in
+   from :cite:`ff-Jonkman13_1`, but are only evaluated in
    discrete time, :math:`t=n\Delta t`, and so, are marked here with
    superscript :math:`^d`.
 
@@ -1663,7 +1662,7 @@ the meandering to known solutions. Note that the lower the value of
 
 .. [4]
    Derived using the Line2-to-Line2 mesh-mapping algorithm of
-   FAST (:raw-latex:`\cite{Sprague14-1, Sprague15-1}`) to transfer the
+   FAST (:cite:`ff-Sprague14_1,ff-Sprague15_1`) to transfer the
    aerodynamic applied loads distributed per unit length along the
    deflected/curved blade as calculated within FAST.
 

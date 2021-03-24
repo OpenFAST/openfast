@@ -4,7 +4,7 @@
    ----------
 
 .. bibliography:: bibliography.bib
-   :labelprefix: farm-
-   :keyprefix: farm-
+   :labelprefix: ff-
+   :keyprefix: ff-
 
 
