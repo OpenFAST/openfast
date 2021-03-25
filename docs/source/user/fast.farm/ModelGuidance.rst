@@ -362,8 +362,21 @@ below in :numref:`FF:sec:DiscRecs`.
 repetition of the turbulence box for the duration of the simulation, the
 following equation is recommended:
 
-.. math::
-   \textbf{nx} = 2^{CEILING\big[log_2\left(\frac{V_\text{Hub}\textbf{T_Max}}{\textbf{dx}}\right)\big]}
+.. only:: html
+
+   .. math::
+      \textbf{nx} = 2^{CEILING\big[log_2
+         \left(\frac{V_\text{Hub}\textbf{T_Max}}
+            {\textbf{dx}}\right)\big]}
+
+
+.. only:: not html
+
+   .. math::
+      \textbf{nx} = 2^{CEILING\big[log_2
+         \left(\frac{V_\text{Hub}\textbf{T\_Max}}
+            {\textbf{dx}}\right)\big]}
+
 
 where :math:`CEILING\big[x\big]` rounds :math:`x` to the next highest
 integer. This equation ensures that the turbulence box will not repeat
@@ -423,9 +436,19 @@ trajectories have negligible dependence of **DT_Low** or **DS_Low**. The
 following equation can be used to ensure convergence of wake meandering
 in the low-resolution domain:
 
-.. math::
-   \textbf{DT_Low} \le \frac{C_\text{Meander}D^\text{Wake}}{10V_\text{Hub}}
-   :label: eq:DTLow
+.. only:: html
+
+   .. math::
+      \textbf{DT_Low} \le
+         \frac{C_\text{Meander}D^\text{Wake}}{10V_\text{Hub}}
+
+
+.. only:: not html
+
+   .. math::
+      \textbf{DT\_Low} \le
+         \frac{C_\text{Meander}D^\text{Wake}}{10V_\text{Hub}}
+
 
 This equation is based on the low-pass cutoff frequency for wake
 meandering
@@ -445,8 +468,21 @@ recommended for identifying the maximum suggested **DS_Low**, where
 :math:`S` refers to :math:`X`, :math:`Y`, or :math:`Z` and the
 denominator has the units [m/s]:
 
-.. math::
-   \textbf{DS_Low} \le \frac{C_\text{Meander}D^\text{Wake}V_\text{Hub}}{150 m/s} = \frac{\textbf{DT_Low}V_\text{Hub}^2}{15 m/s}
+.. only:: html
+
+   .. math::
+      \textbf{DS_Low} \le
+         \frac{C_\text{Meander}D^\text{Wake}V_\text{Hub}}{150 m/s}
+         = \frac{\textbf{DT_Low}V_\text{Hub}^2}{15 m/s}
+
+
+.. only:: not html
+
+   .. math::
+      \textbf{DS\_Low} \le
+         \frac{C_\text{Meander}D^\text{Wake}V_\text{Hub}}{150 m/s}
+         = \frac{\textbf{DT\_Low}V_\text{Hub}^2}{15 m/s}
+
 
 For all synthetic turbulence methods, it is recommended that
 **DX_Low**\ :math:`= V_\text{Hub}`\ **DT_Low** to avoid interpolating in
@@ -461,34 +497,70 @@ for ambient and waked inflow local to a turbine. As such, convergence
 was assessed by comparing trends in mean and standard deviation of
 turbine structural motions and loads for each turbine.
 
-Required discretization levels vary depending on the quantity of
-interest. Thus, it is important to decide what structural components
-will be considered when selecting a high-resolution discretization
-level. Most notably, tower-base moments are the most sensitive to
-**DT_High**, whereas generator power and blade deflections and moments
-show little dependence on this value. To capture the full structural
-response, **DT_High** should be selected based on the highest
-frequencies influencing the structural excitation, including rotational
-sampling of turbulence and response, i.e., natural frequencies, of the
-pertinent structural components, :math:`f_\text{max}` (in Hz), as in
-Equation :eq:`eq:dtHigh`, where the factor of :math:`2` is taken
-from the Nyquist sampling theorem. This is a frequently used rule of
-thumb in wind turbine aeroelastic analysis under excitation from
-turbulent inflow.
+.. only:: html
 
-.. math::
-   \textbf{DT_High} \le \frac{1}{2f_\text{max}}
-   :label: eq:dtHigh
+   Required discretization levels vary depending on the quantity of
+   interest. Thus, it is important to decide what structural components
+   will be considered when selecting a high-resolution discretization
+   level. Most notably, tower-base moments are the most sensitive to
+   **DT_High**, whereas generator power and blade deflections and moments
+   show little dependence on this value. To capture the full structural
+   response, **DT_High** should be selected based on the highest
+   frequencies influencing the structural excitation, including rotational
+   sampling of turbulence and response, i.e., natural frequencies, of the
+   pertinent structural components, :math:`f_\text{max}` (in Hz), as in
+   Equation :eq:`eq:dtHigh:a`, where the factor of :math:`2` is taken
+   from the Nyquist sampling theorem. This is a frequently used rule of
+   thumb in wind turbine aeroelastic analysis under excitation from
+   turbulent inflow.
 
-The required **DS_High** approximately corresponds to the maximum blade
-chord length of the turbine, :math:`c_\text{max}`, as in
-Equation :eq:`eq:dsHigh`. Selecting a **DS_High** equivalent to
-this value has long been a rule-of-thumb in wind turbine aeroelastic
-analysis under excitation from turbulent inflow.
 
-.. math::
-   \textbf{DS_High} \le c_\text{max}
-   :label: eq:dsHigh
+   .. math::
+      \textbf{DT_High} \le \frac{1}{2f_\text{max}}
+      :label: eq:dtHigh:a
+
+   The required **DS_High** approximately corresponds to the maximum blade
+   chord length of the turbine, :math:`c_\text{max}`, as in
+   Equation :eq:`eq:dsHigh:a`. Selecting a **DS_High** equivalent to
+   this value has long been a rule-of-thumb in wind turbine aeroelastic
+   analysis under excitation from turbulent inflow.
+
+   .. math::
+      \textbf{DS_High} \le c_\text{max}
+      :label: eq:dsHigh:a
+
+
+.. only:: not html
+
+   Required discretization levels vary depending on the quantity of
+   interest. Thus, it is important to decide what structural components
+   will be considered when selecting a high-resolution discretization
+   level. Most notably, tower-base moments are the most sensitive to
+   **DT_High**, whereas generator power and blade deflections and moments
+   show little dependence on this value. To capture the full structural
+   response, **DT_High** should be selected based on the highest
+   frequencies influencing the structural excitation, including rotational
+   sampling of turbulence and response, i.e., natural frequencies, of the
+   pertinent structural components, :math:`f_\text{max}` (in Hz), as in
+   Equation :eq:`eq:dtHigh:b`, where the factor of :math:`2` is taken
+   from the Nyquist sampling theorem. This is a frequently used rule of
+   thumb in wind turbine aeroelastic analysis under excitation from
+   turbulent inflow.
+
+   .. math::
+      \textbf{DT\_High} \le \frac{1}{2f_\text{max}}
+      :label: eq:dtHigh:b
+
+   The required **DS_High** approximately corresponds to the maximum blade
+   chord length of the turbine, :math:`c_\text{max}`, as in
+   Equation :eq:`eq:dsHigh:b`. Selecting a **DS_High** equivalent to
+   this value has long been a rule-of-thumb in wind turbine aeroelastic
+   analysis under excitation from turbulent inflow.
+
+   .. math::
+      \textbf{DS\_High} \le c_\text{max}
+      :label: eq:dsHigh:b
+
 
 .. _FF:sec:paramselect:
 
@@ -523,8 +595,19 @@ Low-Resolution Domain
 **DS_Low** and the desired domain size (*Sdist_Low*), where *S*\ =\ *X*,
 *Y* or *Z*. This integer quantity should be computed as:
 
-.. math::
-   \textbf{NS_Low} = CEILING\left( \frac{Sdist_Low}{\textbf{DS_Low}}\right)+1
+.. only:: html
+
+   .. math::
+      \textbf{NS_Low} = CEILING\left(
+         \frac{\textbf{Sdist_Low}}{\textbf{DS_Low}}\right)+1
+
+
+.. only:: not html
+
+   .. math::
+      \textbf{NS\_Low} = CEILING\left(
+         \frac{\textbf{Sdist\_Low}}{\textbf{DS\_Low}}\right)+1
+
 
 **X0_Low** -- This quantity must be less than the *X* location of the
 furthest upstream turbine. It is recommended to set this value further
@@ -536,8 +619,17 @@ any turbine (**WT_Y_**). Additional clearance is required to
 accommodate wake meandering, wake deflection, and spatial averaging used
 in the *AWAE* module. This value may be computed as:
 
-.. math::
-   \textbf{Y0_Low} \le \textbf{WT_Y_min}-3D^\text{Rotor}%}{2}
+.. only:: html
+
+   .. math::
+      \textbf{Y0_Low} \le \textbf{WT_Y_min}-3D^\text{Rotor}
+
+
+.. only:: not html
+
+   .. math::
+      \textbf{Y0\_Low} \le \textbf{WT\_Y\_min}-3D^\text{Rotor}
+
 
 Additional clearance should be allowed for appreciable wake meandering
 and/or yaw. For **Mod_AmbWind** = 2, the synthetic inflow data are
@@ -557,8 +649,19 @@ discussed in :numref:`FF:sec:Synthetic`. To determine the actual
 quantity, the following equation is suggested when using synthetic
 inflow:
 
-.. math::
-   \textbf{DS_Low} = FLOOR\left( \frac{\textbf{DS_Low_Desired}}{\textbf{DS_High}} \right)*\textbf{DS_High}
+.. only:: html
+
+   .. math::
+      \textbf{DS_Low} = FLOOR\left( \frac{\textbf{DS_Low_Desired}}
+         {\textbf{DS_High}} \right)*\textbf{DS_High}
+
+
+.. only:: not html
+
+   .. math::
+      \textbf{DS\_Low} = FLOOR\left( \frac{\textbf{DS\_Low\_Desired}}
+         {\textbf{DS\_High}} \right)*\textbf{DS\_High}
+
 
 Use of this equation is the best way to ensure that **DS_Low** will be a
 multiple integer of **DS_High**, reducing interpolation smoothing.
@@ -573,14 +676,36 @@ lengths, widths, and heights of the high-resolution domains should be
 selected based on the size and location of the turbines. The following
 values are recommended:
 
-.. math::
-   \textbf{Xdist_High} = \textbf{Ydist_High} = \textbf{Zdist_High} \ge 1.1 D^\text{Rotor}
+.. only:: html
+
+   .. math::
+      \textbf{Xdist_High} = \textbf{Ydist_High}
+         = \textbf{Zdist_High} \ge 1.1 D^\text{Rotor}
+
+
+.. only:: nohtml
+
+   .. math::
+      \textbf{Xdist\_High} = \textbf{Ydist\_High}
+         = \textbf{Zdist\_High} \ge 1.1 D^\text{Rotor}
+
 
 If tower aerodynamic loads are desired, the high-resolution domain
 should span the entire tower and rotor:
 
-.. math::
-   \textbf{Zdist_High} = \textbf{HubHt} + \frac{1.1\ D^\text{Rotor}}{2}
+.. only:: html
+
+   .. math::
+      \textbf{Zdist_High} = \textbf{HubHt}
+         + \frac{1.1\ D^\text{Rotor}}{2}
+
+
+.. only:: not html
+
+   .. math::
+      \textbf{Zdist\_High} = \textbf{HubHt}
+         + \frac{1.1\ D^\text{Rotor}}{2}
+
 
 These parameters might need to be increased to account for large
 structural motion, such as for floating offshore wind applications.
@@ -589,8 +714,19 @@ structural motion, such as for floating offshore wind applications.
 on **DS_High** and the desired domain size (*Sdist_High*), where
 *S*\ =\ *X*, *Y*, or *Z*. This integer quantity should be computed as:
 
-.. math::
-   \textbf{NS_High} = \text{CEILING}\left( \frac{\textbf{Sdist_High}}{\textbf{DS_High}}\right)+1
+.. only:: html
+
+   .. math::
+      \textbf{NS_High} = \text{CEILING}\left(
+         \frac{\textbf{Sdist_High}}{\textbf{DS_High}}\right)+1
+
+
+.. only:: nohtml
+
+   .. math::
+      \textbf{NS\_High} = \text{CEILING}\left(
+         \frac{\textbf{Sdist\_High}}{\textbf{DS\_High}}\right)+1
+
 
 **X0_High**, **Y0_High**, **Z0_High** -- These quantities are set for each
 turbine. They should be based on turbine location and set so that the
@@ -603,6 +739,7 @@ data are centered around each turbine, based on **WT_X/Y/Z**.
 **DX_High**, **DY_High**, **DZ_High** -- Desired spatial values are not
 discussed here, as they are covered in detail in
 :numref:`FF:sec:DiscRecs`.
+
 
 Wake Dynamics Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -633,8 +770,19 @@ parameters:
    between :math:`10-20\times D^{Rotor}`. The following value is
    suggested:
 
-   .. math::
-      \textbf{NumPlanes} \ge \frac{x_\text{dist}}{\textbf{DT_Low}\overline{V}}
+   .. only:: html
+
+      .. math::
+         \textbf{NumPlanes} \ge \frac{x_\text{dist}}
+            {\textbf{DT_Low}\overline{V}}
+
+
+   .. only:: not html
+
+      .. math::
+         \textbf{NumPlanes} \ge \frac{x_\text{dist}}
+            {\textbf{DT\_Low}\overline{V}}
+
 
    where :math:`\overline{V}` is the average convection speed of the
    wake, which can be approximated as
@@ -648,14 +796,31 @@ parameters:
    aerodynamic efficiency) and decreases above rated wind speed to near
    zero before the cut-out wind speed.
 
-Note that because new wake planes are added each time step as the
-simulation begins, increasing **NumPlanes** will also increase the
-initial transient time of the simulation. The start-up transient time is
-estimated by Equation :eq:`eq:startup`.
 
-.. math::
-   t_\text{startup}=\textbf{DT_Low}(\textbf{NumPlanes}-2)
-   :label: eq:startup
+
+.. only:: html
+
+   Note that because new wake planes are added each time step as the
+   simulation begins, increasing **NumPlanes** will also increase the
+   initial transient time of the simulation. The start-up transient time is
+   estimated by Equation :eq:`eq:startup:a`.
+
+   .. math::
+      t_\text{startup}=\textbf{DT_Low}(\textbf{NumPlanes}-2)
+      :label: eq:startup:a
+
+
+.. only:: not html
+
+   Note that because new wake planes are added each time step as the
+   simulation begins, increasing **NumPlanes** will also increase the
+   initial transient time of the simulation. The start-up transient time is
+   estimated by Equation :eq:`eq:startup:b`.
+
+   .. math::
+      t_\text{startup}=\textbf{DT\_Low}(\textbf{NumPlanes}-2)
+      :label: eq:startup:b
+
 
 -  **Mod_WakeDiam** -- A value of **1** is recommended. For further details
    on the options for this parameter, see Equation :eq:`eq:DWake`.

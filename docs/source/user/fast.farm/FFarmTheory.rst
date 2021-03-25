@@ -499,7 +499,10 @@ motion), both projected onto the horizontal global *X-Y* plane -- see
 Equation :eq:`eq:Ct`
 
 .. math::
-   ^\text{AzimAvg}C_t\left( r \right)=\frac{\sum\limits_{n_b=1}^{N_b}{\left\{ \hat{x}^\text{Disk} \right\}^T}\vec{f}_{n_b}\left( r \right)}{\frac{1}{2}\rho 2\pi r\left( ^\text{DiskAvg}V_x^\text{Rel} \right)^2}
+   ^\text{AzimAvg}C_t\left( r \right)=
+      \frac{\sum\limits_{n_b=1}^{N_b}
+            {\left\{ \hat{x}^\text{Disk} \right\}^T}\vec{f}_{n_b}\left( r \right)}
+         {\frac{1}{2}\rho 2\pi r\left( ^\text{DiskAvg}V_x^\text{Rel} \right)^2}
    :label: eq:Ct
 
 where:
@@ -659,7 +662,10 @@ smoothing (:cite:`ff-Smith06_1`). The discrete-time recursion
 is (:cite:`ff-Jonkman09_1`):
 
 .. math::
-   {x^d_{n_p}}\left[ n+1 \right]={x^d_{n_p}}\left[ n \right]\alpha +{u^d}\left[ n \right]\left( 1-\alpha  \right) \qquad \textrm{for } n_p=0
+   {x^d_{n_p}}\left[ n+1 \right]={x^d_{n_p}}
+         \left[ n \right]\alpha 
+         +{u^d}\left[ n \right]\left( 1-\alpha  \right) 
+         \qquad \textrm{for } n_p=0
    :label: eq:disc
 
 where
@@ -684,7 +690,8 @@ conditions at the rotor are maintained as fixed states of a wake plane
 as the plane propagates downstream
 
 .. math::
-   x^d_{n_p}[n+1] = x^d_{n_p-1}[n] \qquad \textrm{for } 1 \leq n_p \leq N_p-1
+   x^d_{n_p}[n+1] = x^d_{n_p-1}[n]
+      \qquad \textrm{for } 1 \leq n_p \leq N_p-1
    :label: eq:propagation
 
 Equations :eq:`eq:disc`
@@ -1475,6 +1482,7 @@ and :eq:`eq:VDistLow`, respectively.
                \left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+
                   V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane} \right\} \right)}^2}
             & \textrm{for}~\left( n_{t_{n^\text{Wake}}}\ne n_t \right)  \\
+            \\
             0 & \textrm{otherwise}\\
          \end{cases}
          }}
@@ -1485,6 +1493,7 @@ and :eq:`eq:VDistLow`, respectively.
             \left\{ V_{x_{n^\text{Wake}}}^\text{Wake}\hat{x}_{n^\text{Wake}}^\text{Plane}+
                V_{r_{n^\text{Wake}}}^\text{Wake}\hat{r}_{n^\text{Wake}}^\text{Plane} \right\}
          & \textrm{for}~\left( {n_{t_{n^\text{Wake}}}}\ne n_t \right)  \\
+         \\
          \vec{0} & \textrm{otherwise}  \\
       \end{cases}
       } \\ 
