@@ -1304,14 +1304,14 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
 
          ! Basic Motion
          call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'nacYaw'//sWT         , nacyaw            , errStat2, errMsg2 , unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT       , rotSpeed          , errStat2, errMsg2 , unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'bldPitch'//sWT       , bldPitch          , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'baseMotionType'//sWT , wt%motionType,      errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'degreeOfFreedom'//sWT, wt%degreeOfFreedom, errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'amplitude'//sWT      , wt%amplitude,       errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'frequency'//sWT      , wt%frequency,       errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'nacYaw'//sWT         , nacyaw            , errStat2, errMsg2 , unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT       , rotSpeed          , errStat2, errMsg2 , unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'bldPitch'//sWT       , bldPitch          , errStat2, errMsg2 , unEc); if(Failed()) return
          if (dvr%AnalysisType==idAnalysisRegular) then
             if (wt%motionType==idBaseMotionGeneral) then
                call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
@@ -1408,7 +1408,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
 
          ! Nacelle motion
          if (wt%numBlades>0) then
-            call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'nacMotionType'//sWT    , wt%nac%motionType    , errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'nacYaw'//sWT           , wt%nac%yaw           , errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'nacMotionFilename'//sWT, wt%nac%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
@@ -1422,7 +1421,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             endif
 
             ! Rotor motion
-            call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'rotMotionType'//sWT    , wt%hub%motionType    , errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT         , wt%hub%rotSpeed      , errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'rotMotionFilename'//sWT, wt%hub%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
@@ -1436,7 +1434,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             endif
 
             ! Blade motion
-            call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'bldMotionType'//sWT, bldMotionType, errStat2, errMsg2, unEc); if(Failed()) return
             wt%bld(:)%motionType=bldMotionType
             do iB=1,wt%numBlades
@@ -1470,15 +1467,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          endif ! numBlade>0
       endif ! BASIC/ADVANCED rotor definition
    enddo
-   ! --- Outputs
-   call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseVar(FileInfo_In, CurLine, 'outFmt'     , dvr%out%outFmt      , errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseVar(FileInfo_In, CurLine, 'outFileFmt' , dvr%out%fileFmt     , errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseVar(FileInfo_In, CurLine, 'WrVTK'      , dvr%out%WrVTK       , errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseVar(FileInfo_In, CurLine, 'VTKHubRad'  , hubRad_ReKi         , errStat2, errMsg2, unEc); if(Failed()) return
-   call ParseAry(FileInfo_In, CurLine, 'VTKNacDim'  , dvr%out%VTKNacDim, 6, errStat2, errMsg2, unEc); if(Failed()) return
-   dvr%out%VTKHubRad =  real(hubRad_ReKi,SiKi)
-   dvr%out%delim=' ' ! TAB
 
    ! --- Time dependent analysis
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
@@ -1531,6 +1519,16 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       dvr%numCases=1 ! Only one case
       if (allocated(dvr%Cases)) deallocate(dvr%Cases)
    endif
+
+   ! --- Iniput / Outputs
+   call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'outFmt'     , dvr%out%outFmt      , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'outFileFmt' , dvr%out%fileFmt     , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'WrVTK'      , dvr%out%WrVTK       , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'VTKHubRad'  , hubRad_ReKi         , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseAry(FileInfo_In, CurLine, 'VTKNacDim'  , dvr%out%VTKNacDim, 6, errStat2, errMsg2, unEc); if(Failed()) return
+   dvr%out%VTKHubRad =  real(hubRad_ReKi,SiKi)
+   dvr%out%delim=' ' ! TAB
 
    call cleanup()
 
