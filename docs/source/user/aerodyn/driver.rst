@@ -236,6 +236,7 @@ The different inputs for the basic and advanced geometries are given below:
   The input files are CSV files containing time, position, speed and acceletation. Examples of files are given in :numref:`ad_inputfiles_examples`.
   The rotation data in the CSV files are defined in rad and rad/s, whereas they are defined in deg and rpm in the driver input file.
   Examples are given below:
+
 .. code::
 
     0               NacMotionType(1)      - Type of motion prescribed for the nacelle {0: fixed yaw, 1: time varying yaw angle} (flag)
@@ -273,19 +274,6 @@ General considerations for the advanced:
   
 
 
-
-
-The blades will rotate rigidly
-
-
-
-
-          3.    HubRad(1)       - Hub radius (m)
-      140.82513 HubHt(1)        - Hub height (m)
-          -7    Overhang(1)     - Overhang (m)
-          -6    ShftTilt(1)     - Shaft tilt (deg)
-          -4    Precone(1)      - Blade precone (deg)
-  or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
 
 
 
