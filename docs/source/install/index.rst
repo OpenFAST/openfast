@@ -380,7 +380,7 @@ The CMake options specific to OpenFAST and their default settings are:
     GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules
     ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
-    OPENMP                         - Enable OpenMP parallelization in FVW (Default: OFF)
+    OPENMP                         - Enable OpenMP support (Default: OFF)
     BUILD_FAST_FARM                - Enable FAST.Farm capabilities (Default: OFF)
 
 Additional system-specific options may exist for a given system, but those
