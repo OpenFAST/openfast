@@ -345,6 +345,15 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, defAirD
       if (Failed()) return;
    enddo
 
+      !............................................................................................
+      ! Calculate buoyancy parameters
+      !............................................................................................
+   do iR = 1, nRotors
+      if ( p%rotors(iR)%Buoyancy ) then 
+         call SetBuoyancyParameters( InputFileData%rotors(iR), u%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      end if
+   end do
 
       !............................................................................................
       ! Initialize the BEMT module (also sets other variables for sub module)
@@ -1109,7 +1118,8 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       
       call move_alloc( RotData%TwrDiam, p%TwrDiam )
       call move_alloc( RotData%TwrCd,   p%TwrCd )      
-      call move_alloc( RotData%TwrTI,   p%TwrTI )      
+      call move_alloc( RotData%TwrTI,   p%TwrTI )   
+      call move_alloc( RotData%TwrCb,   p%TwrCb )    
    end if
    
    p%AirDens          = InputFileData%AirDens          
@@ -1149,6 +1159,73 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
 
    
 end subroutine SetParameters
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets parameters for use during the buoyancy calculation; these variables are not changed after AD_Init.
+subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
+   TYPE(RotInputFile),           INTENT(IN   )  :: InputFileData    !< All the data in the AeroDyn input file
+   TYPE(RotInputType),           INTENT(IN   )  :: u                !< AD inputs - used for mesh node positions
+   TYPE(RotParameterType),       INTENT(INOUT)  :: p                !< Parameters
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   INTEGER(IntKi)                               :: ErrStat2         !< Temporary error status of the operation
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2          !< Temporary error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                               :: k                !< Loop counter for blades
+   INTEGER(IntKi)                               :: j                !< Loop counter for nodes
+   REAL(ReKi), DIMENSION(3)                     :: posCBu
+   REAL(ReKi), DIMENSION(3)                     :: posCBuplus
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'SetBuoyancyParameters'
+
+   
+      ! Allocate buoyancy parameters
+   call AllocAry( p%BlRad, p%NumBlNds, p%NumBlades, 'BlRad', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlDL, p%NumBlNds-1_IntKi, p%NumBlades, 'BlDL', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlTaper, p%NumBlNds-1_IntKi, p%NumBlades, 'BlTaper', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlAxCent, p%NumBlNds-1_IntKi, p%NumBlades, 'BlAxCent', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%TwrRad, p%NumTwrNds, 'TwrRad', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%TwrDL, p%NumTwrNds-1_IntKi, 'TwrDL', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%TwrTaper, p%NumTwrNds-1_IntKi, 'TwrTaper', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%TwrAxCent, p%NumTwrNds-1_IntKi, 'TwrAxCent', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      ! Calculate blade buoyancy parameters
+   do k = 1,p%NumBlades ! Loop through all blades
+
+      do j = 1,p%NumBlNds ! Loop through all nodes
+         p%BlRad(j,k) = InputFileData%BladeProps(k)%BlChord(j) * sqrt( InputFileData%BladeProps(k)%BlCb(j) ) / 2 ! node j equivalent radius
+      end do ! j = nodes
+
+      do j = 1,p%NumBlNds - 1 ! Loop through all nodes, except the last
+         posCBu = matmul( [InputFileData%BladeProps(k)%BlCenBn(j), InputFileData%BladeProps(k)%BlCenBt(j), 0.0_ReKi ], u%BladeMotion(k)%RefOrientation(:,:,j) ) + u%BladeMotion(k)%Position(:,j) ! blade node j global undisplaced position
+         posCBuplus = matmul( [InputFileData%BladeProps(k)%BlCenBn(j+1), InputFileData%BladeProps(k)%BlCenBt(j+1), 0.0_ReKi ], u%BladeMotion(k)%RefOrientation(:,:,j+1) ) + u%BladeMotion(k)%Position(:,j+1) ! blade node j+1 global undisplaced position
+         p%BlDL(j,k) = sqrt( ( posCBuplus(1) - posCBu(1) )**2 + ( posCBuplus(2) - posCBu(2) )**2 + ( posCBuplus(3) - posCBu(3) )**2 ) ! element j undisplaced length
+         p%BlTaper(j,k) = ( p%BlRad(j+1,k) - p%BlRad(j,k) ) / p%BlDL(j,k) ! element j taper
+         p%BlAxCent(j,k) = ( p%BlRad(j,k)**2 + 2.0_ReKi*p%BlRad(j,k)*p%BlRad(j+1,k) + 3.0_ReKi*p%BlRad(j+1,k)**2 ) / ( 4.0_ReKi*( p%BlRad(j,k)**2 + p%BlRad(j,k)*p%BlRad(j+1,k) + p%BlRad(j+1,k)**2) ) ! fractional axial centroid of element j
+      end do ! j = nodes
+
+   end do ! k = blades
+
+      ! Calculate tower buoyancy parameters
+   do j = 1,p%NumTwrNds ! Loop through all nodes
+      p%TwrRad(j) = p%TwrDiam(j) * sqrt( p%TwrCb(j) ) / 2 ! node j equivalent radius
+   end do ! j = nodes
+
+   do j = 1,p%NumTwrNds - 1 ! Loop through all nodes, except the last
+      p%TwrDL(j) = InputFileData%TwrElev(j+1) - InputFileData%TwrElev(j) ! element j undisplaced length
+      p%TwrTaper(j) = ( p%TwrRad(j+1) - p%TwrRad(j) ) / p%TwrDL(j) ! element j taper
+      p%TwrAxCent(j) = ( p%TwrRad(j)**2 + 2.0_ReKi*p%TwrRad(j)*p%TwrRad(j+1) + 3.0_ReKi*p%TwrRad(j+1)**2 ) / ( 4.0_ReKi*( p%TwrRad(j)**2 + p%TwrRad(j)*p%TwrRad(j+1) + p%TwrRad(j+1)**2) ) ! fractional axial centroid of element j
+   end do ! j = nodes
+
+end subroutine SetBuoyancyParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
@@ -1508,7 +1585,7 @@ subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
                if (ErrStat >= AbortErrLev) return
       
             SigmaCavit= -1* m%BEMT_y%Cpmin(i,j) ! Local cavitation number on node j                                               
-            SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%WtrDpth - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
+            SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%WtrDpth - ( u%HubMotion%Position(3,1)+u%HubMotion%TranslationDisp(3,1) ) - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
                                                                         
                if ( (SigmaCavitCrit < SigmaCavit) .and. (.not. (m%CavitWarnSet(i,j)) ) ) then     
                     call WrScr( NewLine//'Cavitation occurred at blade '//trim(num2lstr(j))//' and node '//trim(num2lstr(i))//'.' )

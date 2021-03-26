@@ -254,6 +254,14 @@ typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotParameterType	ReKi	NacCenBx    -	-	-	"Nacelle center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	NacCenBy    -	-	-	"Nacelle center of buoyancy y direction offset" m
 typedef	^	RotParameterType	ReKi	NacCenBz    -	-	-	"Nacelle center of buoyancy z direction offset" m
+typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	BlTaper   {:}{:}	-	-	"Matrix of blade element taper, used in buoyancy calculation" -
+typedef ^   RotParameterType	ReKi	BlAxCent  {:}{:}	-	-	"Matrix of blade element axial centroid, used in buoyancy calculation" -
+typedef ^   RotParameterType	ReKi	TwrRad    {:}    	-	-	"Array of equivalent tower radius at each node, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	TwrDL     {:}   	-	-	"Array of tower element length, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	TwrTaper  {:}   	-	-	"Array of tower element taper, used in buoyancy calculation" -
+typedef ^   RotParameterType	ReKi	TwrAxCent {:}	    -	-	"Array of tower element axial centroid, used in buoyancy calculation" -
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
 typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
