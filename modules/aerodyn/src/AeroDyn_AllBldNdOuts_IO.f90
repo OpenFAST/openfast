@@ -791,7 +791,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
             else 
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = -m%FVW%BN_UrelWind_s(1,IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m%FVW%BN_UrelWind_s(1,IdxNode,IdxBlade)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -820,7 +820,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, u, m, y, OtherState, Indx, ErrStat, ErrM
                   DO IdxBlade=1,p%BldNd_BladesOut
                      DO IdxNode=1,p%NumBlNds 
                         if (OtherState%BEMT%ValidPhi(IdxNode,IdxBlade)) then
-                           y%WriteOutput( OutIdx ) = 0.0_ReKi
+                           y%WriteOutput( OutIdx ) = 1.0_ReKi - m%BEMT%BEM_weight
                         else
                            y%WriteOutput( OutIdx ) = 1.0_ReKi
                         end if

@@ -59,8 +59,8 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="call ..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug_Matlab|Win32" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug_Matlab" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
-				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName)_Debug.lib"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="CONSOLE_FILE;COMPILE_SIMULINK;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -68,8 +68,8 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="call ..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug_Matlab|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug_Matlab" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
-				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName)_Debug.lib"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="CONSOLE_FILE;COMPILE_SIMULINK;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -1130,31 +1130,65 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\inflowwind\src\IfW_FFWind_Base.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FFWind_Base" Description="Running Registry for IfW_FFWind_Base" Outputs="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\inflowwind\src\IfW_FFWind_Base_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_HAWCWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration></File>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWind" Outputs="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_HAWCWind_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
@@ -1336,6 +1370,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_4Dext.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_BladedFFWind.f90"/>
+		<File RelativePath="..\..\modules\inflowwind\src\IfW_FFWind_Base.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_HAWCWind.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_TSFFWind.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_UniformWind.f90"/>

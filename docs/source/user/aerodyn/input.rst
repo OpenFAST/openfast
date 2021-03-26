@@ -65,9 +65,7 @@ improved tower clearance.
 
 The I/O SETTINGS section controls the creation of the results file. If
 ``OutFileRoot`` is specified, the results file will have the filename
-*OutFileRoot.#.out*, where the ‘\ *#*\ ’ character is an integer
-number corresponding to a test case line found in the COMBINED-CASE
-ANALYSIS section described below. If an empty string is provided for
+*OutFileRoot.out*. If an empty string is provided for
 ``OutFileRoot``, then the driver file’s root name will be used
 instead. If ``TabDel`` is ``TRUE``, a TAB character is used between
 columns in the output file; if FALSE, fixed-width is used otherwise.
@@ -114,6 +112,19 @@ introduce skewed flow. ``dT`` is the simulation time step, which must
 match the time step for the aerodynamic calculations (``DTAero``) as
 specified in the primary AeroDyn input file, and ``Tmax`` is the total
 simulation time.
+
+Note that ``dT`` should be the same for each of the cases listed in the 
+COMBINED-CASE ANALYSIS section. All of the cases will be output to the same
+file, with a ``Case`` column listed next to the ``Time`` output column 
+for help with data processing.
+
+For further debugging capability, the AeroDyn driver now also has the
+ability to read the combined case input data as a time-history file. 
+In place of a row in the COMBINED-CASE ANALYSIS table, a separate input file
+can be listed instead. The name of the file should be preceded with the ``@``
+character, to indicate the data is a time-history file in a separate text
+input file. An example is provided in 
+:numref:`ad_appendix`
 
 AeroDyn Primary Input File
 --------------------------
@@ -340,7 +351,7 @@ Specify the number of airfoil data input files to be used using
 file names should be in quotations and can contain an absolute path or a
 relative path e.g., “C:\\airfoils\\S809_CLN_298.dat” or
 “airfoils\\S809_CLN_298.dat”. If you use relative paths, it is
-relative to the location of the current working directory. The blade
+relative to the location of the file in which it is specified. The blade
 data input files will reference these airfoil data using their line
 identifier, where the first airfoil file is numbered 1 and the last
 airfoil file is numbered ``NumAFfiles``.
@@ -395,7 +406,9 @@ running AeroDyn standalone, or by the OpenFAST program when running a
 coupled simulation. See section 5.2 for summary file details.
 
 AeroDyn can output aerodynamic and kinematic quantities at up to nine
-nodes along the tower and up to nine nodes along each blade.
+nodes specified along the tower and up to nine nodes along each blade.
+For outputs at every blade node, see :numref:`AD-Nodal-Outputs`.
+
 ``NBlOuts`` specifies the number of blade nodes that output is
 requested for (0 to 9) and ``BlOutNd`` on the next line is a list
 ``NBlOuts`` long of node numbers between 1 and ``NumBlNds``
@@ -447,7 +460,7 @@ complete list of possible output parameters.
 .. _airfoil_data_input_file:
 
 Airfoil Data Input File
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 The airfoil data input files themselves (one for each airfoil) include
 tables containing coefficients of lift force, drag force, and pitching
@@ -464,7 +477,7 @@ pitching-moment, and minimum pressure coefficients as a function of AoA.
 When ``InterpOrd`` is 1, linear interpolation is used; when
 ``InterpOrd`` is 3, the data will be interpolated with cubic splines;
 if the keyword ``DEFAULT`` is entered in place of a numerical value,
-``InterpOrd`` is set to 3.
+``InterpOrd`` is set to 1.
 
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
 local ``BlChord`` squared), but is currently unused by AeroDyn.
@@ -480,6 +493,9 @@ on the surface of the airfoil); the remaining points should define the
 exterior shape of the airfoil. The airfoil shape is currently unused by
 AeroDyn, but when AeroDyn is coupled to OpenFAST, the airfoil shape will be
 used by OpenFAST for blade surface visualization when enabled.
+
+``BL_file`` is the name of the file containing boundary-layer characteristics
+of the profile. It is ignored if the aeroacoustic module is not used.
 
 Specify the number of Reynolds number- or aerodynamic-control
 setting-dependent tables of data for the given airfoil via the
@@ -635,11 +651,11 @@ input file):
    UA are disabled; if the keyword ``DEFAULT`` is entered in place of a
    numerical value, ``UACutOut`` is set to 45.
 
--  ``filtCutOff`` is the cut-off frequency (-3 dB corner frequency)
-   (in Hz) of the low-pass filter applied to the AoA input to UA, as
+-  ``filtCutOff`` is the cut-off reduced frequency
+   of the low-pass filter applied to the AoA input to UA, as
    well as to the pitch rate and pitch acceleration derived from AoA
    within UA; if the keyword ``DEFAULT`` is entered in place of a
-   numerical value, ``filtCutOff`` is set to 20.
+   numerical value, ``filtCutOff`` is set to 0.5.
 
 ``NumAlf`` is the number of distinct AoA entries and determines the
 number of rows in the subsequent table of static airfoil coefficients;
@@ -651,8 +667,13 @@ interpolate on AoA using the data provided via linear interpolation or via cubic
 splines, depending on the setting of input ``InterpOrd`` above. 
 If ``AFTabMod`` is set to ``1``, only the first airfoil table in each file
 will be used. If ``AFTabMod`` is set to ``2``, AeroDyn will find the
-airfoil table that bounds the computed Reynolds number, and linearly interpolate
-between the tables, using the logarithm of the Reynolds numbers.
+airfoil tables that bound the computed Reynolds number,
+and linearly interpolate between the tables, using the logarithm of the Reynolds numbers.
+If ``AFTabMod`` is set to ``3``, it will find the bounding airfoil 
+tables based on the ``UserProp`` field and linearly interpolate the tables
+based on it. Note that OpenFAST currently sets the ``UserProp`` input value to ``0`` 
+unless the DLL controller is used and sets the value, 
+so using this feature may require a code change.
 
 For each AoA, you must set the AoA (in degrees), ``alpha``, the lift-force
 coefficient, ``Coefs``\ (:,1), the drag-force coefficient,
@@ -675,8 +696,7 @@ minimum pressure coefficients may be absent from the file.
 .. _blade_data_input_file:
 
 Blade Data Input File
-~~~~~~~~~~~~~~~~~~~~~
-
+---------------------
 
 The blade data input file contains the nodal discretization, geometry,
 twist, chord, and airfoil identifier for a blade. Separate files are

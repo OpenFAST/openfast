@@ -45,6 +45,9 @@ set(testlist
     test_BD_GaussPointWeight
     test_BD_diffmtc
     test_BD_InitShpDerJaco
+    test_BD_MemberEta
+    test_BD_TrapezoidalPointWeight
+    test_InitializeNodalLocations
 )
 foreach(test ${testlist})
     set(test_dependency pfunit ${source_modulesdirectory}/${module_directory}/tests/${test}.F90)
