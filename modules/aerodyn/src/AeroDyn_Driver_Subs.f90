@@ -139,7 +139,7 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
       dvr%WT(1)%nac%motionType    = idNacMotionConstant
       dvr%WT(1)%hub%motionType    = idHubMotionConstant ! NOTE: we change it back after validate inputs..
       dvr%WT(1)%bld(:)%motionType = idBldMotionConstant ! Change if needed
-   else
+   else if (dvr%analysisType==idAnalysisCombi) then
       print*,'------------------------------------------------------------------------------'
       call WrScr('Running combined case '//trim(num2lstr(iCase))//'/'//trim(num2lstr(dvr%numCases)))
       ! Set time
@@ -159,6 +159,8 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
       endif
       ! Changing rootnam for current case
       dvr%out%root = trim(dvr%root)//'.'//trim(num2lstr(iCase))
+   else
+      ! Should never happen
    endif
    dvr%numSteps = ceiling(dvr%tMax/dvr%dt)
 
@@ -316,7 +318,7 @@ subroutine Dvr_EndCase(dvr, AD, IW, initialized, errStat, errMsg)
       if (dvr%out%fileFmt==idFmtBoth .or. dvr%out%fileFmt == idFmtBinary) then
          do iWT=1,dvr%numTurbines
             if (dvr%numTurbines >1) then
-               sWT = '.WT'//trim(num2lstr(iWT))
+               sWT = '.T'//trim(num2lstr(iWT))
             else
                sWT = ''
             endif
@@ -1293,7 +1295,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       wt%nac%yaw      = myNaN
 
       if (wt%BasicHAWTFormat) then
-         ! Basic Geometry
+         ! --- Basic Geometry
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT , wt%originInit , 3 , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT      , wt%numBlades      , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'hubRad'//sWT         , hubRad            , errStat2, errMsg2 , unEc); if(Failed()) return
@@ -1302,39 +1304,10 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          call ParseVar(FileInfo_In, CurLine, 'shftTilt'//sWT       , shftTilt          , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'precone'//sWT        , precone           , errStat2, errMsg2 , unEc); if(Failed()) return
 
-         ! Basic Motion
-         call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'baseMotionType'//sWT , wt%motionType,      errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'degreeOfFreedom'//sWT, wt%degreeOfFreedom, errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'amplitude'//sWT      , wt%amplitude,       errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'frequency'//sWT      , wt%frequency,       errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'nacYaw'//sWT         , nacyaw            , errStat2, errMsg2 , unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT       , rotSpeed          , errStat2, errMsg2 , unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'bldPitch'//sWT       , bldPitch          , errStat2, errMsg2 , unEc); if(Failed()) return
-         if (dvr%AnalysisType==idAnalysisRegular) then
-            if (wt%motionType==idBaseMotionGeneral) then
-               call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
-               wt%iMotion=1
-               if (wt%motion(size(wt%motion,1),1)<dvr%tMax) then
-                  call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%motionFileName))
-               endif
-            endif
-         else
-            ! Setting dummy values for safety. These values needs to be overriden by TimeDependency or Case
-            nacYaw       = myNaN
-            rotSpeed     = myNaN
-            bldPitch     = myNaN
-            wt%amplitude = myNaN
-            wt%frequency = myNaN
-            wt%motionType = idBaseMotionFixed 
-            wt%degreeOfFreedom = 0
-         endif ! regular analysis or combined/time
-
          shftTilt=-shftTilt*Pi/180._ReKi ! deg 2 rad, NOTE: OpenFAST convention sign wrong around y 
          precone=precone*Pi/180._ReKi ! deg 2 rad
 
-         ! --- We set the advanced rotor properties
+         ! We set the advanced turbine geometry properties
          ! twr/nac/hub
          wt%orientationInit(1:3) = 0.0_ReKi
          wt%hasTower          = .True.
@@ -1354,12 +1327,8 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             wt%bld(iB)%orientation_h(3)   = 0.0_ReKi
             wt%bld(iB)%hubRad_bl          = hubRad
          enddo
-         ! Motion
-         !wt%motionType = idBaseMotionFixed
-         call setSimpleMotion(wt, rotSpeed, bldPitch, nacYaw, wt%degreeOfFreedom, wt%amplitude, wt%frequency)
-
       else
-         ! --- General format (not basic)
+         ! --- Advanced geometry
          ! Rotor origin and orientation
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT     , wt%originInit, 3         , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'baseOrientationInit'//sWT, wt%orientationInit, 3    , errStat2, errMsg2, unEc); if(Failed()) return
@@ -1389,15 +1358,18 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
             call ParseVar(FileInfo_In, CurLine, 'bldHubRad_bl'//sBld , wt%bld(iB)%hubRad_bl, errStat2, errMsg2, unEc); if(Failed()) return
          enddo
+      end if ! Basic /advanced geometry
 
-         ! Base motion
-         call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'baseMotionType'//sWT    , wt%motionType,      errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'degreeOfFreedom'//sWT   , wt%degreeOfFreedom, errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'amplitude'//sWT         , wt%amplitude,       errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'frequency'//sWT         , wt%frequency,       errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
-         wt%frequency = wt%frequency * 2 *pi ! Hz to rad/s
+      ! --- Base motion (common to basic/advanced)
+      ! Base motion
+      call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'baseMotionType'//sWT    , wt%motionType,      errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'degreeOfFreedom'//sWT   , wt%degreeOfFreedom, errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'amplitude'//sWT         , wt%amplitude,       errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'frequency'//sWT         , wt%frequency,       errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
+      wt%frequency = wt%frequency * 2 *pi ! Hz to rad/s
+      if (dvr%analysisType==idAnalysisRegular) then
          if (wt%motionType==idBaseMotionGeneral) then
             call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
             wt%iMotion=1
@@ -1405,19 +1377,49 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
                call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%motionFileName))
             endif
          endif
+      else
+         ! Setting dummy values for safety. These values needs to be overriden by TimeDependency or Case
+         wt%amplitude = myNaN
+         wt%frequency = myNaN
+         wt%motionType = idBaseMotionFixed 
+         wt%degreeOfFreedom = 0
+      endif
 
+      ! --- RNA Motion
+      if (wt%BasicHAWTFormat) then
+         ! --- Basic Motion
+         call ParseVar(FileInfo_In, CurLine, 'nacYaw'//sWT         , nacyaw            , errStat2, errMsg2 , unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT       , rotSpeed          , errStat2, errMsg2 , unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'bldPitch'//sWT       , bldPitch          , errStat2, errMsg2 , unEc); if(Failed()) return
+         if (dvr%analysisType/=idAnalysisRegular) then
+            ! Setting dummy values for safety. These values needs to be overriden by TimeDependency or Case
+            nacYaw       = myNaN
+            rotSpeed     = myNaN
+            bldPitch     = myNaN
+         endif ! regular analysis or combined/time
+
+         !wt%motionType = idBaseMotionFixed
+         call setSimpleMotion(wt, rotSpeed, bldPitch, nacYaw, wt%degreeOfFreedom, wt%amplitude, wt%frequency)
+      else
+         ! --- Advanced Motion
          ! Nacelle motion
          if (wt%numBlades>0) then
             call ParseVar(FileInfo_In, CurLine, 'nacMotionType'//sWT    , wt%nac%motionType    , errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'nacYaw'//sWT           , wt%nac%yaw           , errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'nacMotionFilename'//sWT, wt%nac%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
             wt%nac%yaw = wt%nac%yaw * Pi/180_ReKi ! yaw stored in rad
-            if (wt%nac%motionType==idNacMotionVariable) then
-               call ReadDelimFile(wt%nac%motionFilename, 4, wt%nac%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
-               wt%nac%iMotion=1
-               if (wt%nac%motion(size(wt%nac%motion,1),1)<dvr%tMax) then
-                  call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%nac%motionFileName))
+            if (dvr%analysisType==idAnalysisRegular) then
+               if (wt%nac%motionType==idNacMotionVariable) then
+                  call ReadDelimFile(wt%nac%motionFilename, 4, wt%nac%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
+                  wt%nac%iMotion=1
+                  if (wt%nac%motion(size(wt%nac%motion,1),1)<dvr%tMax) then
+                     call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%nac%motionFileName))
+                  endif
                endif
+            else
+               ! Replacing with default motion if AnalysisType is not Regular, should be overriden later
+               wt%nac%motionType    = idNacMotionConstant
+               wt%nac%yaw           = myNaN
             endif
 
             ! Rotor motion
@@ -1425,12 +1427,18 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             call ParseVar(FileInfo_In, CurLine, 'rotSpeed'//sWT         , wt%hub%rotSpeed      , errStat2, errMsg2, unEc); if(Failed()) return
             call ParseVar(FileInfo_In, CurLine, 'rotMotionFilename'//sWT, wt%hub%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
             wt%hub%rotSpeed = wt%hub%rotSpeed * Pi/30_ReKi ! speed stored in rad/s 
-            if (wt%hub%motionType==idHubMotionVariable) then
-               call ReadDelimFile(wt%hub%motionFilename, 4, wt%hub%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
-               wt%hub%iMotion=1
-               if (wt%hub%motion(size(wt%hub%motion,1),1)<dvr%tMax) then
-                  call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%hub%motionFileName))
+            if (dvr%analysisType==idAnalysisRegular) then
+               if (wt%hub%motionType==idHubMotionVariable) then
+                  call ReadDelimFile(wt%hub%motionFilename, 4, wt%hub%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
+                  wt%hub%iMotion=1
+                  if (wt%hub%motion(size(wt%hub%motion,1),1)<dvr%tMax) then
+                     call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%hub%motionFileName))
+                  endif
                endif
+            else
+               ! Replacing with default motion if AnalysisType is not Regular, should be overriden later
+               wt%hub%motionType    = idHubMotionConstant
+               wt%hub%rotSpeed      = myNaN
             endif
 
             ! Blade motion
@@ -1445,25 +1453,21 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
                sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
                call ParseVar(FileInfo_In, CurLine, 'bldMotionFileName'//sBld , wt%bld(iB)%motionFileName, errStat2, errMsg2, unEc); if(Failed()) return
             enddo
-            do iB=1,wt%numBlades
-               if (wt%bld(iB)%motionType==idBldMotionVariable) then
-                  call ReadDelimFile(wt%bld(iB)%motionFilename, 4, wt%bld(iB)%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
-                  wt%bld(iB)%iMotion=1
-                  if (wt%bld(iB)%motion(size(wt%bld(iB)%motion,1),1)<dvr%tMax) then
-                     call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%bld(iB)%motionFileName))
+            if (dvr%analysisType==idAnalysisRegular) then
+               do iB=1,wt%numBlades
+                  if (wt%bld(iB)%motionType==idBldMotionVariable) then
+                     call ReadDelimFile(wt%bld(iB)%motionFilename, 4, wt%bld(iB)%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
+                     wt%bld(iB)%iMotion=1
+                     if (wt%bld(iB)%motion(size(wt%bld(iB)%motion,1),1)<dvr%tMax) then
+                        call WrScr('Warning: maximum time in motion file smaller than simulation time, last values will be repeated. File: '//trim(wt%bld(iB)%motionFileName))
+                     endif
                   endif
-               endif
-            enddo
-         else
-            wt%degreeofFreedom   = 0                   
-            wt%amplitude         = 0.0_ReKi            
-            wt%frequency         = 0.0_ReKi            
-            wt%nac%motionType    = idNacMotionConstant
-            wt%nac%yaw           = 0
-            wt%hub%motionType    = idHubMotionConstant
-            wt%hub%rotSpeed      = 0
-            wt%bld(:)%motionType = idBldMotionConstant
-            wt%bld(:)%pitch      = 0
+               enddo
+            else
+               ! Replacing with default motion if AnalysisType is not Regular, shouldbe overriden later
+               wt%bld(:)%motionType = idBldMotionConstant
+               wt%bld(:)%pitch      = myNan
+            endif
          endif ! numBlade>0
       endif ! BASIC/ADVANCED rotor definition
    enddo
@@ -1492,9 +1496,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    if (dvr%analysisType==idAnalysisCombi) then
       ! First check
       if( Check(dvr%numTurbines>1    , 'Combined case analyses only possible with zero or one turbine with `basicHAWT` format' )) return
-      if (dvr%numTurbines==1) then
-         if( Check(.not. dvr%wt(1)%basicHAWTFormat , 'Combined case analyses only possible with one turbine with `basicHAWT` format' )) return
-      endif
       if( Check(dvr%numCases<=0      , 'NumCases needs to be >0 for combined analyses' )) return
       allocate(dvr%Cases(dvr%numCases))
       do iCase=1, dvr%numCases
@@ -1520,7 +1521,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       if (allocated(dvr%Cases)) deallocate(dvr%Cases)
    endif
 
-   ! --- Iniput / Outputs
+   ! --- Input / Outputs
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
    call ParseVar(FileInfo_In, CurLine, 'outFmt'     , dvr%out%outFmt      , errStat2, errMsg2, unEc); if(Failed()) return
    call ParseVar(FileInfo_In, CurLine, 'outFileFmt' , dvr%out%fileFmt     , errStat2, errMsg2, unEc); if(Failed()) return
@@ -1685,7 +1686,7 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
          ! --- Start writing to ascii input file 
          do iWT=1,nWT
             if (nWT>1) then
-               sWT = '.WT'//trim(num2lstr(iWT))
+               sWT = '.T'//trim(num2lstr(iWT))
             else
                sWT = ''
             endif
@@ -2018,9 +2019,9 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, AD, ErrStat, ErrMsg)
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters'
-   real(ReKi) :: BladeLength, MaxBladeLength, MaxTwrLength, GroundRad
-   real(ReKi) :: WorldBoxMax(3), WorldBoxMin(3) ! Extent of the turbines
-   real(ReKi) :: BaseBoxDim
+   real(SiKi) :: BladeLength, MaxBladeLength, MaxTwrLength, GroundRad
+   real(SiKi) :: WorldBoxMax(3), WorldBoxMin(3) ! Extent of the turbines
+   real(SiKi) :: BaseBoxDim
    type(MeshType), pointer :: Mesh
    type(WTData), pointer :: wt ! Alias to shorten notation
    ErrStat = ErrID_None
@@ -2042,8 +2043,8 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, AD, ErrStat, ErrMsg)
 
    allocate(p_FAST%VTK_Surface(dvr%numTurbines))
    ! --- Find dimensions for all objects to determine "Ground" and typical dimensions
-   WorldBoxMax(2) =-HUGE(1.0_ReKi)
-   WorldBoxMin(2) = HUGE(1.0_ReKi)
+   WorldBoxMax(2) =-HUGE(1.0_SiKi)
+   WorldBoxMin(2) = HUGE(1.0_SiKi)
    MaxBladeLength=0
    MaxTwrLength=0
    do iWT=1,dvr%numTurbines
@@ -2180,7 +2181,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, AD)
    ! Ground (written at initialization)
    
    do iWT = 1, size(dvr%WT)
-      sWT = '.WT'//trim(num2lstr(iWT))
+      sWT = '.T'//trim(num2lstr(iWT))
       wt=>dvr%WT(iWT)
 
       ! Base 

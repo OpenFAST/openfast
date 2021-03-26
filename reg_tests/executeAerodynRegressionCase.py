@@ -108,14 +108,14 @@ rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_driver.outb':'
 ### Run aerodyn on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, "ad_driver.dvr")
-    returnCode = openfastDrivers.runAerodynDriverCase(caseInputFile, executable, verbose=True)
+    returnCode = openfastDrivers.runAerodynDriverCase(caseInputFile, executable, verbose=verbose)
     if returnCode != 0:
         rtl.exitWithError("")
     
 ###Build the filesystem navigation variables for running the regression test
 # For multiple turbines, test turbine 2, for combined cases, test case 4 
 localOutFile      = os.path.join(testBuildDirectory, "ad_driver.outb")
-localOutFileWT2   = os.path.join(testBuildDirectory, "ad_driver.WT2.outb")
+localOutFileWT2   = os.path.join(testBuildDirectory, "ad_driver.T2.outb")
 localOutFileCase4 = os.path.join(testBuildDirectory, "ad_driver.4.outb")
 if os.path.exists(localOutFileWT2) :
     localOutFile=localOutFileWT2
