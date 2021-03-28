@@ -74,6 +74,13 @@ else()
 endif()
 
 ########################################################################
+# Validate CMake configuration
+#
+if(BUILD_SHARED_LIBS AND MSVC)
+  message(FATAL_ERROR "Shared libraries are not support by OpenFAST with the MSVC build tool (https://github.com/OpenFAST/openfast/issues/448).")
+endif()
+
+########################################################################
 # Build rules for OpenFAST Registry
 #
 if(GENERATE_TYPES)
