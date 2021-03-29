@@ -12,20 +12,14 @@ available in the separate wind turbine rotor-performance tool WT\_Perf.
 
 Examples of applications are:
 
-- Simulation of horizontal axis/ vertical axis wind turbines, kites, quad-rotors.
-- Simulation with prescribed time series of wind speed, pitch, yaw, etc.
-- Combined case analyses to compute the surfaces of power coefficient (C\ :sub:`P`), thrust coefficient (C\ :sub:`T`), and/or torque coefficient (C\ :sub:`Q`) as a function of tip-speed ratio (TSR) and blade-pitch angle. 
+- Simulation of horizontal/vertical axis wind turbine, kites, quad-rotors, multiple rotors and wings.
+- Simulation with prescribed time series of wind speed, pitch, yaw, rotor speed.
+- Combined case analyses to evaluate the turbine response at different operating conditions, for instance to compute the surfaces of power coefficient (C\ :sub:`P`), thrust coefficient (C\ :sub:`T`), and/or torque coefficient (C\ :sub:`Q`) as a function of tip-speed ratio (TSR) and blade-pitch angle. 
 - Simulations with oscillatory motion of the tower base at different amplitudes and frequencies.
 
 More details are provided below.
 
 
-
-**Current limitations:**
-
-- Number of points per blades have to be the same for all blades and all rotors for now
-- A turbine has only one (optional) tower
-- Analysis Types 2 and 3 are limited to 1 turbine
 
 
 
@@ -44,31 +38,48 @@ Driver inputs and options
 -------------------------
 
 **Main concepts**
+
+
 The driver supports:
 
-- 2 kinds of turbine definitions: basic (HAWT), and advanced. 
-- 2 kinds of inflow definition: basic (uniform power law), and advanced (InflowWind)
-- 3 types of analyses: 1) one simulation of multiple turbines, 2) one simulation of one HAWT under time-dependent inputs, 3) combined cases of one HAWT
+- two kinds of turbine definitions: basic (HAWT), and advanced. 
+- two kinds of inflow definition: basic (uniform power law), and advanced (InflowWind)
+- three types of analyses (`AnalysisType`): 1) one simulation of multiple turbines, 2) one simulation of one wind turbine under time-dependent inputs, 3) combined cases of one wind turbine
+
+The current limitations are:
+
+- The number of points per blades have to be the same for all blades and all rotors 
+- A turbine has only one (optional) tower
+- Analysis Types 2 and 3 are limited to 1 turbine
 
 More details are provided below, where the different sections of the input file are described.
 
 
-**Input configuration and analysis type**
+
+**Header and input configuration**
 
 
+The input file starts with a header, the user can place a relevant description of the model on the second line.
+The input configuration section follows. 
+The user can toggle the flag `Echo` to write back the input file, as parsed by the driver, to disk.
 The driver supports three kinds of analyses, but not all turbine formats and inflow types are available for each analysis type: 
 
 - `AnalysisType=1`: Simulation of one or multiple rotors with basic (HAWT) or arbitrary geometries (HAWT/VAWT, quad-rotor, etc.), with basic or advanced wind inputs, and optional time-varying motion of the tower base, nacelle and individual pitch angles. Arbitrary motion or sinusoidal motion of the tower base are possible.
-- `AnalysisType=2`: Simulation of one turbine with basic time-varying wind, nacelle motion, pitch. 
-- `AnalysisType=3`: Combined cases analyses of one turbine with basic steady wind. A table of cases is provided and run sequentially by the driver. 
+- `AnalysisType=2`: Simulation of one turbine with basic time-varying wind, nacelle motion, pitch. See "Time-dependent analysis" below.
+- `AnalysisType=3`: Combined cases analyses of one turbine with basic steady wind. A table of cases is run sequentially by the driver. See "Combined-Case analysis" below.
+
+The section follows with the definition of the total simulation time (`TMax`) and the time step used for the simulation (`DT`). These inputs are used for `AnalysisType=1` and `AnalysisType=2`.
+The user specify the location of the AeroDyn primary file via the variable `AeroFile`. The path can be absolute or relative to the AeroDyn driver file.
 
 
-An example of the input configuration is given below:
+An example of header and input configuration is given below:
 .. code::
 
+    ----- AeroDyn Driver Input File ---------------------------------------------------------
+    Three bladed wind turbine, using basic geometry input
     ----- Input Configuration -------------------------------------------------------
     False           Echo         - Echo input parameters to "<rootname>.ech"?
-            3       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined cases}
+            3       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined-cases}
            11.0     TMax         - Total run time [used only when AnalysisType/=3] (s)
             0.5     DT           - Simulation time step [used only when AnalysisType/=3] (s)
     "AD.dat"        AeroFile     - Name of the primary AeroDyn input file
@@ -79,19 +90,19 @@ An example of the input configuration is given below:
 
 The inflow can be provided in two ways:
 
-- basic (`CompInflow=0`): uniform wind with a power law shear. The wind is defined using a reference height (`RefHt`), a powerlaw exponent (`PLExp`), and the wind speed at reference height (`HWindSpeed`). In some analyses types, the reference wind speed and power law can be defined as time series.
-- advanced (`CompInflow=1`): the InflowWind module is used to compute the inflow, and all available options of InflowWind are then available. The user need to provide the name of the InflowWind input file (`InflowFile`)
+- basic (`CompInflow=0`): uniform wind with a power law shear. The wind is defined using a reference height (`RefHt`), a powerlaw exponent (`PLExp`), and the wind speed at reference height (`HWindSpeed`). With `AnalysisType=1`, the reference wind speed and power law are defined separately as time series (see "time-dependent analysis"). With `AnalysisType=3`, these parameters are provided in a separate table (see "Combined-Case analyses"). The reference height is used for all analyses types, since this height may be different than the hub height.
+- advanced (`CompInflow=1`): the InflowWind module is used to compute the inflow, and all available options of InflowWind are then available. The user need to provide the (relative or absolute) path of the InflowWind input file (`InflowFile`). This feature is limited to `AnalysisType=1`.
 
 An example of inputs is given below:
 
 .. code::
 
     ----- Inflow Data ---------------------------------------------------------------
-              0      CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
-    "unused"         InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
-            9.0      HWindSpeed  - Horizontal wind speed   [used only when CompInflow=0 and AnalysisType=1] (m/s)
-            140      RefHt       - Reference height for horizontal wind speed [used only when CompInflow=0]  (m)
-           0.10      PLExp       - Power law exponent   [used only when CompInflow=0 and AnalysisType=1]                        (-)
+              0   CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
+    "unused"      InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
+            9.0   HWindSpeed  - Horizontal wind speed   [used only when CompInflow=0 and AnalysisType=1] (m/s)
+            140   RefHt       - Reference height for horizontal wind speed [used only when CompInflow=0]  (m)
+           0.10   PLExp       - Power law exponent   [used only when CompInflow=0 and AnalysisType=1]                        (-)
 
 
 
@@ -102,15 +113,15 @@ The user specify the number of turbines as follows:
 .. code:: 
 
     ----- Turbine Data --------------------------------------------------------------
-    1               NumTurbines  - Number of turbines (should be 1 for AnalysisType=2 or AnalysisType=3)
+    1   NumTurbines  - Number of turbines (should be 1 for AnalysisType=2 or AnalysisType=3)
 
 As noted in the comment, the number of turbine should be 1 for `AnalysisType=2` and `AnalysisType=3`.
-After the number of turbine is defined, the geometry and motion is defined for each turbine. Inputs for each turbine must have the suffix `(i)` where `i` is the turbine number.
+After this section, the geometry and motion is provided for each turbine. Inputs for each turbine must have the suffix `(i)` where `i` is the turbine number.
 Outputs for each turbine will be written to distinct files, with the suffix `.Ti` where `i` is the turbine number.
 
-An example of configuration with two wind turbines is given in :numref:`fig:MultiRotor`. The figure defines the different frames and origin associated with each turbine: the turbine base frame (t), nacelle frame (n), hub frame (h), and blade frames (b).
-Prescribed motions of the turbine base occur at the turbine origin.
-Yawing occurs around the :math:`z_n` axis,  the blade rotates about the :math:`x_h` axis, and pitching occurs around the individual :math:`z_b` axes. The definitions of the different frames are standardized when using a basic (HAWT) input format definition, and are arbitrary defined using the advanced input format. More details are given in the next paragraph.
+An example of configuration with two wind turbines is shown in :numref:`fig:MultiRotor`. The figure defines the different frames and origin associated with each turbine: the turbine base frame (t), nacelle frame (n), hub frame (h), and blade frames (b). The notations and conventions follow the OpenFAST frames, except that the turbine frame does not have its origin at the tower base.
+Prescribed motions of the turbine occur at the turbine origin.
+Yawing occurs around the :math:`z_n` axis,  the blade rotates about the :math:`x_h` axis, and pitching occurs around the individual :math:`z_b` axes. The definitions of the different frames are standardized when using a basic (HAWT) input format definition, and are arbitrarily defined when using the advanced input format. More details are given in the next paragraph.
 
 .. figure:: figs/MultiRotor.png
    :width: 80%
@@ -125,7 +136,7 @@ Yawing occurs around the :math:`z_n` axis,  the blade rotates about the :math:`x
 
 Two turbine input formats are supported:
 
-- basic (`BasicHAWTFormat=True`): Basic horizontal axis wind turbine (HAWT) format. In this format, the turbine geometry is entirely determined by the number of blades (`NumBlades`), the hub radius (`HubRad`), the hub height (`HubHt`), the overhang (`Overhang`), the shaft tilt (`ShftTilt`) and the precone (`Precone`). The definition of each parameter follows the OpenFAST convention.
+- basic (`BasicHAWTFormat=True`): Basic horizontal axis wind turbine (HAWT) format. In this format, the turbine geometry is entirely determined by the number of blades (`NumBlades`), the hub radius (`HubRad`), the hub height (`HubHt`), the overhang (`Overhang`), the shaft tilt (`ShftTilt`) and the precone (`Precone`). The definition of each parameter follows the OpenFAST convention. Additionally, the user needs to provide the origin of the turbine base at `t=0` (`BaseOriginInit`).
   An example of basic input is given below:
 
 .. code::
@@ -143,25 +154,25 @@ Two turbine input formats are supported:
 
 - advanced (`BasicHAWTFormat=False`): The position and orientation of the tower base, nacelle, hub, and individual blades can be arbitrarily defined. This can be used for HAWT and any other turbine concepts. 
   The definition of the different frames are given in :numref:`fig:MultiRotor`.
-  The position (`BaseOriginInit`) and orientation (`BaseOriginInit`) of the turbine base frame are defined with respect to the OpenFAST global frame. Orientations are given using the values of three successive rotations (x-y-z Euler angles). If the base undergoes a motion, the orientation of the base frame will consists of the time-varying rotations followed by these initial rotations.
+  The position (`BaseOriginInit`) and orientation (`BaseOriginInit`) of the turbine base frame are defined with respect to the global frame. Orientations are given using the values of three successive rotations (x-y-z Euler angles). If the base undergoes a motion, the orientation of the base frame will consists of the time-varying rotations followed by these initial rotations.
 
-  A flag indicating whether the turbine has a tower is given on the next line (`HasTower`). This flag currently affects the VTK outputs. The user still has to provide tower inputs data in AeroDyn for each turbine (see :numref:`ad_inputs_multirot`).
+  A flag indicating whether the turbine has a tower is given on the next line (`HasTower`). This flag currently affects the VTK outputs and does not have an impact on AeroDyn yet. The user still has to provide tower inputs data in AeroDyn for each turbine (see :numref:`ad_inputs_multirot`).
   The next line indicates which projection AeroDyn is to use in its calculation. It is recommended to use `HAWTProjection=True` for HAWT, which is the default projection used in OpenFAST (projects on the coned-pitched axis). For other rotor concepts, set `HAWTprojection=False`.
   The following lines indicates the position and orientations of the tower, nacelle and hub. 
 
   The tower and the nacelle are defined with respect to the turbine base (t) origin and frame.
-  The tower is assumed to end at the nacelle. 
-  The tower station defined in the AeroDyn input file are assumed to be given with respect to the tower origin, unlike OpenFAST which uses ground/MSL as a reference (see :numref:`ad_inputs_multirot`).
+  The tower top is assumed to coincide with the nacelle origin. 
+  The tower stations defined in the AeroDyn input file are assumed to be given with respect to the tower origin, unlike OpenFAST which uses ground/MSL as a reference (see :numref:`ad_inputs_multirot`).
   The hub is defined with respect to the nacelle origin and frame (n).
 
-  The definitions of the blades follows, starting with the number of blades `NumBlades`. A rotor with zero blade is supported, and can be used to model a tower.
+  The definitions of the blades follows, starting with the number of blades `NumBlades`. A rotor with zero blade is supported and can be used to model an isolated tower.
   If tower shadow/potential is used in AeroDyn, then the isolated tower will disturbed the flow of the vortex wake when OLAF is used.
   When BEM is used, the flow of the blades of a given turbine are disturbed only by the turbine's tower.
   The inputs for turbine `i` and blade `j` are labelled `(i_j)`.
   The origin `BldOrigin_h`) and orientation (`BldOrientation_h`) of each blade are given with respect to the hub origin and frame (h).
   Hub radius inputs (`BldHubRad_Bl`) are provided for convenience. They will effectively offset the blade origin along the :math:`z_b` axis.
   An example of input for an advanced geometry definition is given below. 
-  This example corresponds to typical values for a 3-bladed upwind HAWT, with 6 degrees of tilt (-6 in OpenFAST) and -4 degrees of precone (going upstream)
+  This example corresponds to typical values for a 3-bladed upwind HAWT, with 6 degrees of tilt (-6 in OpenFAST) and -4 degrees of precone (blade inclined upstream).
 
 .. code::
 
@@ -178,8 +189,8 @@ Two turbine input formats are supported:
     ----- Turbine(1) Blades -----------------------------------------------------------------
     3               NumBlades(1)          - Number of blades for current rotor (-)
     0,0,0           BldOrigin_h(1_1)      - Orign of blade 1 wrt. hub origin in hub coordinates (m)
-    0,0,0           BldOrigin_h(1_2)      - Orign of blade 1 wrt. hub origin in hub coordinates (m)
-    0,0,0           BldOrigin_h(1_3)      - Orign of blade 1 wrt. hub origin in hub coordinates (m)
+    0,0,0           BldOrigin_h(1_2)      - Orign of blade 2 wrt. hub origin in hub coordinates (m)
+    0,0,0           BldOrigin_h(1_3)      - Orign of blade 3 wrt. hub origin in hub coordinates (m)
     0  ,-4,0        BldOrientation_h(1_1) - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the blade frame from the hub frame such that the "z" is along span, "y" along trailing edge without pitch (azimuth, precone, pitch) (deg)
     120,-4,0        BldOrientation_h(1_2) - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the blade frame from the hub frame such that the "z" is along span, "y" along trailing edge without pitch (azimuth, precone, pitch) (deg)
     240,-4,0        BldOrientation_h(1_3) - successive rotations (theta_x, theta_y, theta_z) defining initial orientation of the blade frame from the hub frame such that the "z" is along span, "y" along trailing edge without pitch (azimuth, precone, pitch) (deg)
@@ -191,14 +202,14 @@ Two turbine input formats are supported:
 
 **Turbine motion definition**
 
-The definition of the turbine motion are only used when AnalysisType=1, but must always be present in the input file. 
+The definition of the turbine motion are only used when `AnalysisType=1`, but must always be present in the input file. 
 
 The base motion is given in the same way for basic or advanced geometries.
-The motion of the base may be: fixed (`BaseMotionType=0`), sinusoidal (`BaseMotionType=1`) or arbritrary (`BaseMotionType=2`). 
+The motion of the base may be: fixed (`BaseMotionType=0`), sinusoidal (`BaseMotionType=1`) or arbitrary (`BaseMotionType=2`). 
 The turbine base motion is applied at each time step before applying the initial position and orientation of the turbine base.
 A sinusoidal motion implies that one degree of freedom (`DegreeOfFreedom`) of the turbine base is moving according to a sine function of a given amplitude (`Amplitude`) and frequency (`Frequency`), with zero phase.
-The 6 possible degrees of freedom corresponds to translations or rotations of the base frame in global coordinates (g).
-An arbitrary motion is specified via a CSV file (`BaseMotionFileName`) which contains 19 columns: time, 3 translations (global), three successive rotations (global), 3 translation velocities, 3 rotational velocities (omega, in global), 3 translational acceleration and 3 rotational accelerations (alpha, in global). Example of arbitrary input files are given in :numref:`ad_inputfiles_examples`.
+The 6 possible degrees of freedom correspond to translations or rotations of the base frame in global coordinates (g) (e.g. surge, sway, heave, roll, pitch, yaw).
+An arbitrary motion is specified via a CSV file (`BaseMotionFileName`) which contains 19 columns: time, 3 translations (global), three successive rotations (global), 3 translation velocities, 3 rotational velocities (omega, in global), 3 translational accelerations and 3 rotational accelerations (alpha, in global). Example of arbitrary input files are given in :numref:`ad_inputfiles_examples`.
 
 
 An example of inputs for a sinusoidal surge motion is given below:
@@ -225,10 +236,11 @@ The different inputs for the basic and advanced geometries are given below:
     1         BldPitch(1)      - Blades pitch (deg)
 
 - advanced: When an advanced geometry is provided and when the number of blades is non-zero, the motion section contains options for the nacelle motion, rotor motion and individual blade pitch motion. 
-  The syntax for each of these motion consist of defining a type (fixed or time-varying), a value for the fixed case, or a file for the time-varying case.
+  The syntax for each of these motion consists of defining a type (fixed or time-varying), a value for the fixed case or a file for the time-varying case.
   The input files are CSV files containing time, position, speed and acceleration. Examples of files are given in :numref:`ad_inputfiles_examples`.
+  If the pitch rate, yaw rate, and accelerations are not known, the user should input zeros in these columns.
   The time vector in the motion file has to be ascending, but does not need to be linear. Linear interpolation is used by the driver to determine inputs at a given time.
-  The rotation data in the CSV files are defined in rad and rad/s, whereas they are defined in deg and rpm in the driver input file.
+  The angular and rotational data in the CSV file are defined in rad and rad/s, whereas they are defined in deg and rpm in the driver input file.
   An example is given below for a fixed rotational speed:
 
 .. code::
@@ -252,7 +264,7 @@ The different inputs for the basic and advanced geometries are given below:
 
 **Time-dependent analysis**
 
-Time-dependent analyses are used to vary few standard varaiables during the simulation.
+Time-dependent analyses are used to vary few standard variables during the simulation.
 The variables are: reference wind speed (`HWndSpeed`), powerlaw exponent (`PLExp`), rotor speed (`RotSpd`), collective pitch (`Pitch`), and nacelle yaw (`Yaw`).
 The time series of each variables are provided in a CSV file (`TimeAnalysisFileName`).
 Time-dependent analyses are selected using `AnalysisType=2`. They are restricted to one turbine (`numTurbines=1`).
@@ -287,8 +299,8 @@ When `DOF=0`, the turbine base is fixed.
 
 **Outputs**
 
-The output section controls the format of the tabular output file and VTK files, similar to the OpenFAST ouputs.
-The user can control the hub radius and nacelle dimension for the VTK visualization. The nacelle is represented as a sphere of radius (`VTKHubRad`), and the nacelle with a parallelepiped defined using an origin and three length parallel to the nacelle coordinates (`VTKNacDim`).
+The output section controls the format of the tabular output file and VTK files, similar to the OpenFAST outputs.
+The user can control the hub radius and nacelle dimension for the VTK visualization. The nacelle is represented as a sphere of radius (`VTKHubRad`), and the nacelle with a parallelepiped defined using an origin and three lengths parallel to the nacelle coordinates (`VTKNacDim`).
 
 
 .. code::
@@ -310,7 +322,7 @@ AeroDyn inputs for multiple turbines
 ------------------------------------
 
 No changes are required to the AeroDyn input files when one turbine is used. 
-To minimize the impact of the multiple turbine implementation, the driver currently uses only one AeroDyn input file for all turbines. 
+To minimize the impact of the multiple-turbines implementation, the driver currently uses only one AeroDyn input file for all turbines. 
 This means that the AeroDyn options are currently the same for all rotors.
 
 The definition of the blade files and tower inputs needs to be adapted when more than three blades are used and more than one turbine is used.
@@ -370,9 +382,9 @@ Examples of driver input files
 
 Working examples that uses the different features of the driver are given in the r-test repository:
 
-- (Temporary) ` New driver branch <https://github.com/OpenFAST/r-test/tree/f/driver/modules/aerodyn/>`_ .
+- (Temporary) `New driver branch <https://github.com/OpenFAST/r-test/tree/f/driver/modules/aerodyn/>`_ .
 - `Dev branch <https://github.com/OpenFAST/r-test/tree/dev/modules/aerodyn/>`_ .
-- `Mani branch <https://github.com/OpenFAST/r-test/tree/main/modules/aerodyn/>`_ .
+- `Main branch <https://github.com/OpenFAST/r-test/tree/main/modules/aerodyn/>`_ .
 
 
 
@@ -381,18 +393,19 @@ Working examples that uses the different features of the driver are given in the
 Main Driver Input Files
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Example of an AeroDyn driver for a basic inflow, basic HAWT, and combined case analyses is given below:
+An example of an AeroDyn driver for a basic inflow, basic HAWT, and combined case analyses is given below:
+
 
 .. code::
 
     ----- AeroDyn Driver Input File ---------------------------------------------------------
-    BAR turbine driver input file, using basic input
+    Three bladed wind turbine, using basic geometry input
     ----- Input Configuration ---------------------------------------------------------------
     False           Echo         - Echo input parameters to "<rootname>.ech"?
             3       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined cases}
            11.0     TMax         - Total run time [used only when AnalysisType/=3] (s)
             0.5     DT           - Simulation time step [used only when AnalysisType/=3] (s)
-    "./OpenFAST_BAR_00_AeroDyn15.dat"        AeroFile - Name of the primary AeroDyn input file
+    "./AD.dat"      AeroFile - Name of the primary AeroDyn input file
     ----- Inflow Data -----------------------------------------------------------------------
               0      CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
     "unused"         InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
@@ -423,12 +436,12 @@ Example of an AeroDyn driver for a basic inflow, basic HAWT, and combined case a
     "unused"         TimeAnalysisFileName - Filename containing time series (6 column: Time, HWndSpeed, PLExp, RotSpd, Pitch, Yaw). 
     -----  Combined-Case Analysis [used only when AnalysisType=3, numTurbines=1 -------------
              4  NumCases     - Number of cases to run
-    HWndSpeed     PLExp     RotSpd       Pitch          Yaw     dT      Tmax  DOF  Amplitude Frequency 
-    (m/s)        (-)          (rpm)        (deg)        (deg)   (s)     (s)    (-)     (-)     (Hz)
-      08           0.0          6.         0.            0.     1.0     100     0      0        0 
-      08           0.0          6.         0.            0.     1.0     100     0      0        0 
-      09           0.1          7.         1.            0.     0.5     51      1      5.0      0.1 
-      09           0.2          8.         2.            0.     0.51    52      1      2.0      0.2 
+    HWndSpeed  PLExp  RotSpd  Pitch   Yaw   dT    Tmax  DOF  Amplitude Frequency 
+    (m/s)      (-)    (rpm)   (deg)  (deg)  (s)   (s)   (-)   (-)       (Hz)
+      8.0      0.0     6.      0.      0.   1.0   100    0    0          0 
+      8.0      0.0     6.      0.      0.   1.0   100    0    0          0 
+      9.0      0.1     7.      1.      0.   0.5   51     1    5.0        0.1 
+      9.0      0.2     8.      2.      0.   0.51  52     1    2.0        0.2 
     ----- Output Settings -------------------------------------------------------------------
     "ES15.8E2"       OutFmt      - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
     2                OutFileFmt  - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
