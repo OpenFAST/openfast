@@ -1705,7 +1705,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    INTEGER(IntKi)                          :: nt                          ! loop counter for rotor number
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
-   CHARACTER(*),   PARAMETER               :: RoutineName = 'Farm_InitFAST'
+   CHARACTER(*),   PARAMETER               :: RoutineName = 'Farm_InitMD'
    
    
    ErrStat = ErrID_None
