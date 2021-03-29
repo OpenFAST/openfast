@@ -25,7 +25,7 @@ to calculate various parameters, as shown in
    :align: center
 
    Information flowchart for setting up inflow generation and FAST.Farm
-   simulations. Here, *S*\ =\ *X*, *Y*, or *Z*.
+   simulations. Here, *S* = *X*, *Y*, or *Z*.
 
 Note that this schematic only includes information relevant to FAST.Farm
 simulations. Typically, additional inflow information is required to
@@ -40,84 +40,132 @@ which should be avoided. Note that this chapter assumes a wind direction
 of :math:`0^\circ`\ -- i.e., ambient wind that propagates along the *+X*
 axis of the global inertial frame coordinate system.
 
-Before generating the inflow (either with a high-fidelity precursor or
-synthetic turbulence), information about the wind turbines, wind farm
-layout, and mean inflow conditions are needed. With this information,
-inflow generation can begin. Though not required, it is recommended to
-complete inflow generation before setting up the FAST.Farm simulation.
-This is because the realized spatial discretization values and/or mean
-hub height velocity can differ from what is desired. Having the correct
-values of these parameters leads to less interpolation of the wind data
-in FAST.Farm simulations, which would otherwise reduce the ambient
-turbulence.
+When generating a FAST.Farm simulation setup and corresponding inflow, planning
+is important. Improper planning could results in FAST.Farm errors and/or needing
+to regenerate the inflow. Values that should be known *a priori* are:
+
+   - wind turbine rotor diameter (:math:`D^\text{Rotor}`);
+   - wind turbine hub height;
+   - maximum turbine chord length (:math:`c_\text{max}`);
+   - maximum turbine natural frequency (:math:`f_\text{max}`);
+   - *X*, *Y*, and *Z* locations of all turbines in the wind farm;
+   - desired mean inflow hub-height wind velocity;
+   - and mean inflow wind direction.
+
+The values that must be computed using this information are:
+
+   - inflow and FAST.Farm domain size (height, width, and length); 
+   - FAST.Farm high- and low-resolution domain origin locations (**S0_High** and
+     **S0_Low**, where *S* = *X*, *Y*, or *Z*);
+   - high- and low-resolution temporal discretization values (**DT_High** and
+     **DT_Low**);
+   - actual mean inflow hub-height wind velocity (:math:`V_\text{hub}`);
+   - mean inflow wind velocity at a reference height (:math:`V_\text{ref}`);
+   - high- and low-resolution spatial discretization values (**DS_High** and
+     **DS_Low**);
+   - and the number of grid points in the high- and low-resolution domains
+     (**NS_High** and **NS_Low**);
+   - and additional wake dynamics properties (**dr**, **NumRadii**, and
+     **NumPlanes**).
+
+With this information, inflow generation can begin. Though not required, it is
+recommended to complete inflow generation before setting up the FAST.Farm
+simulation.  This is because the realized spatial discretization values and/or
+mean hub height velocity can differ from what is desired. Having the correct
+values of these parameters leads to less interpolation of the wind data in
+FAST.Farm simulations, which would otherwise reduce the ambient turbulence.
 
 When setting up the inflow generation, the recommended spatial and
 temporal discretizations should be used, as discussed in
-:numref:`FF:sec:DiscRecs`. If using a high-fidelity precursor with
-**Mod_AmbWind** = 1, all discretization values can be specified as the
-exact desired value. Note that these values apply to the FAST.Farm
-sampling of the precursor, not necessarily the actual precursor
-simulation. If **Mod_AmbWind** = 2, a single synthetic inflow (TurbSim
-or Mann) must be generated using the high-resolution discretization
-values recommended herein. If **Mod_AmbWind** = 3, multiple synthetic
-inflows must be generated. In this case, the recommended high-resolution
-discretizations should be used for all high-resolution inflows
-generated. For the low-resolution inflow generation, the recommended
-high-resolution temporal discretization and low-resolution spatial
-discretization should be used. If using synthetic inflow (TurbSim or
-Mann), the inflow streamwise spatial discretization, DX_Inflow, is not
-specified by the user, but is instead based on Taylor’s
-frozen-turbulence assumption. As the FAST.Farm domain streamwise
-discretization should be based on the inflow streamwise discretization,
-the user should compute this value using the inflow time step and the
-mean hub-height wind speed, :math:`V_\text{Hub}`. The
-:math:`V_\text{Hub}` may differ from the desired value, as discussed in
-:numref:`FF:sec:Synthetic`, and should be computed directly from
-the generated synthetic inflow. Therefore, the exact resulting DX_Inflow
-will not be known until after the inflow has been generated.
-Additionally, DX_Inflow will likely be much smaller than the desired
-values of **DX_Low** and **DX_High**.
+:numref:`FF:sec:DiscRecs`. If using:
 
-When setting up the FAST.Farm simulation itself, many of the values that
-were used for inflow generation will be used again here to specify the
-FAST.Farm domain. Note that this domain specification in FAST.Farm is
-only needed when using synthetic turbulence inflow. The origin of the
-low-resolution domain (**X0_Low**, **Y0_Low**, and **Z0_Low**) should be
-determined based on the minimum turbine *X*- and *Y*-locations, turbine
-yaw misalignment, inflow wind direction, and the expected range of wake
-meandering. Specifically, **X0_Low** must accommodate all turbine
+   - **Mod\_AmbWind** = 1, a high-fidelity must be generated and all
+     discretization values can be specified as the exact desired value.
+   - **Mod\_AmbWind** = 2, a single synthetic inflow (TurbSim or Mann) must be
+     generated using the high-resolution discretization values recommended
+     herein.
+   - **Mod\_AmbWind** = 3, multiple synthetic inflows must be generated. In
+     this case, the recommended high-resolution discretizations should be used
+     for all high-resolution inflows generated. For the low-resolution inflow
+     generation, the recommended high-resolution temporal discretization and
+     low-resolution spatial discretization should be used.
+
+If using synthetic inflow (TurbSim or Mann), the inflow streamwise spatial
+discretization, **DX_Inflow**, is not specified by the user, but is instead
+based on Taylor's frozen-turbulence assumption. Because streamwise
+discretization of the FAST.Farm domain should be based on the inflow streamwise
+discretization, the user should compute this value using the inflow time step
+and the mean hub-height wind speed, :math:`V_\text{Hub}`. The
+:math:`V_\text{Hub}` may differ from the desired value, as discussed in
+:numref:`FF:sec:Synthetic`, and should be computed directly from the generated
+synthetic inflow.  Therefore, the exact resulting **DX_Inflow** will not be
+known until after the inflow has been generated.  Additionally, **DX_Inflow**
+will likely be much smaller than the desired values of **DX_Low** and
+**DX_High**.
+
+When setting up the FAST.Farm simulation itself, many of the values that were
+used for inflow generation will be used again here to specify the FAST.Farm
+domain. Note that this domain specification in FAST.Farm is only needed when
+using synthetic turbulence inflow. The origin of the low-resolution domain
+(**X0_Low**, **Y0_Low**, and **Z0_Low**) should be determined based on:
+
+   - the minimum turbine *X*- and *Y*-locations;
+   - turbine yaw misalignment;
+   - inflow wind direction;
+   - and the expected range of wake meandering.
+
+Specifically, **X0_Low** must accommodate all turbine
 locations as well as allow enough room to analyze the undisturbed inflow
 upstream of the wind farm, if desired. **Y0_Low** must accommodate all
 turbine locations as well as the horizontal wake meandering. When using
 TurbSim, which cannot generate wind at ground level, **Z0_Low** should
-be close to but above ground level. The calculated **Y0_Low** and
-**Z0_Low** values are then used to compute the domain width and height,
-in conjunction with the horizontal and vertical meandering distance
-requirements, turbine yaw misalignment, and inflow wind direction. These
-quantities, along with the lateral and vertical spacing of the inflow
-generation, DY_Inflow and DZ_Inflow, are then used to compute the
-lateral and vertical spacing of the low-resolution domain in FAST.Farm
-(**DY_Low** and **DZ_Low**) and number of grid points (**NY_Low** and
-**NZ_Low**). The low-resolution temporal discretization (**DT_Low**)
-should be determined from the turbine diameter, inflow hub-height
-velocity, and the actual inflow temporal discretization. The domain
-length should be based on the streamwise extent of the wind farm as well
-as allow enough room to analyze the waked outflow downstream of the wind
-farm, if desired. The streamwise spacing and number of grid points
-(**DX_Low** and **NX_Low**) should be based on **DT_Low** and the mean
-wind speed. Additional parameters that must be determined are the
+be close to but above ground level.
+
+The FAST.Farm domain width and height are then computed using:
+
+   - the turbine locations;
+   - the calculated **Y0_Low** and **Z0_Low** values;
+   - the horizontal and vertical meandering distance requirements;
+   - turbine yaw misalignment;
+   - and the inflow wind direction.
+
+The domain length should be based on the streamwise extent of the wind farm and,
+if desired, allow enough room to analyze the waked outflow downstream of the
+wind farm.
+
+The low-resolution domain in FAST.Farm (**DY_Low** and **DZ_Low**) and number of
+grid points (**NY_Low** and **NZ_Low**) can then be computed using:
+
+    - the domain width and height;
+    - the lateral and vertical spacing of the generated inflow;
+    - and DY_Inflow and DZ_Inflow.
+
+The low-resolution temporal discretization (**DT_Low**)
+should be computed using:
+
+    - the turbine diameter;
+    - inflow hub-height velocity;
+    - and the inflow temporal discretization.
+
+The streamwise spacing and number of grid points (**DX_Low** and **NX_Low**)
+should also be based on **DT_Low** and the mean wind speed.
+
+
+The final domain parameters to calculate are the
 locations of the high-resolution domains (**X0_High**, **Y0_High**, and
 **Z0_High**) and the number of grid points required to make up the
 domain (**NX_High**, **NY_High**, and **NZ_High**). These quantities
-should be determined from **DS_High** values, where *S*\ =\ *X*, *Y*, or
-*Z*, used for inflow generation, turbine locations, and the size of the
-high-resolution domains. These **DS_High** values should be selected
-based on recommended high-resolution domain discretization criteria,
-discussed in :numref:`FF:sec:DiscRecs`. Additional wake dynamics
-quantities are needed when specifying the FAST.Farm input file. It is
-recommended to base **dr** on the maximum blade chord; **NumRadii** on
-wake diameter and **dr**; and **NumPlanes** on **DT_Low**, inflow
-hub-height velocity, and the distance between turbine locations.
+should be determined from:
+
+   - **DS_High** values;
+   - turbine locations;
+   - and the size of the high-resolution domains.
+
+Additional wake dynamics quantities are needed when specifying the FAST.Farm
+input file, as discussed further in :numref:`FF:sec:DiscRecs`.
+It is recommended to base **dr** on :math:`c_\text{max}`;
+**NumRadii** on wake diameter and **dr**; and **NumPlanes** on **DT_Low**,
+inflow hub-height velocity, and the distance between turbine locations.
 
 A sample turbine layout and domain locations are shown in
 :numref:`FF:FFarmLayout`.
