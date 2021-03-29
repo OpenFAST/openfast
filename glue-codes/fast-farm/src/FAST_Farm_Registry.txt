@@ -138,8 +138,9 @@ typedef    ^    ^                 MD_DiscreteStateType      xd            -   - 
 typedef    ^    ^                 MD_ConstraintStateType    z             -   -         -   "Constraint states"
 typedef    ^    ^                 MD_OtherStateType         OtherSt       -   -         -   "Other states"
 typedef    ^    ^                 MD_ParameterType          p             -   -         -   "Parameters"
-typedef    ^    ^                 MD_InputType              u            {2}  -         -   "System inputs"
-typedef    ^    ^                 DbKi                      utimes       {2}  -         -   "Current time" s
+typedef    ^    ^                 MD_InputType              u             -   -         -   "Extrapolated system inputs"
+typedef    ^    ^                 MD_InputType              Input        {:}  -         -   "System inputs"
+typedef    ^    ^                 DbKi                      InputTimes   {:}  -         -   "Current time" s
 typedef    ^    ^                 MD_OutputType             y             -   -         -   "System outputs"
 typedef    ^    ^                 MD_MiscVarType            m             -   -         -   "Misc/optimization variables"
 typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has MD_Init been called"

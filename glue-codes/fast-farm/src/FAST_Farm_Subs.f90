@@ -1768,16 +1768,16 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    MD_InitInp%WtrDepth  =    0.0
 
 
-   !! allocate MoorDyn inputs (assuming size 2 for linear interpolation/extrapolation... >
-   !ALLOCATE( farm%MD%Input( 2 ), farm%MD%InputTimes( 2 ), STAT = ErrStat2 )
-   !IF (ErrStat2 /= 0) THEN
-   !   CALL SetErrStat(ErrID_Fatal,"Error allocating MD%Input and MD%InputTimes.",ErrStat,ErrMsg,RoutineName)
-   !   CALL Cleanup()
-   !   RETURN
-   !END IF
+   ! allocate MoorDyn inputs (assuming size 2 for linear interpolation/extrapolation... >
+   ALLOCATE( farm%MD%Input( 2 ), farm%MD%InputTimes( 2 ), STAT = ErrStat2 )
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating MD%Input and MD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
 
    ! initialize MoorDyn
-   CALL MD_Init( MD_InitInp, farm%MD%u(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, &
+   CALL MD_Init( MD_InitInp, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, &
                  farm%MD%OtherSt, farm%MD%y, farm%MD%m, farm%p%DT_mooring, MD_InitOut, ErrStat2, ErrMsg2 )
    
    farm%MD%IsInitialized = .true.
@@ -1787,6 +1787,15 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       call cleanup()
       return
    end if
+   
+   
+   ! Copy MD inputs over into the 2nd entry of the input array, to allow the first extrapolation in FARM_MD_Increment
+   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   farm%MD%InputTimes(2) = -0.1_DbKi
+   
+   CALL MD_CopyInput (farm%MD%Input(1), farm%MD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    
    
@@ -1813,7 +1822,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
      
       ! kinematics
       CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh,  &
-                          farm%MD%u(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+                          farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
       
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )          
 
@@ -1825,7 +1834,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
       !   
       !CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh,  &
-      !                    farm%MD%u(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 )
+      !                    farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 )
       !                    
       !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )              
       !end if
@@ -1855,29 +1864,27 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    INTEGER(IntKi)                          :: n_ss                      
    INTEGER(IntKi)                          :: n_FMD   
    REAL(DbKi)                              :: t_next        ! time at next step after this one (s)  
-   TYPE(MD_InputType)                      :: u_next
    INTEGER(IntKi)                          :: ErrStat2 
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_MD_Increment'
 
 
    ! ----- extrapolate MD inputs -----
-   
    t_next = t + farm%p%DT_mooring
   
    ! Do a linear extrapolation to estimate MoorDyn inputs at time n_ss+1
-   CALL MD_Input_ExtrapInterp(farm%MD%u, farm%MD%uTimes, u_next, t_next, ErrStat2, ErrMsg2)
+   CALL MD_Input_ExtrapInterp(farm%MD%Input, farm%MD%InputTimes, farm%MD%u, t_next, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
    
    ! Shift "window" of MD%Input: move values of Input and InputTimes from index 1 to index 2
-   CALL MD_CopyInput (farm%MD%u(1),  farm%MD%u(2),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-   farm%MD%uTimes(2) = farm%MD%uTimes(1)
+   farm%MD%InputTimes(2) = farm%MD%InputTimes(1)
    
    ! update index 1 entries with the new extrapolated values
-   CALL MD_CopyInput (u_next,  farm%MD%u(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL MD_CopyInput (farm%MD%u,  farm%MD%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-   farm%MD%uTimes(1) = t_next  
+   farm%MD%InputTimes(1) = t_next  
    
   
    ! ----- map substructure kinematics to MoorDyn inputs -----      (from mapping called at start of CalcOutputs Solve INputs)
@@ -1885,25 +1892,25 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    do nt = 1,farm%p%NumTurbines
       !if (farm%MD%p%NFairs(nt) > 0 ) then   
          
-         CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%u(1)%PtFairleadDisplacement(nt), &
+         CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%Input(1)%PtFairleadDisplacement(nt), &
                                        farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
        
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
                              
          ! SubDyn alternative
-         !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%u(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
+         !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
       !end if 
    end do 
    
    
    ! ----- update states and calculate outputs -----
    
-   CALL MD_UpdateStates( t, n_FMD, farm%MD%u, farm%MD%utimes, farm%MD%p, farm%MD%x,  &
+   CALL MD_UpdateStates( t, n_FMD, farm%MD%Input, farm%MD%InputTimes, farm%MD%p, farm%MD%x,  &
                          farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%m, ErrStat2, ErrMsg2 )
    
    CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-   CALL MD_CalcOutput( t, farm%MD%u(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z,  &
+   CALL MD_CalcOutput( t, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z,  &
                        farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2 )
    
    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1917,7 +1924,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          ! mapping
          CALL Transfer_Point_to_Point( farm%MD%y%PtFairleadLoad(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
-                                       farm%MD%u(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
+                                       farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
       
          CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
          
@@ -1931,7 +1938,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          ! SubDyn alternative
          !CALL Transfer_Point_to_Point( farm%MD%y%PtFairleadLoad(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
          !                              farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
-         !                              farm%MD%u(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
+         !                              farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
          !
          !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Force
          !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Moment 
