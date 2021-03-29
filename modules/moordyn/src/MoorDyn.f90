@@ -282,10 +282,14 @@ CONTAINS
       ! Go through each turbine and set up its mesh and initial fairlead positions
       DO iTurb = 1,p%nTurbines
          
+         ! Always have at least one node (it will be a dummy node if no fairleads are attached)
+         K = p%NFairs(iTurb)
+         if (K == 0) K = 1
+         
          ! create input mesh for fairlead kinematics
          CALL MeshCreate(BlankMesh=u%PtFairleadDisplacement(iTurb) , &
                        IOS= COMPONENT_INPUT           , &
-                       Nnodes=p%NFairs(iTurb)         , &
+                       Nnodes= K                      , &
                        TranslationDisp=.TRUE.         , &
                        TranslationVel=.TRUE.          , &
                        ErrStat=ErrStat2               , &
@@ -335,6 +339,14 @@ CONTAINS
 
          END DO    ! I
 
+         ! add a single dummy element for turbines that aren't coupled with, to keep I/O interp/extrap routines happy
+         if (p%NFairs(iTurb) == 0) then
+            rPos = 0.0_DbKi       ! position at PRP
+            CALL MeshPositionNode(u%PtFairleadDisplacement(iTurb), 1, rPos, ErrStat2, ErrMsg2)
+            CALL MeshConstructElement(u%PtFairleadDisplacement(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, 1)
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
+         end if
 
          CALL MeshCommit ( u%PtFairleadDisplacement(iTurb), ErrStat, ErrMsg )
 

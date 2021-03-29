@@ -1802,7 +1802,9 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    END IF
    
    ! MoorDyn point mesh to/from ElastoDyn (or SubDyn) point mesh
-   do nt = 1,farm%p%NumTurbines
+   do nt = 1,farm%p%NumTurbines      
+      !if (farm%MD%p%NFairs(nt) > 0 ) then   ! only set up a mesh map if MoorDyn has connections to this turbine
+      
       ! loads
       CALL MeshMapCreate( farm%MD%y%PtFairleadLoad(nt),  &
                           farm%FWrap(nt)%m%Turbine%ED%Input(1)%PlatformPtMesh, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
@@ -1826,7 +1828,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       !                    farm%MD%u(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 )
       !                    
       !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )              
-   
+      !end if
    end do   
    
 
@@ -1881,14 +1883,16 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    ! ----- map substructure kinematics to MoorDyn inputs -----      (from mapping called at start of CalcOutputs Solve INputs)
 
    do nt = 1,farm%p%NumTurbines
-
-      CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%u(1)%PtFairleadDisplacement(nt), &
-                                    farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
-    
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
-                          
-      ! SubDyn alternative
-      !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%u(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
+      !if (farm%MD%p%NFairs(nt) > 0 ) then   
+         
+         CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%u(1)%PtFairleadDisplacement(nt), &
+                                       farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+       
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
+                             
+         ! SubDyn alternative
+         !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%u(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
+      !end if 
    end do 
    
    
@@ -1908,27 +1912,30 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
    do nt = 1,farm%p%NumTurbines
    
-      ! mapping
-      CALL Transfer_Point_to_Point( farm%MD%y%PtFairleadLoad(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2,  &
-                                    farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
-                                    farm%MD%u(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
-   
-      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+      if (farm%MD%p%NFairs(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine
+         
+         ! mapping
+         CALL Transfer_Point_to_Point( farm%MD%y%PtFairleadLoad(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2,  &
+                                       farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
+                                       farm%MD%u(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
       
-      ! adding to ElastoDyn mesh that will be a future input (I'm assuming MeshMapData%u_ED_PlatformPtMesh makes its way into ElastoDyn inputs somehow)
-      farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Force  &
-                                                                      + farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2%Force
-                                                                      
-      farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Moment  &
-                                                                      + farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2%Moment            
-   
-      ! SubDyn alternative
-      !CALL Transfer_Point_to_Point( farm%MD%y%PtFairleadLoad(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
-      !                              farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
-      !                              farm%MD%u(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
-      !
-      !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Force
-      !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Moment 
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+         
+         ! adding to ElastoDyn mesh that will be a future input (I'm assuming MeshMapData%u_ED_PlatformPtMesh makes its way into ElastoDyn inputs somehow)
+         farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Force  &
+                                                                         + farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2%Force
+                                                                         
+         farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Moment  &
+                                                                         + farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2%Moment            
+      
+         ! SubDyn alternative
+         !CALL Transfer_Point_to_Point( farm%MD%y%PtFairleadLoad(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
+         !                              farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
+         !                              farm%MD%u(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
+         !
+         !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Force
+         !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Moment 
+      end if
    end do
 end subroutine Farm_MD_Increment
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2222,7 +2229,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
 
          ! A nested parallel for loop to call each instance of OpenFAST in parallel
          !$OMP PARALLEL DO DEFAULT(Shared) Private(nt)
-         DO nt = 1,farm%p%NumTurbines+1
+         DO nt = 1,farm%p%NumTurbines
             call FWrap_Increment( t2, n_FMD, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                         farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
          END DO              
