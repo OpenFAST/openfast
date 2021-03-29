@@ -70,7 +70,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  Index 1 corresponds to X or Y coordinate.  Index 2 corresponds to point number. [-]
     REAL(ReKi)  :: PtfmLocationX      !< Copy of X coordinate of platform location in the wave field, used to offset/phase-shift all wave kinematics to account for location in the farm [m]
     REAL(ReKi)  :: PtfmLocationY      !< Copy of Y coordinate of platform location in the wave field, used to offset/phase-shift all wave kinematics to account for location in the farm [m]
-    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin [-]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     INTEGER(IntKi)  :: NWaveKin      !< Number of points where the incident wave kinematics will be computed [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinxi      !< xi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinyi      !< yi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]

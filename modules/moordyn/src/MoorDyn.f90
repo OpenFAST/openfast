@@ -27,7 +27,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v1.01.02F', '8-Apr-2016' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v1.03.01FFarm', '28-Mar-2021' )
 
 
    PUBLIC :: MD_Init
@@ -62,9 +62,10 @@ CONTAINS
       INTEGER(IntKi)                               :: I              ! index
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
+      INTEGER(IntKi)                               :: iTurb          ! index
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
-      REAL(ReKi)                                   :: Pos(3)         ! array for setting absolute fairlead positions in mesh
+      REAL(ReKi)                                   :: rPos(3)        ! array for setting fairlead reference positions in mesh
       REAL(DbKi)                                   :: TransMat(3,3)  ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
       REAL(DbKi), ALLOCATABLE                      :: FairTensIC(:,:)! array of size Nfairs, 3 to store three latest fairlead tensions of each line
       CHARACTER(20)                                :: TempString     ! temporary string for incidental use
@@ -103,6 +104,33 @@ CONTAINS
       p%RootName = TRIM(InitInp%RootName)//'.MD'  ! all files written from this module will have this root name
 
 
+      ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
+      p%nTurbines = InitInp%FarmSize         ! 0 indicates regular FAST module mode
+      
+      if (p%nTurbines == 0) p%nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
+      
+      allocate( p%NFairs(                p%nTurbines))  ! allocate the array that will hold the number of fairleads for each turbine
+      allocate( p%TurbineRefPos(      3, p%nTurbines))
+         
+      if (InitInp%FarmSize > 0) then
+         CALL WrScr('   >>> MoorDyn is running in array mode <<< ')
+          
+         ! could make sure the size of this is right: SIZE(InitInp%FarmCoupledKinematics)  
+      
+         !InitInp%FarmNCpldCons        
+         
+         ! copy over turbine reference positions for later use
+         p%TurbineRefPos = InitInp%TurbineRefPos
+      
+      else    ! normal, FAST module mode
+         
+         m%PtfmInit = InitInp%PtfmInit(:,1)   ! save a copy of PtfmInit so it's available at the farm level
+         p%TurbineRefPos = 0.0_DbKi           ! for now assuming this is zero for FAST use
+
+      END IF
+      
+      
+
       ! call function that reads input file and creates cross-referenced Connect and Line objects
       CALL MDIO_ReadInput(InitInp, p, m, ErrStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -120,7 +148,9 @@ CONTAINS
 
       CALL WrNR( '   Creating mooring system.  ' )
 
-      p%NFairs = 0   ! this is the number of "vessel" type Connections.  being consistent with MAP terminology
+      do iTurb = 1, p%nTurbines
+         p%NFairs(iTurb) = 0   ! this is the number of fairleads (for each turbine if in farm mode)
+      end do
       p%NConns = 0   ! this is the number of "connect" type Connections.  not to be confused with NConnects, the number of Connections
       p%NAnchs = 0   ! this is the number of "fixed" type Connections.
 
@@ -132,23 +162,39 @@ CONTAINS
          if (TempString == 'FIXED') then
             m%ConnectList(I)%TypeNum = 0
             p%NAnchs = p%NAnchs + 1
+            
          else if (TempString == 'VESSEL') then
-            m%ConnectList(I)%TypeNum = 1
-            p%NFairs = p%NFairs + 1             ! if a vessel connection, increment fairlead counter
+         
+         
+            m%ConnectList(I)%TypeNum = -1             ! changing fairlead typenum to -1 for FAST module operation
+            p%NFairs(1) = p%NFairs(1) + 1             ! if a vessel connection, increment fairlead counter
+            
          else if (TempString == 'CONNECT') then
             m%ConnectList(I)%TypeNum = 2
             p%NConns = p%NConns + 1
+            
+         else if (INDEX(TempString, "TURBINE") > 0 ) then     ! turbine-coupled in FAST.Farm case
+            if (p%nTurbines > 0) then
+               K = scan(TempString , '1234567890' )             ! find index of first number in the string
+               READ(TempString(K:), *) iTurb      ! READ(TRIM(TempString(K:)), *) iTurb        ! convert to int, representing turbine index               
+               m%ConnectList(I)%TypeNum = -iTurb                ! typeNum < 0 indicates -turbine number
+               p%NFairs(iTurb) = p%NFairs(iTurb) + 1            ! increment fairlead counter
+               print *, ' added connection ', I, ' as fairlead for turbine ', iTurb
+            else
+               call CheckError( ErrID_Fatal, 'Error: Turbine[n] Connect types can only be used with FAST.Farm.' )
+               return
+            end if
          else
             CALL CheckError( ErrID_Fatal, 'Error in provided Connect type.  Must be fixed, vessel, or connect.' )
             RETURN
          END IF
       END DO
 
-      CALL WrScr(trim(Num2LStr(p%NFairs))//' fairleads, '//trim(Num2LStr(p%NAnchs))//' anchors, '//trim(Num2LStr(p%NConns))//' connects.')
+      CALL WrScr(trim(Num2LStr(p%NFairs(1)))//' fairleads (T1), '//trim(Num2LStr(p%NAnchs))//' anchors, '//trim(Num2LStr(p%NConns))//' connects.')
 
 
-      ! allocate fairleads list
-      ALLOCATE ( m%FairIdList(p%NFairs), STAT = ErrStat )
+      ! allocate fairleads list (size to the maximum number of fairleads on any given turbine - some entries may not be used)
+      ALLOCATE ( m%FairIdList(MAXVAL(p%NFairs),p%nTurbines), STAT = ErrStat ) 
       IF ( ErrStat /= ErrID_None ) THEN
          CALL CheckError( ErrID_Fatal, 'Error allocating space for FairIdList array.')
          RETURN
@@ -163,15 +209,16 @@ CONTAINS
 
 
       ! now go back through and record the fairlead Id numbers (this is all the "connecting" that's required)
-      J = 1  ! counter for fairlead number
-      K = 1  ! counter for connect number
+      p%NFairs = 0
+      p%NConns = 0  ! re-using this as a counter for connect number (should end back at same value)
       DO I = 1,p%NConnects
-         IF (m%ConnectList(I)%TypeNum == 1) THEN
-           m%FairIdList(J) = I             ! if a vessel connection, add ID to list
-           J = J + 1
+         IF (m%ConnectList(I)%TypeNum < 0) THEN
+           iTurb = -m%ConnectList(I)%TypeNum
+           p%NFairs(iTurb) = p%NFairs(iTurb) + 1
+           m%FairIdList(p%NFairs(iTurb), iTurb) = I             ! if a vessel connection, add ID to list of the appropriate turbine
          ELSE IF (m%ConnectList(I)%TypeNum == 2) THEN
-           m%ConnIdList(K) = I             ! if a connect connection, add ID to list
-           K = K + 1
+           p%NConns = p%NConns + 1
+           m%ConnIdList(p%NConns) = I             ! if a connect connection, add ID to list
          END IF
       END DO
 
@@ -221,78 +268,93 @@ CONTAINS
       !             create i/o meshes for fairlead positions and forces
       !--------------------------------------------------------------------------
 
-      ! create input mesh for fairlead kinematics
-      CALL MeshCreate(BlankMesh=u%PtFairleadDisplacement , &
-                    IOS= COMPONENT_INPUT           , &
-                    Nnodes=p%NFairs                , &
-                    TranslationDisp=.TRUE.         , &
-                    TranslationVel=.TRUE.          , &
-                    ErrStat=ErrStat2                , &
-                    ErrMess=ErrMsg2)
+      ALLOCATE ( u%PtFairleadDisplacement(p%nTurbines), STAT = ErrStat )
+      IF ( ErrStat /= ErrID_None ) THEN
+        CALL CheckError(ErrID_Fatal, ' Error allocating PtFairleadDisplacement input array.')
+        RETURN
+      END IF
+      ALLOCATE ( y%PtFairleadLoad(p%nTurbines), STAT = ErrStat )
+      IF ( ErrStat /= ErrID_None ) THEN
+        CALL CheckError(ErrID_Fatal, ' Error allocating PtFairleadLoad output array.')
+        RETURN
+      END IF
 
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
-
-
-      !  --------------------------- set up initial condition of each fairlead -------------------------------
-      DO i = 1,p%NFairs
-
-         Pos(1) = m%ConnectList(m%FairIdList(i))%conX ! set relative position of each fairlead i (I'm pretty sure this is just relative to ptfm origin)
-         Pos(2) = m%ConnectList(m%FairIdList(i))%conY
-         Pos(3) = m%ConnectList(m%FairIdList(i))%conZ
-
-         CALL MeshPositionNode(u%PtFairleadDisplacement,i,Pos,ErrStat2,ErrMsg2)! "assign the coordinates of each node in the global coordinate space"
-
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-
-         ! set offset position of each node to according to initial platform position
-         CALL SmllRotTrans('initial fairlead positions due to platform rotation', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), TransMat, '', ErrStat2, ErrMsg2)  ! account for possible platform rotation
-
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-         ! Apply initial platform rotations and translations (fixed Jun 19, 2015)
-         u%PtFairleadDisplacement%TranslationDisp(1,i) = InitInp%PtfmInit(1) + Transmat(1,1)*Pos(1) + Transmat(2,1)*Pos(2) + TransMat(3,1)*Pos(3) - Pos(1)
-         u%PtFairleadDisplacement%TranslationDisp(2,i) = InitInp%PtfmInit(2) + Transmat(1,2)*Pos(1) + Transmat(2,2)*Pos(2) + TransMat(3,2)*Pos(3) - Pos(2)
-         u%PtFairleadDisplacement%TranslationDisp(3,i) = InitInp%PtfmInit(3) + Transmat(1,3)*Pos(1) + Transmat(2,3)*Pos(2) + TransMat(3,3)*Pos(3) - Pos(3)
-
-         ! set velocity of each node to zero
-         u%PtFairleadDisplacement%TranslationVel(1,i) = 0.0_DbKi
-         u%PtFairleadDisplacement%TranslationVel(2,i) = 0.0_DbKi
-         u%PtFairleadDisplacement%TranslationVel(3,i) = 0.0_DbKi
+      ! Go through each turbine and set up its mesh and initial fairlead positions
+      DO iTurb = 1,p%nTurbines
          
-         !print *, 'Fairlead ', i, ' z TranslationDisp at start is ', u%PtFairleadDisplacement%TranslationDisp(3,i)
-         !print *, 'Fairlead ', i, ' z Position at start is ', u%PtFairleadDisplacement%Position(3,i)
-
-
-         ! set each node as a point element
-         CALL MeshConstructElement(u%PtFairleadDisplacement, ELEMENT_POINT, ErrStat2, ErrMsg2, i)
+         ! create input mesh for fairlead kinematics
+         CALL MeshCreate(BlankMesh=u%PtFairleadDisplacement(iTurb) , &
+                       IOS= COMPONENT_INPUT           , &
+                       Nnodes=p%NFairs(iTurb)         , &
+                       TranslationDisp=.TRUE.         , &
+                       TranslationVel=.TRUE.          , &
+                       ErrStat=ErrStat2               , &
+                       ErrMess=ErrMsg2)
 
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
 
-      END DO    ! I
+
+         !  --------------------------- set up initial condition of each fairlead -------------------------------
+         DO i = 1,p%NFairs(iTurb)
+
+            rPos(1) = m%ConnectList(m%FairIdList(i, iTurb))%conX       ! reference position of each fairlead relative to each turbine's local reference position
+            rPos(2) = m%ConnectList(m%FairIdList(i, iTurb))%conY
+            rPos(3) = m%ConnectList(m%FairIdList(i, iTurb))%conZ
+
+            CALL MeshPositionNode(u%PtFairleadDisplacement(iTurb), i, rPos, ErrStat2, ErrMsg2)  ! set reference coordinates of each node in the respective turbine's 'global' coordinate space
+
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+            ! set offset position of each node to according to initial platform position and rotation
+            CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), TransMat, '', ErrStat2, ErrMsg2)
+
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+            ! Apply initial platform rotations and translations (fixed Jun 19, 2015)
+            u%PtFairleadDisplacement(iTurb)%TranslationDisp(1,i) = InitInp%PtfmInit(1,iTurb) + Transmat(1,1)*rPos(1) + Transmat(2,1)*rPos(2) + TransMat(3,1)*rPos(3) - rPos(1)
+            u%PtFairleadDisplacement(iTurb)%TranslationDisp(2,i) = InitInp%PtfmInit(2,iTurb) + Transmat(1,2)*rPos(1) + Transmat(2,2)*rPos(2) + TransMat(3,2)*rPos(3) - rPos(2)
+            u%PtFairleadDisplacement(iTurb)%TranslationDisp(3,i) = InitInp%PtfmInit(3,iTurb) + Transmat(1,3)*rPos(1) + Transmat(2,3)*rPos(2) + TransMat(3,3)*rPos(3) - rPos(3)
+
+            ! set velocity of each node to zero
+            u%PtFairleadDisplacement(iTurb)%TranslationVel(1,i) = 0.0_DbKi
+            u%PtFairleadDisplacement(iTurb)%TranslationVel(2,i) = 0.0_DbKi
+            u%PtFairleadDisplacement(iTurb)%TranslationVel(3,i) = 0.0_DbKi
+            
+            !print *, 'Fairlead ', i, ' z TranslationDisp at start is ', u%PtFairleadDisplacement(iTurb)%TranslationDisp(3,i)
+            !print *, 'Fairlead ', i, ' z Position at start is ', u%PtFairleadDisplacement(iTurb)%Position(3,i)
 
 
-      CALL MeshCommit ( u%PtFairleadDisplacement, ErrStat, ErrMsg )
+            ! set each node as a point element
+            CALL MeshConstructElement(u%PtFairleadDisplacement(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, i)
 
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+         END DO    ! I
 
 
-      ! copy the input fairlead kinematics mesh to make the output mesh for fairlead loads, PtFairleadLoad
-      CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement,   DestMesh = y%PtFairleadLoad, &
-                      CtrlCode = MESH_SIBLING,               IOS      = COMPONENT_OUTPUT, &
-                      Force    = .TRUE.,                     ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
+         CALL MeshCommit ( u%PtFairleadDisplacement(iTurb), ErrStat, ErrMsg )
 
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+
+         ! copy the input fairlead kinematics mesh to make the output mesh for fairlead loads, PtFairleadLoad
+         CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement(iTurb),   DestMesh = y%PtFairleadLoad(iTurb), &
+                         CtrlCode = MESH_SIBLING,               IOS      = COMPONENT_OUTPUT, &
+                         Force    = .TRUE.,                     ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
+
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+      end do  ! iTurb
 
 
       ! --------------------------------------------------------------------
-      !   go through all Connects and set position based on input file
+      !   go through all Connections and set position based on input file
       ! --------------------------------------------------------------------
 
       ! first do it for all connections (connect and anchor types will be saved)
@@ -305,13 +367,19 @@ CONTAINS
          m%ConnectList(I)%rd(3) = 0.0_DbKi
       END DO
 
-      ! then do it for fairlead types
-      DO I = 1,p%NFairs
-         DO J = 1, 3
-            m%ConnectList(m%FairIdList(I))%r(J)  = u%PtFairleadDisplacement%Position(J,I) + u%PtFairleadDisplacement%TranslationDisp(J,I)
-            m%ConnectList(m%FairIdList(I))%rd(J) = 0.0_DbKi
+      ! then redo it for fairlead types (remember that for FAST.Farm these need to be offset by turbine positions)
+      do iTurb = 1,p%nTurbines
+         DO I = 1,p%NFairs(iTurb)
+            ! get values in turbine's 'global' reference frame from its mesh
+            DO J = 1, 3
+               m%ConnectList(m%FairIdList(I,iTurb))%r(J)  = u%PtFairleadDisplacement(iTurb)%Position(J,I) + u%PtFairleadDisplacement(iTurb)%TranslationDisp(J,I)
+               m%ConnectList(m%FairIdList(I,iTurb))%rd(J) = 0.0_DbKi
+            END DO
+            ! offset into farm's true global reference based on turbine X and Y reference positions (these should be 0 for regular FAST use)
+            m%ConnectList(m%FairIdList(I,iTurb))%r(1) = m%ConnectList(m%FairIdList(I,iTurb))%r(1) + p%TurbineRefPos(1,iTurb)
+            m%ConnectList(m%FairIdList(I,iTurb))%r(2) = m%ConnectList(m%FairIdList(I,iTurb))%r(2) + p%TurbineRefPos(2,iTurb)
          END DO
-      END DO
+      end do
 
       ! for connect types, write the coordinates to the state vector
       DO I = 1,p%NConns
@@ -397,15 +465,15 @@ CONTAINS
          m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt * InitInp%CdScaleIC
       END DO
 
-      ! allocate array holding three latest fairlead tensions
-      ALLOCATE ( FairTensIC(p%NFairs,3), STAT = ErrStat )
+      ! allocate array holding three latest fairlead tensions *of first turbine only*
+      ALLOCATE ( FairTensIC(p%NFairs(1),3), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          CALL CheckError( ErrID_Fatal, ErrMsg2 )
          RETURN
       END IF
 
       ! initialize fairlead tension memory at zero
-      DO J = 1,p%NFairs
+      DO J = 1,p%NFairs(1)
          DO I = 1, 3
             FairTensIC(J,I) = 0.0_DbKi
          END DO
@@ -425,10 +493,10 @@ CONTAINS
             IF (ErrStat >= AbortErrLev) RETURN
 
          ! store new fairlead tension (and previous fairlead tensions for comparison)
-         DO J = 1, p%NFairs
+         DO J = 1, p%NFairs(1)
             FairTensIC(J,3) = FairTensIC(J,2)
             FairTensIC(J,2) = FairTensIC(J,1)
-            FairTensIC(J,1) = TwoNorm(m%ConnectList(m%FairIdList(J))%Ftot(:))
+            FairTensIC(J,1) = TwoNorm(m%ConnectList(m%FairIdList(J,1))%Ftot(:))
          END DO
 
          ! provide status message
@@ -440,7 +508,7 @@ CONTAINS
          ! check for convergence (compare current tension at each fairlead with previous two values)
          IF (I > 2) THEN
             Converged = 1
-            DO J = 1, p%NFairs   ! check for non-convergence
+            DO J = 1, p%NFairs(1)   ! check for non-convergence
                IF (( abs( FairTensIC(J,1)/FairTensIC(J,2) - 1.0 ) > InitInp%threshIC ) .OR. ( abs( FairTensIC(J,1)/FairTensIC(J,3) - 1.0 ) > InitInp%threshIC ) ) THEN
                   Converged = 0
                   EXIT
@@ -560,8 +628,8 @@ CONTAINS
 !      ! go through fairleads and apply motions from driver
 !      DO I = 1, p%NFairs
 !         DO J = 1,3
-!            m%ConnectList(m%FairIdList(I))%r(J)  = u_interp%PtFairleadDisplacement%Position(J,I) + u_interp%PtFairleadDisplacement%TranslationDisp(J,I)
-!            m%ConnectList(m%FairIdList(I))%rd(J) = u_interp%PtFairleadDisplacement%TranslationVel(J,I)  ! is this right? <<<
+!            m%ConnectList(m%FairIdList(I))%r(J)  = u_interp%PtFairleadDisplacement(iTurb)%Position(J,I) + u_interp%PtFairleadDisplacement(iTurb)%TranslationDisp(J,I)
+!            m%ConnectList(m%FairIdList(I))%rd(J) = u_interp%PtFairleadDisplacement(iTurb)%TranslationVel(J,I)  ! is this right? <<<
 !         END DO
 !      END DO
 !
@@ -623,6 +691,7 @@ CONTAINS
 
       TYPE(MD_ContinuousStateType)                   :: dxdt    ! time derivatives of continuous states (initialized in CalcContStateDeriv)
       INTEGER(IntKi)                                 :: I       ! counter
+      INTEGER(IntKi)                                 :: iTurb   ! counter
       INTEGER(IntKi)                                 :: J       ! counter
 
       INTEGER(IntKi)                                 :: ErrStat2   ! Error status of the operation
@@ -632,24 +701,30 @@ CONTAINS
       ! below updated to make sure outputs are current (based on provided x and u)  - similar to what's in UpdateStates
 
       ! go through fairleads and apply motions from driver
-      DO I = 1, p%NFairs
-         DO J = 1,3
-            m%ConnectList(m%FairIdList(I))%r(J)  = u%PtFairleadDisplacement%Position(J,I) + u%PtFairleadDisplacement%TranslationDisp(J,I)
-            m%ConnectList(m%FairIdList(I))%rd(J) = u%PtFairleadDisplacement%TranslationVel(J,I)  ! is this right? <<<
+      do iTurb = 1,p%nTurbines
+         DO I = 1,p%NFairs(iTurb)
+            DO J = 1,3
+               m%ConnectList(m%FairIdList(I,iTurb))%r(J)  = u%PtFairleadDisplacement(iTurb)%Position(J,I) + u%PtFairleadDisplacement(iTurb)%TranslationDisp(J,I)
+               m%ConnectList(m%FairIdList(I,iTurb))%rd(J) = u%PtFairleadDisplacement(iTurb)%TranslationVel(J,I)
+            END DO
+            ! offset into farm's true global reference based on turbine X and Y reference positions (these should be 0 for regular FAST use)
+            m%ConnectList(m%FairIdList(I,iTurb))%r(1) = m%ConnectList(m%FairIdList(I,iTurb))%r(1) + p%TurbineRefPos(1,iTurb)
+            m%ConnectList(m%FairIdList(I,iTurb))%r(2) = m%ConnectList(m%FairIdList(I,iTurb))%r(2) + p%TurbineRefPos(2,iTurb)
          END DO
-      END DO
+      end do
 
       ! call CalcContStateDeriv in order to run model and calculate dynamics with provided x and u
       CALL MD_CalcContStateDeriv( t, u, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
 
 
       ! assign net force on fairlead Connects to the output mesh
-      DO i = 1, p%NFairs
-         DO J=1,3
-            y%PtFairleadLoad%Force(J,I) = m%ConnectList(m%FairIdList(I))%Ftot(J)
+      do iTurb = 1,p%nTurbines
+         DO i = 1, p%NFairs(iTurb)
+            DO J=1,3
+               y%PtFairleadLoad(iTurb)%Force(J,I) = m%ConnectList(m%FairIdList(I,iTurb))%Ftot(J)
+            END DO
          END DO
-      END DO
-
+      end do
 
       ! calculate outputs (y%WriteOutput) for glue code and write any m outputs to MoorDyn output files
       CALL MDIO_WriteOutputs(t, p, m, y, ErrStat2, ErrMsg2)
@@ -712,6 +787,8 @@ CONTAINS
 
       INTEGER(IntKi)                                     :: L       ! index
       INTEGER(IntKi)                                     :: J       ! index
+      INTEGER(IntKi)                                     :: iTurb   ! index
+      INTEGER(IntKi)                                     :: I       ! index
       INTEGER(IntKi)                                     :: K       ! index
       INTEGER(IntKi)                                     :: Istart  ! start index of line/connect in state vector
       INTEGER(IntKi)                                     :: Iend    ! end index of line/connect in state vector
@@ -742,12 +819,17 @@ CONTAINS
       END DO
       
       ! update fairlead positions for instantaneous values (fixed 2015-06-22)    
-      DO K = 1, p%NFairs
-         DO J = 1,3
-            m%ConnectList(m%FairIdList(K))%r(J)  = u%PtFairleadDisplacement%Position(J,K) + u%PtFairleadDisplacement%TranslationDisp(J,K)
-            m%ConnectList(m%FairIdList(K))%rd(J) = u%PtFairleadDisplacement%TranslationVel(J,K)  ! is this right? <<<
+      do iTurb = 1,p%nTurbines
+         DO I = 1, p%NFairs(iTurb)
+            DO J = 1,3
+               m%ConnectList(m%FairIdList(I,iTurb))%r(J)  = u%PtFairleadDisplacement(iTurb)%Position(J,I) + u%PtFairleadDisplacement(iTurb)%TranslationDisp(J,I)
+               m%ConnectList(m%FairIdList(I,iTurb))%rd(J) = u%PtFairleadDisplacement(iTurb)%TranslationVel(J,I)
+            END DO
+            ! offset into farm's true global reference based on turbine X and Y reference positions (these should be 0 for regular FAST use)
+            m%ConnectList(m%FairIdList(I,iTurb))%r(1) = m%ConnectList(m%FairIdList(I,iTurb))%r(1) + p%TurbineRefPos(1,iTurb)
+            m%ConnectList(m%FairIdList(I,iTurb))%r(2) = m%ConnectList(m%FairIdList(I,iTurb))%r(2) + p%TurbineRefPos(2,iTurb)
          END DO
-      END DO
+      end do
 
       ! apply line length changes from active tensioning if applicable
       DO L = 1, p%NLines

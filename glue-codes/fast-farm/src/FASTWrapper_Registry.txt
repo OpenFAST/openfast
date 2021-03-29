@@ -44,6 +44,7 @@ typedef      ^            InitInputType       SiKi       fromSC                 
 # Define outputs from the initialization routine here:
 #typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
 #typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
+typedef   ^               InitOutputType DbKi               PtfmInit         {6} - -   "Initial platform position/rotation vector - surge,sway,heave,roll,pitch,yaw - needed for mooring module initInp"      -
 typedef   ^               InitOutputType ProgDesc           Ver              -  - -   "This module's name, version, and date"      -
 
 

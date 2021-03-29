@@ -18,7 +18,9 @@ include Registry_NWTC_Library.txt
 typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -999.9 -   "gravity constant"   "[m/s^2]"
 typedef   ^           ^                ReKi               rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
 typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
-typedef   ^           ^                ReKi               PtfmInit      {6}  -      -   "initial position of platform"     -
+typedef   ^           ^                ReKi               PtfmInit      {:}{:} -    -   "initial position of platform(s) shape: 6, nTurbines"     -
+typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0"     -
+typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
 typedef   ^           ^                CHARACTER(1024)    RootName       -   -      -   "RootName for writing output files"              -
 typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
@@ -26,7 +28,7 @@ typedef   ^           ^                ReKi               DTIC           -    - 
 typedef   ^           ^                ReKi               TMaxIC         -    120   -   "maximum time to allow for getting converged ICs"              "[s]"
 typedef   ^           ^                ReKi               CdScaleIC      -    1     -   "factor to scale drag coefficients by during dynamic relaxation"              "[]"
 typedef   ^           ^                ReKi               threshIC       -    0.01  -   "convergence tolerance for ICs  (0.01 means 1%)"              "[]"
-typedef   ^           ^                CHARACTER(ChanLen)      OutList        {:}   ""   -   "string containing list of output channels requested in input file"
+typedef   ^           ^                CHARACTER(ChanLen) OutList        {:}   ""   -   "string containing list of output channels requested in input file"
 
 
 # ====================================== Internal data types ========================================================================
@@ -134,16 +136,16 @@ typedef   ^       OtherStateType       SiKi                dummy             -  
 typedef   ^       MiscVarType          MD_LineProp         LineTypeList     {:}  -  -   "array of properties for each line type"   -
 typedef   ^       ^                    MD_Connect          ConnectList      {:}  -  -   "array of connection properties"   -
 typedef   ^       ^                    MD_Line             LineList         {:}  -  -   "array of line properties"   -
-typedef   ^       ^                    IntKi               FairIdList       {:}  -  -   "array of size NFairs listing the ID of each fairlead (index of ConnectList)"         ""
+typedef   ^       ^                    IntKi               FairIdList       {:}{:}  -  -   "array of size max(NFairs) X nTurbines listing the ID of each fairlead (index of ConnectList)"         ""
 typedef   ^       ^                    IntKi               ConnIdList       {:}  -  -   "array of size NConnss listing the ID of each connect type connection (index of ConnectList)"         ""
 typedef   ^       ^                    IntKi               LineStateIndList {:}  -  -   "starting index of each line's states in state vector"                 ""
 typedef   ^       ^                    ReKi                MDWrOutput       {:}  -  -   "Data from time step to be written to a MoorDyn output file"
-
+typedef   ^       ^                    ReKi                PtfmInit         {6}  -  -   "initial position of platform - saving here to get around FAST(wrapper)'s lack of an InitOut"     -
 
 ## ============================== Parameters ============================================================================================================================================
 typedef   ^       ParameterType        IntKi               NTypes         -     -    -   "number of line types"                       ""
 typedef   ^       ^                    IntKi               NConnects      -     -    -   "number of Connection objects"               ""
-typedef   ^       ^                    IntKi               NFairs         -     -    -   "number of Fairlead Connections"             ""
+typedef   ^       ^                    IntKi               NFairs         {:}   -    -   "number of Fairlead Connections FOR EACH TURBINE"             ""
 typedef   ^       ^                    IntKi               NConns         -     -    -   "number of Connect type Connections - not to be confused with NConnects"             ""
 typedef   ^       ^                    IntKi               NAnchs         -     -    -   "number of Anchor type Connections"             ""
 typedef   ^       ^                    IntKi               NLines         -     -    -   "number of Line objects"                     ""
@@ -159,16 +161,17 @@ typedef   ^       ^                    CHARACTER(1024)     RootName       -     
 typedef   ^       ^                    MD_OutParmType      OutParam       {:}   -    -   "Names and units (and other characteristics) of all requested output parameters"          -
 typedef   ^       ^                    CHARACTER(1)        Delim          -     -    -   "Column delimiter for output text files"     -
 typedef   ^       ^                    IntKi               MDUnOut        -     -    -   "Unit number of main output file"
-
+typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0"
+typedef   ^       ^                    ReKi                TurbineRefPos  {:}{:} -   -   "turbine reference positions, 0 for regular FAST use, shape: 3, nTurbines"     -
 
 # ============================== Inputs ============================================================================================================================================
-typedef   ^       InputType            MeshType     PtFairleadDisplacement  -    -    -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
+typedef   ^       InputType            MeshType     PtFairleadDisplacement  {:}  -    -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
 # typedef ^       ^                    MeshType     HydroForceLineMesh      -    -    -   "Meshed input data"            -
 typedef   ^       ^                    ReKi         DeltaL                  {:}  -    -   "change in line length command for each channel"       "[m]"
 typedef   ^       ^                    ReKi         DeltaLdot               {:}  -    -   "rate of change of line length command for each channel"       "[m]"
 
 
 ## ============================== Outputs ============================================================================================================================================
-typedef   ^       OutputType           MeshType     PtFairleadLoad          -    -    -   "point mesh for fairlead forces in X,Y,Z"         "[N]"
+typedef   ^       OutputType           MeshType     PtFairleadLoad         {:}   -    -   "point mesh for fairlead forces in X,Y,Z"         "[N]"
 typedef   ^       ^                    ReKi         WriteOutput            {:}   -    -   "output vector returned to glue code" ""
 # typedef ^       ^                    MeshType     LineMeshPosition        -    -    -   "Meshed output data"   -

@@ -54,7 +54,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: TMax      !< Supplied by Driver:  The total simulation time [(sec)]
     LOGICAL  :: HasIce      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
-    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin [-]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AddF0      !< Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m) [-]
