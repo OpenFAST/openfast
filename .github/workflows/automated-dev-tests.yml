@@ -109,7 +109,6 @@ jobs:
           cmake \
             -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DBUILD_FAST_FARM:BOOL=ON \
             -DOPENMP:BOOL=ON \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_TESTING:BOOL=ON \

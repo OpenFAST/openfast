@@ -35,7 +35,6 @@ option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
-option(BUILD_FAST_FARM "Enable building FAST.Farm glue code" off)
 option(OPENMP                 "Enable OpenMP support"              off)
 
 # Precompiler/preprocessor flag configuration
@@ -106,6 +105,8 @@ set(OPENFAST_MODULES
   icedyn
   icefloe
   map
+  wakedynamics
+  awae
 )
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
@@ -118,13 +119,6 @@ set(OPENFAST_REGISTRY_INCLUDES
 foreach(IDIR IN ITEMS ${OPENFAST_MODULES})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules/${IDIR}")
 endforeach(IDIR IN ITEMS ${OPENFAST_MODULES})
-
-if (BUILD_FAST_FARM)
-  add_subdirectory("${CMAKE_SOURCE_DIR}/modules/wakedynamics")
-  add_subdirectory("${CMAKE_SOURCE_DIR}/modules/awae")
-  set_registry_includes("modules" wakedynamics)
-  set_registry_includes("modules" awae)
-endif()
 
 add_subdirectory(glue-codes)
 
