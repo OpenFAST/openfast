@@ -1,3 +1,0 @@
-2021.03.24  -- AP
-
-update the links to https://github.com/kshaler/FFarmTools to point to new repo when we port to https://github.com/OpenFAST/FFarmTools (or similar)

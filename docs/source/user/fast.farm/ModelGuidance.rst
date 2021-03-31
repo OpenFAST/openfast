@@ -32,13 +32,13 @@ simulations. Typically, additional inflow information is required to
 generate inflow and the OpenFAST models. The specific equations that
 should be used to compute the input parameters are discussed in
 :numref:`FF:sec:paramselect`. It is highly recommended that the
-Python notebooks provided in the FAST.Farm `tools
-repository <https://github.com/kshaler/FFarmTools>`__ be used when
-setting up new inflow or a FAST.Farm case. Improperly setting these
-parameters can lead to common errors and/or excessive interpolation,
-which should be avoided. Note that this chapter assumes a wind direction
-of :math:`0^\circ`\ -- i.e., ambient wind that propagates along the *+X*
-axis of the global inertial frame coordinate system.
+Python notebooks provided in the FAST.Farm `tools repository
+<https://github.com/OpenFAST/python-toolbox/tree/main/pyFAST/fastfarm>`__ be
+used when setting up new inflow or a FAST.Farm case. Improperly setting these
+parameters can lead to common errors and/or excessive interpolation, which
+should be avoided. Note that this chapter assumes a wind direction of
+:math:`0^\circ`\ -- i.e., ambient wind that propagates along the *+X* axis of
+the global inertial frame coordinate system.
 
 When generating a FAST.Farm simulation setup and corresponding inflow, planning
 is important. Improper planning could results in FAST.Farm errors and/or needing
@@ -220,9 +220,9 @@ computationally expensive. Therefore, it is recommended that users make
 sure all inputs are correct before executing SOWFA, including turbine
 locations and discretization levels.
 
-An example Python notebook is provided in the FAST.Farm `tools
-repository <https://github.com/kshaler/FFarmTools>`__ to assist in
-setting up these files for a given FAST.Farm simulation.
+An example Python notebook is provided in the FAST.Farm `tools repository
+<https://github.com/OpenFAST/python-toolbox/tree/main/pyFAST/fastfarm>`__ to
+assist in setting up these files for a given FAST.Farm simulation.
 
 Complex Terrain
 ~~~~~~~~~~~~~~~
@@ -625,14 +625,14 @@ values. The discrepancies between these values are discussed in
 InflowWind Domain Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Care must be taken when setting up a FAST.Farm simulation using the
-*InflowWind* ambient wind inflow option. It is highly recommended that
-the distributed `Python
-notebooks <https://github.com/kshaler/FFarmTools>`__ be used when
-setting up a new case. Improperly setting these parameters can lead to
-common errors and/or excessive interpolation, which should be avoided.
-The methods and rules of thumb that are used in those Python notebooks
-are also discussed here.
+Care must be taken when setting up a FAST.Farm simulation using the *InflowWind*
+ambient wind inflow option. It is highly recommended that the distributed
+`Python notebooks
+<https://github.com/OpenFAST/python-toolbox/tree/main/pyFAST/fastfarm>`__ be
+used when setting up a new case. Improperly setting these parameters can lead to
+common errors and/or excessive interpolation, which should be avoided.  The
+methods and rules of thumb that are used in those Python notebooks are also
+discussed here.
 
 .. _FF:sec:lowres:
 
