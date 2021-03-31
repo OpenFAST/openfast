@@ -2,15 +2,15 @@ Test driver input file
 InflowWind driver input file. V1.00
 f 		echo (flag)
 ===============================================================================
-"IEA-15-240-RWT-UMaineSemi_InflowFile.dat" IfWFileName -- IfW input filename (-)
+"IFW.inp"       IfWFileName -- IfW input filename (-)
 ===================== File Conversion Options =================================
- false         WrHAWC         -- Convert all data to HAWC2 format? (flag)
- false         WrBladed       -- Convert all data to Bladed format? (flag)
- false         WrVTK          -- Convert all data to VTK format? (flag)
+ false          WrHAWC         -- Convert all data to HAWC2 format? (flag)
+ false          WrBladed       -- Convert all data to Bladed format? (flag)
+ false          WrVTK          -- Convert all data to VTK format? (flag)
 =====================  Tests of Interpolation Options =========================
-DEFAULT 	NumTSteps -- number of timesteps to run (DEFAULT for all) (-)
+11 	        NumTSteps -- number of timesteps to run (DEFAULT for all) (-)
 0.0 		TStart -- Start time (s)
-0.0025 		DT -- timestep size for driver to take (s, or DEFAULT for what the file contains)
+0.1 		DT -- timestep size for driver to take (s, or DEFAULT for what the file contains)
 f 		Summary -- Summarize the data extents in the windfile (flag)
 true 		SummaryFile -- Write summary to file .dvr.sum (flag)
 ---- Points file input (output given as PointsFileName.Velocity.dat) --------

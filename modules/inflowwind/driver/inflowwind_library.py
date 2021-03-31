@@ -55,9 +55,9 @@ class InflowWindLibAPI(CDLL):
 
         self.IFW_CALCOUTPUT_C.argtypes = [
             POINTER(c_double),                    # Time_C
-            POINTER(c_float),                     # Positions - placeholder for now
-            POINTER(c_float),                     # Velocities - placeholder for now
-            POINTER(c_float),                     # Output Channel Values - placeholder for now
+            POINTER(c_float),                     # Positions
+            POINTER(c_float),                     # Velocities
+            POINTER(c_float),                     # Output Channel Values
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
@@ -72,7 +72,7 @@ class InflowWindLibAPI(CDLL):
     # ifw_init ------------------------------------------------------------------------------------------------------------
     def ifw_init(self, input_strings, uniform_string):
 
-        print('Running IFW_INIT_C .....')
+        print('inflowwind_library.py: Running IFW_INIT_C .....')
 
         input_string_array = (c_char_p * len(input_strings))()
         for i, param in enumerate(input_strings):
@@ -103,10 +103,12 @@ class InflowWindLibAPI(CDLL):
         self._channel_output_array = (c_double * self._numChannels.value)(0.0, )
         self._channel_output_values = np.empty( (self.numTimeSteps, self._numChannels.value) )
 
+        print('inflowwind_library.py: Completed IFW_INIT_C')
+
     # ifw_calcOutput ------------------------------------------------------------------------------------------------------------
     def ifw_calcOutput(self, time, positions, velocities, outputChannelValues):
 
-        print('Running IFW_CALCOUTPUT_C .....')
+        print('inflowwinf_library.py: Running IFW_CALCOUTPUT_C .....')
 
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
         positions_flat_c = (c_float * (3 * self.numWindPts))(0.0, )
@@ -122,8 +124,8 @@ class InflowWindLibAPI(CDLL):
             positions_flat_c,                      # IN: positions - specified by user
             velocities_flat_c,                     # OUT: velocities at desired positions
             outputChannelValues_c,                 # OUT: output channel values as described in input file
-            byref(self.error_status),              # ErrStat_C
-            self.error_message                     # ErrMsg_C
+            byref(self.error_status),              # OUT: ErrStat_C
+            self.error_message                     # OUT: ErrMsg_C
         )
         if self.fatal_error:
             print(f"Error {self.error_status.value}: {self.error_message.value}")
@@ -141,10 +143,12 @@ class InflowWindLibAPI(CDLL):
             velocities[j,2] = velocities_flat_c[count+2]
             count = count + 3
 
+        print('inflowwind_library.py: Completed IFW_CALCOUTPUT_C')
+
     # ifw_end ------------------------------------------------------------------------------------------------------------
     def ifw_end(self):
 
-        print('Running IFW_END_C .....')
+        print('inflowwind_library.py: Running IFW_END_C .....')
 
         self.IFW_END_C(
             byref(self.error_status),
@@ -153,6 +157,8 @@ class InflowWindLibAPI(CDLL):
         if self.fatal_error:
             print(f"Error {self.error_status.value}: {self.error_message.value}")
             return
+
+        print('inflowwind_library.py: Completed IFW_END_C')
 
     # other functions ----------------------------------------------------------------------------------------------------------
     @property

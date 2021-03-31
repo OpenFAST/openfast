@@ -8,7 +8,7 @@ ifw_input_string_array = [
     '*Steady 15 m/s winds with no shear for IEA 15 MW Offshore Reference Turbine                                                                                                       *' + \
     '*--------------------------------------------------------------------------------------------------------------                                                                   *' + \
     '       false  Echo           - Echo input data to <RootName>.ech (flag)                                                                                                           *' + \
-    '          1   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)  *' + \
+    '          3   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)  *' + \
     '          0   PropagationDir - Direction of wind propagation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)                               *' + \
     '          0   VFlowAng       - Upflow angle (degrees) (not used for native Bladed format WindType=7)                                                                              *' + \
     '          1   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                           *' + \
@@ -24,7 +24,7 @@ ifw_input_string_array = [
     '        150   RefHt_Uni      - Reference height for horizontal wind speed                (m)                                                                                      *' + \
     '     125.88   RefLength      - Reference length for linear horizontal and vertical sheer (-)                                                                                      *' + \
     '================== Parameters for Binary TurbSim Full-Field files   [used only for WindType = 3] ==============                                                                   *' + \
-    '"unused"      filename_bts   - name of the full field wind file to use (.bts)                                                                                                     *' + \
+    '"./FF_Wind_37x51_ETM_600s_16p0V0_S4.bts"      filename_bts   - name of the full field wind file to use (.bts)                                                                     *' + \
     '================== Parameters for Binary Bladed-style Full-Field files   [used only for WindType = 4] =========                                                                   *' + \
     '"unused"      FilenameRoot   - Rootname of the full-field wind file to use (.wnd, .sum)                                                                                           *' + \
     'False         TowerFile      - Have tower file (.twr) (flag)                                                                                                                      *' + \
@@ -63,13 +63,14 @@ ifw_input_string_array = [
 
 # Only needed for WindType = 2, can leave it empty if not used, but still need as input
 # ifw_uniform_string_array = [""] # if not used
-ifw_uniform_string_array = [ # could be an arbitrary number of lines long
-            '! Wind file for sheared 18 m/s wind with 30 degree direction.    *' + \
-            '! Time Wind Wind  Vert. Horiz. Vert. LinV Gust                   *' + \
-            '!      Speed Dir Speed Shear Shear Shear Speed                   *' + \
-            ' 0.0   12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          *' + \
-            ' 0.1   12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          *' + \
-            ' 999.9 12.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0                          *'
+ifw_uniform_string_array = [ 
+    '! OpenFAST InflowWind uniform wind input file for 15 m/s wind.                                                                                                                    *' + \
+    '! Time Wind  Wind  Vert. Horiz. Vert. LinV  Gust   Upflow                                                                                                                         *' + \
+    '!      Speed Dir   Speed Shear  Shear Shear Speed  Angle                                                                                                                          *' + \
+    '! (sec) (m/s) (deg) (m/s) (-)    (-)   (-)  (m/s)  (deg)                                                                                                                          *' + \
+    '  0.0  15.0  0.0   0.0   0.0    0.0   0.0   0.0    0.0                                                                                                                            *' + \
+    '  0.1  15.0  0.0   0.0   0.0    0.0   0.0   0.0    0.0                                                                                                                            *' + \
+    '  1.0  15.0  0.0   0.0   0.0    0.0   0.0   0.0    0.0                                                                                                                            *'
 ]
 
 #=============================================================================================================================
@@ -86,8 +87,8 @@ ifwlib = inflowwind_library.InflowWindLibAPI(library_path)
 # Set inputs
 t_start             = 0                  # initial time
 ifwlib.dt           = 0.1                # time interval that it's being called at, not usedby IFW, only here for consistency with other modules
-ifwlib.total_time   = 1 + ifwlib.dt      # final or total time + increment because python doesnt include endpoint!
-time                = np.arange(t_start,ifwlib.total_time,ifwlib.dt)
+ifwlib.total_time   = 1                  # final or total time + increment because python doesnt include endpoint!
+time                = np.arange(t_start,ifwlib.total_time + ifwlib.dt,ifwlib.dt)
 ifwlib.numTimeSteps = len(time)
 
 # Initialize arrays
@@ -109,13 +110,15 @@ velocities          = np.zeros((ifwlib.numWindPts,3)) # output velocities (N x 3
 ifwlib.ifw_init(ifw_input_string_array, ifw_uniform_string_array)  
 outputChannelValues = np.zeros(ifwlib._numChannels.value)
 # Debugging only
-#print(repr(ifwlib._channel_names.value))
-#print(repr(ifwlib._channel_units.value))
+# print(ifwlib._channel_names.value)
+# print(ifwlib._channel_units.value)
 
 # Loop over ifw_calcOutput as many times as needed/desired
 idx = 0
 for t in time:
     ifwlib.ifw_calcOutput(t, positions, velocities, outputChannelValues)
+    print('output velocities at time t = ')
+    print(velocities) # This is the desired output that the user will need to store somewhere
     # Store the outputs
     ifwlib._channel_output_array = outputChannelValues
     ifwlib._channel_output_values[idx,:] = ifwlib._channel_output_array
@@ -130,5 +133,5 @@ print("We have successfully run inflowWind!")
 exit()
 
 # If IFW fails, need to kill driver program
-#if ifwlib.error_status != 0:
+# if ifwlib.error_status != 0:
 #    return
