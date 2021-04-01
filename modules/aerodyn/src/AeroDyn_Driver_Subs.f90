@@ -412,6 +412,8 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, defFldDens, defKinVisc, defSpdSound,
       InitInData%RootName  = dvr%out%Root
       InitInData%Gravity   = 9.80665_ReKi
       InitInData%MHK       = dvr%MHK
+      InitInData%WtrDpth   = dvr%WtrDpth
+      InitInData%MSL2SWL   = dvr%MSL2SWL
       ! Init data per rotor
       do iWT=1,dvr%numTurbines
          wt => dvr%WT(iWT)
@@ -1272,6 +1274,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    call ParseVar(FileInfo_In, CurLine, "Patm"        , dvr%Patm    , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "Pvap"        , dvr%Pvap    , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "WtrDpth"     , dvr%WtrDpth , errStat2, errMsg2, unEc); if (Failed()) return
+   dvr%MSL2SWL = 0.0_ReKi ! pass as zero since not set in AeroDyn driver input file
 
    ! --- Inflow data
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return

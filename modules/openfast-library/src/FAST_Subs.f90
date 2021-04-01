@@ -470,7 +470,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_AD%InputFile          = p_FAST%AeroFile
       Init%InData_AD%RootName           = p_FAST%OutFileRoot
       Init%InData_AD%MHK                = p_FAST%MHK
-      
+      Init%InData_AD%WtrDpth            = p_FAST%WtrDpth
+      Init%InData_AD%MSL2SWL            = p_FAST%MSL2SWL
+
       
       Init%InData_AD%rotors(1)%HubPosition        = ED%y%HubPtMotion%Position(:,1)
       Init%InData_AD%rotors(1)%HubOrientation     = ED%y%HubPtMotion%RefOrientation(:,:,1)

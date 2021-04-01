@@ -1074,15 +1074,19 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
 
 
       ! Local variables
-   CHARACTER(ErrMsgLen)                          :: ErrMsg2         ! temporary Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi)                                :: ErrStat2        ! temporary Error status of the operation
-   !INTEGER(IntKi)                                :: i, j
-   character(*), parameter                       :: RoutineName = 'SetParameters'
+   CHARACTER(ErrMsgLen)                                               :: ErrMsg2         ! temporary Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                                                     :: ErrStat2        ! temporary Error status of the operation
+   INTEGER(IntKi)                                                     :: k               ! loop counter for blades
+   REAL(ReKi), DIMENSION(RotData%BladeProps(1)%NumBlNds,p%NumBlades)  :: BlCenBntmp      ! Normal offset bewteen blade node aerodynamic center and center of buoyancy, passed to p%BlCenBn
+   REAL(ReKi), DIMENSION(RotData%BladeProps(1)%NumBlNds,p%NumBlades)  :: BlCenBttmp      ! Tangential offset bewteen blade node aerodynamic center and center of buoyancy, passed to p%BlCenBt
+   character(*), parameter                                            :: RoutineName = 'SetParameters'
    
       ! Initialize variables for this routine
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
+   BlCenBntmp = 0.0_ReKi
+   BlCenBttmp = 0.0_ReKi
 
    p_AD%DT            = InputFileData%DTAero
    p_AD%WakeMod       = InputFileData%WakeMod
@@ -1092,7 +1096,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%CavitCheck       = InputFileData%CavitCheck
    p%AddedMass        = InputFileData%AddedMass
    p%Buoyancy         = InputFileData%Buoyancy
-   p%Gravity          = InitInp%Gravity
    
 
    
@@ -1121,12 +1124,24 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       call move_alloc( RotData%TwrTI,   p%TwrTI )   
       call move_alloc( RotData%TwrCb,   p%TwrCb )    
    end if
+
+   if (p%Buoyancy) then
+      do k = 1,p%NumBlades
+         BlCenBntmp(:,k) = RotData%BladeProps(k)%BlCenBn
+         BlCenBttmp(:,k) = RotData%BladeProps(k)%BlCenBt
+      end do
+   end if
+   p%BlCenBn = BlCenBntmp
+   p%BlCenBt = BlCenBttmp
    
+   p%Gravity          = InitInp%Gravity
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
    p%Patm             = InputFileData%Patm
    p%Pvap             = InputFileData%Pvap
    p%SpdSound         = InputFileData%SpdSound
+   p%WtrDpth          = InitInp%WtrDpth
+   p%MSL2SWL          = InitInp%MSL2SWL
    
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
@@ -1174,39 +1189,44 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
    CHARACTER(ErrMsgLen)                         :: ErrMsg2          !< Temporary error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                               :: k                !< Loop counter for blades
    INTEGER(IntKi)                               :: j                !< Loop counter for nodes
-   REAL(ReKi), DIMENSION(3)                     :: posCBu
-   REAL(ReKi), DIMENSION(3)                     :: posCBuplus
+   REAL(ReKi), DIMENSION(3)                     :: posCBu           !< Global undisplaced position of the center of buoyancy of node j
+   REAL(ReKi), DIMENSION(3)                     :: posCBuplus       !< Global undisplaced position of the center of buoyancy of node j+1
    CHARACTER(*), PARAMETER                      :: RoutineName = 'SetBuoyancyParameters'
+
+
+      ! Initialize variables for this routine
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
 
    
       ! Allocate buoyancy parameters
    call AllocAry( p%BlRad, p%NumBlNds, p%NumBlades, 'BlRad', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call AllocAry( p%BlDL, p%NumBlNds-1_IntKi, p%NumBlades, 'BlDL', ErrStat2, ErrMsg2 )
+   call AllocAry( p%BlDL, p%NumBlNds-1, p%NumBlades, 'BlDL', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call AllocAry( p%BlTaper, p%NumBlNds-1_IntKi, p%NumBlades, 'BlTaper', ErrStat2, ErrMsg2 )
+   call AllocAry( p%BlTaper, p%NumBlNds-1, p%NumBlades, 'BlTaper', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call AllocAry( p%BlAxCent, p%NumBlNds-1_IntKi, p%NumBlades, 'BlAxCent', ErrStat2, ErrMsg2 )
+   call AllocAry( p%BlAxCent, p%NumBlNds-1, p%NumBlades, 'BlAxCent', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    call AllocAry( p%TwrRad, p%NumTwrNds, 'TwrRad', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call AllocAry( p%TwrDL, p%NumTwrNds-1_IntKi, 'TwrDL', ErrStat2, ErrMsg2 )
+   call AllocAry( p%TwrDL, p%NumTwrNds-1, 'TwrDL', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call AllocAry( p%TwrTaper, p%NumTwrNds-1_IntKi, 'TwrTaper', ErrStat2, ErrMsg2 )
+   call AllocAry( p%TwrTaper, p%NumTwrNds-1, 'TwrTaper', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call AllocAry( p%TwrAxCent, p%NumTwrNds-1_IntKi, 'TwrAxCent', ErrStat2, ErrMsg2 )
+   call AllocAry( p%TwrAxCent, p%NumTwrNds-1, 'TwrAxCent', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! Calculate blade buoyancy parameters
-   do k = 1,p%NumBlades ! Loop through all blades
+   do k = 1,p%NumBlades ! loop through all blades
 
-      do j = 1,p%NumBlNds ! Loop through all nodes
+      do j = 1,p%NumBlNds ! loop through all nodes
          p%BlRad(j,k) = InputFileData%BladeProps(k)%BlChord(j) * sqrt( InputFileData%BladeProps(k)%BlCb(j) ) / 2 ! node j equivalent radius
       end do ! j = nodes
 
-      do j = 1,p%NumBlNds - 1 ! Loop through all nodes, except the last
-         posCBu = matmul( [InputFileData%BladeProps(k)%BlCenBn(j), InputFileData%BladeProps(k)%BlCenBt(j), 0.0_ReKi ], u%BladeMotion(k)%RefOrientation(:,:,j) ) + u%BladeMotion(k)%Position(:,j) ! blade node j global undisplaced position
-         posCBuplus = matmul( [InputFileData%BladeProps(k)%BlCenBn(j+1), InputFileData%BladeProps(k)%BlCenBt(j+1), 0.0_ReKi ], u%BladeMotion(k)%RefOrientation(:,:,j+1) ) + u%BladeMotion(k)%Position(:,j+1) ! blade node j+1 global undisplaced position
+      do j = 1,p%NumBlNds - 1 ! loop through all nodes, except the last
+         posCBu = matmul( [InputFileData%BladeProps(k)%BlCenBn(j), InputFileData%BladeProps(k)%BlCenBt(j), 0.0_ReKi ], u%BladeMotion(k)%RefOrientation(:,:,j) ) + u%BladeMotion(k)%Position(:,j) ! blade node j center of buoyancy global undisplaced position
+         posCBuplus = matmul( [InputFileData%BladeProps(k)%BlCenBn(j+1), InputFileData%BladeProps(k)%BlCenBt(j+1), 0.0_ReKi ], u%BladeMotion(k)%RefOrientation(:,:,j+1) ) + u%BladeMotion(k)%Position(:,j+1) ! blade node j+1 center of buoyancy global undisplaced position
          p%BlDL(j,k) = sqrt( ( posCBuplus(1) - posCBu(1) )**2 + ( posCBuplus(2) - posCBu(2) )**2 + ( posCBuplus(3) - posCBu(3) )**2 ) ! element j undisplaced length
          p%BlTaper(j,k) = ( p%BlRad(j+1,k) - p%BlRad(j,k) ) / p%BlDL(j,k) ! element j taper
          p%BlAxCent(j,k) = ( p%BlRad(j,k)**2 + 2.0_ReKi*p%BlRad(j,k)*p%BlRad(j+1,k) + 3.0_ReKi*p%BlRad(j+1,k)**2 ) / ( 4.0_ReKi*( p%BlRad(j,k)**2 + p%BlRad(j,k)*p%BlRad(j+1,k) + p%BlRad(j+1,k)**2) ) ! fractional axial centroid of element j
@@ -1215,11 +1235,11 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
    end do ! k = blades
 
       ! Calculate tower buoyancy parameters
-   do j = 1,p%NumTwrNds ! Loop through all nodes
+   do j = 1,p%NumTwrNds ! loop through all nodes
       p%TwrRad(j) = p%TwrDiam(j) * sqrt( p%TwrCb(j) ) / 2 ! node j equivalent radius
    end do ! j = nodes
 
-   do j = 1,p%NumTwrNds - 1 ! Loop through all nodes, except the last
+   do j = 1,p%NumTwrNds - 1 ! loop through all nodes, except the last
       p%TwrDL(j) = InputFileData%TwrElev(j+1) - InputFileData%TwrElev(j) ! element j undisplaced length
       p%TwrTaper(j) = ( p%TwrRad(j+1) - p%TwrRad(j) ) / p%TwrDL(j) ! element j taper
       p%TwrAxCent(j) = ( p%TwrRad(j)**2 + 2.0_ReKi*p%TwrRad(j)*p%TwrRad(j+1) + 3.0_ReKi*p%TwrRad(j+1)**2 ) / ( 4.0_ReKi*( p%TwrRad(j)**2 + p%TwrRad(j)*p%TwrRad(j+1) + p%TwrRad(j+1)**2) ) ! fractional axial centroid of element j
@@ -1463,6 +1483,12 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
+   ! Calculate buoyant loads
+   do iR = 1,size(p%rotors)
+      if ( p%rotors(iR)%Buoyancy ) then 
+         call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), ErrStat, ErrMsg )
+      end if
+   end do
 
    !-------------------------------------------------------   
    !     get values to output to file:  
@@ -1599,7 +1625,163 @@ subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
       end do  ! p%numBlades
    end if   ! Cavitation check
 end subroutine AD_CavtCrit
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates buoyant loads on an MHK turbine.
+subroutine CalcBuoyantLoads( u, p, m, ErrStat, ErrMsg )
+   TYPE(RotInputType),                             INTENT(IN   )  :: u                !< AD inputs - used for mesh node positions
+   TYPE(RotParameterType),                         INTENT(IN   )  :: p                !< Parameters
+   TYPE(RotMiscVarType),                           INTENT(INOUT)  :: m                !< Misc/optimization variables
+   INTEGER(IntKi),                                 INTENT(  OUT)  :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                                   INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
+
+      ! Local variables
+   INTEGER(IntKi)                                   :: k                !< Loop counter for blades
+   INTEGER(IntKi)                                   :: j                !< Loop counter for nodes
+   REAL(ReKi), DIMENSION(3)                         :: BlglobCB         !< Global offset between aerodynamic center and center of buoyancy of blade node j
+   REAL(ReKi), DIMENSION(3)                         :: BlglobCBplus     !< Global offset between aerodynamic center and center of buoyancy of blade node j+1
+   REAL(ReKi), DIMENSION(3)                         :: BltmpPos         !< Global position of blade node j, adjusted to place the origin at the seabed
+   REAL(ReKi), DIMENSION(3)                         :: BltmpPosplus     !< Global position of blade node j+1, adjusted to place the origin at the seabed
+   REAL(ReKi), DIMENSION(3)                         :: BlposCB          !< Global position of the center of buoyancy of blade node j, adjusted to place the origin at the seabed
+   REAL(ReKi), DIMENSION(3)                         :: BlposCBplus      !< Global position of the center of buoyancy of blade node j+1, adjusted to place the origin at the seabed
+   REAL(ReKi)                                       :: BlheadAng        !< Heading angle of blade element j
+   REAL(ReKi)                                       :: BlorientAng      !< Orientation angle of blade element j
+   REAL(ReKi)                                       :: BlforceAx        !< Axial buoyant force at blade node j
+   REAL(ReKi)                                       :: BlforceRad       !< Radial buoyant force at blade node j
+   REAL(ReKi)                                       :: Blmoment0        !< Nominal buoyant moment at blade node j
+   REAL(ReKi)                                       :: Blmoment         !< Buoyant moment at node j, adjusted for distribution of radial force bewteen blade nodes j and j+1
+   REAL(ReKi), DIMENSION(3)                         :: BlforceB         !< Buoyant force at blade node j in global coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlforceBplus     !< Buoyant force at blade node j+1 in global coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlmomentB        !< Buoyant moment at blade node j in global coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlmomentBplus    !< Buoyant moment at blade node j+1 in global coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlforceBroot     !< Buoyant force on blade root in global coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlmomentBroot    !< Buoyant moment on blade root in global coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlforceBtip      !< Buoyant force on blade tip in global coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlmomentBtip     !< Buoyant moment on blade tip in global coordinates
+   REAL(ReKi), DIMENSION(p%NumBlNds,p%NumBlades,3)  :: BlFBtmp          !< Buoyant force at blade nodes in global coordinates, passed to m%BlFB
+   REAL(ReKi), DIMENSION(p%NumBlNds,p%NumBlades,3)  :: BlMBtmp          !< Buoyant moment at blade nodes in global coordinates, passed to m%BlMB
+   CHARACTER(*), PARAMETER                          :: RoutineName = 'CalcBuoyantLoads'
+
+
+      ! Initialize variables for this routine
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+   BlFBtmp  = 0.0_ReKi
+   BlMBtmp  = 0.0_ReKi
+
+      ! Blades
+   do k = 1,p%NumBlades ! loop through all blades
+      do j = 1,p%NumBlNds ! loop through all nodes
+
+            ! Check that blade nodes do not go beneath the seabed or pierce the free surface
+         if ( u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) >= p%WtrDpth + p%MSL2SWL .OR. u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) <= 0.0_ReKi ) &
+            call SetErrStat( ErrID_Fatal, 'Blades cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+               if (ErrStat >= AbortErrLev) return
+
+      end do ! j = nodes
+
+      do j = 1,p%NumBlNds - 1 ! loop through all nodes, except the last
+
+            ! Global position of blade node, adjusted to place the origin at the seabed
+         BltmpPos = u%BladeMotion(k)%Position(:,j) + u%BladeMotion(k)%TranslationDisp(:,j) - ( p%WtrDpth + p%MSL2SWL )
+         BltmpPosplus = u%BladeMotion(k)%Position(:,j+1) + u%BladeMotion(k)%TranslationDisp(:,j+1) - ( p%WtrDpth + p%MSL2SWL )
+
+            ! Global offset between aerodynamic center and center of buoyancy of blade node
+         BlglobCB = matmul( [p%BlCenBn(j,k), p%BlCenBt(j,k), 0.0_ReKi ], u%BladeMotion(k)%Orientation(:,:,j) )
+         BlglobCBplus = matmul( [p%BlCenBn(j+1,k), p%BlCenBt(j+1,k), 0.0_ReKi ], u%BladeMotion(k)%Orientation(:,:,j+1) )
+         
+            ! Global position of the center of buoyancy of blade node, adjusted to place the origin at the seabed
+         BlposCB = BltmpPos + BlglobCB
+         BlposCBplus = BltmpPosplus + BlglobCBplus
+
+            ! Heading and orientation angles of blade element
+         BlheadAng = atan2( BlposCBplus(2) - BlposCB(2), BlposCBplus(1) - BlposCB(1) )
+         BlorientAng = atan2( sqrt( (BlposCBplus(1) - BlposCB(1))**2 + (BlposCBplus(2) - BlposCB(2))**2 ), BlposCBplus(3) - BlposCB(3) )
+
+            ! Axial and radial buoyant forces and nominal buoyant moment at blade node
+         BlforceAx = -2.0_ReKi * pi * p%BlTaper(j,k) * p%AirDens * p%Gravity * p%BlDL(j,k) * ( BlposCB(3) * p%BlRad(j,k) + 0.5_ReKi * ( BlposCB(3) * p%BlTaper(j,k) + p%BlRad(j,k) * cos( BlorientAng ) ) * p%BlDL(j,k) & 
+            + p%BlTaper(j,k) * cos( BlorientAng ) * p%BlDL(j,k)**2 / 3.0_ReKi )
+         BlforceRad = -pi * p%AirDens * p%Gravity * p%BlDL(j,k) * ( p%BlRad(j,k)**2 + p%BlTaper(j,k) * p%BlRad(j,k) * p%BlDL(j,k) + p%BlTaper(j,k)**2 * p%BlDL(j,k)**2 / 3.0_ReKi ) * sin( BlorientAng )
+         Blmoment0 = -pi * p%AirDens * p%Gravity * p%BlDL(j,k) * ( p%BlDL(j,k)**3 * p%BlTaper(j,k)**4 / 4.0_ReKi + p%BlDL(j,k)**3 * p%BlTaper(j,k)**2 / 4.0_ReKi + p%BlDL(j,k)**2 * p%BlTaper(j,k)**3 * p%BlRad(j,k) &
+            + 2.0_ReKi * p%BlDL(j,k)**2 * p%BlTaper(j,k) * p%BlRad(j,k) / 3.0_ReKi + 3.0_ReKi * p%BlDL(j,k) * p%BlTaper(j,k)**2 * p%BlRad(j,k)**2 / 2.0_ReKi + p%BlDL(j,k) * p%BlRad(j,k)**2 / 2.0_ReKi &
+            + p%BlTaper(j,k) * p%BlRad(j,k)**3 ) * sin( BlorientAng ) 
+
+            ! Buoyant moment at blade node, adjusted for distribution of radial force bewteen blade nodes j and j+1
+         Blmoment = Blmoment0 - BlforceRad * p%BlAxCent(j,k) * p%BlDL(j,k)
+
+            ! Buoyant force and moment at blade node in global coordinates
+         BlforceB(1) = cos( BlheadAng ) * ( BlforceAx * sin( BlorientAng ) + BlforceRad * cos( BlorientAng ) )
+         BlforceB(2) = sin( BlheadAng ) * ( BlforceAx * sin( BlorientAng ) + BlforceRad * cos( BlorientAng ) )
+         BlforceB(3) = BlforceAx * cos( BlorientAng ) - BlforceRad * sin( BlorientAng )
+         BlmomentB(1) = -Blmoment * sin( BlheadAng )
+         BlmomentB(2) = Blmoment * cos( BlheadAng )
+         BlmomentB(3) = 0.0_ReKi
+
+            ! Buoyant force and moment in global coordinates, distributed between adjacent nodes
+         BlforceBplus = BlforceB * p%BlAxCent(j,k)
+         BlforceB = BlforceB * ( 1 - p%BlAxCent(j,k) )
+         BlmomentBplus = BlmomentB * p%BlAxCent(j,k)
+         BlmomentB = BlmomentB * ( 1 - p%BlAxCent(j,k) ) 
+
+            ! Buoyant force and moment on blade root in global coordinates, saved for later use
+         if ( j==1 ) then
+            BlforceBroot(1) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * sin( BlorientAng ) * cos( BlheadAng )
+            BlforceBroot(2) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * sin( BlorientAng ) * sin( BlheadAng )
+            BlforceBroot(3) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * cos( BlorientAng )
+            BlmomentBroot(1) = p%AirDens * p%Gravity * pi * p%BlRad(j,k)**4 / 4.0_ReKi * sin( BlorientAng ) * sin( BlheadAng )
+            BlmomentBroot(2) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**4 / 4.0_ReKi * sin( BlorientAng ) * cos( BlheadAng )
+            BlmomentBroot(3) = 0.0_ReKi
+         end if
+
+            ! Buoyant force and moment on blade tip in global coordinates, added to existing force and moment at tip
+         if ( j==p%NumBlNds - 1 ) then
+            BlforceBtip(1) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * sin( BlorientAng ) * cos( BlheadAng )
+            BlforceBtip(2) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * sin( BlorientAng ) * sin( BlheadAng )
+            BlforceBtip(3) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * cos( BlorientAng )
+            BlmomentBtip(1) = -p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**4 / 4.0_ReKi * sin( BlorientAng ) * sin( BlheadAng )
+            BlmomentBtip(2) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**4 / 4.0_ReKi * sin( BlorientAng ) * cos( BlheadAng )
+            BlmomentBtip(3) = 0.0_ReKi
+
+            BlforceBplus = BlforceBplus + BlforceBtip
+            BlmomentBplus = BlmomentBplus + BlmomentBtip
+         end if
+
+            ! Buoyant force and moment in global coordinates, moved from center of buoyancy to aerodynamic center
+         BlmomentB(1) = BlmomentB(1) + BlglobCB(2) * BlforceB(3) - BlglobCB(3) * BlforceB(2)
+         BlmomentB(2) = BlmomentB(2) + BlglobCB(3) * BlforceB(1) - BlglobCB(1) * BlforceB(3)
+         BlmomentB(3) = BlmomentB(3) + BlglobCB(1) * BlforceB(2) - BlglobCB(2) * BlforceB(1)
+         BlmomentBplus(1) = BlmomentBplus(1) + BlglobCBplus(2) * BlforceBplus(3) - BlglobCBplus(3) * BlforceBplus(2)
+         BlmomentBplus(2) = BlmomentBplus(2) + BlglobCBplus(3) * BlforceBplus(1) - BlglobCBplus(1) * BlforceBplus(3)
+         BlmomentBplus(3) = BlmomentBplus(3) + BlglobCBplus(1) * BlforceBplus(2) - BlglobCBplus(2) * BlforceBplus(1)
+
+            ! Buoyant force and moment in global coordinates, expressed per unit length
+         BlforceB = BlforceB / p%BlDL(j,k)
+         BlmomentB = BlmomentB / p%BlDL(j,k)
+         BlforceBplus = BlforceBplus / p%BlDL(j,k)
+         BlmomentBplus = BlmomentBplus / p%BlDL(j,k)
+
+            ! Buoyant force and moment in global coordinates, with internal nodes expressed as the weighted average of contributions from each neighboring element
+         if ( j==1 ) then
+            BlFBtmp(j,k,:) = BlFBtmp(j,k,:) + BlforceB
+            BlFBtmp(j+1,k,:) = BlFBtmp(j+1,k,:) + BlforceBplus
+            BlMBtmp(j,k,:) = BlMBtmp(j,k,:) + BlmomentB
+            BlMBtmp(j+1,k,:) = BlMBtmp(j+1,k,:) + BlmomentBplus
+         else
+            BlFBtmp(j,k,:) = ( BlFBtmp(j,k,:) * p%BlDL(j-1,k) + BlforceB * p%BlDL(j,k) ) / ( p%BlDL(j-1,k) + p%BlDL(j,k) )
+            BlFBtmp(j+1,k,:) = BlFBtmp(j+1,k,:) + BlforceBplus
+            BlMBtmp(j,k,:) = ( BlMBtmp(j,k,:) * p%BlDL(j-1,k) + BlmomentB * p%BlDL(j,k) ) / ( p%BlDL(j-1,k) + p%BlDL(j,k) )
+            BlMBtmp(j+1,k,:) = BlMBtmp(j+1,k,:) + BlmomentBplus
+         end if
+
+      end do ! j = nodes
+
+   end do ! k = blades
+
+      ! Pass to m variable
+   m%BlFB = BlFBtmp
+   m%BlMB = BlMBtmp
+
+end subroutine CalcBuoyantLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
 subroutine AD_CalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )

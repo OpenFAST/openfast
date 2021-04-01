@@ -225,6 +225,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure of working fluid [Pa]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: CompInflow      !< 0=Steady Wind, 1=InflowWind [-]
     REAL(ReKi)  :: HWindSpeed      !< RefHeight Wind speed [-]
     REAL(ReKi)  :: RefHt      !< RefHeight [-]
@@ -6562,6 +6563,7 @@ ENDIF
     DstDvr_SimDataData%Patm = SrcDvr_SimDataData%Patm
     DstDvr_SimDataData%Pvap = SrcDvr_SimDataData%Pvap
     DstDvr_SimDataData%WtrDpth = SrcDvr_SimDataData%WtrDpth
+    DstDvr_SimDataData%MSL2SWL = SrcDvr_SimDataData%MSL2SWL
     DstDvr_SimDataData%CompInflow = SrcDvr_SimDataData%CompInflow
     DstDvr_SimDataData%HWindSpeed = SrcDvr_SimDataData%HWindSpeed
     DstDvr_SimDataData%RefHt = SrcDvr_SimDataData%RefHt
@@ -6697,6 +6699,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Patm
       Re_BufSz   = Re_BufSz   + 1  ! Pvap
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! CompInflow
       Re_BufSz   = Re_BufSz   + 1  ! HWindSpeed
       Re_BufSz   = Re_BufSz   + 1  ! RefHt
@@ -6828,6 +6831,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%Pvap
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompInflow
     Int_Xferred = Int_Xferred + 1
@@ -7038,6 +7043,8 @@ ENDIF
     OutData%Pvap = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%CompInflow = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

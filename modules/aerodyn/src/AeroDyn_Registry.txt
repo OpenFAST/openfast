@@ -53,6 +53,8 @@ typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravity force" Nm/s^2
 typedef ^   InitInputType   IntKi   MHK     -   -   -   "MHK turbine type switch"   -
+typedef ^   InitInputType   ReKi    WtrDpth -  -   -    "Water depth" m
+typedef ^   InitInputType   ReKi    MSL2SWL -  -   -    "Offset between still-water level and mean sea level" m
 
 
 # This is data defined in the Input File for this module (or could otherwise be passed in)
@@ -230,6 +232,8 @@ typedef	^	RotMiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure t
 typedef	^	RotMiscVarType	ReKi	SigmaCavitCrit	{:}{:}	-	-	 "critical cavitation number-  inception value (above which cavit will occur)"   -
 typedef	^	RotMiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation number at node "   -
 typedef	^	RotMiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issued "   -
+typedef	^	RotMiscVarType	ReKi	BlFB	{:}{:}{:}	-	-	  "buoyant force per unit length at blade node"   N/m
+typedef	^	RotMiscVarType	ReKi	BlMB	{:}{:}{:}	-	-	  "buoyant moment per unit length at blade node"   Nm/m
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
 
@@ -248,6 +252,8 @@ typedef	^	RotParameterType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	RotParameterType	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	RotParameterType	ReKi	TwrTI	{:}	-	-	"Turbulence intensity for tower shadow at tower node"	-
 typedef	^	RotParameterType	ReKi	TwrCb	{:}	-	-	"Coefficient of buoyancy at tower node"	-
+typedef	^	RotParameterType	ReKi	BlCenBn	{:}{:}	-	-	"Normal offset between aerodynamic center and center of buoyancy at blade node"	m
+typedef	^	RotParameterType	ReKi	BlCenBt	{:}{:}	-	-	"Tangential offset between aerodynamic center and center of buoyancy at blade node"	m
 typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
@@ -284,6 +290,7 @@ typedef	^	RotParameterType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef ^   RotParameterType    ReKi    Patm     -   -   -   "Atmospheric pressure" Pa
 typedef ^   RotParameterType    ReKi    Pvap      -   -   -  "Vapour pressure" Pa
 typedef ^   RotParameterType    ReKi    WtrDpth -  -   -     "Water depth" m
+typedef ^   RotParameterType    ReKi    MSL2SWL -  -   -     "Offset between still-water level and mean sea level" m
 typedef	^	RotParameterType	IntKi	AeroProjMod   	-	0	-	"Flag to switch between different projection models"	-
 # parameters for output
 typedef	^	RotParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
