@@ -29,7 +29,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a8', '15 Feb. 2021' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a9', '24 March 2021' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
