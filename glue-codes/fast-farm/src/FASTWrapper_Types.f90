@@ -2830,5 +2830,443 @@ ENDIF
   END IF
  END SUBROUTINE FWrap_UnPackOutput
 
+
+ SUBROUTINE FWrap_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+!
+!  expressions below based on either
+!
+!  f(t) = a
+!  f(t) = a + b * t, or
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+!
+!..................................................................................................................................
+
+ TYPE(FWrap_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
+ REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
+ TYPE(FWrap_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
+ INTEGER(IntKi)                             :: ErrStat2        ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'FWrap_Input_ExtrapInterp'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+ if ( size(t) .ne. size(u)) then
+    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
+    RETURN
+ endif
+ order = SIZE(u) - 1
+ IF ( order .eq. 0 ) THEN
+   CALL FWrap_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 1 ) THEN
+   CALL FWrap_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 2 ) THEN
+   CALL FWrap_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE 
+   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
+   RETURN
+ ENDIF 
+ END SUBROUTINE FWrap_Input_ExtrapInterp
+
+
+ SUBROUTINE FWrap_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is 1.
+!
+!  f(t) = a + b * t, or
+!
+!  where a and b are determined as the solution to
+!  f(t1) = u1, f(t2) = u2
+!
+!..................................................................................................................................
+
+ TYPE(FWrap_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(FWrap_InputType), INTENT(IN)  :: u2    ! Input at t2 
+ REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
+ TYPE(FWrap_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+ REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+ INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+ CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
+ REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'FWrap_Input_ExtrapInterp1'
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i04    ! dim4 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i05    ! dim5 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+ INTEGER                                    :: i2    ! dim2 counter variable for arrays
+ INTEGER                                    :: i3    ! dim3 counter variable for arrays
+ INTEGER                                    :: i4    ! dim4 counter variable for arrays
+ INTEGER                                    :: i5    ! dim5 counter variable for arrays
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / t(2)
+IF (ALLOCATED(u_out%fromSCglob) .AND. ALLOCATED(u1%fromSCglob)) THEN
+  DO i1 = LBOUND(u_out%fromSCglob,1),UBOUND(u_out%fromSCglob,1)
+    b = -(u1%fromSCglob(i1) - u2%fromSCglob(i1))
+    u_out%fromSCglob(i1) = u1%fromSCglob(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%fromSC) .AND. ALLOCATED(u1%fromSC)) THEN
+  DO i1 = LBOUND(u_out%fromSC,1),UBOUND(u_out%fromSC,1)
+    b = -(u1%fromSC(i1) - u2%fromSC(i1))
+    u_out%fromSC(i1) = u1%fromSC(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%Vdist_High) .AND. ALLOCATED(u1%Vdist_High)) THEN
+  DO i5 = LBOUND(u_out%Vdist_High,5),UBOUND(u_out%Vdist_High,5)
+    DO i4 = LBOUND(u_out%Vdist_High,4),UBOUND(u_out%Vdist_High,4)
+      DO i3 = LBOUND(u_out%Vdist_High,3),UBOUND(u_out%Vdist_High,3)
+        DO i2 = LBOUND(u_out%Vdist_High,2),UBOUND(u_out%Vdist_High,2)
+          DO i1 = LBOUND(u_out%Vdist_High,1),UBOUND(u_out%Vdist_High,1)
+            b = -(u1%Vdist_High(i1,i2,i3,i4,i5) - u2%Vdist_High(i1,i2,i3,i4,i5))
+            u_out%Vdist_High(i1,i2,i3,i4,i5) = u1%Vdist_High(i1,i2,i3,i4,i5) + b * ScaleFactor
+          END DO
+        END DO
+      END DO
+    END DO
+  END DO
+END IF ! check if allocated
+ END SUBROUTINE FWrap_Input_ExtrapInterp1
+
+
+ SUBROUTINE FWrap_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is 2.
+!
+!  expressions below based on either
+!
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = u1, f(t2) = u2, f(t3) = u3
+!
+!..................................................................................................................................
+
+ TYPE(FWrap_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(FWrap_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(FWrap_InputType), INTENT(IN)  :: u3      ! Input at t3
+ REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
+ TYPE(FWrap_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
+ REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+ INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'FWrap_Input_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i04    ! dim4 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i05    ! dim5 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+ INTEGER                                    :: i2    ! dim2 counter variable for arrays
+ INTEGER                                    :: i3    ! dim3 counter variable for arrays
+ INTEGER                                    :: i4    ! dim4 counter variable for arrays
+ INTEGER                                    :: i5    ! dim5 counter variable for arrays
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+IF (ALLOCATED(u_out%fromSCglob) .AND. ALLOCATED(u1%fromSCglob)) THEN
+  DO i1 = LBOUND(u_out%fromSCglob,1),UBOUND(u_out%fromSCglob,1)
+    b = (t(3)**2*(u1%fromSCglob(i1) - u2%fromSCglob(i1)) + t(2)**2*(-u1%fromSCglob(i1) + u3%fromSCglob(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%fromSCglob(i1) + t(3)*u2%fromSCglob(i1) - t(2)*u3%fromSCglob(i1) ) * scaleFactor
+    u_out%fromSCglob(i1) = u1%fromSCglob(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%fromSC) .AND. ALLOCATED(u1%fromSC)) THEN
+  DO i1 = LBOUND(u_out%fromSC,1),UBOUND(u_out%fromSC,1)
+    b = (t(3)**2*(u1%fromSC(i1) - u2%fromSC(i1)) + t(2)**2*(-u1%fromSC(i1) + u3%fromSC(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%fromSC(i1) + t(3)*u2%fromSC(i1) - t(2)*u3%fromSC(i1) ) * scaleFactor
+    u_out%fromSC(i1) = u1%fromSC(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%Vdist_High) .AND. ALLOCATED(u1%Vdist_High)) THEN
+  DO i5 = LBOUND(u_out%Vdist_High,5),UBOUND(u_out%Vdist_High,5)
+    DO i4 = LBOUND(u_out%Vdist_High,4),UBOUND(u_out%Vdist_High,4)
+      DO i3 = LBOUND(u_out%Vdist_High,3),UBOUND(u_out%Vdist_High,3)
+        DO i2 = LBOUND(u_out%Vdist_High,2),UBOUND(u_out%Vdist_High,2)
+          DO i1 = LBOUND(u_out%Vdist_High,1),UBOUND(u_out%Vdist_High,1)
+            b = (t(3)**2*(u1%Vdist_High(i1,i2,i3,i4,i5) - u2%Vdist_High(i1,i2,i3,i4,i5)) + t(2)**2*(-u1%Vdist_High(i1,i2,i3,i4,i5) + u3%Vdist_High(i1,i2,i3,i4,i5)))* scaleFactor
+            c = ( (t(2)-t(3))*u1%Vdist_High(i1,i2,i3,i4,i5) + t(3)*u2%Vdist_High(i1,i2,i3,i4,i5) - t(2)*u3%Vdist_High(i1,i2,i3,i4,i5) ) * scaleFactor
+            u_out%Vdist_High(i1,i2,i3,i4,i5) = u1%Vdist_High(i1,i2,i3,i4,i5) + b  + c * t_out
+          END DO
+        END DO
+      END DO
+    END DO
+  END DO
+END IF ! check if allocated
+ END SUBROUTINE FWrap_Input_ExtrapInterp2
+
+
+ SUBROUTINE FWrap_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
+!
+!  expressions below based on either
+!
+!  f(t) = a
+!  f(t) = a + b * t, or
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
+!
+!..................................................................................................................................
+
+ TYPE(FWrap_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
+ REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
+ TYPE(FWrap_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
+ INTEGER(IntKi)                             :: ErrStat2        ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'FWrap_Output_ExtrapInterp'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+ if ( size(t) .ne. size(y)) then
+    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(y)',ErrStat,ErrMsg,RoutineName)
+    RETURN
+ endif
+ order = SIZE(y) - 1
+ IF ( order .eq. 0 ) THEN
+   CALL FWrap_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 1 ) THEN
+   CALL FWrap_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 2 ) THEN
+   CALL FWrap_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE 
+   CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
+   RETURN
+ ENDIF 
+ END SUBROUTINE FWrap_Output_ExtrapInterp
+
+
+ SUBROUTINE FWrap_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+! values of y (which has values associated with times in t).  Order of the interpolation is 1.
+!
+!  f(t) = a + b * t, or
+!
+!  where a and b are determined as the solution to
+!  f(t1) = y1, f(t2) = y2
+!
+!..................................................................................................................................
+
+ TYPE(FWrap_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(FWrap_OutputType), INTENT(IN)  :: y2    ! Output at t2 
+ REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
+ TYPE(FWrap_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+ REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+ INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+ CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
+ REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'FWrap_Output_ExtrapInterp1'
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / t(2)
+IF (ALLOCATED(y_out%toSC) .AND. ALLOCATED(y1%toSC)) THEN
+  DO i1 = LBOUND(y_out%toSC,1),UBOUND(y_out%toSC,1)
+    b = -(y1%toSC(i1) - y2%toSC(i1))
+    y_out%toSC(i1) = y1%toSC(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+  DO i1 = LBOUND(y_out%xHat_Disk,1),UBOUND(y_out%xHat_Disk,1)
+    b = -(y1%xHat_Disk(i1) - y2%xHat_Disk(i1))
+    y_out%xHat_Disk(i1) = y1%xHat_Disk(i1) + b * ScaleFactor
+  END DO
+  b = -(y1%YawErr - y2%YawErr)
+  y_out%YawErr = y1%YawErr + b * ScaleFactor
+  DO i1 = LBOUND(y_out%p_hub,1),UBOUND(y_out%p_hub,1)
+    b = -(y1%p_hub(i1) - y2%p_hub(i1))
+    y_out%p_hub(i1) = y1%p_hub(i1) + b * ScaleFactor
+  END DO
+  b = -(y1%D_rotor - y2%D_rotor)
+  y_out%D_rotor = y1%D_rotor + b * ScaleFactor
+  b = -(y1%DiskAvg_Vx_Rel - y2%DiskAvg_Vx_Rel)
+  y_out%DiskAvg_Vx_Rel = y1%DiskAvg_Vx_Rel + b * ScaleFactor
+IF (ALLOCATED(y_out%AzimAvg_Ct) .AND. ALLOCATED(y1%AzimAvg_Ct)) THEN
+  DO i1 = LBOUND(y_out%AzimAvg_Ct,1),UBOUND(y_out%AzimAvg_Ct,1)
+    b = -(y1%AzimAvg_Ct(i1) - y2%AzimAvg_Ct(i1))
+    y_out%AzimAvg_Ct(i1) = y1%AzimAvg_Ct(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+ END SUBROUTINE FWrap_Output_ExtrapInterp1
+
+
+ SUBROUTINE FWrap_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+! values of y (which has values associated with times in t).  Order of the interpolation is 2.
+!
+!  expressions below based on either
+!
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = y1, f(t2) = y2, f(t3) = y3
+!
+!..................................................................................................................................
+
+ TYPE(FWrap_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(FWrap_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(FWrap_OutputType), INTENT(IN)  :: y3      ! Output at t3
+ REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
+ TYPE(FWrap_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
+ REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+ INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'FWrap_Output_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+IF (ALLOCATED(y_out%toSC) .AND. ALLOCATED(y1%toSC)) THEN
+  DO i1 = LBOUND(y_out%toSC,1),UBOUND(y_out%toSC,1)
+    b = (t(3)**2*(y1%toSC(i1) - y2%toSC(i1)) + t(2)**2*(-y1%toSC(i1) + y3%toSC(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%toSC(i1) + t(3)*y2%toSC(i1) - t(2)*y3%toSC(i1) ) * scaleFactor
+    y_out%toSC(i1) = y1%toSC(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+  DO i1 = LBOUND(y_out%xHat_Disk,1),UBOUND(y_out%xHat_Disk,1)
+    b = (t(3)**2*(y1%xHat_Disk(i1) - y2%xHat_Disk(i1)) + t(2)**2*(-y1%xHat_Disk(i1) + y3%xHat_Disk(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%xHat_Disk(i1) + t(3)*y2%xHat_Disk(i1) - t(2)*y3%xHat_Disk(i1) ) * scaleFactor
+    y_out%xHat_Disk(i1) = y1%xHat_Disk(i1) + b  + c * t_out
+  END DO
+  b = (t(3)**2*(y1%YawErr - y2%YawErr) + t(2)**2*(-y1%YawErr + y3%YawErr))* scaleFactor
+  c = ( (t(2)-t(3))*y1%YawErr + t(3)*y2%YawErr - t(2)*y3%YawErr ) * scaleFactor
+  y_out%YawErr = y1%YawErr + b  + c * t_out
+  DO i1 = LBOUND(y_out%p_hub,1),UBOUND(y_out%p_hub,1)
+    b = (t(3)**2*(y1%p_hub(i1) - y2%p_hub(i1)) + t(2)**2*(-y1%p_hub(i1) + y3%p_hub(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%p_hub(i1) + t(3)*y2%p_hub(i1) - t(2)*y3%p_hub(i1) ) * scaleFactor
+    y_out%p_hub(i1) = y1%p_hub(i1) + b  + c * t_out
+  END DO
+  b = (t(3)**2*(y1%D_rotor - y2%D_rotor) + t(2)**2*(-y1%D_rotor + y3%D_rotor))* scaleFactor
+  c = ( (t(2)-t(3))*y1%D_rotor + t(3)*y2%D_rotor - t(2)*y3%D_rotor ) * scaleFactor
+  y_out%D_rotor = y1%D_rotor + b  + c * t_out
+  b = (t(3)**2*(y1%DiskAvg_Vx_Rel - y2%DiskAvg_Vx_Rel) + t(2)**2*(-y1%DiskAvg_Vx_Rel + y3%DiskAvg_Vx_Rel))* scaleFactor
+  c = ( (t(2)-t(3))*y1%DiskAvg_Vx_Rel + t(3)*y2%DiskAvg_Vx_Rel - t(2)*y3%DiskAvg_Vx_Rel ) * scaleFactor
+  y_out%DiskAvg_Vx_Rel = y1%DiskAvg_Vx_Rel + b  + c * t_out
+IF (ALLOCATED(y_out%AzimAvg_Ct) .AND. ALLOCATED(y1%AzimAvg_Ct)) THEN
+  DO i1 = LBOUND(y_out%AzimAvg_Ct,1),UBOUND(y_out%AzimAvg_Ct,1)
+    b = (t(3)**2*(y1%AzimAvg_Ct(i1) - y2%AzimAvg_Ct(i1)) + t(2)**2*(-y1%AzimAvg_Ct(i1) + y3%AzimAvg_Ct(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%AzimAvg_Ct(i1) + t(3)*y2%AzimAvg_Ct(i1) - t(2)*y3%AzimAvg_Ct(i1) ) * scaleFactor
+    y_out%AzimAvg_Ct(i1) = y1%AzimAvg_Ct(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+ END SUBROUTINE FWrap_Output_ExtrapInterp2
+
 END MODULE FASTWrapper_Types
 !ENDOFREGISTRYGENERATEDFILE
