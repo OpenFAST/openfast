@@ -74,10 +74,10 @@ overlapped itself.
       | RtAxs\ :math:`\delta`\ T\ :math:`\alpha`                     | (-)               | Orientation of the rotor centerline for turbine |
       |                                                              |                   | :math:`\alpha` in the global coordinate system  |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | RtPos\ :math:`\delta`\ T\ :math:`\alpha`                     | (m)               | Position of the rotor (hub) center for turbine  |
+      | RtPos\ :math:`\delta`\ T\ :math:`\alpha`                     | \(m\)             | Position of the rotor (hub) center for turbine  |
       |                                                              |                   | :math:`\alpha` in the global coordinate system  |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | RtDiamT\ :math:`\alpha`                                      | (m)               | Rotor diameter for turbine :math:`\alpha`       |
+      | RtDiamT\ :math:`\alpha`                                      | \(m\)             | Rotor diameter for turbine :math:`\alpha`       |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | YawErrT\ :math:`\alpha`                                      | (deg)             | Nacelle-yaw error for turbine :math:`\alpha`    |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
@@ -107,7 +107,7 @@ overlapped itself.
       |                                                              |                   | downstream distance :math:`\gamma`  of turbine  |
       |                                                              |                   | :math:`\alpha` in the global coordinate system  |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | WkPos\ :math:`\delta`\ T\ :math:`\alpha`\ D\ :math:`\gamma`  | (m)               | Center position of the wake centerline for      |
+      | WkPos\ :math:`\delta`\ T\ :math:`\alpha`\ D\ :math:`\gamma`  | \(m\)             | Center position of the wake centerline for      |
       |                                                              |                   | downstream distance :math:`\gamma` of turbine   |
       |                                                              |                   | :math:`\alpha` in the global coordinate system  |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
@@ -118,7 +118,7 @@ overlapped itself.
       |                                                              |                   | turbine :math:`\alpha` in the global coordinate |
       |                                                              |                   | system                                          |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | WkDiamT\ :math:`\alpha`\ D\ :math:`\gamma`                   | (m)               | Wake diameter for downstream distance           |
+      | WkDiamT\ :math:`\alpha`\ D\ :math:`\gamma`                   | \(m\)             | Wake diameter for downstream distance           |
       |                                                              |                   | :math:`\gamma` of turbine :math:`\alpha`        |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | WkDfVxT\ :math:`\alpha`\ N\ :math:`\beta`\ D\ :math:`\gamma` | (m/s)             | Axial wake velocity deficits for radial output  |

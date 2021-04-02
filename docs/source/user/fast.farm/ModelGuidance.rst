@@ -161,8 +161,13 @@ should be determined from:
    - turbine locations;
    - and the size of the high-resolution domains.
 
+
+The **DS_High** values should be selected based on recommended high-resolution
+domain discretization criteria, discussed in :numref:`FF:sec:DiscRecs`.
+
+
 Additional wake dynamics quantities are needed when specifying the FAST.Farm
-input file, as discussed further in :numref:`FF:sec:DiscRecs`.
+input file, as discussed further in :numref:`FF:wake-dynamics-parameters`.
 It is recommended to base **dr** on :math:`c_\text{max}`;
 **NumRadii** on wake diameter and **dr**; and **NumPlanes** on **DT_Low**,
 inflow hub-height velocity, and the distance between turbine locations.
@@ -647,14 +652,14 @@ Low-Resolution Domain
 
    .. math::
       \textbf{NS_Low} = CEILING\left(
-         \frac{\textbf{Sdist_Low}}{\textbf{DS_Low}}\right)+1
+         \frac{{Sdist\_Low}}{\textbf{DS_Low}}\right)+1
 
 
 .. only:: not html
 
    .. math::
       \textbf{NS\_Low} = CEILING\left(
-         \frac{\textbf{Sdist\_Low}}{\textbf{DS\_Low}}\right)+1
+         \frac{{Sdist\_Low}}{\textbf{DS\_Low}}\right)+1
 
 
 **X0_Low** -- This quantity must be less than the *X* location of the
@@ -700,14 +705,14 @@ inflow:
 .. only:: html
 
    .. math::
-      \textbf{DS_Low} = FLOOR\left( \frac{\textbf{DS_Low_Desired}}
+      \textbf{DS_Low} = FLOOR\left( \frac{{DS\_Low\_Desired}}
          {\textbf{DS_High}} \right)*\textbf{DS_High}
 
 
 .. only:: not html
 
    .. math::
-      \textbf{DS\_Low} = FLOOR\left( \frac{\textbf{DS\_Low\_Desired}}
+      \textbf{DS\_Low} = FLOOR\left( \frac{{DS\_Low\_Desired}}
          {\textbf{DS\_High}} \right)*\textbf{DS\_High}
 
 
@@ -766,7 +771,7 @@ on **DS_High** and the desired domain size (*Sdist_High*), where
 
    .. math::
       \textbf{NS_High} = \text{CEILING}\left(
-         \frac{\textbf{Sdist_High}}{\textbf{DS_High}}\right)+1
+         \frac{{Sdist\_High}}{\textbf{DS_High}}\right)+1
 
 
 .. only:: nohtml
@@ -787,6 +792,8 @@ data are centered around each turbine, based on **WT_X/Y/Z**.
 **DX_High**, **DY_High**, **DZ_High** -- Desired spatial values are not
 discussed here, as they are covered in detail in
 :numref:`FF:sec:DiscRecs`.
+
+.. _FF:wake-dynamics-parameters:
 
 
 Wake Dynamics Parameters
@@ -1046,7 +1053,7 @@ FAST.Farm input file is suggested. In particular, the values of
 **NX_High**, **NY_High**, **NZ_High**, **X0_High**, **Y0_High**,
 **Z0_High**, **dX_High**, **dY_High**, and **dZ_High**, as these
 parameters define the size and location of the high-resolution domain.
-Note that the error specifies which turbine (T\ *<n\ :math:`_t`>*) the
+Note that the error specifies which turbine (T<*n*\ :math:`_t`\>) the
 error has occurred for, which will aid in debugging where the error is.
 
 If the cause is large blade deflection or structural motion, the error
