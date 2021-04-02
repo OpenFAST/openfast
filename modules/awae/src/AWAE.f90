@@ -1433,7 +1433,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       do k = 1,p%NOutDisWindXZ
          call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low, m%outVizXZPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
-         FileName = trim(p%OutFileRoot)//".Low.DisXZ"//trim(num2lstr(k))//"."//trim(Tstr)//".vtk"
+         FileName = trim(p%OutFileVTKRoot)//".Low.DisXZ"//trim(num2lstr(k))//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return

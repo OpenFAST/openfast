@@ -13,6 +13,7 @@ Details on the transition from FAST v8 to OpenFAST may be found in :numref:`fast
    :maxdepth: 1
 
    api_change.rst
+   input_file_overview.rst
    aerodyn/index.rst
    aerodyn-olaf/index.rst
    aerodyn-aeroacoustics/index.rst
@@ -24,4 +25,5 @@ Details on the transition from FAST v8 to OpenFAST may be found in :numref:`fast
    servodyn-stc/StC_index.rst
    fast_to_openfast.rst
    cppapi/index.rst
+   fast.farm/index.rst
 
