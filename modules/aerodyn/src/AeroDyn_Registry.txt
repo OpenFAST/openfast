@@ -234,6 +234,8 @@ typedef	^	RotMiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation number at node
 typedef	^	RotMiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issued "   -
 typedef	^	RotMiscVarType	ReKi	BlFB	{:}{:}{:}	-	-	  "buoyant force per unit length at blade node"   N/m
 typedef	^	RotMiscVarType	ReKi	BlMB	{:}{:}{:}	-	-	  "buoyant moment per unit length at blade node"   Nm/m
+typedef	^	RotMiscVarType	ReKi	TwrFB	{:}{:}	    -	-	  "buoyant force per unit length at tower node"   N/m
+typedef	^	RotMiscVarType	ReKi	TwrMB	{:}{:}	    -	-	  "buoyant moment per unit length at tower node"   Nm/m
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
 
