@@ -8,7 +8,7 @@ FAST.Farm User’s Guide and Theory Manual
    This document offers a quick reference guide for the FAST.Farm driver for
    OpenFAST.
 
-   The documentaiton here was derived from the FAST.Farm users manual by Jason
+   The documentation here was derived from the FAST.Farm User's Guide and Theory Manuel by Jason
    Jonkman and Kelsey Shaler.
 ..
    Update this link and uncomment when published:
