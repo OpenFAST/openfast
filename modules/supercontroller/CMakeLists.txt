@@ -16,7 +16,7 @@
 
 if (GENERATE_TYPES)
   generate_f90_types(src/SuperController_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SuperController_Types.f90 -ccode)
-  generate_f90_types(src/SC_DataEx_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SCDataEx_Types.f90 -ccode)
+  generate_f90_types(src/SC_DataEx_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SCDataEx_Types.f90 -ccode -noextrap)
 endif()
 
 # copy the header files to their build location
