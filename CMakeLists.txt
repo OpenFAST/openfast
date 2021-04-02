@@ -35,7 +35,14 @@ option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
-option(OPENMP                 "Enable OpenMP support"              off)
+option(OPENMP "Enable OpenMP support" off)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  # Configure the default install path to openfast/install
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH "OpenFAST install directory" FORCE)
+endif()
+if(APPLE)
+  option(CMAKE_MACOSX_RPATH "Use RPATH runtime linking" on)
+endif()
 
 # Precompiler/preprocessor flag configuration
 # Do this before configuring modules so that the flags are included
@@ -72,6 +79,9 @@ else()
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
 endif()
+
+# Set the RPATH after configuring the install prefix
+include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 
 ########################################################################
 # Build rules for OpenFAST Registry
@@ -150,11 +160,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
   DESTINATION lib/cmake/OpenFAST)
 
 ########################################################################
-# Configure the default install path to openfast/install
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH
-    "OpenFAST install directory" FORCE)
-endif()
 
 # Option configuration
 if(BUILD_TESTING)

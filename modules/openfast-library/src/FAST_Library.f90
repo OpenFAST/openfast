@@ -134,7 +134,7 @@ subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, N
    CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
                   
    AbortErrLev_c = AbortErrLev   
-   NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine(iTurb)%y_FAST%numOuts )) ! includes time
+   NumOuts_c     = min(MAXOUTPUTS, SUM( Turbine(iTurb)%y_FAST%numOuts ))
    dt_c          = Turbine(iTurb)%p_FAST%dt
 
    ErrStat_c     = ErrStat
@@ -204,7 +204,7 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
          OutputAry(1)              = Turbine(iTurb)%m_FAST%t_global 
          OutputAry(2:NumOutputs_c) = Outputs 
 
-         CALL FAST_Linearize_T(t_initial, 0, Turbine(iTurb), ErrStat, ErrMsg)
+         CALL FAST_Linearize_T(t_initial, 0, Turbine(iTurb), ErrStat2, ErrMsg2)
          if (ErrStat2 /= ErrID_None) then
             ErrStat = max(ErrStat,ErrStat2)
             ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
