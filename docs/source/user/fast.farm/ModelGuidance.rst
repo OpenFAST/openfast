@@ -14,7 +14,7 @@ FAST.Farm Setup Overview
 ------------------------
 
 This section includes a high-level overview of how to set up ambient
-inflow and FAST.Farm simulations. In particular, the information needed
+inflow and FAST.Farm simulations in particular, the information needed
 to calculate various parameters, as shown in
 :numref:`FF:FFarmSetup`.
 
@@ -49,8 +49,8 @@ to regenerate the inflow. Values that should be known *a priori* are:
    - maximum turbine chord length (:math:`c_\text{max}`);
    - maximum turbine natural frequency (:math:`f_\text{max}`);
    - *X*, *Y*, and *Z* locations of all turbines in the wind farm;
-   - desired mean inflow hub-height wind velocity;
-   - and mean inflow wind direction.
+   - desired mean inflow hub-height wind velocity; and
+   - mean inflow wind direction.
 
 The values that must be computed using this information are:
 
@@ -59,13 +59,10 @@ The values that must be computed using this information are:
      **S0_Low**, where *S* = *X*, *Y*, or *Z*);
    - high- and low-resolution temporal discretization values (**DT_High** and
      **DT_Low**);
+   - high- and low-resolution spatial discretization values (**DS_High** and **DS_Low**);
+   - number of grid points in the high- and low-resolution domains (**NS_High** and **NS_Low**);
    - actual mean inflow hub-height wind velocity (:math:`V_\text{hub}`);
-   - mean inflow wind velocity at a reference height (:math:`V_\text{ref}`);
-   - high- and low-resolution spatial discretization values (**DS_High** and
-     **DS_Low**);
-   - and the number of grid points in the high- and low-resolution domains
-     (**NS_High** and **NS_Low**);
-   - and additional wake dynamics properties (**dr**, **NumRadii**, and
+   - additional wake dynamics properties (**dr**, **NumRadii**, and
      **NumPlanes**).
 
 With this information, inflow generation can begin. Though not required, it is
@@ -92,11 +89,12 @@ temporal discretizations should be used, as discussed in
 
 If using synthetic inflow (TurbSim or Mann), the inflow streamwise spatial
 discretization, **DX_Inflow**, is not specified by the user, but is instead
-based on Taylor's frozen-turbulence assumption. Because streamwise
+based on Taylor's frozen-turbulence assumption. Because the streamwise
 discretization of the FAST.Farm domain should be based on the inflow streamwise
 discretization, the user should compute this value using the inflow time step
-and the mean hub-height wind speed, :math:`V_\text{Hub}`. The
-:math:`V_\text{Hub}` may differ from the desired value, as discussed in
+(**DT_High**) and the advection speed of the synthetic wind data,
+:math:`V_\text{Advect}`. The :math:`V_\text{Advect}` may differ from the actual
+wind speed at hub height, :math:`V_\text{Hub}`, as discussed in
 :numref:`FF:sec:Synthetic`, and should be computed directly from the generated
 synthetic inflow.  Therefore, the exact resulting **DX_Inflow** will not be
 known until after the inflow has been generated.  Additionally, **DX_Inflow**
@@ -111,8 +109,8 @@ using synthetic turbulence inflow. The origin of the low-resolution domain
 
    - the minimum turbine *X*- and *Y*-locations;
    - turbine yaw misalignment;
-   - inflow wind direction;
-   - and the expected range of wake meandering.
+   - inflow wind direction; and
+   - the expected range of wake meandering.
 
 Specifically, **X0_Low** must accommodate all turbine
 locations as well as allow enough room to analyze the undisturbed inflow
@@ -126,8 +124,8 @@ The FAST.Farm domain width and height are then computed using:
    - the turbine locations;
    - the calculated **Y0_Low** and **Z0_Low** values;
    - the horizontal and vertical meandering distance requirements;
-   - turbine yaw misalignment;
-   - and the inflow wind direction.
+   - turbine yaw misalignment; and
+   - the inflow wind direction.
 
 The domain length should be based on the streamwise extent of the wind farm and,
 if desired, allow enough room to analyze the waked outflow downstream of the
@@ -137,15 +135,15 @@ The low-resolution domain in FAST.Farm (**DY_Low** and **DZ_Low**) and number of
 grid points (**NY_Low** and **NZ_Low**) can then be computed using:
 
     - the domain width and height;
-    - the lateral and vertical spacing of the generated inflow;
-    - and DY_Inflow and DZ_Inflow.
+    - the lateral and vertical spacing of the generated inflow; and
+    - DY_Inflow and DZ_Inflow.
 
 The low-resolution temporal discretization (**DT_Low**)
 should be computed using:
 
     - the turbine diameter;
-    - inflow hub-height velocity;
-    - and the inflow temporal discretization.
+    - inflow hub-height velocity; and
+    - the inflow temporal discretization.
 
 The streamwise spacing and number of grid points (**DX_Low** and **NX_Low**)
 should also be based on **DT_Low** and the mean wind speed.
@@ -154,12 +152,12 @@ should also be based on **DT_Low** and the mean wind speed.
 The final domain parameters to calculate are the
 locations of the high-resolution domains (**X0_High**, **Y0_High**, and
 **Z0_High**) and the number of grid points required to make up the
-domain (**NX_High**, **NY_High**, and **NZ_High**). These quantities
+domains (**NX_High**, **NY_High**, and **NZ_High**). These quantities
 should be determined from:
 
    - **DS_High** values;
-   - turbine locations;
-   - and the size of the high-resolution domains.
+   - turbine locations; and
+   - the size of the high-resolution domains.
 
 
 The **DS_High** values should be selected based on recommended high-resolution
@@ -246,7 +244,7 @@ not include any explicit models for complex terrain, flow recirculation
 or separation, or local pressure gradients.
 
 If using a SOWFA inflow precursor, the complex terrain is accounted for
-in the SOWFA inflow precursor generation and so no modification to the
+in the SOWFA inflow precursor generation, and so, no modification to the
 *vtk* files is required to account for complex terrain when sampling for
 a FAST.Farm simulation.
 
@@ -301,10 +299,11 @@ selected, spatial coherence is computed using
 Eq. :eq:`eq:IECCoh` (:cite:`ff-TurbSim_1`).
 
 .. math::
-   Coh_{i,j_K}(f)=exp\left(-a_K\sqrt{\left(\frac{fr}{V_\text{Hub}}\right)^2+(rb_K)^2}~\right)
+   Coh_{i,j_K}(f)=exp\left(-a_K\sqrt{\left(\frac{fr}{V_\text{Advect}}\right)^2+(rb_K)^2}~\right)
    :label: eq:IECCoh
 
-where :math:`V_\text{Hub}` is the average wind speed at hub height;
+where :math:`V_\text{Advect}` is the average wind speed at the hub height
+specified in TurbSim, which is also the advection speed in *InflowWind*;
 :math:`Coh_{i,j_K}` is the spatial coherence between points :math:`i`
 and :math:`j` for the velocity components :math:`K=u,v,w`; :math:`r` is
 the distance between points :math:`i` and :math:`j`; :math:`a_K` is the
@@ -345,20 +344,19 @@ where :math:`z_\text{bot}` is the desired bottom vertical location of
 the grid (just above ground level) and
 :math:`D_\text{grid}=MIN\left( \textbf{GridWidth}, \textbf{GridHeight}\right)`.
 Note that the **HubHt** parameter is used by TurbSim as the reference
-height for the wind speed used to define the wind-speed standard
-deviations and spatial coherence in the IEC turbulence models, as well
-as the advection speed (in *InflowWind*) for all models. Thus, the
-resulting wind-speed standard deviations and spatial coherence in the
-IEC turbulence models will not be what is expected without explicit
-consideration of the difference in wind speeds between the **HubHt**
-used by TurbSim and the actual turbine hub height. The advection speed
-(in *InflowWind*) will likely also be faster than it would be when the
-actual hub height speed is used. A separate reference height (**RefHt**)
-is specified in TurbSim, which is the height at which, e.g., the
-reference wind speed is enforced. This value is also used to properly
-set the power law velocity profile. Future work is needed to `decouple
-the HubHt parameter from the TurbSim grid
-generation <https://github.com/OpenFAST/openfast/issues/199>`__.
+height for the wind speed used (:math:`V_\text{Advect}`) to define the
+wind-speed standard deviations and spatial coherence in the IEC turbulence
+models, as well as the advection speed (in *InflowWind*) for all models. Thus,
+the resulting wind-speed standard deviations and spatial coherence in the IEC
+turbulence models will not be what is expected without explicit consideration of
+the difference in wind speeds between the **HubHt** used by TurbSim and the
+actual turbine hub height. The advection speed (in *InflowWind*) will likely
+also be faster than it would be when the actual hub height speed is used. A
+separate reference height (**RefHt**) is specified in TurbSim, which is the
+height at which, e.g., the reference wind speed is enforced. This value is also
+used to properly set the power law velocity profile. Future work is needed to
+`decouple the HubHt parameter from the TurbSim grid generation
+<https://github.com/OpenFAST/openfast/issues/199>`__.
 
 It is generally recommended that the full-field wind data files be
 generated periodically. This effectively extends the wind domain forever
@@ -419,7 +417,7 @@ following equation is recommended:
 
    .. math::
       \textbf{nx} = 2^{CEILING\big[log_2
-         \left(\frac{V_\text{Hub}\textbf{T_Max}}
+         \left(\frac{V_\text{Advect}\textbf{T_Max}}
             {\textbf{dx}}\right)\big]}
 
 
@@ -427,14 +425,14 @@ following equation is recommended:
 
    .. math::
       \textbf{nx} = 2^{CEILING\big[log_2
-         \left(\frac{V_\text{Hub}\textbf{T\_Max}}
+         \left(\frac{V_\text{Advect}\textbf{T\_Max}}
             {\textbf{dx}}\right)\big]}
 
 
-where :math:`CEILING\big[x\big]` rounds :math:`x` to the next highest
-integer. This equation ensures that the turbulence box will not repeat
-during the simulation and also that the power of two criteria is
-satisfied.
+where :math:`V_\text{Advect}` is the advection speed of the Mann box and
+:math:`CEILING\big[x\big]` rounds :math:`x` to the next highest integer. This
+equation ensures that the turbulence box will not repeat during the simulation
+and also that the power of two criteria is satisfied.
 
 **ny** and **nz** -- These values are also required to be powers of
 :math:`2`. With this requirement in mind, these values should be
@@ -442,16 +440,18 @@ selected to ensure the entire desired domain width (*Y*) and height
 (*Z*) are captured, as discussed below in
 :numref:`FF:sec:lowres`.
 
-The *InflowWind* input file has a specific section for using a Mann
-turbulence box. This section requires the input of **nx**, **ny**,
-**nz**, **dx**, **dy**, **dz**, and **RefHt**. These values should be
-specified exactly as those used to generate the inflow. Note that
-**dx**, **dy**, and **dz** specified in *InflowWind* should be the same
-as **dX_High**, **dY_High**, and **dZ_High** in FAST.Farm, respectively.
-**RefHt** should be defined as follows:
+The *InflowWind* input file has a specific section for using a Mann turbulence
+box. This section requires the input of **nx**, **ny**, **nz**, **dx**, **dy**,
+**dz**, **RefHt**, and **URef**. These values should be specified exactly as
+those used to generate the inflow. Note that **dx**, **dy**, and **dz**
+specified in *InflowWind* should be the same as **dX_High**, **dY_High**, and
+**dZ_High** in FAST.Farm, respectively.  **RefHt** should be defined as follows:
 
 .. math::
    \textbf{RefHt} = 0.5\textbf{dz}(\textbf{nz} - 1)+z_\text{bot}
+
+where **URef** is the mean wind speed at the reference height, and dictates the
+advection speed of the Mann box, identified here as :math:`V_\text{Advect}`.
 
 When using a Mann box, it is important to know that **the x-axis
 direction is opposite the convention used by InflowWind. Although the
@@ -538,8 +538,10 @@ denominator has the units [m/s]:
 
 
 For all synthetic turbulence methods, it is recommended that
-**DX_Low**\ :math:`= V_\text{Hub}`\ **DT_Low** to avoid interpolating in
-X-direction. Additionally, **X0_Low** should be an integer multiple of
+**DX_Low**\ :math:`= V_\text{Advect}`\ **DT_Low** to avoid interpolating in
+X-direction. Note the use of the advection speed, :math:`V_\text{Advect}`, to
+calculate **DX_Low**, rather than the actual hub-height wind speed,
+:math:`V_\text{Hub}`. Additionally, **X0_Low** should be an integer multiple of
 **DX_Low**.
 
 High-Resolution Domain
@@ -893,6 +895,8 @@ simulations for the NREL 5MW turbine
 ( :cite:`ff-Doubrawa18_1`), but these can be overwritten by the
 user.
 
+.. _FF:sec:SupCon:
+
 Super Controller
 ----------------
 
@@ -970,8 +974,8 @@ procedures, whose arguments are outlined in :numref:`FF:tab:SC_DLL`.
    |                     | - ``NumStatesGlobal``                             |                                                   |                                                             |
    |                     | - ``NumStatesTurbine``                            |                                                   |                                                             |
    +---------------------+---------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
-   | ``sc_end``          | - ``errStat``                                     | - Release memory                                  |                                                             |
-   |                     | - ``errMsg``                                      | - Close files                                     |                                                             |
+   | ``sc_end``          |                                                   | - ``errStat``                                     | - Release memory                                            |
+   |                     |                                                   | - ``errMsg``                                      | - Close files                                               |
    +---------------------+---------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
 
 

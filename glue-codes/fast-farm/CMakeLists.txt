@@ -15,7 +15,7 @@
 #
 
 if (GENERATE_TYPES)
-  generate_f90_types(src/FASTWrapper_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FASTWrapper_Types.f90)
+  generate_f90_types(src/FASTWrapper_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FASTWrapper_Types.f90 -noextrap)
   generate_f90_types(src/FAST_Farm_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FAST_Farm_Types.f90 -noextrap)
 endif()
 

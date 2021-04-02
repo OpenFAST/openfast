@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 if (GENERATE_TYPES)
-  generate_f90_types(src/WakeDynamics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/WakeDynamics_Types.f90)
+  generate_f90_types(src/WakeDynamics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/WakeDynamics_Types.f90 -noextrap)
 endif()
 
 set(WD_LIBS_SOURCES
