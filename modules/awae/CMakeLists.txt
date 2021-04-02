@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 if (GENERATE_TYPES)
-  generate_f90_types(src/AWAE_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AWAE_Types.f90)
+  generate_f90_types(src/AWAE_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AWAE_Types.f90 -noextrap)
 endif()
 
 set(AWAE_LIBS_SOURCES

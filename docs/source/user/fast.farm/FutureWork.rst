@@ -94,12 +94,12 @@ releases:
 
 -  Interface FAST.Farm to the Wind-Plant Integrated System Design &
    Engineering Model
-   (`WISDEM <https://nwtc.nrel.gov/WISDEM>`__\ :math:`^\text{TM}`) for
+   (`WISDEM <https://github.com/NREL/WISDEM>`__\ :math:`^\text{TM}`) for
    systems-engineering applications (multidisciplinary design, analysis,
    and optimization; uncertainty quantification; and so on).
 
 -  Develop a wrapper for stand-alone
-   `AeroDyn <https://nwtc.nrel.gov/AeroDyn>`__ – the aerodynamics module
+   AeroDyn – the aerodynamics module
    of OpenFAST (or an equivalent BEM tool) – as an alternative to
    OpenFAST to support advanced performance-only wind-farm analysis that
    is much more computationally efficient than FAST.Farm analysis using

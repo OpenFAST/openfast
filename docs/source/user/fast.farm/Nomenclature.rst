@@ -68,6 +68,7 @@ Nomenclature
       |eqs_t|           |txt_t|
       |eqs_TIAmb|       |txt_TIAmb|
       |eqs_ud|          |txt_ud|
+      |eqs_Vadvect|     |txt_Vadvect|
       |eqs_VAmbHigh|    |txt_VAmbHigh|
       |eqs_VAmbLow|     |txt_VAmbLow|
       |eqs_VDistHigh|   |txt_VDistHigh|
@@ -221,6 +222,8 @@ Nomenclature
 .. |txt_TIAmb|       replace:: ambient turbulence intensity of the wind at a rotor and its low-pass time-filtered value for wake plane :math:`n_p`
 .. |eqs_ud|          replace:: :math:`u^d`
 .. |txt_ud|          replace:: discrete-time inputs
+.. |eqs_Vadvect|     replace:: :math:`V_\text{Advect}`
+.. |txt_Vadvect|     replace:: advection speed of the synthetic wind data
 .. |eqs_VAmbHigh|    replace:: :math:`\vec{V}_\text{Amb}^\text{High}`
 .. |txt_VAmbHigh|    replace:: ambient wind across a high-resolution wind domain around a turbine
 .. |eqs_VAmbLow|     replace:: :math:`\vec{V}_\text{Amb}^\text{Low}`

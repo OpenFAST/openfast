@@ -71,9 +71,7 @@ in FAST.Farm is used the same way as the level set in stand-alone
 OpenFAST, but the **AbortLevel** set in FAST.Farm will override the
 levels set in the OpenFAST primary input file of each wind turbine in
 the wind farm. Setting FAST.Farm to abort on fatal errors is typical,
-but see the `FAST v8 ReadMe
-document <https://wind.nrel.gov/nwtc/docs/README_FAST8.pdf>`__ for
-additional guidance.
+but see the FAST v8 ReadMe document  for additional guidance.
 
 **TMax** [sec] is the total length of the simulation to be run. The
 first output is calculated at :math:`t=0`; the last output is calculated
@@ -108,7 +106,7 @@ name must be in quotations** and can contain an absolute or a relative
 path. The super controller is used in conjunction with individual wind
 turbine controllers defined in the style of the DISCON dynamic library
 of the DNV GL’s Bladed wind turbine software package, with minor
-modification. See :numref:`FF:SC` for more information.
+modification. See :numref:`FF:sec:SupCon` for more information.
 
 .. _FF:Input:VTK:
 
@@ -484,7 +482,7 @@ zero. If the DEFAULT keyword is specified in place of a numerical value,
 [**Mod_WakeDiam=4**]. If the DEFAULT keyword is specified in place of a
 numerical value, **Mod_WakeDiam** is set to :math:`1`.
 
-**C_WakeDiam** [-] (:math:`C_{WakeDIam}`) is the calibrated parameter
+**C_WakeDiam** [-] (:math:`C_{WakeDiam}`) is the calibrated parameter
 for the wake diameter calculation and must be greater than zero and less
 than :math:`0.99`. It is unused when **Mod_WakeDiam=1**. If the DEFAULT
 keyword is specified in place of a numerical value, **C_WakeDiam** is
