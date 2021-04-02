@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "mpi.h"
 #include "hdf5.h"
 #include "dlfcn.h"
 
