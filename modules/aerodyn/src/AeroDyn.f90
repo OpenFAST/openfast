@@ -1512,11 +1512,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       end if
    end do
 
-   print *, m%rotors(1)%BlFB(10,1,:)
-   print *, m%rotors(1)%BlMB(10,1,:)
-   print *, m%rotors(1)%TwrFB(5,:)
-   print *, m%rotors(1)%TwrMB(5,:)
-
    !-------------------------------------------------------   
    !     get values to output to file:  
    !-------------------------------------------------------   
