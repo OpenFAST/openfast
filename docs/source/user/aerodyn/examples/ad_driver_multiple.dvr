@@ -2,6 +2,7 @@
 Multiple HAWT
 ----- Input Configuration ---------------------------------------------------------------
 False           Echo        - Echo input parameters to "<rootname>.ech"?
+        0       MHK         - MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}
         1       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined cases}
         0.3     TMax        - Total run time [used only when AnalysisType/=3] (s)
         0.1     DT          - Simulation time step [used only when AnalysisType/=3] (s)

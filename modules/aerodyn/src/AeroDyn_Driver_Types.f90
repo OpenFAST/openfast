@@ -217,6 +217,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Dvr_SimData
     character(1024)  :: AD_InputFile      !< Name of AeroDyn input file [-]
     character(1024)  :: IW_InputFile      !< Name of InfloWind input file [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine} [-]
     INTEGER(IntKi)  :: AnalysisType      !< 0=Steady Wind, 1=InflowWind [-]
     INTEGER(IntKi)  :: CompInflow      !< 0=Steady Wind, 1=InflowWind [-]
     REAL(ReKi)  :: HWindSpeed      !< RefHeight Wind speed [-]
@@ -6547,6 +6548,7 @@ ENDIF
    ErrMsg  = ""
     DstDvr_SimDataData%AD_InputFile = SrcDvr_SimDataData%AD_InputFile
     DstDvr_SimDataData%IW_InputFile = SrcDvr_SimDataData%IW_InputFile
+    DstDvr_SimDataData%MHK = SrcDvr_SimDataData%MHK
     DstDvr_SimDataData%AnalysisType = SrcDvr_SimDataData%AnalysisType
     DstDvr_SimDataData%CompInflow = SrcDvr_SimDataData%CompInflow
     DstDvr_SimDataData%HWindSpeed = SrcDvr_SimDataData%HWindSpeed
@@ -6675,6 +6677,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%AD_InputFile)  ! AD_InputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%IW_InputFile)  ! IW_InputFile
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! AnalysisType
       Int_BufSz  = Int_BufSz  + 1  ! CompInflow
       Re_BufSz   = Re_BufSz   + 1  ! HWindSpeed
@@ -6792,6 +6795,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%IW_InputFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AnalysisType
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompInflow
@@ -6988,6 +6993,8 @@ ENDIF
       OutData%IW_InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%AnalysisType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%CompInflow = IntKiBuf(Int_Xferred)

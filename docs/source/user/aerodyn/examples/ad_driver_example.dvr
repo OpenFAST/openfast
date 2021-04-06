@@ -2,6 +2,7 @@
 Three bladed wind turbine, using basic geometry input
 ----- Input Configuration ---------------------------------------------------------------
 False           Echo         - Echo input parameters to "<rootname>.ech"?
+        0       MHK          - MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}
         3       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined cases}
        11.0     TMax         - Total run time [used only when AnalysisType/=3] (s)
         0.5     DT           - Simulation time step [used only when AnalysisType/=3] (s)

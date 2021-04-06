@@ -156,6 +156,7 @@ typedef   ^                         ^            ReKi                    WriteOu
 # ..... Data for driver simulation .......................................................................................................
 typedef   ^                        Dvr_SimData  character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
 typedef   ^                         ^            character(1024)         IW_InputFile     -      -     -   "Name of InfloWind input file" -
+typedef   ^                         ^            IntKi                   MHK              -      -     -   "MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}" "-"
 typedef   ^                         ^            IntKi                   AnalysisType     -      -     -   "0=Steady Wind, 1=InflowWind" "-"
 typedef   ^                         ^            IntKi                   CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
 typedef   ^                         ^            ReKi                    HWindSpeed       -      -     -   "RefHeight Wind speed"

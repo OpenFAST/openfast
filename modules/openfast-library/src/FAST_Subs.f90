@@ -467,6 +467,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_AD%Linearize          = p_FAST%Linearize
       Init%InData_AD%InputFile          = p_FAST%AeroFile
       Init%InData_AD%RootName           = p_FAST%OutFileRoot
+      Init%InData_AD%MHK                = p_FAST%MHK
       
       
       Init%InData_AD%rotors(1)%HubPosition        = ED%y%HubPtMotion%Position(:,1)
@@ -1556,16 +1557,20 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    p%nBeams = 0               ! initialize number of BeamDyn instances (will be set later)
    
       ! determine what kind of turbine we're modeling:
-   IF ( p%CompHydro == Module_HD ) THEN
+   IF ( p%CompHydro == Module_HD .and. p%MHK == 0) THEN
       IF ( p%CompSub == Module_SD ) THEN
          p%TurbineType = Type_Offshore_Fixed
       ELSE
          p%TurbineType = Type_Offshore_Floating
       END IF
-   ELSEIF ( p%CompMooring == Module_Orca ) THEN
+   ELSEIF ( p%CompMooring == Module_Orca .and. p%MHK == 0) THEN
       p%TurbineType = Type_Offshore_Floating
-   ELSEIF ( p%CompSub == Module_ExtPtfm ) THEN
+   ELSEIF ( p%CompSub == Module_ExtPtfm .and. p%MHK == 0) THEN
       p%TurbineType = Type_Offshore_Fixed
+   ELSEIF ( p%MHK == 1 ) THEN
+         p%TurbineType = Type_MHK_Fixed
+   ELSEIF ( p%MHK == 2 ) THEN
+         p%TurbineType = Type_MHK_Floating
    ELSE      
       p%TurbineType = Type_LandBased
    END IF   
@@ -1683,6 +1688,12 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    
    IF (p%CompElast == Module_BD .and. p%CompAero == Module_AD14 ) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used when BeamDyn is used. Change CompAero or CompElast in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    
+   IF (p%MHK /= 0 .and. p%MHK /= 1 .and. p%MHK /= 2) CALL SetErrStat( ErrID_Fatal, 'MHK switch is invalid. Set MHK to 0, 1, or 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+
+   IF (p%MHK == 2) CALL SetErrStat( ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName )
+
+   IF (p%MHK == 1 .and. p%CompAero == Module_AD14 .or. p%MHK == 2 .and. p%CompAero == Module_AD14) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+
 !   IF ( p%InterpOrder < 0 .OR. p%InterpOrder > 2 ) THEN
    IF ( p%InterpOrder < 1 .OR. p%InterpOrder > 2 ) THEN
       CALL SetErrStat( ErrID_Fatal, 'InterpOrder must be 1 or 2.', ErrStat, ErrMsg, RoutineName ) ! 5/13/14 bjj: MAS and JMJ compromise for certain integrators is that InterpOrder cannot be 0
@@ -1756,7 +1767,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    end if
       
    
-   if ( p%TurbineType /= Type_LandBased .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) ) then
+   if ( p%TurbineType == Type_Offshore_Fixed .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) .or. p%TurbineType == Type_Offshore_Floating .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) ) then
     call SetErrStat(ErrID_Fatal, 'Height of turbine location, TurbinePos(3), must be 0 for offshore turbines.', ErrStat, ErrMsg, RoutineName)
    end if
 
@@ -2508,6 +2519,13 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
             p%CompIce = Module_Unknown
          END IF
                
+      ! MHK - MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}:
+   CALL ReadVar( UnIn, InputFile, p%MHK, "MHK", "MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
 
    !---------------------- INPUT FILES ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Input Files', ErrStat2, ErrMsg2, UnEc )
@@ -3645,6 +3663,10 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
       DescStr = 'Modeling a fixed-bottom offshore turbine'
    CASE ( Type_Offshore_Floating )
       DescStr = 'Modeling a floating offshore turbine'
+   CASE ( Type_MHK_Fixed )
+      DescStr = 'Modeling a fixed-bottom MHK turbine'
+   CASE ( Type_MHK_Floating )
+      DescStr = 'Modeling a floating MHK turbine'
    CASE DEFAULT ! This should never happen
       DescStr=""
    END SELECT                  
