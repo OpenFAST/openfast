@@ -1618,6 +1618,7 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
+   if (dvr%MHK /= 0 ) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0. Functionality to model an MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName) ! hkr (4/6/21) Remove after MHK functionality is implemented
    if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
    if (dvr%MHK == 2) call SetErrStat(ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName)
    

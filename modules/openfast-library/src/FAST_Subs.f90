@@ -1700,6 +1700,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    
    IF (p%CompElast == Module_BD .and. p%CompAero == Module_AD14 ) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used when BeamDyn is used. Change CompAero or CompElast in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    
+   IF (p%MHK /= 0) CALL SetErrStat( ErrID_Fatal, 'MHK switch must be 0 in the FAST input file. Functionality to model an MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName ) ! hkr (4/6/21) Remove after MHK functionality is implemented
+
    IF (p%MHK /= 0 .and. p%MHK /= 1 .and. p%MHK /= 2) CALL SetErrStat( ErrID_Fatal, 'MHK switch is invalid. Set MHK to 0, 1, or 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%MHK == 2) CALL SetErrStat( ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName )
