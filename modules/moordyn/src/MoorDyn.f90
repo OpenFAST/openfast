@@ -6539,7 +6539,7 @@ CONTAINS
          print *, "ERROR in GetOrientationAngles in MoorDyn" !call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, 'Morison_CalcOutput' )
          print *, p1
          print *, p2
-         k_hat = 1.0/0.0
+         k_hat = NaN ! 1.0/0.0
       else
          k_hat = vec / vecLen 
          phi   = atan2(vecLen2D, vec(3))  ! incline angle   
