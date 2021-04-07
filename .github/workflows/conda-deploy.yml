@@ -12,6 +12,7 @@ on:
 
 jobs:
   update-dev:
+    if: github.repository_owner == 'OpenFAST'
     runs-on: ubuntu-20.04
     steps:
       # - name: Echo path
