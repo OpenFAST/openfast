@@ -13,6 +13,11 @@
 
 include Registry_NWTC_Library.txt
 
+## ====== some data read from the input file, but not needed after init ======
+typedef   MoorDyn/MD  MD_InputFileType DbKi               DTIC           -    -     -   "convergence check time step for IC generation"              "[s]"
+typedef   ^           ^                DbKi               TMaxIC         -    120   -   "maximum time to allow for getting converged ICs"              "[s]"
+typedef   ^           ^                ReKi               CdScaleIC      -    1     -   "factor to scale drag coefficients by during dynamic relaxation"              "[]"
+typedef   ^           ^                ReKi               threshIC       -    0.01  -   "convergence tolerance for ICs  (0.01 means 1%)"              "[]"
 
 ## ============================== Define input types here: ============================================================================================================================================
 typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -999.9 -   "gravity constant"   "[m/s^2]"
@@ -23,10 +28,6 @@ typedef   ^           ^                ReKi               PtfmInit      {:}  -  
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
 typedef   ^           ^                CHARACTER(1024)    RootName       -   -      -   "RootName for writing output files"              -
 typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
-typedef   ^           ^                DbKi               DTIC           -    -     -   "convergence check time step for IC generation"              "[s]"
-typedef   ^           ^                DbKi               TMaxIC         -    120   -   "maximum time to allow for getting converged ICs"              "[s]"
-typedef   ^           ^                ReKi               CdScaleIC      -    1     -   "factor to scale drag coefficients by during dynamic relaxation"              "[]"
-typedef   ^           ^                ReKi               threshIC       -    0.01  -   "convergence tolerance for ICs  (0.01 means 1%)"              "[]"
 #typedef   ^           ^                CHARACTER(ChanLen) OutList        {:}   ""   -   "string containing list of output channels requested in input file"
 
 #typedef   ^       ^                    DbKi         UGrid                  {:}{:}{:} -  -   "water velocities time series at each grid point"            -

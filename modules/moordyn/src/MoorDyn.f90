@@ -46,7 +46,7 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(MD_InitInputType),       INTENT(INOUT)  :: InitInp     ! INTENT(INOUT) : Input data for initialization routine
+      TYPE(MD_InitInputType),       INTENT(IN   )  :: InitInp     ! INTENT(INOUT) : Input data for initialization routine
       TYPE(MD_InputType),           INTENT(  OUT)  :: u           ! INTENT( OUT) : An initial guess for the input; input mesh must be defined
       TYPE(MD_ParameterType),       INTENT(  OUT)  :: p           ! INTENT( OUT) : Parameters
       TYPE(MD_ContinuousStateType), INTENT(  OUT)  :: x           ! INTENT( OUT) : Initial continuous states
@@ -61,6 +61,7 @@ CONTAINS
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! local variables
+      TYPE(MD_InputFileType)                       :: InputFileDat   ! Data read from input file for setup, but not stored after Init
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
       INTEGER(IntKi)                               :: I              ! index
@@ -1205,13 +1206,13 @@ CONTAINS
                   else if ( OptString == 'CBOT')  then
                      read (OptValue,*) p%cBot
                   else if ( OptString == 'DTIC')  then
-                     read (OptValue,*) InitInp%dtIC
+                     read (OptValue,*) InputFileDat%dtIC
                   else if ( OptString == 'TMAXIC')  then
-                     read (OptValue,*) InitInp%TMaxIC
+                     read (OptValue,*) InputFileDat%TMaxIC
                   else if ( OptString == 'CDSCALEIC')  then
-                     read (OptValue,*) InitInp%CdScaleIC
+                     read (OptValue,*) InputFileDat%CdScaleIC
                   else if ( OptString == 'THRESHIC')  then
-                     read (OptValue,*) InitInp%threshIC
+                     read (OptValue,*) InputFileDat%threshIC
                   else if ( OptString == 'WATERKIN')  then
                      read (OptValue,*) p%WaterKin
                   else
@@ -1948,14 +1949,14 @@ CONTAINS
       ! --------------------------------------------------------------------
 
       ! only do this if TMaxIC > 0
-      if (InitInp%TMaxIC > 0.0_DbKi) then
+      if (InputFileDat%TMaxIC > 0.0_DbKi) then
 
          CALL WrScr("   Finalizing initial conditions using dynamic relaxation."//NewLine)  ! newline because next line writes over itself
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
          DO I = 1, p%nLineTypes
-            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn * InitInp%CdScaleIC
-            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt * InitInp%CdScaleIC   ! <<<<< need to update this to apply to all objects' drag
+            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn * InputFileDat%CdScaleIC
+            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt * InputFileDat%CdScaleIC   ! <<<<< need to update this to apply to all objects' drag
          END DO
 
          ! allocate array holding 10 latest fairlead tensions
@@ -1974,8 +1975,8 @@ CONTAINS
 
 
          ! round dt to integer number of time steps  
-         NdtM = ceiling(InitInp%DTIC/p%dtM0)            ! get number of mooring time steps to do based on desired time step size
-         dtM = InitInp%DTIC/real(NdtM, DbKi)            ! adjust desired time step to satisfy dt with an integer number of time steps
+         NdtM = ceiling(InputFileDat%dtIC/p%dtM0)            ! get number of mooring time steps to do based on desired time step size
+         dtM = InputFileDat%dtIC/real(NdtM, DbKi)            ! adjust desired time step to satisfy dt with an integer number of time steps
 
          t = 0.0_DbKi     ! start time at zero
 
@@ -1984,7 +1985,7 @@ CONTAINS
          call MD_CopyInput( u,  u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! also make an inputs object to interpExtrap to
          t_array(1) = t                                                       ! fill in the times "array" for u_array
 
-         DO I = 1, ceiling(InitInp%TMaxIC/InitInp%DTIC)   ! loop through IC gen time steps, up to maximum
+         DO I = 1, ceiling(InputFileDat%TMaxIC/InputFileDat%dtIC)   ! loop through IC gen time steps, up to maximum
 
 
             !loop through line integration time steps
@@ -2013,7 +2014,7 @@ CONTAINS
             END DO  ! J  time steps
 
          !   ! integrate the EOMs one DTIC s time step
-         !   CALL TimeStep ( t, InitInp%DTIC, u_array, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+         !   CALL TimeStep ( t, InputFileDat%dtIC, u_array, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
          !      CALL CheckError( ErrStat2, ErrMsg2 )
          !      IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2044,7 +2045,7 @@ CONTAINS
                
                DO l = 1, p%nLines   
                   DO K = 1,9
-                     IF ( abs( FairTensIC(l,K)/FairTensIC(l,K+1) - 1.0 ) > InitInp%threshIC ) THEN
+                     IF ( abs( FairTensIC(l,K)/FairTensIC(l,K+1) - 1.0 ) > InputFileDat%threshIC ) THEN
                         Converged = 0
                         EXIT
                      END IF
@@ -2054,13 +2055,13 @@ CONTAINS
                END DO
 
                IF (Converged == 1)  THEN  ! if we made it with all cases satisfying the threshold
-                  CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InitInp%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
+                  CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
                   EXIT  ! break out of the time stepping loop
                END IF
             END IF
 
-            IF (I == ceiling(InitInp%TMaxIC/InitInp%DTIC) ) THEN
-               CALL WrScr('   Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InitInp%TMaxIC))//' seconds.')
+            IF (I == ceiling(InputFileDat%TMaxIC/InputFileDat%dtIC) ) THEN
+               CALL WrScr('   Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InputFileDat%TMaxIC))//' seconds.')
                !ErrStat = ErrID_Warn
                !ErrMsg = '  MD_Init: ran dynamic convergence to TMaxIC without convergence'
             END IF
@@ -2073,11 +2074,11 @@ CONTAINS
 
          ! UNboost drag coefficient of each line type   <<<
          DO I = 1, p%nLineTypes
-            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn / InitInp%CdScaleIC
-            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt / InitInp%CdScaleIC
+            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn / InputFileDat%CdScaleIC
+            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt / InputFileDat%CdScaleIC
          END DO
 
-      end if ! InitInp%TMaxIC > 0
+      end if ! InputFileDat%TMaxIC > 0
       
 
       p%dtCoupling = DTcoupling  ! store coupling time step for use in updatestates
@@ -2140,7 +2141,9 @@ CONTAINS
                IF (ALLOCATED(m%ConStateIs1      ))  DEALLOCATE(m%ConStateIs1     )
                IF (ALLOCATED(m%ConStateIsN      ))  DEALLOCATE(m%ConStateIsN     )
                IF (ALLOCATED(x%states           ))  DEALLOCATE(x%states           )
-               IF (ALLOCATED(FairTensIC         ))  DEALLOCATE(FairTensIC         ) 
+               IF (ALLOCATED(FairTensIC         ))  DEALLOCATE(FairTensIC         )
+
+               call CleanUp()    ! make sure to close files 
             END IF
          END IF
 
@@ -2148,7 +2151,8 @@ CONTAINS
 
      SUBROUTINE CleanUp()
         ! ErrStat = ErrID_Fatal  
-        CLOSE( UnIn )
+        call MD_DestroyInputFileType( InputFileDat, ErrStat2, ErrMsg2 )    ! Ignore any error messages from this
+        if(UnIn > 0) CLOSE( UnIn )        ! Only if opened
  !       IF (InitInp%Echo) CLOSE( UnEc )
      END SUBROUTINE
 
