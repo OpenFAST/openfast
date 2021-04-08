@@ -207,6 +207,15 @@ CONTAINS
 
 
 
+!FIXME: Set some of the options -- the way parsing is written, they don't have to exist in the input file, but get used anyhow.
+! Setting these to some value for the moment -- trying to figure out why I get NaN's with the -Wuninitialized -finit-real=inf -finit-integer=9999 flags set.
+p%dtM0      = DTcoupling      ! default to the coupling
+!p%WtrDpth   = InitInp%WtrDpth      ! This will be passed in later.  Right now use the default of -9999 in the registry
+p%kBot      = 0
+p%cBot      = 0
+p%WaterKin  = 0
+
+
       ! ----------------- go through file contents a first time, counting each entry -----------------------
 
       i = 0
@@ -1193,6 +1202,7 @@ CONTAINS
                   CALL Conv2UC(OptString)
 
                   ! check all possible options types and see if OptString is one of them, in which case set the variable.
+!FIXME: if some of these are not found in the input file they won't get set
                   if ( OptString == 'DTM') THEN
                      read (OptValue,*) p%dtM0   ! InitInp%DTmooring
                   else if ( OptString == 'G') then
@@ -5012,7 +5022,10 @@ CONTAINS
       REAL(DbKi)                            :: dlEnd          ! stretched length of attached line end segment
       REAL(DbKi)                            :: qMomentSum(3)  ! summation of qEnd*EI/dl_stretched (with correct sign) for each attached line
          
-         
+
+      ! Initialize variables         
+      qMomentSum = 0.0_DbKi
+
       ! in future pass accelerations here too? <<<<
    
       N = Rod%N
@@ -5094,6 +5107,10 @@ CONTAINS
       Real(DbKi)                            :: y_temp (6)       ! temporary vector for LU decomposition
       Real(DbKi)                            :: LU_temp(6,6)     ! temporary matrix for LU decomposition
       
+      ! Initialize some things to zero
+      y_temp  = 0.0_DbKi
+! FIXME: should LU_temp be set to M_out before calling LUsolve?????
+      LU_temp = 0.0_DbKi
 
       CALL Rod_GetNetForceAndMass(Rod, Rod%r(:,0), Fnet, M_out, m, p)
                   
@@ -6118,6 +6135,11 @@ CONTAINS
       Real(DbKi)                            :: LU_temp(6,6)     ! temporary matrix for LU decomposition
       
 
+      ! Initialize temp variables
+      y_temp   = 0.0_DbKi
+! FIXME: should LU_temp be set to M_out before calling LUsolve?????
+      LU_temp  = 0.0_DbKi
+
       CALL Body_DoRHS(Body, m, p)
 
       ! solve for accelerations in [M]{a}={f} using LU decomposition
@@ -6165,6 +6187,9 @@ CONTAINS
       Real(DbKi)                 :: vi(6)              ! relative water velocity (last 3 terms are rotatonal and will be set to zero
       Real(DbKi)                 :: F6_i(6)            ! net force and moments from an attached object
       Real(DbKi)                 :: M6_i(6,6)          ! mass and inertia from an attached object
+
+      ! Initialize variables
+      U = 0.0_DbKi      ! Set to zero for now
 
       ! First, the body's own mass matrix must be adjusted based on its orientation so that 
       ! we have a mass matrix in the global orientation frame

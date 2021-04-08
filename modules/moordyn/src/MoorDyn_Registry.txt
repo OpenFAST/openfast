@@ -14,7 +14,7 @@
 include Registry_NWTC_Library.txt
 
 ## ====== some data read from the input file, but not needed after init ======
-typedef   MoorDyn/MD  MD_InputFileType DbKi               DTIC           -    -     -   "convergence check time step for IC generation"              "[s]"
+typedef   MoorDyn/MD  MD_InputFileType DbKi               DTIC           -    0.5   -   "convergence check time step for IC generation"              "[s]"
 typedef   ^           ^                DbKi               TMaxIC         -    120   -   "maximum time to allow for getting converged ICs"              "[s]"
 typedef   ^           ^                ReKi               CdScaleIC      -    1     -   "factor to scale drag coefficients by during dynamic relaxation"              "[]"
 typedef   ^           ^                ReKi               threshIC       -    0.01  -   "convergence tolerance for ICs  (0.01 means 1%)"              "[]"

@@ -35,7 +35,7 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  MD_InputFileType  =======
   TYPE, PUBLIC :: MD_InputFileType
-    REAL(DbKi)  :: DTIC      !< convergence check time step for IC generation [[s]]
+    REAL(DbKi)  :: DTIC = 0.5      !< convergence check time step for IC generation [[s]]
     REAL(DbKi)  :: TMaxIC = 120      !< maximum time to allow for getting converged ICs [[s]]
     REAL(ReKi)  :: CdScaleIC = 1      !< factor to scale drag coefficients by during dynamic relaxation [[]]
     REAL(ReKi)  :: threshIC = 0.01      !< convergence tolerance for ICs  (0.01 means 1%) [[]]
