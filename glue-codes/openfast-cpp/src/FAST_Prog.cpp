@@ -3,8 +3,6 @@
 #include <iostream>
 #include <mpi.h>
 
-#include <filesystem>
-
 inline bool checkFileExists(const std::string& name) {
     struct stat buffer;   
     return (stat (name.c_str(), &buffer) == 0); 

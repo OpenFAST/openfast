@@ -644,7 +644,7 @@ END SUBROUTINE StC_WriteOutputFile
 
 end module read_file_module 
 
-PROGRAM StrucCtrl
+PROGRAM StrucCtrl_Driver
     
     USE NWTC_Library
     USE StrucCtrl
@@ -919,4 +919,4 @@ CALL StC_CloseOutputFile(UnOut)
         CALL WrScr( ErrMsg )
     END IF
     
-END PROGRAM StrucCtrl
+END PROGRAM StrucCtrl_Driver
