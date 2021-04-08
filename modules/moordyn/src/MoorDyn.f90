@@ -1995,7 +1995,7 @@ CONTAINS
                               
                ! check for NaNs - is this a good place/way to do it?
                DO K = 1, m%Nx
-                  IF (Is_NaN(REAL(x%states(K),DbKi))) THEN
+                  IF (Is_NaN(x%states(K))) THEN
                      ErrStat = ErrID_Fatal
                      ErrMsg = ' NaN state detected.'
                      EXIT
@@ -2231,7 +2231,7 @@ CONTAINS
 
       ! round dt to integer number of time steps   <<<< should this be calculated only once, up front?
       NdtM = ceiling(p%dtCoupling/p%dtM0)            ! get number of mooring time steps to do based on desired time step size
-      dtM = p%dtCoupling/float(NdtM)                       ! adjust desired time step to satisfy dt with an integer number of time steps
+      dtM = p%dtCoupling/REAL(NdtM,DbKi)             ! adjust desired time step to satisfy dt with an integer number of time steps
 
 
       !loop through line integration time steps
@@ -2242,7 +2242,7 @@ CONTAINS
          
          ! check for NaNs - is this a good place/way to do it?
          DO J = 1, m%Nx
-            IF (Is_NaN(REAL(x%states(J),DbKi))) THEN
+            IF (Is_NaN(x%states(J))) THEN
                ErrStat = ErrID_Fatal
                ErrMsg = ' NaN state detected.'
                EXIT
@@ -2273,7 +2273,7 @@ CONTAINS
 
       ! check for NaNs - is this a good place/way to do it?
       DO J = 1, m%Nx
-         IF (Is_NaN(REAL(x%states(J),DbKi))) THEN
+         IF (Is_NaN(x%states(J))) THEN
             ErrStat = ErrID_Fatal
             ErrMsg = ' NaN state detected.'
             EXIT
@@ -2965,7 +2965,7 @@ CONTAINS
 
       ! round dt to integer number of time steps
       NdtM = ceiling(dtStep/p%dtM0)                  ! get number of mooring time steps to do based on desired time step size
-      dtM = dtStep/float(NdtM)                       ! adjust desired time step to satisfy dt with an integer number of time steps
+      dtM = dtStep/REAL(NdtM,DbKi)                   ! adjust desired time step to satisfy dt with an integer number of time steps
 
 
       !loop through line integration time steps
@@ -3025,7 +3025,7 @@ CONTAINS
       
       ! check for NaNs - is this a good place/way to do it?
       DO J = 1, Nx
-         IF (Is_NaN(REAL(x%states(J),DbKi))) THEN
+         IF (Is_NaN(x%states(J))) THEN
             ErrStat = ErrID_Fatal
             ErrMsg = ' NaN state detected.'
          END IF
@@ -4156,7 +4156,7 @@ CONTAINS
 
       ! check for NaNs
       DO J = 1, 6*(N-1)
-         IF (Is_NaN(REAL(Xd(J),DbKi))) THEN
+         IF (Is_NaN(Xd(J))) THEN
             print *, "NaN detected at time ", Line%time, " in Line ", Line%IdNum, " in MoorDyn."
             IF (wordy > 1) THEN
                print *, "state derivatives:"
@@ -4485,7 +4485,7 @@ CONTAINS
 
       ! check for NaNs
       DO J = 1, 6
-         IF (Is_NaN(REAL(Xd(J),DbKi))) THEN
+         IF (Is_NaN(Xd(J))) THEN
             print *, "NaN detected at time ", Connect%time, " in Point ",Connect%IdNum, " in MoorDyn."
             IF (wordy > 1) print *, "state derivatives:"
             IF (wordy > 1) print *, Xd
@@ -5147,7 +5147,7 @@ CONTAINS
    
       ! check for NaNs (should check all state derivatives, not just first 6)
       DO J = 1, 6
-         IF (Is_NaN(REAL(Xd(J),DbKi))) THEN
+         IF (Is_NaN(Xd(J))) THEN
             print *, "NaN detected at time ", Rod%time, " in Rod ",Rod%IdNum
             IF (wordy > 1) THEN
                print *, " state derivatives:"
@@ -6132,7 +6132,7 @@ CONTAINS
    
       ! check for NaNs (should check all state derivatives, not just first 6)
       DO J = 1, 6
-         IF (Is_NaN(REAL(Xd(J),DbKi))) THEN
+         IF (Is_NaN(Xd(J))) THEN
             print *, "NaN detected at time ", Body%time, " in Body ",Body%IdNum, "in MoorDyn,"
             IF (wordy > 0) print *, "state derivatives:"
             IF (wordy > 0) print *, Xd
