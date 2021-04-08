@@ -6332,9 +6332,11 @@ CONTAINS
       Integer(IntKi),INTENT (  OUT)            :: i             ! lower index to interpolate from
       Real(DbKi),    INTENT (  OUT)            :: fout          ! fraction to return   such that y* = y[i] + fout*(y[i+1]-y[i])
       
-      Integer(IntKi)                           :: i1 = 1  ! the index we'll start at
+      Integer(IntKi)                           :: i1
       Integer(IntKi)                           :: nx
       
+      i1 = 1   ! Setting in declaration causes an implied save, which would never allow this routine to find anything at the start of the array.
+
       nx = SIZE(xlist)
       
       if (xin <= xlist(1)) THEN                !  below lowest data point
@@ -6346,11 +6348,11 @@ CONTAINS
          fout = 0.0_DbKi
       
       else                                     ! within the data range
-      
-         IF (xlist(istart) < xin) i1 = istart  ! if istart is below the actual value, start with it instead of starting at 1 to save time
+     
+         IF (xlist(min(istart,nx)) < xin) i1 = istart  ! if istart is below the actual value, start with it instead of starting at 1 to save time, but make sure it doesn't overstep the array
       
          DO i = i1, nx-1
-              IF (xlist(i+1) > xin) THEN
+            IF (xlist(i+1) > xin) THEN
                fout = (xin - xlist(i) )/( xlist(i+1) - xlist(i) )
                exit
             END IF
@@ -6375,25 +6377,25 @@ CONTAINS
       if (fx == 0) then 
          ix1 = ix0
       else  
-         ix1 = ix0+1
+         ix1 = min(ix0+1,size(f,4))    ! don't overstep bounds
       end if
       
       if (fy == 0) then
          iy1 = iy0
       else
-         iy1 = iy0+1
+         iy1 = min(iy0+1,size(f,3))    ! don't overstep bounds
       end if
       
       if (fz == 0) then
          iz1 = iz0
       else         
-         iz1 = iz0+1
+         iz1 = min(iz0+1,size(f,2))    ! don't overstep bounds
       end if
       
       if (ft == 0) then
          it1 = it0
       else  
-         it1 = it0+1
+         it1 = min(it0+1,size(f,1))    ! don't overstep bounds
       end if
       
       c000 = f(it0,iz0,iy0,ix0)*(1.0-ft) + f(it1,iz0,iy0,ix0)*ft
@@ -6435,19 +6437,19 @@ CONTAINS
       if (fx == 0) then 
          ix1 = ix0
       else  
-         ix1 = ix0+1
+         ix1 = min(ix0+1,size(f,3))    ! don't overstep bounds
       end if
       
       if (fy == 0) then
          iy1 = iy0
       else
-         iy1 = iy0+1
+         iy1 = min(iy0+1,size(f,2))    ! don't overstep bounds
       end if
       
       if (fz == 0) then
          iz1 = iz0
       else         
-         iz1 = iz0+1
+         iz1 = min(iz0+1,size(f,1))    ! don't overstep bounds
       end if
       
       c000 = f(iz0,iy0,ix0)
