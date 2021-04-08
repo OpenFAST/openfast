@@ -214,7 +214,7 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
          OutputAry(1)              = Turbine(iTurb)%m_FAST%t_global 
          OutputAry(2:NumOutputs_c) = Outputs 
 
-         CALL FAST_Linearize_T(t_initial, 0, Turbine(iTurb), ErrStat, ErrMsg)
+         CALL FAST_Linearize_T(t_initial, 0, Turbine(iTurb), ErrStat2, ErrMsg2)
          if (ErrStat2 /= ErrID_None) then
             ErrStat = max(ErrStat,ErrStat2)
             ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
