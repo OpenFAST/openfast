@@ -2119,6 +2119,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       
          ! get rotation matrix for moment of inertia orientations
          call RodrigMat(I_n, R_I, errStat, errMsg)
+         IF ( errStat > AbortErrLev ) RETURN
 
          ! globally-oreinted moment of inertia matrix for joint
          Irl_mat = 0.0
@@ -2183,16 +2184,12 @@ SUBROUTINE RodrigMat(a, R, errStat, errMsg)
 
    REAL(ReKi)                         :: vec(3)  ! scaled and adjusted input vector
    REAL(ReKi)                         :: factor  ! denomenator used for scaling                     
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
    factor = Dot_Product(a,a)
+   ! Return the identity if the vector is zero.  We are defining it this way because of how this is used
    if ( EqualRealNos(factor, 0.0_ReKi) ) then
-   !IF ((a(1) == 0) .AND. (a(2)==0)) THEN    ! return identity if vertical
-   !      CALL EYE(R, errStat,errMsg)
-   !   IF (a(3) < 0) THEN
-   !      R = -R
-   !   END IF
-   !
-      errStat = ErrID_Fatal
-      errMsg  = 'RodrigMat encountered vector of zero length'
+      CALL EYE(R, errStat,errMsg)
    else IF ( EqualRealNos(a(1), 0.0_ReKi) .AND. EqualRealNos(a(2), 0.0_ReKi) ) THEN    ! return identity if vertical
       CALL EYE(R, errStat,errMsg)
       IF (a(3) < 0) THEN
