@@ -99,9 +99,9 @@ void fast::OpenFAST::init() {
                 sc.init(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
                 sc.calcOutputs_n(0.0);
             } else {
-                &scio.nSC2CtrlGlob = 0;
-                &scio.nSC2Ctrl = 0;
-                &scio.nCtrl2SC = 0;
+                scio.nSC2CtrlGlob = 0;
+                scio.nSC2Ctrl = 0;
+                scio.nCtrl2SC = 0;
             }
 
             // this calls the Init() routines of each module
