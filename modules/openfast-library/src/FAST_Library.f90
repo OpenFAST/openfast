@@ -504,11 +504,6 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2CtrlGlob = NumSC2CtrlGlob
    
-call WrScr('NumSC2CtrlGlob='//num2lstr(NumSC2CtrlGlob))   
-call WrScr('NumCtrl2SC='//num2lstr(NumCtrl2SC))   
-call WrScr('NumSC2Ctrl='//num2lstr(NumSC2Ctrl))   
-call WrScr('NumActForcePtsBlade='//num2lstr(NumActForcePtsBlade))   
-call WrScr('NumActForcePtsTower='//num2lstr(NumActForcePtsTower))   
    if ( NumSC2CtrlGlob .gt. 0 ) then
       CALL AllocAry( ExternInitData%fromSCGlob, NumSC2CtrlGlob, 'ExternInitData%fromSCGlob', ErrStat, ErrMsg)
          IF (FAILED()) RETURN
@@ -518,7 +513,7 @@ call WrScr('NumActForcePtsTower='//num2lstr(NumActForcePtsTower))
       end do
    end if
    
-   ExternInitData%NumSC2Ctrl = NumSC2Ctrl   
+   ExternInitData%NumSC2Ctrl = NumSC2Ctrl
    if ( NumSC2Ctrl .gt. 0 ) then
       CALL AllocAry( ExternInitData%fromSC, NumSC2Ctrl, 'ExternInitData%fromSC', ErrStat, ErrMsg)
          IF (FAILED()) RETURN
@@ -658,7 +653,11 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    if (allocated(Turbine(iTurb)%ad%p%rotors)) then ! this might not be allocated if we had an error earlier
       numBlades_c   = Turbine(iTurb)%ad%p%rotors(1)%numblades
       numElementsPerBlade_c = Turbine(iTurb)%ad%p%rotors(1)%numblnds ! I'm not sure if FASTv8 can handle different number of blade nodes for each blade.
+   else
+      numBlades_c = 0
+      numElementsPerBlade_c = 0
    end if
+   
    dt_c          = Turbine(iTurb)%p_FAST%dt      
       
    ErrStat_c     = ErrStat

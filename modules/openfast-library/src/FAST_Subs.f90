@@ -651,6 +651,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          IF ( p_FAST%UseSC ) THEN
             CALL SC_DX_Init( ExternInitData%NumSC2CtrlGlob, ExternInitData%NumSC2Ctrl, ExternInitData%NumCtrl2SC, SC_DX, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ELSE
+            SC_DX%u%c_obj%toSC_Len       = 0
+            SC_DX%u%c_obj%toSC           = C_NULL_PTR
+            SC_DX%y%c_obj%fromSC_Len     = 0
+            SC_DX%y%c_obj%fromSC         = C_NULL_PTR
+            SC_DX%y%c_obj%fromSCglob_Len = 0
+            SC_DX%y%c_obj%fromSCglob     = C_NULL_PTR
          END IF
       END IF
 
