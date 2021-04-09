@@ -131,7 +131,7 @@ subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, N
    
    
    
-   CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
+   CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
                   
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, SUM( Turbine(iTurb)%y_FAST%numOuts ))
@@ -511,6 +511,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
          ExternInitData%fromSCGlob(i) = InitScOutputsGlob(i)
       end do
    end if
+   
    ExternInitData%NumSC2Ctrl = NumSC2Ctrl   
    if ( NumSC2Ctrl .gt. 0 ) then
       CALL AllocAry( ExternInitData%fromSC, NumSC2Ctrl, 'ExternInitData%fromSC', ErrStat, ErrMsg)
@@ -520,10 +521,11 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
          ExternInitData%fromSC(i) = InitScOutputsTurbine(i)
       end do
    end if
+   
    ExternInitData%NumActForcePtsBlade = NumActForcePtsBlade
    ExternInitData%NumActForcePtsTower = NumActForcePtsTower
 
-   CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
+   CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
 
       ! set values for return to OpenFOAM
    AbortErrLev_c = AbortErrLev   
@@ -534,7 +536,6 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
 
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL WrScr( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
-      IF (ALLOCATED(Turbine)) DEALLOCATE(Turbine)
       RETURN
    END IF
    
@@ -558,16 +559,19 @@ contains
    
       FAILED = ErrStat >= AbortErrLev
       
-      IF ( FAILED ) THEN
-         AbortErrLev_c = AbortErrLev
-         ErrStat_c     = ErrStat
-         ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
-         ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
-   
+      IF (ErrStat > 0) THEN
          CALL WrScr( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
-         !IF (ALLOCATED(Turbine)) DEALLOCATE(Turbine)
-         ! bjj: if there is an error, the driver should call FAST_DeallocateTurbines() instead of putting this deallocate statement here
-      
+         
+         IF ( FAILED ) THEN
+               
+            AbortErrLev_c = AbortErrLev
+            ErrStat_c     = ErrStat
+            ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+            ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+   
+            !IF (ALLOCATED(Turbine)) DEALLOCATE(Turbine)
+            ! bjj: if there is an error, the driver should call FAST_DeallocateTurbines() instead of putting this deallocate statement here
+         END IF
       END IF
       
       
@@ -668,9 +672,9 @@ end subroutine FAST_OpFM_Restart
 subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
 
    IMPLICIT NONE
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
-   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST
+   INTEGER(C_INT),            INTENT(IN   ) :: iTurb            ! Turbine number 
+   TYPE(OpFM_InputType_C),    INTENT(INOUT) :: OpFM_Input_from_FAST
+   TYPE(OpFM_OutputType_C),   INTENT(INOUT) :: OpFM_Output_to_FAST
    TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
    TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
 
@@ -693,15 +697,23 @@ subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST
    OpFM_Input_from_FAST%forceNodesChord_Len = Turbine(iTurb)%OpFM%u%c_obj%forceNodesChord_Len; OpFM_Input_from_FAST%forceNodesChord = Turbine(iTurb)%OpFM%u%c_obj%forceNodesChord
 
    SC_DX_Input_from_FAST%toSC_Len = Turbine(iTurb)%SC_DX%u%c_obj%toSC_Len
-   SC_DX_Input_from_FAST%toSC     = Turbine(iTurb)%SC_DX%u%c_obj%toSC
+   IF (SC_DX_Input_from_FAST%toSC_Len > 0) THEN
+      SC_DX_Input_from_FAST%toSC     = Turbine(iTurb)%SC_DX%u%c_obj%toSC
+   ELSE
+      SC_DX_Input_from_FAST%toSC     = C_NULL_PTR
+   END IF
    
    OpFM_Output_to_FAST%u_Len   = Turbine(iTurb)%OpFM%y%c_obj%u_Len;  OpFM_Output_to_FAST%u = Turbine(iTurb)%OpFM%y%c_obj%u 
    OpFM_Output_to_FAST%v_Len   = Turbine(iTurb)%OpFM%y%c_obj%v_Len;  OpFM_Output_to_FAST%v = Turbine(iTurb)%OpFM%y%c_obj%v 
    OpFM_Output_to_FAST%w_Len   = Turbine(iTurb)%OpFM%y%c_obj%w_Len;  OpFM_Output_to_FAST%w = Turbine(iTurb)%OpFM%y%c_obj%w 
 
    SC_DX_Output_to_FAST%fromSC_Len = Turbine(iTurb)%SC_DX%y%c_obj%fromSC_Len
-   SC_DX_Output_to_FAST%fromSC     = Turbine(iTurb)%SC_DX%y%c_obj%fromSC
-      
+   IF (SC_DX_Output_to_FAST%fromSC_Len > 0) THEN
+      SC_DX_Output_to_FAST%fromSC     = Turbine(iTurb)%SC_DX%y%c_obj%fromSC
+   ELSE
+      SC_DX_Output_to_FAST%fromSC     = C_NULL_PTR
+   END IF
+   
 end subroutine SetOpenFOAM_pointers
 !==================================================================================================================================
 subroutine FAST_OpFM_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Step')
