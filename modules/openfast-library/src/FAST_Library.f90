@@ -503,6 +503,12 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2CtrlGlob = NumSC2CtrlGlob
+   
+call WrScr('NumSC2CtrlGlob='//num2lstr(NumSC2CtrlGlob))   
+call WrScr('NumCtrl2SC='//num2lstr(NumCtrl2SC))   
+call WrScr('NumSC2Ctrl='//num2lstr(NumSC2Ctrl))   
+call WrScr('NumActForcePtsBlade='//num2lstr(NumActForcePtsBlade))   
+call WrScr('NumActForcePtsTower='//num2lstr(NumActForcePtsTower))   
    if ( NumSC2CtrlGlob .gt. 0 ) then
       CALL AllocAry( ExternInitData%fromSCGlob, NumSC2CtrlGlob, 'ExternInitData%fromSCGlob', ErrStat, ErrMsg)
          IF (FAILED()) RETURN
