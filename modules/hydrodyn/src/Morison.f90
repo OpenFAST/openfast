@@ -2119,6 +2119,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       
          ! get rotation matrix for moment of inertia orientations
          call RodrigMat(I_n, R_I, errStat, errMsg)
+         IF ( errStat > AbortErrLev ) RETURN
 
          ! globally-oreinted moment of inertia matrix for joint
          Irl_mat = 0.0
@@ -2183,16 +2184,12 @@ SUBROUTINE RodrigMat(a, R, errStat, errMsg)
 
    REAL(ReKi)                         :: vec(3)  ! scaled and adjusted input vector
    REAL(ReKi)                         :: factor  ! denomenator used for scaling                     
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
    factor = Dot_Product(a,a)
+   ! Return the identity if the vector is zero.  We are defining it this way because of how this is used
    if ( EqualRealNos(factor, 0.0_ReKi) ) then
-   !IF ((a(1) == 0) .AND. (a(2)==0)) THEN    ! return identity if vertical
-   !      CALL EYE(R, errStat,errMsg)
-   !   IF (a(3) < 0) THEN
-   !      R = -R
-   !   END IF
-   !
-      errStat = ErrID_Fatal
-      errMsg  = 'RodrigMat encountered vector of zero length'
+      CALL EYE(R, errStat,errMsg)
    else IF ( EqualRealNos(a(1), 0.0_ReKi) .AND. EqualRealNos(a(2), 0.0_ReKi) ) THEN    ! return identity if vertical
       CALL EYE(R, errStat,errMsg)
       IF (a(3) < 0) THEN
@@ -2652,8 +2649,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    m%F_B_End = 0.0_ReKi
    y%Mesh%Force  = 0.0_ReKi
    y%Mesh%Moment = 0.0_ReKi
-   F_WMG(1) = 0.0_ReKi
-   F_WMG(2) = 0.0_ReKi
    
    ! Loop through each member
    DO im = 1, p%NMembers    
@@ -2701,6 +2696,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! should lumped half-element coefficients get combined at initialization? <<<
               
             ! ------------------ marine growth: Sides: Section 4.1.2 --------------------  
+            F_WMG = 0.0_ReKi
 
             ! lower node
             !m%F_WMG(3, mem%NodeIndx(i  )) = m%F_WMG(3, mem%NodeIndx(i  )) - mem%m_mg_l(i)*g ! weight force  : Note: this is a constant
