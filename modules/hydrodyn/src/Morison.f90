@@ -2649,8 +2649,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    m%F_B_End = 0.0_ReKi
    y%Mesh%Force  = 0.0_ReKi
    y%Mesh%Moment = 0.0_ReKi
-   F_WMG(1) = 0.0_ReKi
-   F_WMG(2) = 0.0_ReKi
    
    ! Loop through each member
    DO im = 1, p%NMembers    
@@ -2698,6 +2696,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! should lumped half-element coefficients get combined at initialization? <<<
               
             ! ------------------ marine growth: Sides: Section 4.1.2 --------------------  
+            F_WMG = 0.0_ReKi
 
             ! lower node
             !m%F_WMG(3, mem%NodeIndx(i  )) = m%F_WMG(3, mem%NodeIndx(i  )) - mem%m_mg_l(i)*g ! weight force  : Note: this is a constant
