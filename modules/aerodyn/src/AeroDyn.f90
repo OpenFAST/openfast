@@ -1514,7 +1514,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ! Calculate buoyant loads
    do iR = 1,size(p%rotors)
       if ( p%rotors(iR)%Buoyancy ) then 
-         call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), ErrStat, ErrMsg )
+         call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
       end if
    end do
 
@@ -1655,10 +1655,11 @@ subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
 end subroutine AD_CavtCrit
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates buoyant loads on an MHK turbine.
-subroutine CalcBuoyantLoads( u, p, m, ErrStat, ErrMsg )
+subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    TYPE(RotInputType),                             INTENT(IN   )  :: u                !< AD inputs - used for mesh node positions
    TYPE(RotParameterType),                         INTENT(IN   )  :: p                !< Parameters
    TYPE(RotMiscVarType),                           INTENT(INOUT)  :: m                !< Misc/optimization variables
+   TYPE(RotOutputType),                            INTENT(INOUT)  :: y                !< Outputs computed at t 
    INTEGER(IntKi),                                 INTENT(  OUT)  :: ErrStat          !< Error status of the operation
    CHARACTER(*),                                   INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
@@ -1846,6 +1847,14 @@ subroutine CalcBuoyantLoads( u, p, m, ErrStat, ErrMsg )
    m%BlFB = BlFBtmp
    m%BlMB = BlMBtmp
 
+      ! Add buoyant loads to aerodynamic loads
+   do k = 1,p%NumBlades ! loop through all blades
+      do j = 1,p%NumBlNds ! loop through all nodes
+         y%BladeLoad(k)%Force(:,j) = y%BladeLoad(k)%Force(:,j) + BlFBtmp(j,k,:)
+         y%BladeLoad(k)%Moment(:,j) = y%BladeLoad(k)%Moment(:,j) + BlMBtmp(j,k,:)
+      end do ! j = nodes
+   end do ! k = blades
+
       ! Tower
    if ( p%NumTwrNds > 0 ) then
 
@@ -1921,10 +1930,23 @@ subroutine CalcBuoyantLoads( u, p, m, ErrStat, ErrMsg )
 
       end do ! j = nodes
 
-         ! Pass to m variable
-      m%TwrFB = TwrFBtmp
-      m%TwrMB = TwrMBtmp
+   end if
 
+      ! Pass to m variable
+   m%TwrFB = TwrFBtmp
+   m%TwrMB = TwrMBtmp
+
+      ! Add buoyant loads to aerodynamic loads
+   if ( p%TwrAero ) then
+      do j = 1,p%NumTwrNds ! loop through all nodes
+         y%TowerLoad%Force(:,j) = y%TowerLoad%Force(:,j) + TwrFBtmp(j,:)
+         y%TowerLoad%Moment(:,j) = y%TowerLoad%Moment(:,j) + TwrMBtmp(j,:)
+      end do ! j = nodes
+   else
+      do j = 1,p%NumTwrNds ! loop through all nodes
+         y%TowerLoad%Force(:,j) = TwrFBtmp(j,:)
+         y%TowerLoad%Moment(:,j) = TwrMBtmp(j,:)
+      end do ! j = nodes
    end if
 
       ! Hub
@@ -2009,6 +2031,10 @@ subroutine CalcBuoyantLoads( u, p, m, ErrStat, ErrMsg )
       m%NacFB = NacFBtmp
       m%NacMB = NacMBtmp
    end if
+
+      ! Assign buoyant loads to nacelle mesh
+   y%NacelleLoad%Force(:,1) = NacFBtmp
+   y%NacelleLoad%Moment(:,1) = NacMBtmp
 
 end subroutine CalcBuoyantLoads
 !----------------------------------------------------------------------------------------------------------------------------------
