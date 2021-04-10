@@ -99,7 +99,12 @@ void SuperController::load(int inNTurbinesGlob, std::string inScLibFile, scInitO
 
 }
 
-void SuperController::init(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob, MPI_Comm inFastMPIComm) {
+void SuperController::init(int nTurbinesProc) {
+    ip_from_FAST.resize(nTurbinesProc) ;
+    op_to_FAST.resize(nTurbinesProc) ;
+}
+
+void SuperController::init_sc(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob, MPI_Comm inFastMPIComm) {
 
     fastMPIComm = inFastMPIComm;
     nTurbinesProc = inNTurbinesProc;
@@ -131,9 +136,6 @@ void SuperController::init(scInitOutData & scio, int inNTurbinesProc, std::map<i
         to_SCglob_nm1.resize(nTurbinesGlob*nInpGlobal);
         to_SCglob_n.resize(nTurbinesGlob*nInpGlobal);
         to_SCglob_np1.resize(nTurbinesGlob*nInpGlobal);
-
-        ip_from_FAST.resize(nTurbinesProc) ;
-        op_to_FAST.resize(nTurbinesProc) ;
 
         sc_getInitData(&nTurbinesGlob, &nParamGlobal, &nParamTurbine, paramGlobal.data(), paramTurbine.data(), &nSC2CtrlGlob, from_SCglob_nm1.data(), &nSC2Ctrl, from_SC_nm1.data(), &nStatesGlobal, globStates.data(), &nStatesTurbine, turbineStates.data(), &ErrStat, ErrMsg);
 
