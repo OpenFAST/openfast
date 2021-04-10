@@ -44,13 +44,13 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
    
-   if (nTurbines .gt. 0) then
+   if (nTurbines > 0) then
       NumTurbines = nTurbines
    end if
    
-   if (nTurbines .gt. 10) then
+   if (nTurbines > 10) then
       call wrscr1('Number of turbines is > 10! Are you sure you have enough memory?')
-      call wrscr1('Proceeding anyway')
+      call wrscr1('Proceeding anyway.')
    end if
 
    allocate(Turbine(0:NumTurbines-1),Stat=ErrStat) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
@@ -504,7 +504,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2CtrlGlob = NumSC2CtrlGlob
    
-   if ( NumSC2CtrlGlob .gt. 0 ) then
+   if ( NumSC2CtrlGlob > 0 ) then
       CALL AllocAry( ExternInitData%fromSCGlob, NumSC2CtrlGlob, 'ExternInitData%fromSCGlob', ErrStat, ErrMsg)
          IF (FAILED()) RETURN
 
@@ -514,7 +514,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    end if
    
    ExternInitData%NumSC2Ctrl = NumSC2Ctrl
-   if ( NumSC2Ctrl .gt. 0 ) then
+   if ( NumSC2Ctrl > 0 ) then
       CALL AllocAry( ExternInitData%fromSC, NumSC2Ctrl, 'ExternInitData%fromSC', ErrStat, ErrMsg)
          IF (FAILED()) RETURN
 
