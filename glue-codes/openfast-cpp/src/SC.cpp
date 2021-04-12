@@ -12,14 +12,10 @@ nStatesTurbine(0)
 }
 
 SuperController::~SuperController() {
-
-    if (nTurbinesProc > 0) {
-
-        if(scLibHandle != NULL) {
-            // close the library
-            std::cout << "Closing SC library..." << std::endl;
-            dlclose(scLibHandle);
-        }
+    // close the library
+    if (sc_library_loaded) {
+        std::cout << "Closing SC library..." << std::endl;
+        dlclose(scLibHandle);
     }
 }
 
@@ -33,6 +29,7 @@ void SuperController::load(int inNTurbinesGlob, std::string inScLibFile, scInitO
     if (!scLibHandle) {
         std::cerr << "Cannot open library: " << dlerror() << '\n';
     }
+    sc_library_loaded = true;
 
     sc_init = (sc_init_t*) dlsym(scLibHandle, "sc_init");
     // reset errors
