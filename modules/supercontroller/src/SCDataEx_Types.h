@@ -36,8 +36,7 @@
   } SC_DX_ParameterType_t ;
   typedef struct SC_DX_InputType {
     void * object ;
-    float * toSC ;
-    int toSC_Len =0 ;
+    float * toSC ;     int toSC_Len ;
   } SC_DX_InputType_t ;
   typedef struct SC_DX_OutputType {
     void * object ;
