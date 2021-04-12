@@ -104,7 +104,7 @@ public:
 
     ~SuperController() ;
 
-    void init(int nNTurbinesProc);
+    void init(scInitOutData & scio, int nTurbinesProc);
     void init_sc(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob, MPI_Comm inFastMPIComm);
 
     void load(int inNTurbinesGlob, std::string inScLibFile, scInitOutData & scio);
