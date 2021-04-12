@@ -87,6 +87,7 @@ private:
     void *scLibHandle ;
     typedef void sc_init_t(int * nTurbinesGlob, int * nInpGlobal, int * nCtrl2SC, int * nParamGlobal, int * nParamTurbine, int * nStatesGlobal, int * nStatesTurbine, int * nSC2CtrlGlob, int * nSC2Ctrl, int *ErrStat, char * ErrMsg);
     sc_init_t * sc_init;
+    bool sc_library_loaded = false;
 
     typedef void sc_getInitData_t(int * nTurbinesGlob, int * nParamGlobal, int * nParamTurbine, float * paramGlobal, float * paramTurbine, int * nSC2CtrlGlob, float * from_SCglob, int * nSC2Ctrl, float * from_SC, int * nStatesGlobal, float * globStates, int * nStatesTurbine, float * turbineStates, int *ErrStat, char * ErrMsg);
     sc_getInitData_t * sc_getInitData;
