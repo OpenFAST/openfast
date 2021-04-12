@@ -65,7 +65,7 @@ CONTAINS
       type(FileInfoType)                           :: FileInfo_In    !< The derived type for holding the full input file for parsing -- we may pass this in the future
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
-      INTEGER(IntKi)                               :: I              ! index
+      INTEGER(IntKi)                               :: I              ! Current line number of input file 
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
       INTEGER(IntKi)                               :: Itemp          ! index
@@ -233,10 +233,10 @@ p%WaterKin  = 0
 
       ! ----------------- go through file contents a first time, counting each entry -----------------------
 
-      i  = 1  ! set line number counter to first line
+      i  = 0  ! set line number counter to before first line
       Line = NextLine(i);     ! Get the line and increment counter.  See description of routine. 
       
-      do while ( i < FileInfo_In%NumLines )
+      do while ( i <= FileInfo_In%NumLines )
 
          if (INDEX(Line, "---") > 0) then ! look for a header line
 
@@ -443,10 +443,10 @@ p%WaterKin  = 0
       ! note: no longer worrying about "Echo" option
       
       Nx = 0  ! set state counter to zero
-      i  = 1  ! set line number counter to first line 
+      i  = 0  ! set line number counter to before first line 
       Line = NextLine(i)
       
-      do while ( i < FileInfo_In%NumLines )
+      do while ( i <= FileInfo_In%NumLines )
       
          if (INDEX(Line, "---") > 0) then ! look for a header line
 
@@ -2180,13 +2180,12 @@ p%WaterKin  = 0
       !! in a while looking for the next section and accidentally overstep the end of the array
       !! resulting in a segfault.  This function will trap that issue and return a section break
       CHARACTER(1024) function NextLine(i)
-         integer, intent(inout) :: i
+         integer, intent(inout) :: i      ! Current line number corresponding to contents of NextLine
+         i=i+1             ! Increment to line next line.
          if (i>FileInfo_In%NumLines) then
             NextLine="---"       ! Set as a separator so we can escape some of the while loops
-            i=FileInfo_In%NumLines
          else
             NextLine=trim(FileInfo_In%Lines(i))
-            i=i+1
          endif
       end function NextLine
 
