@@ -497,6 +497,9 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    ErrStat = ErrID_None
    ErrMsg = ""
    
+   NumBl_c       = 0    ! initialize here in case of error
+   NumBlElem_c   = 0    ! initialize here in case of error
+   
    ExternInitData%TMax = TMax
    ExternInitData%TurbineID = TurbID
    ExternInitData%TurbinePos = TurbPosn
@@ -534,7 +537,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
    ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
-
+      
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL WrScr( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
       RETURN
@@ -547,13 +550,16 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD14) THEN   
       NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
       NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
-   ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN  
-      NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
-      NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
-   ELSE
-      NumBl_c     = 0
-      NumBlElem_c = 0
-   END IF   
+   ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
+      IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors)) THEN
+         IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)) THEN
+            NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
+         END IF
+      END IF
+      IF (NumBl_c > 0) THEN
+         NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
+      END IF
+   END IF
    
 contains
    LOGICAL FUNCTION FAILED()
