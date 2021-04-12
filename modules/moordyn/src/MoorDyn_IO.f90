@@ -1032,6 +1032,9 @@ CONTAINS
       ErrMsg  = ""
 
 
+!FIXME: make sure thes are actually open before trying to close them. Segfault will occur otherwise!!!!
+!  This bug can be triggered by an early failure of the parsing routines, before these files were ever opened
+!  which returns MD to OpenFAST as ErrID_Fatal, then OpenFAST calls MD_End, which calls this.
       ! close main MoorDyn output file
       CLOSE( p%MDUnOut, IOSTAT = ErrStat )
          IF ( ErrStat /= 0 ) THEN
