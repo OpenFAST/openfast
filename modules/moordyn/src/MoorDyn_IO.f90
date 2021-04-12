@@ -629,10 +629,9 @@ CONTAINS
 
 
    !----------------------------------------------------------------------------------------============
-   SUBROUTINE MDIO_OpenOutput( OutRootName,  p, m, InitOut, ErrStat, ErrMsg )
+   SUBROUTINE MDIO_OpenOutput( p, m, InitOut, ErrStat, ErrMsg )
    !----------------------------------------------------------------------------------------------------
 
-      CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
       TYPE(MD_ParameterType),        INTENT( INOUT ) :: p
       TYPE(MD_MiscVarType),          INTENT( INOUT ) :: m
       TYPE(MD_InitOutPutType ),      INTENT( IN    ) :: InitOut              !

@@ -62,6 +62,7 @@ CONTAINS
 
       ! local variables
       TYPE(MD_InputFileType)                       :: InputFileDat   ! Data read from input file for setup, but not stored after Init
+      type(FileInfoType)                           :: FileInfo_In    !< The derived type for holding the full input file for parsing -- we may pass this in the future
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
       INTEGER(IntKi)                               :: I              ! index
@@ -159,6 +160,14 @@ CONTAINS
 
       p%RootName = TRIM(InitInp%RootName)//'.MD'  ! all files written from this module will have this root name
 
+!FIXME: Set some of the options -- the way parsing is written, they don't have to exist in the input file, but get used anyhow.
+! Setting these to some value for the moment -- trying to figure out why I get NaN's with the -Wuninitialized -finit-real=inf -finit-integer=9999 flags set.
+p%dtM0      = DTcoupling      ! default to the coupling
+!p%WtrDpth   = InitInp%WtrDpth      ! This will be passed in later.  Right now use the default of -9999 in the registry
+p%kBot      = 0
+p%cBot      = 0
+p%WaterKin  = 0
+
       ! Check for farm-level inputs (indicating that this MoorDyn isntance is being run from FAST.Farm)
       !intead of below, check first dimension of PtfmInit
       !p%nTurbines = SIZE(InitInp%FarmCoupledKinematics)  ! the number of turbines in the array (0 indicates a regular OpenFAST simulation with 1 turbine)
@@ -207,13 +216,6 @@ CONTAINS
 
 
 
-!FIXME: Set some of the options -- the way parsing is written, they don't have to exist in the input file, but get used anyhow.
-! Setting these to some value for the moment -- trying to figure out why I get NaN's with the -Wuninitialized -finit-real=inf -finit-integer=9999 flags set.
-p%dtM0      = DTcoupling      ! default to the coupling
-!p%WtrDpth   = InitInp%WtrDpth      ! This will be passed in later.  Right now use the default of -9999 in the registry
-p%kBot      = 0
-p%cBot      = 0
-p%WaterKin  = 0
 
 
       ! ----------------- go through file contents a first time, counting each entry -----------------------
@@ -1932,7 +1934,7 @@ p%WaterKin  = 0
 
       ! --------------------------------------------------------------------
       !          open output file(s) and write header lines
-      CALL MDIO_OpenOutput( InitInp%FileName, p, m, InitOut, ErrStat2, ErrMsg2 )
+      CALL MDIO_OpenOutput( p, m, InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       ! --------------------------------------------------------------------
