@@ -90,7 +90,7 @@ void fast::OpenFAST::init() {
      
         case fast::init:
 
-            sc.init(nTurbinesProc);
+            sc.init(scio, nTurbinesProc);
             if(scStatus) {
                 sc.init_sc(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
                 sc.calcOutputs_n(0.0);
@@ -155,7 +155,7 @@ void fast::OpenFAST::init() {
 
         case fast::restartDriverInitFAST:
 
-            sc.init(nTurbinesProc);
+            sc.init(scio, nTurbinesProc);
             if(scStatus) {
                 sc.init_sc(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
                 sc.calcOutputs_n(0.0);

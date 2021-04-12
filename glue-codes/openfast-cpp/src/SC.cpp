@@ -99,9 +99,19 @@ void SuperController::load(int inNTurbinesGlob, std::string inScLibFile, scInitO
 
 }
 
-void SuperController::init(int nTurbinesProc) {
+void SuperController::init(scInitOutData & scio, int nTurbinesProc) {
     ip_from_FAST.resize(nTurbinesProc) ;
     op_to_FAST.resize(nTurbinesProc) ;
+
+    scio.nSC2CtrlGlob = 0;
+    scio.nSC2Ctrl = 0;
+    scio.nCtrl2SC = 0;
+
+    scio.from_SCglob.resize(nSC2CtrlGlob);
+    scio.from_SC.resize(nTurbinesProc);
+    for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+        scio.from_SC[iTurb].resize(nSC2Ctrl);
+    }
 }
 
 void SuperController::init_sc(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob, MPI_Comm inFastMPIComm) {
@@ -138,12 +148,6 @@ void SuperController::init_sc(scInitOutData & scio, int inNTurbinesProc, std::ma
         to_SCglob_np1.resize(nTurbinesGlob*nInpGlobal);
 
         sc_getInitData(&nTurbinesGlob, &nParamGlobal, &nParamTurbine, paramGlobal.data(), paramTurbine.data(), &nSC2CtrlGlob, from_SCglob_nm1.data(), &nSC2Ctrl, from_SC_nm1.data(), &nStatesGlobal, globStates.data(), &nStatesTurbine, turbineStates.data(), &ErrStat, ErrMsg);
-
-        scio.from_SC.resize(nTurbinesProc);
-        for(int iTurb=0; iTurb < nTurbinesProc; iTurb++)
-            scio.from_SC[iTurb].resize(nSC2Ctrl);
-
-        scio.from_SCglob.resize(nSC2CtrlGlob);
 
         for(int i=0; i < nSC2CtrlGlob; i++) {
             scio.from_SCglob[i] = from_SCglob_nm1[i];
