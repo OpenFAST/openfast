@@ -1,0 +1,51 @@
+--------------------- MoorDyn Input File ------------------------------------
+Mooring system for the SOT TetraSpar model for the UMaine wave tank test at full scale.
+FALSE    Echo      - echo the input file data (flag)
+----------------------- LINE TYPES ------------------------------------------
+1        NTypes    - number of LineTypes
+Name     Diam      MassDen      EA     BA/-zeta  Can   Cat   Cdn   Cdt  
+(-)       (m)      (kg/m)       (N)    (N-s/-)   (-)   (-)   (-)   (-)  
+ A       0.0766    133.35     7.536E8   -1.0     0.8   0.25  2.0   0.4
+---------------------- CONNECTION PROPERTIES --------------------------------
+6       NConnects - number of connections including anchors and fairleads
+Node    Type     	 X        Y        Z       M     V      FX   FY   FZ   CdA   Ca  
+(-)     (-)      	(m)      (m)      (m)     (kg)  (m^3)  (kN) (kN) (kN) (m^2)  (-) 
+1      fixed   	       418.8    725.383  -200.0    0     0      0    0    0     0     0
+2      fixed   	      -837.6    0.0000   -200.0    0     0      0    0    0     0     0
+3      fixed           418.8   -725.383  -200.0    0     0      0    0    0     0     0
+4      vessel          20.434   35.393   -14.0     0     0      0    0    0     0     0
+5      vessel         -40.868   0.0000   -14.0     0     0      0    0    0     0     0
+6      vessel          20.434  -35.393   -14.0     0     0      0    0    0     0     0
+---------------------- LINE PROPERTIES --------------------------------------
+3        NLines    - number of line objects                                
+Line    LineType  UnstrLen  NumSegs   NodeAnch  NodeFair  Flags/Outputs  CtrlChan
+(-)       (-)       (m)       (-)       (-)       (-)         (-)          (-)
+1          A       835.35      20        1         4           -           0
+2          A       835.35      20        2         5           -           0
+3          A       835.35      20        3         6           -           0
+---------------------- SOLVER OPTIONS ---------------------------------------
+0.001    dtM       - time step to use in mooring integration (s). 
+3E6      kbot      - bottom stiffness (Pa/m). 
+3E5      cbot      - bottom damping (Pa-s/m). 
+2        dtIC      - time interval for analyzing convergence during initial condition (IC) generation (s)
+60       TmaxIC    - max time for IC generation without convergence (s)
+4.0      CdScaleIC - factor by which to scale drag coefficients during dynamic relaxation (-)
+0.01     threshIC  - threshold for IC convergence (-)
+------------------------ OUTPUTS --------------------------------------------
+AnchTen1        - Tension [N] in the connection 1 (anchor) of line 1.
+AnchTen2        - Tension [N] in the connection 2 (anchor) of line 2.
+AnchTen3        - Tension [N] in the connection 3 (anchor) of line 3.
+FairTen1        - Tension [N] in the connection 7 (fairlead) of line 1.
+FairTen2        - Tension [N] in the connection 8 (fairlead) of line 2.
+FairTen3        - Tension [N] in the connection 9 (fairlead) of line 3.
+END
+------------------------- need this line --------------------------------------
+
+
+
+
+
+
+
+
+

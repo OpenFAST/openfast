@@ -27,6 +27,10 @@ set(MOORDYN_LIBS_SOURCES
 add_library(moordynlib ${MOORDYN_LIBS_SOURCES})
 target_link_libraries(moordynlib nwtclibs)
 
+# Linux
+add_library(md_c_lib driver/MD_C.f90)
+target_link_libraries(md_c_lib moordynlib)
+
 install(TARGETS moordynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib

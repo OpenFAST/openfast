@@ -8,7 +8,7 @@ ifw_input_string_array = [
     '*Steady 15 m/s winds with no shear for IEA 15 MW Offshore Reference Turbine                                                                                                       *' + \
     '*--------------------------------------------------------------------------------------------------------------                                                                   *' + \
     '       false  Echo           - Echo input data to <RootName>.ech (flag)                                                                                                           *' + \
-    '          3   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)  *' + \
+    '          2   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)  *' + \
     '          0   PropagationDir - Direction of wind propagation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)                               *' + \
     '          0   VFlowAng       - Upflow angle (degrees) (not used for native Bladed format WindType=7)                                                                              *' + \
     '          1   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                           *' + \
