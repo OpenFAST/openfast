@@ -244,7 +244,7 @@ END SUBROUTINE CleanupEchoFile
 
 
 !====================================================================================================
-SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
+SUBROUTINE HydroDynInput_GetInput( InitInp, defWtrDens, defWtrDpth, defMSL2SWL, ErrStat, ErrMsg )
 !     This public subroutine reads the input required for HydroDyn from the file whose name is an
 !     input parameter.
 !----------------------------------------------------------------------------------------------------
@@ -253,6 +253,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       ! Passed variables
 
    TYPE(HydroDyn_InitInputType),  INTENT( INOUT )   :: InitInp              ! the hydrodyn data
+   REAL(ReKi),                    INTENT(IN     )   :: defWtrDens           ! default water density from the driver; may be overwritten
+   REAL(ReKi),                    INTENT(IN     )   :: defWtrDpth           ! default water depth from the driver; may be overwritten
+   REAL(ReKi),                    INTENT(IN     )   :: defMSL2SWL           ! default mean sea level to still water level from the driver; may be overwritten
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -373,7 +376,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! WtrDens - Water density.
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Waves%WtrDens, 'WtrDens', 'Water density', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVarWDefault ( UnIn, FileName, InitInp%Waves%WtrDens, 'WtrDens', 'Water density', defWtrDens, ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -383,7 +386,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! WtrDpth - Water depth
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Morison%WtrDpth, 'WtrDpth', 'Water depth', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVarWDefault ( UnIn, FileName, InitInp%Morison%WtrDpth, 'WtrDpth', 'Water depth', defWtrDpth, ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -393,7 +396,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! MSL2SWL
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Morison%MSL2SWL, 'MSL2SWL', 'MSL to SWL offset', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVarWDefault ( UnIn, FileName, InitInp%Morison%MSL2SWL, 'MSL2SWL', 'MSL to SWL offset', defMSL2SWL, ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()

@@ -124,6 +124,8 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%UseAD14   = LEN_TRIM(InitInp%ADInputFile) > 0 ! if we're using AD14, we need to use the AD14 input files
 
    p%RootName = InitInp%RootName ! FAST already adds '.ED' to the root name
+
+   p%Gravity = InitInp%Gravity
    
    CALL ED_ReadInput( InitInp%InputFile, InitInp%ADInputFile, InputFileData, GetAdamsVals, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -237,7 +239,6 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       
    InitOut%Ver         = ED_Ver
    InitOut%NumBl       = p%NumBl
-   InitOut%Gravity     = p%Gravity
    InitOut%BladeLength = p%TipRad - p%HubRad
    InitOut%TowerHeight = p%TwrFlexL
    InitOut%TowerBaseHeight = p%TowerBsHt
@@ -3487,7 +3488,6 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%PtfmCMyt = InputFileData%PtfmCMyt   
    
    p%DT        = InputFileData%DT
-   p%Gravity   = InputFileData%Gravity
    p%OverHang  = InputFileData%OverHang
    p%ShftGagL  = InputFileData%ShftGagL
    p%TowerHt   = InputFileData%TowerHt

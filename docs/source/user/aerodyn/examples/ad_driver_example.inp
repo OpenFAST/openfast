@@ -3,6 +3,8 @@ UAE Phase 3 turbine (BEM)
 -----  Input Configuration  ----------------------------------------------------
 True          Echo            -  Echo input parameters to "<rootname>.ech"?
 "ad_primary_example.inp"    AD_InputFile    -  Name of the primary AeroDyn input file
+-----  Feature Switches and Flags ----------------------------------------------
+          0   MHK             - MHK turbine type (switch) {0=Not an MHK turbine, 1=Fixed MHK turbine, 2=Floating MHK turbine}
 -----  Turbine Data  -----------------------------------------------------------
           2   NumBlades       - Number of blades (-)
       0.432   HubRad          - Hub radius (m)

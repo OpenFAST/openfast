@@ -32,6 +32,8 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: Type_LandBased          = 1
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Fixed     = 2
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Floating  = 3
+   INTEGER(IntKi), PARAMETER :: Type_MHK_Fixed          = 4
+   INTEGER(IntKi), PARAMETER :: Type_MHK_Floating       = 5
    
    ! state array indexes
    INTEGER(IntKi), PARAMETER :: STATE_CURR              = 1          !< index for "current" (t_global) states
