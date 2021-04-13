@@ -438,6 +438,7 @@ typedef	^	InputType	StC_InputType	TStC	{:}	-	-	"StC module inputs - tower"	-
 typedef	^	InputType	StC_InputType	SStC	{:}	-	-	"StC module inputs - substructure"	-
 typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
+typedef	^	InputType	MeshType	PtfmMotionMesh	-	-	-	"Platform motion mesh at platform reference point" -
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

@@ -600,6 +600,8 @@ typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_ED_P	{:}	-	-	"Map ServoDyn/S
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SStC_P_P	{:}	-	-	"Map ElastoDyn     platform point mesh motion to ServoDyn/SStC point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_SD_P	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to SubDyn        point load mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_SStC_P_P	{:}	-	-	"Map SubDyn        platform point mesh motion to ServoDyn/SStC point mesh"
+# ED <-> SrvD -- PlatformPtMesh motion to SrvD%PtfmMotionMesh for passing to DLL
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn     platform point mesh motion to ServoDyn      point mesh -- for passing to controller"
 # ED/BD <-> AD (blades)
 typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"

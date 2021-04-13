@@ -1034,6 +1034,13 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
    !ELSE
    !END IF
    !
+
+   ! Platform motion mesh to pass to DLL -- NOTE: this is only the transition piece motion, and only passed when DLL is used
+   IF (y_ED%PlatformPtMesh%Committed .and. u_SrvD%PtfmMotionMesh%Committed ) THEN
+      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%PtfmMotionMesh, MeshMapData%ED_P_2_SrvD_P_P, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ENDIF
+
    
    ! StrucCtrl input motion meshes
    IF ( ALLOCATED(u_SrvD%NStC) ) THEN
@@ -4465,6 +4472,13 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !-------------------------
 !  ServoDyn <-> Platform
 !-------------------------
+      ! ServoDyn platform point mesh from ElastoDyn platform point mesh -- Motions passed to DLL
+      IF ( SrvD%Input(1)%PtfmMotionMesh%Committed ) THEN
+         CALL MeshMapCreate( PlatformMotion, SrvD%Input(1)%PtfmMotionMesh, MeshMapData%ED_P_2_SrvD_P_P, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_SrvD_P_P' )
+      ENDIF
+
+
       IF ( ALLOCATED(SrvD%Input(1)%SStC) ) THEN
          IF ( p_FAST%CompSub /= Module_SD ) THEN ! all of these get mapped to ElastoDyn ! (offshore floating with rigid substructure)
             j=size(SrvD%Input(1)%SStC)
