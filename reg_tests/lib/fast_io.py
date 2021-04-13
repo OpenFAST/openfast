@@ -67,7 +67,7 @@ def load_ascii_output(filename):
         if np.any(np.isnan(data)):
             raise ValueError("NaN found in test data: {}".format(filename))
         if np.any(np.isinf(data)):
-            raise ValueError("NaN found in test data: {}".format(filename))
+            raise ValueError("Infinity found in test data: {}".format(filename))
         return data, info
 
 def load_binary_output(filename):
