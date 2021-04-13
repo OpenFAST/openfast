@@ -266,16 +266,20 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%UseSC = .FALSE.
    END IF
 
-   IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
+   IF (p%UseBladedInterface) THEN
       CALL AllocAry( u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC', ErrStat2, ErrMsg2 )
       if (Failed())  return;
-      u%fromSC = InitInp%fromSC
+      if (InitInp%NumSC2Ctrl > 0 ) then
+         u%fromSC = InitInp%fromSC
+      end if
    END IF
 
-   IF (InitInp%NumSC2CtrlGlob > 0 .and. p%UseBladedInterface) THEN
+   IF (p%UseBladedInterface) THEN
       CALL AllocAry( u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob', ErrStat2, ErrMsg2 )
       if (Failed())  return;
-      u%fromSCglob = InitInp%fromSCGlob
+      if (InitInp%NumSC2CtrlGlob > 0) then
+         u%fromSCglob = InitInp%fromSCGlob
+      end if
    END IF
 
    u%BlPitch = p%BlPitchInit(1:p%NumBl)
