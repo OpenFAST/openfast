@@ -1116,9 +1116,9 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    endif
    if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. .not. p%Buoyancy .and. .not. p%AddedMass ) then
       p%NumTwrNds     = 0
-   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%Buoyancy .or. p%AddedMass .and. RotData%NumTwrNds <= 0 ) then
+   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. (p%Buoyancy .or. p%AddedMass) .and. RotData%NumTwrNds <= 0 ) then
       p%NumTwrNds     = 0
-   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%Buoyancy .or. p%AddedMass .and. RotData%NumTwrNds > 0 ) then
+   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. (p%Buoyancy .or. p%AddedMass) .and. RotData%NumTwrNds > 0 ) then
       p%NumTwrNds     = RotData%NumTwrNds
       
       call move_alloc( RotData%TwrDiam, p%TwrDiam )
