@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2020 National Renewable Energy Laboratory
-! Copyright (C) 2020 Matthew Hall
+! Copyright (C) 2020-2021 Alliance for Sustainable Energy, LLC
+! Copyright (C) 2015-2019 Matthew Hall
 !
 !    This file is part of MoorDyn.
 !
