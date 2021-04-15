@@ -651,6 +651,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          IF ( p_FAST%UseSC ) THEN
             CALL SC_DX_Init( ExternInitData%NumSC2CtrlGlob, ExternInitData%NumSC2Ctrl, ExternInitData%NumCtrl2SC, SC_DX, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ELSE
+            SC_DX%u%c_obj%toSC_Len       = 0
+            SC_DX%u%c_obj%toSC           = C_NULL_PTR
+            SC_DX%y%c_obj%fromSC_Len     = 0
+            SC_DX%y%c_obj%fromSC         = C_NULL_PTR
+            SC_DX%y%c_obj%fromSCglob_Len = 0
+            SC_DX%y%c_obj%fromSCglob     = C_NULL_PTR
          END IF
       END IF
 
@@ -720,18 +727,28 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       IF ( PRESENT(ExternInitData) ) THEN
          Init%InData_SrvD%NumSC2CtrlGlob = ExternInitData%NumSC2CtrlGlob
-         IF ( (Init%InData_SrvD%NumSC2CtrlGlob .gt. 0) ) THEN
+         IF ( (Init%InData_SrvD%NumSC2CtrlGlob > 0) ) THEN
             CALL AllocAry( Init%InData_SrvD%fromSCGlob, Init%InData_SrvD%NumSC2CtrlGlob, 'Init%InData_SrvD%fromSCGlob', ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
+               
             do i=1,Init%InData_SrvD%NumSC2CtrlGlob
                Init%InData_SrvD%fromSCGlob(i) = ExternInitData%fromSCGlob(i)
             end do
          END IF
 
          Init%InData_SrvD%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
-         IF ( (Init%InData_SrvD%NumSC2Ctrl .gt. 0) ) THEN
+         IF ( (Init%InData_SrvD%NumSC2Ctrl > 0) ) THEN
             CALL AllocAry( Init%InData_SrvD%fromSC, Init%InData_SrvD%NumSC2Ctrl, 'Init%InData_SrvD%fromSC', ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
+            
             do i=1,Init%InData_SrvD%NumSC2Ctrl
                Init%InData_SrvD%fromSC(i) = ExternInitData%fromSC(i)
             end do

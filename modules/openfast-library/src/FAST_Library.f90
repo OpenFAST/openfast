@@ -44,13 +44,13 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
    
-   if (nTurbines .gt. 0) then
+   if (nTurbines > 0) then
       NumTurbines = nTurbines
    end if
    
-   if (nTurbines .gt. 10) then
+   if (nTurbines > 10) then
       call wrscr1('Number of turbines is > 10! Are you sure you have enough memory?')
-      call wrscr1('Proceeding anyway')
+      call wrscr1('Proceeding anyway.')
    end if
 
    allocate(Turbine(0:NumTurbines-1),Stat=ErrStat) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
@@ -131,7 +131,7 @@ subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, N
    
    
    
-   CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
+   CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
                   
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, SUM( Turbine(iTurb)%y_FAST%numOuts ))
@@ -497,29 +497,39 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    ErrStat = ErrID_None
    ErrMsg = ""
    
+   NumBl_c       = 0    ! initialize here in case of error
+   NumBlElem_c   = 0    ! initialize here in case of error
+   
    ExternInitData%TMax = TMax
    ExternInitData%TurbineID = TurbID
    ExternInitData%TurbinePos = TurbPosn
    ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2CtrlGlob = NumSC2CtrlGlob
-   if ( NumSC2CtrlGlob .gt. 0 ) then
+   
+   if ( NumSC2CtrlGlob > 0 ) then
       CALL AllocAry( ExternInitData%fromSCGlob, NumSC2CtrlGlob, 'ExternInitData%fromSCGlob', ErrStat, ErrMsg)
+         IF (FAILED()) RETURN
+
       do i=1,NumSC2CtrlGlob
          ExternInitData%fromSCGlob(i) = InitScOutputsGlob(i)
       end do
    end if
-   ExternInitData%NumSC2Ctrl = NumSC2Ctrl   
-   if ( NumSC2Ctrl .gt. 0 ) then
+   
+   ExternInitData%NumSC2Ctrl = NumSC2Ctrl
+   if ( NumSC2Ctrl > 0 ) then
       CALL AllocAry( ExternInitData%fromSC, NumSC2Ctrl, 'ExternInitData%fromSC', ErrStat, ErrMsg)
-        do i=1,NumSC2Ctrl
-           ExternInitData%fromSC(i) = InitScOutputsTurbine(i)
-        end do
+         IF (FAILED()) RETURN
+
+      do i=1,NumSC2Ctrl
+         ExternInitData%fromSC(i) = InitScOutputsTurbine(i)
+      end do
    end if
+   
    ExternInitData%NumActForcePtsBlade = NumActForcePtsBlade
    ExternInitData%NumActForcePtsTower = NumActForcePtsTower
 
-   CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
+   CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
 
       ! set values for return to OpenFOAM
    AbortErrLev_c = AbortErrLev   
@@ -527,10 +537,9 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
    ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
-
+      
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL WrScr( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
-      IF (ALLOCATED(Turbine)) DEALLOCATE(Turbine)
       RETURN
    END IF
    
@@ -541,14 +550,39 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD14) THEN   
       NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
       NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
-   ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN  
-      NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
-      NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
-   ELSE
-      NumBl_c     = 0
-      NumBlElem_c = 0
-   END IF   
+   ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
+      IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors)) THEN
+         IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)) THEN
+            NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
+         END IF
+      END IF
+      IF (NumBl_c > 0) THEN
+         NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
+      END IF
+   END IF
    
+contains
+   LOGICAL FUNCTION FAILED()
+   
+      FAILED = ErrStat >= AbortErrLev
+      
+      IF (ErrStat > 0) THEN
+         CALL WrScr( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
+         
+         IF ( FAILED ) THEN
+               
+            AbortErrLev_c = AbortErrLev
+            ErrStat_c     = ErrStat
+            ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+            ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+   
+            !IF (ALLOCATED(Turbine)) DEALLOCATE(Turbine)
+            ! bjj: if there is an error, the driver should call FAST_DeallocateTurbines() instead of putting this deallocate statement here
+         END IF
+      END IF
+      
+      
+   END FUNCTION FAILED
 end subroutine   
 !==================================================================================================================================
 subroutine FAST_OpFM_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Solution0')
@@ -622,8 +656,14 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    n_t_global_c  = n_t_global
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine(iTurb)%y_FAST%numOuts )) ! includes time
-   numBlades_c   = Turbine(iTurb)%ad%p%rotors(1)%numblades
-   numElementsPerBlade_c = Turbine(iTurb)%ad%p%rotors(1)%numblnds ! I'm not sure if FASTv8 can handle different number of blade nodes for each blade.
+   if (allocated(Turbine(iTurb)%ad%p%rotors)) then ! this might not be allocated if we had an error earlier
+      numBlades_c   = Turbine(iTurb)%ad%p%rotors(1)%numblades
+      numElementsPerBlade_c = Turbine(iTurb)%ad%p%rotors(1)%numblnds ! I'm not sure if FASTv8 can handle different number of blade nodes for each blade.
+   else
+      numBlades_c = 0
+      numElementsPerBlade_c = 0
+   end if
+   
    dt_c          = Turbine(iTurb)%p_FAST%dt      
       
    ErrStat_c     = ErrStat
@@ -634,6 +674,8 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
 #endif   
 
+   if (ErrStat >= AbortErrLev) return
+   
    call SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
 
 end subroutine FAST_OpFM_Restart
@@ -641,9 +683,9 @@ end subroutine FAST_OpFM_Restart
 subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
 
    IMPLICIT NONE
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
-   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST
+   INTEGER(C_INT),            INTENT(IN   ) :: iTurb            ! Turbine number 
+   TYPE(OpFM_InputType_C),    INTENT(INOUT) :: OpFM_Input_from_FAST
+   TYPE(OpFM_OutputType_C),   INTENT(INOUT) :: OpFM_Output_to_FAST
    TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
    TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
 

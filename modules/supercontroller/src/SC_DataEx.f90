@@ -77,6 +77,9 @@ SUBROUTINE SC_DX_Init( NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, SC_DX, ErrStat, E
    if (NumCtrl2SC > 0) then
       SC_DX%u%c_obj%toSC_Len = NumCtrl2SC
       SC_DX%u%c_obj%toSC     = C_LOC( SC_DX%u%toSC(1) )
+   else
+      SC_DX%u%c_obj%toSC_Len = 0
+      SC_DX%u%c_obj%toSC     = C_NULL_PTR
    end if
       
       
@@ -94,6 +97,9 @@ SUBROUTINE SC_DX_Init( NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, SC_DX, ErrStat, E
    if (NumSC2CtrlGlob > 0) then
       SC_DX%y%c_obj%fromSCglob_Len = NumSC2CtrlGlob
       SC_DX%y%c_obj%fromSCglob     = C_LOC( SC_DX%y%fromSCglob(1) )
+   else
+      SC_DX%y%c_obj%fromSCglob_Len = 0
+      SC_DX%y%c_obj%fromSCglob     = C_NULL_PTR
    end if
    
    if (NumSC2Ctrl > 0) then
@@ -107,6 +113,9 @@ SUBROUTINE SC_DX_Init( NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, SC_DX, ErrStat, E
    if (NumSC2Ctrl > 0) then
       SC_DX%y%c_obj%fromSC_Len = NumSC2Ctrl
       SC_DX%y%c_obj%fromSC     = C_LOC( SC_DX%y%fromSC(1) )
+   else
+      SC_DX%y%c_obj%fromSC_Len = 0
+      SC_DX%y%c_obj%fromSC     = C_NULL_PTR
    end if
 
    if( (NumSC2CtrlGlob > 0) .or. (NumSC2Ctrl > 0) .or. (NumSC2Ctrl > 0)) then
