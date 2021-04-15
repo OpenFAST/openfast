@@ -63,9 +63,10 @@ CONTAINS
 
       ! local variables
       TYPE(MD_InputFileType)                       :: InputFileDat   ! Data read from input file for setup, but not stored after Init
+      type(FileInfoType)                           :: FileInfo_In    !< The derived type for holding the full input file for parsing -- we may pass this in the future
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
-      INTEGER(IntKi)                               :: I              ! index
+      INTEGER(IntKi)                               :: I              ! Current line number of input file 
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
       INTEGER(IntKi)                               :: Itemp          ! index
@@ -91,7 +92,6 @@ CONTAINS
       CHARACTER(MaxWrScrLen)                       :: Message
       
       ! Local variables for reading file input (Previously in MDIO_ReadInput)
-      INTEGER(IntKi)               :: UnIn                 ! Unit number for the input file
       INTEGER(IntKi)               :: UnEc                 ! The local unit number for this module's echo file
     INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
     CHARACTER(200)   :: Frmt     ! a string to hold a format statement
@@ -101,7 +101,7 @@ CONTAINS
       CHARACTER(20)                :: LineOutString        ! String to temporarially hold characters specifying line output options
       CHARACTER(20)                :: OptString            ! String to temporarially hold name of option variable
       CHARACTER(20)                :: OptValue             ! String to temporarially hold value of options variable input
-      INTEGER(IntKi)               :: nOpts = 0            ! number of options lines in input file
+      INTEGER(IntKi)               :: nOpts                ! number of options lines in input file
       CHARACTER(40)                :: TempString1          !
       CHARACTER(40)                :: TempString2          !
       CHARACTER(40)                :: TempString3          !
@@ -160,6 +160,14 @@ CONTAINS
 
       p%RootName = TRIM(InitInp%RootName)//'.MD'  ! all files written from this module will have this root name
 
+!FIXME: Set some of the options -- the way parsing is written, they don't have to exist in the input file, but get used anyhow.
+! Setting these to some value for the moment -- trying to figure out why I get NaN's with the -Wuninitialized -finit-real=inf -finit-integer=9999 flags set.
+p%dtM0      = DTcoupling      ! default to the coupling
+!p%WtrDpth   = InitInp%WtrDpth      ! This will be passed in later.  Right now use the default of -9999 in the registry
+p%kBot      = 0
+p%cBot      = 0
+p%WaterKin  = 0
+
       ! Check for farm-level inputs (indicating that this MoorDyn isntance is being run from FAST.Farm)
       !intead of below, check first dimension of PtfmInit
       !p%nTurbines = SIZE(InitInp%FarmCoupledKinematics)  ! the number of turbines in the array (0 indicates a regular OpenFAST simulation with 1 turbine)
@@ -184,125 +192,130 @@ CONTAINS
       !---------------------------------------------------------------------------------------------
       
       
-      UnEc = -1
-
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+
+      CALL WrScr( '   Parsing MoorDyn input file: '//trim(InitInp%FileName) )
+
+
+      ! -----------------------------------------------------------------
+      ! Read the primary MoorDyn input file, or copy from passed input
+   if (InitInp%UsePrimaryInputFile) then
+      ! Read the entire input file, minus any comment lines, into the FileInfo_In
+      ! data structure in memory for further processing.
+      call ProcessComFile( InitInp%FileName, FileInfo_In, ErrStat2, ErrMsg2 )
+   else
+      call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+   endif
+   if (Failed()) return;
+
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the FileInfo_In data structure.
+   !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+
+      !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
+!   CALL ParsePrimaryFileInfo_BuildModel( PriPath, InitInp, FileInfo_In, InputFileDat, p, m, UnEc, ErrStat2, ErrMsg2 )
+!   if (Failed()) return;
+
+
+
+
+!NOTE: This could be split into a separate routine for easier to read code
       !-------------------------------------------------------------------------------------------------
-      ! Open the file
+      ! Parsing of input file from the FileInfo_In data structure
+      !     -  FileInfo_Type is essentially a string array with some metadata.
       !-------------------------------------------------------------------------------------------------
-      FileName = TRIM(InitInp%FileName)
 
-      CALL GetNewUnit( UnIn )
-      CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-
-
-      CALL WrScr( '   Reading MoorDyn input file: '//FileName )
-
-
-
-!FIXME: Set some of the options -- the way parsing is written, they don't have to exist in the input file, but get used anyhow.
-! Setting these to some value for the moment -- trying to figure out why I get NaN's with the -Wuninitialized -finit-real=inf -finit-integer=9999 flags set.
-p%dtM0      = DTcoupling      ! default to the coupling
-!p%WtrDpth   = InitInp%WtrDpth      ! This will be passed in later.  Right now use the default of -9999 in the registry
-p%kBot      = 0
-p%cBot      = 0
-p%WaterKin  = 0
+      UnEc = -1
+      nOpts = 0         ! Setting here rather than implied save
 
 
       ! ----------------- go through file contents a first time, counting each entry -----------------------
 
-      i = 0
-      read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1       !read a line
+      i  = 0  ! set line number counter to before first line
+      Line = NextLine(i);     ! Get the line and increment counter.  See description of routine. 
       
-      do while ( ErrStat2 == 0 ) 
-      
+      do while ( i <= FileInfo_In%NumLines )
 
          if (INDEX(Line, "---") > 0) then ! look for a header line
 
             if ( ( INDEX(Line, "LINE DICTIONARY") > 0) .or. ( INDEX(Line, "LINE TYPES") > 0) ) then ! if line dictionary header
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nLineTypes = p%nLineTypes + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
 
             else if ( (INDEX(Line, "ROD DICTIONARY") > 0) .or. ( INDEX(Line, "ROD TYPES") > 0) ) then ! if rod dictionary header
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nRodTypes = p%nRodTypes + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
 
             else if ((INDEX(Line, "BODIES") > 0 ) .or. (INDEX(Line, "BODY LIST") > 0 ) .or. (INDEX(Line, "BODY PROPERTIES") > 0 )) then
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nBodies = p%nBodies + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
 
             else if ((INDEX(Line, "RODS") > 0 ) .or. (INDEX(Line, "ROD LIST") > 0) .or. (INDEX(Line, "ROD PROPERTIES") > 0)) then ! if rod properties header
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nRods = p%nRods + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
 
             else if ((INDEX(Line, "POINTS") > 0 ) .or. (INDEX(Line, "CONNECTION PROPERTIES") > 0) .or. (INDEX(Line, "NODE PROPERTIES") > 0) .or. (INDEX(Line, "POINT PROPERTIES") > 0) .or. (INDEX(Line, "POINT LIST") > 0) ) then ! if node properties header
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nConnects = p%nConnects + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
 
             else if ((INDEX(Line, "LINES") > 0 ) .or. (INDEX(Line, "LINE PROPERTIES") > 0) .or. (INDEX(Line, "LINE LIST") > 0) ) then ! if line properties header
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               i=i+2
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nLines = p%nLines + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
 
             else if (INDEX(Line, "CONTROL") > 0) then ! if failure conditions header
@@ -310,14 +323,14 @@ p%WaterKin  = 0
                IF (wordy > 1) print *, "   Reading control channels: ";
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nCtrlChans = p%nCtrlChans + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
                
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
@@ -325,14 +338,14 @@ p%WaterKin  = 0
                IF (wordy > 1) print *, "   Reading failure conditions: ";
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! find how many elements of this type there are
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   p%nFails = p%nFails + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
                
                
@@ -341,10 +354,10 @@ p%WaterKin  = 0
                ! don't skip any lines (no column headers for the options section)
 
                ! find how many options have been specified
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
                   nOpts = nOpts + 1
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                END DO
                
 
@@ -352,15 +365,15 @@ p%WaterKin  = 0
 
                ! we don't need to count this section...
 
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
 
 
             else  ! otherwise ignore this line that isn't a recognized header line and read the next line
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
             end if
 
          else ! otherwise ignore this line, which doesn't have the "---" or header line and read the next line
-            read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+            Line = NextLine(i)
          end if
      
       end do
@@ -373,6 +386,7 @@ p%WaterKin  = 0
       IF (wordy > 0) print *, "  Identified ", p%nRods       , "Rods in input file."
       IF (wordy > 0) print *, "  Identified ", p%nConnects   , "Connections in input file."
       IF (wordy > 0) print *, "  Identified ", p%nLines      , "Lines in input file."
+      IF (wordy > 0) print *, "  Identified ", nOpts         , "Options in input file."
 
 
 
@@ -426,16 +440,14 @@ p%WaterKin  = 0
 
       ! ---------------------- now go through again and process file contents --------------------
 
-      REWIND(UnIn)      ! rewind to start of input file
 
       ! note: no longer worrying about "Echo" option
       
       Nx = 0  ! set state counter to zero
-      i  = 0  ! set line number counter to zero
+      i  = 0  ! set line number counter to before first line 
+      Line = NextLine(i)
       
-      read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1       !read a line
-      
-      do while ( ErrStat2 == 0 ) 
+      do while ( i <= FileInfo_In%NumLines )
       
          if (INDEX(Line, "---") > 0) then ! look for a header line
 
@@ -445,14 +457,14 @@ p%WaterKin  = 0
                IF (wordy > 0) print *, "Reading line types"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                 ! process each line
                 DO l = 1,p%nLineTypes
                    
                    !read into a line
-                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                   Line = NextLine(i)
 
                    ! parse out entries: Name  Diam MassDenInAir EA cIntDamp >>EI(new)<<  Can  Cat Cdn  Cdt 
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
@@ -498,14 +510,14 @@ p%WaterKin  = 0
                IF (wordy > 0) print *, "Reading rod types"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                 ! process each line
                 DO l = 1,p%nRodTypes
                    
                    !read into a line
-                   read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                   Line = NextLine(i)
 
                    ! parse out entries: Name  Diam MassDenInAir Can  Cat Cdn  Cdt 
                    IF (ErrStat2 == 0) THEN
@@ -533,14 +545,14 @@ p%WaterKin  = 0
             else if ((INDEX(Line, "BODIES") > 0 ) .or. (INDEX(Line, "BODY LIST") > 0 ) .or. (INDEX(Line, "BODY PROPERTIES") > 0 )) then
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! process each body
                DO l = 1,p%nBodies
                   
                   !read into a line
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
 
                   ! parse out entries: Name/ID X0 Y0 Z0 r0 p0 y0 Xcg Ycg Zcg M  V  IX IY IZ CdA-x,y,z Ca-x,y,z
                   IF (ErrStat2 == 0) THEN
@@ -624,14 +636,14 @@ p%WaterKin  = 0
                IF (wordy > 0) print *, "Reading Rods"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! process each rod
                DO l = 1,p%nRods
                   
                   !read into a line
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
 
                   ! parse out entries: RodID  Type/BodyID  RodType  Xa   Ya   Za   Xb   Yb   Zb  NumSegs  Flags/Outputs
                   IF (ErrStat2 == 0) THEN
@@ -803,14 +815,14 @@ p%WaterKin  = 0
                IF (wordy > 0) print *, "Reading Points"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! process each point
                DO l = 1,p%nConnects
                   
                   !read into a line
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
 
                   ! parse out entries: Node Type X Y Z M V FX FY FZ CdA Ca 
                   IF (ErrStat2 == 0) THEN
@@ -947,14 +959,14 @@ p%WaterKin  = 0
                IF (wordy > 0) print *, "Reading Lines"
                
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! process each line
                DO l = 1,p%nLines
                   
                   !read into a line
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
 
                    ! parse out entries: LineID  LineType  UnstrLen  NumSegs  NodeA  NodeB  Flags/Outputs
                   IF (ErrStat2 == 0) THEN
@@ -1121,14 +1133,14 @@ p%WaterKin  = 0
                ! TODO: add stuff <<<<<<<<
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! process each line
                DO l = 1,p%nCtrlChans
                   
                   !read into a line
-                  read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                   
                   ! count commas to determine how many line IDs specified for this channel
                   N = count(transfer(Line, 'a', len(Line)) == ",") + 1   ! number of line IDs given
@@ -1161,14 +1173,14 @@ p%WaterKin  = 0
                ! TODO: add stuff <<<<<<<<
 
                ! skip following two lines (label line and unit line)
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
+               Line = NextLine(i)
                
                ! process each line
                DO l = 1,p%nFails
                   
                   !read into a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
                   
                   
                      READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
@@ -1188,7 +1200,7 @@ p%WaterKin  = 0
                DO l = 1,nOpts
                   
                   !read into a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
 
                   ! parse out entries:  value, option keyword
                   READ(Line,*,IOSTAT=ErrStat2) OptValue, OptString  ! look at first two entries, ignore remaining words in line, which should be comments
@@ -1243,10 +1255,6 @@ p%WaterKin  = 0
                ! allocate InitInp%Outliest (to a really big number for now...)
                CALL AllocAry( OutList, MaxAryLen, "MoorDyn Input File's Outlist", ErrStat2, ErrMsg2 ); if(Failed()) return
 
-               ! OutList - List of user-requested output channels (-):
-               !CALL ReadOutputList ( UnIn, FileName, InitInp%OutList, p%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-
-               ! customm implementation to avoid need for "END" keyword line
  
                ! Initialize some values
                p%NumOuts = 0    ! start counter at zero
@@ -1254,9 +1262,10 @@ p%WaterKin  = 0
 
 
                ! Read in all of the lines containing output parameters and store them in OutList(:)
+               ! customm implementation to avoid need for "END" keyword line
                DO
                   ! read a line
-                  READ(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+                  Line = NextLine(i)
 
                   CALL Conv2UC(Line)   ! convert to uppercase for easy string matching
 
@@ -1288,21 +1297,23 @@ p%WaterKin  = 0
 
             !-------------------------------------------------------------------------------------------
             else  ! otherwise ignore this line that isn't a recognized header line and read the next line
-               read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+               Line = NextLine(i)
             end if
 
             !-------------------------------------------------------------------------------------------
          
          else ! otherwise ignore this line, which doesn't have the "---" or header line and read the next line
-            read(UnIn,'(A)',IOSTAT=ErrStat2) Line; i=i+1
+            Line = NextLine(i)
          end if
      
       end do
 
 
-      ! this is the end of reading the input file, so close it now
+      ! this is the end of parsing the input file, so cleanup anything we don't need anymore
       CALL CleanUp()
       
+      ! End of input file parsing from the FileInfo_In data structure
+      !-------------------------------------------------------------------------------------------------
       
       
       
@@ -1933,7 +1944,7 @@ p%WaterKin  = 0
 
       ! --------------------------------------------------------------------
       !          open output file(s) and write header lines
-      CALL MDIO_OpenOutput( InitInp%FileName, p, m, InitOut, ErrStat2, ErrMsg2 )
+      CALL MDIO_OpenOutput( p, m, InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       ! --------------------------------------------------------------------
@@ -2160,12 +2171,24 @@ p%WaterKin  = 0
 
       END SUBROUTINE CheckError
 
-     SUBROUTINE CleanUp()
+      SUBROUTINE CleanUp()
         ! ErrStat = ErrID_Fatal  
         call MD_DestroyInputFileType( InputFileDat, ErrStat2, ErrMsg2 )    ! Ignore any error messages from this
-        if(UnIn > 0) CLOSE( UnIn )        ! Only if opened
  !       IF (InitInp%Echo) CLOSE( UnEc )
-     END SUBROUTINE
+      END SUBROUTINE
+
+      !> If for some reason the file is truncated, it is possible to get into an infinite loop
+      !! in a while looking for the next section and accidentally overstep the end of the array
+      !! resulting in a segfault.  This function will trap that issue and return a section break
+      CHARACTER(1024) function NextLine(i)
+         integer, intent(inout) :: i      ! Current line number corresponding to contents of NextLine
+         i=i+1             ! Increment to line next line.
+         if (i>FileInfo_In%NumLines) then
+            NextLine="---"       ! Set as a separator so we can escape some of the while loops
+         else
+            NextLine=trim(FileInfo_In%Lines(i))
+         endif
+      end function NextLine
 
    END SUBROUTINE MD_Init
    !----------------------------------------------------------------------------------------======

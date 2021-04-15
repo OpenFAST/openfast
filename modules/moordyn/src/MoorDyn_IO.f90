@@ -630,10 +630,9 @@ CONTAINS
 
 
    !----------------------------------------------------------------------------------------============
-   SUBROUTINE MDIO_OpenOutput( OutRootName,  p, m, InitOut, ErrStat, ErrMsg )
+   SUBROUTINE MDIO_OpenOutput( p, m, InitOut, ErrStat, ErrMsg )
    !----------------------------------------------------------------------------------------------------
 
-      CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
       TYPE(MD_ParameterType),        INTENT( INOUT ) :: p
       TYPE(MD_MiscVarType),          INTENT( INOUT ) :: m
       TYPE(MD_InitOutPutType ),      INTENT( IN    ) :: InitOut              !
@@ -1034,6 +1033,9 @@ CONTAINS
       ErrMsg  = ""
 
 
+!FIXME: make sure thes are actually open before trying to close them. Segfault will occur otherwise!!!!
+!  This bug can be triggered by an early failure of the parsing routines, before these files were ever opened
+!  which returns MD to OpenFAST as ErrID_Fatal, then OpenFAST calls MD_End, which calls this.
       ! close main MoorDyn output file
       CLOSE( p%MDUnOut, IOSTAT = ErrStat )
          IF ( ErrStat /= 0 ) THEN
