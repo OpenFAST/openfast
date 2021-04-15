@@ -5099,9 +5099,11 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, y_AD, 
       
       IF ( y_FAST%numOuts(Module_AD) > 0 ) THEN
          do i=1,SIZE(y_AD%Rotors)
-            indxLast = indxNext + SIZE(y_AD%Rotors(i)%WriteOutput) - 1
-            OutputAry(indxNext:indxLast) = y_AD%Rotors(i)%WriteOutput
-            indxNext = IndxLast + 1
+            if (allocated(y_AD%Rotors(i)%WriteOutput)) then
+               indxLast = indxNext + SIZE(y_AD%Rotors(i)%WriteOutput) - 1
+               OutputAry(indxNext:indxLast) = y_AD%Rotors(i)%WriteOutput
+               indxNext = IndxLast + 1
+            endif
          end do         
       END IF            
          

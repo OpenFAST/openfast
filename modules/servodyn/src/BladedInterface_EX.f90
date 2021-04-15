@@ -71,8 +71,8 @@ CONTAINS
 !> This routine sets the input and output necessary for the extended interface.
 SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, UnSum, ErrStat, ErrMsg)
    type(SrvD_InitInputType),     intent(in   )  :: InitInp        !< Input data for initialization routine
-   type(SrvD_InputType),         intent(inout)  :: u              !< Inputs at t (allocate a few vars)
-   type(SrvD_ParameterType),     intent(inout)  :: p              !< Parameters
+   type(SrvD_InputType),         intent(inout)  :: u              !< Inputs at t (setting up mesh)
+   type(SrvD_ParameterType),     intent(in   )  :: p              !< Parameters
    type(SrvD_OutputType),        intent(inout)  :: y              !< Initial system outputs (outputs are not calculated)
    type(BladedDLLType),          intent(inout)  :: dll_data       !< data for the Bladed DLL
    integer(IntKi),               intent(in   )  :: UnSum          !< Unit number for summary file (>0 when active)
@@ -88,7 +88,6 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, UnSum, ErrStat, ErrMsg)
       ! Initialize ErrStat and ErrMsg
    ErrStat = ErrID_None
    ErrMsg  = ''
-
 
 
       ! Make sure we didn't get here by mistake
@@ -120,14 +119,19 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, UnSum, ErrStat, ErrMsg)
    endif
 
 
-      ! Set the input and output arrays
+      ! non-lidar sensors  -- These will always be set if the extended array is used
+   call InitPtfmMotionSensors()  ! 1001:1018
+      if (Failed())  return
+   call InitNonLidarSensors()    ! 1018:2000
+      if (Failed())  return
 
-
-      ! Initialize cable controls
+      ! Initialize cable controls (2601:2800)
    if (InitInp%NumCableControl > 0) then
       call InitCableCtrl()
         if (Failed())  return
    endif
+
+      ! Add additional routines here as needed.
 
       ! Write to summary file
    if (UnSum>0)   call WrBladedSumInfoToFile()
@@ -135,17 +139,66 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, UnSum, ErrStat, ErrMsg)
       ! Cleanup afterwards
    call Cleanup
 
+
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed
+
+
    subroutine CleanUp()
       if (allocated(SumInfo))    deallocate(SumInfo)
       if (allocated(Requestor))  deallocate(Requestor)
       if (allocated(DataFlow))   deallocate(DataFlow)
    end subroutine CleanUp
+
+
+   subroutine InitPtfmMotionSensors()     ! Channels 1001:1018
+      !--------------------------------------------------------------
+      ! Setup a platform motion mesh point to pass through to the DLL
+      CALL MeshCreate( BlankMesh = u%PtfmMotionMesh, IOS=COMPONENT_INPUT, Nnodes=1, &
+               ErrStat=ErrStat2, ErrMess=ErrMsg2, &
+               TranslationDisp=.TRUE., Orientation=.TRUE., &
+               TranslationVel =.TRUE., RotationVel=.TRUE., &
+               TranslationAcc =.TRUE., RotationAcc=.TRUE.)
+         if (Failed())  return;
+      ! Create the node on the mesh
+      CALL MeshPositionNode ( u%PtfmMotionMesh,1, InitInp%PlatformPos(1:3), ErrStat2, ErrMsg2, InitInp%PlatformOrient )
+         if (Failed())  return;
+      ! Create the mesh element
+      CALL MeshConstructElement ( u%PtfmMotionMesh, ELEMENT_POINT, ErrStat2, ErrMsg2, 1 )
+         if (Failed())  return;
+      CALL MeshCommit ( u%PtfmMotionMesh, ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      ! Writing out info on channels
+      call WrSumInfoSend(1001, 'General channel group -- Platform motion -- Displacement TDX (m)')
+      call WrSumInfoSend(1002, 'General channel group -- Platform motion -- Displacement TDY (m)')
+      call WrSumInfoSend(1003, 'General channel group -- Platform motion -- Displacement TDZ (m)')
+      call WrSumInfoSend(1004, 'General channel group -- Platform motion -- Displacement RDX (rad)')
+      call WrSumInfoSend(1005, 'General channel group -- Platform motion -- Displacement RDY (rad)')
+      call WrSumInfoSend(1006, 'General channel group -- Platform motion -- Displacement RDZ (rad)')
+      call WrSumInfoSend(1007, 'General channel group -- Platform motion -- Velocity     TVX (m/s)')
+      call WrSumInfoSend(1008, 'General channel group -- Platform motion -- Velocity     TVY (m/s)')
+      call WrSumInfoSend(1009, 'General channel group -- Platform motion -- Velocity     TVZ (m/s)')
+      call WrSumInfoSend(1010, 'General channel group -- Platform motion -- Velocity     RVX (rad/s)')
+      call WrSumInfoSend(1011, 'General channel group -- Platform motion -- Velocity     RVY (rad/s)')
+      call WrSumInfoSend(1012, 'General channel group -- Platform motion -- Velocity     RVZ (rad/s)')
+      call WrSumInfoSend(1013, 'General channel group -- Platform motion -- Acceleration TAX (m/s^2)')
+      call WrSumInfoSend(1014, 'General channel group -- Platform motion -- Acceleration TAY (m/s^2)')
+      call WrSumInfoSend(1015, 'General channel group -- Platform motion -- Acceleration TAZ (m/s^2)')
+      call WrSumInfoSend(1016, 'General channel group -- Platform motion -- Acceleration RAX (rad/s^2)')
+      call WrSumInfoSend(1017, 'General channel group -- Platform motion -- Acceleration RAY (rad/s^2)')
+      call WrSumInfoSend(1018, 'General channel group -- Platform motion -- Acceleration RAZ (rad/s^2)')
+   end subroutine InitPtfmMotionSensors
+
+
+   subroutine InitNonLidarSensors()    ! Channels 1019:2000
+      ! This is a placeholder for info about other sensor channels that are passed to the DLL
+      !call WrSumInfoSend(1019, 'Description of channel info sent to DLL')
+   end subroutine InitNonLidarSensors
+
 
    subroutine InitCableCtrl()
       integer(IntKi)    :: I,J   ! Generic counters
@@ -202,6 +255,7 @@ contains
       endif
    end subroutine InitCableCtrl
 
+
    subroutine WrBladedSumInfoToFile()
       integer(IntKi)    :: I  !< generic counter
       write(UnSum,'(A)') ''
@@ -216,12 +270,16 @@ contains
          if (len_trim(SumInfo(I)) > 0 )  write(UnSum,'(8x,I4,5x,A3,4x,A21,2x,A)')  I,DataFlow(I),Requestor(I),trim(SumInfo(I))
       enddo
    end subroutine WrBladedSumInfoToFile
+
+
    subroutine WrSumInfoSend(Record,Desc)
       integer(IntKi),   intent(in   )  :: Record
       character(*),     intent(in   )  :: Desc
       DataFlow(Record)  = '-->'
       SumInfo(Record)   = trim(Desc(1:min(len(Desc),len(SumInfo(1)))))     ! prevent string length overrun
    end subroutine WrSumInfoSend
+
+
    subroutine WrSumInfoRcvd(Record,Rqst,Desc)
       integer(IntKi),   intent(in   )  :: Record
       character(*),     intent(in   )  :: Rqst
@@ -230,10 +288,14 @@ contains
       Requestor(Record) = trim(Rqst(1:min(len(Rqst),len(Requestor(1)))))   ! prevent string length overrun
       SumInfo(Record)   = trim(Desc(1:min(len(Desc),len(SumInfo(1)))))     ! prevent string length overrun
    end subroutine WrSumInfoRcvd
+
 END SUBROUTINE EXavrSWAP_Init
+
+
 
 !==================================================================================================================================
 !> This routine fills the extended avrSWAP
+!FIXME: Error handling is not complete in this routine!!!
 SUBROUTINE Fill_EXavrSWAP( t, u, p, dll_data )
    real(DbKi),                   intent(in   )  :: t           !< Current simulation time in seconds
    type(SrvD_InputType),         intent(in   )  :: u           !< Inputs at t
@@ -241,7 +303,10 @@ SUBROUTINE Fill_EXavrSWAP( t, u, p, dll_data )
    type(BladedDLLType),          intent(inout)  :: dll_data    !< data for the Bladed DLL
 
       ! local variables:
-   integer(IntKi)                                 :: I           ! Loop counter
+   integer(IntKi)                               :: I           ! Loop counter
+   integer(IntKi)                               :: ErrStat2    ! Error status of the operation (occurs after initial error)
+   character(ErrMsgLen)                         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+   real(ReKi)                                   :: rotations(3)
 
       ! Make sure we didn't get here by mistake
    if ( .not. p%EXavrSWAP ) return
@@ -253,12 +318,34 @@ SUBROUTINE Fill_EXavrSWAP( t, u, p, dll_data )
 
    call SetEXavrSWAP_LidarSensors()
 CONTAINS
-   !> Set the sensor inputs for non-lidar channels
+
+
+   !> Set the sensor inputs for non-lidar channels.
    !!    avrSWAP(1001:2000)
    subroutine SetEXavrSWAP_Sensors()
          ! in case something got set wrong, don't try to write beyond array
       if (size(dll_data%avrswap) < 2000 ) return
+
+      !------------------
+      ! Platform motion
+      !     NOTE: we are assuming small angle, and assuming that the reference orientation is the identity
+      !           - this is the same assumption as in ED where the platform motion mesh is calculated
+      !     NOTE: we are ignoring any small angle conversion errors here.  Any small angle violations
+      !           will be caught and reported in ED,HD, SD.
+      rotations  = GetSmllRotAngs(u%PtfmMotionMesh%Orientation(:,:,1), ErrStat2, Errmsg2)
+      dll_data%avrswap(1001:1003) = u%PtfmMotionMesh%TranslationDisp(1:3,1)   ! Platform motion -- Displacement TDX, TDY, TDZ (m)
+      dll_data%avrswap(1004:1006) = rotations                                 ! Platform motion -- Displacement RDX, RDY, RDZ (rad)
+      dll_data%avrswap(1007:1009) = u%PtfmMotionMesh%TranslationVel (1:3,1)   ! Platform motion -- Velocity     TVX, TVY, TVZ (m/s)
+      dll_data%avrswap(1010:1012) = u%PtfmMotionMesh%RotationVel    (1:3,1)   ! Platform motion -- Velocity     RVX, RVY, RVZ (rad/s)
+      dll_data%avrswap(1013:1015) = u%PtfmMotionMesh%TranslationAcc (1:3,1)   ! Platform motion -- Acceleration TAX, TAY, TAZ (m/s^2)
+      dll_data%avrswap(1016:1018) = u%PtfmMotionMesh%RotationAcc    (1:3,1)   ! Platform motion -- Acceleration RAX, RAY, RAZ (rad/s^2)
+
+      !------------------
+      ! Set other sensors here (non-lidar measurements)
+      !       Add summary file descriptions about channels to InitNonLidarSensors as channels are added.
+
    end subroutine SetEXavrSWAP_Sensors
+
 
    !> Set the Lidar related sensor inputs
    !!    avrSWAP(2001:2500)
@@ -267,7 +354,9 @@ CONTAINS
       if (size(dll_data%avrswap) < 2500 ) return
    end subroutine SetEXavrSWAP_LidarSensors
 
+
 END SUBROUTINE Fill_EXavrSWAP
+
 
 
 !==================================================================================================================================
@@ -290,13 +379,24 @@ SUBROUTINE Retrieve_EXavrSWAP( p, dll_data, ErrStat, ErrMsg )
    call Retrieve_EXavrSWAP_Cable ()
    call Retrieve_EXavrSWAP_StControls ()
    call Retrieve_EXavrSWAP_AeroControls ()
+
+   !  Add other relevant routines here. As routines are added, make sure info
+   !  is included in the Init for writing channel info to summary file.
+   !  Additional data handling will be necessary:
+   !     -  relevant arrays in dll_data in registry (for dll timestep interpolation)
+   !     -  relevant xyzControl_CalcOutput for dll timestep interpolation
+   !     -  relevant y% arrays for passing control signals out to glue code from
+   !        corresponding xyzControl_CalcOutput routines (ServoDyn.f90)
+
 CONTAINS
+
    !> Controller signals to Lidar module
    !!    avrSWAP(2501:2600)
    subroutine Retrieve_EXavrSWAP_Lidar ()
       ! in case something got set wrong, don't try to read beyond array
       if (size(dll_data%avrswap) < 2000 ) return
    end subroutine Retrieve_EXavrSWAP_Lidar
+
 
    !> Controller signals to mooring systems (active mooring)
    !!    avrSWAP(2601:2800)
@@ -312,12 +412,21 @@ CONTAINS
       endif
    end subroutine Retrieve_EXavrSWAP_Cable
 
+
    !> Controller signals to substructure controls (actuators in substructure)
    !!    avrSWAP(3001:3200)
    subroutine Retrieve_EXavrSWAP_StControls ()
       ! in case something got set wrong, don't try to read beyond array
       if (size(dll_data%avrswap) < 3200 ) return
+
+      !------------------
+      ! Set StC control channels here
+      !       Add summary file descriptions about channels to  as channels are added.
+      ! NOTE: data passing is not setup yet.
+      !     Add relevant data structure to dll_data in registry to store data.
+      !     Add relevant connection to the StC module -- may need a CalcOutput routine similar to CableControl_CalcOutput
    end subroutine Retrieve_EXavrSWAP_StControls
+
 
    !> Controller signals to active aero elements (aero actuators in blades)
    !!    avrSWAP(3201:3500)
@@ -326,7 +435,9 @@ CONTAINS
       if (size(dll_data%avrswap) < 3500 ) return
    end subroutine Retrieve_EXavrSWAP_AeroControls
 
+
 END SUBROUTINE Retrieve_EXavrSWAP
+
 
 !==================================================================================================================================
 END MODULE BladedInterface_EX
