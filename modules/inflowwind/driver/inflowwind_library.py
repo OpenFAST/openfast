@@ -1,3 +1,25 @@
+#**********************************************************************************************************************************
+# LICENSING
+# Copyright (C) 2021 Nicole Mendoza
+#
+# This file is part of InflowWind.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#**********************************************************************************************************************************
+#
+# This is the Python-C interface library for InflowWind
+# Usage: THIS LIBRARY IS NOT TO BE CHANGED OR EDITED BY THE USER
 from ctypes import (
 	CDLL,
     POINTER,
@@ -23,9 +45,7 @@ class InflowWindLibAPI(CDLL):
         self._initialize_routines()
 
         # Create buffers for class data
-        # TODO: set abort error level in InflowWind Init
         self.abort_error_level = c_int(4)
-
         self.error_status = c_int(0)
         self.error_message = create_string_buffer(1025)
 
@@ -38,11 +58,13 @@ class InflowWindLibAPI(CDLL):
 
         self.numWindPts = c_int(0)
 
-    # _initialize_routines ------------------------------------------------------------------------------------------------------------
+    # _initialize_routines() ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
         self.IFW_INIT_C.argtypes = [
             POINTER(c_char_p),                    # input file string
+            POINTER(c_int),                       # input file string length
             POINTER(c_char_p),                    # uniform file string
+            POINTER(c_int),                       # uniform file string length
             POINTER(c_int),                       # numWindPts
             POINTER(c_double),                    # dt
             POINTER(c_int),                       # number of channels
@@ -70,10 +92,11 @@ class InflowWindLibAPI(CDLL):
         self.IFW_END_C.restype = c_int
 
     # ifw_init ------------------------------------------------------------------------------------------------------------
-    def ifw_init(self, input_strings, uniform_string):
+    def ifw_init(self, input_strings, input_string_length, uniform_string, uniform_string_length):
 
         print('inflowwind_library.py: Running IFW_INIT_C .....')
 
+        # Set up inputs
         input_string_array = (c_char_p * len(input_strings))()
         for i, param in enumerate(input_strings):
             input_string_array[i] = param.encode('utf-8')
@@ -84,9 +107,12 @@ class InflowWindLibAPI(CDLL):
         
         self._numChannels = c_int(0)
 
+        # Run IFW_INIT_C
         self.IFW_INIT_C(
             input_string_array,                    # IN: input file string
+            byref(c_int(input_string_length)),     # IN: input file string length
             uniform_string_array,                  # IN: uniform file string
+            byref(c_int(uniform_string_length)),   # IN: uniform file string length
             byref(c_int(self.numWindPts)),         # IN: number of wind points
             byref(c_double(self.dt)),              # IN: time step (dt)
             byref(self._numChannels),              # OUT: number of channels
@@ -108,8 +134,9 @@ class InflowWindLibAPI(CDLL):
     # ifw_calcOutput ------------------------------------------------------------------------------------------------------------
     def ifw_calcOutput(self, time, positions, velocities, outputChannelValues):
 
-        print('inflowwinf_library.py: Running IFW_CALCOUTPUT_C .....')
+        print('inflowwind_library.py: Running IFW_CALCOUTPUT_C .....')
 
+        # Set up inputs
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
         positions_flat_c = (c_float * (3 * self.numWindPts))(0.0, )
         for i, p in enumerate(positions_flat):
@@ -119,6 +146,7 @@ class InflowWindLibAPI(CDLL):
 
         outputChannelValues_c = (c_float * self._numChannels.value)(0.0, )
 
+        # Run IFW_CALCOUTPUT_C
         self.IFW_CALCOUTPUT_C(
             byref(c_double(time)),                 # IN: time at which to calculate velocities
             positions_flat_c,                      # IN: positions - specified by user
@@ -150,6 +178,7 @@ class InflowWindLibAPI(CDLL):
 
         print('inflowwind_library.py: Running IFW_END_C .....')
 
+        # Run IFW_END_C
         self.IFW_END_C(
             byref(self.error_status),
             self.error_message
@@ -164,15 +193,3 @@ class InflowWindLibAPI(CDLL):
     @property
     def fatal_error(self):
         return self.error_status.value >= self.abort_error_level.value
-
-    @property
-    def output_channel_names(self):
-        output_channel_names = self._channel_names.value.split()
-        output_channel_names = [n.decode('UTF-8') for n in output_channel_names]        
-        return output_channel_names
-
-    @property
-    def output_channel_units(self):
-        output_channel_units = self._channel_units.value.split()
-        output_channel_units = [n.decode('UTF-8') for n in output_channel_units]        
-        return output_channel_units

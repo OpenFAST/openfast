@@ -45,31 +45,30 @@ TYPE(InflowWind_OtherStateType)         :: OtherStates       !< Initial other/op
 TYPE(InflowWind_OutputType)             :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
 TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
 
-
-INTEGER, PARAMETER :: IntfStrLen        = 1025               !< length of strings through the C interface
 INTEGER, PARAMETER :: InputStringLength = 179                !< Fixed length for all lines of the string-based input file
-INTEGER, PARAMETER :: InputFileLines    = 55                 !< Number of lines expected in the string-based input file array
 
 CONTAINS
 
 !===============================================================================================================
 !--------------------------------------------- IFW INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
+SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformStrings_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
 
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileStrings_C
+    INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputUniformStrings_C
+    INTEGER(C_INT)                                 , INTENT(IN   )   :: InputUniformStringLength_C
     INTEGER(C_INT)                                 , INTENT(IN   )   :: NumWindPts_C
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelNames_C
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelUnits_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
-    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(IntfStrLen) 
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025) 
 
     ! Local Variables
-    CHARACTER(InputStringLength), DIMENSION(InputFileLines)          :: InputFileStrings
-    CHARACTER(InputStringLength), DIMENSION(6)                       :: InputUniformStrings
+    CHARACTER(InputStringLength), DIMENSION(InputFileStringLength_C) :: InputFileStrings
+    CHARACTER(InputStringLength), DIMENSION(InputUniformStringLength_C) :: InputUniformStrings
     CHARACTER(kind=C_char, len=1), DIMENSION(:), POINTER             :: character_pointer
     CHARACTER(kind=C_char, len=1), DIMENSION(:), POINTER             :: character_pointer2
     CHARACTER, DIMENSION(InputStringLength)                          :: single_line_character_array
@@ -84,11 +83,10 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, D
     CHARACTER(ErrMsgLen)                                             :: ErrMsg
     INTEGER                                                          :: I, J, K
 
-   ! Convert the string-input from C-style character arrays (char **) to a Fortran-style array of characters.
-   ! TODO: This expects a fixed number of lines with a fixed length per line --> NEED TO MAKE NUM OF LINES VARIABLE OR ALLOCATABLE
+   ! Convert the string-input from C-style character arrays (char**) to a Fortran-style array of characters.
    ! TODO: Add error checking
-   CALL C_F_pointer(InputFileStrings_C, character_pointer, [InputFileLines * InputStringLength])
-   DO i = 0, InputFileLines - 1
+   CALL C_F_pointer(InputFileStrings_C, character_pointer, [InputFileStringLength_C * InputStringLength])
+   DO i = 0, InputFileStringLength_C - 1
       single_line_character_array = character_pointer(i * InputStringLength + 1 : i * InputStringLength + InputStringLength)
       DO j = 1, InputStringLength
          single_line_chars(j:j) = single_line_character_array(j)
@@ -96,8 +94,8 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, D
       InputFileStrings(i + 1) = single_line_chars
    END DO
 
-   CALL C_F_pointer(InputUniformStrings_C, character_pointer2, [6 * InputStringLength])
-   DO i = 0, 5
+   CALL C_F_pointer(InputUniformStrings_C, character_pointer2, [InputUniformStringLength_C * InputStringLength])
+   DO i = 0, InputUniformStringLength_C - 1
       single_line_character_array2 = character_pointer2(i * InputStringLength + 1 : i * InputStringLength + InputStringLength)
       DO j = 1, InputStringLength
          single_line_chars2(j:j) = single_line_character_array2(j)
@@ -106,13 +104,13 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputUniformStrings_C, NumWindPts_C, D
    END DO
 
    ! Store string-inputs as type FileInfoType within InflowWind_InitInputType
-   CALL InitFileInfo(InputFileStrings, InitInp%PassedFileData, ErrStat, ErrMsg)           ! in, out (FileInfoType), out, out
+   CALL InitFileInfo(InputFileStrings, InitInp%PassedFileData, ErrStat, ErrMsg)           
    IF (ErrStat .NE. 0) THEN 
       PRINT *, "IFW_INIT_C: Failed to convert main input file to FileInfoType"
       PRINT *, ErrMsg
    END IF
 
-   CALL InitFileInfo(InputUniformStrings, InitInp%WindType2Data, ErrStat, ErrMsg)         ! in, out (FileInfoType), out, out
+   CALL InitFileInfo(InputUniformStrings, InitInp%WindType2Data, ErrStat, ErrMsg)        
    IF (ErrStat .NE. 0) THEN 
       PRINT *, "IFW_INIT_C: Failed to convert uniform input file to FileInfoType"
       PRINT *, ErrMsg
