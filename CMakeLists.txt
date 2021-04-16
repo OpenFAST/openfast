@@ -115,6 +115,8 @@ set(OPENFAST_MODULES
   icedyn
   icefloe
   map
+  wakedynamics
+  awae
 )
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
