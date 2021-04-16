@@ -5,4 +5,5 @@ $ Then type
 mkdir build
 cd build
 cmake ..
+in the ccmake gui, turn BUILD_SHARED_LIBS=ON
 make ifw_c_lib
