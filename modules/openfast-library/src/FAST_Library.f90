@@ -22,8 +22,8 @@ MODULE FAST_Data
    INTEGER(IntKi)                        :: NumTurbines 
    INTEGER,        PARAMETER             :: IntfStrLen  = 1025       ! length of strings through the C interface
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 4000        ! Maximum number of outputs
-   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 10       ! Maximum number of initialization values from Simulink
-   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 8
+   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 53       ! Maximum number of initialization values from Simulink
+   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 51
    
    
       ! Global (static) data:
@@ -65,7 +65,7 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
    ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
 end subroutine FAST_AllocateTurbines
-
+!==================================================================================================================================
 subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_DeallocateTurbines')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
@@ -82,7 +82,7 @@ subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Deal
    ErrStat_c = ErrID_None
    ErrMsg_c = C_NULL_CHAR
 end subroutine
-
+!==================================================================================================================================
 subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
@@ -134,7 +134,7 @@ subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, N
    CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
                   
    AbortErrLev_c = AbortErrLev   
-   NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine(iTurb)%y_FAST%numOuts )) ! includes time
+   NumOuts_c     = min(MAXOUTPUTS, SUM( Turbine(iTurb)%y_FAST%numOuts ))
    dt_c          = Turbine(iTurb)%p_FAST%dt
 
    ErrStat_c     = ErrStat
@@ -187,17 +187,7 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
       ! initialize variables:   
    n_t_global = 0
 
-#ifdef SIMULINK_DirectFeedThrough   
-   IF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
-      ErrStat_c = ErrID_Fatal
-      ErrMsg  = "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR
-      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
-      RETURN
-   END IF
 
-   CALL FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, Turbine(iTurb)%m_FAST)
-
-#endif      
    !...............................................................................................................................
    ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................  
@@ -214,7 +204,7 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
          OutputAry(1)              = Turbine(iTurb)%m_FAST%t_global 
          OutputAry(2:NumOutputs_c) = Outputs 
 
-         CALL FAST_Linearize_T(t_initial, 0, Turbine(iTurb), ErrStat, ErrMsg)
+         CALL FAST_Linearize_T(t_initial, 0, Turbine(iTurb), ErrStat2, ErrMsg2)
          if (ErrStat2 /= ErrID_None) then
             ErrStat = max(ErrStat,ErrStat2)
             ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
@@ -313,6 +303,9 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Er
       
 end subroutine FAST_Update 
 !==================================================================================================================================
+!> NOTE: If this interface is changed, update the table in the ServoDyn_IO.f90::WrSumInfo4Simulink routine
+!!    Ideally we would write this summary info from here, but that isn't currently done.  So as a workaround so the user has some
+!!    vague idea what went wrong with their simulation, we have ServoDyn include the arrangement set here in the SrvD.sum file.
 subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
 
    USE, INTRINSIC :: ISO_C_Binding
@@ -329,17 +322,21 @@ subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
          ! set the inputs from external code here...
          ! transfer inputs from Simulink to FAST
       IF ( NumInputs_c < NumFixedInputs ) RETURN ! This is an error
-      
-      m_FAST%ExternInput%GenTrq      = InputAry(1)
-      m_FAST%ExternInput%ElecPwr     = InputAry(2)
-      m_FAST%ExternInput%YawPosCom   = InputAry(3)
-      m_FAST%ExternInput%YawRateCom  = InputAry(4)
-      m_FAST%ExternInput%BlPitchCom  = InputAry(5:7)
-      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)         
+
+   !NOTE: if anything here changes, update ServoDyn_IO.f90::WrSumInfo4Simulink
+      m_FAST%ExternInput%GenTrq           = InputAry(1)
+      m_FAST%ExternInput%ElecPwr          = InputAry(2)
+      m_FAST%ExternInput%YawPosCom        = InputAry(3)
+      m_FAST%ExternInput%YawRateCom       = InputAry(4)
+      m_FAST%ExternInput%BlPitchCom       = InputAry(5:7)
+      m_FAST%ExternInput%HSSBrFrac        = InputAry(8)
+      m_FAST%ExternInput%BlAirfoilCom     = InputAry(9:11)
+      m_FAST%ExternInput%CableDeltaL      = InputAry(12:31)
+      m_FAST%ExternInput%CableDeltaLdot   = InputAry(32:51)
             
       IF ( NumInputs_c > NumFixedInputs ) THEN  ! NumFixedInputs is the fixed number of inputs
          IF ( NumInputs_c == NumFixedInputs + 3 ) &
-             m_FAST%ExternInput%LidarFocus = InputAry(9:11)
+             m_FAST%ExternInput%LidarFocus = InputAry(52:54)
       END IF   
       
 end subroutine FAST_SetExternalInputs
@@ -472,8 +469,8 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumBl_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumBlElem_c      
-   TYPE(OpFM_InputType_C), INTENT(  OUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),INTENT(  OUT) :: OpFM_Output_to_FAST
+   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_InputType_C),   INTENT(INOUT) :: SC_Input_from_FAST
    TYPE(SC_OutputType_C),  INTENT(INOUT) :: SC_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
@@ -526,8 +523,8 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
       NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
       NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
    ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN  
-      NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%BladeMotion)
-      NumBlElem_c = Turbine(iTurb)%AD%Input(1)%BladeMotion(1)%Nnodes
+      NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
+      NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
    ELSE
       NumBl_c     = 0
       NumBlElem_c = 0
@@ -577,8 +574,8 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    INTEGER(C_INT),         INTENT(  OUT) :: numElementsPerBlade_c
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(  OUT) :: n_t_global_c      
-   TYPE(OpFM_InputType_C), INTENT(  OUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),INTENT(  OUT) :: OpFM_Output_to_FAST
+   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_InputType_C),   INTENT(INOUT) :: SC_Input_from_FAST
    TYPE(SC_OutputType_C),  INTENT(INOUT) :: SC_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
@@ -610,8 +607,8 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
    n_t_global_c  = n_t_global
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine(iTurb)%y_FAST%numOuts )) ! includes time
-   numBlades_c   = Turbine(iTurb)%ad%p%numblades
-   numElementsPerBlade_c = Turbine(iTurb)%ad%p%numblnds ! I'm not sure if FASTv8 can handle different number of blade nodes for each blade.
+   numBlades_c   = Turbine(iTurb)%ad%p%rotors(1)%numblades
+   numElementsPerBlade_c = Turbine(iTurb)%ad%p%rotors(1)%numblnds ! I'm not sure if FASTv8 can handle different number of blade nodes for each blade.
    dt_c          = Turbine(iTurb)%p_FAST%dt      
       
    ErrStat_c     = ErrStat

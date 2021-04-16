@@ -59,12 +59,18 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
 
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          test-target: regression
       - name: Run BeamDyn tests
         uses: ./.github/actions/tests-module-beamdyn
         with:
           test-target: regression
       - name: Run HydroDyn tests
         uses: ./.github/actions/tests-module-hydrodyn
+      - name: Run SubDyn tests
+        uses: ./.github/actions/tests-module-subdyn
       - name: Run OpenFAST tests
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         uses: ./.github/actions/tests-gluecode-openfast
@@ -111,6 +117,8 @@ jobs:
         uses: ./.github/actions/tests-module-nwtclibrary
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
+        with:
+          test-target: unit
       - name: Run BeamDyn tests
         uses: ./.github/actions/tests-module-beamdyn
         with:
@@ -121,6 +129,7 @@ jobs:
   compile-all-single-precision:
     # Test if single precision compile completes.
     # Compiles all targets excluding tests.
+    # Run with the OpenFAST registry generating the types files.
     # Do not run the test suite.
 
     runs-on: ubuntu-20.04
@@ -139,6 +148,7 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DDOUBLE_PRECISION:BOOL=OFF \
+            -DGENERATE_TYPES:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build all
         working-directory: ${{runner.workspace}}/build
@@ -146,3 +156,57 @@ jobs:
       - name: Test
         working-directory: ${{runner.workspace}}/build
         run: ./glue-codes/openfast/openfast -v
+
+  cpp-interface-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+          sudo apt-get update
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_SHARED_LIBS:BOOL=ON \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build OpenFAST C++ API
+        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
+
+      - name: Run OpenFAST C++ API tests
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ctest -VV -L cpp
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: test-results
+          path: |
+            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast-cpp
+            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline

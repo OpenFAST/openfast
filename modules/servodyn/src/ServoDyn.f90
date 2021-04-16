@@ -139,6 +139,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    INTEGER(IntKi)                                 :: i              ! loop counter
    INTEGER(IntKi)                                 :: j              ! loop counter
    INTEGER(IntKi)                                 :: K              ! loop counter
+   INTEGER(IntKi)                                 :: UnSum          ! Summary file unit
    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
    
@@ -149,6 +150,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    ErrStat = ErrID_None
    ErrMsg  = ""
+   UnSum   = -1_IntKi
 
       
       ! Initialize the NWTC Subroutine Library
@@ -194,11 +196,17 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       call Cleanup()
       return
    end if
-        
+
+      !............................................................................................
+      ! Start a summary file (if requested):
+      !............................................................................................
+   call InitializeSummaryFile( InputFileData, TRIM(InitInp%RootName), UnSum, ErrStat2, ErrMsg2 )
+      if (Failed())  return;
+
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL SrvD_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
+   CALL SrvD_SetParameters( InputFileData, p, UnSum, ErrStat2, ErrMsg2 )
       if (Failed())  return;
 
       ! Set and verify BlPitchInit, which comes from InitInputData (not the inputfiledata)
@@ -271,9 +279,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (Failed())  return;
       u%SuperController = 0.0_SiKi
    END IF
-                  
+
+   CALL AllocAry( u%ExternalBlAirfoilCom, p%NumBl, 'ExternalBlAirfoilCom', ErrStat2, ErrMsg2 )
+      if (Failed())  return;
+        
       
-   u%BlPitch = p%BlPitchInit
+   u%BlPitch = p%BlPitchInit(1:p%NumBl)
    
    u%Yaw = p%YawNeut
    u%YawRate   = 0.0
@@ -284,21 +295,22 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    u%ExternalYawPosCom = p%YawNeut
    u%ExternalYawRateCom = 0.
-   u%ExternalBlPitchCom = p%BlPitchInit
+   u%ExternalBlPitchCom = p%BlPitchInit(1:p%NumBl)
    u%ExternalGenTrq = 0.
    u%ExternalElecPwr = 0.
    u%ExternalHSSBrFrac = 0.
-   
+   u%ExternalBlAirfoilCom = 0.
+
    u%TwrAccel  = 0.
    u%YawErr    = 0.   
    u%WindDir   = 0.
    
       !Inputs for the Bladed Interface:
-   u%RootMyc   = 0.
+   u%RootMyc(:) = 0. ! Hardcoded to 3
    u%YawBrTAxp = 0.
    u%YawBrTAyp = 0.
    u%LSSTipPxa = 0.
-   u%RootMxc   = 0.
+   u%RootMxc(:)= 0. ! Hardcoded to 3
    u%LSSTipMxa = 0.
    u%LSSTipMya = 0.
    u%LSSTipMza = 0.
@@ -368,18 +380,70 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
 
    Interval = p%DT      
-      
+
+ 
+      !............................................................................................
+      ! Setup and initialize the StC submodule (possibly multiple instances at each location)
+      !............................................................................................
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Structural controls'
+   endif
+   call StC_Nacelle_Setup(InitInp,p,InputFileData,u%NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,y%NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Tower_Setup(InitInp,p,InputFileData,u%TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,y%TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Blade_Setup(InitInp,p,InputFileData,u%BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,y%BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Substruc_Setup(InitInp,p,InputFileData,u%SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,y%SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+
+      !............................................................................................
+      ! Setup and initialize the cable controls -- could be from Simulink or DLL
+      !............................................................................................
+   p%NumCableControl = InitInp%NumCableControl
+      ! Outputs from SrvD -- we allocate this if any cable control signals were requested.
+      !  -- only allocate what is needed -- OpenFAST glue code has logic for this 
+   if (p%NumCableControl > 0) then
+      call AllocAry( y%CableDeltaL,    p%NumCableControl, 'CableDeltaL',    ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      call AllocAry( y%CableDeltaLdot, p%NumCableControl, 'CableDeltaLdot', ErrStat2, ErrMsg2 )
+         if (Failed())  return
+
+      call AllocAry( u%ExternalCableDeltaL,    p%NumCableControl, 'ExternalCableDeltaL',    ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      call AllocAry( u%ExternalCableDeltaLdot, p%NumCableControl, 'ExternalCableDeltaLdot', ErrStat2, ErrMsg2 )
+         if (Failed())  return
+
+      y%CableDeltaL     = 0.0_ReKi
+      y%CableDeltaLdot  = 0.0_ReKi
+      u%ExternalCableDeltaL = 0.0_ReKi
+      u%ExternalCableDeltaLdot = 0.0_ReKi
+   endif
+
+
+
       !............................................................................................
       ! After we've set up all the data for everything else, we'll call the routines to initialize the Bladed Interface
       ! (it requires initial guesses for input/output)
       !............................................................................................
       
    IF ( p%UseBladedInterface ) THEN
+      if (UnSum >0) then
+         write(UnSum, '(A)') ''
+         write(UnSum, '(A)') SectionDivide
+         write(UnSum, '(A)')              ' Bladed Interface: in use'
+      endif
 
       p%AirDens      = InitInp%AirDens
       p%AvgWindSpeed = InitInp%AvgWindSpeed
       
-      CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, ErrStat2, ErrMsg2 )
+      CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, UnSum, ErrStat2, ErrMsg2 )
          if (Failed())  return;
          
       m%LastTimeCalled   = - m%dll_data%DLL_DT  ! we'll initialize the last time the DLL was called as -1 DLL_DT.
@@ -392,25 +456,23 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%DLL_Trgt%FileName = ""
       p%DLL_Trgt%ProcName = ""
       
+      if (UnSum >0) then
+         write(UnSum, '(A)') ''
+         write(UnSum, '(A)') SectionDivide
+         write(UnSum, '(A)')              ' Bladed Interface: not used'
+      endif
    END IF
          
-  
+ 
       !............................................................................................
-      ! Setup and initialize the StC submodule (possibly multiple instances at each location)
+      ! If we are using the Simulink interface, add info to summary file.
       !............................................................................................
-   call StC_Nacelle_Setup(InitInp,p,InputFileData,u%NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,y%NStC,m%NStC,ErrStat2,ErrMsg2)
-      if (Failed())  return;
 
-   call StC_Tower_Setup(InitInp,p,InputFileData,u%TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,y%TStC,m%TStC,ErrStat2,ErrMsg2)
-      if (Failed())  return;
+   if (UnSum >0 .and. Cmpl4SFun) then
+      call WrSumInfo4Simulink(p,ControlMode_EXTERN,UnSum)
+   END IF
 
-   call StC_Blade_Setup(InitInp,p,InputFileData,u%BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,y%BStC,m%BStC,ErrStat2,ErrMsg2)
-      if (Failed())  return;
-
-   call StC_S_Setup(InitInp,p,InputFileData,u%SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,y%SStC,m%SStC,ErrStat2,ErrMsg2)
-      if (Failed())  return;
-
-
+ 
       !............................................................................................
       ! Set Init outputs for linearization (after StrucCtrl, in case we ever add the StrucCtrl to the linearization features):
       !............................................................................................
@@ -430,7 +492,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       CALL AllocAry( InitOut%LinNames_y, SrvD_Indx_Y_WrOutput+p%NumOuts, 'LinNames_y', ErrStat2, ErrMsg2 )
       if (Failed())  return;
          
-      do i=1,size(SrvD_Indx_Y_BlPitchCom)
+      do i=1,size(SrvD_Indx_Y_BlPitchCom) ! NOTE: potentially limit to NumBl
          InitOut%LinNames_y(SrvD_Indx_Y_BlPitchCom(i)) = 'BlPitchCom('//trim(num2lstr(i))//'), rad'
          InitOut%RotFrame_y(SrvD_Indx_Y_BlPitchCom(i)) = .true.         
       end do
@@ -509,6 +571,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    
       !............................................................................................
+      ! Close summary file:
+      !............................................................................................
+   call SrvD_CloseSum( UnSum, ErrStat2, ErrMsg2 )
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      !............................................................................................
       ! Clean up the local variables:
       !............................................................................................
    CALL SrvD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
@@ -523,6 +591,7 @@ contains
       if (Failed)    call Cleanup()
    end function Failed
    subroutine Cleanup()    ! Ignore any errors here
+      if (UnSum > 0)    close(UnSum)
       CALL SrvD_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
@@ -532,7 +601,7 @@ END SUBROUTINE SrvD_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Nacelle Instances
-subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -544,6 +613,7 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherS
    type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
    type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
    type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -611,7 +681,7 @@ contains
 end subroutine StC_Nacelle_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Tower instances
-subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -623,6 +693,7 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
    type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
    type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -690,7 +761,7 @@ contains
 end subroutine StC_Tower_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Blade instances
-subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -702,6 +773,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
    type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
    type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -771,8 +843,8 @@ contains
    end subroutine Cleanup
 end subroutine StC_Blade_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the data structures for the structural control (StC) module -- hydrodynamics platform instances
-subroutine StC_S_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,ErrStat,ErrMsg)
+!> This routine sets the data structures for the structural control (StC) module -- substructure instances
+subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
    TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
@@ -784,6 +856,7 @@ subroutine StC_S_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y
    type(StC_OtherStateType),        allocatable,intent(  out)  :: OtherState(:)  !< Initial other states
    type(StC_OutputType),            allocatable,intent(  out)  :: y(:)           !< Initial system outputs (outputs are not calculated;
    type(StC_MiscVarType),           allocatable,intent(  out)  :: m(:)           !< Misc (optimization) variables
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -793,7 +866,7 @@ subroutine StC_S_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y
    real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
    type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
-   character(*), parameter    :: RoutineName = 'StC_S_Setup'
+   character(*), parameter    :: RoutineName = 'StC_Substruc_Setup'
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
@@ -848,7 +921,7 @@ contains
       CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
-end subroutine StC_S_Setup
+end subroutine StC_Substruc_Setup
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
@@ -1176,7 +1249,7 @@ SUBROUTINE DLL_controller_call(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
             m%FirstWarn = .FALSE.
          END IF
       ELSE
-         m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom  ! used for linear ramp of delayed signal
+         m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom(1:p%NumBl)  ! used for linear ramp of delayed signal
          m%LastTimeCalled = t
 
          CALL BladedInterface_CalcOutput( t, u, p, m, ErrStat2, ErrMsg2 )
@@ -1249,11 +1322,6 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
       
-      !  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
-      !  This is passed to AD15 to be interpolated with the airfoil table userprop column
-      !  (might be used for airfoil flap angles for example)
-      y%BlAirfoilCom(1:p%NumBl) = m%dll_data%BlAirfoilCom(1:p%NumBl)
-      
       IF (ALLOCATED(y%SuperController)) THEN
          y%SuperController = m%dll_data%SCoutput
       END IF
@@ -1284,6 +1352,16 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
    
+      ! Airfoil control:
+   CALL AirfoilControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%BlAirfoilCom, m, ErrStat, ErrMsg )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) RETURN
+
+      ! Cable control:
+   CALL CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%CableDeltaL, y%CableDeltaLdot, m, ErrStat, ErrMsg )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) RETURN
+
 
    !...............................................................................................................................   
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -1903,8 +1981,12 @@ SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_o
       end if
       
          
-      do i=1,size(SrvD_Indx_Y_BlPitchCom)
-         y_op(SrvD_Indx_Y_BlPitchCom(i)) = y%BlPitchCom(i)
+      do i=1,size(SrvD_Indx_Y_BlPitchCom) ! Note: Potentially limit to NumBl
+         if (i<=p%NumBl) then
+            y_op(SrvD_Indx_Y_BlPitchCom(i)) = y%BlPitchCom(i)
+         else
+            y_op(SrvD_Indx_Y_BlPitchCom(i)) = 0.0_ReKI
+         endif
       end do
       y_op(SrvD_Indx_Y_YawMom)  = y%YawMom
       y_op(SrvD_Indx_Y_GenTrq)  = y%GenTrq
@@ -1964,6 +2046,8 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
    CALL HSSBr_ValidateData()
 !FIXME: add validation for StC inputs
 !   CALL StC_ValidateData()
+   CALL AfC_ValidateData()    ! Airfoil controls
+   CALL CC_ValidateData()     ! Cable controls
 
    !  Checks for linearization:
    if ( InitInp%Linearize ) then
@@ -2005,8 +2089,13 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
       IF (InputFileData%PCMode    /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Pitch angles are not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
       IF (InputFileData%VSContrl  /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Generator torque and power are not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
       IF (InputFileData%HSSBrMode /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'HSS brake is not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
+      IF (InputFileData%AfCmode   /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Airfoil control is not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
+      IF (InputFileData%CCmode    /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Cable control is not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
    END IF
    
+
+!FIXME: add checks on the EXavrSWAP entries
+
    RETURN
    
 CONTAINS
@@ -2219,15 +2308,39 @@ CONTAINS
       IF ( InputFileData%HSSBrTqF < 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'HSSBrTqF must not be negative.', ErrStat, ErrMsg, RoutineName )
             
    END SUBROUTINE HSSBr_ValidateData
+
    !-------------------------------------------------------------------------------------------------------------------------------
+   !> This routine performs the checks on inputs for the flap control.
+   SUBROUTINE AfC_ValidateData( )
+      IF ( InputFileData%AfCMode /= ControlMode_NONE      .and. InputFileData%AfCMode /= ControlMode_Simple   .and. &
+           InputFileData%AfCMode /= ControlMode_EXTERN    .and. InputFileData%AfCMode /= ControlMode_DLL )  THEN
+         CALL SetErrStat( ErrID_Fatal, 'AfCMode must be 0, 1, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+      ENDIF
+      if ( InputFileData%AfCMode == ControlMode_Simple ) then
+         if ( InputFileData%AfC_phase < -TwoPi .and. InputFileData%AfC_phase > TwoPi ) then
+            call SetErrStat( ErrID_Fatal, 'AfC_phase must be between -360 and 360 degrees.', ErrStat, ErrMsg, RoutineName)
+         endif
+      endif
+   END SUBROUTINE AfC_ValidateData
+
+   !-------------------------------------------------------------------------------------------------------------------------------
+   !> This routine performs the checks on inputs for the flap control.
+   SUBROUTINE CC_ValidateData( )
+      IF ( InputFileData%CCMode /= ControlMode_NONE      .and. &
+           InputFileData%CCMode /= ControlMode_EXTERN    .and. InputFileData%CCMode /= ControlMode_DLL )  THEN
+         CALL SetErrStat( ErrID_Fatal, 'CCMode must be 0, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+      ENDIF
+   END SUBROUTINE CC_ValidateData
+
 END SUBROUTINE ValidatePrimaryData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData.
-SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
+SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(SrvD_InputFile),     INTENT(INOUT)    :: InputFileData  !< Data stored in the module's input file (intent OUT for MOVE_ALLOC)
    TYPE(SrvD_ParameterType), INTENT(INOUT)    :: p              !< The module's parameter data
+   INTEGER(IntKi),           INTENT(IN   )    :: UnSum          !< summary file number (>0 when set)
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
    CHARACTER(*),             INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
 
@@ -2241,16 +2354,13 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
    CHARACTER(*), PARAMETER                    :: RoutineName = 'SrvD_SetParameters'
 
-
    
       ! Initialize variables
-
    ErrStat = ErrID_None
    ErrMsg  = ''
-
-
    p%DT = InputFileData%DT
-   
+
+  
       !.............................................
       ! Pitch control parameters
       !.............................................
@@ -2263,10 +2373,23 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    CALL AllocAry( p%PitManRat, p%NumBl, 'PitManRat', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); p%PitManRat=0.0_ReKi
       IF (ErrStat >= AbortErrLev) RETURN  
       
+
    p%TPitManS  = InputFileData%TPitManS( 1:min(p%NumBl,size(InputFileData%TPitManS)))
    p%BlPitchF  = InputFileData%BlPitchF( 1:min(p%NumBl,size(InputFileData%BlPitchF)))
    p%PitManRat = InputFileData%PitManRat(1:min(p%NumBl,size(InputFileData%PitManRat)))
 
+   if (UnSum >0) then
+      write(UnSum, '(A)')  ' Unless specified, units are consistent with Input units, [SI] system is advised.'
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')                 ' Pitch control mode {0: none, 3: user-defined from routine PitchCntrl, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A43,I2)')            '   PCMode -- Pitch control mode:           ',p%PCMode
+      write(UnSum, '(A43,ES20.12e3)')     '   TPCOn  -- pitch control start time:     ',p%TPCOn
+      write(UnSum, '(A)')                 '   -------------------'
+      write(UnSum, '(A43,3ES12.5e2)')     '   TPitManS  -- pitch override start time: ',p%TPitManS( 1:min(p%NumBl,size(InputFileData%TPitManS)))
+      write(UnSum, '(A43,3ES12.5e2)')     '   BlPitchF  -- pitch override final pos:  ',p%BlPitchF( 1:min(p%NumBl,size(InputFileData%BlPitchF)))
+      write(UnSum, '(A43,3ES12.5e2)')     '   PitManRat -- pitch override rate:       ',p%PitManRat(1:min(p%NumBl,size(InputFileData%PitManRat)))
+      write(UnSum, '(A)')  ''
+   endif
       !.............................................
       ! Set generator and torque control parameters:
       !.............................................
@@ -2282,6 +2405,22 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    
    p%THSSBrFl  = InputFileData%THSSBrDp + InputFileData%HSSBrDT   ! Time at which shaft brake is fully deployed
    
+   if (UnSum >0) then
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')                 ' Variable-speed control mode {0: none, 1: simple VS, 3: user-defined from routine UserVSCont, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A41,I2)')            '   VSContrl -- speed control mode:       ',p%VSContrl
+      write(UnSum, '(A)')                 '   -------------------'
+      write(UnSum, '(A18,I2)')            '   GenModel:      ',p%GenModel
+      write(UnSum, '(A55,ES12.5e2)')      '     GenEff  --  efficiency (%):                       ',p%GenEff
+      if (p%GenTiStr) then
+      write(UnSum, '(A55,ES12.5e2)')      '     GenTiStr -- Timed generator start (s):            ',p%TimGenOn
+      else
+      write(UnSum, '(A55,ES12.5e2)')      '     SpdGenOn -- Gen speed to turn on the gen (rpm):   ',p%SpdGenOn
+      endif
+      if (p%GenTiStp)   &
+      write(UnSum, '(A55,ES12.5e2)')      '     GenTiStp -- Timed generator stop (s):             ',p%TimGenOf
+   endif
+
    SELECT CASE ( p%VSContrl )      
    CASE ( ControlMode_NONE )  ! None
       
@@ -2293,6 +2432,16 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
          p%SIG_Slop  = InputFileData%SIG_RtTq/( SIG_RtSp - InputFileData%SIG_SySp )                                 ! SIG torque/speed slope
 
          p%SIG_SySp = InputFileData%SIG_SySp
+
+         if (UnSum >0) then
+            write(UnSum, '(A41)')            '   Simple generator model                '
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_RtSp -- Rated speed             ',SIG_RtSp
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_POSl -- Pullout slip            ',p%SIG_POSl
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_POTq -- Pullout torque          ',p%SIG_POTq
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_Slop -- Torque/speed slope      ',p%SIG_Slop
+            write(UnSum, '(A55,ES12.5e2)')   '     SIG_SySp -- Synchronous gen speed   ',p%SIG_SySp
+         endif
+
       ELSEIF ( p%GenModel == ControlMode_ADVANCED )  THEN   ! Thevenin-equivalent induction generator
 
          ComDenom    = InputFileData%TEC_SRes**2 + ( InputFileData%TEC_SLR + InputFileData%TEC_MR )**2   ! common denominator used in many of the following equations
@@ -2314,6 +2463,25 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
          p%TEC_RRes  = InputFileData%TEC_RRes
          p%TEC_SRes  = InputFileData%TEC_SRes
          p%TEC_VLL   = InputFileData%TEC_VLL
+
+         if (UnSum >0) then
+            write(UnSum, '(A55)')            '   Advanced Thevenin equivalent generator model      '
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_Re1  -- stator resistance (ohms)            ',p%TEC_Re1
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_Xe1  -- stator leakage reactance (ohms)     ',p%TEC_Xe1
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_V1a  -- source voltage                      ',p%TEC_V1a
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_SySp -- synchronous speed                   ',p%TEC_SySp
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_K1   -- K1 term                             ',  TEC_K1
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_K2   -- K2 term                             ',  TEC_K2
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_A0   -- A0 term                             ',p%TEC_A0
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_C0   -- C0 term                             ',p%TEC_C0
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_C1   -- C1 term                             ',p%TEC_C1
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_C2   -- C2 term                             ',p%TEC_C2
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_MR   -- Magnetizing reactance (ohms)        ',p%TEC_MR
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_RLR  -- Rotor leakage reactance (ohms)      ',p%TEC_RLR
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_RRes -- Rotor resistance (ohms)             ',p%TEC_RRes
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_SRes -- Stator resistance (ohms)            ',p%TEC_SRes
+            write(UnSum, '(A55,ES12.5e2)')   '     TEC_VLL  -- Line-to-line RMS voltage (volts)    ',p%TEC_VLL
+         endif
 
       ENDIF
          
@@ -2338,8 +2506,19 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       p%VS_RtGnSp  = InputFileData%VS_RtGnSp
       p%VS_RtTq    = InputFileData%VS_RtTq
       
+      if (UnSum >0) then
+         write(UnSum, '(A55)')            '   Simple variable speed control                     '
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_SySp    -- region 2.5 synchronous gen speed  ',p%VS_SySp
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_Slope   -- Torque/speed slope of region 2.5  ',p%VS_Slope
+         write(UnSum, '(A55,ES12.5e2)')   '     mVS_TrGnSp -- region 2 -> 2.5 trans gen speed   ',p%VS_TrGnSp
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_Rgn2K   -- Gen torque constant region 2      ',p%VS_Rgn2K 
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_RtGnSp  -- Rated gen speed                   ',p%VS_RtGnSp
+         write(UnSum, '(A55,ES12.5e2)')   '     VS_RtTq    -- Rated gen torque                  ',p%VS_RtTq  
+      endif
+
    END SELECT 
-      
+
+
       !.............................................
       ! High-speed shaft brake parameters
       !.............................................   
@@ -2347,6 +2526,18 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%THSSBrDp  = InputFileData%THSSBrDp
    p%HSSBrDT   = InputFileData%HSSBrDT
    p%HSSBrTqF  = InputFileData%HSSBrTqF
+
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A45,I2)')         '    HSSBrMode -- high speed shaft brake mode ',p%HSSBrMode
+      if (p%HSSBrMode > 0) then 
+      write(UnSum, '(A56,ES12.5e2)')   '    THSSBrDp -- Time to initiate deployment (s)         ',p%THSSBrDp
+      write(UnSum, '(A56,ES12.5e2)')   '    HSSBrDT  -- Time full deployment once initiated (s) ',p%HSSBrDT 
+      write(UnSum, '(A56,ES12.5e2)')   '    HSSBrTqF -- Fully deployed HSS-brake torque (N-m)   ',p%HSSBrTqF
+      endif
+   endif
          
       !.............................................
       ! Nacelle-yaw control parameters
@@ -2360,7 +2551,26 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%TYawManS  = InputFileData%TYawManS   
    p%NacYawF   = InputFileData%NacYawF   
    p%YawManRat = InputFileData%YawManRat              ! we change the sign of this variable later
-      
+
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Yaw control mode {0: none, 3: user-defined from routine UserYawCont, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)'
+      write(UnSum, '(A32,I2)')         '    YCMode  -- yaw control mode ',p%YCMode
+      if (p%YCMode > 0) &
+      write(UnSum, '(A55,ES12.5e2)')   '    TYCOn   --  Time to enable active yaw control (s)  ',p%TYCOn
+      write(UnSum, '(A)')              '    -------------------'
+      write(UnSum, '(A)')              '    Yaw spring characteristics'
+      write(UnSum, '(A55,ES12.5e2)')   '      YawNeut --  neutral spring position (degrees)    ',p%YawNeut
+      write(UnSum, '(A55,ES12.5e2)')   '      YawSpr  --  spring constant (N-m/rad)            ',p%YawSpr
+      write(UnSum, '(A55,ES12.5e2)')   '      YawDamp --  damping constant (N-m/(rad/s))       ',p%YawDamp
+      write(UnSum, '(A)')              '    -------------------'
+      write(UnSum, '(A)')              '    Prescribed yaw motion'
+      write(UnSum, '(A55,ES12.5e2)')   '      TYawManS  -- yaw maneuver start time (s)         ',p%TYawManS
+      write(UnSum, '(A55,ES12.5e2)')   '      YawManRat -- yaw maneuver rate (deg/s)           ',p%YawManRat
+      write(UnSum, '(A55,ES12.5e2)')   '      NacYawF   -- Final yaw angle for override (deg)  ',p%NacYawF
+   endif
+
       !.............................................
       ! tip-brake parameters (not used in this version)
       !.............................................
@@ -2375,14 +2585,20 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%TBDrConN = 0.0_ReKi         ! tip-drag constant during normal operation
    p%TBDrConD = 0.0_ReKi         ! tip-drag constant during fully deployed operation
    
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)') ' Tip Brake  (not available)'
+   endif
       
       !.............................................
       ! Tuned-mass damper parameters
+      !     -- summary file info written later
       !.............................................   
-   p%NumBStC     = InputFileData%NumBStC
-   p%NumNStC     = InputFileData%NumNStC
-   p%NumTStC     = InputFileData%NumTStC
-   p%NumSStC  = InputFileData%NumSStC
+   p%NumBStC   = InputFileData%NumBStC
+   p%NumNStC   = InputFileData%NumNStC
+   p%NumTStC   = InputFileData%NumTStC
+   p%NumSStC   = InputFileData%NumSStC
 
       !.............................................
       ! Determine if the BladedDLL should be called
@@ -2414,7 +2630,40 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    ELSE
       p%Delim = ' '
    END IF           
-             
+
+      !.............................................
+      ! Save values for AfCmode - Airfoil control
+      !.............................................
+   p%AfCmode      =  InputFileData%AfCmode
+   p%AfC_Mean     =  InputFileData%AfC_Mean
+   p%AfC_Amp      =  InputFileData%AfC_Amp
+   p%AfC_phase    =  InputFileData%AfC_phase
+
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Airfoil control'
+      write(UnSum, '(A37,I2)')         '    AfCMode  -- Airfoil control mode ',p%AfCMode
+      if (p%AfCMode == ControlMode_SIMPLE) then
+      write(UnSum, '(A)')              '    -------------------'
+      write(UnSum, '(A)')              '    Simple cosine signal'
+      write(UnSum, '(A115,ES12.5e2)')  '      AfC_Mean  -- Mean level for cocosine cycling or steady value (-)                                             ',p%AfC_Mean
+      write(UnSum, '(A115,ES12.5e2)')  '      AfC_Amp   -- Amplitude for for cocosine cycling of flap signal (-)                                           ',p%AfC_Amp
+      write(UnSum, '(A115,ES12.5e2)')  '      AfC_Phase -- Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) ',p%AfC_Phase
+      endif
+   endif
+
+      !.............................................
+      ! Save values for CCmode - Cable control
+      !.............................................
+   p%CCmode       =  InputFileData%CCmode
+ 
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Cable control'
+      write(UnSum, '(A34,I2)')         '    CCMode  -- cable control mode ',p%CCMode
+   endif
 
 END SUBROUTINE SrvD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2676,7 +2925,7 @@ SUBROUTINE Pitch_CalcOutput( t, u, p, x, xd, z, OtherState, BlPitchCom, ElecPwr,
 
          CASE ( ControlMode_EXTERN )              ! User-defined from Simulink or LabVIEW.
 
-            BlPitchCom = u%ExternalBlPitchCom                ! copy entire array
+            BlPitchCom = u%ExternalBlPitchCom(1:p%NumBl)
          
          CASE ( ControlMode_DLL )                                ! User-defined pitch control from Bladed-style DLL
             
@@ -3547,6 +3796,113 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
 END SUBROUTINE CalculateTorqueJacobian
 !----------------------------------------------------------------------------------------------------------------------------------
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for computing the airfoil commands 
+!  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
+!  This is passed to AD15 to be interpolated with the airfoil table userprop column
+!  (might be used for airfoil flap angles for example)
+SUBROUTINE AirfoilControl_CalcOutput( t, u, p, x, xd, z, OtherState, BlAirfoilCom, m, ErrStat, ErrMsg )
+   REAL(DbKi),                     INTENT(IN   )  :: t               !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u               !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p               !< Parameters
+   TYPE(SrvD_ContinuousStateType), INTENT(IN   )  :: x               !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd              !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z               !< Constraint states at t
+   TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState      !< Other states at t
+   REAL(ReKi),                     INTENT(INOUT)  :: BlAirfoilCom(:) !< Airfoil command signals
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m               !< Misc (optimization) variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi)                                     :: factor
+   REAL(ReKi)                                     :: Azimuth         !< Azimuth of this blade for simple control
+   INTEGER(IntKi)                                 :: i
+
+         ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      !...................................................................
+      ! Calculate the airfoil commands:
+      !...................................................................
+      SELECT CASE ( p%AfCmode )  ! Which airfoil control mode are we using?
+         CASE ( ControlMode_NONE )                    ! None control 
+            BlAirfoilCom(1:p%NumBl) = 0.0_ReKi 
+         CASE ( ControlMode_SIMPLE )                  ! Simple, built-in cosine wave control routine.
+            do i=1,p%NumBl
+               Azimuth = u%LSSTipPxa + TwoPi*(i-1)/p%NumBl       ! assuming all blades evenly spaced on rotor
+               BlAirfoilCom(i) = p%AfC_Mean + p%AfC_Amp*cos( Azimuth + p%AfC_phase)
+            enddo
+         CASE ( ControlMode_EXTERN )                  ! User-defined from Simulink or LabVIEW.
+            BlAirfoilCom = u%ExternalBlAirfoilCom   ! copy entire array
+         CASE ( ControlMode_DLL )                     ! User-defined pitch control from Bladed-style DLL
+            if (p%DLL_Ramp) then
+               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+               BlAirfoilCom(1:p%NumBl) = m%dll_data%PrevBlAirfoilCom(1:p%NumBl) + &
+                                 factor * ( m%dll_data%BlAirfoilCom(1:p%NumBl) - m%dll_data%PrevBlAirfoilCom(1:p%NumBl) )
+            else
+               BlAirfoilCom(1:p%NumBl) = m%dll_data%BlAirfoilCom(1:p%NumBl)
+            end if
+      END SELECT
+END SUBROUTINE AirfoilControl_CalcOutput
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for computing the cable control commands 
+!  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
+!  This is passed to AD15 to be interpolated with the airfoil table userprop column
+!  (might be used for airfoil flap angles for example)
+SUBROUTINE CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, CableDeltaL, CableDeltaLdot, m, ErrStat, ErrMsg )
+   REAL(DbKi),                     INTENT(IN   )  :: t                  !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u                  !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p                  !< Parameters
+   TYPE(SrvD_ContinuousStateType), INTENT(IN   )  :: x                  !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
+   TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: CableDeltaL(:)     !< CableDeltaL command signals
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: CableDeltaLdot(:)  !< CableDeltaLdot command signals
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m                  !< Misc (optimization) variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi)                                     :: factor
+
+         ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      if (.not. allocated(CableDeltaL) .or. .not. allocated(CableDeltaLdot))     return
+
+
+      !...................................................................
+      ! Calculate the cable control channels
+      !...................................................................
+      SELECT CASE ( p%CCmode )  ! Which cable control are we using? 
+         ! Nothing.  Note that these might be allocated if no control signals were requested from any modules
+         CASE ( ControlMode_NONE )
+            CableDeltaL    = 0.0_ReKi
+            CableDeltaLdot = 0.0_ReKi
+         ! User-defined from Simulink or LabVIEW.
+         CASE ( ControlMode_EXTERN )
+            if (allocated(u%ExternalCableDeltaL)) then
+               CableDeltaL(   1:p%NumCableControl) = u%ExternalCableDeltaL(   1:p%NumCableControl)
+            endif
+            if (allocated(u%ExternalCableDeltaLdot)) then
+               CableDeltaLdot(1:p%NumCableControl) = u%ExternalCableDeltaLdot(1:p%NumCableControl)
+            endif
+         ! User-defined cable control from Bladed-style DLL
+         CASE ( ControlMode_DLL )
+            if (p%DLL_Ramp) then
+               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+               CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
+                                 factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
+               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) + &
+                                 factor * ( m%dll_data%CableDeltaLdot(1:p%NumCableControl) - m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) )
+            else
+               CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
+               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
+            end if
+      END SELECT
+
+END SUBROUTINE CableControl_CalcOutput
 
 
 END MODULE ServoDyn

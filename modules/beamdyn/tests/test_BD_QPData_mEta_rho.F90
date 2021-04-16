@@ -35,7 +35,7 @@ subroutine test_BD_QPData_mEta_rho()
     
     ! allocate and build the custom input types
     parametertype = simpleParameterType(1,16,16,0,1)
-    miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
+    miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%dof_node, parametertype%elem_total, parametertype%nodes_per_elem)
     
     ! allocate the results
     call BD_QPData_mEta_rho(parametertype, miscvartype)

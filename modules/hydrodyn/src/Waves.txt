@@ -82,6 +82,8 @@ typedef     ^                 ^                 SiKi                 PWaveVel0  
 typedef     ^                 ^                 SiKi                 WaveElev          {:}{:}   -        -        "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
 typedef     ^                 ^                 SiKi                 WaveElev0         {:}      -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (meters)
 
+typedef     ^           ^                 SiKi             WaveElevMD          {:}{:}   -        -        "Instantaneous elevation time-series of incident waves at hard coded grid for temporary use in MoorDyn" (m)
+
 typedef     ^                 ^                 SiKi                 WaveElevSeries    {:}{:}   -        -        "Instantaneous elevation time-series at each of the points given by WaveElevXY.  Used for making movies of the waves. First index is the timestep. Second index is XY point number corresponding to second index of WaveElevXY." (m)
 
 typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined" (sec)

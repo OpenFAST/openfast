@@ -33,6 +33,8 @@ MODULE HydroDyn_Input
 
    PRIVATE :: CleanupEchoFile
    PRIVATE :: CheckMeshOutput
+   
+   !>>> put parameters here (in waves)  nx,ny,nz...  and discretization coefficients, with unique names, it's like a global<<<
 
 CONTAINS
    
@@ -2383,6 +2385,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    INTEGER                                          :: I                    ! Generic loop counter index
    INTEGER                                          :: J                    ! Generic loop counter index
    INTEGER                                          :: K                    ! Generic loop counter index
+   INTEGER                                          :: Itemp                ! @mhall: additional temporary index
    CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    LOGICAL                                          :: FoundID              ! Boolean flag indicating whether an ID from one tables is found in one of the other input table
    REAL(ReKi)                                       :: MinDepth             ! The minimum depth entry in the Depth-based Hydrodynamic coefficents table
@@ -2553,7 +2556,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! WaveTMax - Analysis time for incident wave calculations.
 
-   IF ( InitInp%Waves%WaveMod == 0 )  THEN   ! .TRUE if we have incident waves.
+   IF ( InitInp%Waves%WaveMod == 0 )  THEN   ! .TRUE if we DO NOT HAVE have incident waves.
       
       ! TODO: Issue warning if WaveTMax was not already 0.0 in this case.
       IF ( .NOT. EqualRealNos(InitInp%Waves%WaveTMax, 0.0_DbKi) ) THEN
@@ -4261,9 +4264,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Set the number and global Z locations for the X and Y components of the current velocities
-      InitInp%Current%NMorisonNodes = InitInp%Morison%NNodes
+         ! @mhall: hard-coding an extra WaveGrid_n points to make a water kinematics grid
+      InitInp%Current%NMorisonNodes = InitInp%Morison%NNodes + WaveGrid_n
 
-      ALLOCATE ( InitInp%Current%MorisonNodezi(InitInp%Morison%NNodes), STAT = ErrStat2 )
+      ALLOCATE ( InitInp%Current%MorisonNodezi(InitInp%Current%NMorisonNodes), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for MorisonNodezi array.',ErrStat,ErrMsg,RoutineName)
          RETURN
@@ -4272,7 +4276,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 
          ! Establish the number and locations where the wave kinematics will be computed
-      InitInp%Waves%NWaveKin   = InitInp%Morison%NNodes                          ! Number of points where the incident wave kinematics will be computed (-)
+         ! @mhall: hard-coding an extra WaveGrid_n points to make a water kinematics grid
+      InitInp%Waves%NWaveKin   = InitInp%Morison%NNodes + WaveGrid_n                    ! Number of points where the incident wave kinematics will be computed (-)
       ALLOCATE ( InitInp%Waves%WaveKinxi(InitInp%Waves%NWaveKin), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array.',ErrStat,ErrMsg,RoutineName)
@@ -4295,7 +4300,18 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          InitInp%Waves%WaveKinzi(I)      = InitInp%Morison%Nodes(I)%Position(3)   ! zi-coordinates for points where the incident wave kinematics will be computed; 
          InitInp%Current%MorisonNodezi(I) = InitInp%Waves%WaveKinzi(I)
       END DO
-
+      !@mhall: hard-coding the coordinates of those additional nodes for the grid (remember, must be in increasing order) <<< move these to module global parameters<<<<
+      DO I=1,WaveGrid_nz          !z
+         DO J = 1,WaveGrid_ny     !y
+            DO K = 1,WaveGrid_nx  !x
+               Itemp = InitInp%Morison%NNodes + (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
+               InitInp%Waves%WaveKinzi(Itemp)      =   1.0 - 2.0**(WaveGrid_nz-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
+               InitInp%Waves%WaveKinyi(Itemp)      = WaveGrid_y0 + WaveGrid_dy*(J-1)
+               InitInp%Waves%WaveKinxi(Itemp)      = WaveGrid_x0 + WaveGrid_dx*(K-1)
+               InitInp%Current%MorisonNodezi(Itemp)= InitInp%Waves%WaveKinzi(I)
+            END DO
+         END DO
+      END DO
 
             ! If we are using the Waves module, the node information must be copied over.
       InitInp%Waves2%NWaveKin   = InitInp%Waves%NWaveKin                          ! Number of points where the incident wave kinematics will be computed (-)
