@@ -67,9 +67,9 @@ typedef	^	AD_BladePropsType	ReKi	BlCrvAng	{:}	-	-	"Curve angle at blade node"	ra
 typedef	^	AD_BladePropsType	ReKi	BlTwist	{:}	-	-	"Twist at blade node"	radians
 typedef	^	AD_BladePropsType	ReKi	BlChord	{:}	-	-	"Chord at blade node"	m
 typedef	^	AD_BladePropsType	IntKi	BlAFID	{:}	-	-	"ID of Airfoil at blade node"	-
-typedef ^   AD_BladePropsType   ReKi    BlCaX   {:} -   -   "X-direction added mass coefficient at blade node"   -
-typedef ^   AD_BladePropsType   ReKi    BlCaY   {:} -   -   "Y-direction added mass coefficient at blade node"   -
-typedef ^   AD_BladePropsType   ReKi    BlCaZ   {:} -   -   "Z-direction added mass coefficient at blade node"   -
+typedef ^   AD_BladePropsType   ReKi    BlCax   {:} -   -   "X-direction added mass coefficient at blade node"   -
+typedef ^   AD_BladePropsType   ReKi    BlCay   {:} -   -   "Y-direction added mass coefficient at blade node"   -
+typedef ^   AD_BladePropsType   ReKi    BlCaz   {:} -   -   "Z-direction added mass coefficient at blade node"   -
 typedef ^   AD_BladePropsType   ReKi    BlCb    {:} -   -   "Coefficient of buoyancy at blade node"   -
 typedef ^   AD_BladePropsType   ReKi    BlCenBn {:} -   -   "Center of buoyancy normal offset at blade node"   m
 typedef ^   AD_BladePropsType   ReKi    BlCenBt {:} -   -   "Center of buoyancy tangential offset at blade node"   m
@@ -122,9 +122,9 @@ typedef	^	RotInputFile	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotInputFile	ReKi	NacCenBx    -	-	-	"Nacelle center of buoyancy x direction offset" m
 typedef	^	RotInputFile	ReKi	NacCenBy    -	-	-	"Nacelle center of buoyancy y direction offset" m
 typedef	^	RotInputFile	ReKi	NacCenBz    -	-	-	"Nacelle center of buoyancy z direction offset" m
-typedef	^	RotInputFile	ReKi	NacCenAx    -	-	-	"Nacelle center of added mass x direction offset w.r.t. the top tower coord.  system" m
-typedef	^	RotInputFile	ReKi	NacCenAy    -	-	-	"Nacelle center of added mass y direction offset w.r.t. the top tower coord.  system" m
-typedef	^	RotInputFile	ReKi	NacCenAz    -	-	-	"Nacelle center of added mass z direction offset w.r.t. the top tower coord.  system" m
+typedef	^	RotInputFile	ReKi	NacCenAx    -	-	-	"Nacelle center of added mass x direction offset w.r.t. the tower top coord. system" m
+typedef	^	RotInputFile	ReKi	NacCenAy    -	-	-	"Nacelle center of added mass y direction offset w.r.t. the tower top coord. system" m
+typedef	^	RotInputFile	ReKi	NacCenAz    -	-	-	"Nacelle center of added mass z direction offset w.r.t. the tower top coord. system" m
 typedef	^	RotInputFile	ReKi	NacCax	    -	-	-	"X-direction added mass coefficient at nacelle node" -
 typedef	^	RotInputFile	ReKi	NacCay	    -	-	-	"Y-direction added mass coefficient at nacelle node" -
 typedef	^	RotInputFile	ReKi	NacCaz	    -	-	-	"Z-direction added mass coefficient at nacelle node" -
@@ -288,9 +288,9 @@ typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotParameterType	ReKi	NacCenBx    -	-	-	"Nacelle center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	NacCenBy    -	-	-	"Nacelle center of buoyancy y direction offset" m
 typedef	^	RotParameterType	ReKi	NacCenBz    -	-	-	"Nacelle center of buoyancy z direction offset" m
-typedef	^	RotParameterType	ReKi	NacCenAx    -	-	-	"Nacelle center of added mass x direction offset w.r.t. the top tower coord.  system" m
-typedef	^	RotParameterType	ReKi	NacCenAy    -	-	-	"Nacelle center of added mass y direction offset w.r.t. the top tower coord.  system" m
-typedef	^	RotParameterType	ReKi	NacCenAz    -	-	-	"Nacelle center of added mass z direction offset w.r.t. the top tower coord.  system" m
+typedef	^	RotParameterType	ReKi	NacCenAx    -	-	-	"Nacelle center of added mass x direction offset w.r.t. the tower top coord. system" m
+typedef	^	RotParameterType	ReKi	NacCenAy    -	-	-	"Nacelle center of added mass y direction offset w.r.t. the tower top coord. system" m
+typedef	^	RotParameterType	ReKi	NacCenAz    -	-	-	"Nacelle center of added mass z direction offset w.r.t. the tower top coord. system" m
 typedef	^	RotParameterType	ReKi	NacCax	    -	-	-	"X-direction added mass coefficient at nacelle node" -
 typedef	^	RotParameterType	ReKi	NacCay	    -	-	-	"Y-direction added mass coefficient at nacelle node" -
 typedef	^	RotParameterType	ReKi	NacCaz	    -	-	-	"Z-direction added mass coefficient at nacelle node" -
