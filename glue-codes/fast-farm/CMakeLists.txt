@@ -49,7 +49,7 @@ if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
   # restarts with this option off. Disabling in Release mode avoids this problem when compiling with
   # full optimizations, but leaves it enabled for RelWithDebInfo which adds both -O2 and -g flags.
   # https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
-  set_source_files_properties(src/FASTWrapper_Types.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
+  set_source_files_properties(src/FAST_Farm_Types.f90 src/FASTWrapper_Types.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 endif()
 
 install(TARGETS FAST.Farm
