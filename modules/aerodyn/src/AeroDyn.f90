@@ -2003,6 +2003,10 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       m%HubMB = HubMBtmp
    end if
 
+      ! Assign buoyant loads to hub mesh
+   y%HubLoad%Force(:,1) = HubFBtmp
+   y%HubLoad%Moment(:,1) = HubMBtmp
+
       ! Nacelle
       
       ! Set forces and moments to zero if VolNac is zero
