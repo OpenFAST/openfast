@@ -546,7 +546,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
    type(RotMiscVarType),          intent(inout)  :: m                !< misc/optimization data (not defined in submodules)
    type(RotParameterType),        intent(in   )  :: p                !< Parameters
    type(RotInputType),            intent(inout)  :: u                !< input for HubMotion mesh (create sibling mesh here)
-   type(RotOutputType),           intent(in   )  :: y                !< output (create mapping between output and otherstate mesh here)
+   type(RotOutputType),           intent(inout)  :: y                !< output (create mapping between output and otherstate mesh here)
    integer(IntKi),                intent(  out)  :: errStat          !< Error status of the operation
    character(*),                  intent(  out)  :: errMsg           !< Error message if ErrStat /= ErrID_None
 
@@ -609,16 +609,8 @@ end if
          call SetErrStat( ErrID_Fatal, "Error allocating B_L_2_H_P mapping structure.", errStat, errMsg, RoutineName )
          return
       end if
-
-   call MeshCopy (  SrcMesh  = u%HubMotion        &
-                  , DestMesh = m%HubLoad          &
-                  , CtrlCode = MESH_SIBLING       &
-                  , IOS      = COMPONENT_OUTPUT   &
-                  , force    = .TRUE.             &
-                  , moment   = .TRUE.             &
-                  , ErrStat  = ErrStat2           &
-                  , ErrMess  = ErrMsg2            )
-   
+  
+   call MeshCopy( y%HubLoad, m%HubLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) RETURN         
    
@@ -749,6 +741,18 @@ subroutine Init_y(y, u, p, errStat, errMsg)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
          if (ErrStat >= AbortErrLev) RETURN         
          
+      call MeshCopy ( SrcMesh  = u%HubMotion      &
+                    , DestMesh = y%HubLoad        &
+                    , CtrlCode = MESH_SIBLING     &
+                    , IOS      = COMPONENT_OUTPUT &
+                    , force    = .TRUE.           &
+                    , moment   = .TRUE.           &
+                    , ErrStat  = ErrStat2         &
+                    , ErrMess  = ErrMsg2          )
+
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+         if (ErrStat >= AbortErrLev) RETURN 
+         
    allocate( y%BladeLoad(p%numBlades), stat=ErrStat2 )
    if (errStat2 /= 0) then
       call SetErrStat( ErrID_Fatal, 'Error allocating y%BladeLoad.', ErrStat, ErrMsg, RoutineName )      
@@ -827,6 +831,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
    u%InflowOnBlade = 0.0_ReKi
    u%UserProp      = 0.0_ReKi
    u%InflowOnNacelle = 0.0_ReKi
+   u%InflowOnHub = 0.0_ReKi
    
       ! Meshes for motion inputs (ElastoDyn and/or BeamDyn)
          !................

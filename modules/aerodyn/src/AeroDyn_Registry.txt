@@ -332,6 +332,7 @@ typedef	^	RotInputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 typedef	^	RotInputType	ReKi	InflowOnBlade	{:}{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
 typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
+typedef	^	RotInputType	ReKi	InflowOnHub 	{3}	-	-	"U,V,W at hub"	m/s
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 typedef	^	InputType	RotInputType	rotors	{:}	-	-	"Inputs for each rotor"	-
@@ -341,6 +342,7 @@ typedef	^	InputType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on a mesh here:
 typedef	^	RotOutputType	MeshType	NacelleLoad	-	-	-	"loads on the nacelle"	-
+typedef	^	RotOutputType	MeshType	HubLoad  	-	-	-	"loads on the hub"  	-
 typedef	^	RotOutputType	MeshType	TowerLoad	-	-	-	"loads on the tower"	-
 typedef	^	RotOutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
 # Define outputs that are not on a mesh here:
