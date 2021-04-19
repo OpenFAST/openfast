@@ -68,6 +68,17 @@ SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannel
     INTEGER                                                          :: ErrStat
     CHARACTER(ErrMsgLen)                                             :: ErrMsg
     INTEGER                                                          :: I
+
+    ! Additional Inputs
+    REAL(ReKi)                                                       :: g = -9.806       !< gravity constant [[m/s^2]]
+    REAL(ReKi)                                                       :: rhoW = -1000.    !< sea density [[kg/m^3]]
+    REAL(ReKi)                                                       :: WtrDepth = -100. !< depth of water [[m]]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE                           :: PtfmInit         !< initial position of platform(s) originally size 6 [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE                       :: WaveVel          !<  [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE                       :: WaveAcc          !<  [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE                         :: WavePDyn         !<  [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE                         :: WaveElev         !<  [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE                           :: WaveTime         !<  [-]
     
     ! Convert the MD input filename from C to Fortran
     MD_InputFileName = TRANSFER(MD_InputFileName_C, MD_InputFileName)
@@ -76,9 +87,25 @@ SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannel
     PRINT *, 'Inside MD_INIT_C: the passed input filename is ', MD_InputFileName
 
     ! Set other inputs for calling MD_Init
+    ALLOCATE(PtfmInit(6))
+    ALLOCATE(WaveVel())
+    ALLOCATE(WaveAcc())
+    ALLOCATE(WavePDyn())
+    ALLOCATE(WaveElev())
+    ALLOCATE(WaveTime())
+
+    DTcoupling               = REAL(DT_C, DbKi)
     InitInp%FileName         = MD_InputFileName
     InitInp%RootName         = 'MDroot'
-    DTcoupling               = REAL(DT_C, DbKi)
+    InitInp%g                = g
+    InitInp%rhoW             = rhoW
+    InitInp%WtrDepth         = WtrDepth
+    InitInp%PtfmInit         = PtfmInit
+    InitInp%WaveVel          = WaveVel
+    InitInp%WaveAcc          = WaveAcc
+    InitInp%WavePDyn         = WavePDyn
+    InitInp%WaveElev         = WaveElev
+    InitInp%WaveTime         = WaveTime
 
     ! Call the main subroutine MD_Init
     CALL MD_Init(InitInp, u, p, x, xd, z, other, y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)

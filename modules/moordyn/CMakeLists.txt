@@ -25,7 +25,7 @@ set(MOORDYN_LIBS_SOURCES
 )
 
 add_library(moordynlib ${MOORDYN_LIBS_SOURCES})
-target_link_libraries(moordynlib nwtclibs)
+target_link_libraries(moordynlib waveslib nwtclibs)
 
 # Linux
 add_library(md_c_lib driver/MD_C.f90)

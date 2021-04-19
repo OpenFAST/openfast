@@ -59,6 +59,10 @@ set(HYDRODYN_SOURCES
 add_library(hydrodynlib ${HYDRODYN_SOURCES})
 target_link_libraries(hydrodynlib nwtclibs)
 
+#TEMPORARY HACK FOR MD
+add_library(waveslib src/Waves.f90 src/Waves_Types.f90 src/UserWaves.f90)
+target_link_libraries(waveslib nwtclibs)
+
 add_executable(hydrodyn_driver src/HydroDyn_DriverCode.f90)
 target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs versioninfolib)
 
@@ -66,7 +70,7 @@ target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs versioninfolib)
 #  src/SS_Radiation_DriverCode.f90)
 #target_link_libraries(ss_radiation hydrodynlib nwtclibs)
 
-install(TARGETS hydrodynlib hydrodyn_driver
+install(TARGETS hydrodynlib waveslib hydrodyn_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

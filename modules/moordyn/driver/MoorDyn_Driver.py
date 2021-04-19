@@ -7,12 +7,9 @@ import MoorDyn_Library
 #=============================================================================================================================
 
 # Main input file
-input_filename = '/home/nmendoza/Projects/CCT2/OpenFAST/modules/moordyn/driver/MD.inp' # with or without path? ASK MATT
+input_filename = '/home/nmendoza/Projects/CCT2/OpenFAST/modules/moordyn/driver/MDv2.inp' # with or without path? ASK MATT
 
 # Library path
-## Raf
-# library_path = ''
-## Nicole
 library_path = "/home/nmendoza/Projects/CCT2/OpenFAST/build_test/modules/moordyn/libmd_c_lib.so"
 md_lib = MoorDyn_Library.MoorDynLibAPI(library_path)
 
