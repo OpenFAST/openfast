@@ -2,7 +2,7 @@
 Description line for this file -- file corresponds to inputs in Test01_UAE_AeroDyn.dat
 ======  Blade Properties =================================================================
    23               NumBlNds           - Number of blade nodes used in the analysis (-)
-  BlSpn     BlCrvAC    BlSwpAC    BlCrvAng    BlTwist    BlChord    BlAFID    BlCaX    BlCaY    BlCaZ    BlCb    BlCenBn    BlCenBt
+  BlSpn     BlCrvAC    BlSwpAC    BlCrvAng    BlTwist    BlChord    BlAFID    BlCax    BlCay    BlCaz    BlCb    BlCenBn    BlCenBt
   (m)       (m)        (m)        (deg)       (deg)      (m)        (-)       (-)      (-)      (-)      (-)     (m)        (m)
  0.0        0.0        0.0        0.0         0.000      0.219       1        0.0      0.0      0.0      0.0     0.0        0.0
  0.1360     0.0        0.0        0.0         0.000      0.219       1        0.0      0.0      0.0      0.0     0.0        0.0

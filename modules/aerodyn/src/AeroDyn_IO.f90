@@ -2323,10 +2323,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, Buoyancy=True, or AddedMass=True]
       call ParseVar( FileInfo_In, CurLine, "NumTwrNds", InputFileData%rotors(iR)%NumTwrNds, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
-         !TwrElev        TwrDiam        TwrCd        TwrTI        TwrCb        TwrCax        TwrCay        TwrCaz
+         !TwrElev        TwrDiam        TwrCd        TwrTI        TwrCax        TwrCay        TwrCaz        TwrCb
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Tower Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
-         !(m)            (m)            (-)          (-)          (-)          (-)           (-)           (-)
+         !(m)            (m)            (-)          (-)          (-)           (-)           (-)           (-)
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Tower Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
          ! Allocate space for tower table
@@ -2338,14 +2338,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          if (Failed()) return
       CALL AllocAry( InputFileData%rotors(iR)%TwrTI, InputFileData%rotors(iR)%NumTwrNds, 'TwrTI', ErrStat2, ErrMsg2)
          if (Failed()) return
-      CALL AllocAry( InputFileData%rotors(iR)%TwrCb, InputFileData%rotors(iR)%NumTwrNds, 'TwrCb', ErrStat2, ErrMsg2)
-         if (Failed()) return
 	  CALL AllocAry( InputFileData%rotors(iR)%TwrCax, InputFileData%rotors(iR)%NumTwrNds, 'TwrCax', ErrStat2, ErrMsg2)
          if (Failed()) return
 	  CALL AllocAry( InputFileData%rotors(iR)%TwrCay, InputFileData%rotors(iR)%NumTwrNds, 'TwrCay', ErrStat2, ErrMsg2)
          if (Failed()) return
 	  CALL AllocAry( InputFileData%rotors(iR)%TwrCaz, InputFileData%rotors(iR)%NumTwrNds, 'TwrCaz', ErrStat2, ErrMsg2)
-         if (Failed()) return		 
+         if (Failed()) return	
+      CALL AllocAry( InputFileData%rotors(iR)%TwrCb, InputFileData%rotors(iR)%NumTwrNds, 'TwrCb', ErrStat2, ErrMsg2)
+         if (Failed()) return	 
       do I=1,InputFileData%rotors(iR)%NumTwrNds
          call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe8, 8, ErrStat2, ErrMsg2, UnEc )
             if (Failed()) return;
@@ -2353,10 +2353,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          InputFileData%rotors(iR)%TwrDiam(I) = TmpRe8( 2)
          InputFileData%rotors(iR)%TwrCd(I)   = TmpRe8( 3)
          InputFileData%rotors(iR)%TwrTI(I)   = TmpRe8( 4)
-         InputFileData%rotors(iR)%TwrCb(I)   = TmpRe8( 5)
-		   InputFileData%rotors(iR)%TwrCax(I)  = TmpRe8( 6)
-         InputFileData%rotors(iR)%TwrCay(I)  = TmpRe8( 7)
-         InputFileData%rotors(iR)%TwrCaz(I)  = TmpRe8( 8)
+		   InputFileData%rotors(iR)%TwrCax(I)  = TmpRe8( 5)
+         InputFileData%rotors(iR)%TwrCay(I)  = TmpRe8( 6)
+         InputFileData%rotors(iR)%TwrCaz(I)  = TmpRe8( 7)
+         InputFileData%rotors(iR)%TwrCb(I)   = TmpRe8( 8)
       end do
    enddo
 
@@ -2368,12 +2368,6 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          ! VolHub - Hub volume (m^3)
       call ParseVar( FileInfo_In, CurLine, "VolHub", InputFileData%rotors(iR)%VolHub, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
-         ! HubCenBx - Hub center of buoyancy x direction offset (m)
-      call ParseVar( FileInfo_In, CurLine, "HubCenBx", InputFileData%rotors(iR)%HubCenBx, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return 
-         ! HubCenAx - Hub center of added mass x direction offset w.r.t. the hub coord. system (m)
-      call ParseVar( FileInfo_In, CurLine, "HubCenAx", InputFileData%rotors(iR)%HubCenAx, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return      		 
          ! HubCax - X-direction added mass coefficient at hub node (-)
       call ParseVar( FileInfo_In, CurLine, "HubCax", InputFileData%rotors(iR)%HubCax, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
@@ -2382,6 +2376,12 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          if (Failed()) return
          ! HubCaz - Z-direction added mass coefficient at hub node (-)
       call ParseVar( FileInfo_In, CurLine, "HubCaz", InputFileData%rotors(iR)%HubCaz, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return 
+         ! HubCenAx - Hub center of added mass x direction offset w.r.t. the hub coord. system (m)
+      call ParseVar( FileInfo_In, CurLine, "HubCenAx", InputFileData%rotors(iR)%HubCenAx, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return   
+         ! HubCenBx - Hub center of buoyancy x direction offset (m)
+      call ParseVar( FileInfo_In, CurLine, "HubCenBx", InputFileData%rotors(iR)%HubCenBx, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return 		 
    end do
 
@@ -2393,6 +2393,24 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          ! VolNac - Nacelle volume (m^3)
       call ParseVar( FileInfo_In, CurLine, "VolNac", InputFileData%rotors(iR)%VolNac, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
+         ! NacCax - X-direction added mass coefficient at nacelle node (-)
+      call ParseVar( FileInfo_In, CurLine, "NacCax", InputFileData%rotors(iR)%NacCax, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return  
+         ! NacCay - Y-direction added mass coefficient at nacelle node (-)
+      call ParseVar( FileInfo_In, CurLine, "NacCay", InputFileData%rotors(iR)%NacCay, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return 
+         ! NacCaz - Z-direction added mass coefficient at nacelle node (-)
+      call ParseVar( FileInfo_In, CurLine, "NacCaz", InputFileData%rotors(iR)%NacCaz, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return	
+         ! NacCenAx - Nacelle center of added mass x direction offset w.r.t. the tower top coord. system" m
+      call ParseVar( FileInfo_In, CurLine, "NacCenAx", InputFileData%rotors(iR)%NacCenAx, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return  
+         ! NacCenAy - Nacelle center of added mass y direction offset w.r.t. the tower top coord. system" m
+      call ParseVar( FileInfo_In, CurLine, "NacCenAy", InputFileData%rotors(iR)%NacCenAy, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return 
+         ! NacCenAz - Nacelle center of added mass z direction offset w.r.t. the tower top coord. system" m
+      call ParseVar( FileInfo_In, CurLine, "NacCenAz", InputFileData%rotors(iR)%NacCenAz, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return	 
          ! NacCenBx - Nacelle center of buoyancy x direction offset (m)
       call ParseVar( FileInfo_In, CurLine, "NacCenBx", InputFileData%rotors(iR)%NacCenBx, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return  
@@ -2402,24 +2420,6 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
          ! NacCenBz - Nacelle center of buoyancy z direction offset (m)
       call ParseVar( FileInfo_In, CurLine, "NacCenBz", InputFileData%rotors(iR)%NacCenBz, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return   
-         ! NacCenAx - Nacelle center of added mass x direction offset w.r.t. the tower top coord. system" m
-      call ParseVar( FileInfo_In, CurLine, "NacCenAx", InputFileData%rotors(iR)%NacCenAx, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return  
-         ! NacCenAy - Nacelle center of added mass y direction offset w.r.t. the tower top coord. system" m
-      call ParseVar( FileInfo_In, CurLine, "NacCenAy", InputFileData%rotors(iR)%NacCenAy, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return 
-         ! NacCenAz - Nacelle center of added mass z direction offset w.r.t. the tower top coord. system" m
-      call ParseVar( FileInfo_In, CurLine, "NacCenAz", InputFileData%rotors(iR)%NacCenAz, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return
-         ! NacCax - X-direction added mass coefficient at nacelle node (-)
-      call ParseVar( FileInfo_In, CurLine, "NacCax", InputFileData%rotors(iR)%NacCax, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return  
-         ! NacCay - Y-direction added mass coefficient at nacelle node (-)
-      call ParseVar( FileInfo_In, CurLine, "NacCay", InputFileData%rotors(iR)%NacCay, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return 
-         ! NacCaz - Z-direction added mass coefficient at nacelle node (-)
-      call ParseVar( FileInfo_In, CurLine, "NacCaz", InputFileData%rotors(iR)%NacCaz, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return		 
    end do
 
    !======  Outputs  ====================================================================================
