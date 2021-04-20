@@ -1016,7 +1016,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
       ! Local variables
-   TYPE(StC_InputType),ALLOCATABLE                :: u(:)            ! Inputs at t
+   TYPE(StC_InputType),ALLOCATABLE                :: u_StC(:)        ! Inputs at t
    INTEGER(IntKi)                                 :: i               ! loop counter 
    INTEGER(IntKi)                                 :: j               ! loop counter for StC instance of type
    INTEGER(IntKi)                                 :: order
@@ -1040,9 +1040,9 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
 
    IF ((p%NumNStC + p%NumTStC + p%NumBStC + p%NumSStC) > 0_IntKi) THEN 
       order = SIZE(Inputs)
-      allocate(u(order), STAT=ErrStat2)
+      allocate(u_StC(order), STAT=ErrStat2)
       if (ErrStat2 /= 0) then
-         CALL SetErrStat( ErrID_Fatal, 'Could not allocate StrucCtrl input array, u', ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate StrucCtrl input array, u_StC', ErrStat, ErrMsg, RoutineName )
             if (Failed()) return;
       endif
    ENDIF
@@ -1051,16 +1051,16 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! Nacelle StrucCtrl
    do j=1,p%NumNStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%NStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call StC_CopyInput( Inputs(i)%NStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u, InputTimes, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
+      call StC_UpdateStates( t, n, u_StC, InputTimes, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
-      do i=1,SIZE(u)
-         call StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+      do i=1,SIZE(u_StC)
+         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
          if (Failed()) return;
       enddo
    enddo
@@ -1069,16 +1069,16 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! Tower StrucCtrl
    do j=1,p%NumTStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%TStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call StC_CopyInput( Inputs(i)%TStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u, InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
+      call StC_UpdateStates( t, n, u_StC, InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
-      do i=1,SIZE(u)
-         call StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+      do i=1,SIZE(u_StC)
+         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
          if (Failed()) return;
       enddo
    enddo
@@ -1087,16 +1087,16 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! Blade StrucCtrl
    do j=1,p%NumBStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%BStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call StC_CopyInput( Inputs(i)%BStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u, InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+      call StC_UpdateStates( t, n, u_StC, InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
-      do i=1,SIZE(u)
-         call StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+      do i=1,SIZE(u_StC)
+         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
          if (Failed()) return;
       enddo
    enddo
@@ -1105,16 +1105,16 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! Platform StrucCtrl
    do j=1,p%NumSStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%SStC(j), u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call StC_CopyInput( Inputs(i)%SStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u, InputTimes, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
+      call StC_UpdateStates( t, n, u_StC, InputTimes, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
-      do i=1,SIZE(u)
-         call StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+      do i=1,SIZE(u_StC)
+         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
          if (Failed()) return;
       enddo
    enddo
@@ -1194,12 +1194,12 @@ CONTAINS
       if (Failed)    call Cleanup()
    end function Failed
    SUBROUTINE Cleanup()
-      IF (ALLOCATED(u)) THEN
-         DO i=1,SIZE(u)
-            CALL StC_DestroyInput(u(i), ErrStat2, ErrMsg2)
+      IF (ALLOCATED(u_StC)) THEN
+         DO i=1,SIZE(u_StC)
+            CALL StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          END DO
-         DEALLOCATE(u)
+         DEALLOCATE(u_StC)
       END IF      
       CALL SrvD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
