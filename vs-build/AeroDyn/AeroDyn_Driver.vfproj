@@ -298,23 +298,7 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\aerodyn\src\FVW.f90"/>
-		<File RelativePath="..\..\modules\aerodyn\src\FVW_BiotSavart.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\aerodyn\src\FVW_BiotSavart.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\FVW_IO.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\FVW_Subs.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\FVW_Tests.f90"/>
