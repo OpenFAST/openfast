@@ -51,8 +51,8 @@ CONTAINS
 !FIXME: add g_C, rhoW_C, WtrDepth_C, and PtfmInit_C to the interface  -- make PtfmInit_C an array size 6
 SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
 
-   !TEMPORARY hack until Waves handling is finalized
-   USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_dx, WaveGrid_nx, WaveGrid_y0, WaveGrid_dy, WaveGrid_ny, WaveGrid_nz
+    !TEMPORARY hack until Waves handling is finalized
+    USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_y0, WaveGrid_dx, WaveGrid_dy, WaveGrid_nx, WaveGrid_ny, WaveGrid_nz
 
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileNameLength_C
     CHARACTER(KIND=C_CHAR)                         , INTENT(IN   )   :: MD_InputFileName_C(InputFileNameLength_C)
@@ -73,12 +73,12 @@ SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannel
     CHARACTER(ErrMsgLen)                                             :: ErrMsg
     INTEGER                                                          :: I
 
-    integer(IntKi)                                                   :: ErrStat2       ! temporary error status of the operation
-    character(ErrMsgLen)                                             :: ErrMsg2        ! temporary error message
+    INTEGER(IntKi)                                                   :: ErrStat2       ! temporary error status of the operation
+    CHARACTER(ErrMsgLen)                                             :: ErrMsg2        ! temporary error message
 
     ! NOTE: Wave info will be handled differently in the future.  So the following is a temporary hack until that is finalized
     ! Hard coded for 10 wave steps.  Doesn't actually matter since it will get zeroed
-    integer(IntKi)                                                   :: NStepWave = 10
+    INTEGER(IntKi)                                                   :: NStepWave = 10
 
     ! Initialize ErrStat
     ErrStat = ErrID_None
@@ -96,76 +96,75 @@ SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannel
     InitInp%RootName         = 'MDroot'
 
     ! Environment variables -- These should be passed in from C.
-    InitInp%g                = -9.806        ! Set this from a value passed in from C   -- check with Matt Hall on sign
+    InitInp%g                = 9.806         ! Set this from a value passed in from C
     InitInp%rhoW             = 1000.0_ReKi   ! Set this from a value passed in from C
-    InitInp%WtrDepth         = -100.0_ReKi   ! Set this from a value passed in from C   -- check with Matt Hall on sign
+    InitInp%WtrDepth         = 100.0_ReKi    ! Set this from a value passed in from C
 
-    ! Platform position (x,y,z,Rx,Ry,Rz) where rotations are small angle assumption in radians.
+    ! Platform position (x,y,z,Rx,Ry,Rz) -- where rotations are small angle assumption in radians.
     ! This data is used to set the CoupledKinematics mesh that will be used at each timestep call
-    call AllocAry (InitInp%PtfmInit, 6, 'InitInp%PtfmInit', ErrStat2, ErrMsg2 ); if (Failed()) return
+    CALL AllocAry (InitInp%PtfmInit, 6, 'InitInp%PtfmInit', ErrStat2, ErrMsg2 ); IF (Failed()) RETURN
     InitInp%PtfmInit         = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
 
-    ! THIS IS A SHORT TERM HACK
+    ! Wave INformation - THIS IS A SHORT TERM HACK
     ! Fake wave info -- completely still, with no dynamic pressure terms
     ! Set wave info to zeros -- assume 10 timesteps for now (doesn't really matter since it isn't getting used)
-    call AllocAry ( InitInp%WaveVel  ,NStepWave, WaveGrid_n, 3, 'InitInp%WaveVel' , ErrStat2, ErrMsg2 );    if (Failed()) return
-    call AllocAry ( InitInp%WaveAcc  ,NStepWave, WaveGrid_n, 3, 'InitInp%WaveAcc' , ErrStat2, ErrMsg2 );    if (Failed()) return
-    call AllocAry ( InitInp%WavePDyn ,NStepWave, WaveGrid_n,    'InitInp%WavePDyn', ErrStat2, ErrMsg2 );    if (Failed()) return
-    call AllocAry ( InitInp%WaveElev ,NStepWave, WaveGrid_n,    'InitInp%WaveElev', ErrStat2, ErrMsg2 );    if (Failed()) return
-    call AllocAry ( InitInp%WaveTime ,NStepWave,                'InitInp%WaveTime', ErrStat2, ErrMsg2 );    if (Failed()) return
-    do i=1,NStepWave
+    CALL AllocAry ( InitInp%WaveVel  ,NStepWave, WaveGrid_n, 3, 'InitInp%WaveVel' , ErrStat2, ErrMsg2 );    IF (Failed()) RETURN
+    CALL AllocAry ( InitInp%WaveAcc  ,NStepWave, WaveGrid_n, 3, 'InitInp%WaveAcc' , ErrStat2, ErrMsg2 );    IF (Failed()) RETURN
+    CALL AllocAry ( InitInp%WavePDyn ,NStepWave, WaveGrid_n,    'InitInp%WavePDyn', ErrStat2, ErrMsg2 );    IF (Failed()) RETURN
+    CALL AllocAry ( InitInp%WaveElev ,NStepWave, WaveGrid_n,    'InitInp%WaveElev', ErrStat2, ErrMsg2 );    IF (Failed()) RETURN
+    CALL AllocAry ( InitInp%WaveTime ,NStepWave,                'InitInp%WaveTime', ErrStat2, ErrMsg2 );    IF (Failed()) RETURN
+    DO i=1,NStepWave
        InitInp%WaveTime(i) = DTcoupling * REAL(i-1, DbKi)
-    enddo
+    END DO
     InitInp%WaveVel          = 0.0_ReKi
     InitInp%WaveAcc          = 0.0_ReKi
     InitInp%WavePDyn         = 0.0_ReKi
     InitInp%WaveElev         = 0.0_ReKi
 
-
     ! Call the main subroutine MD_Init
     CALL MD_Init(InitInp, u, p, x, xd, z, other, y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)
-!FIXME: this may catch messages labelled as Info as fatal errors.  You probably don't want that.
+    !FIXME: this may catch messages labelled as Info as fatal errors.  You probably don't want that.
     IF (ErrStat /= ErrID_None) THEN
         PRINT *, "MD_INIT_C: Main MD_Init subroutine failed!"
         PRINT *, ErrMsg
-     ELSE
+    ELSE
         PRINT*, "MD_INIT_C: Successfully called MD_Init ....."
-     END IF
+    END IF
 
     ! Convert the outputs of MD_Init from Fortran to C
-     ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%writeOutputHdr)))
-     ALLOCATE(tmp_OutputChannelUnits_C(size(InitOutData%writeOutputUnt)))
-     NumChannels_C = size(InitOutData%writeOutputHdr)
-     PRINT *, 'MD_INIT_C: The number of output channels is ', NumChannels_C
+    ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%writeOutputHdr)))
+    ALLOCATE(tmp_OutputChannelUnits_C(size(InitOutData%writeOutputUnt)))
+    NumChannels_C = size(InitOutData%writeOutputHdr)
+    PRINT *, 'MD_INIT_C: The number of output channels is ', NumChannels_C
 
-     DO I = 1,NumChannels_C
+    DO I = 1,NumChannels_C
         tmp_OutputChannelNames_C(I) = TRANSFER(InitOutData%writeOutputHdr(I)//C_NULL_CHAR, tmp_OutputChannelNames_C(I))
         tmp_OutputChannelUnits_C(I) = TRANSFER(InitOutData%writeOutputUnt(I)//C_NULL_CHAR, tmp_OutputChannelUnits_C(I))
-     END DO
-     OutputChannelNames_C = C_LOC(tmp_OutputChannelNames_C)
-     OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
+    END DO
+    OutputChannelNames_C = C_LOC(tmp_OutputChannelNames_C)
+    OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
 
-    if (ErrStat /= 0) then
+    IF (ErrStat /= 0) THEN
         ErrStat_C = ErrID_Fatal
-     else
+    ELSE
         ErrStat_C = ErrID_None
-     end if
-     ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
+    END IF
+    ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
     PRINT*, "DONE WITH MD_INIT_C!"
 
-contains
+CONTAINS
 
-   subroutine Cleanup()
-      ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
-      ErrStat_C = ErrStat
-   end subroutine Cleanup
+    SUBROUTINE Cleanup()
+        ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
+        ErrStat_C = ErrStat
+    END SUBROUTINE Cleanup
 
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_Init_C')
-      Failed =  ErrStat >= AbortErrLev
-      if (Failed) call CleanUp()
-   end function Failed
+    logical FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_Init_C')
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+    END FUNCTION Failed
 
 END SUBROUTINE MD_INIT_C
 
