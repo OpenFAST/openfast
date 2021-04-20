@@ -9,8 +9,6 @@ from ctypes import (
     c_float, 
     c_char,
     c_char_p, 
-    c_wchar, 
-    c_wchar_p,
     c_bool
 )
 import numpy as np
@@ -28,8 +26,8 @@ class MoorDynLibAPI(CDLL):
         self.error_status      = c_int(0)
         self.error_message     = create_string_buffer(1025)
 
-        self._channel_names    = create_string_buffer(20 * 4000)
-        self._channel_units    = create_string_buffer(20 * 4000)
+        self._channel_names    = create_string_buffer(20*4000)
+        self._channel_units    = create_string_buffer(20*4000)
 
         self.dt                = c_double(0)
         self.total_time        = c_double(0)
@@ -60,7 +58,8 @@ class MoorDynLibAPI(CDLL):
         self.MD_CALCOUTPUT_C.restype = c_int
 
         self.MD_END_C.argtypes = [
-
+            POINTER(c_int),                       # OUT: ErrStat_C
+            POINTER(c_char)                       # OUT: ErrMsg_C
         ]
         self.MD_END_C.restype = c_int
 

@@ -193,9 +193,31 @@ END SUBROUTINE MD_CALCOUTPUT_C
 !===============================================================================================================
 !----------------------------------------------- MD END --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_END_C() BIND (C, NAME='MD_END_C')
+SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
 
-! SUBROUTINE MD_End(u, p, x, xd, z, other, y, m, ErrStat , ErrMsg)
+    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
+    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+
+    ! Local variables
+    INTEGER                                            :: ErrStat
+    CHARACTER(ErrMsgLen)                               :: ErrMsg
+
+    ! Call the main subroutine MD_End
+    CALL MD_End(u, p, x, xd, z, other, y, m, ErrStat , ErrMsg)
+    IF (ErrStat .NE. 0) THEN
+        PRINT *, "MD_END_C: MD_End failed"
+        PRINT *, ErrMsg
+    ELSE
+        PRINT*, "MD_END_C: Successfully called MD_END ....."
+    END IF
+
+    ! Convert the outputs of MD_End from Fortran to C
+    IF (ErrStat /= 0) THEN
+        ErrStat_C = ErrID_Fatal
+    ELSE
+        ErrStat_C = ErrID_None
+    END IF
+    ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
     PRINT*, "DONE WITH MD_END_C!"
 

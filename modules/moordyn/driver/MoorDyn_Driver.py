@@ -20,10 +20,23 @@ md_lib.total_time   = 1                  # total or end time
 time                = np.arange(t_start,md_lib.total_time + md_lib.dt,md_lib.dt)
 md_lib.numTimeSteps = len(time)
 
+#=============================================================================================================================
+#-------------------------------------------------------- RUN MOORDYN --------------------------------------------------------
+#=============================================================================================================================
+
 # Only need to call md_init once
 md_lib.md_init(input_filename)  
-#outputChannelValues = np.zeros(md_lib._numChannels.value)
 
+# Run these at each time step
 # md_lib.md_updateStates
 # md_lib.md_calcOutput
-# md_lib.md_end
+
+# MD_END: Only need to call md_end once
+md_lib.md_end()
+
+print("We have successfully run MoorDyn!")
+exit()
+
+# If MD fails, need to kill driver program
+# if md_lib.error_status != 0:
+#    return
