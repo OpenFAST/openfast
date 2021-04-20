@@ -642,6 +642,25 @@ compile the C++ interface.
     # Compile the C++ API
     make openfastcpplib
 
+FAST.Farm
+~~~~~~~~~
+The FAST.Farm glue-code is included in the CMake project similar to the
+OpenFAST glue-code. See :ref:`compile_from_source` for a full description
+on installing dependencies, configuring the project, and compiling.
+FAST.Farm is enabled in the CMake project with an additional flag:
+
+.. code-block:: bash
+
+    # Enable compiling FAST.Farm
+    cmake .. -DBUILD_FASTFARM:BOOL=ON
+
+    # Compile FAST.Farm
+    make FAST.Farm
+
+OpenMP-Fortran is an additional dependency for FAST.Farm. These libraries
+can be installed with any package manager for macOS and Linux or
+through the Intel oneAPI distributions.
+
 .. _installation_appendix:
 
 Appendix
