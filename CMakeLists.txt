@@ -67,7 +67,7 @@ if (FPE_TRAP_ENABLED)
 endif (FPE_TRAP_ENABLED)
 
 # Setup dependencies
-if (CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
+if (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
   find_package(MKL)
 endif()
 if (MKL_FOUND)
