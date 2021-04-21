@@ -390,16 +390,16 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       write(UnSum, '(A)') SectionDivide
       write(UnSum, '(A)')              ' Structural controls'
    endif
-   call StC_Nacelle_Setup(InitInp,p,InputFileData,u%NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,y%NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
+   call StC_Nacelle_Setup(InitInp,p,InputFileData,m%u_NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,m%y_NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Tower_Setup(InitInp,p,InputFileData,u%TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,y%TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
+   call StC_Tower_Setup(InitInp,p,InputFileData,m%u_TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,m%y_TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Blade_Setup(InitInp,p,InputFileData,u%BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,y%BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
+   call StC_Blade_Setup(InitInp,p,InputFileData,m%u_BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,m%y_BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Substruc_Setup(InitInp,p,InputFileData,u%SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,y%SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
+   call StC_Substruc_Setup(InitInp,p,InputFileData,m%u_SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,m%y_SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
 
@@ -625,6 +625,7 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherS
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
    character(*), parameter    :: RoutineName = 'StC_Nacelle_Setup'
 
+!FIXME: add mesh mappings to SrvD_u & SrvD_y
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
@@ -705,6 +706,7 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
    character(*), parameter    :: RoutineName = 'StC_Tower_Setup'
 
+!FIXME: add mesh mappings to SrvD_u & SrvD_y
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
@@ -786,6 +788,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
    character(*), parameter    :: RoutineName = 'StC_Blade_Setup'
 
+!FIXME: add mesh mappings to SrvD_u & SrvD_y
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
@@ -868,6 +871,7 @@ subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,Other
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
    character(*), parameter    :: RoutineName = 'StC_Substruc_Setup'
 
+!FIXME: add mesh mappings to SrvD_u & SrvD_y
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
@@ -948,24 +952,24 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       END IF
       
       ! StrucCtrl -- since all StC data is stored in SrvD types, we don't technically need to call StC_End directly
-      if (allocated(u%NStC)) then
+      if (allocated(m%u_NStC)) then
          do j=1,p%NumNStC       ! Nacelle
-            call StC_End( u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y%NStC(j), m%NStC(j), ErrStat, ErrMsg )
+            call StC_End( m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%y_NStC(j), m%NStC(j), ErrStat, ErrMsg )
          enddo
       endif
-      if (allocated(u%TStC)) then
+      if (allocated(m%u_TStC)) then
          do j=1,p%NumTStC       ! Tower
-            call StC_End( u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y%TStC(j), m%TStC(j), ErrStat, ErrMsg )
+            call StC_End( m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%y_TStC(j), m%TStC(j), ErrStat, ErrMsg )
          enddo
       endif
-      if (allocated(u%BStC)) then
+      if (allocated(m%u_BStC)) then
          do j=1,p%NumBStC       ! Blades
-            call StC_End( u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat, ErrMsg )
+            call StC_End( m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat, ErrMsg )
          enddo
       endif
-      if (allocated(u%SStC)) then
+      if (allocated(m%u_SStC)) then
          do j=1,p%NumSStC    ! Platform
-            call StC_End( u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y%SStC(j), m%SStC(j), ErrStat, ErrMsg )
+            call StC_End( m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%y_SStC(j), m%SStC(j), ErrStat, ErrMsg )
          enddo
       endif
 
@@ -1048,19 +1052,20 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    ENDIF
       
 
+!FIXME: set inputs for StC
       ! Nacelle StrucCtrl
    do j=1,p%NumNStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%NStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!         call StC_CopyInput( Inputs(i)%NStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u_StC, InputTimes, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
+!      call StC_UpdateStates( t, n, u_StC, InputTimes, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
       do i=1,SIZE(u_StC)
-         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
+!         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
          if (Failed()) return;
       enddo
    enddo
@@ -1069,16 +1074,16 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! Tower StrucCtrl
    do j=1,p%NumTStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%TStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!         call StC_CopyInput( Inputs(i)%TStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u_StC, InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
+!      call StC_UpdateStates( t, n, u_StC, InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
       do i=1,SIZE(u_StC)
-         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
+!         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
          if (Failed()) return;
       enddo
    enddo
@@ -1087,16 +1092,16 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! Blade StrucCtrl
    do j=1,p%NumBStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%BStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!         call StC_CopyInput( Inputs(i)%BStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u_StC, InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+!      call StC_UpdateStates( t, n, u_StC, InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
       do i=1,SIZE(u_StC)
-         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
+!         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
          if (Failed()) return;
       enddo
    enddo
@@ -1105,16 +1110,16 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       ! Platform StrucCtrl
    do j=1,p%NumSStC
       do i=1,order
-         call StC_CopyInput( Inputs(i)%SStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+!         call StC_CopyInput( Inputs(i)%SStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          if (Failed()) return;
       enddo
 
-      call StC_UpdateStates( t, n, u_StC, InputTimes, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
+!      call StC_UpdateStates( t, n, u_StC, InputTimes, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
 
          ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
       do i=1,SIZE(u_StC)
-         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
+!         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
          if (Failed()) return;
       enddo
    enddo
@@ -1295,19 +1300,19 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
       ! StrucCtrl
    do j=1,p%NumNStC       ! Nacelle
-      CALL StC_CalcOutput( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
+      CALL StC_CalcOutput( t, m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%y_NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
    do j=1,p%NumTStC       ! Tower
-      CALL StC_CalcOutput( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
+      CALL StC_CalcOutput( t, m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%y_TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
    do j=1,p%NumBStC       ! Blades
-      CALL StC_CalcOutput( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+      CALL StC_CalcOutput( t, m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
    do j=1,p%NumSStC    ! Platform
-      CALL StC_CalcOutput( t, u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
+      CALL StC_CalcOutput( t, m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%y_SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    enddo
    
@@ -1371,10 +1376,10 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
    call Set_SrvD_Outs( p, y, m, AllOuts )
 
-   if (p%NumNStC>0)    call Set_NStC_Outs(     p, x%NStC,     m%NStC,     y%NStC,     AllOuts )
-   if (p%NumTStC>0)    call Set_TStC_Outs(     p, x%TStC,     m%TStC,     y%TStC,     AllOuts )
-   if (p%NumBStC>0)    call Set_BStC_Outs(     p, x%BStC,     m%BStC,     y%BStC,     AllOuts )
-   if (p%NumSStC>0) call Set_SStC_Outs(  p, x%SStC,  m%SStC,  y%SStC,  AllOuts )
+   if (p%NumNStC>0)     call Set_NStC_Outs(  p, x%NStC,  m%NStC,  m%y_NStC,  AllOuts )
+   if (p%NumTStC>0)     call Set_TStC_Outs(  p, x%TStC,  m%TStC,  m%y_TStC,  AllOuts )
+   if (p%NumBStC>0)     call Set_BStC_Outs(  p, x%BStC,  m%BStC,  m%y_BStC,  AllOuts )
+   if (p%NumSStC>0)     call Set_SStC_Outs(  p, x%SStC,  m%SStC,  m%y_SStC,  AllOuts )
   
    DO I = 1,p%NumOuts  ! Loop through all selected output channels
       y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
@@ -1420,19 +1425,19 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
 
          ! StrucCtrl
       do j=1,p%NumNStC       ! Nacelle
-         CALL StC_CalcContStateDeriv( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 )
+         CALL StC_CalcContStateDeriv( t, m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
       do j=1,p%NumTStC       ! Tower
-         CALL StC_CalcContStateDeriv( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 )
+         CALL StC_CalcContStateDeriv( t, m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
       do j=1,p%NumBStC       ! Blade
-         CALL StC_CalcContStateDeriv( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
+         CALL StC_CalcContStateDeriv( t, m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
       do j=1,p%NumSStC    ! Platform
-         CALL StC_CalcContStateDeriv( t, u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), dxdt%SStC(j), ErrStat2, ErrMsg2 )
+         CALL StC_CalcContStateDeriv( t, m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), dxdt%SStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
 
@@ -1495,19 +1500,19 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
 
       ! Update discrete states for StrucCtrl       --- StC does not currently support this
 !  do j=1,p%NumNStC       ! Nacelle
-!     CALL StC_UpdateDiscState( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat, ErrMsg )
+!     CALL StC_UpdateDiscState( t, m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumTStC       ! tower
-!     CALL StC_UpdateDiscState( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat, ErrMsg )
+!     CALL StC_UpdateDiscState( t, m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumBStC       ! Blade
-!     CALL StC_UpdateDiscState( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
+!     CALL StC_UpdateDiscState( t, m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumSStC    ! Platform
-!     CALL StC_UpdateDiscState( t, u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat, ErrMsg )
+!     CALL StC_UpdateDiscState( t, m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
          
@@ -1543,19 +1548,19 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
 
       ! Solve for the constraint states for StrucCtrl    --- StC does not currently support this
 !  do j=1,p%NumNStC       ! Nacelle
-!     CALL StC_CalcConstrStateResidual( t, u%NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), z_residual%NStC(j), ErrStat, ErrMsg )
+!     CALL StC_CalcConstrStateResidual( t, m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), z_residual%NStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumTStC       ! Tower
-!     CALL StC_CalcConstrStateResidual( t, u%TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), z_residual%TStC(j), ErrStat, ErrMsg )
+!     CALL StC_CalcConstrStateResidual( t, m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), z_residual%TStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumBStC       ! Blade
-!     CALL StC_CalcConstrStateResidual( t, u%BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
+!     CALL StC_CalcConstrStateResidual( t, m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumSStC    ! Platform
-!     CALL StC_CalcConstrStateResidual( t, u%SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), z_residual%SStC(j), ErrStat, ErrMsg )
+!     CALL StC_CalcConstrStateResidual( t, m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), z_residual%SStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 

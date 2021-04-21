@@ -291,6 +291,14 @@ typedef	^	MiscVarType	StC_MiscVarType	BStC	{:}	-	-	"StC module misc vars - blade
 typedef	^	MiscVarType	StC_MiscVarType	NStC	{:}	-	-	"StC module misc vars - nacelle"	-
 typedef	^	MiscVarType	StC_MiscVarType	TStC	{:}	-	-	"StC module misc vars - tower"	-
 typedef	^	MiscVarType	StC_MiscVarType	SStC	{:}	-	-	"StC module misc vars - substructure"	-
+typedef	^	MiscVarType	StC_InputType	u_BStC	{:}	-	-	"StC module inputs - blade"	-
+typedef	^	MiscVarType	StC_InputType	u_NStC	{:}	-	-	"StC module inputs - nacelle"	-
+typedef	^	MiscVarType	StC_InputType	u_TStC	{:}	-	-	"StC module inputs - tower"	-
+typedef	^	MiscVarType	StC_InputType	u_SStC	{:}	-	-	"StC module inputs - substructure"	-
+typedef	^	MiscVarType	StC_OutputType	y_BStC	{:}	-	-	"StC module outputs - blade"	-
+typedef	^	MiscVarType	StC_OutputType	y_NStC	{:}	-	-	"StC module outputs - nacelle"	-
+typedef	^	MiscVarType	StC_OutputType	y_TStC	{:}	-	-	"StC module outputs - tower"	-
+typedef	^	MiscVarType	StC_OutputType	y_SStC	{:}	-	-	"StC module outputs - substructure"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -432,13 +440,14 @@ typedef	^	InputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angu
 typedef	^	InputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
 typedef	^	InputType	ReKi	HorWindV	-	-	-	"Horizontal hub-height wind velocity magnitude"	m/s
 typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"	radians
-typedef	^	InputType	StC_InputType	BStC	{:}	-	-	"StC module inputs - blade"	-
-typedef	^	InputType	StC_InputType	NStC	{:}	-	-	"StC module inputs - nacelle"	-
-typedef	^	InputType	StC_InputType	TStC	{:}	-	-	"StC module inputs - tower"	-
-typedef	^	InputType	StC_InputType	SStC	{:}	-	-	"StC module inputs - substructure"	-
 typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
 typedef	^	InputType	MeshType	PtfmMotionMesh	-	-	-	"Platform motion mesh at platform reference point" -
+typedef	^	InputType	MeshType	BStCMotionMesh	{:}{:}	-	-	"StC module blade        input motion mesh" -
+typedef	^	InputType	MeshType	NStCMotionMesh	{:}	-	-	"StC module nacelle      input motion mesh" -
+typedef	^	InputType	MeshType	TStCMotionMesh	{:}	-	-	"StC module tower        input motion mesh" -
+typedef	^	InputType	MeshType	SStCMotionMesh	{:}	-	-	"StC module substructure input motion mesh" -
+
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
@@ -452,12 +461,12 @@ typedef	^	OutputType	ReKi	GenTrq	-	-	-	"Electrical generator torque"	N-m
 typedef	^	OutputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
 typedef	^	OutputType	ReKi	ElecPwr	-	-	-	"Electrical power"	W
 typedef	^	OutputType	ReKi	TBDrCon	{:}	-	-	"Instantaneous tip-brake drag constant, Cd*Area"
-typedef	^	OutputType	StC_OutputType	BStC	{:}	-	-	"StC module outputs - blade"	-
-typedef	^	OutputType	StC_OutputType	NStC	{:}	-	-	"StC module outputs - nacelle"	-
-typedef	^	OutputType	StC_OutputType	TStC	{:}	-	-	"StC module outputs - tower"	-
-typedef	^	OutputType	StC_OutputType	SStC	{:}	-	-	"StC module outputs - substructure"	-
 typedef	^	OutputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
 typedef	^	OutputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the Lidar"	-
 typedef	^	OutputType	ReKi	CableDeltaL	{:}	-	-	"Cable control -- Length change request (passed to MD or SD)"	m
 typedef	^	OutputType	ReKi	CableDeltaLdot	{:}	-	-	"Cable control -- Length change rate request (passed to MD or SD)"	m/s
+typedef	^	OutputType	MeshType	BStCLoadMesh	{:}{:}	-	-	"StC module blade        output load mesh (NumBl,NumBStC)" -
+typedef	^	OutputType	MeshType	NStCLoadMesh	{:}	-	-	"StC module nacelle      output load mesh" -
+typedef	^	OutputType	MeshType	TStCLoadMesh	{:}	-	-	"StC module tower        output load mesh" -
+typedef	^	OutputType	MeshType	SStCLoadMesh	{:}	-	-	"StC module substructure output load mesh" -
 
