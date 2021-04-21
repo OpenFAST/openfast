@@ -74,6 +74,7 @@ typedef	^		^				ReKi			F_TBL		{:}{:}	-	-	"user-defined spring force"	"N"
 typedef	^		^				IntKi			PrescribedForcesCoordSys	-	-	-	"Prescribed forces coordinate system {0: global; 1: local}"	-
 typedef	^		^				CHARACTER(1024)	PrescribedForcesFile	-	-	-	"Prescribed force time-series filename"	-
 typedef	^		^				ReKi			StC_PrescribedForce	{:}{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
+typedef	^		^				IntKi			StC_CChan	{:}	-	-	"StC control chan to use -- one per instance"	-
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
@@ -150,8 +151,8 @@ typedef	^		^				ReKi			C_S	{3}	-	-	"StC stop damping" "N/(m/s)"
 typedef	^		^				ReKi			P_SP	{3}	-	-	"Positive stop position (maximum mass displacement)"	m
 typedef	^		^				ReKi			N_SP	{3}	-	-	"Negative stop position (minimum X mass displacement)" m
 typedef	^		^				ReKi			Gravity	{3}	-	-	"Gravitational acceleration vector"	"m/s^2"
-typedef	^		^				INTEGER			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
-typedef	^		^				INTEGER			StC_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
+typedef	^		^				IntKi			StC_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
+typedef	^		^				IntKi			StC_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
 typedef	^		^				ReKi			StC_X_C_HIGH	-	-	-	"StC X high damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			StC_X_C_LOW		-	-	-	"StC X low damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			StC_Y_C_HIGH	-	-	-	"StC Y high damping for ground hook control"	"N/(m/s)"
@@ -178,11 +179,18 @@ typedef	^		^				ReKi			F_TBL	{:}{:} - -	"user-defined spring force"	"N"
 typedef	^	ParameterType	IntKi	NumMeshPts	-	-	-	"Number of mesh points"	-
 typedef	^		^				IntKi			PrescribedForcesCoordSys	-	-	-	"Prescribed forces coordinate system {0: global; 1: local}"	-
 typedef	^		^				ReKi			StC_PrescribedForce	{:}{:}	-	-	"StC prescribed force time-series info"	"(s,N,N-m)"
+typedef	^		^				IntKi			StC_CChan	{:}	-	-	"StC control chan to use"	-
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef   ^                            InputType                     MeshType                 Mesh                     {:}         -         -         "Displacements at the StC reference point(s) P in the inertial frame" -
+typedef	^		^				ReKi	CmdStiff	{:}{:}	-	-	"StC stiffness from controller"	"N/m"
+typedef	^		^				ReKi	CmdDamp	{:}{:}	-	-	"StC damping from controller"	"N/(m/s)"
+typedef	^		^				ReKi	CmdBrake	{:}{:}	-	-	"StC braking signal"	"N/(m/s)"
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef ^   OutputType          MeshType        Mesh                     {:}         -         -         "Loads at the StC reference points in the inertial frame" -
+typedef	^		^				ReKi	RelDisp	{:}{:}	-	-	"StC mass relative displacement (local coordinates) signal to controller" "m"
+typedef	^		^				ReKi	RelVel	{:}{:}	-	-	"StC mass relative velocity (local coordinates) signal to controller" "m/s"
+
 # Define outputs that are not on this mesh here:
 #typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

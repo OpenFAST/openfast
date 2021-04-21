@@ -62,8 +62,8 @@ MODULE BladedInterface_EX
    integer(IntKi),   parameter   :: LidarCtrl_MaxChan    = 100    !< Maximum channels in lidar control group
    integer(IntKi),   parameter   :: CableCtrl_StartIdx   = 2601   !< Starting index for the cable control
    integer(IntKi),   parameter   :: CableCtrl_MaxChan    = 200    !< Maximum channels in cable control group
-   integer(IntKi),   parameter   :: TMDCtrl_StartIdx     = 2801   !< Starting index for the TMD control
-   integer(IntKi),   parameter   :: TMDCtrl_MaxChan      = 200    !< Maximum channels in TMD control group
+   integer(IntKi),   parameter   :: StCCtrl_StartIdx     = 2801   !< Starting index for the StC control
+   integer(IntKi),   parameter   :: StCCtrl_MaxChan      = 200    !< Maximum channels in StC control group
 
 
 CONTAINS
@@ -114,8 +114,8 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, UnSum, ErrStat, ErrMsg)
       call WrSumInfoRcvd(LidarCtrl_StartIdx+LidarCtrl_MaxChan-1,  '','Ending   index for the lidar control channel block')
       call WrSumInfoRcvd(CableCtrl_StartIdx,                      '','Starting index for the cable control channel block')
       call WrSumInfoRcvd(CableCtrl_StartIdx+CableCtrl_MaxChan-1,  '','Ending   index for the cable control channel block')
-      call WrSumInfoRcvd(TMDCtrl_StartIdx,                        '','Starting index for the TMD control channel block')
-      call WrSumInfoRcvd(TMDCtrl_StartIdx+TMDCtrl_MaxChan-1,      '','Ending   index for the TMD control channel block')
+      call WrSumInfoRcvd(StCCtrl_StartIdx,                        '','Starting index for the StC control channel block')
+      call WrSumInfoRcvd(StCCtrl_StartIdx+StCCtrl_MaxChan-1,      '','Ending   index for the StC control channel block')
    endif
 
 

@@ -403,6 +403,10 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call StC_Substruc_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,m%y_SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
+      !............................................................................................
+      ! Setup and initialize the StC controls interface
+      !............................................................................................
+
 
       !............................................................................................
       ! Setup and initialize the cable controls -- could be from Simulink or DLL
@@ -1390,7 +1394,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   
+
    !...............................................................................................................................   
    ! Get the demanded values from the external Bladed dynamic link library, if necessary:
    !...............................................................................................................................   
@@ -3988,9 +3992,7 @@ END SUBROUTINE AirfoilControl_CalcOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing the cable control commands 
-!  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
-!  This is passed to AD15 to be interpolated with the airfoil table userprop column
-!  (might be used for airfoil flap angles for example)
+!  The commanded CableDeltaL and CableDeltaLdot are passed back to the glue code for passing to MD or SD
 SUBROUTINE CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, CableDeltaL, CableDeltaLdot, m, ErrStat, ErrMsg )
    REAL(DbKi),                     INTENT(IN   )  :: t                  !< Current simulation time in seconds
    TYPE(SrvD_InputType),           INTENT(IN   )  :: u                  !< Inputs at t
@@ -4045,6 +4047,68 @@ SUBROUTINE CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, CableDeltaL, 
 
 END SUBROUTINE CableControl_CalcOutput
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for computing the StC control commands 
+!  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
+!  This is passed to AD15 to be interpolated with the airfoil table userprop column
+!  (might be used for airfoil flap angles for example)
+SUBROUTINE StCControl_CalcOutput( t, u, p, x, xd, z, OtherState, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, m, ErrStat, ErrMsg )
+   REAL(DbKi),                     INTENT(IN   )  :: t                  !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u                  !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p                  !< Parameters
+   TYPE(SrvD_ContinuousStateType), INTENT(IN   )  :: x                  !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
+   TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdStiff(:)    !< StC_CmdStiff command signals
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdDamp(:)    !< StC_CmdDamp command signals
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdBrake(:)    !< StC_CmdBrake command signals
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m                  !< Misc (optimization) variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi)                                     :: factor
+
+         ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      if (.not. allocated(StC_CmdStiff) .or. .not. allocated(StC_CmdDamp) .or. .not. allocated(StC_CmdBrake))     return
+
+
+      !...................................................................
+      ! Calculate the cable control channels
+      !...................................................................
+!FIXME: check how I'm dealing with p%CCmode equivalent here
+      SELECT CASE ( p%CCmode )  ! Which cable control are we using? 
+         ! Nothing.  Note that these might be allocated if no control signals were requested from any modules
+         CASE ( ControlMode_NONE )
+            StC_CmdStiff   = 0.0_ReKi
+         ! User-defined from Simulink or LabVIEW.
+         CASE ( ControlMode_EXTERN )
+!            if (allocated(u%ExternalCableDeltaL)) then
+!               CableDeltaL(   1:p%NumCableControl) = u%ExternalCableDeltaL(   1:p%NumCableControl)
+!            endif
+!            if (allocated(u%ExternalCableDeltaLdot)) then
+!               CableDeltaLdot(1:p%NumCableControl) = u%ExternalCableDeltaLdot(1:p%NumCableControl)
+!            endif
+         ! User-defined cable control from Bladed-style DLL
+         CASE ( ControlMode_DLL )
+            if (p%DLL_Ramp) then
+               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+!               CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
+!                                 factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
+            else
+!               CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
+            end if
+      END SELECT
+
+!m%dll_data%PrevStC_CmdStiff
+!m%dll_data%PrevStC_CmdDamp
+!m%dll_data%PrevStC_CmdBrake
+!m%dll_data%StC_CmdStiff
+!m%dll_data%StC_CmdDamp
+!m%dll_data%StC_CmdBrake
+END SUBROUTINE StCControl_CalcOutput
 
 END MODULE ServoDyn
 !**********************************************************************************************************************************

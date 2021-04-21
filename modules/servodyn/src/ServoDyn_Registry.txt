@@ -231,10 +231,16 @@ typedef	^	BladedDLLType	SiKi	PrevCableDeltaL 	{:}	-	-	"Previous value for rampin
 typedef	^	BladedDLLType	SiKi	PrevCableDeltaLdot 	{:}	-	-	"Previous value for ramping for cable tensioning DeltaLdot using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" m/s
 typedef	^	BladedDLLType	SiKi	CableDeltaL 	{:}	-	-	"The swap array: used to pass data from the DLL controller for cable tensioning DeltaL using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]"   m
 typedef	^	BladedDLLType	SiKi	CableDeltaLdot 	{:}	-	-	"The swap array: used to pass data from the DLL controller for cable tensioning DeltaLdot using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" m/s
+typedef	^	BladedDLLType	SiKi	PrevCmdStiff	{:}	-	-	"Previous value for ramping StC stiffness from controller"	"N/m"
+typedef	^	BladedDLLType	SiKi	PrevCmdDamp		{:}	-	-	"Previous value for ramping StC damping from controller"	"N/(m/s)"
+typedef	^	BladedDLLType	SiKi	PrevCmdBrake	{:}	-	-	"Previous value for ramping StC braking signal"	"N/(m/s)"
+typedef	^	BladedDLLType	SiKi	CmdStiff			{:}	-	-	"StC stiffness from controller"	"N/m"
+typedef	^	BladedDLLType	SiKi	CmdDamp			{:}	-	-	"StC damping from controller"	"N/(m/s)"
+typedef	^	BladedDLLType	SiKi	CmdBrake			{:}	-	-	"StC braking signal"	"N/(m/s)"
+
 #Placeholders for future development
-#typedef	^	BladedDLLType	SiKi	EXavrSWAP_Lidar       	{:}	-	-	"The swap array: used to pass data from the DLL controller for Lidar            using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]"  -
-#typedef	^	BladedDLLType	SiKi	EXavrSWAP_StCControls  	{:}	-	-	"The swap array: used to pass data from the DLL controller for StCControls      using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" -
-#typedef	^	BladedDLLType	SiKi	EXavrSWAP_AeroControls	{:}	-	-	"The swap array: used to pass data from the DLL controller for AeroControls     using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" -
+#typedef	^	BladedDLLType	SiKi	EXavrSWAP_Lidar       	{:}	-	-	"The swap array: used to pass data from the DLL controller for Lidar       using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]"  -
+#typedef	^	BladedDLLType	SiKi	EXavrSWAP_AeroControls	{:}	-	-	"The swap array: used to pass data from the DLL controller for AeroControls using extended avrSWAP [see EXavrSWAP documentation in BladededInterface_EX]" -
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:

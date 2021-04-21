@@ -52,7 +52,8 @@ MODULE StrucCtrl
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 4          !< prescribed force series
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control
-   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          !< active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveEXTERN    = 4          !< active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveDLL       = 5          !< active control
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_vel       = 1          !< 1: velocity-based ground hook control;
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_invVel    = 2          !< 2: Inverse velocity-based ground hook control
@@ -141,10 +142,10 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ! For diagnostic purposes, the following can be used to display the contents
    ! of the FileInfo_In data structure.
-   !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+   ! call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
-   CALL StC_ParseInputFileInfo( PriPath, InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+   CALL StC_ParseInputFileInfo( PriPath, InitInp%InputFile, TRIM(InitInp%RootName), InitInp%NumMeshPts, FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
    if (Failed())  return;
 
       ! Using the InputFileData structure, check that it makes sense
@@ -1604,7 +1605,7 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 END SUBROUTINE SpringForceExtrapInterp
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Parse the inputfile info stored in FileInfo_In.
-SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
 
    implicit    none
 
@@ -1612,6 +1613,7 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, In
    character(*),                    intent(in   )  :: PriPath           !< primary path
    CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
    CHARACTER(*),                    intent(in   )  :: RootName          !< The rootname of the echo file, possibly opened in this routine
+   integer(IntKi),                  intent(in   )  :: NumMeshPts        !< The number of mesh points passed in
    type(StC_InputFile),             intent(inout)  :: InputFileData     !< All the data in the StrucCtrl input file
    type(FileInfoType),              intent(in   )  :: FileInfo_In       !< The derived type for holding the file information.
    integer(IntKi),                  intent(  out)  :: UnEcho            !< The local unit number for this module's echo file
@@ -1849,9 +1851,26 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, In
    if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
-      !  Control mode (switch) {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode}
+      !  Control mode (switch) {
+      !     0:none;
+      !     1: Semi-Active Control Mode;
+      !     4: Active Control Mode through Simulink (not available);
+      !     5: Active Control Mode through Bladed interface} (-)
    call ParseVar( FileInfo_In, Curline, 'StC_CMODE', InputFileData%StC_CMODE, ErrStat2, ErrMsg2 )
       If (Failed()) return;
+   ! Control channels -- there may be multiple if there are multiple StC mesh points (blade TMD case), but we also allow a single
+      ! StC_CChan     - Control channel group for stiffness and damping (StC_[XYZ]_K, StC_[XYZ]_C, and StC_[XYZ]_Brake) [used only when StC_CMODE=4 or StC_CMODE=5]
+   allocate( InputFileData%StC_CChan(NumMeshPts), STAT=ErrStat2 )    ! Blade TMD will possibly have independent TMD's for each instance
+      if (ErrStat2 /= ErrID_None) ErrMsg2="Error allocating InputFileData%StC_CChan(NumMeshPts)"
+      If (Failed()) return;
+   call ParseAry( FileInfo_In, CurLine, 'StC_CChan', InputFileData%StC_CChan, NumMeshPts, ErrStat2, ErrMsg2 )
+   if ( ErrStat2 /= ErrID_None) then      ! If we didn't read a full array, then try reading just one input
+      ! If there was an error, CurLine didn't advance, so no resetting of it needed
+      call ParseVar( FileInfo_In, CurLine, 'StC_CChan', InputFileData%StC_CChan(1), ErrStat2, ErrMsg2 )
+      InputFileData%StC_CChan(:) = InputFileData%StC_CChan(1)     ! Assign all the same, will check in validation
+   endif
+      If (Failed()) return;
+
       !  Semi-Active control mode {
       !     1: velocity-based ground hook control; 
       !     2: Inverse velocity-based ground hook control;
@@ -1972,6 +1991,7 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
    INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat        !< The error status code
    CHARACTER(ErrMsgLen),     INTENT(  OUT)   :: ErrMsg         !< The error message, if an error occurred
 
+   integer(IntKi)                            :: i              !< generic loop counter
    CHARACTER(*), PARAMETER                   :: RoutineName = 'StC_ValidatePrimaryData'
 
       ! Initialize variables
@@ -1984,13 +2004,38 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
          InputFileData%StC_DOF_MODE /= DOFMode_Omni         .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_TLCD         .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Prescribed) &
-      CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional), or 3 (TLCD), or 4 (prescribed force time-series).', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), '// &
+               'or 2 (omni-directional), or 3 (TLCD), or 4 (prescribed force time-series).', ErrStat, ErrMsg, RoutineName )
 
       ! Check control modes
-   IF ( InputFileData%StC_CMODE /= ControlMode_None .and. InputFileData%StC_CMODE /= CMODE_Semi ) &
-      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none) or 1 (semi-active) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
-!   IF ( InputFileData%StC_CMODE /= ControlMode_None .and. InputFileData%StC_CMODE /= CMODE_Semi .and. InputFileData%StC_CMODE /= CMODE_Active) &
-!      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active), or 2 (active).', ErrStat, ErrMsg, RoutineName )
+   IF (  InputFileData%StC_CMODE /= ControlMode_None     .and. &
+         InputFileData%StC_CMODE /= CMODE_Semi           .and. &
+         InputFileData%StC_CMode /= CMODE_ActiveEXTERN   .and. &
+         InputFileData%StC_CMode /= CMODE_ActiveDLL ) &
+      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active), 4 (active with Simulink control),'// &
+            ' or 5 (active with DLL control) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+
+      ! Check control channel
+   if ( InputFileData%StC_CMode == CMODE_ActiveEXTERN .or. InputFileData%StC_CMode == CMODE_ActiveDLL ) then
+      if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept ) then
+         call SetErrStat( ErrID_Fatal, 'Control mode 4 (active with Simulink control), or 5 (active with DLL control) '// &
+               'can only be used with independent DOF (StC_DOF_Mode=1) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+      endif
+      if (InitInp%NumMeshPts > 1) then
+         do i=2,InitInp%NumMeshPts  ! Warn if controlling multiple mesh points with single instance (blade TMD)
+            if ( InputFileData%StC_CChan(i) == InputFileData%StC_CChan(1) ) then
+               call SetErrStat( ErrID_Warn, 'Same control channel is used for multiple StC instances within input file '// &
+                        trim(InitInp%InputFile)//'.  This may not be desired in some cases such as blade TMD active controls.', &
+                        ErrStat, ErrMsg, RoutineName )
+            endif
+         enddo
+      endif
+      do i=1,InitInp%NumMeshPts     ! Check we are in range of number of control channel groups
+         if ( InputFileData%StC_CChan(i) < 1 .or. InputFileData%StC_CChan(i) > 10 ) then
+            call SetErrStat( ErrID_Fatal, 'Control channel (StC_CChan) must be between 1 and 10 when StC_CMode=4 or StC_CMode=5.', ErrStat, ErrMsg, RoutineName )
+         endif
+      enddo
+   endif
 
    IF ( InputFileData%StC_SA_MODE /= SA_CMODE_GH_vel    .and. &
         InputFileData%StC_SA_MODE /= SA_CMODE_GH_invVel .and. &
@@ -2021,6 +2066,11 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       call SetErrStat(ErrID_Fatal,'StC_Y_M must be > 0 when StC_Y_DOF is enabled', ErrStat,ErrMsg,RoutineName)
    if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Y_DOF .and. (InputFileData%StC_Y_K <= 0.0_ReKi) )    & 
       call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when StC_Y_DOF is enabled', ErrStat,ErrMsg,RoutineName)
+
+   if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. (InputFileData%StC_Z_M <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'StC_Z_M must be > 0 when StC_Z_DOF is enabled', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. (InputFileData%StC_Z_K <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'StC_Z_K must be > 0 when StC_Z_DOF is enabled', ErrStat,ErrMsg,RoutineName)
 
    if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_XY_M <= 0.0_ReKi) )    & 
       call SetErrStat(ErrID_Fatal,'StC_XY_M must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)

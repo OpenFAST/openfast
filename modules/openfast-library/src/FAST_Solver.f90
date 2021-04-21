@@ -1194,6 +1194,9 @@ SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
       end do
    end if
 
+   ! StC controls
+   ! This is a placeholder for where StC controls would be passed if they are enabled from Simulink
+
 END SUBROUTINE SrvD_SetExternalInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine transfers the SD outputs into inputs required for HD
