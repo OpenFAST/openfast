@@ -188,6 +188,9 @@ typedef     ^                   ^              IntKi                            
 typedef     ^                   ^              LOGICAL                           UA_Flag           - - -   "logical flag indicating whether to use UnsteadyAero"        -
 typedef     ^                   ^              LOGICAL                           Flookup           - - -   "Use table lookup for f' and f'' "    -
 typedef     ^                   ^              ReKi                              a_s               - - -   "speed of sound"        m/s
+typedef     ^                   ^              INTEGER                  UAOff_innerNode          {:} - -   "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
+typedef     ^                   ^              INTEGER                  UAOff_outerNode          {:} - -   "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
+typedef     ^                   ^              LOGICAL                           SumPrint          - - -   "Whether to print summary file (primarially in in UA)"    -
 
 #.......... InputFileType ......
 # FVW_InputFile

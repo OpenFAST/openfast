@@ -1024,6 +1024,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_Init_Wrapper'); return
 
       ! ---Condensed version of "BEMT_Set_UA_InitData"
+      
       allocate(Init_UA_Data%c(InitInp%numBladeNodes,InitInp%numBlades), STAT = errStat2)
       do j = 1,InitInp%NumBlades
          do i = 1,InitInp%numBladeNodes
@@ -1031,13 +1032,18 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
          end do
       end do
       Init_UA_Data%dt              = interval          
-      Init_UA_Data%OutRootName     = 'Debug.UA'
+      Init_UA_Data%OutRootName     = InitInp%RootName
       Init_UA_Data%numBlades       = InitInp%NumBlades 
       Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
+      
       Init_UA_Data%UAMod           = InitInp%UAMod  
       Init_UA_Data%Flookup         = InitInp%Flookup
       Init_UA_Data%a_s             = InitInp%a_s ! m/s
       Init_UA_Data%ShedEffect      = .False. ! Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
+      Init_UA_Data%WrSum           = InitInp%SumPrint
+      call move_alloc(InitInp%UAOff_innerNode, Init_UA_Data%UAOff_innerNode)
+      call move_alloc(InitInp%UAOff_outerNode, Init_UA_Data%UAOff_outerNode)
+      
       
       ! --- UA init
       call UA_Init( Init_UA_Data, u_UA, m%p_UA, x%UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return

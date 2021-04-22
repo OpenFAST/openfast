@@ -2191,6 +2191,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
    call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%FLookup, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+      
+      ! UAStartRad - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
+   call ParseVar( FileInfo_In, CurLine, "UAStartRad", InputFileData%UAStartRad, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2>= AbortErrLev) InputFileData%UAStartRad = 0.0_ReKi
+   
+      ! UAEndRad - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
+   call ParseVar( FileInfo_In, CurLine, "UAEndRad", InputFileData%UAEndRad, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2>= AbortErrLev) InputFileData%UAEndRad = 1.0_ReKi
 
    !======  Airfoil Information =========================================================================
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
@@ -2692,14 +2700,18 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       
       ! UAMod
       select case (InputFileData%UAMod)
-         case (1)
+         case (UA_Baseline)
             Msg = 'baseline model (original)'
-         case (2)
+         case (UA_Gonzalez)
             Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
-         case (3)
+         case (UA_MinnemaPierce)
             Msg = 'Minnema/Pierce variant (changes in Cc and Cm)'      
          !case (4)
          !   Msg = 'DYSTOOL'      
+         case (UA_HGM)
+            Msg = 'HGM (continuous state)'
+         case (UA_HGMV)
+            Msg = 'HGMV (continuous state + vortex)'
          case default      
             Msg = 'unknown'      
       end select
