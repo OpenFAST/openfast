@@ -31,6 +31,8 @@ OpenFAST v2.5.0 to OpenFAST dev
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
 AeroDyn 15                                         TwrTi               0.0000000E+00  6.0000000E+00  1.0000000E+00  1.0000000E-01                 [additional column in *Tower Influence and Aerodynamics* table]
+AeroDyn 15                                    40   UAStartRad          0.25    UAStartRad          - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+AeroDyn 15                                    41   UAEndRad            0.95    UAEndRad            - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
 SubDyn                                         8   GuyanLoadCorr.      False   GuyanLoadCorection  - Include extra moment from lever arm at interface and rotate FEM for floating
 SubDyn                                        15   GuyanDampMod        0       GuyanDampMod - Guyan damping {0=none, 1=Rayleigh Damping, 2=user specified 6x6 matrix}
 SubDyn                                        16   RayleighDamp        0.001, 0.003   RayleighDamp - Mass and stiffness proportional damping  coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
@@ -55,7 +57,12 @@ ServoDyn                                      65   NumTStC            0         
 ServoDyn                                      66   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
 ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
 ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+AirFoilTables                                 12\* alphaUpper          5.0   alphaUpper        ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
+AirFoilTables                                 13\* alphaLower         \-3.0   alphaLower        ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
+AirFoilTables                                 42\* UACutout_delta     "DEFAULT"  UACutout_delta  ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
 ============================================= ==== =============== ========================================================================================================================================================================================================
+\*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
+
 
 ============================================= ====== =============== ======================================================================================================================================================================================================
 Modified in OpenFAST dev
