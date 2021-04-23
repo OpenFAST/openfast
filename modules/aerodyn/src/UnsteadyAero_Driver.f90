@@ -180,7 +180,7 @@ program UnsteadyAero_Driver
       ! Initialize the Airfoil Info Params
    afNames(1)  = dvrInitInp%AirFoil1 ! All nodes/blades are using the same 2D airfoil
    AFIndx(1,1) = 1
-   call Init_AFI( p, NumAFfiles, afNames, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
+   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
       call checkError()
 
 !   call WriteAFITables(AFI_Params(1), dvrInitInp%OutRootName)

@@ -513,9 +513,9 @@ module UA_Dvr_Subs
       end subroutine Cleanup
    end subroutine ReadTimeSeriesData
 !--------------------------------------------------------------------------------------------------------------
-   subroutine Init_AFI(p, NumAFfiles, afNames, UseCm, AFI_Params, ErrStat, ErrMsg)
+   subroutine Init_AFI(UAMod, NumAFfiles, afNames, UseCm, AFI_Params, ErrStat, ErrMsg)
 
-   type(UA_ParameterType),intent(in)   :: p
+   integer,             intent(in   )  :: UAMod
    integer,             intent(in   )  :: NumAFfiles
    CHARACTER(1024),     intent(in   )  :: afNames(NumAFfiles)
    logical,             intent(in   )  :: UseCm
@@ -556,7 +556,7 @@ module UA_Dvr_Subs
    
    AFI_InitInputs%InCol_Cpmin = 0
    AFI_InitInputs%AFTabMod = AFITable_1 ! 1D-interpolation (on AoA only)
-   AFI_InitInputs%UA_f_cn  = p%UAMod /= UA_HGM ! HGM needs the separation function based on cl instead of cn
+   AFI_InitInputs%UA_f_cn  = UAMod /= UA_HGM ! HGM needs the separation function based on cl instead of cn
    
    do i=1,NumAFfiles
       AFI_InitInputs%FileName = afNames(i) !InitInp%AF_File(i)

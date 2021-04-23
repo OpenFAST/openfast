@@ -470,7 +470,8 @@ CONTAINS
       
       ! Reading Boundary layer file  for aeroacoustics
       CALL ParseVar ( FileInfo, CurLine, 'BL_file' , p%BL_file , ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat2 >= AbortErrLev) p%BL_file = "NOT_SET_IN_AIRFOIL_FILE"
+         !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( p%BL_file ) )  p%BL_file=trim(PriPath)//trim(p%BL_file)
          
     ! How many columns do we need to read in the input and how many total coefficients will be used?

@@ -1153,7 +1153,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
 
             
             if (p%UAmod == UA_HGMV) then
-               InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//''x5'
+               InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'x5'
                InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
             end if
             
@@ -2016,6 +2016,8 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
     
    alphaE   = alpha_34                                                    ! Eq. 12 (after substitute of x1 and x2 initializations)
    alphaF   = alphaE
+   call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    if (p%UAMod==UA_HGM) then
       x%x(3)   = BL_p%c_lalpha * (alphaE-BL_p%alpha0)
@@ -2024,11 +2026,11 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
       !alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
       !this simplifies to alphaF = alphaE
       
-      call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
-      x%x(4) = AFI_interp%f_st
+      !call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
+      !x%x(4) = AFI_interp%f_st
       
    else !if (p%UAMod==UA_HGMV) then
-      call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
+      !call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
       x%x(3)   = AFI_interp%FullyAttached ! ~ (alpha-alphaLower)*c_Rate + c_alphaLower
       
           ! find alphaF where cn_FullyAttached(alphaF) = x(3)
@@ -2036,11 +2038,12 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
       ! alphaF   = alphaE
       
          ! calculate x%x(4) = fs_aF = f_st(alphaF):
-      call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
-      x%x(4) = AFI_interp%f_st
+      !call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
+      !x%x(4) = AFI_interp%f_st
       
    end if
    
+   x%x(4) = AFI_interp%f_st
    x%x(5) = 0.0_R8Ki
    
 end subroutine HGM_Steady
