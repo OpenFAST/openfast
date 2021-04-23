@@ -1132,6 +1132,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SrvD%TrimCase      = p_FAST%TrimCase
       Init%InData_SrvD%TrimGain      = p_FAST%TrimGain
       Init%InData_SrvD%RotSpeedRef   = Init%OutData_ED%RotSpeed
+      Init%InData_SrvD%InterpOrder   = p_FAST%InterpOrder
 
       CALL AllocAry( Init%InData_SrvD%BladeRootPosition,      3, Init%OutData_ED%NumBl, 'Init%InData_SrvD%BladeRootPosition', errStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)

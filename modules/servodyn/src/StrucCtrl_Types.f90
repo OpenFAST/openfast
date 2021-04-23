@@ -122,9 +122,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  StC_ContinuousStateType  =======
   TYPE, PUBLIC :: StC_ContinuousStateType
-    REAL(ReKi)  :: DummyContState      !< Remove this variable if you have continuous states [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: StC_x      !< Continuous States -- StrucCtrl x [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: StC_xdot      !< Continuous States -- StrucCtrl xdot [-]
   END TYPE StC_ContinuousStateType
 ! =======================
 ! =========  StC_DiscreteStateType  =======
@@ -1503,7 +1501,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstContStateData%DummyContState = SrcContStateData%DummyContState
 IF (ALLOCATED(SrcContStateData%StC_x)) THEN
   i1_l = LBOUND(SrcContStateData%StC_x,1)
   i1_u = UBOUND(SrcContStateData%StC_x,1)
@@ -1518,20 +1515,6 @@ IF (ALLOCATED(SrcContStateData%StC_x)) THEN
   END IF
     DstContStateData%StC_x = SrcContStateData%StC_x
 ENDIF
-IF (ALLOCATED(SrcContStateData%StC_xdot)) THEN
-  i1_l = LBOUND(SrcContStateData%StC_xdot,1)
-  i1_u = UBOUND(SrcContStateData%StC_xdot,1)
-  i2_l = LBOUND(SrcContStateData%StC_xdot,2)
-  i2_u = UBOUND(SrcContStateData%StC_xdot,2)
-  IF (.NOT. ALLOCATED(DstContStateData%StC_xdot)) THEN 
-    ALLOCATE(DstContStateData%StC_xdot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%StC_xdot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstContStateData%StC_xdot = SrcContStateData%StC_xdot
-ENDIF
  END SUBROUTINE StC_CopyContState
 
  SUBROUTINE StC_DestroyContState( ContStateData, ErrStat, ErrMsg )
@@ -1545,9 +1528,6 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(ContStateData%StC_x)) THEN
   DEALLOCATE(ContStateData%StC_x)
-ENDIF
-IF (ALLOCATED(ContStateData%StC_xdot)) THEN
-  DEALLOCATE(ContStateData%StC_xdot)
 ENDIF
  END SUBROUTINE StC_DestroyContState
 
@@ -1586,16 +1566,10 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyContState
   Int_BufSz   = Int_BufSz   + 1     ! StC_x allocated yes/no
   IF ( ALLOCATED(InData%StC_x) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! StC_x upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%StC_x)  ! StC_x
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! StC_xdot allocated yes/no
-  IF ( ALLOCATED(InData%StC_xdot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! StC_xdot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%StC_xdot)  ! StC_xdot
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1624,8 +1598,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    ReKiBuf(Re_Xferred) = InData%DummyContState
-    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%StC_x) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1642,26 +1614,6 @@ ENDIF
       DO i2 = LBOUND(InData%StC_x,2), UBOUND(InData%StC_x,2)
         DO i1 = LBOUND(InData%StC_x,1), UBOUND(InData%StC_x,1)
           ReKiBuf(Re_Xferred) = InData%StC_x(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%StC_xdot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%StC_xdot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StC_xdot,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%StC_xdot,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StC_xdot,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%StC_xdot,2), UBOUND(InData%StC_xdot,2)
-        DO i1 = LBOUND(InData%StC_xdot,1), UBOUND(InData%StC_xdot,1)
-          ReKiBuf(Re_Xferred) = InData%StC_xdot(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -1696,8 +1648,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%DummyContState = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StC_x not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1717,29 +1667,6 @@ ENDIF
       DO i2 = LBOUND(OutData%StC_x,2), UBOUND(OutData%StC_x,2)
         DO i1 = LBOUND(OutData%StC_x,1), UBOUND(OutData%StC_x,1)
           OutData%StC_x(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StC_xdot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%StC_xdot)) DEALLOCATE(OutData%StC_xdot)
-    ALLOCATE(OutData%StC_xdot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%StC_xdot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%StC_xdot,2), UBOUND(OutData%StC_xdot,2)
-        DO i1 = LBOUND(OutData%StC_xdot,1), UBOUND(OutData%StC_xdot,1)
-          OutData%StC_xdot(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO

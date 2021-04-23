@@ -43,6 +43,7 @@ typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input
 #ADD in the TMD submodule input file passing her
 typedef	^	InitInputType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
 typedef	^	InitInputType	CHARACTER(64)	CableControlRequestor	{:}	-	-	"Array with text info about which module requested the cable control channel (size of NumCableControl).  This is just for diagnostics."	-
+typedef	^	InitInputType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue code -- required to set m%u_xStC sizes" -
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -281,6 +282,16 @@ typedef	^	OtherStateType	StC_OtherStateType	NStC	{:}	-	-	"StC module states - na
 typedef	^	OtherStateType	StC_OtherStateType	TStC	{:}	-	-	"StC module states - tower"	-
 typedef	^	OtherStateType	StC_OtherStateType	SStC	{:}	-	-	"StC module inputs - substructure"	-
 
+# ..... SrvD_ModuleMapType.............................................................................................................
+typedef	^	SrvD_ModuleMapType	MeshMapType	u_BStC_Mot2_BStC	{:}{:}	-	-	"Map motions: u%BStCMotionMesh to m%u_BSTC%MotionMesh"
+typedef	^	SrvD_ModuleMapType	MeshMapType	u_NStC_Mot2_NStC	{:}	-	-	"Map motions: u%NStCMotionMesh to m%u_NStC%MotionMesh"
+typedef	^	SrvD_ModuleMapType	MeshMapType	u_TStC_Mot2_TStC	{:}	-	-	"Map motions: u%TStCMotionMesh to m%u_TStC%MotionMesh"
+typedef	^	SrvD_ModuleMapType	MeshMapType	u_SStC_Mot2_SStC	{:}	-	-	"Map motions: u%SStCMotionMesh to m%u_SStC%MotionMesh"
+typedef	^	SrvD_ModuleMapType	MeshMapType	BStC_Frc2_y_BStC	{:}{:}	-	-	"Map loads: m%y_BStCLoadMesh to y%BSTC%LoadMesh"
+typedef	^	SrvD_ModuleMapType	MeshMapType	NStC_Frc2_y_NStC	{:}	-	-	"Map loads: m%y_NStCLoadMesh to y%NStC%LoadMesh"
+typedef	^	SrvD_ModuleMapType	MeshMapType	TStC_Frc2_y_TStC	{:}	-	-	"Map loads: m%y_TStCLoadMesh to y%TStC%LoadMesh"
+typedef	^	SrvD_ModuleMapType	MeshMapType	SStC_Frc2_y_SStC	{:}	-	-	"Map loads: m%y_SStCLoadMesh to y%SStC%LoadMesh"
+
 # ..... Misc Variables ................................................................................................................
 typedef	^	MiscVarType	DbKi	LastTimeCalled	-	-	-	"last time the CalcOutput/Bladed DLL was called"	s
 typedef	^	MiscVarType	BladedDLLType	dll_data	-	-	-	"data used for Bladed DLL"	-
@@ -291,14 +302,16 @@ typedef	^	MiscVarType	StC_MiscVarType	BStC	{:}	-	-	"StC module misc vars - blade
 typedef	^	MiscVarType	StC_MiscVarType	NStC	{:}	-	-	"StC module misc vars - nacelle"	-
 typedef	^	MiscVarType	StC_MiscVarType	TStC	{:}	-	-	"StC module misc vars - tower"	-
 typedef	^	MiscVarType	StC_MiscVarType	SStC	{:}	-	-	"StC module misc vars - substructure"	-
-typedef	^	MiscVarType	StC_InputType	u_BStC	{:}	-	-	"StC module inputs - blade"	-
-typedef	^	MiscVarType	StC_InputType	u_NStC	{:}	-	-	"StC module inputs - nacelle"	-
-typedef	^	MiscVarType	StC_InputType	u_TStC	{:}	-	-	"StC module inputs - tower"	-
-typedef	^	MiscVarType	StC_InputType	u_SStC	{:}	-	-	"StC module inputs - substructure"	-
+typedef	^	MiscVarType	StC_InputType	u_BStC	{:}{:}	-	-	"StC module inputs - blade          size:(interpOrder,NumBStC)"	-
+typedef	^	MiscVarType	StC_InputType	u_NStC	{:}{:}	-	-	"StC module inputs - nacelle        size:(interpOrder,NumNStC)"	-
+typedef	^	MiscVarType	StC_InputType	u_TStC	{:}{:}	-	-	"StC module inputs - tower          size:(interpOrder,NumTStC)"	-
+typedef	^	MiscVarType	StC_InputType	u_SStC	{:}{:}	-	-	"StC module inputs - substructure   size:(interpOrder,NumSStC)"	-
 typedef	^	MiscVarType	StC_OutputType	y_BStC	{:}	-	-	"StC module outputs - blade"	-
 typedef	^	MiscVarType	StC_OutputType	y_NStC	{:}	-	-	"StC module outputs - nacelle"	-
 typedef	^	MiscVarType	StC_OutputType	y_TStC	{:}	-	-	"StC module outputs - tower"	-
 typedef	^	MiscVarType	StC_OutputType	y_SStC	{:}	-	-	"StC module outputs - substructure"	-
+typedef	^	MiscVarType	SrvD_ModuleMapType	SrvD_MeshMap	-	-	-	"Mesh mapping from inputs/output meshes to StC input/output meshes"	-
+typedef	^	MiscVarType	IntKi	PrevTstepN	0	-	-	"Previous timestep N for tracking when in predictor/corrector loop for setting StC u values"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -399,6 +412,7 @@ typedef	^	ParameterType	StC_ParameterType	BStC	{:}	-	-	"StC module parameters - 
 typedef	^	ParameterType	StC_ParameterType	NStC	{:}	-	-	"StC module parameters - nacelle"	-
 typedef	^	ParameterType	StC_ParameterType	TStC	{:}	-	-	"StC module parameters - tower"	-
 typedef	^	ParameterType	StC_ParameterType	SStC	{:}	-	-	"StC module parameters - substructure"	-
+typedef	^	ParameterType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue code -- required to set m%u_xStC sizes" -
 typedef	^	ParameterType	Logical	EXavrSWAP	-	-	-	"Use extendend avr SWAP"	-
 typedef	^	ParameterType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
 

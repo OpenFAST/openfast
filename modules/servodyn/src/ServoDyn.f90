@@ -208,6 +208,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
    CALL SrvD_SetParameters( InputFileData, p, UnSum, ErrStat2, ErrMsg2 )
       if (Failed())  return;
+   p%InterpOrder = InitInp%InterpOrder    ! Store this for setting StC input array sizes stored in MiscVars%u_xStC
 
       ! Set and verify BlPitchInit, which comes from InitInputData (not the inputfiledata)
    CALL AllocAry( p%BlPitchInit, p%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2 )
@@ -390,16 +391,16 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       write(UnSum, '(A)') SectionDivide
       write(UnSum, '(A)')              ' Structural controls'
    endif
-   call StC_Nacelle_Setup(InitInp,p,InputFileData,m%u_NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,m%y_NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
+   call StC_Nacelle_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,m%y_NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Tower_Setup(InitInp,p,InputFileData,m%u_TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,m%y_TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
+   call StC_Tower_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,m%y_TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Blade_Setup(InitInp,p,InputFileData,m%u_BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,m%y_BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
+   call StC_Blade_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,m%y_BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
-   call StC_Substruc_Setup(InitInp,p,InputFileData,m%u_SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,m%y_SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
+   call StC_Substruc_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,m%y_SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
 
@@ -601,11 +602,14 @@ END SUBROUTINE SrvD_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Nacelle Instances
-subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
+subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_MeshMap,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
-   TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
-   type(StC_InputType),             allocatable,intent(  out)  :: u(:)           !< An initial guess for the input; input mesh must be defined
+   type(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
+   type(SrvD_InputType),                        intent(inout)  :: SrvD_u         !< SrvD inputs (for setting up meshes)
+   type(SrvD_OutputType),                       intent(inout)  :: SrvD_y         !< SrvD outputs (for setting up meshes)
+   type(SrvD_ModuleMapType),                    intent(inout)  :: SrvD_MeshMap   !< Mesh mapping
+   type(StC_InputType),             allocatable,intent(  out)  :: u(:,:)         !< An initial guess for the input; input mesh must be defined
    type(StC_ParameterType),         allocatable,intent(  out)  :: p(:)           !< Parameters
    type(StC_ContinuousStateType),   allocatable,intent(  out)  :: x(:)           !< Initial continuous states
    type(StC_DiscreteStateType),     allocatable,intent(  out)  :: xd(:)          !< Initial discrete states
@@ -619,18 +623,19 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherS
 
    integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
    character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: i              ! Counter for the input interp order
    integer(IntKi)             :: j              ! Counter for the instances
    real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
    type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
    character(*), parameter    :: RoutineName = 'StC_Nacelle_Setup'
 
-!FIXME: add mesh mappings to SrvD_u & SrvD_y
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
    if (SrvD_p%NumNStC > 0_IntKi) then
-      allocate(u(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      ! StC types
+      allocate(u(SrvD_p%InterpOrder+1,SrvD_p%NumNStC), STAT=ErrStat2);  if ( AllErr('Could not allocate StrucCtrl input array, u') )   return;
       allocate(p(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
       allocate(x(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
       allocate(xd(SrvD_p%NumNStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
@@ -638,6 +643,11 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherS
       allocate(OtherState(SrvD_p%NumNStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
       allocate(y(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
       allocate(m(SrvD_p%NumNStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+      ! SrvD mesh stuff
+      allocate(SrvD_u%NStCMotionMesh(SrvD_p%NumNStC), SrvD_y%NStCLoadMesh(SrvD_p%NumNStC), STAT=ErrStat2)
+      if ( AllErr('Could not allocate motion u%NStCMotionMesh and y%NStCLoadMesh') ) return;
+      allocate(SrvD_MeshMap%u_NStC_Mot2_NStC(SrvD_p%NumNStC), SrvD_MeshMap%NStC_Frc2_y_NStC(SrvD_p%NumNStC), STAT=ErrStat2)
+      if ( AllErr('Could not allocate motion nacelle mesh mappings' ) ) return;
 
       do j=1,SrvD_p%NumNStC
          StC_InitInp%InputFile      =  InputFileData%NStCfiles(j)
@@ -651,12 +661,35 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherS
          StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%NacPosition
          StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%NacOrientation
 
-         CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         CALL StC_Init( StC_InitInp, u(1,j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
-         IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) &
-            CALL SetErrStat( ErrID_Fatal, "Nacelle StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step.",ErrStat,ErrMsg,RoutineName )
+         IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2="Nacelle StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step."
+         endif
          if (Failed())  return;
+
+         ! Copy u(1,:) to all input so interp works correctly in StC
+         do i = 2, SrvD_p%InterpOrder + 1
+            call StC_CopyInput (u(1,j),  u(i,j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+            if (Failed())  return;
+         enddo
+
+         ! SrvD meshes <-> NStC meshes -- only one Mesh point per NStC instance
+         call MeshCopy( SrcMesh=u(1,j)%Mesh(1), DestMesh=SrvD_u%NStCMotionMesh(j), CtrlCode=MESH_COUSIN, &
+                        IOS=COMPONENT_INPUT,  ErrStat=ErrStat2, ErrMess=ErrMsg2, &
+                        TranslationDisp = .TRUE.,  Orientation = .TRUE.,  &
+                        TranslationVel  = .TRUE.,  RotationVel = .TRUE.,  &
+                        TranslationAcc  = .TRUE.,  RotationAcc = .TRUE.)
+            if (Failed())  return
+         call MeshMapCreate( u(1,j)%Mesh(1), SrvD_u%NStCMotionMesh(j), SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return
+         call MeshCopy( SrcMesh=y(j)%Mesh(1), DestMesh=SrvD_y%NStCLoadMesh(j),   CtrlCode=MESH_COUSIN, &
+                        IOS=COMPONENT_OUTPUT, ErrStat=ErrStat2, ErrMess=ErrMsg2, Force=.True., Moment=.True.)
+            if (Failed())  return
+         call MeshMapCreate(   y(j)%Mesh(1), SrvD_y%NStCLoadMesh(j),   SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return
 
          call Cleanup()
       enddo
@@ -682,11 +715,14 @@ contains
 end subroutine StC_Nacelle_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Tower instances
-subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
+subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_MeshMap,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
-   TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
-   type(StC_InputType),             allocatable,intent(  out)  :: u(:)           !< An initial guess for the input; input mesh must be defined
+   type(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
+   type(SrvD_InputType),                        intent(inout)  :: SrvD_u         !< SrvD inputs (for setting up meshes)
+   type(SrvD_OutputType),                       intent(inout)  :: SrvD_y         !< SrvD outputs (for setting up meshes)
+   type(SrvD_ModuleMapType),                    intent(inout)  :: SrvD_MeshMap   !< Mesh mapping
+   type(StC_InputType),             allocatable,intent(  out)  :: u(:,:)         !< An initial guess for the input; input mesh must be defined
    type(StC_ParameterType),         allocatable,intent(  out)  :: p(:)           !< Parameters
    type(StC_ContinuousStateType),   allocatable,intent(  out)  :: x(:)           !< Initial continuous states
    type(StC_DiscreteStateType),     allocatable,intent(  out)  :: xd(:)          !< Initial discrete states
@@ -700,18 +736,19 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
 
    integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
    character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: i              ! Counter for the input interp order
    integer(IntKi)             :: j              ! Counter for the instances
    real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
    type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
    character(*), parameter    :: RoutineName = 'StC_Tower_Setup'
 
-!FIXME: add mesh mappings to SrvD_u & SrvD_y
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
    if (SrvD_p%NumTStC > 0_IntKi) then
-      allocate(u(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      ! StC types
+      allocate(u(SrvD_p%InterpOrder+1,SrvD_p%NumTStC), STAT=ErrStat2);  if ( AllErr('Could not allocate StrucCtrl input array, u') )   return;
       allocate(p(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
       allocate(x(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
       allocate(xd(SrvD_p%NumTStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
@@ -719,6 +756,11 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
       allocate(OtherState(SrvD_p%NumTStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
       allocate(y(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
       allocate(m(SrvD_p%NumTStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+      ! SrvD mesh stuff
+      allocate(SrvD_u%TStCMotionMesh(SrvD_p%NumTStC), SrvD_y%TStCLoadMesh(SrvD_p%NumTStC), STAT=ErrStat2)
+      if ( AllErr('Could not allocate motion u%TStCMotionMesh and y%TStCLoadMesh') ) return;
+      allocate(SrvD_MeshMap%u_TStC_Mot2_TStC(SrvD_p%NumTStC), SrvD_MeshMap%TStC_Frc2_y_TStC(SrvD_p%NumTStC), STAT=ErrStat2)
+      if ( AllErr('Could not allocate motion tower mesh mappings' ) ) return;
 
       do j=1,SrvD_p%NumTStC
          StC_InitInp%InputFile      =  InputFileData%TStCfiles(j)
@@ -732,12 +774,33 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
          StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%TwrBasePos
          StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%TwrBaseOrient
 
-         CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         CALL StC_Init( StC_InitInp, u(1,j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
          IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) &
             CALL SetErrStat( ErrID_Fatal, "Tower StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step.",ErrStat,ErrMsg,RoutineName )
          if (Failed())  return;
+
+         ! Copy u(1,:) to all input so interp works correctly in StC
+         do i = 2, SrvD_p%InterpOrder + 1
+            call StC_CopyInput (u(1,j),  u(i,j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+            if (Failed())  return;
+         enddo
+
+         ! SrvD meshes <-> TStC meshes -- only one Mesh point per TStC instance
+         call MeshCopy( SrcMesh=u(1,j)%Mesh(1), DestMesh=SrvD_u%TStCMotionMesh(j), CtrlCode=MESH_COUSIN, &
+                        IOS=COMPONENT_INPUT,  ErrStat=ErrStat2, ErrMess=ErrMsg2, &
+                        TranslationDisp = .TRUE.,  Orientation = .TRUE.,  &
+                        TranslationVel  = .TRUE.,  RotationVel = .TRUE.,  &
+                        TranslationAcc  = .TRUE.,  RotationAcc = .TRUE.)
+            if (Failed())  return
+         call MeshMapCreate( u(1,j)%Mesh(1), SrvD_u%TStCMotionMesh(j), SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return
+         call MeshCopy( SrcMesh=y(j)%Mesh(1), DestMesh=SrvD_y%TStCLoadMesh(j),   CtrlCode=MESH_COUSIN, &
+                        IOS=COMPONENT_OUTPUT, ErrStat=ErrStat2, ErrMess=ErrMsg2, Force=.True., Moment=.True.)
+            if (Failed())  return
+         call MeshMapCreate(   y(j)%Mesh(1), SrvD_y%TStCLoadMesh(j),   SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return
 
          call Cleanup()
       enddo
@@ -763,11 +826,14 @@ contains
 end subroutine StC_Tower_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Blade instances
-subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
+subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_MeshMap,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
-   TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
-   type(StC_InputType),             allocatable,intent(  out)  :: u(:)           !< An initial guess for the input; input mesh must be defined
+   type(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
+   type(SrvD_InputType),                        intent(inout)  :: SrvD_u         !< SrvD inputs (for setting up meshes)
+   type(SrvD_OutputType),                       intent(inout)  :: SrvD_y         !< SrvD outputs (for setting up meshes)
+   type(SrvD_ModuleMapType),                    intent(inout)  :: SrvD_MeshMap   !< Mesh mapping
+   type(StC_InputType),             allocatable,intent(  out)  :: u(:,:)         !< An initial guess for the input; input mesh must be defined
    type(StC_ParameterType),         allocatable,intent(  out)  :: p(:)           !< Parameters
    type(StC_ContinuousStateType),   allocatable,intent(  out)  :: x(:)           !< Initial continuous states
    type(StC_DiscreteStateType),     allocatable,intent(  out)  :: xd(:)          !< Initial discrete states
@@ -781,6 +847,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
 
    integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
    character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: i              ! Counter for the input interp order
    integer(IntKi)             :: j              ! Counter for the instances
    integer(IntKi)             :: k              ! Counter for the blade
    real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
@@ -788,12 +855,12 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
    character(*), parameter    :: RoutineName = 'StC_Blade_Setup'
 
-!FIXME: add mesh mappings to SrvD_u & SrvD_y
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
    if (SrvD_p%NumBStC > 0_IntKi) then
-      allocate(u(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      ! StC types
+      allocate(u(SrvD_p%InterpOrder+1,SrvD_p%NumBStC), STAT=ErrStat2);  if ( AllErr('Could not allocate StrucCtrl input array, u') )   return;
       allocate(p(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
       allocate(x(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
       allocate(xd(SrvD_p%NumBStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
@@ -801,6 +868,11 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
       allocate(OtherState(SrvD_p%NumBStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
       allocate(y(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
       allocate(m(SrvD_p%NumBStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+      ! SrvD mesh stuff
+      allocate(SrvD_u%BStCMotionMesh(SrvD_p%NumBl,SrvD_p%NumBStC), SrvD_y%BStCLoadMesh(SrvD_p%NumBl,SrvD_p%NumBStC), STAT=ErrStat2)
+      if ( AllErr('Could not allocate motion u%BStCMotionMesh and y%BStCLoadMesh') ) return;
+      allocate(SrvD_MeshMap%u_BStC_Mot2_BStC(SrvD_p%NumBl,SrvD_p%NumBStC), SrvD_MeshMap%BStC_Frc2_y_BStC(SrvD_p%NumBl,SrvD_p%NumBStC), STAT=ErrStat2)
+      if ( AllErr('Could not allocate motion nacelle mesh mappings' ) ) return;
 
       do j=1,SrvD_p%NumBStC
          StC_InitInp%InputFile      =  InputFileData%BStCfiles(j)
@@ -816,12 +888,37 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherSta
             StC_InitInp%InitOrientation(:,:,k) = SrvD_InitInp%BladeRootOrientation(:,:,k)
          enddo
 
-         CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         CALL StC_Init( StC_InitInp, u(1,j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
-         IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) &
-            CALL SetErrStat( ErrID_Fatal, "Blade StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step.",ErrStat,ErrMsg,RoutineName )
+         IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2="Blade StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step."
+         endif
          if (Failed())  return;
+
+         ! Copy u(1,:) to all input so interp works correctly in StC
+         do i = 2, SrvD_p%InterpOrder + 1
+            call StC_CopyInput (u(1,j),  u(i,j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+            if (Failed())  return;
+         enddo
+
+         ! SrvD meshes <-> BStC meshes -- NumBl Mesh point per BStC instance
+         do k=1,StC_InitInp%NumMeshPts
+            call MeshCopy( SrcMesh=u(1,j)%Mesh(k), DestMesh=SrvD_u%BStCMotionMesh(k,j), CtrlCode=MESH_COUSIN, &
+                           IOS=COMPONENT_INPUT,  ErrStat=ErrStat2, ErrMess=ErrMsg2, &
+                           TranslationDisp = .TRUE.,  Orientation = .TRUE.,  &
+                           TranslationVel  = .TRUE.,  RotationVel = .TRUE.,  &
+                           TranslationAcc  = .TRUE.,  RotationAcc = .TRUE.)
+               if (Failed())  return
+            call MeshMapCreate( u(1,j)%Mesh(k), SrvD_u%BStCMotionMesh(k,j), SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
+               if (Failed()) return
+            call MeshCopy( SrcMesh=y(j)%Mesh(k), DestMesh=SrvD_y%BStCLoadMesh(k,j),   CtrlCode=MESH_COUSIN, &
+                           IOS=COMPONENT_OUTPUT, ErrStat=ErrStat2, ErrMess=ErrMsg2, Force=.True., Moment=.True.)
+               if (Failed())  return
+            call MeshMapCreate(   y(j)%Mesh(k), SrvD_y%BStCLoadMesh(k,j),   SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2 )
+               if (Failed()) return
+         enddo
 
          call Cleanup()
       enddo
@@ -847,11 +944,14 @@ contains
 end subroutine StC_Blade_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- substructure instances
-subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
+subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_MeshMap,u,p,x,xd,z,OtherState,y,m,UnSum,ErrStat,ErrMsg)
    type(SrvD_InitInputType),                    intent(in   )  :: SrvD_InitInp   !< Input data for initialization routine
    type(SrvD_ParameterType),                    intent(in   )  :: SrvD_p         !< Parameters
-   TYPE(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
-   type(StC_InputType),             allocatable,intent(  out)  :: u(:)           !< An initial guess for the input; input mesh must be defined
+   type(SrvD_InputFile),                        intent(in   )  :: InputFileData  ! Data stored in the module's input file
+   type(SrvD_InputType),                        intent(inout)  :: SrvD_u         !< SrvD inputs (for setting up meshes)
+   type(SrvD_OutputType),                       intent(inout)  :: SrvD_y         !< SrvD outputs (for setting up meshes)
+   type(SrvD_ModuleMapType),                    intent(inout)  :: SrvD_MeshMap   !< Mesh mapping
+   type(StC_InputType),             allocatable,intent(  out)  :: u(:,:)         !< An initial guess for the input; input mesh must be defined
    type(StC_ParameterType),         allocatable,intent(  out)  :: p(:)           !< Parameters
    type(StC_ContinuousStateType),   allocatable,intent(  out)  :: x(:)           !< Initial continuous states
    type(StC_DiscreteStateType),     allocatable,intent(  out)  :: xd(:)          !< Initial discrete states
@@ -865,18 +965,19 @@ subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,Other
 
    integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
    character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: i              ! Counter for the input interp order
    integer(IntKi)             :: j              ! Counter for the instances
    real(DbKi)                 :: Interval       !< Coupling interval in seconds from StC
    type(StC_InitInputType)    :: StC_InitInp    !< data to initialize StC module
    type(StC_InitOutputType)   :: StC_InitOut    !< data from StC module initialization (not currently used)
    character(*), parameter    :: RoutineName = 'StC_Substruc_Setup'
 
-!FIXME: add mesh mappings to SrvD_u & SrvD_y
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
    if (SrvD_p%NumSStC > 0_IntKi) then
-      allocate(u(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, u') )            return;
+      ! StC types
+      allocate(u(SrvD_p%InterpOrder+1,SrvD_p%NumSStC), STAT=ErrStat2);  if ( AllErr('Could not allocate StrucCtrl input array, u') )   return;
       allocate(p(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, p') )            return;
       allocate(x(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, x') )            return;
       allocate(xd(SrvD_p%NumSStC),STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, xd') )           return;
@@ -884,6 +985,11 @@ subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,Other
       allocate(OtherState(SrvD_p%NumSStC), STAT=ErrStat2); if ( AllErr('Could not allocate StrucCtrl input array, OtherState') )   return;
       allocate(y(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, y') )            return;
       allocate(m(SrvD_p%NumSStC), STAT=ErrStat2);          if ( AllErr('Could not allocate StrucCtrl input array, m') )            return;
+      ! SrvD mesh stuff
+      allocate(SrvD_u%SStCMotionMesh(SrvD_p%NumSStC), SrvD_y%SStCLoadMesh(SrvD_p%NumSStC), STAT=ErrStat2)
+      if ( AllErr('Could not allocate motion u%SStCMotionMesh and y%SStCLoadMesh') ) return;
+      allocate(SrvD_MeshMap%u_SStC_Mot2_SStC(SrvD_p%NumSStC), SrvD_MeshMap%SStC_Frc2_y_SStC(SrvD_p%NumSStC), STAT=ErrStat2)
+      if ( AllErr('Could not allocate motion substructure mesh mappings' ) ) return;
 
       do j=1,SrvD_p%NumSStC
          StC_InitInp%InputFile      =  InputFileData%SStCfiles(j)
@@ -897,12 +1003,33 @@ subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,u,p,x,xd,z,Other
          StC_InitInp%InitPosition(1:3,1)    = SrvD_InitInp%PlatformPos(1:3)
          StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%PlatformOrient
 
-         CALL StC_Init( StC_InitInp, u(j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
+         CALL StC_Init( StC_InitInp, u(1,j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
          IF (.NOT. EqualRealNos( Interval, SrvD_p%DT ) ) &
             CALL SetErrStat( ErrID_Fatal, "Platform StrucCtrl (instance "//trim(num2lstr(j))//") time step differs from SrvD time step.",ErrStat,ErrMsg,RoutineName )
          if (Failed())  return;
+
+         ! Copy u(1,:) to all input so interp works correctly in StC
+         do i = 2, SrvD_p%InterpOrder + 1
+            call StC_CopyInput (u(1,j),  u(i,j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+            if (Failed())  return;
+         enddo
+
+         ! SrvD meshes <-> SStC meshes -- only one Mesh point per SStC instance
+         call MeshCopy( SrcMesh=u(1,j)%Mesh(1), DestMesh=SrvD_u%SStCMotionMesh(j), CtrlCode=MESH_COUSIN, &
+                        IOS=COMPONENT_INPUT,  ErrStat=ErrStat2, ErrMess=ErrMsg2, &
+                        TranslationDisp = .TRUE.,  Orientation = .TRUE.,  &
+                        TranslationVel  = .TRUE.,  RotationVel = .TRUE.,  &
+                        TranslationAcc  = .TRUE.,  RotationAcc = .TRUE.)
+            if (Failed())  return
+         call MeshMapCreate( u(1,j)%Mesh(1), SrvD_u%SStCMotionMesh(j), SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return
+         call MeshCopy( SrcMesh=y(j)%Mesh(1), DestMesh=SrvD_y%SStCLoadMesh(j),   CtrlCode=MESH_COUSIN, &
+                        IOS=COMPONENT_OUTPUT, ErrStat=ErrStat2, ErrMess=ErrMsg2, Force=.True., Moment=.True.)
+            if (Failed())  return
+         call MeshMapCreate(   y(j)%Mesh(1), SrvD_y%SStCLoadMesh(j),   SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return
 
          call Cleanup()
       enddo
@@ -952,24 +1079,25 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       END IF
       
       ! StrucCtrl -- since all StC data is stored in SrvD types, we don't technically need to call StC_End directly
+      !     -- Note: not entirely certian why only the first time in u is destroyed and not the others.  This is also true at the glue code level for whatever reason.
       if (allocated(m%u_NStC)) then
          do j=1,p%NumNStC       ! Nacelle
-            call StC_End( m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%y_NStC(j), m%NStC(j), ErrStat, ErrMsg )
+            call StC_End( m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%y_NStC(j), m%NStC(j), ErrStat, ErrMsg )
          enddo
       endif
       if (allocated(m%u_TStC)) then
          do j=1,p%NumTStC       ! Tower
-            call StC_End( m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%y_TStC(j), m%TStC(j), ErrStat, ErrMsg )
+            call StC_End( m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%y_TStC(j), m%TStC(j), ErrStat, ErrMsg )
          enddo
       endif
       if (allocated(m%u_BStC)) then
          do j=1,p%NumBStC       ! Blades
-            call StC_End( m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat, ErrMsg )
+            call StC_End( m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat, ErrMsg )
          enddo
       endif
       if (allocated(m%u_SStC)) then
          do j=1,p%NumSStC    ! Platform
-            call StC_End( m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%y_SStC(j), m%SStC(j), ErrStat, ErrMsg )
+            call StC_End( m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%y_SStC(j), m%SStC(j), ErrStat, ErrMsg )
          enddo
       endif
 
@@ -1020,9 +1148,9 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
       ! Local variables
-   TYPE(StC_InputType),ALLOCATABLE                :: u_StC(:)        ! Inputs at t
    INTEGER(IntKi)                                 :: i               ! loop counter 
    INTEGER(IntKi)                                 :: j               ! loop counter for StC instance of type
+   INTEGER(IntKi)                                 :: k               ! loop counter for blade in BStC
    INTEGER(IntKi)                                 :: order
    TYPE(SrvD_InputType)                           :: u_interp        ! interpolated input
       ! Local variables:
@@ -1038,93 +1166,6 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    ErrStat = ErrID_None
    ErrMsg  = ""
                   
-   !...............................................................................................................................   
-   ! update states in StrucCtrl submodule, if necessary:
-   !...............................................................................................................................   
-
-   IF ((p%NumNStC + p%NumTStC + p%NumBStC + p%NumSStC) > 0_IntKi) THEN 
-      order = SIZE(Inputs)
-      allocate(u_StC(order), STAT=ErrStat2)
-      if (ErrStat2 /= 0) then
-         CALL SetErrStat( ErrID_Fatal, 'Could not allocate StrucCtrl input array, u_StC', ErrStat, ErrMsg, RoutineName )
-            if (Failed()) return;
-      endif
-   ENDIF
-      
-
-!FIXME: set inputs for StC
-      ! Nacelle StrucCtrl
-   do j=1,p%NumNStC
-      do i=1,order
-!         call StC_CopyInput( Inputs(i)%NStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-      enddo
-
-!      call StC_UpdateStates( t, n, u_StC, InputTimes, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-
-         ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
-      do i=1,SIZE(u_StC)
-!         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
-         if (Failed()) return;
-      enddo
-   enddo
-
-
-      ! Tower StrucCtrl
-   do j=1,p%NumTStC
-      do i=1,order
-!         call StC_CopyInput( Inputs(i)%TStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-      enddo
-
-!      call StC_UpdateStates( t, n, u_StC, InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-
-         ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
-      do i=1,SIZE(u_StC)
-!         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
-         if (Failed()) return;
-      enddo
-   enddo
-
-
-      ! Blade StrucCtrl
-   do j=1,p%NumBStC
-      do i=1,order
-!         call StC_CopyInput( Inputs(i)%BStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-      enddo
-
-!      call StC_UpdateStates( t, n, u_StC, InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-
-         ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
-      do i=1,SIZE(u_StC)
-!         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
-         if (Failed()) return;
-      enddo
-   enddo
-
-
-      ! Platform StrucCtrl
-   do j=1,p%NumSStC
-      do i=1,order
-!         call StC_CopyInput( Inputs(i)%SStC(j), u_StC(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-      enddo
-
-!      call StC_UpdateStates( t, n, u_StC, InputTimes, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-
-         ! destroy these for the next call to StC_UpdateStates (reset for next StC instance)
-      do i=1,SIZE(u_StC)
-!         call StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
-         if (Failed()) return;
-      enddo
-   enddo
-
-
    !...............................................................................................................................   
    ! get inputs at t:
    !...............................................................................................................................  
@@ -1176,6 +1217,64 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    CALL TipBrake_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       if (Failed()) return;
    
+   !...............................................................................................................................   
+   ! update states in StrucCtrl submodule, if necessary:
+   !...............................................................................................................................   
+   ! Nacelle StrucCtrl
+   do j=1,p%NumNStC
+      ! update the StC inputs with SrvD u(:) values
+      do i=1,p%InterpOrder+1
+         CALL Transfer_Point_to_Point( Inputs(i)%NStCMotionMesh(j), m%u_NStC(i,j)%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return;
+      enddo
+      !TODO: set inputs for StC controls channels from dll call above
+      !  -- If this is new timestep call, then move stored dll control values back in m%u_StC
+      call StC_UpdateStates( t, n, m%u_NStC(:,j), InputTimes, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+   enddo
+
+      ! Tower StrucCtrl
+   do j=1,p%NumTStC
+      ! update the StC inputs with SrvD u(:) values
+      do i=1,p%InterpOrder+1
+         CALL Transfer_Point_to_Point( Inputs(i)%TStCMotionMesh(j), m%u_TStC(i,j)%Mesh(1), m%SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return;
+      enddo
+      !TODO: set inputs for StC controls channels from dll call above
+      !  -- If this is new timestep call, then move stored dll control values back in m%u_StC
+      call StC_UpdateStates( t, n, m%u_TStC(:,j), InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+   enddo
+
+      ! Blade StrucCtrl
+   do j=1,p%NumBStC
+      do k=1,p%NumBl       ! number of blades
+         ! update the StC inputs with SrvD u(:) values
+         do i=1,p%InterpOrder+1
+            CALL Transfer_Point_to_Point( Inputs(i)%BStCMotionMesh(k,j), m%u_BStC(i,j)%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
+               if (Failed()) return;
+         enddo
+      enddo
+      !TODO: set inputs for StC controls channels from dll call above
+      !  -- If this is new timestep call, then move stored dll control values back in m%u_StC
+      call StC_UpdateStates( t, n, m%u_BStC(:,j), InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+   enddo
+
+      ! Platform StrucCtrl
+   do j=1,p%NumSStC
+      ! update the StC inputs with SrvD u(:) values
+      do i=1,p%InterpOrder+1
+         CALL Transfer_Point_to_Point( Inputs(i)%SStCMotionMesh(j), m%u_SStC(i,j)%Mesh(1), m%SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return;
+      enddo
+      !TODO: set inputs for StC controls channels from dll call above
+      !  -- If this is new timestep call, then move stored dll control values back in m%u_StC
+      call StC_UpdateStates( t, n, m%u_SStC(:,j), InputTimes, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+   enddo
+
+
    !...................................................................
    ! Compute ElecPwr and GenTrq for controller (and DLL needs this saved):
    !...................................................................
@@ -1199,13 +1298,6 @@ CONTAINS
       if (Failed)    call Cleanup()
    end function Failed
    SUBROUTINE Cleanup()
-      IF (ALLOCATED(u_StC)) THEN
-         DO i=1,SIZE(u_StC)
-            CALL StC_DestroyInput(u_StC(i), ErrStat2, ErrMsg2)
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         END DO
-         DEALLOCATE(u_StC)
-      END IF      
       CALL SrvD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    END SUBROUTINE Cleanup
@@ -1298,23 +1390,6 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! StrucCtrl
-   do j=1,p%NumNStC       ! Nacelle
-      CALL StC_CalcOutput( t, m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%y_NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   enddo
-   do j=1,p%NumTStC       ! Tower
-      CALL StC_CalcOutput( t, m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%y_TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   enddo
-   do j=1,p%NumBStC       ! Blades
-      CALL StC_CalcOutput( t, m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   enddo
-   do j=1,p%NumSStC    ! Platform
-      CALL StC_CalcOutput( t, m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%y_SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   enddo
    
    !...............................................................................................................................   
    ! Get the demanded values from the external Bladed dynamic link library, if necessary:
@@ -1366,6 +1441,67 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    CALL CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%CableDeltaL, y%CableDeltaLdot, m, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
+
+
+   !...............................................................................................................................   
+   ! Compute the StrucCtrl outputs
+   !...............................................................................................................................   
+   do j=1,p%NumNStC       ! Nacelle
+      ! Set inputs
+      CALL Transfer_Point_to_Point( u%NStCMotionMesh(j), m%u_NStC(1,j)%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      !TODO: add pass through of StC control channels here
+      ! call Calc
+      CALL StC_CalcOutput( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%y_NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      ! Set NStC outputs
+      CALL Transfer_Point_to_Point( m%y_NStC(j)%Mesh(1), y%NStCLoadMesh(j), m%SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat2, ErrMsg2, u%NStCMotionMesh(j), u%NStCMotionMesh(j) )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      !TODO: set output StC control channel info
+   enddo
+   do j=1,p%NumTStC       ! Tower
+      CALL Transfer_Point_to_Point( u%TStCMotionMesh(j), m%u_TStC(1,j)%Mesh(1), m%SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      !TODO: add pass through of StC control channels here
+      ! call Calc
+      CALL StC_CalcOutput( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%y_TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      ! Set TStC outputs
+      CALL Transfer_Point_to_Point( m%y_TStC(j)%Mesh(1), y%TStCLoadMesh(j), m%SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat2, ErrMsg2, u%TStCMotionMesh(j), u%TStCMotionMesh(j) )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      !TODO: set output StC control channel info
+   enddo
+   do j=1,p%NumBStC       ! Blades
+      ! Set inputs
+      do k=1,p%NumBl
+         CALL Transfer_Point_to_Point( u%BStCMotionMesh(k,j), m%u_BStC(1,j)%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      enddo
+      !TODO: add pass through of StC control channels here
+      ! call Calc
+      CALL StC_CalcOutput( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      ! Set BStC outputs
+      do k=1,p%NumBl
+         CALL Transfer_Point_to_Point( m%y_BStC(j)%Mesh(k), y%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      enddo
+      !TODO: set output StC control channel info
+   enddo
+   do j=1,p%NumSStC    ! Platform
+      ! Set inputs
+      CALL Transfer_Point_to_Point( u%SStCMotionMesh(j), m%u_SStC(1,j)%Mesh(1), m%SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      !TODO: add pass through of StC control channels here
+      ! call Calc
+      CALL StC_CalcOutput( t, m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%y_SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      ! Set SStC outputs
+      CALL Transfer_Point_to_Point( m%y_SStC(j)%Mesh(1), y%SStCLoadMesh(j), m%SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat2, ErrMsg2, u%SStCMotionMesh(j), u%SStCMotionMesh(j) )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+      !TODO: set output StC control channel info
+   enddo
+
 
 
    !...............................................................................................................................   
@@ -1425,19 +1561,19 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
 
          ! StrucCtrl
       do j=1,p%NumNStC       ! Nacelle
-         CALL StC_CalcContStateDeriv( t, m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 )
+         CALL StC_CalcContStateDeriv( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
       do j=1,p%NumTStC       ! Tower
-         CALL StC_CalcContStateDeriv( t, m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 )
+         CALL StC_CalcContStateDeriv( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
       do j=1,p%NumBStC       ! Blade
-         CALL StC_CalcContStateDeriv( t, m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
+         CALL StC_CalcContStateDeriv( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
       do j=1,p%NumSStC    ! Platform
-         CALL StC_CalcContStateDeriv( t, m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), dxdt%SStC(j), ErrStat2, ErrMsg2 )
+         CALL StC_CalcContStateDeriv( t, m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), dxdt%SStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
 
@@ -1500,19 +1636,19 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
 
       ! Update discrete states for StrucCtrl       --- StC does not currently support this
 !  do j=1,p%NumNStC       ! Nacelle
-!     CALL StC_UpdateDiscState( t, m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat, ErrMsg )
+!     CALL StC_UpdateDiscState( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumTStC       ! tower
-!     CALL StC_UpdateDiscState( t, m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat, ErrMsg )
+!     CALL StC_UpdateDiscState( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumBStC       ! Blade
-!     CALL StC_UpdateDiscState( t, m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
+!     CALL StC_UpdateDiscState( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumSStC    ! Platform
-!     CALL StC_UpdateDiscState( t, m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat, ErrMsg )
+!     CALL StC_UpdateDiscState( t, m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
          
@@ -1548,19 +1684,19 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
 
       ! Solve for the constraint states for StrucCtrl    --- StC does not currently support this
 !  do j=1,p%NumNStC       ! Nacelle
-!     CALL StC_CalcConstrStateResidual( t, m%u_NStC(j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), z_residual%NStC(j), ErrStat, ErrMsg )
+!     CALL StC_CalcConstrStateResidual( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), z_residual%NStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumTStC       ! Tower
-!     CALL StC_CalcConstrStateResidual( t, m%u_TStC(j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), z_residual%TStC(j), ErrStat, ErrMsg )
+!     CALL StC_CalcConstrStateResidual( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), z_residual%TStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumBStC       ! Blade
-!     CALL StC_CalcConstrStateResidual( t, m%u_BStC(j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
+!     CALL StC_CalcConstrStateResidual( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumSStC    ! Platform
-!     CALL StC_CalcConstrStateResidual( t, m%u_SStC(j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), z_residual%SStC(j), ErrStat, ErrMsg )
+!     CALL StC_CalcConstrStateResidual( t, m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), z_residual%SStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 

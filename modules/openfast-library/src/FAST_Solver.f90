@@ -3125,8 +3125,8 @@ CONTAINS
 
          IF ( p_FAST%CompServo == Module_SrvD .and. allocated(y_SrvD%SStCLoadMesh) ) THEN
             do k=1,size(y_SrvD%SStCLoadMesh)
-               IF (y_SrvD%SStCLoadMesh(j)%Committed) THEN      ! size 1 only for SStC
-                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(j), MeshMapData%u_SD_LMesh_2, MeshMapData%SStC_P_P_2_SD_P(k), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(j), y_SD2%Y2Mesh )
+               IF (y_SrvD%SStCLoadMesh(k)%Committed) THEN      ! size 1 only for SStC
+                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(k), MeshMapData%u_SD_LMesh_2, MeshMapData%SStC_P_P_2_SD_P(k), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(k), y_SD2%Y2Mesh )
                      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
                   MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
                   MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment    
