@@ -598,7 +598,7 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
    real(R8Ki)            :: R_hub2gl(3,3)
    real(R8Ki)            :: R_hub2bl(3,3)
    real(R8Ki)            :: R_gl2wt(3,3)
-   integer(IntKi)        :: iWT, iBld
+   integer(IntKi)        :: iWT, iB
    integer(IntKi)        :: errStat2      ! local status of error message
    character(ErrMsgLen)  :: errMsg2       ! local error message if ErrStat /= ErrID_None
    type(WTData), pointer :: wt ! Alias to shorten notation
@@ -610,10 +610,9 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
       wt => dvr%WT(iWT)
       ! WT base
       pos         = wt%originInit
-      !R_gl2wt     = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
-      !R_gl2wt     = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
       ! We initialize to indentity at first
-      CALL Eye(R_gl2wt, errStat2, errMsg2) 
+      !CALL Eye(R_gl2wt, errStat2, errMsg2) 
+      R_gl2wt = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
       orientation = R_gl2wt
       call CreatePointMesh(wt%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
 
@@ -646,11 +645,11 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
 !       InitInData%HubOrientation = matmul(wt%Rb2h0, wt%Rg2b0) ! Global 2 hub = base2hub x global2base
 
       R_hub2gl  = transpose(wt%hub%ptMesh%RefOrientation(:,:,1))
-      do iBld=1,wt%numBlades
-         R_hub2bl = EulerConstruct( wt%bld(iBld)%orientation_h ) ! Rotation matrix hub 2 blade (constant)
+      do iB=1,wt%numBlades
+         R_hub2bl = EulerConstruct( wt%bld(iB)%orientation_h ) ! Rotation matrix hub 2 blade (constant)
          orientation = matmul(R_hub2bl,  wt%hub%ptMesh%RefOrientation(:,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
-         pos         = wt%hub%ptMesh%Position(:,1) + matmul(R_hub2gl, wt%bld(iBld)%origin_h) +  wt%bld(iBld)%hubRad_bl*orientation(3,:) 
-         call CreatePointMesh(wt%bld(iBld)%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+         pos         = wt%hub%ptMesh%Position(:,1) + matmul(R_hub2gl, wt%bld(iB)%origin_h) +  wt%bld(iB)%hubRad_bl*orientation(3,:) 
+         call CreatePointMesh(wt%bld(iB)%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
       end do
 
       ! --- Mapping
@@ -664,20 +663,20 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
       call MeshMapCreate(wt%nac%ptMesh, wt%hub%ptMesh, wt%nac%map2hubPt, errStat2, errMsg2); if(Failed())return
       ! hub 2 bld
       allocate(wt%hub%map2bldPt(wt%numBlades))
-      do iBld=1,wt%numBlades
-         call MeshMapCreate(wt%hub%ptMesh, wt%bld(iBld)%ptMesh, wt%hub%map2bldPt(iBld), errStat2, errMsg2); if(Failed())return
+      do iB=1,wt%numBlades
+         call MeshMapCreate(wt%hub%ptMesh, wt%bld(iB)%ptMesh, wt%hub%map2bldPt(iB), errStat2, errMsg2); if(Failed())return
       enddo
       ! 
       ! --- NOTE: KEEP ME, this information would go well in a summary file...
       print*,'Nodes positions for turbine '//trim(num2lstr(iWT))//', (at t=0, without base or RNA motion)'
-      print*,'Bse: ',wt%ptMesh%Position
+      print*,'Bse: ',wt%ptMesh%Position + wt%ptMesh%TranslationDisp
       if (wt%hasTower) then
-         print*,'Twr: ',wt%twr%ptMesh%Position
+         print*,'Twr: ',wt%twr%ptMesh%Position + wt%twr%ptMesh%TranslationDisp
       endif
-      print*,'Nac: ',wt%nac%ptMesh%Position
-      print*,'Hub: ',wt%hub%ptMesh%Position
-      do iBld=1,wt%numBlades
-         print*,'Bld: ',wt%bld(iBld)%ptMesh%Position
+      print*,'Nac: ',wt%nac%ptMesh%Position + wt%nac%ptMesh%TranslationDisp
+      print*,'Hub: ',wt%hub%ptMesh%Position + wt%hub%ptMesh%TranslationDisp
+      do iB=1,wt%numBlades
+         print*,'Bld: ',wt%bld(iB)%ptMesh%Position + wt%bld(iB)%ptMesh%TranslationDisp
       enddo
    enddo
 
@@ -990,6 +989,16 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
          orientation_loc = EulerConstruct(theta)
          wt%bld(iB)%ptMesh%Orientation(:,:,1) = matmul(orientation_loc, wt%bld(iB)%ptMesh%Orientation(:,:,1))
       enddo
+
+      !print*,'Bse: ',wt%ptMesh%Position + wt%ptMesh%TranslationDisp
+      !if (wt%hasTower) then
+      !   print*,'Twr: ',wt%twr%ptMesh%Position + wt%twr%ptMesh%TranslationDisp
+      !endif
+      !print*,'Nac: ',wt%nac%ptMesh%Position + wt%nac%ptMesh%TranslationDisp
+      !print*,'Hub: ',wt%hub%ptMesh%Position + wt%hub%ptMesh%TranslationDisp
+      !do iB=1,wt%numBlades
+      !   print*,'Bld: ',wt%bld(iB)%ptMesh%Position + wt%bld(iB)%ptMesh%TranslationDisp
+      !enddo
    enddo ! Loop on wind turbines
 
 contains
