@@ -1942,7 +1942,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
 
    TYPE(AD_InputFile),      INTENT(INOUT) :: InputFileData   ! Data stored in the module's input file
-   INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
+   INTEGER(IntKi),          INTENT(INOUT) :: UnEcho          ! Unit number for the echo file
 
    INTEGER(IntKi),          INTENT(IN)    :: NumBlades(:)    ! Number of blades per rotor 
    INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
@@ -1964,7 +1964,6 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   UnEcho  = -1
    InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 
 
@@ -2351,18 +2350,17 @@ CONTAINS
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ParsePrimaryFileInfo' )
       Failed = ErrStat >= AbortErrLev
-      if (Failed) then
-         if (UnEc  > -1_IntKi)      CLOSE( UnEc )
-      endif
+      !if (Failed) then
+      !endif
    end function Failed
    logical function FailedNodal()
       ErrMsg_NoAllBldNdOuts='AD15 Nodal Outputs: Nodal output section of AeroDyn input file not found or improperly formatted. Skipping nodal outputs.'
-      if (ErrStat2 >= AbortErrLev ) then
+      FailedNodal = ErrStat2 >= AbortErrLev
+      if ( FailedNodal ) then
          InputFileData%BldNd_BladesOut = 0
          InputFileData%BldNd_NumOuts = 0
          call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       endif
-      FailedNodal = ErrStat2 >= AbortErrLev
    end function FailedNodal
    !-------------------------------------------------------------------------------------------------
 END SUBROUTINE ParsePrimaryFileInfo
