@@ -204,7 +204,6 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       call AllocAry( m%W(iW)%alpha_LL,        p%W(iW)%nSpan  , 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%alpha_LL= -999999_ReKi;
       call AllocAry( m%W(iW)%Vreln_LL,        p%W(iW)%nSpan  , 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vreln_LL = -999999_ReKi;
       ! Variables at control points/elements
-      call AllocAry( m%W(iW)%Gamma_LL,        p%W(iW)%nSpan, 'Lifting line Circulation', ErrStat2, ErrMsg2);call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Gamma_LL = -999999_ReKi;
       call AllocAry( m%W(iW)%CP_LL   , 3   ,  p%W(iW)%nSpan, 'Control points LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%CP_LL= -999999_ReKi;
       call AllocAry( m%W(iW)%Tang    , 3   ,  p%W(iW)%nSpan, 'Tangential vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Tang= -999999_ReKi;
       call AllocAry( m%W(iW)%Norm    , 3   ,  p%W(iW)%nSpan, 'Normal     vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Norm= -999999_ReKi;
