@@ -156,13 +156,15 @@ CONTAINS
 
 !====================================================================================================
 !>  This public subroutine parses the array of strings in InputFileData for the input parameters.
-SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, InputFileName, EchoFileName,  ErrStat, ErrMsg )
+SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, InputFileName, EchoFileName,  FixedWindFileRootName, TurbineID, ErrStat, ErrMsg )
 !----------------------------------------------------------------------------------------------------
 
    IMPLICIT NONE
    CHARACTER(*),              PARAMETER               :: RoutineName="InflowWind_ParseInputFileInfo"
 
       ! Passed variables
+   LOGICAL,                            INTENT(IN   )  :: FixedWindFileRootName!< Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)
+   INTEGER(IntKi),                     INTENT(IN   )  :: TurbineID            !< Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)
    TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData        !< Data of the InflowWind Input File
    TYPE(FileInfoType),                 INTENT(IN   )  :: InFileInfo           !< The derived type for holding the file information
    CHARACTER(*),                       INTENT(IN   )  :: PriPath              !< Path to InflowWind input files
@@ -290,6 +292,13 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%Uniform_FileName ) ) InputFileData%Uniform_FileName = TRIM(PriPath)//TRIM(InputFileData%Uniform_FileName)
+   IF ( FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+      IF ( TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
+         InputFileData%Uniform_FileName = TRIM(InputFileData%Uniform_FileName)//TRIM(PathSep)//'Low.dat'
+      ELSE                           ! FAST.Farm high-resolution domain(s)
+         InputFileData%Uniform_FileName = TRIM(InputFileData%Uniform_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(TurbineID))//'.dat'
+      ENDIF
+   ENDIF
 
    CALL ParseVar( InFileInfo, CurLine, "RefHt_Uni", InputFileData%Uniform_RefHt, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
@@ -308,6 +317,13 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%TSFF_FileName ) ) InputFileData%TSFF_FileName = TRIM(PriPath)//TRIM(InputFileData%TSFF_FileName)
+   IF ( FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+      IF ( TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
+         InputFileData%TSFF_FileName = TRIM(InputFileData%TSFF_FileName)//TRIM(PathSep)//'Low.bts'
+      ELSE                           ! FAST.Farm high-resolution domain(s)
+         InputFileData%TSFF_FileName = TRIM(InputFileData%TSFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(TurbineID))//'.bts'
+      ENDIF
+   ENDIF
 
    !-------------------------------------------------------------------------------------------------
    !> Read the _Parameters for Binary Bladed-style Full-Field files [used only for WindType = 4]_ section
@@ -361,7 +377,19 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_w ) ) InputFileData%HAWC_FileName_w = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_w)
-
+   
+   IF ( FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+      IF ( TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
+         InputFileData%HAWC_FileName_u = TRIM(InputFileData%HAWC_FileName_u)//TRIM(PathSep)//'Low_u.bin'
+         InputFileData%HAWC_FileName_v = TRIM(InputFileData%HAWC_FileName_v)//TRIM(PathSep)//'Low_v.bin'
+         InputFileData%HAWC_FileName_w = TRIM(InputFileData%HAWC_FileName_w)//TRIM(PathSep)//'Low_w.bin'
+      ELSE                           ! FAST.Farm high-resolution domain(s)
+         InputFileData%HAWC_FileName_u = TRIM(InputFileData%HAWC_FileName_u)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(TurbineID))//'_u.bin'
+         InputFileData%HAWC_FileName_v = TRIM(InputFileData%HAWC_FileName_v)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(TurbineID))//'_v.bin'
+         InputFileData%HAWC_FileName_w = TRIM(InputFileData%HAWC_FileName_w)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(TurbineID))//'_w.bin'
+      ENDIF
+   ENDIF
+   
    CALL ParseVar( InFileInfo, CurLine, "nx", InputFileData%HAWC_nx, TmpErrStat, TmpErrMsg, UnEc )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
@@ -1446,7 +1474,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          ENDDO
       ENDIF
 
-
+      
       !---------------------------------
       !  
 

@@ -751,8 +751,8 @@ p%Table(iTable)%UA_BL%C_lalpha = p%Table(iTable)%UA_BL%C_nalpha
 !               CALL SetErrStat( ErrID_Fatal &
                CALL SetErrStat( ErrID_Warn, &
                   'Airfoil data should go from -180 degrees to 180 degrees and the coefficients at the ends should be the same.', ErrStat, ErrMsg, RoutineName )
-               CALL Cleanup()
-               RETURN
+               !CALL Cleanup()
+               !RETURN
             ENDIF
          ENDIF ! ( .NOT. p%Table(iTable)%ConstData )
 

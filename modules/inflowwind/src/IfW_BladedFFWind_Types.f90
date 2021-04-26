@@ -40,6 +40,8 @@ IMPLICIT NONE
     LOGICAL  :: TowerFileExist      !< Tower file exists [-]
     INTEGER(IntKi)  :: SumFileUnit      !< Unit number for the summary file (-1 for none).  Provided by IfW. [-]
     LOGICAL  :: NativeBladedFmt      !< Whether this is native Bladed (needs wind profile and TI scaling) or not [-]
+    INTEGER(IntKi)  :: TurbineID = 0      !< Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm) [-]
+    LOGICAL  :: FixedWindFileRootName = .FALSE.      !< Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm) [-]
   END TYPE IfW_BladedFFWind_InitInputType
 ! =======================
 ! =========  IfW_BladedFFWind_InitOutputType  =======
@@ -80,6 +82,8 @@ CONTAINS
     DstInitInputData%TowerFileExist = SrcInitInputData%TowerFileExist
     DstInitInputData%SumFileUnit = SrcInitInputData%SumFileUnit
     DstInitInputData%NativeBladedFmt = SrcInitInputData%NativeBladedFmt
+    DstInitInputData%TurbineID = SrcInitInputData%TurbineID
+    DstInitInputData%FixedWindFileRootName = SrcInitInputData%FixedWindFileRootName
  END SUBROUTINE IfW_BladedFFWind_CopyInitInput
 
  SUBROUTINE IfW_BladedFFWind_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -132,6 +136,8 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! TowerFileExist
       Int_BufSz  = Int_BufSz  + 1  ! SumFileUnit
       Int_BufSz  = Int_BufSz  + 1  ! NativeBladedFmt
+      Int_BufSz  = Int_BufSz  + 1  ! TurbineID
+      Int_BufSz  = Int_BufSz  + 1  ! FixedWindFileRootName
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -168,6 +174,10 @@ CONTAINS
     IntKiBuf(Int_Xferred) = InData%SumFileUnit
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%NativeBladedFmt, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%TurbineID
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%FixedWindFileRootName, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE IfW_BladedFFWind_PackInitInput
 
@@ -207,6 +217,10 @@ CONTAINS
     OutData%SumFileUnit = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NativeBladedFmt = TRANSFER(IntKiBuf(Int_Xferred), OutData%NativeBladedFmt)
+    Int_Xferred = Int_Xferred + 1
+    OutData%TurbineID = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%FixedWindFileRootName = TRANSFER(IntKiBuf(Int_Xferred), OutData%FixedWindFileRootName)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE IfW_BladedFFWind_UnPackInitInput
 

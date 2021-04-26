@@ -380,7 +380,8 @@ The CMake options specific to OpenFAST and their default settings are:
     GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules
     ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
-    OPENMP                         - Enable OpenMP parallelization in FVW (Default: OFF)
+    OPENMP                         - Enable OpenMP support (Default: OFF)
+    BUILD_FAST_FARM                - Enable FAST.Farm capabilities (Default: OFF)
 
 Additional system-specific options may exist for a given system, but those
 should not impact the OpenFAST configuration. As mentioned above, the
@@ -640,6 +641,25 @@ compile the C++ interface.
 
     # Compile the C++ API
     make openfastcpplib
+
+FAST.Farm
+~~~~~~~~~
+The FAST.Farm glue-code is included in the CMake project similar to the
+OpenFAST glue-code. See :ref:`compile_from_source` for a full description
+on installing dependencies, configuring the project, and compiling.
+FAST.Farm is enabled in the CMake project with an additional flag:
+
+.. code-block:: bash
+
+    # Enable compiling FAST.Farm
+    cmake .. -DBUILD_FASTFARM:BOOL=ON
+
+    # Compile FAST.Farm
+    make FAST.Farm
+
+OpenMP-Fortran is an additional dependency for FAST.Farm. These libraries
+can be installed with any package manager for macOS and Linux or
+through the Intel oneAPI distributions.
 
 .. _installation_appendix:
 

@@ -103,6 +103,8 @@ typedef  ^                       InitInputType     CHARACTER(1024)   InputFileNa
 typedef  ^                       ^                 LOGICAL           Linearize         -   .FALSE. -     "Flag that tells this module if the glue code wants to linearize." -
 typedef  ^                       ^                 LOGICAL           Use4Dext          -   .FALSE. -     "Flag that tells this module if an external module will pass it 4-D velocity grids." -
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
+typedef  ^                       ^                 IntKi             TurbineID         -     0     -     "Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)"                                     -
+typedef  ^                       ^                 LOGICAL           FixedWindFileRootName - .FALSE. -   "Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)" -
 typedef  ^                       ^                 LOGICAL           UseInputFile      -   .TRUE.  -     "Should we read everthing from an input file, or do we get it some other way" -
 typedef  ^                       ^                 CHARACTER(1024)	RootName          -     -     -     "RootName for writing output files"
 typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
