@@ -276,7 +276,11 @@ subroutine Dvr_TimeStep(nt, dvr, AD, IW, errStat, errMsg)
 
 
    ! VTK outputs
-   if (dvr%out%WrVTK>0) then
+   if (dvr%out%WrVTK==1 .and. nt==1) then
+      ! Init only
+      call WrVTK_Surfaces(time, dvr, dvr%out, nt-1, AD)
+   else if (dvr%out%WrVTK==2) then
+      ! Animation
       call WrVTK_Surfaces(time, dvr, dvr%out, nt-1, AD)
    endif
 

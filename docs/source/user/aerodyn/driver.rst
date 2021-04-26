@@ -311,7 +311,7 @@ The user can control the hub radius and nacelle dimension for the VTK visualizat
     ----- Output Settings -------------------------------------------------------------------
       "ES15.8E2"     OutFmt      - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
     2                OutFileFmt  - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
-    0                WrVTK       - VTK visualization data output: (switch) {0=none; 1=animation}
+    0                WrVTK       - VTK visualization data output: (switch) {0=none; 1=init; 2=animation}
     2                VTKHubRad   - HubRadius for VTK visualization (m)
     -1,-1,-1,2,2,2   VTKNacDim   - Nacelle Dimension for VTK visualization x0,y0,z0,Lx,Ly,Lz (m)
 
@@ -448,7 +448,7 @@ An example of an AeroDyn driver for a basic inflow, basic HAWT, and combined cas
     ----- Output Settings -------------------------------------------------------------------
     "ES15.8E2"       OutFmt      - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
     2                OutFileFmt  - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
-    0                WrVTK       - VTK visualization data output: (switch) {0=none; 1=animation}
+    0                WrVTK       - VTK visualization data output: (switch) {0=none; 1=init; 2=animation}
     2                VTKHubRad   - HubRadius for VTK visualization (m)
     -1,-1,-1,2,2,2   VTKNacDim   - Nacelle Dimension for VTK visualization x0,y0,z0,Lx,Ly,Lz (m)
 
