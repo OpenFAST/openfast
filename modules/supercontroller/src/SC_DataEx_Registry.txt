@@ -1,0 +1,36 @@
+###################################################################################################################################
+# Registry for SuperController DataExchange types in the FAST Modularization Framework
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# File last committed $Date$
+# (File) Revision #: $Rev$
+# URL: $HeadURL$
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include	Registry_NWTC_Library.txt
+
+
+
+# ..... SC_DX_InitInputType data .......................................................................................................
+typedef	SCDataEx/SC_DX	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of turbine specific controller inputs [from supercontroller]"	-
+typedef	^  ^	IntKi	NumSC2CtrlGlob	-	-	-	"number of global controller inputs [from supercontroller]"	-
+typedef	^	^	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
+
+# ..... SuperController_InitOutputType data .......................................................................................................
+# Define outputs from the initialization routine here:
+typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+
+# ..... MiscVars ................................................................................................................
+
+# ..... Parameters ................................................................................................................
+typedef	SCDataEx/SC_DX	ParameterType	Logical	useSC	-	.FALSE.	-	"Flag that tells this module if supercontroller is on."	-
+
+# ..... SC_DX_InputType data .......................................................................................................
+typedef	SCDataEx/SC_DX	InputType	ReKi	toSC	{:}	-	-	"inputs to the super controller (from the turbine controller)"	-
+
+# ..... SC_DX_OutputType data .......................................................................................................
+typedef	SCDataEx/SC_DX	OutputType	ReKi	fromSC	{:}	-	-	"global outputs of the super controller (to the turbine controller)"	-
+typedef	SCDataEx/SC_DX	OutputType	ReKi	fromSCglob	{:}	-	-	"turbine specific outputs of the super controller (to the turbine controller)"	-

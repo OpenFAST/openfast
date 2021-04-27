@@ -25,4 +25,5 @@ Details on the transition from FAST v8 to OpenFAST may be found in :numref:`fast
    servodyn-stc/StC_index.rst
    fast_to_openfast.rst
    cppapi/index.rst
+   fast.farm/index.rst
 

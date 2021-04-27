@@ -2038,7 +2038,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
 
    ! Initialization
-   ErrStat  =  0
+   ErrStat  =  ErrId_None
    ErrMsg   =  ""
    UnEc   = -1     ! Echo file unit.  >0 when used
 
