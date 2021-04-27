@@ -1134,6 +1134,7 @@ SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, p_AD, ErrStat, ErrMsg )
 
       ! Set the parameter to store number of requested Blade Node output sets
    p%BldNd_NumOuts = InputFileData%BldNd_NumOuts
+   if (p%BldNd_BladesOut==0) p%BldNd_NumOuts = 0
 
       ! Set the total number of outputs ( requested channel groups * number requested nodes * number requested blades )
    p%BldNd_TotNumOuts = p%BldNd_NumOuts*p%NumBlNds*p%BldNd_BladesOut    ! p%BldNd_NumOuts * size(p%BldNd_BlOutNd) * size(p%BldNd_BladesOut)
