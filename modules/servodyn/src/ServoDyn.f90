@@ -136,6 +136,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    TYPE(SrvD_InputFile)                           :: InputFileData  ! Data stored in the module's input file
    TYPE(StC_InitInputType)                        :: StC_InitInp    ! data to initialize StC module
    TYPE(StC_InitOutputType)                       :: StC_InitOut    ! data from StC module initialization (not used)
+   character(64),       allocatable               :: StCControlRequestor(:)  !< text string of which StC requests which cable control channel
    INTEGER(IntKi)                                 :: i              ! loop counter
    INTEGER(IntKi)                                 :: j              ! loop counter
    INTEGER(IntKi)                                 :: K              ! loop counter
@@ -407,6 +408,10 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Setup and initialize the StC controls interface
       !............................................................................................
 
+      ! Setup the StC_CtrlChans
+   call StC_CtrlChan_Setup(p,p%NumStC_Control,StCControlRequestor,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
 
       !............................................................................................
       ! Setup and initialize the cable controls -- could be from Simulink or DLL
@@ -448,7 +453,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%AirDens      = InitInp%AirDens
       p%AvgWindSpeed = InitInp%AvgWindSpeed
       
-      CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, UnSum, ErrStat2, ErrMsg2 )
+      CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, StCControlRequestor, UnSum, ErrStat2, ErrMsg2 )
          if (Failed())  return;
          
       m%LastTimeCalled   = - m%dll_data%DLL_DT  ! we'll initialize the last time the DLL was called as -1 DLL_DT.
@@ -1057,6 +1062,26 @@ contains
       CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 end subroutine StC_Substruc_Setup
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the control channels for the StCs
+!!    These control channel signals are then passed back to all StC and they will pick out only the channels they are linking to
+subroutine StC_CtrlChan_Setup(p,NumStC_Control,StCControlRequestor,ErrStat,ErrMsg)
+   type(SrvD_ParameterType),                    intent(in   )  :: p                       !< Parameters
+   integer(IntKi),                              intent(  out)  :: NumStC_Control          !< Number of StC_control channels requested
+   character(64),       allocatable,            intent(  out)  :: StCControlRequestor(:)  !< text string of which StC requests which cable control channel
+   integer(IntKi),                              intent(  out)  :: ErrStat                 !< Error status of the operation
+   character(*),                                intent(  out)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
+
+NumStC_Control=0_IntKi
+!  Cycle through all StC
+!     -  check chan info
+!     -  check multiple same channel designations and warn
+!  Set total number p%NumStC_Control
+!  Allocate StCControlRequestor
+!  Cycle through all StC again
+!     -  set requestor info
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
@@ -4078,19 +4103,18 @@ SUBROUTINE StCControl_CalcOutput( t, u, p, x, xd, z, OtherState, StC_CmdStiff, S
       !...................................................................
       ! Calculate the cable control channels
       !...................................................................
-!FIXME: check how I'm dealing with p%CCmode equivalent here
+!FIXME: check how I'm dealing with p%StC_Cmode equivalent here
       SELECT CASE ( p%CCmode )  ! Which cable control are we using? 
          ! Nothing.  Note that these might be allocated if no control signals were requested from any modules
          CASE ( ControlMode_NONE )
-            StC_CmdStiff   = 0.0_ReKi
-         ! User-defined from Simulink or LabVIEW.
-         CASE ( ControlMode_EXTERN )
-!            if (allocated(u%ExternalCableDeltaL)) then
-!               CableDeltaL(   1:p%NumCableControl) = u%ExternalCableDeltaL(   1:p%NumCableControl)
-!            endif
-!            if (allocated(u%ExternalCableDeltaLdot)) then
-!               CableDeltaLdot(1:p%NumCableControl) = u%ExternalCableDeltaLdot(1:p%NumCableControl)
-!            endif
+            if (allocated(StC_CmdStiff))  StC_CmdStiff   = 0.0_ReKi
+            if (allocated(StC_CmdDamp ))  StC_CmdDamp    = 0.0_ReKi
+            if (allocated(StC_CmdBrake))  StC_CmdBrake   = 0.0_ReKi
+         CASE ( ControlMode_EXTERN )   ! user defined from external (often Simulink)
+            ! NOTE: this option is not enabled in the cpp api yet
+            if (allocated(StC_CmdStiff))  StC_CmdStiff   = 0.0_ReKi
+            if (allocated(StC_CmdDamp ))  StC_CmdDamp    = 0.0_ReKi
+            if (allocated(StC_CmdBrake))  StC_CmdBrake   = 0.0_ReKi
          ! User-defined cable control from Bladed-style DLL
          CASE ( ControlMode_DLL )
             if (p%DLL_Ramp) then

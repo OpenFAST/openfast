@@ -2010,13 +2010,13 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       ! Check control modes
    IF (  InputFileData%StC_CMODE /= ControlMode_None     .and. &
          InputFileData%StC_CMODE /= CMODE_Semi           .and. &
-         InputFileData%StC_CMode /= CMODE_ActiveEXTERN   .and. &
          InputFileData%StC_CMode /= CMODE_ActiveDLL ) &
-      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active), 4 (active with Simulink control),'// &
+         !InputFileData%StC_CMode /= CMODE_ActiveEXTERN   .and. &    ! Not an option at the moment --> 4 (active with Simulink control),
+      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active),'// &
             ' or 5 (active with DLL control) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
 
       ! Check control channel
-   if ( InputFileData%StC_CMode == CMODE_ActiveEXTERN .or. InputFileData%StC_CMode == CMODE_ActiveDLL ) then
+   if ( InputFileData%StC_CMode == CMODE_ActiveDLL ) then
       if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept ) then
          call SetErrStat( ErrID_Fatal, 'Control mode 4 (active with Simulink control), or 5 (active with DLL control) '// &
                'can only be used with independent DOF (StC_DOF_Mode=1) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
@@ -2031,8 +2031,8 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
          enddo
       endif
       do i=1,InitInp%NumMeshPts     ! Check we are in range of number of control channel groups
-         if ( InputFileData%StC_CChan(i) < 1 .or. InputFileData%StC_CChan(i) > 10 ) then
-            call SetErrStat( ErrID_Fatal, 'Control channel (StC_CChan) must be between 1 and 10 when StC_CMode=4 or StC_CMode=5.', ErrStat, ErrMsg, RoutineName )
+         if ( InputFileData%StC_CChan(i) < 0 .or. InputFileData%StC_CChan(i) > 10 ) then
+            call SetErrStat( ErrID_Fatal, 'Control channel (StC_CChan) must be between 0 (off) and 10 when StC_CMode=5.', ErrStat, ErrMsg, RoutineName )
          endif
       enddo
    endif
@@ -2201,6 +2201,14 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
       call AllocAry( p%StC_PrescribedForce, size(InputFileData%StC_PrescribedForce,1), size(InputFileData%StC_PrescribedForce,2),"Array of force data", ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName);  if (ErrStat >= ErrID_Fatal) return
       p%StC_PrescribedForce = InputFileData%StC_PrescribedForce
+   endif
+
+   ! StC Control channels
+   call AllocAry( p%StC_CChan, size(InputFileData%StC_CChan), 'p%StC_CChan', ErrStat2, ErrMsg2 )
+   if (p%StC_CMODE == CMODE_ActiveDLL ) then
+      p%StC_CChan = InputFileData%StC_CChan
+   else
+      p%StC_CChan = 0   ! turn off regardless of input file request.
    endif
 
 END SUBROUTINE StC_SetParameters
