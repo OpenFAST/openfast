@@ -1131,9 +1131,14 @@ subroutine StC_CtrlChan_Setup(p,NumStC_Control,StCControlRequestor,ErrStat,ErrMs
    do i=1,NumStC_Control
       if (ChanUsed(i)>1) then
          call SetErrStat(ErrID_Warn,NewLine//' Multiple StC instances using StC control channel '//&
-               '#'//trim(Num2LStr(i))//' from controller: '//trim(StCControlRequestor(i)),ErrStat,ErrMsg,RoutineName)
+               '#'//trim(Num2LStr(i))//' from controller: '//trim(StCControlRequestor(i))//'.'//&
+               ' StC outputs to controller will be averaged.',ErrStat,ErrMsg,RoutineName)
       endif
    enddo
+!FIXME: set initial values to pass to controller for first call
+!dll_data%PrevStCCmdStiff(1:3,I)
+!dll_data%PrevStCCmdDamp( 1:3,I)
+!dll_data%PrevStCCmdBrake(1:3,I)
 
    call Cleanup()
 contains
@@ -1143,14 +1148,14 @@ contains
       integer(IntKi), allocatable, intent(in) :: CChan(:)      ! Channel request set from that StC instance
       do j=1,size(CChan)
          if (CChan(j) > 0) then
-            ChanUsed = ChanUsed + 1
-            if (len_trim(StCControlRequestor(iNum))>1) then
-               StCControlRequestor(iNum) = trim(StCControlRequestor(iNum))//', '//Location//'StC'//trim(Num2LStr(iNum))
+            ChanUsed(CChan(j)) = ChanUsed(CChan(j)) + 1
+            if (len_trim(StCControlRequestor(CChan(j)))>1) then
+               StCControlRequestor(CChan(j)) = trim(StCControlRequestor(CChan(j)))//', '//Location//'StC'//trim(Num2LStr(iNum))
             else
-               StCControlRequestor(iNum) = Location//'StC'//trim(Num2LStr(iNum))
+               StCControlRequestor(CChan(j)) = Location//'StC'//trim(Num2LStr(iNum))
             endif
             ! Name blade number if needed
-            if (Location=='B') StCControlRequestor(iNum) = trim(StCControlRequestor(iNum))//'_B'//trim(Num2LStr(j))
+            if (Location=='B') StCControlRequestor(CChan(j)) = trim(StCControlRequestor(CChan(j)))//'_B'//trim(Num2LStr(j))
          endif
       enddo
    end subroutine ChanCheck
@@ -1170,7 +1175,6 @@ contains
    subroutine Cleanup()    ! Ignore any errors here
       if (allocated(ChanUsed))   deallocate(ChanUsed)
    end subroutine Cleanup
-
 end subroutine StC_CtrlChan_Setup
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1465,7 +1469,7 @@ SUBROUTINE DLL_controller_call(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
             m%FirstWarn = .FALSE.
          END IF
       ELSE
-         m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom(1:p%NumBl)  ! used for linear ramp of delayed signal
+         call StorePrevDLLdata()
          m%LastTimeCalled = t
 
          CALL BladedInterface_CalcOutput( t, u, p, m, ErrStat2, ErrMsg2 )
@@ -1475,6 +1479,27 @@ SUBROUTINE DLL_controller_call(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       END IF
       
    !END IF
+
+CONTAINS
+   ! Store old values for linear ramping
+   subroutine StorePrevDLLdata()
+      m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom(1:p%NumBl)
+      ! airfoil controls:
+      if (p%AFCmode == ControlMode_DLL) then
+         m%dll_data%PrevBlAirfoilCom(1:p%NumBl) = m%dll_data%BlAirfoilCom(1:p%NumBl)
+      endif
+      ! for Cable controls:
+      if (p%NumCableControl > 0) then
+         m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
+         m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
+      endif
+      ! for StC active controls:
+      if (p%NumStC_Control > 0) then
+         m%dll_data%PrevStCCmdStiff(1:3,1:p%NumStC_Control) = m%dll_data%StCCmdStiff(1:3,1:p%NumStC_Control)
+         m%dll_data%PrevStCCmdDamp( 1:3,1:p%NumStC_Control) = m%dll_data%StCCmdDamp( 1:3,1:p%NumStC_Control)
+         m%dll_data%PrevStCCmdBrake(1:3,1:p%NumStC_Control) = m%dll_data%StCCmdBrake(1:3,1:p%NumStC_Control)
+      endif
+   end subroutine StorePrevDLLdata
    
 END SUBROUTINE DLL_controller_call
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4127,7 +4152,7 @@ SUBROUTINE CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, CableDeltaL, 
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      if (.not. allocated(CableDeltaL) .or. .not. allocated(CableDeltaLdot))     return
+      if (.not. allocated(CableDeltaL) .or. .not. allocated(CableDeltaLdot) .or. (p%NumCableControl<=0))     return
 
 
       !...................................................................
@@ -4175,9 +4200,9 @@ SUBROUTINE StCControl_CalcOutput( t, u, p, x, xd, z, OtherState, StC_CmdStiff, S
    TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
    TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
    TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
-   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdStiff(:)    !< StC_CmdStiff command signals
-   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdDamp(:)    !< StC_CmdDamp command signals
-   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdBrake(:)    !< StC_CmdBrake command signals
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdStiff(:,:)  !< StC_CmdStiff command signals (3,p%NumStC_Control)
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdDamp(:,:)   !< StC_CmdDamp  command signals (3,p%NumStC_Control)
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdBrake(:,:)  !< StC_CmdBrake command signals (3,p%NumStC_Control)
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m                  !< Misc (optimization) variables
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat            !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
@@ -4187,41 +4212,37 @@ SUBROUTINE StCControl_CalcOutput( t, u, p, x, xd, z, OtherState, StC_CmdStiff, S
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      if (.not. allocated(StC_CmdStiff) .or. .not. allocated(StC_CmdDamp) .or. .not. allocated(StC_CmdBrake))     return
-
+         ! Only proceed if we have have StC controls with the extended swap and legacy interface
+      if (p%NumStC_Control <= 0 .or. .not. p%UseLegacyInterface .or. .not. p%EXavrSWAP)    return
+      if (.not. allocated(StC_CmdStiff) .or. .not. allocated(StC_CmdDamp) .or. .not. allocated(StC_CmdBrake)) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = "StC control signal matrices not allocated.  Programming error somewhere."
+         return
+      endif
 
       !...................................................................
-      ! Calculate the cable control channels
+      ! Calculate the cable control channels -- NOTE: each StC instance will only use the channel data if StC_CMODE is set to 
       !...................................................................
-!FIXME: check how I'm dealing with p%StC_Cmode equivalent here
-      SELECT CASE ( p%CCmode )  ! Which cable control are we using? 
-         ! Nothing.  Note that these might be allocated if no control signals were requested from any modules
-         CASE ( ControlMode_NONE )
-            if (allocated(StC_CmdStiff))  StC_CmdStiff   = 0.0_ReKi
-            if (allocated(StC_CmdDamp ))  StC_CmdDamp    = 0.0_ReKi
-            if (allocated(StC_CmdBrake))  StC_CmdBrake   = 0.0_ReKi
-         CASE ( ControlMode_EXTERN )   ! user defined from external (often Simulink)
-            ! NOTE: this option is not enabled in the cpp api yet
-            if (allocated(StC_CmdStiff))  StC_CmdStiff   = 0.0_ReKi
-            if (allocated(StC_CmdDamp ))  StC_CmdDamp    = 0.0_ReKi
-            if (allocated(StC_CmdBrake))  StC_CmdBrake   = 0.0_ReKi
          ! User-defined cable control from Bladed-style DLL
-         CASE ( ControlMode_DLL )
-            if (p%DLL_Ramp) then
-               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
-!               CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
-!                                 factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
-            else
-!               CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
-            end if
-      END SELECT
-
-!m%dll_data%PrevStC_CmdStiff
-!m%dll_data%PrevStC_CmdDamp
-!m%dll_data%PrevStC_CmdBrake
-!m%dll_data%StC_CmdStiff
-!m%dll_data%StC_CmdDamp
-!m%dll_data%StC_CmdBrake
+      if (p%DLL_Ramp) then
+         factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+         if (allocated(StC_CmdStiff)) then
+            StC_CmdStiff(1:3,1:p%NumStC_Control)    = m%dll_data%PrevStCCmdStiff(1:3,1:p%NumStC_Control) + &
+                         factor * ( m%dll_data%StCCmdStiff(1:3,1:p%NumStC_Control) - m%dll_data%PrevStCCmdStiff(1:3,1:p%NumStC_Control) )
+         endif
+         if (allocated(StC_CmdDamp)) then
+            StC_CmdDamp(1:3,1:p%NumStC_Control)    = m%dll_data%PrevStCCmdDamp(1:3,1:p%NumStC_Control) + &
+                         factor * ( m%dll_data%StCCmdDamp(1:3,1:p%NumStC_Control) - m%dll_data%PrevStCCmdDamp(1:3,1:p%NumStC_Control) )
+         endif
+         if (allocated(StC_CmdBrake)) then
+            StC_CmdBrake(1:3,1:p%NumStC_Control)    = m%dll_data%PrevStCCmdBrake(1:3,1:p%NumStC_Control) + &
+                         factor * ( m%dll_data%StCCmdBrake(1:3,1:p%NumStC_Control) - m%dll_data%PrevStCCmdBrake(1:3,1:p%NumStC_Control) )
+         endif
+      else
+         if (allocated(StC_CmdStiff))  StC_CmdStiff(1:3,1:p%NumStC_Control) = m%dll_data%StCCmdStiff(1:3,1:p%NumStC_Control)
+         if (allocated(StC_CmdDamp))   StC_CmdDamp( 1:3,1:p%NumStC_Control) = m%dll_data%StCCmdDamp( 1:3,1:p%NumStC_Control)
+         if (allocated(StC_CmdBrake))  StC_CmdBrake(1:3,1:p%NumStC_Control) = m%dll_data%StCCmdBrake(1:3,1:p%NumStC_Control)
+      end if
 END SUBROUTINE StCControl_CalcOutput
 
 END MODULE ServoDyn
