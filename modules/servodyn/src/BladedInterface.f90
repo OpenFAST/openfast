@@ -410,7 +410,7 @@ SUBROUTINE BladedInterface_Init(u, p, m, y, InputFileData, InitInp, StCControlRe
             p%DLL_Trgt%ProcName(2) = p%DLL_Trgt%ProcName(1)   ! we won't call the separate controller_init routine the first time
             p%DLL_Trgt%ProcAddr(2) = p%DLL_Trgt%ProcAddr(1)
          elseif (ErrStat2 == ErrID_Fatal) then
-            CALL CheckError(ErrID_Info,'Error opening BLADED interface DLL. Checking for legacy DLL.')
+            CALL CheckError(ErrID_Info,'Unable to open BLADED interface DLL. Checking for legacy DLL.')
             CALL FreeDynamicLib( p%DLL_Trgt, ErrStat2, ErrMsg2 )  ! this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL)
             p%UseLegacyInterface = .true. ! Bladed checks for the legacy version if it can't find the CONTROLL function in the DLL, so that's what we'll have to do, too
          end if
