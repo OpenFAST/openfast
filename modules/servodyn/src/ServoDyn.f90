@@ -1073,15 +1073,105 @@ subroutine StC_CtrlChan_Setup(p,NumStC_Control,StCControlRequestor,ErrStat,ErrMs
    integer(IntKi),                              intent(  out)  :: ErrStat                 !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
 
-NumStC_Control=0_IntKi
-!  Cycle through all StC
-!     -  check chan info
-!     -  check multiple same channel designations and warn
-!  Set total number p%NumStC_Control
-!  Allocate StCControlRequestor
-!  Cycle through all StC again
-!     -  set requestor info
-end subroutine
+   integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
+   character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)             :: i              ! Counter for the input interp order
+   integer(IntKi)             :: j              ! Counter for the instances
+   integer(IntKi),allocatable :: ChanUsed(:)    ! To check if a channel number was requested and by whom
+   character(*), parameter    :: RoutineName = 'StC_CtrlChan_Setup'
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   ! Step through all StC instances to find total number of channels
+   NumStC_Control=0_IntKi
+   do i=1,p%NumBStC  ! Blade
+      do j=1,size(p%BStC(i)%StC_CChan)
+         if (p%BStC(i)%StC_CChan(j) > 0)     NumStC_Control = NumStC_Control + 1
+      enddo
+   enddo
+   do i=1,p%NumNStC  ! Nacelle
+      do j=1,size(p%NStC(i)%StC_CChan)
+         if (p%NStC(i)%StC_CChan(j) > 0)     NumStC_Control = NumStC_Control + 1
+      enddo
+   enddo
+   do i=1,p%NumTStC  ! Tower
+      do j=1,size(p%TStC(i)%StC_CChan)
+         if (p%TStC(i)%StC_CChan(j) > 0)     NumStC_Control = NumStC_Control + 1
+      enddo
+   enddo
+   do i=1,p%NumSStC  ! SubStructure
+      do j=1,size(p%SStC(i)%StC_CChan)
+         if (p%SStC(i)%StC_CChan(j) > 0)     NumStC_Control = NumStC_Control + 1
+      enddo
+   enddo
+
+   if (NumStC_Control==0) return    ! No reason to do anything else
+
+   ! Allocate StCControlRequestor
+   allocate(StCControlRequestor(NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate StCControlRequestor array') ) return;
+   allocate(ChanUsed(NumStC_Control),            STAT=ErrStat2);  if ( AllErr('Could not allocate ChanUsed array') ) return;
+   ChanUsed = 0
+
+   ! Set info about which StC requested which channel
+   do i=1,p%NumBStC  ! Blade
+      call ChanCheck(i,'B',p%BStC(i)%StC_CChan)
+   enddo
+   do i=1,p%NumNStC  ! Nacelle
+      call ChanCheck(i,'N',p%NStC(i)%StC_CChan)
+   enddo
+   do i=1,p%NumTStC  ! Tower
+      call ChanCheck(i,'T',p%TStC(i)%StC_CChan)
+   enddo
+   do i=1,p%NumSStC  ! SubStructure
+      call ChanCheck(i,'S',p%SStC(i)%StC_CChan)
+   enddo
+
+   ! Warn about duplicate channels
+   do i=1,NumStC_Control
+      if (ChanUsed(i)>1) then
+         call SetErrStat(ErrID_Warn,NewLine//' Multiple StC instances using StC control channel '//&
+               '#'//trim(Num2LStr(i))//' from controller: '//trim(StCControlRequestor(i)),ErrStat,ErrMsg,RoutineName)
+      endif
+   enddo
+
+   call Cleanup()
+contains
+   subroutine ChanCheck(iNum,Location,CChan)    ! Assemble info about who requested which channel
+      integer(IntKi),              intent(in) :: iNum          ! instance number
+      character(1),                intent(in) :: Location      ! Type of StC
+      integer(IntKi), allocatable, intent(in) :: CChan(:)      ! Channel request set from that StC instance
+      do j=1,size(CChan)
+         if (CChan(j) > 0) then
+            ChanUsed = ChanUsed + 1
+            if (len_trim(StCControlRequestor(iNum))>1) then
+               StCControlRequestor(iNum) = trim(StCControlRequestor(iNum))//', '//Location//'StC'//trim(Num2LStr(iNum))
+            else
+               StCControlRequestor(iNum) = Location//'StC'//trim(Num2LStr(iNum))
+            endif
+            ! Name blade number if needed
+            if (Location=='B') StCControlRequestor(iNum) = trim(StCControlRequestor(iNum))//'_B'//trim(Num2LStr(j))
+         endif
+      enddo
+   end subroutine ChanCheck
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   logical function AllErr(Msg)
+      character(*), intent(in) :: Msg
+      if(ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, Msg, ErrStat, ErrMsg, RoutineName )
+      endif
+      AllErr = ErrStat >= AbortErrLev
+      if (AllErr)    call Cleanup()
+   end function AllErr
+   subroutine Cleanup()    ! Ignore any errors here
+      if (allocated(ChanUsed))   deallocate(ChanUsed)
+   end subroutine Cleanup
+
+end subroutine StC_CtrlChan_Setup
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
