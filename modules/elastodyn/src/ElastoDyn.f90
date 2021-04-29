@@ -28,6 +28,8 @@ MODULE ElastoDyn
 
    USE ED_UserSubs         ! <- module not in the FAST Framework!
 
+   USE ElastoDyn_AllBldNdOuts_IO
+
    IMPLICIT NONE
 
    PRIVATE
@@ -98,6 +100,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    INTEGER(IntKi)                               :: i, K                    ! loop counters
    LOGICAL, PARAMETER                           :: GetAdamsVals = .FALSE.  ! Determines if we should read Adams values and create (update) an Adams model
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   REAL(R8Ki)                                   :: TransMat(3,3)            ! Initial rotation matrix at Platform Refz
 
 
       ! Initialize variables for this routine
@@ -214,10 +217,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       ! Define initialization-routine output here:
       !............................................................................................
-   CALL AllocAry( InitOut%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', ErrStat2, ErrMsg2 )
+   CALL AllocAry( InitOut%WriteOutputHdr, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputHdr', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-   CALL AllocAry( InitOut%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', ErrStat2, ErrMsg2 )
+
+   CALL AllocAry( InitOut%WriteOutputUnt, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputUnt', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -225,6 +229,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
       InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
    end do
+
+      ! Set the info in WriteOutputHdr and WriteOutputUnt
+   CALL AllBldNdOuts_InitOut( InitOut, p, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
       
    InitOut%Ver         = ED_Ver
    InitOut%NumBl       = p%NumBl
@@ -232,10 +241,21 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%BladeLength = p%TipRad - p%HubRad
    InitOut%TowerHeight = p%TwrFlexL
    InitOut%TowerBaseHeight = p%TowerBsHt
+
+   ! Platform reference point wrt to global origin (0,0,0)
    InitOut%PlatformPos = x%QT(1:6)
+   CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
+   InitOut%PlatformPos(1) = InitOut%PlatformPos(1) - TransMat(3,1)*p%PtfmRefzt
+   InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
+   InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
+
    InitOut%HubHt       = p%HubHt
-   InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
+   InitOut%TwrBasePos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
+   InitOut%TwrBaseOrient = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
+   InitOut%RotSpeed    = p%RotSpeed
+   InitOut%isFixed_GenDOF = .not. InputFileData%GenDOF
+   
 
    if (.not. p%BD4Blades) then
       ALLOCATE(InitOut%BldRNodes(p%BldNodes),  STAT=ErrStat2)
@@ -305,7 +325,7 @@ CONTAINS
       CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
 
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
       !............................................................................................................................
       ! Set error status/message;
@@ -518,6 +538,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    REAL(R8Ki)                   :: TmpVec2   (NDims)                               ! A temporary vector.
 
    REAL(ReKi)                   :: LinAccES (NDims,0:p%TipNode,p%NumBl)            ! Total linear acceleration of a point on a   blade (point S) in the inertia frame (body E for earth).
+   REAL(ReKi)                   :: AngAccEK (NDims,0:p%TipNode,p%NumBl)            ! Total rotational acceleration of a point on a blade (point S) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: LinAccET (NDims,0:p%TwrNodes)                   ! Total linear acceleration of a point on the tower (point T) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: AngAccEF (NDims,0:p%TwrNodes)                   ! Total angular acceleration of tower element J (body F) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: FrcS0B   (NDims,p%NumBl)                        ! Total force at the blade root (point S(0)) due to the blade.
@@ -654,9 +675,10 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       DO J = 0,p%TipNode ! Loop through the blade nodes / elements
 
          LinAccES(:,J,K) = m%RtHS%LinAccESt(:,K,J)
-
+         AngAccEK(:,J,K) = m%RtHs%AngAccEKt(:,J,K)
          DO I = 1,p%DOFs%NPSE(K)  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
             LinAccES(:,J,K) = LinAccES(:,J,K) + m%RtHS%PLinVelES(K,J,p%DOFs%PSE(K,I),0,:)*m%QD2T(p%DOFs%PSE(K,I))
+            AngAccEK(:,J,K) = AngAccEK(:,J,K) + m%RtHS%PAngVelEM(K,J,p%DOFs%PSE(K,I),0,:)*m%QD2T(p%DOFs%PSE(K,I))
          ENDDO             ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
 
       ENDDO             ! J - Blade nodes / elements
@@ -855,12 +877,20 @@ END IF
 
    rOPO     = m%RtHS%rT0O - p%TwrFlexL*m%CoordSys%a2 ! Position vector from the undeflected tower top (point O prime) to the deflected tower top (point O).
 
+   ! p%TwrNodes+1 is the tower top:
+   J = p%TwrNodes+1
+   m%AllOuts(TwrTpTDxi) =     m%RtHS%rO(1) - y%TowerLn2Mesh%Position(1,J)
+   m%AllOuts(TwrTpTDyi) = -1.*m%RtHS%rO(3) - y%TowerLn2Mesh%Position(2,J)
+   m%AllOuts(TwrTpTDzi) =     m%RtHS%rO(2) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
    m%AllOuts(YawBrTDxp) =  DOT_PRODUCT(     rOPO, m%CoordSys%b1 )
    m%AllOuts(YawBrTDyp) = -DOT_PRODUCT(     rOPO, m%CoordSys%b3 )
    m%AllOuts(YawBrTDzp) =  DOT_PRODUCT(     rOPO, m%CoordSys%b2 )
    m%AllOuts(YawBrTDxt) =  DOT_PRODUCT(     rOPO, m%CoordSys%a1 )
    m%AllOuts(YawBrTDyt) = -DOT_PRODUCT(     rOPO, m%CoordSys%a3 )
    m%AllOuts(YawBrTDzt) =  DOT_PRODUCT(     rOPO, m%CoordSys%a2 )
+   m%AllOuts(YawBrTVxp) =  DOT_PRODUCT( m%RtHS%LinVelEO, m%CoordSys%b1 )
+   m%AllOuts(YawBrTVyp) = -DOT_PRODUCT( m%RtHS%LinVelEO, m%CoordSys%b3 )
+   m%AllOuts(YawBrTVzp) =  DOT_PRODUCT( m%RtHS%LinVelEO, m%CoordSys%b2 )  
    m%AllOuts(YawBrTAxp) =  DOT_PRODUCT( LinAccEO, m%CoordSys%b1 )
    m%AllOuts(YawBrTAyp) = -DOT_PRODUCT( LinAccEO, m%CoordSys%b3 )
    m%AllOuts(YawBrTAzp) =  DOT_PRODUCT( LinAccEO, m%CoordSys%b2 )
@@ -1225,11 +1255,8 @@ END IF
    m%AllOuts( QD_Y     ) = x%QDT(  DOF_Y       )
 
    m%AllOuts( QD2_B1E1 ) = m%QD2T( DOF_BE(1,1) )
-   m%AllOuts( QD2_B2E1 ) = m%QD2T( DOF_BE(2,1) )
    m%AllOuts( QD2_B1F1 ) = m%QD2T( DOF_BF(1,1) )
-   m%AllOuts( QD2_B2F1 ) = m%QD2T( DOF_BF(2,1) )
    m%AllOuts( QD2_B1F2 ) = m%QD2T( DOF_BF(1,2) )
-   m%AllOuts( QD2_B2F2 ) = m%QD2T( DOF_BF(2,2) )
    m%AllOuts( QD2_DrTr ) = m%QD2T( DOF_DrTr    )
    m%AllOuts( QD2_GeAz ) = m%QD2T( DOF_GeAz    )
    m%AllOuts( QD2_RFrl ) = m%QD2T( DOF_RFrl    )
@@ -1255,6 +1282,10 @@ IF ( p%NumBl > 1 ) THEN
    m%AllOuts( QD_B2E1  ) = x%QDT(  DOF_BE(2,1) )
    m%AllOuts( QD_B2F1  ) = x%QDT(  DOF_BF(2,1) )
    m%AllOuts( QD_B2F2  ) = x%QDT(  DOF_BF(2,2) )
+
+   m%AllOuts( QD2_B2E1 ) = m%QD2T( DOF_BE(2,1) )
+   m%AllOuts( QD2_B2F1 ) = m%QD2T( DOF_BF(2,1) )
+   m%AllOuts( QD2_B2F2 ) = m%QD2T( DOF_BF(2,2) )
    
    IF ( p%NumBl > 2 ) THEN
       m%AllOuts( Q_B3E1   ) = x%QT(   DOF_BE(3,1) )
@@ -1286,7 +1317,15 @@ END IF
 
    ENDDO             ! I - All selected output channels
 
-   
+   IF ( .NOT. p%BD4Blades ) THEN
+      y%WriteOutput(p%NumOuts+1:) = 0.0_ReKi
+
+         ! Now we need to populate the blade node outputs here
+      call Calc_WriteAllBldNdOutput( p, u, m, y, LinAccES, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ED_CalcOutput')
+   ENDIF
+
+
    !...............................................................................................................................
    ! Outputs required for AeroDyn
    !...............................................................................................................................
@@ -1331,11 +1370,6 @@ END IF
                y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     m%CoordSys%te2(K,J2,2)
                y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     m%CoordSys%te3(K,J2,2)
                
-                  ! Translational Acceleration (for water-power request for added mass calculations)
-               y%BladeLn2Mesh(K)%TranslationAcc(1,NodeNum) =     LinAccES(1,J2,K)
-               y%BladeLn2Mesh(K)%TranslationAcc(2,NodeNum) = -1.*LinAccES(3,J2,K)
-               y%BladeLn2Mesh(K)%TranslationAcc(3,NodeNum) =     LinAccES(2,J2,K)  
-               
             else         
                   ! Translational Displacement (first calculate absolute position)
                y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
@@ -1357,12 +1391,27 @@ END IF
                ! Translational Displacement (get displacement, not absolute position):
             y%BladeLn2Mesh(K)%TranslationDisp(:,NodeNum) = y%BladeLn2Mesh(K)%TranslationDisp(:,NodeNum) - y%BladeLn2Mesh(K)%Position(:,NodeNum)
             
-           
                ! Translational Velocity
             y%BladeLn2Mesh(K)%TranslationVel(1,NodeNum) =     m%RtHS%LinVelES(1,J2,K)
             y%BladeLn2Mesh(K)%TranslationVel(2,NodeNum) = -1.*m%RtHS%LinVelES(3,J2,K)
             y%BladeLn2Mesh(K)%TranslationVel(3,NodeNum) =     m%RtHS%LinVelES(2,J2,K)  
-                                                
+            
+               ! Rotational Velocity
+            y%BladeLn2Mesh(K)%RotationVel(1,NodeNum) =     m%RtHS%AngVelEM(1,J2,K)
+            y%BladeLn2Mesh(K)%RotationVel(2,NodeNum) = -1.*m%RtHS%AngVelEM(3,J2,K)
+            y%BladeLn2Mesh(K)%RotationVel(3,NodeNum) =     m%RtHS%AngVelEM(2,J2,K)  
+
+               ! Translational Acceleration
+            y%BladeLn2Mesh(K)%TranslationAcc(1,NodeNum) =     LinAccES(1,J2,K)
+            y%BladeLn2Mesh(K)%TranslationAcc(2,NodeNum) = -1.*LinAccES(3,J2,K)
+            y%BladeLn2Mesh(K)%TranslationAcc(3,NodeNum) =     LinAccES(2,J2,K)  
+
+               ! Rotational Acceleration
+            y%BladeLn2Mesh(K)%RotationAcc(1,NodeNum)     =     AngAccEK(1,J2,K)
+            y%BladeLn2Mesh(K)%RotationAcc(2,NodeNum)     = -1.*AngAccEK(3,J2,K)
+            y%BladeLn2Mesh(K)%RotationAcc(3,NodeNum)     =     AngAccEK(2,J2,K) 
+               
+            
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
                   
       END DO !K = 1,p%NumBl
@@ -2005,8 +2054,12 @@ SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
+   CALL AllBldNdOuts_SetParameters( p, InputFileData, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+    !p%BldNd_NumOuts = 0_IntKi
+    !p%BldNd_TotNumOuts = 0_IntKi
 
-   
 CONTAINS
    !...............................................................................................................................
    SUBROUTINE CheckError(ErrID,Msg)
@@ -2059,11 +2112,12 @@ SUBROUTINE Init_DOFparameters( InputFileData, p, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
-   IF ( p%NumBl == 2 )  THEN
+   IF ( p%NumBl == 1 )  THEN
+      p%NDOF = 18 
+   ELSEIF ( p%NumBl == 2 )  THEN
       p%NDOF = 22
    ELSE
-      p%NDOF = 24
+      p%NDOF = ED_MaxDOFs
    ENDIF
 
    p%NAug = p%NDOF + 1
@@ -2969,7 +3023,7 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
       ErrMsg = ' Error allocating memory for the PAngVelEL array.'
       RETURN
    ENDIF
-   ALLOCATE ( RtHS%PAngVelEM(p%NumBl,p%TipNode,p%NDOF,0:1,Dims) , STAT=ErrStat )
+   ALLOCATE ( RtHS%PAngVelEM(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims) , STAT=ErrStat )
    IF ( ErrStat /= 0_IntKi )  THEN
       ErrStat = ErrID_Fatal
       ErrMsg = ' Error allocating memory for the PAngVelEM array.'
@@ -2989,10 +3043,11 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
    !CALL AllocAry( RtHS%LinVelET,  Dims, p%TwrNodes,         'LinVelET',  ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN         
 
    !CALL AllocAry( RtHS%LinVelESm2,                 p%NumBl, 'LinVelESm2',ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN ! The m2-component (closest to tip) of LinVelES
-   ALLOCATE( RtHS%LinVelES( Dims, 0:p%TipNode, p%NumBl ), STAT=ErrStat )
+   ALLOCATE( RtHS%LinVelES( Dims, 0:p%TipNode, p%NumBl ), &
+             RtHS%AngVelEM( Dims, 0:p%TipNode, p%NumBl ), STAT=ErrStat )
    IF (ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = RoutineName//":Error allocating LinVelES."
+      ErrMsg = RoutineName//":Error allocating LinVelES and AngVelEM."
       RETURN
    END IF
    
@@ -3093,7 +3148,19 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
       ErrMsg = ' Error allocating memory for LinAccESt.'
       RETURN
    ENDIF
+   ALLOCATE ( RtHS%AngAccEKt( Dims, 0:p%TipNode, p%NumBl ) , STAT=ErrStat )
+   IF ( ErrStat /= 0_IntKi )  THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = ' Error allocating memory for AngAccEKt.'
+      RETURN
+   ENDIF
 
+   ALLOCATE(RtHS%AngPosHM(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat )
+   IF ( ErrStat /= 0_IntKi )  THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = ' Error allocating memory for the AngPosHM arrays.'
+      RETURN
+   ENDIF
 
    !CALL AllocAry( RtHS%LinAccESt, Dims, p%NumBl, p%TipNode,'LinAccESt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    !CALL AllocAry( RtHS%LinAccETt, Dims, p%TwrNodes,        'LinAccETt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
@@ -3112,7 +3179,6 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
    CALL AllocAry( RtHS%FSAero,    Dims, p%NumBl,p%BldNodes,'FSAero',    ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%MMAero,    Dims, p%NumBl,p%BldNodes,'MMAero',    ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%FSTipDrag, Dims, p%NumBl,           'FSTipDrag', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%AngPosHM,  Dims, p%NumBl,p%TipNode, 'AngPosHM',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%PFTHydro,  Dims, p%TwrNodes, p%NDOF,'PFTHydro',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%PMFHydro,  Dims, p%TwrNodes, p%NDOF,'PMFHydro',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( RtHS%FTHydrot,  Dims, p%TwrNodes,        'FTHydrot',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
@@ -3844,27 +3910,29 @@ END SUBROUTINE Init_MiscOtherStates
 ! NOTE: The following lines of code were generated by a Matlab script called "Write_ChckOutLst.m"
 !      using the parameters listed in the "OutListParameters.xlsx" Excel file. Any changes to these 
 !      lines should be modified in the Matlab script and/or Excel worksheet as necessary. 
-! This code was generated by Write_ChckOutLst.m at 02-Mar-2015 10:37:31.
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a 
+!! warning if any of the channels are not available outputs from the module.
+!!  It assigns the settings for OutParam(:) (i.e, the index, name, and units of the output channels, WriteOutput(:)).
+!!  the sign is set to 0 if the channel is invalid.
+!! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
+!! 
+!! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 25-Jan-2021 13:23:51.
 SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
-! This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a 
-! warning if any of the channels are not available outputs from the module.
-!  It assigns the settings for OutParam(:) (i.e, the index, name, and units of the output channels, WriteOutput(:)).
-!  the sign is set to 0 if the channel is invalid.
-! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
 !..................................................................................................................................
 
    IMPLICIT                        NONE
 
       ! Passed variables
 
-   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        ! The list out user-requested outputs
-   TYPE(ED_ParameterType),    INTENT(INOUT)  :: p                                 ! The module parameters
-   INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           ! The error status code
-   CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            ! The error message, if an error occurred
+   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list out user-requested outputs
+   TYPE(ED_ParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
+   CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
 
       ! Local variables
 
+   INTEGER                      :: ErrStat2                                        ! temporary (local) error status
    INTEGER                      :: I                                               ! Generic loop-counting index
    INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
@@ -3873,427 +3941,380 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
    LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
    CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
+   CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(972) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "AZIMUTH  ","BLDPITCH1","BLDPITCH2","BLDPITCH3","BLPITCH1 ","BLPITCH2 ","BLPITCH3 ", &
-                               "GENACCEL ","GENSPEED ","HSSBRTQ  ","HSSHFTA  ","HSSHFTPWR","HSSHFTTQ ","HSSHFTV  ", &
-                               "IPDEFL1  ","IPDEFL2  ","IPDEFL3  ","LSSGAGA  ","LSSGAGAXA","LSSGAGAXS","LSSGAGFXA", &
-                               "LSSGAGFXS","LSSGAGFYA","LSSGAGFYS","LSSGAGFZA","LSSGAGFZS","LSSGAGMXA","LSSGAGMXS", &
-                               "LSSGAGMYA","LSSGAGMYS","LSSGAGMZA","LSSGAGMZS","LSSGAGP  ","LSSGAGPXA","LSSGAGPXS", &
-                               "LSSGAGV  ","LSSGAGVXA","LSSGAGVXS","LSSHFTFXA","LSSHFTFXS","LSSHFTFYA","LSSHFTFYS", &
-                               "LSSHFTFZA","LSSHFTFZS","LSSHFTMXA","LSSHFTMXS","LSSHFTPWR","LSSHFTTQ ","LSSTIPA  ", &
-                               "LSSTIPAXA","LSSTIPAXS","LSSTIPMYA","LSSTIPMYS","LSSTIPMZA","LSSTIPMZS","LSSTIPP  ", &
-                               "LSSTIPPXA","LSSTIPPXS","LSSTIPV  ","LSSTIPVXA","LSSTIPVXS","NACYAW   ","NACYAWA  ", &
-                               "NACYAWP  ","NACYAWV  ","NCIMURAXS","NCIMURAYS","NCIMURAZS","NCIMURVXS","NCIMURVYS", &
-                               "NCIMURVZS","NCIMUTAXS","NCIMUTAYS","NCIMUTAZS","NCIMUTVXS","NCIMUTVYS","NCIMUTVZS", &
-                               "OOPDEFL1 ","OOPDEFL2 ","OOPDEFL3 ","PTCHDEFL1","PTCHDEFL2","PTCHDEFL3","PTCHPMZB1", &
-                               "PTCHPMZB2","PTCHPMZB3","PTCHPMZC1","PTCHPMZC2","PTCHPMZC3","PTFMHEAVE","PTFMPITCH", &
-                               "PTFMRAXI ","PTFMRAXT ","PTFMRAYI ","PTFMRAYT ","PTFMRAZI ","PTFMRAZT ","PTFMRDXI ", &
-                               "PTFMRDYI ","PTFMRDZI ","PTFMROLL ","PTFMRVXI ","PTFMRVXT ","PTFMRVYI ","PTFMRVYT ", &
-                               "PTFMRVZI ","PTFMRVZT ","PTFMSURGE","PTFMSWAY ","PTFMTAXI ","PTFMTAXT ","PTFMTAYI ", &
-                               "PTFMTAYT ","PTFMTAZI ","PTFMTAZT ","PTFMTDXI ","PTFMTDXT ","PTFMTDYI ","PTFMTDYT ", &
-                               "PTFMTDZI ","PTFMTDZT ","PTFMTVXI ","PTFMTVXT ","PTFMTVYI ","PTFMTVYT ","PTFMTVZI ", &
-                               "PTFMTVZT ","PTFMYAW  ","QD2_B1E1 ","QD2_B1F1 ","QD2_B1F2 ","QD2_B2E1 ","QD2_B2F1 ", &
-                               "QD2_B2F2 ","QD2_B3E1 ","QD2_B3F1 ","QD2_B3F2 ","QD2_DRTR ","QD2_GEAZ ","QD2_HV   ", &
-                               "QD2_P    ","QD2_R    ","QD2_RFRL ","QD2_SG   ","QD2_SW   ","QD2_TEET ","QD2_TFA1 ", &
-                               "QD2_TFA2 ","QD2_TFRL ","QD2_TSS1 ","QD2_TSS2 ","QD2_Y    ","QD2_YAW  ","QD_B1E1  ", &
-                               "QD_B1F1  ","QD_B1F2  ","QD_B2E1  ","QD_B2F1  ","QD_B2F2  ","QD_B3E1  ","QD_B3F1  ", &
-                               "QD_B3F2  ","QD_DRTR  ","QD_GEAZ  ","QD_HV    ","QD_P     ","QD_R     ","QD_RFRL  ", &
-                               "QD_SG    ","QD_SW    ","QD_TEET  ","QD_TFA1  ","QD_TFA2  ","QD_TFRL  ","QD_TSS1  ", &
-                               "QD_TSS2  ","QD_Y     ","QD_YAW   ","Q_B1E1   ","Q_B1F1   ","Q_B1F2   ","Q_B2E1   ", &
-                               "Q_B2F1   ","Q_B2F2   ","Q_B3E1   ","Q_B3F1   ","Q_B3F2   ","Q_DRTR   ","Q_GEAZ   ", &
-                               "Q_HV     ","Q_P      ","Q_R      ","Q_RFRL   ","Q_SG     ","Q_SW     ","Q_TEET   ", &
-                               "Q_TFA1   ","Q_TFA2   ","Q_TFRL   ","Q_TSS1   ","Q_TSS2   ","Q_Y      ","Q_YAW    ", &
-                               "RFRLBRM  ","ROLLDEFL1","ROLLDEFL2","ROLLDEFL3","ROOTFXB1 ","ROOTFXB2 ","ROOTFXB3 ", &
-                               "ROOTFXC1 ","ROOTFXC2 ","ROOTFXC3 ","ROOTFYB1 ","ROOTFYB2 ","ROOTFYB3 ","ROOTFYC1 ", &
-                               "ROOTFYC2 ","ROOTFYC3 ","ROOTFZB1 ","ROOTFZB2 ","ROOTFZB3 ","ROOTFZC1 ","ROOTFZC2 ", &
-                               "ROOTFZC3 ","ROOTMEDG1","ROOTMEDG2","ROOTMEDG3","ROOTMFLP1","ROOTMFLP2","ROOTMFLP3", &
-                               "ROOTMIP1 ","ROOTMIP2 ","ROOTMIP3 ","ROOTMOOP1","ROOTMOOP2","ROOTMOOP3","ROOTMXB1 ", &
-                               "ROOTMXB2 ","ROOTMXB3 ","ROOTMXC1 ","ROOTMXC2 ","ROOTMXC3 ","ROOTMYB1 ","ROOTMYB2 ", &
-                               "ROOTMYB3 ","ROOTMYC1 ","ROOTMYC2 ","ROOTMYC3 ","ROOTMZB1 ","ROOTMZB2 ","ROOTMZB3 ", &
-                               "ROOTMZC1 ","ROOTMZC2 ","ROOTMZC3 ","ROTACCEL ","ROTFURL  ","ROTFURLA ","ROTFURLP ", &
-                               "ROTFURLV ","ROTPWR   ","ROTSPEED ","ROTTEETA ","ROTTEETP ","ROTTEETV ","ROTTHRUST", &
-                               "ROTTORQ  ","SPN1ALXB1","SPN1ALXB2","SPN1ALXB3","SPN1ALYB1","SPN1ALYB2","SPN1ALYB3", &
-                               "SPN1ALZB1","SPN1ALZB2","SPN1ALZB3","SPN1FLXB1","SPN1FLXB2","SPN1FLXB3","SPN1FLYB1", &
-                               "SPN1FLYB2","SPN1FLYB3","SPN1FLZB1","SPN1FLZB2","SPN1FLZB3","SPN1MLXB1","SPN1MLXB2", &
-                               "SPN1MLXB3","SPN1MLYB1","SPN1MLYB2","SPN1MLYB3","SPN1MLZB1","SPN1MLZB2","SPN1MLZB3", &
-                               "SPN1RDXB1","SPN1RDXB2","SPN1RDXB3","SPN1RDYB1","SPN1RDYB2","SPN1RDYB3","SPN1RDZB1", &
-                               "SPN1RDZB2","SPN1RDZB3","SPN1TDXB1","SPN1TDXB2","SPN1TDXB3","SPN1TDYB1","SPN1TDYB2", &
-                               "SPN1TDYB3","SPN1TDZB1","SPN1TDZB2","SPN1TDZB3","SPN2ALXB1","SPN2ALXB2","SPN2ALXB3", &
-                               "SPN2ALYB1","SPN2ALYB2","SPN2ALYB3","SPN2ALZB1","SPN2ALZB2","SPN2ALZB3","SPN2FLXB1", &
-                               "SPN2FLXB2","SPN2FLXB3","SPN2FLYB1","SPN2FLYB2","SPN2FLYB3","SPN2FLZB1","SPN2FLZB2", &
-                               "SPN2FLZB3","SPN2MLXB1","SPN2MLXB2","SPN2MLXB3","SPN2MLYB1","SPN2MLYB2","SPN2MLYB3", &
-                               "SPN2MLZB1","SPN2MLZB2","SPN2MLZB3","SPN2RDXB1","SPN2RDXB2","SPN2RDXB3","SPN2RDYB1", &
-                               "SPN2RDYB2","SPN2RDYB3","SPN2RDZB1","SPN2RDZB2","SPN2RDZB3","SPN2TDXB1","SPN2TDXB2", &
-                               "SPN2TDXB3","SPN2TDYB1","SPN2TDYB2","SPN2TDYB3","SPN2TDZB1","SPN2TDZB2","SPN2TDZB3", &
-                               "SPN3ALXB1","SPN3ALXB2","SPN3ALXB3","SPN3ALYB1","SPN3ALYB2","SPN3ALYB3","SPN3ALZB1", &
-                               "SPN3ALZB2","SPN3ALZB3","SPN3FLXB1","SPN3FLXB2","SPN3FLXB3","SPN3FLYB1","SPN3FLYB2", &
-                               "SPN3FLYB3","SPN3FLZB1","SPN3FLZB2","SPN3FLZB3","SPN3MLXB1","SPN3MLXB2","SPN3MLXB3", &
-                               "SPN3MLYB1","SPN3MLYB2","SPN3MLYB3","SPN3MLZB1","SPN3MLZB2","SPN3MLZB3","SPN3RDXB1", &
-                               "SPN3RDXB2","SPN3RDXB3","SPN3RDYB1","SPN3RDYB2","SPN3RDYB3","SPN3RDZB1","SPN3RDZB2", &
-                               "SPN3RDZB3","SPN3TDXB1","SPN3TDXB2","SPN3TDXB3","SPN3TDYB1","SPN3TDYB2","SPN3TDYB3", &
-                               "SPN3TDZB1","SPN3TDZB2","SPN3TDZB3","SPN4ALXB1","SPN4ALXB2","SPN4ALXB3","SPN4ALYB1", &
-                               "SPN4ALYB2","SPN4ALYB3","SPN4ALZB1","SPN4ALZB2","SPN4ALZB3","SPN4FLXB1","SPN4FLXB2", &
-                               "SPN4FLXB3","SPN4FLYB1","SPN4FLYB2","SPN4FLYB3","SPN4FLZB1","SPN4FLZB2","SPN4FLZB3", &
-                               "SPN4MLXB1","SPN4MLXB2","SPN4MLXB3","SPN4MLYB1","SPN4MLYB2","SPN4MLYB3","SPN4MLZB1", &
-                               "SPN4MLZB2","SPN4MLZB3","SPN4RDXB1","SPN4RDXB2","SPN4RDXB3","SPN4RDYB1","SPN4RDYB2", &
-                               "SPN4RDYB3","SPN4RDZB1","SPN4RDZB2","SPN4RDZB3","SPN4TDXB1","SPN4TDXB2","SPN4TDXB3", &
-                               "SPN4TDYB1","SPN4TDYB2","SPN4TDYB3","SPN4TDZB1","SPN4TDZB2","SPN4TDZB3","SPN5ALXB1", &
-                               "SPN5ALXB2","SPN5ALXB3","SPN5ALYB1","SPN5ALYB2","SPN5ALYB3","SPN5ALZB1","SPN5ALZB2", &
-                               "SPN5ALZB3","SPN5FLXB1","SPN5FLXB2","SPN5FLXB3","SPN5FLYB1","SPN5FLYB2","SPN5FLYB3", &
-                               "SPN5FLZB1","SPN5FLZB2","SPN5FLZB3","SPN5MLXB1","SPN5MLXB2","SPN5MLXB3","SPN5MLYB1", &
-                               "SPN5MLYB2","SPN5MLYB3","SPN5MLZB1","SPN5MLZB2","SPN5MLZB3","SPN5RDXB1","SPN5RDXB2", &
-                               "SPN5RDXB3","SPN5RDYB1","SPN5RDYB2","SPN5RDYB3","SPN5RDZB1","SPN5RDZB2","SPN5RDZB3", &
-                               "SPN5TDXB1","SPN5TDXB2","SPN5TDXB3","SPN5TDYB1","SPN5TDYB2","SPN5TDYB3","SPN5TDZB1", &
-                               "SPN5TDZB2","SPN5TDZB3","SPN6ALXB1","SPN6ALXB2","SPN6ALXB3","SPN6ALYB1","SPN6ALYB2", &
-                               "SPN6ALYB3","SPN6ALZB1","SPN6ALZB2","SPN6ALZB3","SPN6FLXB1","SPN6FLXB2","SPN6FLXB3", &
-                               "SPN6FLYB1","SPN6FLYB2","SPN6FLYB3","SPN6FLZB1","SPN6FLZB2","SPN6FLZB3","SPN6MLXB1", &
-                               "SPN6MLXB2","SPN6MLXB3","SPN6MLYB1","SPN6MLYB2","SPN6MLYB3","SPN6MLZB1","SPN6MLZB2", &
-                               "SPN6MLZB3","SPN6RDXB1","SPN6RDXB2","SPN6RDXB3","SPN6RDYB1","SPN6RDYB2","SPN6RDYB3", &
-                               "SPN6RDZB1","SPN6RDZB2","SPN6RDZB3","SPN6TDXB1","SPN6TDXB2","SPN6TDXB3","SPN6TDYB1", &
-                               "SPN6TDYB2","SPN6TDYB3","SPN6TDZB1","SPN6TDZB2","SPN6TDZB3","SPN7ALXB1","SPN7ALXB2", &
-                               "SPN7ALXB3","SPN7ALYB1","SPN7ALYB2","SPN7ALYB3","SPN7ALZB1","SPN7ALZB2","SPN7ALZB3", &
-                               "SPN7FLXB1","SPN7FLXB2","SPN7FLXB3","SPN7FLYB1","SPN7FLYB2","SPN7FLYB3","SPN7FLZB1", &
-                               "SPN7FLZB2","SPN7FLZB3","SPN7MLXB1","SPN7MLXB2","SPN7MLXB3","SPN7MLYB1","SPN7MLYB2", &
-                               "SPN7MLYB3","SPN7MLZB1","SPN7MLZB2","SPN7MLZB3","SPN7RDXB1","SPN7RDXB2","SPN7RDXB3", &
-                               "SPN7RDYB1","SPN7RDYB2","SPN7RDYB3","SPN7RDZB1","SPN7RDZB2","SPN7RDZB3","SPN7TDXB1", &
-                               "SPN7TDXB2","SPN7TDXB3","SPN7TDYB1","SPN7TDYB2","SPN7TDYB3","SPN7TDZB1","SPN7TDZB2", &
-                               "SPN7TDZB3","SPN8ALXB1","SPN8ALXB2","SPN8ALXB3","SPN8ALYB1","SPN8ALYB2","SPN8ALYB3", &
-                               "SPN8ALZB1","SPN8ALZB2","SPN8ALZB3","SPN8FLXB1","SPN8FLXB2","SPN8FLXB3","SPN8FLYB1", &
-                               "SPN8FLYB2","SPN8FLYB3","SPN8FLZB1","SPN8FLZB2","SPN8FLZB3","SPN8MLXB1","SPN8MLXB2", &
-                               "SPN8MLXB3","SPN8MLYB1","SPN8MLYB2","SPN8MLYB3","SPN8MLZB1","SPN8MLZB2","SPN8MLZB3", &
-                               "SPN8RDXB1","SPN8RDXB2","SPN8RDXB3","SPN8RDYB1","SPN8RDYB2","SPN8RDYB3","SPN8RDZB1", &
-                               "SPN8RDZB2","SPN8RDZB3","SPN8TDXB1","SPN8TDXB2","SPN8TDXB3","SPN8TDYB1","SPN8TDYB2", &
-                               "SPN8TDYB3","SPN8TDZB1","SPN8TDZB2","SPN8TDZB3","SPN9ALXB1","SPN9ALXB2","SPN9ALXB3", &
-                               "SPN9ALYB1","SPN9ALYB2","SPN9ALYB3","SPN9ALZB1","SPN9ALZB2","SPN9ALZB3","SPN9FLXB1", &
-                               "SPN9FLXB2","SPN9FLXB3","SPN9FLYB1","SPN9FLYB2","SPN9FLYB3","SPN9FLZB1","SPN9FLZB2", &
-                               "SPN9FLZB3","SPN9MLXB1","SPN9MLXB2","SPN9MLXB3","SPN9MLYB1","SPN9MLYB2","SPN9MLYB3", &
-                               "SPN9MLZB1","SPN9MLZB2","SPN9MLZB3","SPN9RDXB1","SPN9RDXB2","SPN9RDXB3","SPN9RDYB1", &
-                               "SPN9RDYB2","SPN9RDYB3","SPN9RDZB1","SPN9RDZB2","SPN9RDZB3","SPN9TDXB1","SPN9TDXB2", &
-                               "SPN9TDXB3","SPN9TDYB1","SPN9TDYB2","SPN9TDYB3","SPN9TDZB1","SPN9TDZB2","SPN9TDZB3", &
-                               "TAILFURL ","TAILFURLA","TAILFURLP","TAILFURLV","TEETAYA  ","TEETDEFL ","TEETPYA  ", &
-                               "TEETVYA  ","TFRLBRM  ","TIP2TWR1 ","TIP2TWR2 ","TIP2TWR3 ","TIPALXB1 ","TIPALXB2 ", &
-                               "TIPALXB3 ","TIPALYB1 ","TIPALYB2 ","TIPALYB3 ","TIPALZB1 ","TIPALZB2 ","TIPALZB3 ", &
-                               "TIPCLRNC1","TIPCLRNC2","TIPCLRNC3","TIPDXB1  ","TIPDXB2  ","TIPDXB3  ","TIPDXC1  ", &
-                               "TIPDXC2  ","TIPDXC3  ","TIPDYB1  ","TIPDYB2  ","TIPDYB3  ","TIPDYC1  ","TIPDYC2  ", &
-                               "TIPDYC3  ","TIPDZB1  ","TIPDZB2  ","TIPDZB3  ","TIPDZC1  ","TIPDZC2  ","TIPDZC3  ", &
-                               "TIPRDXB1 ","TIPRDXB2 ","TIPRDXB3 ","TIPRDYB1 ","TIPRDYB2 ","TIPRDYB3 ","TIPRDZB1 ", &
-                               "TIPRDZB2 ","TIPRDZB3 ","TIPRDZC1 ","TIPRDZC2 ","TIPRDZC3 ","TTDSPAX  ","TTDSPFA  ", &
-                               "TTDSPPTCH","TTDSPROLL","TTDSPSS  ","TTDSPTWST","TWHT1ALXT","TWHT1ALYT","TWHT1ALZT", &
-                               "TWHT1FLXT","TWHT1FLYT","TWHT1FLZT","TWHT1MLXT","TWHT1MLYT","TWHT1MLZT","TWHT1RDXT", &
-                               "TWHT1RDYT","TWHT1RDZT","TWHT1RPXI","TWHT1RPYI","TWHT1RPZI","TWHT1TDXT","TWHT1TDYT", &
-                               "TWHT1TDZT","TWHT1TPXI","TWHT1TPYI","TWHT1TPZI","TWHT2ALXT","TWHT2ALYT","TWHT2ALZT", &
-                               "TWHT2FLXT","TWHT2FLYT","TWHT2FLZT","TWHT2MLXT","TWHT2MLYT","TWHT2MLZT","TWHT2RDXT", &
-                               "TWHT2RDYT","TWHT2RDZT","TWHT2RPXI","TWHT2RPYI","TWHT2RPZI","TWHT2TDXT","TWHT2TDYT", &
-                               "TWHT2TDZT","TWHT2TPXI","TWHT2TPYI","TWHT2TPZI","TWHT3ALXT","TWHT3ALYT","TWHT3ALZT", &
-                               "TWHT3FLXT","TWHT3FLYT","TWHT3FLZT","TWHT3MLXT","TWHT3MLYT","TWHT3MLZT","TWHT3RDXT", &
-                               "TWHT3RDYT","TWHT3RDZT","TWHT3RPXI","TWHT3RPYI","TWHT3RPZI","TWHT3TDXT","TWHT3TDYT", &
-                               "TWHT3TDZT","TWHT3TPXI","TWHT3TPYI","TWHT3TPZI","TWHT4ALXT","TWHT4ALYT","TWHT4ALZT", &
-                               "TWHT4FLXT","TWHT4FLYT","TWHT4FLZT","TWHT4MLXT","TWHT4MLYT","TWHT4MLZT","TWHT4RDXT", &
-                               "TWHT4RDYT","TWHT4RDZT","TWHT4RPXI","TWHT4RPYI","TWHT4RPZI","TWHT4TDXT","TWHT4TDYT", &
-                               "TWHT4TDZT","TWHT4TPXI","TWHT4TPYI","TWHT4TPZI","TWHT5ALXT","TWHT5ALYT","TWHT5ALZT", &
-                               "TWHT5FLXT","TWHT5FLYT","TWHT5FLZT","TWHT5MLXT","TWHT5MLYT","TWHT5MLZT","TWHT5RDXT", &
-                               "TWHT5RDYT","TWHT5RDZT","TWHT5RPXI","TWHT5RPYI","TWHT5RPZI","TWHT5TDXT","TWHT5TDYT", &
-                               "TWHT5TDZT","TWHT5TPXI","TWHT5TPYI","TWHT5TPZI","TWHT6ALXT","TWHT6ALYT","TWHT6ALZT", &
-                               "TWHT6FLXT","TWHT6FLYT","TWHT6FLZT","TWHT6MLXT","TWHT6MLYT","TWHT6MLZT","TWHT6RDXT", &
-                               "TWHT6RDYT","TWHT6RDZT","TWHT6RPXI","TWHT6RPYI","TWHT6RPZI","TWHT6TDXT","TWHT6TDYT", &
-                               "TWHT6TDZT","TWHT6TPXI","TWHT6TPYI","TWHT6TPZI","TWHT7ALXT","TWHT7ALYT","TWHT7ALZT", &
-                               "TWHT7FLXT","TWHT7FLYT","TWHT7FLZT","TWHT7MLXT","TWHT7MLYT","TWHT7MLZT","TWHT7RDXT", &
-                               "TWHT7RDYT","TWHT7RDZT","TWHT7RPXI","TWHT7RPYI","TWHT7RPZI","TWHT7TDXT","TWHT7TDYT", &
-                               "TWHT7TDZT","TWHT7TPXI","TWHT7TPYI","TWHT7TPZI","TWHT8ALXT","TWHT8ALYT","TWHT8ALZT", &
-                               "TWHT8FLXT","TWHT8FLYT","TWHT8FLZT","TWHT8MLXT","TWHT8MLYT","TWHT8MLZT","TWHT8RDXT", &
-                               "TWHT8RDYT","TWHT8RDZT","TWHT8RPXI","TWHT8RPYI","TWHT8RPZI","TWHT8TDXT","TWHT8TDYT", &
-                               "TWHT8TDZT","TWHT8TPXI","TWHT8TPYI","TWHT8TPZI","TWHT9ALXT","TWHT9ALYT","TWHT9ALZT", &
-                               "TWHT9FLXT","TWHT9FLYT","TWHT9FLZT","TWHT9MLXT","TWHT9MLYT","TWHT9MLZT","TWHT9RDXT", &
-                               "TWHT9RDYT","TWHT9RDZT","TWHT9RPXI","TWHT9RPYI","TWHT9RPZI","TWHT9TDXT","TWHT9TDYT", &
-                               "TWHT9TDZT","TWHT9TPXI","TWHT9TPYI","TWHT9TPZI","TWRBSFXT ","TWRBSFYT ","TWRBSFZT ", &
-                               "TWRBSMXT ","TWRBSMYT ","TWRBSMZT ","TWRCLRNC1","TWRCLRNC2","TWRCLRNC3","TWSTDEFL1", &
-                               "TWSTDEFL2","TWSTDEFL3","YAWACCEL ","YAWAZN   ","YAWAZP   ","YAWBRFXN ","YAWBRFXP ", &
-                               "YAWBRFYN ","YAWBRFYP ","YAWBRFZN ","YAWBRFZP ","YAWBRMXN ","YAWBRMXP ","YAWBRMYN ", &
-                               "YAWBRMYP ","YAWBRMZN ","YAWBRMZP ","YAWBRRAXP","YAWBRRAYP","YAWBRRAZP","YAWBRRDXT", &
-                               "YAWBRRDYT","YAWBRRDZT","YAWBRRVXP","YAWBRRVYP","YAWBRRVZP","YAWBRTAXP","YAWBRTAYP", &
-                               "YAWBRTAZP","YAWBRTDXP","YAWBRTDXT","YAWBRTDYP","YAWBRTDYT","YAWBRTDZP","YAWBRTDZT", &
-                               "YAWPOS   ","YAWPZN   ","YAWPZP   ","YAWRATE  ","YAWVZN   ","YAWVZP   "/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(972) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                LSSTipPxa , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 , &
-                                  HSShftA ,   HSShftV ,   HSSBrTq ,   HSShftA , HSShftPwr ,  HSShftTq ,   HSShftV , &
-                                  TipDyc1 ,   TipDyc2 ,   TipDyc3 , LSSGagAxa , LSSGagAxa , LSSGagAxa , LSShftFxa , &
-                                LSShftFxa , LSShftFya , LSShftFys , LSShftFza , LSShftFzs , LSShftMxa , LSShftMxa , &
-                                LSSGagMya , LSSGagMys , LSSGagMza , LSSGagMzs , LSSGagPxa , LSSGagPxa , LSSGagPxa , &
-                                LSSGagVxa , LSSGagVxa , LSSGagVxa , LSShftFxa , LSShftFxa , LSShftFya , LSShftFys , &
-                                LSShftFza , LSShftFzs , LSShftMxa , LSShftMxa ,    RotPwr , LSShftMxa , LSSTipAxa , &
-                                LSSTipAxa , LSSTipAxa , LSSTipMya , LSSTipMys , LSSTipMza , LSSTipMzs , LSSTipPxa , &
-                                LSSTipPxa , LSSTipPxa , LSSTipVxa , LSSTipVxa , LSSTipVxa ,    YawPzn ,    YawAzn , &
-                                   YawPzn ,    YawVzn , NcIMURAxs , NcIMURAys , NcIMURAzs , NcIMURVxs , NcIMURVys , &
-                                NcIMURVzs , NcIMUTAxs , NcIMUTAys , NcIMUTAzs , NcIMUTVxs , NcIMUTVys , NcIMUTVzs , &
-                                  TipDxc1 ,   TipDxc2 ,   TipDxc3 ,  TipRDyb1 ,  TipRDyb2 ,  TipRDyb3 , PtchPMzc1 , &
-                                PtchPMzc2 , PtchPMzc3 , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 ,  PtfmTDzi ,  PtfmRDyi , &
-                                 PtfmRAxi ,  PtfmRAxt ,  PtfmRAyi ,  PtfmRAyt ,  PtfmRAzi ,  PtfmRAzt ,  PtfmRDxi , &
-                                 PtfmRDyi ,  PtfmRDzi ,  PtfmRDxi ,  PtfmRVxi ,  PtfmRVxt ,  PtfmRVyi ,  PtfmRVyt , &
-                                 PtfmRVzi ,  PtfmRVzt ,  PtfmTDxi ,  PtfmTDyi ,  PtfmTAxi ,  PtfmTAxt ,  PtfmTAyi , &
-                                 PtfmTAyt ,  PtfmTAzi ,  PtfmTAzt ,  PtfmTDxi ,  PtfmTDxt ,  PtfmTDyi ,  PtfmTDyt , &
-                                 PtfmTDzi ,  PtfmTDzt ,  PtfmTVxi ,  PtfmTVxt ,  PtfmTVyi ,  PtfmTVyt ,  PtfmTVzi , &
-                                 PtfmTVzt ,  PtfmRDzi ,  QD2_B1E1 ,  QD2_B1F1 ,  QD2_B1F2 ,  QD2_B2E1 ,  QD2_B2F1 , &
-                                 QD2_B2F2 ,  QD2_B3E1 ,  QD2_B3F1 ,  QD2_B3F2 ,  QD2_DrTr ,  QD2_GeAz ,    QD2_Hv , &
-                                    QD2_P ,     QD2_R ,  QD2_RFrl ,    QD2_Sg ,    QD2_Sw ,  QD2_Teet ,  QD2_TFA1 , &
-                                 QD2_TFA2 ,  QD2_TFrl ,  QD2_TSS1 ,  QD2_TSS2 ,     QD2_Y ,   QD2_Yaw ,   QD_B1E1 , &
-                                  QD_B1F1 ,   QD_B1F2 ,   QD_B2E1 ,   QD_B2F1 ,   QD_B2F2 ,   QD_B3E1 ,   QD_B3F1 , &
-                                  QD_B3F2 ,   QD_DrTr ,   QD_GeAz ,     QD_Hv ,      QD_P ,      QD_R ,   QD_RFrl , &
-                                    QD_Sg ,     QD_Sw ,   QD_Teet ,   QD_TFA1 ,   QD_TFA2 ,   QD_TFrl ,   QD_TSS1 , &
-                                  QD_TSS2 ,      QD_Y ,    QD_Yaw ,    Q_B1E1 ,    Q_B1F1 ,    Q_B1F2 ,    Q_B2E1 , &
-                                   Q_B2F1 ,    Q_B2F2 ,    Q_B3E1 ,    Q_B3F1 ,    Q_B3F2 ,    Q_DrTr ,    Q_GeAz , &
-                                     Q_Hv ,       Q_P ,       Q_R ,    Q_RFrl ,      Q_Sg ,      Q_Sw ,    Q_Teet , &
-                                   Q_TFA1 ,    Q_TFA2 ,    Q_TFrl ,    Q_TSS1 ,    Q_TSS2 ,       Q_Y ,     Q_Yaw , &
-                                  RFrlBrM ,  TipRDxb1 ,  TipRDxb2 ,  TipRDxb3 ,  RootFxb1 ,  RootFxb2 ,  RootFxb3 , &
-                                 RootFxc1 ,  RootFxc2 ,  RootFxc3 ,  RootFyb1 ,  RootFyb2 ,  RootFyb3 ,  RootFyc1 , &
-                                 RootFyc2 ,  RootFyc3 ,  RootFzc1 ,  RootFzc2 ,  RootFzc3 ,  RootFzc1 ,  RootFzc2 , &
-                                 RootFzc3 ,  RootMxb1 ,  RootMxb2 ,  RootMxb3 ,  RootMyb1 ,  RootMyb2 ,  RootMyb3 , &
-                                 RootMxc1 ,  RootMxc2 ,  RootMxc3 ,  RootMyc1 ,  RootMyc2 ,  RootMyc3 ,  RootMxb1 , &
-                                 RootMxb2 ,  RootMxb3 ,  RootMxc1 ,  RootMxc2 ,  RootMxc3 ,  RootMyb1 ,  RootMyb2 , &
-                                 RootMyb3 ,  RootMyc1 ,  RootMyc2 ,  RootMyc3 ,  RootMzc1 ,  RootMzc2 ,  RootMzc3 , &
-                                 RootMzc1 ,  RootMzc2 ,  RootMzc3 , LSSTipAxa ,  RotFurlP ,  RotFurlA ,  RotFurlP , &
-                                 RotFurlV ,    RotPwr , LSSTipVxa ,   TeetAya ,   TeetPya ,   TeetVya , LSShftFxa , &
-                                LSShftMxa , Spn1ALxb1 , Spn1ALxb2 , Spn1ALxb3 , Spn1ALyb1 , Spn1ALyb2 , Spn1ALyb3 , &
-                                Spn1ALzb1 , Spn1ALzb2 , Spn1ALzb3 , Spn1FLxb1 , Spn1FLxb2 , Spn1FLxb3 , Spn1FLyb1 , &
-                                Spn1FLyb2 , Spn1FLyb3 , Spn1FLzb1 , Spn1FLzb2 , Spn1FLzb3 , Spn1MLxb1 , Spn1MLxb2 , &
-                                Spn1MLxb3 , Spn1MLyb1 , Spn1MLyb2 , Spn1MLyb3 , Spn1MLzb1 , Spn1MLzb2 , Spn1MLzb3 , &
-                                Spn1RDxb1 , Spn1RDxb2 , Spn1RDxb3 , Spn1RDyb1 , Spn1RDyb2 , Spn1RDyb3 , Spn1RDzb1 , &
-                                Spn1RDzb2 , Spn1RDzb3 , Spn1TDxb1 , Spn1TDxb2 , Spn1TDxb3 , Spn1TDyb1 , Spn1TDyb2 , &
-                                Spn1TDyb3 , Spn1TDzb1 , Spn1TDzb2 , Spn1TDzb3 , Spn2ALxb1 , Spn2ALxb2 , Spn2ALxb3 , &
-                                Spn2ALyb1 , Spn2ALyb2 , Spn2ALyb3 , Spn2ALzb1 , Spn2ALzb2 , Spn2ALzb3 , Spn2FLxb1 , &
-                                Spn2FLxb2 , Spn2FLxb3 , Spn2FLyb1 , Spn2FLyb2 , Spn2FLyb3 , Spn2FLzb1 , Spn2FLzb2 , &
-                                Spn2FLzb3 , Spn2MLxb1 , Spn2MLxb2 , Spn2MLxb3 , Spn2MLyb1 , Spn2MLyb2 , Spn2MLyb3 , &
-                                Spn2MLzb1 , Spn2MLzb2 , Spn2MLzb3 , Spn2RDxb1 , Spn2RDxb2 , Spn2RDxb3 , Spn2RDyb1 , &
-                                Spn2RDyb2 , Spn2RDyb3 , Spn2RDzb1 , Spn2RDzb2 , Spn2RDzb3 , Spn2TDxb1 , Spn2TDxb2 , &
-                                Spn2TDxb3 , Spn2TDyb1 , Spn2TDyb2 , Spn2TDyb3 , Spn2TDzb1 , Spn2TDzb2 , Spn2TDzb3 , &
-                                Spn3ALxb1 , Spn3ALxb2 , Spn3ALxb3 , Spn3ALyb1 , Spn3ALyb2 , Spn3ALyb3 , Spn3ALzb1 , &
-                                Spn3ALzb2 , Spn3ALzb3 , Spn3FLxb1 , Spn3FLxb2 , Spn3FLxb3 , Spn3FLyb1 , Spn3FLyb2 , &
-                                Spn3FLyb3 , Spn3FLzb1 , Spn3FLzb2 , Spn3FLzb3 , Spn3MLxb1 , Spn3MLxb2 , Spn3MLxb3 , &
-                                Spn3MLyb1 , Spn3MLyb2 , Spn3MLyb3 , Spn3MLzb1 , Spn3MLzb2 , Spn3MLzb3 , Spn3RDxb1 , &
-                                Spn3RDxb2 , Spn3RDxb3 , Spn3RDyb1 , Spn3RDyb2 , Spn3RDyb3 , Spn3RDzb1 , Spn3RDzb2 , &
-                                Spn3RDzb3 , Spn3TDxb1 , Spn3TDxb2 , Spn3TDxb3 , Spn3TDyb1 , Spn3TDyb2 , Spn3TDyb3 , &
-                                Spn3TDzb1 , Spn3TDzb2 , Spn3TDzb3 , Spn4ALxb1 , Spn4ALxb2 , Spn4ALxb3 , Spn4ALyb1 , &
-                                Spn4ALyb2 , Spn4ALyb3 , Spn4ALzb1 , Spn4ALzb2 , Spn4ALzb3 , Spn4FLxb1 , Spn4FLxb2 , &
-                                Spn4FLxb3 , Spn4FLyb1 , Spn4FLyb2 , Spn4FLyb3 , Spn4FLzb1 , Spn4FLzb2 , Spn4FLzb3 , &
-                                Spn4MLxb1 , Spn4MLxb2 , Spn4MLxb3 , Spn4MLyb1 , Spn4MLyb2 , Spn4MLyb3 , Spn4MLzb1 , &
-                                Spn4MLzb2 , Spn4MLzb3 , Spn4RDxb1 , Spn4RDxb2 , Spn4RDxb3 , Spn4RDyb1 , Spn4RDyb2 , &
-                                Spn4RDyb3 , Spn4RDzb1 , Spn4RDzb2 , Spn4RDzb3 , Spn4TDxb1 , Spn4TDxb2 , Spn4TDxb3 , &
-                                Spn4TDyb1 , Spn4TDyb2 , Spn4TDyb3 , Spn4TDzb1 , Spn4TDzb2 , Spn4TDzb3 , Spn5ALxb1 , &
-                                Spn5ALxb2 , Spn5ALxb3 , Spn5ALyb1 , Spn5ALyb2 , Spn5ALyb3 , Spn5ALzb1 , Spn5ALzb2 , &
-                                Spn5ALzb3 , Spn5FLxb1 , Spn5FLxb2 , Spn5FLxb3 , Spn5FLyb1 , Spn5FLyb2 , Spn5FLyb3 , &
-                                Spn5FLzb1 , Spn5FLzb2 , Spn5FLzb3 , Spn5MLxb1 , Spn5MLxb2 , Spn5MLxb3 , Spn5MLyb1 , &
-                                Spn5MLyb2 , Spn5MLyb3 , Spn5MLzb1 , Spn5MLzb2 , Spn5MLzb3 , Spn5RDxb1 , Spn5RDxb2 , &
-                                Spn5RDxb3 , Spn5RDyb1 , Spn5RDyb2 , Spn5RDyb3 , Spn5RDzb1 , Spn5RDzb2 , Spn5RDzb3 , &
-                                Spn5TDxb1 , Spn5TDxb2 , Spn5TDxb3 , Spn5TDyb1 , Spn5TDyb2 , Spn5TDyb3 , Spn5TDzb1 , &
-                                Spn5TDzb2 , Spn5TDzb3 , Spn6ALxb1 , Spn6ALxb2 , Spn6ALxb3 , Spn6ALyb1 , Spn6ALyb2 , &
-                                Spn6ALyb3 , Spn6ALzb1 , Spn6ALzb2 , Spn6ALzb3 , Spn6FLxb1 , Spn6FLxb2 , Spn6FLxb3 , &
-                                Spn6FLyb1 , Spn6FLyb2 , Spn6FLyb3 , Spn6FLzb1 , Spn6FLzb2 , Spn6FLzb3 , Spn6MLxb1 , &
-                                Spn6MLxb2 , Spn6MLxb3 , Spn6MLyb1 , Spn6MLyb2 , Spn6MLyb3 , Spn6MLzb1 , Spn6MLzb2 , &
-                                Spn6MLzb3 , Spn6RDxb1 , Spn6RDxb2 , Spn6RDxb3 , Spn6RDyb1 , Spn6RDyb2 , Spn6RDyb3 , &
-                                Spn6RDzb1 , Spn6RDzb2 , Spn6RDzb3 , Spn6TDxb1 , Spn6TDxb2 , Spn6TDxb3 , Spn6TDyb1 , &
-                                Spn6TDyb2 , Spn6TDyb3 , Spn6TDzb1 , Spn6TDzb2 , Spn6TDzb3 , Spn7ALxb1 , Spn7ALxb2 , &
-                                Spn7ALxb3 , Spn7ALyb1 , Spn7ALyb2 , Spn7ALyb3 , Spn7ALzb1 , Spn7ALzb2 , Spn7ALzb3 , &
-                                Spn7FLxb1 , Spn7FLxb2 , Spn7FLxb3 , Spn7FLyb1 , Spn7FLyb2 , Spn7FLyb3 , Spn7FLzb1 , &
-                                Spn7FLzb2 , Spn7FLzb3 , Spn7MLxb1 , Spn7MLxb2 , Spn7MLxb3 , Spn7MLyb1 , Spn7MLyb2 , &
-                                Spn7MLyb3 , Spn7MLzb1 , Spn7MLzb2 , Spn7MLzb3 , Spn7RDxb1 , Spn7RDxb2 , Spn7RDxb3 , &
-                                Spn7RDyb1 , Spn7RDyb2 , Spn7RDyb3 , Spn7RDzb1 , Spn7RDzb2 , Spn7RDzb3 , Spn7TDxb1 , &
-                                Spn7TDxb2 , Spn7TDxb3 , Spn7TDyb1 , Spn7TDyb2 , Spn7TDyb3 , Spn7TDzb1 , Spn7TDzb2 , &
-                                Spn7TDzb3 , Spn8ALxb1 , Spn8ALxb2 , Spn8ALxb3 , Spn8ALyb1 , Spn8ALyb2 , Spn8ALyb3 , &
-                                Spn8ALzb1 , Spn8ALzb2 , Spn8ALzb3 , Spn8FLxb1 , Spn8FLxb2 , Spn8FLxb3 , Spn8FLyb1 , &
-                                Spn8FLyb2 , Spn8FLyb3 , Spn8FLzb1 , Spn8FLzb2 , Spn8FLzb3 , Spn8MLxb1 , Spn8MLxb2 , &
-                                Spn8MLxb3 , Spn8MLyb1 , Spn8MLyb2 , Spn8MLyb3 , Spn8MLzb1 , Spn8MLzb2 , Spn8MLzb3 , &
-                                Spn8RDxb1 , Spn8RDxb2 , Spn8RDxb3 , Spn8RDyb1 , Spn8RDyb2 , Spn8RDyb3 , Spn8RDzb1 , &
-                                Spn8RDzb2 , Spn8RDzb3 , Spn8TDxb1 , Spn8TDxb2 , Spn8TDxb3 , Spn8TDyb1 , Spn8TDyb2 , &
-                                Spn8TDyb3 , Spn8TDzb1 , Spn8TDzb2 , Spn8TDzb3 , Spn9ALxb1 , Spn9ALxb2 , Spn9ALxb3 , &
-                                Spn9ALyb1 , Spn9ALyb2 , Spn9ALyb3 , Spn9ALzb1 , Spn9ALzb2 , Spn9ALzb3 , Spn9FLxb1 , &
-                                Spn9FLxb2 , Spn9FLxb3 , Spn9FLyb1 , Spn9FLyb2 , Spn9FLyb3 , Spn9FLzb1 , Spn9FLzb2 , &
-                                Spn9FLzb3 , Spn9MLxb1 , Spn9MLxb2 , Spn9MLxb3 , Spn9MLyb1 , Spn9MLyb2 , Spn9MLyb3 , &
-                                Spn9MLzb1 , Spn9MLzb2 , Spn9MLzb3 , Spn9RDxb1 , Spn9RDxb2 , Spn9RDxb3 , Spn9RDyb1 , &
-                                Spn9RDyb2 , Spn9RDyb3 , Spn9RDzb1 , Spn9RDzb2 , Spn9RDzb3 , Spn9TDxb1 , Spn9TDxb2 , &
-                                Spn9TDxb3 , Spn9TDyb1 , Spn9TDyb2 , Spn9TDyb3 , Spn9TDzb1 , Spn9TDzb2 , Spn9TDzb3 , &
-                                TailFurlP , TailFurlA , TailFurlP , TailFurlV ,   TeetAya ,   TeetPya ,   TeetPya , &
-                                  TeetVya ,   TFrlBrM , TipClrnc1 , TipClrnc2 , TipClrnc3 ,  TipALxb1 ,  TipALxb2 , &
-                                 TipALxb3 ,  TipALyb1 ,  TipALyb2 ,  TipALyb3 ,  TipALzb1 ,  TipALzb2 ,  TipALzb3 , &
-                                TipClrnc1 , TipClrnc2 , TipClrnc3 ,   TipDxb1 ,   TipDxb2 ,   TipDxb3 ,   TipDxc1 , &
-                                  TipDxc2 ,   TipDxc3 ,   TipDyb1 ,   TipDyb2 ,   TipDyb3 ,   TipDyc1 ,   TipDyc2 , &
-                                  TipDyc3 ,   TipDzc1 ,   TipDzc2 ,   TipDzc3 ,   TipDzc1 ,   TipDzc2 ,   TipDzc3 , &
-                                 TipRDxb1 ,  TipRDxb2 ,  TipRDxb3 ,  TipRDyb1 ,  TipRDyb2 ,  TipRDyb3 ,  TipRDzc1 , &
-                                 TipRDzc2 ,  TipRDzc3 ,  TipRDzc1 ,  TipRDzc2 ,  TipRDzc3 , YawBrTDzt , YawBrTDxt , &
-                                YawBrRDyt , YawBrRDxt , YawBrTDyt , YawBrRDzt , TwHt1ALxt , TwHt1ALyt , TwHt1ALzt , &
-                                TwHt1FLxt , TwHt1FLyt , TwHt1FLzt , TwHt1MLxt , TwHt1MLyt , TwHt1MLzt , TwHt1RDxt , &
-                                TwHt1RDyt , TwHt1RDzt , TwHt1RPxi , TwHt1RPyi , TwHt1RPzi , TwHt1TDxt , TwHt1TDyt , &
-                                TwHt1TDzt , TwHt1TPxi , TwHt1TPyi , TwHt1TPzi , TwHt2ALxt , TwHt2ALyt , TwHt2ALzt , &
-                                TwHt2FLxt , TwHt2FLyt , TwHt2FLzt , TwHt2MLxt , TwHt2MLyt , TwHt2MLzt , TwHt2RDxt , &
-                                TwHt2RDyt , TwHt2RDzt , TwHt2RPxi , TwHt2RPyi , TwHt2RPzi , TwHt2TDxt , TwHt2TDyt , &
-                                TwHt2TDzt , TwHt2TPxi , TwHt2TPyi , TwHt2TPzi , TwHt3ALxt , TwHt3ALyt , TwHt3ALzt , &
-                                TwHt3FLxt , TwHt3FLyt , TwHt3FLzt , TwHt3MLxt , TwHt3MLyt , TwHt3MLzt , TwHt3RDxt , &
-                                TwHt3RDyt , TwHt3RDzt , TwHt3RPxi , TwHt3RPyi , TwHt3RPzi , TwHt3TDxt , TwHt3TDyt , &
-                                TwHt3TDzt , TwHt3TPxi , TwHt3TPyi , TwHt3TPzi , TwHt4ALxt , TwHt4ALyt , TwHt4ALzt , &
-                                TwHt4FLxt , TwHt4FLyt , TwHt4FLzt , TwHt4MLxt , TwHt4MLyt , TwHt4MLzt , TwHt4RDxt , &
-                                TwHt4RDyt , TwHt4RDzt , TwHt4RPxi , TwHt4RPyi , TwHt4RPzi , TwHt4TDxt , TwHt4TDyt , &
-                                TwHt4TDzt , TwHt4TPxi , TwHt4TPyi , TwHt4TPzi , TwHt5ALxt , TwHt5ALyt , TwHt5ALzt , &
-                                TwHt5FLxt , TwHt5FLyt , TwHt5FLzt , TwHt5MLxt , TwHt5MLyt , TwHt5MLzt , TwHt5RDxt , &
-                                TwHt5RDyt , TwHt5RDzt , TwHt5RPxi , TwHt5RPyi , TwHt5RPzi , TwHt5TDxt , TwHt5TDyt , &
-                                TwHt5TDzt , TwHt5TPxi , TwHt5TPyi , TwHt5TPzi , TwHt6ALxt , TwHt6ALyt , TwHt6ALzt , &
-                                TwHt6FLxt , TwHt6FLyt , TwHt6FLzt , TwHt6MLxt , TwHt6MLyt , TwHt6MLzt , TwHt6RDxt , &
-                                TwHt6RDyt , TwHt6RDzt , TwHt6RPxi , TwHt6RPyi , TwHt6RPzi , TwHt6TDxt , TwHt6TDyt , &
-                                TwHt6TDzt , TwHt6TPxi , TwHt6TPyi , TwHt6TPzi , TwHt7ALxt , TwHt7ALyt , TwHt7ALzt , &
-                                TwHt7FLxt , TwHt7FLyt , TwHt7FLzt , TwHt7MLxt , TwHt7MLyt , TwHt7MLzt , TwHt7RDxt , &
-                                TwHt7RDyt , TwHt7RDzt , TwHt7RPxi , TwHt7RPyi , TwHt7RPzi , TwHt7TDxt , TwHt7TDyt , &
-                                TwHt7TDzt , TwHt7TPxi , TwHt7TPyi , TwHt7TPzi , TwHt8ALxt , TwHt8ALyt , TwHt8ALzt , &
-                                TwHt8FLxt , TwHt8FLyt , TwHt8FLzt , TwHt8MLxt , TwHt8MLyt , TwHt8MLzt , TwHt8RDxt , &
-                                TwHt8RDyt , TwHt8RDzt , TwHt8RPxi , TwHt8RPyi , TwHt8RPzi , TwHt8TDxt , TwHt8TDyt , &
-                                TwHt8TDzt , TwHt8TPxi , TwHt8TPyi , TwHt8TPzi , TwHt9ALxt , TwHt9ALyt , TwHt9ALzt , &
-                                TwHt9FLxt , TwHt9FLyt , TwHt9FLzt , TwHt9MLxt , TwHt9MLyt , TwHt9MLzt , TwHt9RDxt , &
-                                TwHt9RDyt , TwHt9RDzt , TwHt9RPxi , TwHt9RPyi , TwHt9RPzi , TwHt9TDxt , TwHt9TDyt , &
-                                TwHt9TDzt , TwHt9TPxi , TwHt9TPyi , TwHt9TPzi ,  TwrBsFxt ,  TwrBsFyt ,  TwrBsFzt , &
-                                 TwrBsMxt ,  TwrBsMyt ,  TwrBsMzt , TipClrnc1 , TipClrnc2 , TipClrnc3 ,  TipRDzc1 , &
-                                 TipRDzc2 ,  TipRDzc3 ,    YawAzn ,    YawAzn ,    YawAzn ,  YawBrFxn ,  YawBrFxp , &
-                                 YawBrFyn ,  YawBrFyp ,  YawBrFzn ,  YawBrFzn ,  YawBrMxn ,  YawBrMxp ,  YawBrMyn , &
-                                 YawBrMyp ,  YawBrMzn ,  YawBrMzn , YawBrRAxp , YawBrRAyp , YawBrRAzp , YawBrRDxt , &
-                                YawBrRDyt , YawBrRDzt , YawBrRVxp , YawBrRVyp , YawBrRVzp , YawBrTAxp , YawBrTAyp , &
-                                YawBrTAzp , YawBrTDxp , YawBrTDxt , YawBrTDyp , YawBrTDyt , YawBrTDzp , YawBrTDzt , &
-                                   YawPzn ,    YawPzn ,    YawPzn ,    YawVzn ,    YawVzn ,    YawVzn /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(972) =  (/ &                     ! This lists the units corresponding to the allowed parameters
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg/s^2) ","(rpm)     ","(kN-m)    ","(deg/s^2) ","(kW)      ","(kN-m)    ","(rpm)     ", &
-                               "(m)       ","(m)       ","(m)       ","(deg/s^2) ","(deg/s^2) ","(deg/s^2) ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(rpm)     ","(rpm)     ","(rpm)     ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kW)      ","(kN-m)    ","(deg/s^2) ", &
-                               "(deg/s^2) ","(deg/s^2) ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(rpm)     ","(rpm)     ","(rpm)     ","(deg)     ","(deg/s^2) ", &
-                               "(deg)     ","(deg/s)   ","(deg/s^2) ","(deg/s^2) ","(deg/s^2) ","(deg/s)   ","(deg/s)   ", &
-                               "(deg/s)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s)     ","(m/s)     ","(m/s)     ", &
-                               "(m)       ","(m)       ","(m)       ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(deg)     ", &
-                               "(deg/s^2) ","(deg/s^2) ","(deg/s^2) ","(deg/s^2) ","(deg/s^2) ","(deg/s^2) ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg/s)   ","(deg/s)   ","(deg/s)   ","(deg/s)   ", &
-                               "(deg/s)   ","(deg/s)   ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
-                               "(m/s)     ","(deg)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(rad/s^2) ","(rad/s^2) ","(m/s^2)   ", &
-                               "(rad/s^2) ","(rad/s^2) ","(rad/s^2) ","(m/s^2)   ","(m/s^2)   ","(rad/s^2) ","(m/s^2)   ", &
-                               "(m/s^2)   ","(rad/s^2) ","(m/s^2)   ","(m/s^2)   ","(rad/s^2) ","(rad/s^2) ","(m/s)     ", &
-                               "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
-                               "(m/s)     ","(rad/s)   ","(rad/s)   ","(m/s)     ","(rad/s)   ","(rad/s)   ","(rad/s)   ", &
-                               "(m/s)     ","(m/s)     ","(rad/s)   ","(m/s)     ","(m/s)     ","(rad/s)   ","(m/s)     ", &
-                               "(m/s)     ","(rad/s)   ","(rad/s)   ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(rad)     ","(rad)     ", &
-                               "(m)       ","(rad)     ","(rad)     ","(rad)     ","(m)       ","(m)       ","(rad)     ", &
-                               "(m)       ","(m)       ","(rad)     ","(m)       ","(m)       ","(rad)     ","(rad)     ", &
-                               "(kN-m)    ","(deg)     ","(deg)     ","(deg)     ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg/s^2) ","(deg)     ","(deg/s^2) ","(deg)     ", &
-                               "(deg/s)   ","(kW)      ","(rpm)     ","(deg/s^2) ","(deg)     ","(deg/s)   ","(kN)      ", &
-                               "(kN-m)    ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(deg)     ","(deg/s^2) ","(deg)     ","(deg/s)   ","(deg/s^2) ","(deg)     ","(deg)     ", &
-                               "(deg/s)   ","(kN-m)    ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(deg)     ","(deg)     ","(m)       ","(deg)     ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(m/s^2)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg)     ","(deg)     ","(m)       ","(m)       ", &
-                               "(m)       ","(m)       ","(m)       ","(m)       ","(kN)      ","(kN)      ","(kN)      ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(m)       ","(m)       ","(m)       ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg/s^2) ","(deg/s^2) ","(deg/s^2) ","(kN)      ","(kN)      ", &
-                               "(kN)      ","(kN)      ","(kN)      ","(kN)      ","(kN-m)    ","(kN-m)    ","(kN-m)    ", &
-                               "(kN-m)    ","(kN-m)    ","(kN-m)    ","(deg/s^2) ","(deg/s^2) ","(deg/s^2) ","(deg)     ", &
-                               "(deg)     ","(deg)     ","(deg/s)   ","(deg/s)   ","(deg/s)   ","(m/s^2)   ","(m/s^2)   ", &
-                               "(m/s^2)   ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ","(m)       ", &
-                               "(deg)     ","(deg)     ","(deg)     ","(deg/s)   ","(deg/s)   ","(deg/s)   "/)
+      CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(981) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                                  "AZIMUTH  ","BLDPITCH1","BLDPITCH2","BLDPITCH3","BLPITCH1 ","BLPITCH2 ","BLPITCH3 ","GENACCEL ", &
+                                  "GENSPEED ","HSSBRTQ  ","HSSHFTA  ","HSSHFTPWR","HSSHFTTQ ","HSSHFTV  ","IPDEFL1  ","IPDEFL2  ", &
+                                  "IPDEFL3  ","LSSGAGA  ","LSSGAGAXA","LSSGAGAXS","LSSGAGFXA","LSSGAGFXS","LSSGAGFYA","LSSGAGFYS", &
+                                  "LSSGAGFZA","LSSGAGFZS","LSSGAGMXA","LSSGAGMXS","LSSGAGMYA","LSSGAGMYS","LSSGAGMZA","LSSGAGMZS", &
+                                  "LSSGAGP  ","LSSGAGPXA","LSSGAGPXS","LSSGAGV  ","LSSGAGVXA","LSSGAGVXS","LSSHFTFXA","LSSHFTFXS", &
+                                  "LSSHFTFYA","LSSHFTFYS","LSSHFTFZA","LSSHFTFZS","LSSHFTMXA","LSSHFTMXS","LSSHFTPWR","LSSHFTTQ ", &
+                                  "LSSTIPA  ","LSSTIPAXA","LSSTIPAXS","LSSTIPMYA","LSSTIPMYS","LSSTIPMZA","LSSTIPMZS","LSSTIPP  ", &
+                                  "LSSTIPPXA","LSSTIPPXS","LSSTIPV  ","LSSTIPVXA","LSSTIPVXS","NACYAW   ","NACYAWA  ","NACYAWP  ", &
+                                  "NACYAWV  ","NCIMURAXS","NCIMURAYS","NCIMURAZS","NCIMURVXS","NCIMURVYS","NCIMURVZS","NCIMUTAXS", &
+                                  "NCIMUTAYS","NCIMUTAZS","NCIMUTVXS","NCIMUTVYS","NCIMUTVZS","OOPDEFL1 ","OOPDEFL2 ","OOPDEFL3 ", &
+                                  "PTCHDEFL1","PTCHDEFL2","PTCHDEFL3","PTCHPMZB1","PTCHPMZB2","PTCHPMZB3","PTCHPMZC1","PTCHPMZC2", &
+                                  "PTCHPMZC3","PTFMHEAVE","PTFMPITCH","PTFMRAXI ","PTFMRAXT ","PTFMRAYI ","PTFMRAYT ","PTFMRAZI ", &
+                                  "PTFMRAZT ","PTFMRDXI ","PTFMRDYI ","PTFMRDZI ","PTFMROLL ","PTFMRVXI ","PTFMRVXT ","PTFMRVYI ", &
+                                  "PTFMRVYT ","PTFMRVZI ","PTFMRVZT ","PTFMSURGE","PTFMSWAY ","PTFMTAXI ","PTFMTAXT ","PTFMTAYI ", &
+                                  "PTFMTAYT ","PTFMTAZI ","PTFMTAZT ","PTFMTDXI ","PTFMTDXT ","PTFMTDYI ","PTFMTDYT ","PTFMTDZI ", &
+                                  "PTFMTDZT ","PTFMTVXI ","PTFMTVXT ","PTFMTVYI ","PTFMTVYT ","PTFMTVZI ","PTFMTVZT ","PTFMYAW  ", &
+                                  "QD2_B1E1 ","QD2_B1F1 ","QD2_B1F2 ","QD2_B2E1 ","QD2_B2F1 ","QD2_B2F2 ","QD2_B3E1 ","QD2_B3F1 ", &
+                                  "QD2_B3F2 ","QD2_DRTR ","QD2_GEAZ ","QD2_HV   ","QD2_P    ","QD2_R    ","QD2_RFRL ","QD2_SG   ", &
+                                  "QD2_SW   ","QD2_TEET ","QD2_TFA1 ","QD2_TFA2 ","QD2_TFRL ","QD2_TSS1 ","QD2_TSS2 ","QD2_Y    ", &
+                                  "QD2_YAW  ","QD_B1E1  ","QD_B1F1  ","QD_B1F2  ","QD_B2E1  ","QD_B2F1  ","QD_B2F2  ","QD_B3E1  ", &
+                                  "QD_B3F1  ","QD_B3F2  ","QD_DRTR  ","QD_GEAZ  ","QD_HV    ","QD_P     ","QD_R     ","QD_RFRL  ", &
+                                  "QD_SG    ","QD_SW    ","QD_TEET  ","QD_TFA1  ","QD_TFA2  ","QD_TFRL  ","QD_TSS1  ","QD_TSS2  ", &
+                                  "QD_Y     ","QD_YAW   ","Q_B1E1   ","Q_B1F1   ","Q_B1F2   ","Q_B2E1   ","Q_B2F1   ","Q_B2F2   ", &
+                                  "Q_B3E1   ","Q_B3F1   ","Q_B3F2   ","Q_DRTR   ","Q_GEAZ   ","Q_HV     ","Q_P      ","Q_R      ", &
+                                  "Q_RFRL   ","Q_SG     ","Q_SW     ","Q_TEET   ","Q_TFA1   ","Q_TFA2   ","Q_TFRL   ","Q_TSS1   ", &
+                                  "Q_TSS2   ","Q_Y      ","Q_YAW    ","RFRLBRM  ","ROLLDEFL1","ROLLDEFL2","ROLLDEFL3","ROOTFXB1 ", &
+                                  "ROOTFXB2 ","ROOTFXB3 ","ROOTFXC1 ","ROOTFXC2 ","ROOTFXC3 ","ROOTFYB1 ","ROOTFYB2 ","ROOTFYB3 ", &
+                                  "ROOTFYC1 ","ROOTFYC2 ","ROOTFYC3 ","ROOTFZB1 ","ROOTFZB2 ","ROOTFZB3 ","ROOTFZC1 ","ROOTFZC2 ", &
+                                  "ROOTFZC3 ","ROOTMEDG1","ROOTMEDG2","ROOTMEDG3","ROOTMFLP1","ROOTMFLP2","ROOTMFLP3","ROOTMIP1 ", &
+                                  "ROOTMIP2 ","ROOTMIP3 ","ROOTMOOP1","ROOTMOOP2","ROOTMOOP3","ROOTMXB1 ","ROOTMXB2 ","ROOTMXB3 ", &
+                                  "ROOTMXC1 ","ROOTMXC2 ","ROOTMXC3 ","ROOTMYB1 ","ROOTMYB2 ","ROOTMYB3 ","ROOTMYC1 ","ROOTMYC2 ", &
+                                  "ROOTMYC3 ","ROOTMZB1 ","ROOTMZB2 ","ROOTMZB3 ","ROOTMZC1 ","ROOTMZC2 ","ROOTMZC3 ","ROTACCEL ", &
+                                  "ROTFURL  ","ROTFURLA ","ROTFURLP ","ROTFURLV ","ROTPWR   ","ROTSPEED ","ROTTEETA ","ROTTEETP ", &
+                                  "ROTTEETV ","ROTTHRUST","ROTTORQ  ","SPN1ALXB1","SPN1ALXB2","SPN1ALXB3","SPN1ALYB1","SPN1ALYB2", &
+                                  "SPN1ALYB3","SPN1ALZB1","SPN1ALZB2","SPN1ALZB3","SPN1FLXB1","SPN1FLXB2","SPN1FLXB3","SPN1FLYB1", &
+                                  "SPN1FLYB2","SPN1FLYB3","SPN1FLZB1","SPN1FLZB2","SPN1FLZB3","SPN1MLXB1","SPN1MLXB2","SPN1MLXB3", &
+                                  "SPN1MLYB1","SPN1MLYB2","SPN1MLYB3","SPN1MLZB1","SPN1MLZB2","SPN1MLZB3","SPN1RDXB1","SPN1RDXB2", &
+                                  "SPN1RDXB3","SPN1RDYB1","SPN1RDYB2","SPN1RDYB3","SPN1RDZB1","SPN1RDZB2","SPN1RDZB3","SPN1TDXB1", &
+                                  "SPN1TDXB2","SPN1TDXB3","SPN1TDYB1","SPN1TDYB2","SPN1TDYB3","SPN1TDZB1","SPN1TDZB2","SPN1TDZB3", &
+                                  "SPN2ALXB1","SPN2ALXB2","SPN2ALXB3","SPN2ALYB1","SPN2ALYB2","SPN2ALYB3","SPN2ALZB1","SPN2ALZB2", &
+                                  "SPN2ALZB3","SPN2FLXB1","SPN2FLXB2","SPN2FLXB3","SPN2FLYB1","SPN2FLYB2","SPN2FLYB3","SPN2FLZB1", &
+                                  "SPN2FLZB2","SPN2FLZB3","SPN2MLXB1","SPN2MLXB2","SPN2MLXB3","SPN2MLYB1","SPN2MLYB2","SPN2MLYB3", &
+                                  "SPN2MLZB1","SPN2MLZB2","SPN2MLZB3","SPN2RDXB1","SPN2RDXB2","SPN2RDXB3","SPN2RDYB1","SPN2RDYB2", &
+                                  "SPN2RDYB3","SPN2RDZB1","SPN2RDZB2","SPN2RDZB3","SPN2TDXB1","SPN2TDXB2","SPN2TDXB3","SPN2TDYB1", &
+                                  "SPN2TDYB2","SPN2TDYB3","SPN2TDZB1","SPN2TDZB2","SPN2TDZB3","SPN3ALXB1","SPN3ALXB2","SPN3ALXB3", &
+                                  "SPN3ALYB1","SPN3ALYB2","SPN3ALYB3","SPN3ALZB1","SPN3ALZB2","SPN3ALZB3","SPN3FLXB1","SPN3FLXB2", &
+                                  "SPN3FLXB3","SPN3FLYB1","SPN3FLYB2","SPN3FLYB3","SPN3FLZB1","SPN3FLZB2","SPN3FLZB3","SPN3MLXB1", &
+                                  "SPN3MLXB2","SPN3MLXB3","SPN3MLYB1","SPN3MLYB2","SPN3MLYB3","SPN3MLZB1","SPN3MLZB2","SPN3MLZB3", &
+                                  "SPN3RDXB1","SPN3RDXB2","SPN3RDXB3","SPN3RDYB1","SPN3RDYB2","SPN3RDYB3","SPN3RDZB1","SPN3RDZB2", &
+                                  "SPN3RDZB3","SPN3TDXB1","SPN3TDXB2","SPN3TDXB3","SPN3TDYB1","SPN3TDYB2","SPN3TDYB3","SPN3TDZB1", &
+                                  "SPN3TDZB2","SPN3TDZB3","SPN4ALXB1","SPN4ALXB2","SPN4ALXB3","SPN4ALYB1","SPN4ALYB2","SPN4ALYB3", &
+                                  "SPN4ALZB1","SPN4ALZB2","SPN4ALZB3","SPN4FLXB1","SPN4FLXB2","SPN4FLXB3","SPN4FLYB1","SPN4FLYB2", &
+                                  "SPN4FLYB3","SPN4FLZB1","SPN4FLZB2","SPN4FLZB3","SPN4MLXB1","SPN4MLXB2","SPN4MLXB3","SPN4MLYB1", &
+                                  "SPN4MLYB2","SPN4MLYB3","SPN4MLZB1","SPN4MLZB2","SPN4MLZB3","SPN4RDXB1","SPN4RDXB2","SPN4RDXB3", &
+                                  "SPN4RDYB1","SPN4RDYB2","SPN4RDYB3","SPN4RDZB1","SPN4RDZB2","SPN4RDZB3","SPN4TDXB1","SPN4TDXB2", &
+                                  "SPN4TDXB3","SPN4TDYB1","SPN4TDYB2","SPN4TDYB3","SPN4TDZB1","SPN4TDZB2","SPN4TDZB3","SPN5ALXB1", &
+                                  "SPN5ALXB2","SPN5ALXB3","SPN5ALYB1","SPN5ALYB2","SPN5ALYB3","SPN5ALZB1","SPN5ALZB2","SPN5ALZB3", &
+                                  "SPN5FLXB1","SPN5FLXB2","SPN5FLXB3","SPN5FLYB1","SPN5FLYB2","SPN5FLYB3","SPN5FLZB1","SPN5FLZB2", &
+                                  "SPN5FLZB3","SPN5MLXB1","SPN5MLXB2","SPN5MLXB3","SPN5MLYB1","SPN5MLYB2","SPN5MLYB3","SPN5MLZB1", &
+                                  "SPN5MLZB2","SPN5MLZB3","SPN5RDXB1","SPN5RDXB2","SPN5RDXB3","SPN5RDYB1","SPN5RDYB2","SPN5RDYB3", &
+                                  "SPN5RDZB1","SPN5RDZB2","SPN5RDZB3","SPN5TDXB1","SPN5TDXB2","SPN5TDXB3","SPN5TDYB1","SPN5TDYB2", &
+                                  "SPN5TDYB3","SPN5TDZB1","SPN5TDZB2","SPN5TDZB3","SPN6ALXB1","SPN6ALXB2","SPN6ALXB3","SPN6ALYB1", &
+                                  "SPN6ALYB2","SPN6ALYB3","SPN6ALZB1","SPN6ALZB2","SPN6ALZB3","SPN6FLXB1","SPN6FLXB2","SPN6FLXB3", &
+                                  "SPN6FLYB1","SPN6FLYB2","SPN6FLYB3","SPN6FLZB1","SPN6FLZB2","SPN6FLZB3","SPN6MLXB1","SPN6MLXB2", &
+                                  "SPN6MLXB3","SPN6MLYB1","SPN6MLYB2","SPN6MLYB3","SPN6MLZB1","SPN6MLZB2","SPN6MLZB3","SPN6RDXB1", &
+                                  "SPN6RDXB2","SPN6RDXB3","SPN6RDYB1","SPN6RDYB2","SPN6RDYB3","SPN6RDZB1","SPN6RDZB2","SPN6RDZB3", &
+                                  "SPN6TDXB1","SPN6TDXB2","SPN6TDXB3","SPN6TDYB1","SPN6TDYB2","SPN6TDYB3","SPN6TDZB1","SPN6TDZB2", &
+                                  "SPN6TDZB3","SPN7ALXB1","SPN7ALXB2","SPN7ALXB3","SPN7ALYB1","SPN7ALYB2","SPN7ALYB3","SPN7ALZB1", &
+                                  "SPN7ALZB2","SPN7ALZB3","SPN7FLXB1","SPN7FLXB2","SPN7FLXB3","SPN7FLYB1","SPN7FLYB2","SPN7FLYB3", &
+                                  "SPN7FLZB1","SPN7FLZB2","SPN7FLZB3","SPN7MLXB1","SPN7MLXB2","SPN7MLXB3","SPN7MLYB1","SPN7MLYB2", &
+                                  "SPN7MLYB3","SPN7MLZB1","SPN7MLZB2","SPN7MLZB3","SPN7RDXB1","SPN7RDXB2","SPN7RDXB3","SPN7RDYB1", &
+                                  "SPN7RDYB2","SPN7RDYB3","SPN7RDZB1","SPN7RDZB2","SPN7RDZB3","SPN7TDXB1","SPN7TDXB2","SPN7TDXB3", &
+                                  "SPN7TDYB1","SPN7TDYB2","SPN7TDYB3","SPN7TDZB1","SPN7TDZB2","SPN7TDZB3","SPN8ALXB1","SPN8ALXB2", &
+                                  "SPN8ALXB3","SPN8ALYB1","SPN8ALYB2","SPN8ALYB3","SPN8ALZB1","SPN8ALZB2","SPN8ALZB3","SPN8FLXB1", &
+                                  "SPN8FLXB2","SPN8FLXB3","SPN8FLYB1","SPN8FLYB2","SPN8FLYB3","SPN8FLZB1","SPN8FLZB2","SPN8FLZB3", &
+                                  "SPN8MLXB1","SPN8MLXB2","SPN8MLXB3","SPN8MLYB1","SPN8MLYB2","SPN8MLYB3","SPN8MLZB1","SPN8MLZB2", &
+                                  "SPN8MLZB3","SPN8RDXB1","SPN8RDXB2","SPN8RDXB3","SPN8RDYB1","SPN8RDYB2","SPN8RDYB3","SPN8RDZB1", &
+                                  "SPN8RDZB2","SPN8RDZB3","SPN8TDXB1","SPN8TDXB2","SPN8TDXB3","SPN8TDYB1","SPN8TDYB2","SPN8TDYB3", &
+                                  "SPN8TDZB1","SPN8TDZB2","SPN8TDZB3","SPN9ALXB1","SPN9ALXB2","SPN9ALXB3","SPN9ALYB1","SPN9ALYB2", &
+                                  "SPN9ALYB3","SPN9ALZB1","SPN9ALZB2","SPN9ALZB3","SPN9FLXB1","SPN9FLXB2","SPN9FLXB3","SPN9FLYB1", &
+                                  "SPN9FLYB2","SPN9FLYB3","SPN9FLZB1","SPN9FLZB2","SPN9FLZB3","SPN9MLXB1","SPN9MLXB2","SPN9MLXB3", &
+                                  "SPN9MLYB1","SPN9MLYB2","SPN9MLYB3","SPN9MLZB1","SPN9MLZB2","SPN9MLZB3","SPN9RDXB1","SPN9RDXB2", &
+                                  "SPN9RDXB3","SPN9RDYB1","SPN9RDYB2","SPN9RDYB3","SPN9RDZB1","SPN9RDZB2","SPN9RDZB3","SPN9TDXB1", &
+                                  "SPN9TDXB2","SPN9TDXB3","SPN9TDYB1","SPN9TDYB2","SPN9TDYB3","SPN9TDZB1","SPN9TDZB2","SPN9TDZB3", &
+                                  "TAILFURL ","TAILFURLA","TAILFURLP","TAILFURLV","TEETAYA  ","TEETDEFL ","TEETPYA  ","TEETVYA  ", &
+                                  "TFRLBRM  ","TIP2TWR1 ","TIP2TWR2 ","TIP2TWR3 ","TIPALXB1 ","TIPALXB2 ","TIPALXB3 ","TIPALYB1 ", &
+                                  "TIPALYB2 ","TIPALYB3 ","TIPALZB1 ","TIPALZB2 ","TIPALZB3 ","TIPCLRNC1","TIPCLRNC2","TIPCLRNC3", &
+                                  "TIPDXB1  ","TIPDXB2  ","TIPDXB3  ","TIPDXC1  ","TIPDXC2  ","TIPDXC3  ","TIPDYB1  ","TIPDYB2  ", &
+                                  "TIPDYB3  ","TIPDYC1  ","TIPDYC2  ","TIPDYC3  ","TIPDZB1  ","TIPDZB2  ","TIPDZB3  ","TIPDZC1  ", &
+                                  "TIPDZC2  ","TIPDZC3  ","TIPRDXB1 ","TIPRDXB2 ","TIPRDXB3 ","TIPRDYB1 ","TIPRDYB2 ","TIPRDYB3 ", &
+                                  "TIPRDZB1 ","TIPRDZB2 ","TIPRDZB3 ","TIPRDZC1 ","TIPRDZC2 ","TIPRDZC3 ","TTDSPAX  ","TTDSPFA  ", &
+                                  "TTDSPPTCH","TTDSPROLL","TTDSPSS  ","TTDSPTWST","TWHT1ALXT","TWHT1ALYT","TWHT1ALZT","TWHT1FLXT", &
+                                  "TWHT1FLYT","TWHT1FLZT","TWHT1MLXT","TWHT1MLYT","TWHT1MLZT","TWHT1RDXT","TWHT1RDYT","TWHT1RDZT", &
+                                  "TWHT1RPXI","TWHT1RPYI","TWHT1RPZI","TWHT1TDXT","TWHT1TDYT","TWHT1TDZT","TWHT1TPXI","TWHT1TPYI", &
+                                  "TWHT1TPZI","TWHT2ALXT","TWHT2ALYT","TWHT2ALZT","TWHT2FLXT","TWHT2FLYT","TWHT2FLZT","TWHT2MLXT", &
+                                  "TWHT2MLYT","TWHT2MLZT","TWHT2RDXT","TWHT2RDYT","TWHT2RDZT","TWHT2RPXI","TWHT2RPYI","TWHT2RPZI", &
+                                  "TWHT2TDXT","TWHT2TDYT","TWHT2TDZT","TWHT2TPXI","TWHT2TPYI","TWHT2TPZI","TWHT3ALXT","TWHT3ALYT", &
+                                  "TWHT3ALZT","TWHT3FLXT","TWHT3FLYT","TWHT3FLZT","TWHT3MLXT","TWHT3MLYT","TWHT3MLZT","TWHT3RDXT", &
+                                  "TWHT3RDYT","TWHT3RDZT","TWHT3RPXI","TWHT3RPYI","TWHT3RPZI","TWHT3TDXT","TWHT3TDYT","TWHT3TDZT", &
+                                  "TWHT3TPXI","TWHT3TPYI","TWHT3TPZI","TWHT4ALXT","TWHT4ALYT","TWHT4ALZT","TWHT4FLXT","TWHT4FLYT", &
+                                  "TWHT4FLZT","TWHT4MLXT","TWHT4MLYT","TWHT4MLZT","TWHT4RDXT","TWHT4RDYT","TWHT4RDZT","TWHT4RPXI", &
+                                  "TWHT4RPYI","TWHT4RPZI","TWHT4TDXT","TWHT4TDYT","TWHT4TDZT","TWHT4TPXI","TWHT4TPYI","TWHT4TPZI", &
+                                  "TWHT5ALXT","TWHT5ALYT","TWHT5ALZT","TWHT5FLXT","TWHT5FLYT","TWHT5FLZT","TWHT5MLXT","TWHT5MLYT", &
+                                  "TWHT5MLZT","TWHT5RDXT","TWHT5RDYT","TWHT5RDZT","TWHT5RPXI","TWHT5RPYI","TWHT5RPZI","TWHT5TDXT", &
+                                  "TWHT5TDYT","TWHT5TDZT","TWHT5TPXI","TWHT5TPYI","TWHT5TPZI","TWHT6ALXT","TWHT6ALYT","TWHT6ALZT", &
+                                  "TWHT6FLXT","TWHT6FLYT","TWHT6FLZT","TWHT6MLXT","TWHT6MLYT","TWHT6MLZT","TWHT6RDXT","TWHT6RDYT", &
+                                  "TWHT6RDZT","TWHT6RPXI","TWHT6RPYI","TWHT6RPZI","TWHT6TDXT","TWHT6TDYT","TWHT6TDZT","TWHT6TPXI", &
+                                  "TWHT6TPYI","TWHT6TPZI","TWHT7ALXT","TWHT7ALYT","TWHT7ALZT","TWHT7FLXT","TWHT7FLYT","TWHT7FLZT", &
+                                  "TWHT7MLXT","TWHT7MLYT","TWHT7MLZT","TWHT7RDXT","TWHT7RDYT","TWHT7RDZT","TWHT7RPXI","TWHT7RPYI", &
+                                  "TWHT7RPZI","TWHT7TDXT","TWHT7TDYT","TWHT7TDZT","TWHT7TPXI","TWHT7TPYI","TWHT7TPZI","TWHT8ALXT", &
+                                  "TWHT8ALYT","TWHT8ALZT","TWHT8FLXT","TWHT8FLYT","TWHT8FLZT","TWHT8MLXT","TWHT8MLYT","TWHT8MLZT", &
+                                  "TWHT8RDXT","TWHT8RDYT","TWHT8RDZT","TWHT8RPXI","TWHT8RPYI","TWHT8RPZI","TWHT8TDXT","TWHT8TDYT", &
+                                  "TWHT8TDZT","TWHT8TPXI","TWHT8TPYI","TWHT8TPZI","TWHT9ALXT","TWHT9ALYT","TWHT9ALZT","TWHT9FLXT", &
+                                  "TWHT9FLYT","TWHT9FLZT","TWHT9MLXT","TWHT9MLYT","TWHT9MLZT","TWHT9RDXT","TWHT9RDYT","TWHT9RDZT", &
+                                  "TWHT9RPXI","TWHT9RPYI","TWHT9RPZI","TWHT9TDXT","TWHT9TDYT","TWHT9TDZT","TWHT9TPXI","TWHT9TPYI", &
+                                  "TWHT9TPZI","TWRBSFXT ","TWRBSFYT ","TWRBSFZT ","TWRBSMXT ","TWRBSMYT ","TWRBSMZT ","TWRCLRNC1", &
+                                  "TWRCLRNC2","TWRCLRNC3","TWRTPTDXI","TWRTPTDYI","TWRTPTDZI","TWSTDEFL1","TWSTDEFL2","TWSTDEFL3", &
+                                  "YAWACCEL ","YAWAZN   ","YAWAZP   ","YAWBRFXN ","YAWBRFXP ","YAWBRFYN ","YAWBRFYP ","YAWBRFZN ", &
+                                  "YAWBRFZP ","YAWBRMXN ","YAWBRMXP ","YAWBRMYN ","YAWBRMYP ","YAWBRMZN ","YAWBRMZP ","YAWBRRAXP", &
+                                  "YAWBRRAYP","YAWBRRAZP","YAWBRRDXT","YAWBRRDYT","YAWBRRDZT","YAWBRRVXP","YAWBRRVYP","YAWBRRVZP", &
+                                  "YAWBRTAXP","YAWBRTAYP","YAWBRTAZP","YAWBRTDXI","YAWBRTDXP","YAWBRTDXT","YAWBRTDYI","YAWBRTDYP", &
+                                  "YAWBRTDYT","YAWBRTDZI","YAWBRTDZP","YAWBRTDZT","YAWBRTVXP","YAWBRTVYP","YAWBRTVZP","YAWPOS   ", &
+                               "YAWPZN   ","YAWPZP   ","YAWRATE  ","YAWVZN   ","YAWVZP   "/)
+      INTEGER(IntKi), PARAMETER :: ParamIndxAry(981) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                   LSSTipPxa , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 ,   HSShftA , &
+                                     HSShftV ,   HSSBrTq ,   HSShftA , HSShftPwr ,  HSShftTq ,   HSShftV ,   TipDyc1 ,   TipDyc2 , &
+                                     TipDyc3 , LSSGagAxa , LSSGagAxa , LSSGagAxa , LSShftFxa , LSShftFxa , LSShftFya , LSShftFys , &
+                                   LSShftFza , LSShftFzs , LSShftMxa , LSShftMxa , LSSGagMya , LSSGagMys , LSSGagMza , LSSGagMzs , &
+                                   LSSGagPxa , LSSGagPxa , LSSGagPxa , LSSGagVxa , LSSGagVxa , LSSGagVxa , LSShftFxa , LSShftFxa , &
+                                   LSShftFya , LSShftFys , LSShftFza , LSShftFzs , LSShftMxa , LSShftMxa ,    RotPwr , LSShftMxa , &
+                                   LSSTipAxa , LSSTipAxa , LSSTipAxa , LSSTipMya , LSSTipMys , LSSTipMza , LSSTipMzs , LSSTipPxa , &
+                                   LSSTipPxa , LSSTipPxa , LSSTipVxa , LSSTipVxa , LSSTipVxa ,    YawPzn ,    YawAzn ,    YawPzn , &
+                                      YawVzn , NcIMURAxs , NcIMURAys , NcIMURAzs , NcIMURVxs , NcIMURVys , NcIMURVzs , NcIMUTAxs , &
+                                   NcIMUTAys , NcIMUTAzs , NcIMUTVxs , NcIMUTVys , NcIMUTVzs ,   TipDxc1 ,   TipDxc2 ,   TipDxc3 , &
+                                    TipRDyb1 ,  TipRDyb2 ,  TipRDyb3 , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 , PtchPMzc1 , PtchPMzc2 , &
+                                   PtchPMzc3 ,  PtfmTDzi ,  PtfmRDyi ,  PtfmRAxi ,  PtfmRAxt ,  PtfmRAyi ,  PtfmRAyt ,  PtfmRAzi , &
+                                    PtfmRAzt ,  PtfmRDxi ,  PtfmRDyi ,  PtfmRDzi ,  PtfmRDxi ,  PtfmRVxi ,  PtfmRVxt ,  PtfmRVyi , &
+                                    PtfmRVyt ,  PtfmRVzi ,  PtfmRVzt ,  PtfmTDxi ,  PtfmTDyi ,  PtfmTAxi ,  PtfmTAxt ,  PtfmTAyi , &
+                                    PtfmTAyt ,  PtfmTAzi ,  PtfmTAzt ,  PtfmTDxi ,  PtfmTDxt ,  PtfmTDyi ,  PtfmTDyt ,  PtfmTDzi , &
+                                    PtfmTDzt ,  PtfmTVxi ,  PtfmTVxt ,  PtfmTVyi ,  PtfmTVyt ,  PtfmTVzi ,  PtfmTVzt ,  PtfmRDzi , &
+                                    QD2_B1E1 ,  QD2_B1F1 ,  QD2_B1F2 ,  QD2_B2E1 ,  QD2_B2F1 ,  QD2_B2F2 ,  QD2_B3E1 ,  QD2_B3F1 , &
+                                    QD2_B3F2 ,  QD2_DrTr ,  QD2_GeAz ,    QD2_Hv ,     QD2_P ,     QD2_R ,  QD2_RFrl ,    QD2_Sg , &
+                                      QD2_Sw ,  QD2_Teet ,  QD2_TFA1 ,  QD2_TFA2 ,  QD2_TFrl ,  QD2_TSS1 ,  QD2_TSS2 ,     QD2_Y , &
+                                     QD2_Yaw ,   QD_B1E1 ,   QD_B1F1 ,   QD_B1F2 ,   QD_B2E1 ,   QD_B2F1 ,   QD_B2F2 ,   QD_B3E1 , &
+                                     QD_B3F1 ,   QD_B3F2 ,   QD_DrTr ,   QD_GeAz ,     QD_Hv ,      QD_P ,      QD_R ,   QD_RFrl , &
+                                       QD_Sg ,     QD_Sw ,   QD_Teet ,   QD_TFA1 ,   QD_TFA2 ,   QD_TFrl ,   QD_TSS1 ,   QD_TSS2 , &
+                                        QD_Y ,    QD_Yaw ,    Q_B1E1 ,    Q_B1F1 ,    Q_B1F2 ,    Q_B2E1 ,    Q_B2F1 ,    Q_B2F2 , &
+                                      Q_B3E1 ,    Q_B3F1 ,    Q_B3F2 ,    Q_DrTr ,    Q_GeAz ,      Q_Hv ,       Q_P ,       Q_R , &
+                                      Q_RFrl ,      Q_Sg ,      Q_Sw ,    Q_Teet ,    Q_TFA1 ,    Q_TFA2 ,    Q_TFrl ,    Q_TSS1 , &
+                                      Q_TSS2 ,       Q_Y ,     Q_Yaw ,   RFrlBrM ,  TipRDxb1 ,  TipRDxb2 ,  TipRDxb3 ,  RootFxb1 , &
+                                    RootFxb2 ,  RootFxb3 ,  RootFxc1 ,  RootFxc2 ,  RootFxc3 ,  RootFyb1 ,  RootFyb2 ,  RootFyb3 , &
+                                    RootFyc1 ,  RootFyc2 ,  RootFyc3 ,  RootFzc1 ,  RootFzc2 ,  RootFzc3 ,  RootFzc1 ,  RootFzc2 , &
+                                    RootFzc3 ,  RootMxb1 ,  RootMxb2 ,  RootMxb3 ,  RootMyb1 ,  RootMyb2 ,  RootMyb3 ,  RootMxc1 , &
+                                    RootMxc2 ,  RootMxc3 ,  RootMyc1 ,  RootMyc2 ,  RootMyc3 ,  RootMxb1 ,  RootMxb2 ,  RootMxb3 , &
+                                    RootMxc1 ,  RootMxc2 ,  RootMxc3 ,  RootMyb1 ,  RootMyb2 ,  RootMyb3 ,  RootMyc1 ,  RootMyc2 , &
+                                    RootMyc3 ,  RootMzc1 ,  RootMzc2 ,  RootMzc3 ,  RootMzc1 ,  RootMzc2 ,  RootMzc3 , LSSTipAxa , &
+                                    RotFurlP ,  RotFurlA ,  RotFurlP ,  RotFurlV ,    RotPwr , LSSTipVxa ,   TeetAya ,   TeetPya , &
+                                     TeetVya , LSShftFxa , LSShftMxa , Spn1ALxb1 , Spn1ALxb2 , Spn1ALxb3 , Spn1ALyb1 , Spn1ALyb2 , &
+                                   Spn1ALyb3 , Spn1ALzb1 , Spn1ALzb2 , Spn1ALzb3 , Spn1FLxb1 , Spn1FLxb2 , Spn1FLxb3 , Spn1FLyb1 , &
+                                   Spn1FLyb2 , Spn1FLyb3 , Spn1FLzb1 , Spn1FLzb2 , Spn1FLzb3 , Spn1MLxb1 , Spn1MLxb2 , Spn1MLxb3 , &
+                                   Spn1MLyb1 , Spn1MLyb2 , Spn1MLyb3 , Spn1MLzb1 , Spn1MLzb2 , Spn1MLzb3 , Spn1RDxb1 , Spn1RDxb2 , &
+                                   Spn1RDxb3 , Spn1RDyb1 , Spn1RDyb2 , Spn1RDyb3 , Spn1RDzb1 , Spn1RDzb2 , Spn1RDzb3 , Spn1TDxb1 , &
+                                   Spn1TDxb2 , Spn1TDxb3 , Spn1TDyb1 , Spn1TDyb2 , Spn1TDyb3 , Spn1TDzb1 , Spn1TDzb2 , Spn1TDzb3 , &
+                                   Spn2ALxb1 , Spn2ALxb2 , Spn2ALxb3 , Spn2ALyb1 , Spn2ALyb2 , Spn2ALyb3 , Spn2ALzb1 , Spn2ALzb2 , &
+                                   Spn2ALzb3 , Spn2FLxb1 , Spn2FLxb2 , Spn2FLxb3 , Spn2FLyb1 , Spn2FLyb2 , Spn2FLyb3 , Spn2FLzb1 , &
+                                   Spn2FLzb2 , Spn2FLzb3 , Spn2MLxb1 , Spn2MLxb2 , Spn2MLxb3 , Spn2MLyb1 , Spn2MLyb2 , Spn2MLyb3 , &
+                                   Spn2MLzb1 , Spn2MLzb2 , Spn2MLzb3 , Spn2RDxb1 , Spn2RDxb2 , Spn2RDxb3 , Spn2RDyb1 , Spn2RDyb2 , &
+                                   Spn2RDyb3 , Spn2RDzb1 , Spn2RDzb2 , Spn2RDzb3 , Spn2TDxb1 , Spn2TDxb2 , Spn2TDxb3 , Spn2TDyb1 , &
+                                   Spn2TDyb2 , Spn2TDyb3 , Spn2TDzb1 , Spn2TDzb2 , Spn2TDzb3 , Spn3ALxb1 , Spn3ALxb2 , Spn3ALxb3 , &
+                                   Spn3ALyb1 , Spn3ALyb2 , Spn3ALyb3 , Spn3ALzb1 , Spn3ALzb2 , Spn3ALzb3 , Spn3FLxb1 , Spn3FLxb2 , &
+                                   Spn3FLxb3 , Spn3FLyb1 , Spn3FLyb2 , Spn3FLyb3 , Spn3FLzb1 , Spn3FLzb2 , Spn3FLzb3 , Spn3MLxb1 , &
+                                   Spn3MLxb2 , Spn3MLxb3 , Spn3MLyb1 , Spn3MLyb2 , Spn3MLyb3 , Spn3MLzb1 , Spn3MLzb2 , Spn3MLzb3 , &
+                                   Spn3RDxb1 , Spn3RDxb2 , Spn3RDxb3 , Spn3RDyb1 , Spn3RDyb2 , Spn3RDyb3 , Spn3RDzb1 , Spn3RDzb2 , &
+                                   Spn3RDzb3 , Spn3TDxb1 , Spn3TDxb2 , Spn3TDxb3 , Spn3TDyb1 , Spn3TDyb2 , Spn3TDyb3 , Spn3TDzb1 , &
+                                   Spn3TDzb2 , Spn3TDzb3 , Spn4ALxb1 , Spn4ALxb2 , Spn4ALxb3 , Spn4ALyb1 , Spn4ALyb2 , Spn4ALyb3 , &
+                                   Spn4ALzb1 , Spn4ALzb2 , Spn4ALzb3 , Spn4FLxb1 , Spn4FLxb2 , Spn4FLxb3 , Spn4FLyb1 , Spn4FLyb2 , &
+                                   Spn4FLyb3 , Spn4FLzb1 , Spn4FLzb2 , Spn4FLzb3 , Spn4MLxb1 , Spn4MLxb2 , Spn4MLxb3 , Spn4MLyb1 , &
+                                   Spn4MLyb2 , Spn4MLyb3 , Spn4MLzb1 , Spn4MLzb2 , Spn4MLzb3 , Spn4RDxb1 , Spn4RDxb2 , Spn4RDxb3 , &
+                                   Spn4RDyb1 , Spn4RDyb2 , Spn4RDyb3 , Spn4RDzb1 , Spn4RDzb2 , Spn4RDzb3 , Spn4TDxb1 , Spn4TDxb2 , &
+                                   Spn4TDxb3 , Spn4TDyb1 , Spn4TDyb2 , Spn4TDyb3 , Spn4TDzb1 , Spn4TDzb2 , Spn4TDzb3 , Spn5ALxb1 , &
+                                   Spn5ALxb2 , Spn5ALxb3 , Spn5ALyb1 , Spn5ALyb2 , Spn5ALyb3 , Spn5ALzb1 , Spn5ALzb2 , Spn5ALzb3 , &
+                                   Spn5FLxb1 , Spn5FLxb2 , Spn5FLxb3 , Spn5FLyb1 , Spn5FLyb2 , Spn5FLyb3 , Spn5FLzb1 , Spn5FLzb2 , &
+                                   Spn5FLzb3 , Spn5MLxb1 , Spn5MLxb2 , Spn5MLxb3 , Spn5MLyb1 , Spn5MLyb2 , Spn5MLyb3 , Spn5MLzb1 , &
+                                   Spn5MLzb2 , Spn5MLzb3 , Spn5RDxb1 , Spn5RDxb2 , Spn5RDxb3 , Spn5RDyb1 , Spn5RDyb2 , Spn5RDyb3 , &
+                                   Spn5RDzb1 , Spn5RDzb2 , Spn5RDzb3 , Spn5TDxb1 , Spn5TDxb2 , Spn5TDxb3 , Spn5TDyb1 , Spn5TDyb2 , &
+                                   Spn5TDyb3 , Spn5TDzb1 , Spn5TDzb2 , Spn5TDzb3 , Spn6ALxb1 , Spn6ALxb2 , Spn6ALxb3 , Spn6ALyb1 , &
+                                   Spn6ALyb2 , Spn6ALyb3 , Spn6ALzb1 , Spn6ALzb2 , Spn6ALzb3 , Spn6FLxb1 , Spn6FLxb2 , Spn6FLxb3 , &
+                                   Spn6FLyb1 , Spn6FLyb2 , Spn6FLyb3 , Spn6FLzb1 , Spn6FLzb2 , Spn6FLzb3 , Spn6MLxb1 , Spn6MLxb2 , &
+                                   Spn6MLxb3 , Spn6MLyb1 , Spn6MLyb2 , Spn6MLyb3 , Spn6MLzb1 , Spn6MLzb2 , Spn6MLzb3 , Spn6RDxb1 , &
+                                   Spn6RDxb2 , Spn6RDxb3 , Spn6RDyb1 , Spn6RDyb2 , Spn6RDyb3 , Spn6RDzb1 , Spn6RDzb2 , Spn6RDzb3 , &
+                                   Spn6TDxb1 , Spn6TDxb2 , Spn6TDxb3 , Spn6TDyb1 , Spn6TDyb2 , Spn6TDyb3 , Spn6TDzb1 , Spn6TDzb2 , &
+                                   Spn6TDzb3 , Spn7ALxb1 , Spn7ALxb2 , Spn7ALxb3 , Spn7ALyb1 , Spn7ALyb2 , Spn7ALyb3 , Spn7ALzb1 , &
+                                   Spn7ALzb2 , Spn7ALzb3 , Spn7FLxb1 , Spn7FLxb2 , Spn7FLxb3 , Spn7FLyb1 , Spn7FLyb2 , Spn7FLyb3 , &
+                                   Spn7FLzb1 , Spn7FLzb2 , Spn7FLzb3 , Spn7MLxb1 , Spn7MLxb2 , Spn7MLxb3 , Spn7MLyb1 , Spn7MLyb2 , &
+                                   Spn7MLyb3 , Spn7MLzb1 , Spn7MLzb2 , Spn7MLzb3 , Spn7RDxb1 , Spn7RDxb2 , Spn7RDxb3 , Spn7RDyb1 , &
+                                   Spn7RDyb2 , Spn7RDyb3 , Spn7RDzb1 , Spn7RDzb2 , Spn7RDzb3 , Spn7TDxb1 , Spn7TDxb2 , Spn7TDxb3 , &
+                                   Spn7TDyb1 , Spn7TDyb2 , Spn7TDyb3 , Spn7TDzb1 , Spn7TDzb2 , Spn7TDzb3 , Spn8ALxb1 , Spn8ALxb2 , &
+                                   Spn8ALxb3 , Spn8ALyb1 , Spn8ALyb2 , Spn8ALyb3 , Spn8ALzb1 , Spn8ALzb2 , Spn8ALzb3 , Spn8FLxb1 , &
+                                   Spn8FLxb2 , Spn8FLxb3 , Spn8FLyb1 , Spn8FLyb2 , Spn8FLyb3 , Spn8FLzb1 , Spn8FLzb2 , Spn8FLzb3 , &
+                                   Spn8MLxb1 , Spn8MLxb2 , Spn8MLxb3 , Spn8MLyb1 , Spn8MLyb2 , Spn8MLyb3 , Spn8MLzb1 , Spn8MLzb2 , &
+                                   Spn8MLzb3 , Spn8RDxb1 , Spn8RDxb2 , Spn8RDxb3 , Spn8RDyb1 , Spn8RDyb2 , Spn8RDyb3 , Spn8RDzb1 , &
+                                   Spn8RDzb2 , Spn8RDzb3 , Spn8TDxb1 , Spn8TDxb2 , Spn8TDxb3 , Spn8TDyb1 , Spn8TDyb2 , Spn8TDyb3 , &
+                                   Spn8TDzb1 , Spn8TDzb2 , Spn8TDzb3 , Spn9ALxb1 , Spn9ALxb2 , Spn9ALxb3 , Spn9ALyb1 , Spn9ALyb2 , &
+                                   Spn9ALyb3 , Spn9ALzb1 , Spn9ALzb2 , Spn9ALzb3 , Spn9FLxb1 , Spn9FLxb2 , Spn9FLxb3 , Spn9FLyb1 , &
+                                   Spn9FLyb2 , Spn9FLyb3 , Spn9FLzb1 , Spn9FLzb2 , Spn9FLzb3 , Spn9MLxb1 , Spn9MLxb2 , Spn9MLxb3 , &
+                                   Spn9MLyb1 , Spn9MLyb2 , Spn9MLyb3 , Spn9MLzb1 , Spn9MLzb2 , Spn9MLzb3 , Spn9RDxb1 , Spn9RDxb2 , &
+                                   Spn9RDxb3 , Spn9RDyb1 , Spn9RDyb2 , Spn9RDyb3 , Spn9RDzb1 , Spn9RDzb2 , Spn9RDzb3 , Spn9TDxb1 , &
+                                   Spn9TDxb2 , Spn9TDxb3 , Spn9TDyb1 , Spn9TDyb2 , Spn9TDyb3 , Spn9TDzb1 , Spn9TDzb2 , Spn9TDzb3 , &
+                                   TailFurlP , TailFurlA , TailFurlP , TailFurlV ,   TeetAya ,   TeetPya ,   TeetPya ,   TeetVya , &
+                                     TFrlBrM , TipClrnc1 , TipClrnc2 , TipClrnc3 ,  TipALxb1 ,  TipALxb2 ,  TipALxb3 ,  TipALyb1 , &
+                                    TipALyb2 ,  TipALyb3 ,  TipALzb1 ,  TipALzb2 ,  TipALzb3 , TipClrnc1 , TipClrnc2 , TipClrnc3 , &
+                                     TipDxb1 ,   TipDxb2 ,   TipDxb3 ,   TipDxc1 ,   TipDxc2 ,   TipDxc3 ,   TipDyb1 ,   TipDyb2 , &
+                                     TipDyb3 ,   TipDyc1 ,   TipDyc2 ,   TipDyc3 ,   TipDzc1 ,   TipDzc2 ,   TipDzc3 ,   TipDzc1 , &
+                                     TipDzc2 ,   TipDzc3 ,  TipRDxb1 ,  TipRDxb2 ,  TipRDxb3 ,  TipRDyb1 ,  TipRDyb2 ,  TipRDyb3 , &
+                                    TipRDzc1 ,  TipRDzc2 ,  TipRDzc3 ,  TipRDzc1 ,  TipRDzc2 ,  TipRDzc3 , YawBrTDzt , YawBrTDxt , &
+                                   YawBrRDyt , YawBrRDxt , YawBrTDyt , YawBrRDzt , TwHt1ALxt , TwHt1ALyt , TwHt1ALzt , TwHt1FLxt , &
+                                   TwHt1FLyt , TwHt1FLzt , TwHt1MLxt , TwHt1MLyt , TwHt1MLzt , TwHt1RDxt , TwHt1RDyt , TwHt1RDzt , &
+                                   TwHt1RPxi , TwHt1RPyi , TwHt1RPzi , TwHt1TDxt , TwHt1TDyt , TwHt1TDzt , TwHt1TPxi , TwHt1TPyi , &
+                                   TwHt1TPzi , TwHt2ALxt , TwHt2ALyt , TwHt2ALzt , TwHt2FLxt , TwHt2FLyt , TwHt2FLzt , TwHt2MLxt , &
+                                   TwHt2MLyt , TwHt2MLzt , TwHt2RDxt , TwHt2RDyt , TwHt2RDzt , TwHt2RPxi , TwHt2RPyi , TwHt2RPzi , &
+                                   TwHt2TDxt , TwHt2TDyt , TwHt2TDzt , TwHt2TPxi , TwHt2TPyi , TwHt2TPzi , TwHt3ALxt , TwHt3ALyt , &
+                                   TwHt3ALzt , TwHt3FLxt , TwHt3FLyt , TwHt3FLzt , TwHt3MLxt , TwHt3MLyt , TwHt3MLzt , TwHt3RDxt , &
+                                   TwHt3RDyt , TwHt3RDzt , TwHt3RPxi , TwHt3RPyi , TwHt3RPzi , TwHt3TDxt , TwHt3TDyt , TwHt3TDzt , &
+                                   TwHt3TPxi , TwHt3TPyi , TwHt3TPzi , TwHt4ALxt , TwHt4ALyt , TwHt4ALzt , TwHt4FLxt , TwHt4FLyt , &
+                                   TwHt4FLzt , TwHt4MLxt , TwHt4MLyt , TwHt4MLzt , TwHt4RDxt , TwHt4RDyt , TwHt4RDzt , TwHt4RPxi , &
+                                   TwHt4RPyi , TwHt4RPzi , TwHt4TDxt , TwHt4TDyt , TwHt4TDzt , TwHt4TPxi , TwHt4TPyi , TwHt4TPzi , &
+                                   TwHt5ALxt , TwHt5ALyt , TwHt5ALzt , TwHt5FLxt , TwHt5FLyt , TwHt5FLzt , TwHt5MLxt , TwHt5MLyt , &
+                                   TwHt5MLzt , TwHt5RDxt , TwHt5RDyt , TwHt5RDzt , TwHt5RPxi , TwHt5RPyi , TwHt5RPzi , TwHt5TDxt , &
+                                   TwHt5TDyt , TwHt5TDzt , TwHt5TPxi , TwHt5TPyi , TwHt5TPzi , TwHt6ALxt , TwHt6ALyt , TwHt6ALzt , &
+                                   TwHt6FLxt , TwHt6FLyt , TwHt6FLzt , TwHt6MLxt , TwHt6MLyt , TwHt6MLzt , TwHt6RDxt , TwHt6RDyt , &
+                                   TwHt6RDzt , TwHt6RPxi , TwHt6RPyi , TwHt6RPzi , TwHt6TDxt , TwHt6TDyt , TwHt6TDzt , TwHt6TPxi , &
+                                   TwHt6TPyi , TwHt6TPzi , TwHt7ALxt , TwHt7ALyt , TwHt7ALzt , TwHt7FLxt , TwHt7FLyt , TwHt7FLzt , &
+                                   TwHt7MLxt , TwHt7MLyt , TwHt7MLzt , TwHt7RDxt , TwHt7RDyt , TwHt7RDzt , TwHt7RPxi , TwHt7RPyi , &
+                                   TwHt7RPzi , TwHt7TDxt , TwHt7TDyt , TwHt7TDzt , TwHt7TPxi , TwHt7TPyi , TwHt7TPzi , TwHt8ALxt , &
+                                   TwHt8ALyt , TwHt8ALzt , TwHt8FLxt , TwHt8FLyt , TwHt8FLzt , TwHt8MLxt , TwHt8MLyt , TwHt8MLzt , &
+                                   TwHt8RDxt , TwHt8RDyt , TwHt8RDzt , TwHt8RPxi , TwHt8RPyi , TwHt8RPzi , TwHt8TDxt , TwHt8TDyt , &
+                                   TwHt8TDzt , TwHt8TPxi , TwHt8TPyi , TwHt8TPzi , TwHt9ALxt , TwHt9ALyt , TwHt9ALzt , TwHt9FLxt , &
+                                   TwHt9FLyt , TwHt9FLzt , TwHt9MLxt , TwHt9MLyt , TwHt9MLzt , TwHt9RDxt , TwHt9RDyt , TwHt9RDzt , &
+                                   TwHt9RPxi , TwHt9RPyi , TwHt9RPzi , TwHt9TDxt , TwHt9TDyt , TwHt9TDzt , TwHt9TPxi , TwHt9TPyi , &
+                                   TwHt9TPzi ,  TwrBsFxt ,  TwrBsFyt ,  TwrBsFzt ,  TwrBsMxt ,  TwrBsMyt ,  TwrBsMzt , TipClrnc1 , &
+                                   TipClrnc2 , TipClrnc3 , TwrTpTDxi , TwrTpTDyi , TwrTpTDzi ,  TipRDzc1 ,  TipRDzc2 ,  TipRDzc3 , &
+                                      YawAzn ,    YawAzn ,    YawAzn ,  YawBrFxn ,  YawBrFxp ,  YawBrFyn ,  YawBrFyp ,  YawBrFzn , &
+                                    YawBrFzn ,  YawBrMxn ,  YawBrMxp ,  YawBrMyn ,  YawBrMyp ,  YawBrMzn ,  YawBrMzn , YawBrRAxp , &
+                                   YawBrRAyp , YawBrRAzp , YawBrRDxt , YawBrRDyt , YawBrRDzt , YawBrRVxp , YawBrRVyp , YawBrRVzp , &
+                                   YawBrTAxp , YawBrTAyp , YawBrTAzp , TwrTpTDxi , YawBrTDxp , YawBrTDxt , TwrTpTDyi , YawBrTDyp , &
+                                   YawBrTDyt , TwrTpTDzi , YawBrTDzp , YawBrTDzt , YawBrTVxp , YawBrTVyp , YawBrTVzp ,    YawPzn , &
+                                   YawPzn ,    YawPzn ,    YawVzn ,    YawVzn ,    YawVzn /)
+      CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(981) =  (/  &  ! This lists the units corresponding to the allowed parameters
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg/s^2)", &
+                                  "(rpm)    ","(kN-m)   ","(deg/s^2)","(kW)     ","(kN-m)   ","(rpm)    ","(m)      ","(m)      ", &
+                                  "(m)      ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(rpm)    ","(rpm)    ","(rpm)    ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kW)     ","(kN-m)   ", &
+                                  "(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(rpm)    ","(rpm)    ","(rpm)    ","(deg)    ","(deg/s^2)","(deg)    ", &
+                                  "(deg/s)  ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s)  ","(deg/s)  ","(deg/s)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s)    ","(m/s)    ","(m/s)    ","(m)      ","(m)      ","(m)      ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(m)      ","(deg)    ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s^2)", &
+                                  "(deg/s^2)","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  ", &
+                                  "(deg/s)  ","(deg/s)  ","(deg/s)  ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(rad/s^2)","(rad/s^2)","(m/s^2)  ","(rad/s^2)","(rad/s^2)","(rad/s^2)","(m/s^2)  ", &
+                                  "(m/s^2)  ","(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)", &
+                                  "(rad/s^2)","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ", &
+                                  "(m/s)    ","(m/s)    ","(rad/s)  ","(rad/s)  ","(m/s)    ","(rad/s)  ","(rad/s)  ","(rad/s)  ", &
+                                  "(m/s)    ","(m/s)    ","(rad/s)  ","(m/s)    ","(m/s)    ","(rad/s)  ","(m/s)    ","(m/s)    ", &
+                                  "(rad/s)  ","(rad/s)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(rad)    ","(rad)    ","(m)      ","(rad)    ","(rad)    ", &
+                                  "(rad)    ","(m)      ","(m)      ","(rad)    ","(m)      ","(m)      ","(rad)    ","(m)      ", &
+                                  "(m)      ","(rad)    ","(rad)    ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg/s^2)", &
+                                  "(deg)    ","(deg/s^2)","(deg)    ","(deg/s)  ","(kW)     ","(rpm)    ","(deg/s^2)","(deg)    ", &
+                                  "(deg/s)  ","(kN)     ","(kN-m)   ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(deg)    ","(deg/s^2)","(deg)    ","(deg/s)  ","(deg/s^2)","(deg)    ","(deg)    ","(deg/s)  ", &
+                                  "(kN-m)   ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
+                                  "(deg)    ","(deg)    ","(m)      ","(deg)    ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
+                                  "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
+                                  "(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                                  "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
+                                  "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(deg)    ","(deg)    ","(deg)    ", &
+                                  "(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                                  "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg/s^2)", &
+                                  "(deg/s^2)","(deg/s^2)","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  ", &
+                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ", &
+                                  "(deg)    ","(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  "/)
 
 
       ! Initialize values
@@ -4433,21 +4454,34 @@ end if
 
    END DO
 
-   IF ( p%NumBl < 3_IntKi ) THEN
-      InvalidOutput(PtchPMzc3) = .TRUE.
 
-      InvalidOutput(   Q_B3E1) = .TRUE.
-      InvalidOutput(   Q_B3F1) = .TRUE.
-      InvalidOutput(   Q_B3F2) = .TRUE.
-
-      InvalidOutput(  QD_B3E1) = .TRUE.
-      InvalidOutput(  QD_B3F1) = .TRUE.
-      InvalidOutput(  QD_B3F2) = .TRUE.
-
-      InvalidOutput( QD2_B3E1) = .TRUE.
-      InvalidOutput( QD2_B3F1) = .TRUE.
-      InvalidOutput( QD2_B3F2) = .TRUE.
-   ELSE IF ( p%NumBl > 2_IntKi ) THEN
+   ! Invalid outputs based on number of blades
+   IF ( p%NumBl < 3 ) THEN
+         InvalidOutput(PtchPMzc3) = .TRUE.
+         InvalidOutput(   Q_B3E1) = .TRUE.
+         InvalidOutput(   Q_B3F1) = .TRUE.
+         InvalidOutput(   Q_B3F2) = .TRUE.
+         InvalidOutput(  QD_B3E1) = .TRUE.
+         InvalidOutput(  QD_B3F1) = .TRUE.
+         InvalidOutput(  QD_B3F2) = .TRUE.
+         InvalidOutput( QD2_B3E1) = .TRUE.
+         InvalidOutput( QD2_B3F1) = .TRUE.
+         InvalidOutput( QD2_B3F2) = .TRUE.      
+   ENDIF
+   IF ( p%NumBl < 2 ) THEN
+         InvalidOutput(PtchPMzc2) = .TRUE.
+         InvalidOutput(   Q_B2E1) = .TRUE.
+         InvalidOutput(   Q_B2F1) = .TRUE.
+         InvalidOutput(   Q_B2F2) = .TRUE.
+         InvalidOutput(  QD_B2E1) = .TRUE.
+         InvalidOutput(  QD_B2F1) = .TRUE.
+         InvalidOutput(  QD_B2F2) = .TRUE.
+         InvalidOutput( QD2_B2E1) = .TRUE.
+         InvalidOutput( QD2_B2F1) = .TRUE.
+         InvalidOutput( QD2_B2F2) = .TRUE.      
+   ENDIF
+   ! 1-bladed or 3-bladed, no teeter
+   IF ( p%NumBl /= 2 ) THEN
       InvalidOutput(  TeetPya) = .TRUE.
       InvalidOutput(  TeetVya) = .TRUE.
       InvalidOutput(  TeetAya) = .TRUE.
@@ -4498,19 +4532,15 @@ end if
    END IF
 !   ................. End of validity checking .................
 
-
    !-------------------------------------------------------------------------------------------------
    ! Allocate and set index, name, and units for the output channels
    ! If a selected output channel is not available in this module, set error flag.
    !-------------------------------------------------------------------------------------------------
 
-   ALLOCATE ( p%OutParam(0:p%NumOuts) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = "SetOutParam:Error allocating memory for the ElastoDyn OutParam array."
+   ALLOCATE ( p%OutParam(0:p%NumOuts) , STAT=ErrStat2 )
+   IF ( ErrStat2 /= 0_IntKi )  THEN
+      CALL SetErrStat( ErrID_Fatal,"Error allocating memory for the ElastoDyn OutParam array.", ErrStat, ErrMsg, RoutineName )
       RETURN
-   ELSE
-      ErrStat = ErrID_None
    ENDIF
 
       ! Set index, name, and units for the time output channel:
@@ -4574,8 +4604,7 @@ end if
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
-         ErrStat = ErrID_Fatal
-         ErrMsg  = "SetOutParam:"//trim(p%OutParam(I)%Name)//" is not an available output channel. "//TRIM(ErrMsg)
+         CALL SetErrStat(ErrID_Fatal, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
       END IF
 
    END DO
@@ -5215,10 +5244,18 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
       ! Calculate the tower natural frequencies:
 
    DO I = 1,2     ! Loop through all tower DOFs in one direction
-      p%FreqTFA(I,1) = Inv2Pi*SQRT(   p%KTFA(I,I)                  /( MTFA(I,I) - p%TwrTpMass ) )  ! Natural tower I-fore-aft frequency w/o gravitational destiffening nor tower-top mass effects
-      p%FreqTFA(I,2) = Inv2Pi*SQRT( ( p%KTFA(I,I) + KTFAGrav(I,I) )/  MTFA(I,I)               )  ! Natural tower I-fore-aft frequency w/  gravitational destiffening and tower-top mass effects
-      p%FreqTSS(I,1) = Inv2Pi*SQRT(   p%KTSS(I,I)                  /( MTSS(I,I) - p%TwrTpMass ) )  ! Natural tower I-side-to-side frequency w/o gravitational destiffening nor tower-top mass effects
-      p%FreqTSS(I,2) = Inv2Pi*SQRT( ( p%KTSS(I,I) + KTSSGrav(I,I) )/  MTSS(I,I)               )  ! Natural tower I-side-to-side frequency w/  gravitational destiffening and tower-top mass effects
+      if ( EqualRealNos(( MTFA(I,I) - p%TwrTpMass ), 0.0_ReKi) ) then
+         p%FreqTFA(I,1) = NaN ! Avoid creating a divide by zero signal, but set p%FreqTFA(I,1) = NaN
+      else        
+         p%FreqTFA(I,1) = Inv2Pi*SQRT(   p%KTFA(I,I)/( MTFA(I,I) - p%TwrTpMass ) )  ! Natural tower I-fore-aft frequency w/o gravitational destiffening nor tower-top mass effects
+      end if
+      if ( EqualRealNos(( MTSS(I,I) - p%TwrTpMass ), 0.0_ReKi) ) then
+         p%FreqTSS(I,1) = NaN ! Avoid creating a divide by zero signal, but set p%FreqTFS(I,1) = NaN
+      else
+         p%FreqTSS(I,1) = Inv2Pi*SQRT(   p%KTSS(I,I)/( MTSS(I,I) - p%TwrTpMass ) )  ! Natural tower I-side-to-side frequency w/o gravitational destiffening nor tower-top mass effects
+      end if
+      p%FreqTFA(I,2) = Inv2Pi*SQRT( ( p%KTFA(I,I) + KTFAGrav(I,I) )/MTFA(I,I)               )  ! Natural tower I-fore-aft frequency w/  gravitational destiffening and tower-top mass effects
+      p%FreqTSS(I,2) = Inv2Pi*SQRT( ( p%KTSS(I,I) + KTSSGrav(I,I) )/MTSS(I,I)               )  ! Natural tower I-side-to-side frequency w/  gravitational destiffening and tower-top mass effects
    ENDDO          ! I - All tower DOFs in one direction
 
 
@@ -5286,7 +5323,7 @@ SUBROUTINE InitBlDefl ( p, InputFileData, InitQF1, InitQF2, InitQE1, ErrStat, Er
    REAL(ReKi),              INTENT(OUT) :: InitQF2(p%NumBl)                        !< Initial flap deflection for mode 2 (output).
 
    INTEGER(IntKi),          INTENT(OUT) :: ErrStat                                 !< Error status
-   CHARACTER(1024),         INTENT(OUT) :: ErrMsg                                  !< Error message when ErrStat =/ ErrID_None
+   CHARACTER(ErrMsgLen),    INTENT(OUT) :: ErrMsg                                  !< Error message when ErrStat =/ ErrID_None
 
 
       ! Local variables:
@@ -6768,6 +6805,8 @@ SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
    TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       !Local variables
+   
+   REAL(ReKi)                   :: AngVelHM  (3)                                   ! Angular velocity of eleMent J of blade K (body M) in the hub (body H).
 !   REAL(ReKi)                   :: AngVelEN  (3)                                   ! Angular velocity of the nacelle (body N) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: AngAccELt (3)                                   ! Portion of the angular acceleration of the low-speed shaft (body L) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
    INTEGER(IntKi)               :: J                                               ! Counter for elements
@@ -6887,58 +6926,29 @@ ENDIF
 
    DO K = 1,p%NumBl ! Loop through all blades
 
-      ! Define the partial angular velocities of the tip (body M(p%BldFlexL)) in the  inertia frame:
-      ! NOTE: PAngVelEM(K,J,I,D,:) = the Dth-derivative of the partial angular velocity of DOF I for body M of blade K, element J in body E.
-
-      RtHSdat%PAngVelEM(K,p%TipNode,          :,0,:) = RtHSdat%PAngVelEH(:,0,:)
-      RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),0,:) = - p%TwistedSF(K,2,1,p%TipNode,1)*CoordSys%j1(K,:) &
-                                                       + p%TwistedSF(K,1,1,p%TipNode,1)*CoordSys%j2(K,:)
-      RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),0,:) = - p%TwistedSF(K,2,2,p%TipNode,1)*CoordSys%j1(K,:) &
-                                                       + p%TwistedSF(K,1,2,p%TipNode,1)*CoordSys%j2(K,:)
-      RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),0,:) = - p%TwistedSF(K,2,3,p%TipNode,1)*CoordSys%j1(K,:) &
-                                                       + p%TwistedSF(K,1,3,p%TipNode,1)*CoordSys%j2(K,:)
-   !           AngVelHM(K,p%TipNode              ,:) =  RtHSdat%AngVelEH + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),0,:) & ! Currently
-   !                                                                     + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),0,:) & ! unused
-   !                                                                     + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),0,:)   ! calculations
-       RtHSdat%AngPosHM(:,K,p%TipNode) =        x%QT (DOF_BF(K,1))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),0,:) &
-                                              + x%QT (DOF_BF(K,2))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),0,:) &
-                                              + x%QT (DOF_BE(K,1))*RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),0,:)
-
-
-      ! Define the 1st derivatives of the partial angular velocities of the tip
-      !   (body M(p%BldFlexL)) in the inertia frame:
-
-   ! NOTE: These are currently unused by the code, therefore, they need not
-   !       be calculated.  Thus, they are currently commented out.  If it
-   !       turns out that they are ever needed (i.e., if inertias of the
-   !       blade elements are ever added, etc...) simply uncomment out these
-   !       computations:
-   !   RtHSdat%PAngVelEM(K,p%TipNode,          :,1,:) = RtHSdat%PAngVelEH(:,1,:)
-   !   RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,1),0,:)    )
-   !   RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,p%TipNode,DOF_BF(K,2),0,:)    )
-   !   RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEH, RtHSdat%PAngVelEM(K,p%TipNode,DOF_BE(K,1),0,:)    )
-
-
-      DO J = 1,p%BldNodes ! Loop through the blade nodes / elements
+      DO J = 0,p%TipNode ! Loop through the blade nodes / elements
       ! Define the partial angular velocities of the current node (body M(RNodes(J))) in the inertia frame:
       ! NOTE: PAngVelEM(K,J,I,D,:) = the Dth-derivative of the partial angular velocity
       !   of DOF I for body M of blade K, element J in body E.
 
          RtHSdat%PAngVelEM(K,J,          :,0,:) = RtHSdat%PAngVelEH(:,0,:)
          RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) = - p%TwistedSF(K,2,1,J,1)*CoordSys%j1(K,:) &
-                                                + p%TwistedSF(K,1,1,J,1)*CoordSys%j2(K,:)
+                                                  + p%TwistedSF(K,1,1,J,1)*CoordSys%j2(K,:)
          RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) = - p%TwistedSF(K,2,2,J,1)*CoordSys%j1(K,:) &
-                                                + p%TwistedSF(K,1,2,J,1)*CoordSys%j2(K,:)
+                                                  + p%TwistedSF(K,1,2,J,1)*CoordSys%j2(K,:)
          RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:) = - p%TwistedSF(K,2,3,J,1)*CoordSys%j1(K,:) &
-                                                + p%TwistedSF(K,1,3,J,1)*CoordSys%j2(K,:)
-!                 AngVelHM(K,J              ,:) =  RtHSdat%AngVelEH + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) & ! Currently
-!                                                                   + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) & ! unused
-!                                                                   + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)   ! calculations
-          RtHSdat%AngPosHM(:,K,J              ) =             x%QT (DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
+                                                  + p%TwistedSF(K,1,3,J,1)*CoordSys%j2(K,:)
+                                      AngVelHM  =     x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
+                                                    + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) &
+                                                    + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)
+          RtHSdat%AngVelEM(:,J,K              ) =  RtHSdat%AngVelEH + AngVelHM
+          RtHSdat%AngPosHM(:,K,J              ) =     x%QT (DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),0,:) &
                                                     + x%QT (DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),0,:) &
                                                     + x%QT (DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),0,:)
-
-
+         RtHSdat%AngAccEKt(:,J              ,K) =  RtHSdat%AngAccEHt + x%QDT(DOF_BF(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,1),1,:) & 
+                                                                     + x%QDT(DOF_BF(K,2))*RtHSdat%PAngVelEM(K,J,DOF_BF(K,2),1,:) & 
+                                                                     + x%QDT(DOF_BE(K,1))*RtHSdat%PAngVelEM(K,J,DOF_BE(K,1),1,:)   
+ 
       ! Define the 1st derivatives of the partial angular velocities of the current node (body M(RNodes(J))) in the inertia frame:
 
    ! NOTE: These are currently unused by the code, therefore, they need not
@@ -8214,11 +8224,13 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
       ! Initialize the portions of the mass matrix below the diagonal associated
       !   with the teeter and pure blade DOFs using the partial loads at the teeter pin; only do this if necessary:
 
-      IF ( ( p%NumBl == 2 ) .AND. ( p%DOF_Flag(DOF_Teet) ) )  THEN
-         DO L = 1,p%DOFs%NPSBE(K) ! Loop through all active (enabled) blade DOFs that contribute to the QD2T-related linear accelerations of the blade
-            AugMat(DOF_Teet,p%DOFs%PSBE(K,L)) = -DOT_PRODUCT( RtHSdat%PAngVelEH(DOF_Teet,0,:), &
-                                                              RtHSdat%PMomLPRot(:,p%DOFs%PSBE(K,L)) )  ! [C(q,t)]B
-         ENDDO             ! L - All active (enabled) blade DOFs that contribute to the QD2T-related linear accelerations of the blade
+      IF ( ( p%NumBl == 2 ) ) THEN
+         IF ( p%DOF_Flag(DOF_Teet) ) THEN ! NOTE: two "ifs" since DOF_Teet might be out of bound
+            DO L = 1,p%DOFs%NPSBE(K) ! Loop through all active (enabled) blade DOFs that contribute to the QD2T-related linear accelerations of the blade
+               AugMat(DOF_Teet,p%DOFs%PSBE(K,L)) = -DOT_PRODUCT( RtHSdat%PAngVelEH(DOF_Teet,0,:), &
+                                                                 RtHSdat%PMomLPRot(:,p%DOFs%PSBE(K,L)) )  ! [C(q,t)]B
+            ENDDO             ! L - All active (enabled) blade DOFs that contribute to the QD2T-related linear accelerations of the blade
+         ENDIF
       ENDIF
 
 
@@ -8501,11 +8513,13 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
                                                               +  RtHSdat%TFrlMom                                                  ! + {-f(qd,q,t)}SpringTF + {-f(qd,q,t)}DampTF
    ENDIF
 
-   IF ( ( p%NumBl == 2 ) .AND. ( p%DOF_Flag(DOF_Teet) ) )  THEN
-      ! The teeter DOF does not affect any DOF index larger than DOF_Teet.  Therefore, there is no need to perform the loop: DO I = Diag(DOF_Teet),NActvDOF
+   IF ( ( p%NumBl == 2 ) ) THEN 
+      IF ( p%DOF_Flag(DOF_Teet) )  THEN  ! NOTE: two "ifs" since DOF_Teet may be out of bound
+         ! The teeter DOF does not affect any DOF index larger than DOF_Teet.  Therefore, there is no need to perform the loop: DO I = Diag(DOF_Teet),NActvDOF
          AugMat(DOF_Teet,       DOF_Teet) = -DOT_PRODUCT( RtHSdat%PAngVelEH(DOF_Teet,0,:), RtHSdat%PMomLPRot(:,DOF_Teet) )        ! [C(q,t)]H + [C(q,t)]B
          AugMat(DOF_Teet,         p%NAug) =  DOT_PRODUCT( RtHSdat%PAngVelEH(DOF_Teet,0,:), RtHSdat%MomLPRott             ) &      ! {-f(qd,q,t)}H + {-f(qd,q,t)}GravH + {-f(qd,q,t)}B + {-f(qd,q,t)}GravB + {-f(qd,q,t)}AeroB
                                                               +  RtHSdat%TeetMom                                                  ! + {-f(qd,q,t)}SpringTeet + {-f(qd,q,t)}DampTeet
+      ENDIF
    ENDIF
    !..................................................................................................................................
    ! So far, we have only filled in the portions of the mass matrix on and below the diagonal.  Because the mass matrix is symmetric
@@ -8547,6 +8561,7 @@ END SUBROUTINE FillAugMat
 !> This routine allocates the arrays and meshes stored in the ED_OutputType data structure (y), based on the parameters (p). 
 !! Inputs (u) are included only so that output meshes can be siblings of the inputs.
 !! The routine assumes that the arrays/meshes are not currently allocated (It will produce a fatal error otherwise.)
+!! Also note that this must be called after init_u() so that the misc variables that contain the orientations are set.
 SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -8564,7 +8579,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: NodeNum     ! node number
    INTEGER(IntKi)                               :: J, K        ! loop counters
    INTEGER(IntKi)                               :: ErrStat2    ! The error identifier (ErrStat)
-   CHARACTER(1024)                              :: ErrMsg2     ! The error message (ErrMsg)
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2     ! The error message (ErrMsg)
    
    
       ! initialize variables:
@@ -8573,7 +8588,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    ErrMsg  = ""
       
 
-   CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 )
+   CALL AllocAry( y%WriteOutput, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutput', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8622,7 +8637,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
                IF (ErrStat >= AbortErrLev) RETURN
             
                ! Use orientation at node 1 for the blade root            
-            CALL MeshPositionNode ( y%BladeLn2Mesh(K), p%BldNodes + 2, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat2, ErrMsg2, Orient=u%BladePtLoads(K)%RefOrientation(:,:,1) )
+            CALL MeshPositionNode ( y%BladeLn2Mesh(K), p%BldNodes + 2, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat2, ErrMsg2, Orient=u%BladePtLoads(K)%RefOrientation(:,:,1), ref=.true. )
                CALL CheckError( ErrStat2, ErrMsg2 )
                IF (ErrStat >= AbortErrLev) RETURN
                
@@ -8632,6 +8647,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
             DO J = 0,p%TipNode,p%TipNode
                if (j==0) then ! blade root
                   NodeNum = p%BldNodes + 2
+                  y%BladeLn2Mesh(K)%RefNode = NodeNum
                elseif (j==p%TipNode) then ! blade tip
                   NodeNum = p%BldNodes + 1
                end if
@@ -8749,7 +8765,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF (ErrStat >= AbortErrLev) RETURN
          
-      CALL MeshPositionNode ( y%TowerLn2Mesh, p%TwrNodes + 2, (/0.0_ReKi, 0.0_ReKi, p%TowerBsHt  /), ErrStat2, ErrMsg2 )
+      CALL MeshPositionNode ( y%TowerLn2Mesh, p%TwrNodes + 2, (/0.0_ReKi, 0.0_ReKi, p%TowerBsHt  /), ErrStat2, ErrMsg2, ref=.true. )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF (ErrStat >= AbortErrLev) RETURN
 
@@ -9635,7 +9651,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL ED_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
@@ -9813,7 +9829,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL ED_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
@@ -9976,7 +9992,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL ED_DestroyContState( xdot_pred,  ErrStat3, ErrMsg3 )
@@ -10073,15 +10089,15 @@ SUBROUTINE ED_PrintSum( p, OtherState, GenerateAdamsModel, ErrStat, ErrMsg )
    ELSE
       RotorType = 'Upwind,'
    ENDIF
-   IF ( p%NumBl == 2 )  THEN
-      RotorType = TRIM(RotorType)//' two-bladed rotor'
-      IF ( p%DOF_Flag(DOF_Teet) )  THEN
+   RotorType = TRIM(RotorType)//' '//trim(Num2LStr(p%NumBl))//'-bladed rotor'
+   IF ( p%NumBl==2 )  THEN
+      IF ( p%DOF_Flag(DOF_Teet) ) THEN ! NOTE: two "ifs" required since DOF_Teet might be out of bound
          RotorType = TRIM(RotorType)//' with teetering hub.'
       ELSE
          RotorType = TRIM(RotorType)//' with rigid hub.'
       ENDIF
    ELSE
-      RotorType = TRIM(RotorType)//' three-bladed rotor with rigid hub.'
+      RotorType = TRIM(RotorType)//' with rigid hub.'
    ENDIF
 
    WRITE    (UnSu,'(A)')  '            '//TRIM(RotorType)
@@ -10243,6 +10259,19 @@ END IF
    DO I = 0,p%NumOuts
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
    END DO             
+
+   IF (.not. p%BD4Blades) THEN
+      WRITE (UnSu,'(2x,A)')
+      WRITE (UnSu,'(2x,A)')
+      WRITE (UnSu,'(2x,A)')  'Requested Output Channels at each blade station:'
+      WRITE (UnSu,OutPFmtS)  "Col", TitleStr
+      WRITE (UnSu,OutPFmtS)  "---", TitleStrLines
+      !WRITE (UnSu,'(2x,A)')  'Col   Parameter       Units'
+      !WRITE (UnSu,'(2x,A)')  '----  --------------  ----------'
+      DO I = 1,p%BldNd_NumOuts
+         WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
+      END DO
+   ENDIF
 
    CLOSE(UnSu)
 
@@ -10810,7 +10839,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
 
-      ! allocate dXdu if necessary
+      ! allocate dXdx if necessary
       if (.not. allocated(dXdx)) then
          call AllocAry(dXdx, p%DOFs%NActvDOF * 2, p%DOFs%NActvDOF * 2, 'dXdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -11069,7 +11098,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
       + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
       + 3                                       & ! Yaw, YawRate, and HSS_Spd
-      + p%NumOuts                                 ! WriteOutput values 
+      + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
       
    do i=1,p%NumBl
       p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
@@ -11113,7 +11142,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
    InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
          
-   do i=1,p%NumOuts
+   do i=1,p%NumOuts + p%BldNd_TotNumOuts
       InitOut%LinNames_y(i+index_next) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do   
    
@@ -11174,6 +11203,10 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       InitOut%RotFrame_y(i+index_next) = AllOut( p%OutParam(i)%Indx )      
    end do    
    
+   do i=1, p%BldNd_TotNumOuts
+      InitOut%RotFrame_y(i+p%NumOuts+index_next) = .true.     
+   end do
+   
    deallocate(AllOut)         
    
    
@@ -11203,7 +11236,11 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    call allocAry(p%dx,               p%NDof,            'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%LinNames_x, p%DOFs%NActvDOF*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%RotFrame_x, p%DOFs%NActvDOF*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%DOFs%NActvDOF*2, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   
+      ! All Elastodyn continuous states are max order = 2
+   if ( allocated(InitOut%DerivOrder_x) ) InitOut%DerivOrder_x = 2
    
    p%dx = 0.0_R8Ki ! initialize in case we have only 1 blade
    
@@ -11530,9 +11567,9 @@ SUBROUTINE ED_Perturb_u( p, n, perturb_sign, u, du )
    CASE (12) !Module/Mesh/Field: u%HubPtLoad%Moment = 12
       u%HubPtLoad%Moment(fieldIndx,node) = u%HubPtLoad%Moment(fieldIndx,node) + du * perturb_sign            
   
-   CASE (13) !Module/Mesh/Field: u%HubPtLoad%Force = 13
+   CASE (13) !Module/Mesh/Field: u%NacelleLoads%Force = 13
       u%NacelleLoads%Force( fieldIndx,node) = u%NacelleLoads%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (14) !Module/Mesh/Field: u%HubPtLoad%Moment = 14
+   CASE (14) !Module/Mesh/Field: u%NacelleLoads%Moment = 14
       u%NacelleLoads%Moment(fieldIndx,node) = u%NacelleLoads%Moment(fieldIndx,node) + du * perturb_sign            
    
    CASE (15) !Module/Mesh/Field: u%BlPitchCom = 15
@@ -11617,7 +11654,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    dY(indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
    
    !indx_last = indx_first + p%NumOuts - 1
-   do k=1,p%NumOuts
+   do k=1,p%NumOuts + p%BldNd_TotNumOuts
       dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
    end do   
    
@@ -11626,7 +11663,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
 END SUBROUTINE Compute_dY
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedLogMap )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(ED_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -11645,6 +11682,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedLogMap !< whether a y_op values should contain log maps instead of full orientation matrices
 
 
 
@@ -11653,6 +11691,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_GetOP'
+   LOGICAL                                           :: ReturnLogMap
    TYPE(ED_ContinuousStateType)                      :: dx          !< derivative of continuous states at operating point
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
    
@@ -11703,6 +11742,11 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    !..................................
    IF ( PRESENT( y_op ) ) THEN
+      if (present(NeedLogMap)) then
+         ReturnLogMap = NeedLogMap
+      else
+         ReturnLogMap = .false.
+      end if
       
       if (.not. allocated(y_op)) then 
             ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
@@ -11735,22 +11779,22 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       index = 1
       if (allocated(y%BladeLn2Mesh)) then
          do k=1,p%NumBl
-            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index)
+            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, UseLogMaps=ReturnLogMap)
          end do      
       end if
-      call PackMotionMesh(y%PlatformPtMesh, y_op, index)
-      call PackMotionMesh(y%TowerLn2Mesh, y_op, index)
-      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask)
+      call PackMotionMesh(y%PlatformPtMesh, y_op, index, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, UseLogMaps=ReturnLogMap)
       do k=1,p%NumBl
-         call PackMotionMesh(y%BladeRootMotion(k), y_op, index)
+         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, UseLogMaps=ReturnLogMap)
       end do   
-      call PackMotionMesh(y%NacelleMotion, y_op, index)
+      call PackMotionMesh(y%NacelleMotion, y_op, index, UseLogMaps=ReturnLogMap)
       
       y_op(index) = y%Yaw     ; index = index + 1    
       y_op(index) = y%YawRate ; index = index + 1    
       y_op(index) = y%HSS_Spd 
    
-      do i=1,p%NumOuts
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
          y_op(i+index) = y%WriteOutput(i)
       end do   
                         

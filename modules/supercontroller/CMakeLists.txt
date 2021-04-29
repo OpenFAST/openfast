@@ -14,17 +14,29 @@
 # limitations under the License.
 #
 
-generate_f90_types(src/SuperController_Registry.txt SuperController_Types.f90 -ccode)
+if (GENERATE_TYPES)
+  generate_f90_types(src/SuperController_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SuperController_Types.f90 -ccode)
+  generate_f90_types(src/SC_DataEx_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SCDataEx_Types.f90 -ccode -noextrap)
+endif()
 
-add_library(sctypeslib
-  SuperController_Types.f90)
+# copy the header files to their build location
+configure_file(src/SuperController_Types.h ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(src/SCDataEx_Types.h ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+
+add_library(scdataextypeslib src/SCDataEx_Types.f90)
+target_link_libraries(scdataextypeslib nwtclibs)
+
+add_library(scdataexlib src/SC_DataEx.f90)
+target_link_libraries(scdataexlib scdataextypeslib openfast_prelib nwtclibs)
+
+add_library(sctypeslib  src/SuperController_Types.f90)
 target_link_libraries(sctypeslib nwtclibs)
 
 add_library(scfastlib
   src/SuperController.f90)
 target_link_libraries(scfastlib sctypeslib openfast_prelib nwtclibs)
 
-install(TARGETS sctypeslib scfastlib
+install(TARGETS sctypeslib scfastlib scdataextypeslib scdataexlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
@@ -32,4 +44,5 @@ install(TARGETS sctypeslib scfastlib
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/SuperController_Types.h
+  ${CMAKE_CURRENT_BINARY_DIR}/SCDataEx_Types.h
   DESTINATION include)

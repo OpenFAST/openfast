@@ -11,9 +11,7 @@ include	Registry_NWTC_Library.txt
 
 
 # ..... OpenFOAM_InitInputType data .......................................................................................................
-typedef	OpenFOAM/OpFM	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
-typedef	^	^	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
-typedef	^	^	IntKi	NumActForcePtsBlade	-	-	-	"number of actuator line force points in blade"	-
+typedef	OpenFOAM/OpFM	InitInputType	IntKi	NumActForcePtsBlade	-	-	-	"number of actuator line force points in blade"	-
 typedef	^	^	IntKi	NumActForcePtsTower	-	-	-	"number of actuator line force points in tower"	-
 typedef	^	^	ReKi	StructBldRNodes	{:}	-	-	"Radius to structural model analysis nodes relative to hub"
 typedef	^	^	ReKi	StructTwrHNodes	{:}	-	-	"Location of variable-spaced structural model tower nodes (relative to the tower rigid base height)"
@@ -64,6 +62,9 @@ typedef	^	InputType	ReKi	pzVel	{:}	-	-	"z position of velocity interface (Aerody
 typedef	^	InputType	ReKi	pxForce	{:}	-	-	"x position of actuator force nodes"	"m"
 typedef	^	InputType	ReKi	pyForce	{:}	-	-	"y position of actuator force nodes"	"m"
 typedef	^	InputType	ReKi	pzForce	{:}	-	-	"z position of actuator force nodes"	"m"
+typedef	^	InputType	ReKi	xdotForce	{:}	-	-	"x velocity of actuator force nodes"	"m/s"
+typedef	^	InputType	ReKi	ydotForce	{:}	-	-	"y velocity of actuator force nodes"	"m/s"
+typedef	^	InputType	ReKi	zdotForce	{:}	-	-	"z velocity of actuator force nodes"	"m/s"
 typedef	^	InputType	ReKi	pOrientation	{:}	-	-	"Direction cosine matrix to transform vectors from global frame of reference to actuator force node frame of reference" -
 typedef	^	InputType	ReKi	fx	{:}	-	-	"normalized x force at actuator force nodes"	"N/kg/m^3"
 typedef	^	InputType	ReKi	fy	{:}	-	-	"normalized y force at actuator force nodes"	"N/kg/m^3"
@@ -72,11 +73,9 @@ typedef	^	InputType	ReKi	momentx	{:}	-	-	"normalized x moment at actuator force 
 typedef	^	InputType	ReKi	momenty	{:}	-	-	"normalized y moment at actuator force nodes"	"Nm/kg/m^3"
 typedef	^	InputType	ReKi	momentz	{:}	-	-	"normalized z moment at actuator force nodes"	"Nm/kg/m^3"
 typedef ^       InputType       ReKi    forceNodesChord   {:}     -       -       "chord distribution at the actuator force nodes"   "m"
-typedef	^	InputType	ReKi	SuperController	{:}	-	-	"inputs to the super controller (from the turbine controller)"	-
 
 # ..... OpenFOAM_OutputType data .......................................................................................................
 typedef	OpenFOAM/OpFM	OutputType	ReKi	u	{:}	-	-	"U-component wind speed (in the X-direction) at interface nodes"	m/s
 typedef	^	OutputType	ReKi	v	{:}	-	-	"V-component wind speed (in the Y-direction) at interface nodes"	m/s
 typedef	^	OutputType	ReKi	w	{:}	-	-	"W-component wind speed (in the Z-direction) at interface nodes"	m/s
-typedef	^	OutputType	ReKi	SuperController	{:}	-	-	"outputs of the super controller (to the turbine controller)"	-
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

@@ -59,16 +59,16 @@ def load_ascii_output(filename):
     with open(filename) as f:
         info = {}
         info['name'] = os.path.splitext(os.path.basename(filename))[0]
-        try:
-            header = [f.readline() for _ in range(8)]
-            info['description'] = header[4].strip()
-            info['attribute_names'] = header[6].split()
-            info['attribute_units'] = [unit[1:-1] for unit in header[7].split()]  #removing "()"
-            data = np.array([line.split() for line in f.readlines()]).astype(np.float)
-            return data, info
-
-        except (ValueError, AssertionError):
-            raise
+        header = [f.readline() for _ in range(8)]
+        info['description'] = header[4].strip()
+        info['attribute_names'] = header[6].split()
+        info['attribute_units'] = [unit[1:-1] for unit in header[7].split()]  #removing "()"
+        data = np.array([line.split() for line in f.readlines()], dtype=np.float)
+        if np.any(np.isnan(data)):
+            raise ValueError("NaN found in test data: {}".format(filename))
+        if np.any(np.isinf(data)):
+            raise ValueError("Infinity found in test data: {}".format(filename))
+        return data, info
 
 def load_binary_output(filename):
     """
@@ -86,11 +86,17 @@ def load_binary_output(filename):
     FileFmtID_WithTime = 1    # File identifiers used in FAST
     FileFmtID_WithoutTime = 2
     FileFmtID_NoCompressWithoutTime = 3
-    LenName = 10              # number of characters per channel name
-    LenUnit = 10              # number of characters per unit name
+    FileFmtID_ChanLen_In = 4
     
     with open(filename, 'rb') as fid:
         FileID = fread(fid, 1, 'int16')[0]       # FAST output file format, INT(2)
+        
+        if FileID == FileFmtID_ChanLen_In:
+            LenName  = fread(fid, 1, 'int16')[0] # Number of characters in channel names and units
+        else:
+            LenName = 10                         # default number of characters per channel name
+
+        
         NumOutChans = fread(fid, 1, 'int32')[0]  # The number of output channels, INT(4)
         NT = fread(fid, 1, 'int32')[0]           # The number of time steps, INT(4)
         
@@ -116,7 +122,7 @@ def load_binary_output(filename):
 
         ChanUnit = []                                     # initialize the ChanUnit cell array
         for iChan in range(NumOutChans + 1):
-            ChanUnitASCII = fread(fid, LenUnit, 'uint8')  # ChanUnit converted to numeric ASCII
+            ChanUnitASCII = fread(fid, LenName, 'uint8')  # ChanUnit converted to numeric ASCII
             ChanUnit.append("".join(map(chr, ChanUnitASCII)).strip()[1:-1])
 
         # get the channel time series

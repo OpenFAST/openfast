@@ -9,6 +9,7 @@
 
 usefrom IfW_UniformWind.txt
 usefrom IfW_TSFFWind.txt
+usefrom IfW_FFWind_Base.txt
 usefrom IfW_BladedFFWind.txt
 usefrom IfW_HAWCWind.txt
 usefrom IfW_UserWind.txt
@@ -25,8 +26,9 @@ param    ^                       -                 IntKi             TSFF_WindNu
 param    ^                       -                 IntKi             BladedFF_WindNumber  -     4     -     "Bladed style binary full-field file.  Includes native bladed format"      -
 param    ^                       -                 IntKi             HAWC_WindNumber      -     5     -     "HAWC wind file."                                                          -
 param    ^                       -                 IntKi             User_WindNumber      -     6     -     "User defined wind."                                                       -
-param    ^                       -                 IntKi             FDext_WindNumber     -     7     -     "4D wind from external souce (i.e., FAST.Farm)."                                                       -
-param    ^                       -                 IntKi             Highest_WindNumber   -     7     -     "Highest wind number supported."                                           -
+param    ^                       -                 IntKi             BladedFF_Shr_WindNumber  - 7     -     "Native Bladed binary full-field file."      -
+param    ^                       -                 IntKi             FDext_WindNumber     -     8     -     "4D wind from external souce (i.e., FAST.Farm)."                                                       -
+param    ^                       -                 IntKi             Highest_WindNumber   -     8     -     "Highest wind number supported."                                           -
 
 
 #########################
@@ -60,6 +62,7 @@ typedef  ^                       ^                 ReKi              MWS        
 typedef  InflowWind/InflowWind   InflowWind_InputFile   LOGICAL      EchoFlag          -     -     -     "Echo the input file"                                    -
 typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of windfile"                                       -
 typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation (meteorological direction)"  (degrees)
+typedef  ^                       ^                 ReKi              VFlowAngle        -     -     -     "Vertical (upflow) angle"                                degrees
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points to output the wind velocity (0 to 9)"
 typedef  ^                       ^                 ReKi              WindVxiList       :     -     -     "List of X coordinates for wind velocity measurements"   meters
 typedef  ^                       ^                 ReKi              WindVyiList       :     -     -     "List of Y coordinates for wind velocity measurements"   meters
@@ -73,7 +76,7 @@ typedef  ^                       ^                 ReKi              Uniform_Ref
 typedef  ^                       ^                 CHARACTER(1024)   TSFF_FileName     -     -     -     "TurbSim Full-Field -- filename"                         -
 typedef  ^                       ^                 CHARACTER(1024)   BladedFF_FileName -     -     -     "Bladed-style Full-Field -- filename"                    -
 typedef  ^                       ^                 LOGICAL           BladedFF_TowerFile -    -     -     "Bladed-style Full-Field -- tower file exists"           -
-typedef  ^                       ^                 LOGICAL           CTTS_CoherentTurb -     -     -     "Coherent turbulence data exists"                        -
+typedef  ^                       ^                 LOGICAL           CTTS_CoherentTurb -     .FALSE.     -     "Coherent turbulence data exists"                        -
 typedef  ^                       ^                 CHARACTER(1024)   CTTS_FileName     -     -     -     "Name of coherent turbulence file"                       -
 typedef  ^                       ^                 CHARACTER(1024)   CTTS_Path         -     -     -     "Path to coherent turbulence binary data files"          -
 typedef  ^                       ^                 CHARACTER(1024)   HAWC_FileName_u   -     -     -     "HAWC -- u component binary data file name"              -
@@ -85,27 +88,14 @@ typedef  ^                       ^                 IntKi             HAWC_nz    
 typedef  ^                       ^                 ReKi              HAWC_dx           -     -     -     "HAWC -- distance between points in x direction"         meters
 typedef  ^                       ^                 ReKi              HAWC_dy           -     -     -     "HAWC -- distance between points in y direction"         meters
 typedef  ^                       ^                 ReKi              HAWC_dz           -     -     -     "HAWC -- distance between points in z direction"         meters
-typedef  ^                       ^                 ReKi              HAWC_RefHt        -     -     -     "HAWC -- reference height"                               meters
-typedef  ^                       ^                 IntKi             HAWC_ScaleMethod  -     -     -     "HAWC -- scale method"                                   -
-typedef  ^                       ^                 ReKi              HAWC_SFx          -     -     -     "HAWC -- turbulence scaling factor x direction"          -
-typedef  ^                       ^                 ReKi              HAWC_SFy          -     -     -     "HAWC -- turbulence scaling factor y direction"          -
-typedef  ^                       ^                 ReKi              HAWC_SFz          -     -     -     "HAWC -- turbulence scaling factor z direction"          -
-typedef  ^                       ^                 ReKi              HAWC_SigmaFx      -     -     -     "HAWC -- turbulence standard deviation x direction"      -
-typedef  ^                       ^                 ReKi              HAWC_SigmaFy      -     -     -     "HAWC -- turbulence standard deviation y direction"      -
-typedef  ^                       ^                 ReKi              HAWC_SigmaFz      -     -     -     "HAWC -- turbulence standard deviation z direction"      -
-typedef  ^                       ^                 ReKi              HAWC_TStart       -     -     -     "HAWC -- start time for turbulence scaling"              seconds
-typedef  ^                       ^                 ReKi              HAWC_TEnd         -     -     -     "HAWC -- end time for turbulence scaling"                seconds
-typedef  ^                       ^                 ReKi              HAWC_URef         -     -     -     "HAWC -- Mean u-component wind speed at the reference height" meters
-typedef  ^                       ^                 IntKi             HAWC_ProfileType  -     -     -     "HAWC -- Wind profile type (0=constant;1=logarithmic;2=power law)" -
-typedef  ^                       ^                 ReKi              HAWC_PLExp        -     -     -     "HAWC -- Power law exponent (used for PL wind profile type only)"   -
-typedef  ^                       ^                 ReKi              HAWC_Z0           -     -     -     "HAWC -- Surface roughness length (used for LOG wind profile type only)"  -
 typedef  ^                       ^                 LOGICAL           SumPrint          -     -     -     "Write summary info to a file <ROOTNAME>.IfW.Sum"        -
 typedef  ^                       ^                 IntKi             NumOuts           -     -     -     "Number of parameters in the output list (number of outputs requested)" -
-typedef  ^                       ^                 CHARACTER(10)     OutList           :     -     -     "List of user-requested output channels"                 -
+typedef  ^                       ^                 CHARACTER(ChanLen) OutList           :     -     -     "List of user-requested output channels"                 -
 typedef  ^                       ^                 IntKi             SensorType        -  SensorType_None    -     "Sensor type (for lidar/sensor module)"                 -
 typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "the number of range gates to return wind speeds at"                 -
 typedef  ^                       ^                 ReKi              RotorApexOffsetPos 3    -     -     "position of the lidar unit relative to the rotor apex of rotation"	m
 typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate"	-
+typedef  ^                       ^                 IfW_FFWind_InitInputType     FF                -     -     -     "scaling data" -
 
 
 
@@ -113,23 +103,27 @@ typedef  ^                       InitInputType     CHARACTER(1024)   InputFileNa
 typedef  ^                       ^                 LOGICAL           Linearize         -   .FALSE. -     "Flag that tells this module if the glue code wants to linearize." -
 typedef  ^                       ^                 LOGICAL           Use4Dext          -   .FALSE. -     "Flag that tells this module if an external module will pass it 4-D velocity grids." -
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
+typedef  ^                       ^                 IntKi             TurbineID         -     0     -     "Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)"                                     -
+typedef  ^                       ^                 LOGICAL           FixedWindFileRootName - .FALSE. -   "Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)" -
 typedef  ^                       ^                 LOGICAL           UseInputFile      -   .TRUE.  -     "Should we read everthing from an input file, or do we get it some other way" -
-typedef  ^                       ^                 CHARACTER(1024)	 RootName          -     -     -     "RootName for writing output files"
-typedef  ^                       ^          InflowWind_InputFile     PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
+typedef  ^                       ^                 CHARACTER(1024)	RootName          -     -     -     "RootName for writing output files"
+typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
+typedef  ^                       ^                 LOGICAL           WindType2UseInputFile    -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
+typedef  ^                       ^                 FileInfoType      WindType2Data    -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
 typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for lidar data"                                             -
 
 
 # Init Output
-typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteOutputHdr    :     -     -     "Names of output-to-file channels"                       -
-typedef  ^                       ^                 CHARACTER(ChanLen)     WriteOutputUnt    :     -     -     "Units of output-to-file channels"                       -
-typedef  ^                       ^                 ProgDesc          Ver               -     -     -     "Version information of InflowWind module"               -
-typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
-typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_y      {:} - -   "Names of the outputs used in linearization" -
-typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_u      {:} - -   "Names of the inputs used in linearization" -
-typedef  ^               InitOutputType         LOGICAL               RotFrame_y      {:} - -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
-typedef  ^               InitOutputType         LOGICAL               RotFrame_u      {:} - -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
-typedef  ^               InitOutputType         LOGICAL               IsLoad_u        {:} - -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteOutputHdr    :   -   -    "Names of output-to-file channels"                       -
+typedef  ^                       ^                 CHARACTER(ChanLen)     WriteOutputUnt    :   -   -    "Units of output-to-file channels"                       -
+typedef  ^                       ^                 ProgDesc               Ver               -   -   -    "Version information of InflowWind module"               -
+typedef  ^                       ^                 WindFileMetaData       WindFileInfo      -   -   -    "Meta data from the wind file"                           -
+typedef  ^                       InitOutputType    CHARACTER(LinChanLen)  LinNames_y       {:}  -   -    "Names of the outputs used in linearization" -
+typedef  ^                       InitOutputType    CHARACTER(LinChanLen)  LinNames_u       {:}  -   -    "Names of the inputs used in linearization" -
+typedef  ^                       InitOutputType    LOGICAL                RotFrame_y       {:}  -   -    "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+typedef  ^                       InitOutputType    LOGICAL                RotFrame_u       {:}  -   -    "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+typedef  ^                       InitOutputType    LOGICAL                IsLoad_u         {:}  -   -    "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -151,15 +145,18 @@ typedef  ^                       ^                 ReKi              WindViUVW  
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType        CHARACTER(1024)   RootFileName      -     -     -     "Root of the InflowWind input   filename"                -
 typedef  ^                       ^                 LOGICAL           CTTS_Flag         -  .FALSE.  -     "determines if coherent turbulence is used"              -
+typedef  ^                       ^                 LOGICAL           RotateWindBox     -  .FALSE.  -     "determines if wind will be rotated"              -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation"                          radians
+typedef  ^                       ^                 ReKi              VFlowAngle        -     -     -     "Vertical (upflow) angle"                                radians
 
 typedef  ^                       ^                 ReKi              RotToWind        {3}{3} -     -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
 typedef  ^                       ^                 ReKi              RotFromWind      {3}{3} -     -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -
-typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters/second
+typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters
 
 typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of wind -- set to Undef_Wind initially"            -
 typedef  ^                       ^                 ReKi              ReferenceHeight   -     -     -     "Height of the wind turbine"                             meters
+typedef  ^                       ^                 ReKi              RefPosition       3     -     -     "Reference position (point where box is rotated)"        meters
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points in the wind velocity list"             -
 typedef  ^                       ^                 ReKi              WindViXYZ         ::    -     -     "List of XYZ coordinates for wind velocity measurements, 3xNWindVel" meters
 typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -

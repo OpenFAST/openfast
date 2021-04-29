@@ -15,8 +15,8 @@ typedef     ^             ^                 CHARACTER(1024)          Descr    - 
 typedef     ^             ^                 IntKi                    NumChans - - - "Number of output channels in this binary file (not including the time channel)"
 typedef     ^             ^                 IntKi                    NumRecs  - - - "Number of records (rows) of data in the file"
 typedef     ^             ^                 DbKi                     TimeStep - - - "Time step for evenly-spaced data in the output file (when NumRecs is not allo"
-typedef     ^             ^                 CHARACTER(20)            ChanNames {:} - - "Strings describing the names of the channels from the binary file (including the time channel)"
-typedef     ^             ^                 CHARACTER(20)            ChanUnits {:} - - "Strings describing the units of the channels from the binary file (including the time channel)"
+typedef     ^             ^                 CHARACTER(ChanLen)       ChanNames {:} - - "Strings describing the names of the channels from the binary file (including the time channel)"
+typedef     ^             ^                 CHARACTER(ChanLen)       ChanUnits {:} - - "Strings describing the units of the channels from the binary file (including the time channel)"
 typedef     ^             ^                 ReKi                     Data      {:}{:} - - "numeric data (rows and columns) from the binary file, including the time channel"
 
 typedef   NWTC_Library  OutParmType         IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
@@ -24,18 +24,17 @@ typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - 
 typedef     ^             ^                 CHARACTER(ChanLen)       Units  - - - "Units this channel is specified in"
 typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
 
-typedef   NWTC_Library  OutParmFFType       IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
-typedef     ^             ^                 CHARACTER(ChanLenFF)     Name   - - - "Name of the output channel"
-typedef     ^             ^                 CHARACTER(ChanLenFF)     Units  - - - "Units this channel is specified in"
-typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
-
 typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
 typedef     ^             ^                 IntKi                    NumFiles
 typedef     ^             ^                 IntKi                    FileLine  {:}
 typedef     ^             ^                 IntKi                    FileIndx  {:}
 typedef     ^             ^                 CHARACTER(1024)          FileList  {:}
-typedef     ^             ^                 CHARACTER(512)           Lines     {:}
+typedef     ^             ^                 CHARACTER(1024)          Lines     {:}
 
 typedef   NWTC_Library  Quaternion          ReKi                     q0
 typedef     ^             ^                 ReKi                     v  {3}
 
+typedef   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
+typedef     ^             ^                     IntKi                RandSeed          {3}
+typedef     ^             ^                     IntKi                RandSeedAry       {:}
+typedef     ^             ^              CHARACTER(6)                RNG_type

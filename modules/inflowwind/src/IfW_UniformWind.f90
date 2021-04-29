@@ -6,7 +6,7 @@
 !! in space.
 !!
 !! the file contains header information (rows that contain "!"), followed by numeric data stored in
-!! 8 columns:   
+!! 9 columns (if only 8 are listed, Upflow is assumed to be 0):   
 !!              |Column | Description                 | Variable Name | Units|
 !!              |-------|-----------------------------|---------------|------|  
 !!              |    1  |  Time                       | Time          | [s]  |
@@ -17,6 +17,7 @@
 !!              |    6  |  Vertical power-law shear   | VShr          | [-]  |
 !!              |    7  |  Vertical linear shear      | VLinShr       | [-]  |
 !!              |    8  |  Gust (horizontal) velocity | VGust         | [m/s]|
+!!              |    9  |  Upflow angle               | Upflow        | [deg]|
 !!
 !! The horizontal wind speed at (X, Y, Z) is then calculated using the interpolated columns by  \n
 !!  \f{eqnarray}{ V_h & = & V \, \left( \frac{Z}{Z_{Ref}} \right) ^ {VShr}                   & \mbox{power-law wind shear} \\
@@ -36,7 +37,7 @@ MODULE IfW_UniformWind
 !!
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015-2106  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -68,6 +69,8 @@ MODULE IfW_UniformWind
    PUBLIC                                    :: IfW_UniformWind_JacobianPInput
    PUBLIC                                    :: IfW_UniformWind_GetOP
    
+   PUBLIC                                    :: Uniform_to_FF
+   
 CONTAINS
 
 !====================================================================================================
@@ -82,7 +85,7 @@ CONTAINS
 !!          the PositionXYZ array.
 !! @date    16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 !----------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOutData, ErrStat, ErrMsg)
+SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrStat, ErrMsg)
 
 
    IMPLICIT                                                       NONE
@@ -93,10 +96,8 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
       ! Passed Variables
    TYPE(IfW_UniformWind_InitInputType),         INTENT(IN   )  :: InitData          !< Input data for initialization
    TYPE(IfW_UniformWind_ParameterType),         INTENT(  OUT)  :: ParamData         !< Parameters
-   TYPE(IfW_UniformWind_MiscVarType),           INTENT(  OUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
+   TYPE(IfW_UniformWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
    TYPE(IfW_UniformWind_InitOutputType),        INTENT(  OUT)  :: InitOutData       !< Initial output
-
-   REAL(DbKi),                                  INTENT(IN   )  :: Interval          !< We don't change this.
 
 
 
@@ -106,16 +107,16 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
 
       ! local variables
 
-   INTEGER(IntKi),            PARAMETER                        :: NumCols = 8       ! Number of columns in the Uniform file
-   REAL(ReKi)                                                  :: TmpData(NumCols)  ! Temp variable for reading all columns from a line
-   REAL(ReKi)                                                  :: DelDiff           ! Temp variable for storing the direction difference
+   INTEGER(IntKi), PARAMETER                                   :: MaxNumCols = 9       ! maximum number of columns in the Uniform file
+   INTEGER(IntKi)                                              :: NumCols              ! Number of columns in the Uniform file
+   REAL(ReKi)                                                  :: TmpData(MaxNumCols)  ! Temp variable for reading all columns from a line
+   INTEGER(IntKi)                                              :: LineNo
+   REAL(ReKi)                                                  :: DelDiff              ! Temp variable for storing the direction difference
 
-   INTEGER(IntKi)                                              :: UnitWind     ! Unit number for the InflowWind input file
    INTEGER(IntKi)                                              :: I
-   INTEGER(IntKi)                                              :: NumComments
    INTEGER(IntKi)                                              :: ILine             ! Counts the line number in the file
    INTEGER(IntKi),            PARAMETER                        :: MaxTries = 100
-   CHARACTER(1024)                                             :: Line              ! Temp variable for reading whole line from file
+   TYPE(FileInfoType)                                          :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
 
       ! Temporary variables for error handling
    INTEGER(IntKi)                                              :: TmpErrStat        ! Temp variable for the error status
@@ -129,7 +130,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
    ErrStat     = ErrID_None
    ErrMsg      = ""
 
-
       !-------------------------------------------------------------------------------------------------
       ! Check that it's not already initialized
       !-------------------------------------------------------------------------------------------------
@@ -139,14 +139,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
       RETURN
    END IF
 
-
-      ! Get a unit number to use
-
-   CALL GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF (ErrStat >= AbortErrLev) RETURN
-
-
       !-------------------------------------------------------------------------------------------------
       ! Copy things from the InitData to the ParamData
       !-------------------------------------------------------------------------------------------------
@@ -154,174 +146,54 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
    ParamData%RefHt            =  InitData%ReferenceHeight
    ParamData%RefLength        =  InitData%RefLength
 
+      !  Read in the data from a file, or copy from the passed InFileInfo.  After this, the InFileInfo
+      !  should contain only a table -- all comments and empty lines have been stripped out
+   IF ( InitData%UseInputFile ) THEN
+      CALL ProcessComFile( InitData%WindFileName, InFileInfo, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   ELSE
+      CALL NWTC_Library_CopyFileInfoType( InitData%PassedFileData, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   ENDIF
+
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the InFileInfo data structure.
+   ! call Print_FileInfo_Struct( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
+
 
       !-------------------------------------------------------------------------------------------------
-      ! Open the file for reading
+      ! Allocate the data arrays
       !-------------------------------------------------------------------------------------------------
 
-   CALL OpenFInpFile (UnitWind, TRIM(InitData%WindFileName), TmpErrStat, TmpErrMsg)
+   ParamData%NumDataLines = InFileInfo%NumLines
+   CALL Alloc_ParamDataArrays( ParamData, TmpErrStat, TmpErrMsg)
    CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) RETURN
 
 
       !-------------------------------------------------------------------------------------------------
-      ! Find the number of comment lines
+      ! Store the data arrays
       !-------------------------------------------------------------------------------------------------
 
-   LINE = '!'                          ! Initialize the line for the DO WHILE LOOP
-   NumComments = -1                    ! the last line we read is not a comment, so we'll initialize this to -1 instead of 0
-
-   DO WHILE ( (INDEX( LINE, '!' ) > 0) .OR. (INDEX( LINE, '#' ) > 0) .OR. (INDEX( LINE, '%' ) > 0) ) ! Lines containing "!" are treated as comment lines
-      NumComments = NumComments + 1
-
-      READ(UnitWind,'( A )',IOSTAT=TmpErrStat) LINE
-
-      IF ( TmpErrStat /=0 ) THEN
-         CALL SetErrStat(ErrID_Fatal,' Error reading from uniform wind file on line '//TRIM(Num2LStr(NumComments+1))//'.',   &
-               ErrStat, ErrMsg, RoutineName)
-         CLOSE(UnitWind)
-         RETURN
-      END IF
-
-   END DO !WHILE
+      ! Check if 9 columns
+   NumCols = MaxNumCols
+   LineNo = 1     ! Start at begining
+   CALL ParseAry( InFileInfo, LineNo, "Wind type 2 line", TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
+   if (TmpErrStat /= 0) then
+         ! assume the upflow is 0 and try reading the rest of the files
+      CALL SetErrStat(ErrID_Info,' Could not read upflow column in uniform wind files. Assuming upflow is 0.', ErrStat, ErrMsg, RoutineName)
+      NumCols = NumCols - 1
+   end if
 
 
-      !-------------------------------------------------------------------------------------------------
-      ! Find the number of data lines
-      !-------------------------------------------------------------------------------------------------
-
-   ParamData%NumDataLines = 0
-
-   READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's make sure it contains
-
-   DO WHILE (TmpErrStat == 0)  ! read the rest of the file (until an error occurs)
-      ParamData%NumDataLines = ParamData%NumDataLines + 1
-
-      READ(UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
-
-   END DO !WHILE
-
-
-   IF (ParamData%NumDataLines < 1) THEN
-      TmpErrMsg=  'Error: '//TRIM(Num2LStr(NumComments))//' comment lines were found in the uniform wind file, '// &
-                  'but the first data line does not contain the proper format.'
-      CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CLOSE(UnitWind)
-      RETURN
-   END IF
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Allocate arrays for the uniform wind data
-      !-------------------------------------------------------------------------------------------------
-      ! BJJ note: If the subroutine AllocAry() is called, the CVF compiler with A2AD does not work
-      !   properly.  The arrays are not properly read even though they've been allocated.
-      ! ADP note: the above note may or may not apply after conversion to the modular framework in 2013
-      !-------------------------------------------------------------------------------------------------
-
-   IF (.NOT. ALLOCATED(ParamData%Tdata) ) THEN
-      CALL AllocAry( ParamData%Tdata, ParamData%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%V) ) THEN
-      CALL AllocAry( ParamData%V, ParamData%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%Delta) ) THEN
-      CALL AllocAry( ParamData%Delta, ParamData%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%VZ) ) THEN
-      CALL AllocAry( ParamData%VZ, ParamData%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%HShr) ) THEN
-      CALL AllocAry( ParamData%HShr, ParamData%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%VShr) ) THEN
-      CALL AllocAry( ParamData%VShr, ParamData%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%VLinShr) ) THEN
-      CALL AllocAry( ParamData%VLinShr, ParamData%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-   IF (.NOT. ALLOCATED(ParamData%VGust) ) THEN
-      CALL AllocAry( ParamData%VGust, ParamData%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END IF
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Rewind the file (to the beginning) and skip the comment lines
-      !-------------------------------------------------------------------------------------------------
-
-   REWIND( UnitWind )
-
-   DO I=1,NumComments
-      CALL ReadCom( UnitWind, TRIM(InitData%WindFileName), 'Header line #'//TRIM(Num2LStr(I)), TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
-   END DO !I
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Read the data arrays
-      !-------------------------------------------------------------------------------------------------
-
+      ! Parse the data and store it
+   LineNo = 1
    DO I=1,ParamData%NumDataLines
-
-      CALL ReadAry( UnitWind, TRIM(InitData%WindFileName), TmpData(1:NumCols), NumCols, 'TmpData', &
-                'Data from uniform wind file line '//TRIM(Num2LStr(NumComments+I)), TmpErrStat, TmpErrMsg)
-      CALL SetErrStat(TmpErrStat,'Error retrieving data from the uniform wind file line'//TRIM(Num2LStr(NumComments+I)),   &
-            ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE(UnitWind)
-         RETURN
-      ENDIF
+      CALL ParseAry( InFileInfo, LineNo, "Wind type 2 file line", TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
       ParamData%Tdata(  I) = TmpData(1)
       ParamData%V(      I) = TmpData(2)
@@ -331,8 +203,10 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
       ParamData%VShr(   I) = TmpData(6)
       ParamData%VLinShr(I) = TmpData(7)
       ParamData%VGust(  I) = TmpData(8)
-
+      
+      if (NumCols > 8) ParamData%Upflow(  I) = TmpData(9)*D2R
    END DO !I
+
 
 
       !-------------------------------------------------------------------------------------------------
@@ -365,8 +239,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
 
 
    END DO !I
-
-
 
       !-------------------------------------------------------------------------------------------------
       ! Find out information on the timesteps and range
@@ -402,15 +274,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
 
       ! Number of timesteps
    InitOutData%WindFileNumTSteps    =  ParamData%NumDataLines
-
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Close the file
-      !-------------------------------------------------------------------------------------------------
-
-   CLOSE( UnitWind )
-
 
       !-------------------------------------------------------------------------------------------------
       ! Print warnings and messages
@@ -476,6 +339,89 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
 
 END SUBROUTINE IfW_UniformWind_Init
 
+SUBROUTINE Alloc_ParamDataArrays( ParamData, ErrStat, ErrMsg )
+
+   IMPLICIT                                     NONE
+   CHARACTER(*),           PARAMETER                           :: RoutineName="Alloc_ParamDataArrays"
+
+   TYPE(IfW_UniformWind_ParameterType),         INTENT(INOUT)  :: ParamData         !< Parameters
+
+      ! Error handling
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< determines if an error has been encountered
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< A message about the error
+
+      ! Temporary variables for error handling
+   INTEGER(IntKi)                                              :: TmpErrStat        ! Temp variable for the error status
+   CHARACTER(ErrMsgLen)                                        :: TmpErrMsg         ! Temporary error message
+
+   ErrStat     = ErrID_None
+   ErrMsg      = ""
+
+   !-------------------------------------------------------------------------------------------------
+   ! Allocate arrays for the uniform wind data
+   !-------------------------------------------------------------------------------------------------
+   ! BJJ note: If the subroutine AllocAry() is called, the CVF compiler with A2AD does not work
+   !   properly.  The arrays are not properly read even though they've been allocated.
+   ! ADP note: the above note may or may not apply after conversion to the modular framework in 2013
+   !-------------------------------------------------------------------------------------------------
+
+   IF (.NOT. ALLOCATED(ParamData%Tdata) ) THEN
+      CALL AllocAry( ParamData%Tdata, ParamData%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%V) ) THEN
+      CALL AllocAry( ParamData%V, ParamData%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%Delta) ) THEN
+      CALL AllocAry( ParamData%Delta, ParamData%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%VZ) ) THEN
+      CALL AllocAry( ParamData%VZ, ParamData%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%HShr) ) THEN
+      CALL AllocAry( ParamData%HShr, ParamData%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%VShr) ) THEN
+      CALL AllocAry( ParamData%VShr, ParamData%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%VLinShr) ) THEN
+      CALL AllocAry( ParamData%VLinShr, ParamData%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%VGust) ) THEN
+      CALL AllocAry( ParamData%VGust, ParamData%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+   IF (.NOT. ALLOCATED(ParamData%Upflow) ) THEN
+      CALL AllocAry( ParamData%Upflow, ParamData%NumDataLines, 'Uniform wind upflow', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+   ParamData%Upflow = 0.0_ReKi
+
+END SUBROUTINE Alloc_ParamDataArrays
+
 !====================================================================================================
 
 !-------------------------------------------------------------------------------------------------
@@ -535,24 +481,32 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m
    CALL InterpParams(Time, p, m, op)   
    
       ! Step through all the positions and get the velocities
+   !$OMP PARALLEL default(shared) if(NumPoints>1000)
+   !$OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
-      call GetWindSpeed(PositionXYZ(:,PointNum), p, m, op, Velocity(:,PointNum), TmpErrStat, TmpErrMsg)
+      call GetWindSpeed(PositionXYZ(:,PointNum), p, op, Velocity(:,PointNum), TmpErrStat, TmpErrMsg)
 
          ! Error handling
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) THEN
-         TmpErrMsg=  " Error calculating the wind speed at position ("//   &
+      !CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF (TmpErrStat >= AbortErrLev) THEN
+         TmpErrMsg=  trim(TmpErrMsg)//" Error calculating the wind speed at position ("//   &
                      TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
                      TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
                      TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in the wind-file coordinates"
+         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+         ErrStat = ErrID_None
+         ErrMsg  = ""
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         RETURN
+         !$OMP END CRITICAL
       ENDIF
 
    ENDDO
+   !$OMP END DO 
+   !$OMP END PARALLEL
 
+   IF (ErrStat >= AbortErrLev) RETURN ! Return cannot be in parallel loop
 
       ! DiskVel term -- this represents the average across the disk -- sort of.  This changes for AeroDyn 15
    DiskVel   =  WindInf_ADhack_diskVel(Time, p, m, TmpErrStat, TmpErrMsg)
@@ -588,6 +542,7 @@ SUBROUTINE InterpParams(Time, p, m, op)
       m%TimeIndex  = 1
       op%V         = p%V      (1)
       op%Delta     = p%Delta  (1)
+      op%Upflow    = p%Upflow (1)
       op%VZ        = p%VZ     (1)
       op%HShr      = p%HShr   (1)
       op%VShr      = p%VShr   (1)
@@ -599,6 +554,7 @@ SUBROUTINE InterpParams(Time, p, m, op)
       m%TimeIndex  = p%NumDataLines - 1
       op%V         = p%V      (p%NumDataLines)
       op%Delta     = p%Delta  (p%NumDataLines)
+      op%Upflow    = p%Upflow (p%NumDataLines)
       op%VZ        = p%VZ     (p%NumDataLines)
       op%HShr      = p%HShr   (p%NumDataLines)
       op%VShr      = p%VShr   (p%NumDataLines)
@@ -625,6 +581,7 @@ SUBROUTINE InterpParams(Time, p, m, op)
             
             op%V       = ( p%V(      m%TimeIndex+1) - p%V(      m%TimeIndex) )*slope  + p%V(      m%TimeIndex)
             op%Delta   = ( p%Delta(  m%TimeIndex+1) - p%Delta(  m%TimeIndex) )*slope  + p%Delta(  m%TimeIndex)
+            op%Upflow  = ( p%Upflow( m%TimeIndex+1) - p%Upflow( m%TimeIndex) )*slope  + p%Upflow( m%TimeIndex)
             op%VZ      = ( p%VZ(     m%TimeIndex+1) - p%VZ(     m%TimeIndex) )*slope  + p%VZ(     m%TimeIndex)
             op%HShr    = ( p%HShr(   m%TimeIndex+1) - p%HShr(   m%TimeIndex) )*slope  + p%HShr(   m%TimeIndex)
             op%VShr    = ( p%VShr(   m%TimeIndex+1) - p%VShr(   m%TimeIndex) )*slope  + p%VShr(   m%TimeIndex)
@@ -645,12 +602,11 @@ END SUBROUTINE InterpParams
 !! in space represented by InputPosition.
 !!
 !!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-SUBROUTINE GetWindSpeed(InputPosition, p, m, op, WindSpeed, ErrStat, ErrMsg)
+SUBROUTINE GetWindSpeed(InputPosition, p, op, WindSpeed, ErrStat, ErrMsg)
 
       ! Passed Variables
    REAL(ReKi),                            INTENT(IN   )  :: InputPosition(3)  !< input information: positions X,Y,Z
    TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p                 !< Parameters
-   TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m                 !< Misc variables (stores last index into array time for efficiency)
    TYPE(IfW_UniformWind_Intrp),           INTENT(IN   )  :: op                !< operating point values; interpolated UniformWind parameters for this time (for glue-code linearization operating point)
 
    INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status
@@ -661,10 +617,13 @@ SUBROUTINE GetWindSpeed(InputPosition, p, m, op, WindSpeed, ErrStat, ErrMsg)
 
       ! Local Variables
    REAL(ReKi)                                            :: CosDelta          ! cosine of y%Delta
-   
    REAL(ReKi)                                            :: SinDelta          ! sine of y%Delta
    REAL(ReKi)                                            :: V1                ! temporary storage for horizontal velocity
+   REAL(ReKi)                                            :: V1_rotate         ! temporary storage for rotated horizontal velocity
+   REAL(ReKi)                                            :: VZ_rotate         ! temporary storage for rotated vertical velocity
 
+   REAL(ReKi)                                            :: CosUpflow         ! cosine of y%Upflow
+   REAL(ReKi)                                            :: SinUpflow         ! sine of y%Upflow
 
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
@@ -675,8 +634,10 @@ SUBROUTINE GetWindSpeed(InputPosition, p, m, op, WindSpeed, ErrStat, ErrMsg)
    !> 2. Calculate the wind speed at this time (if z<0, return an error):
    !-------------------------------------------------------------------------------------------------
 
-   if ( InputPosition(3) < 0.0_ReKi ) then
-      call SetErrStat(ErrID_Fatal,'Height must not be negative.',ErrStat,ErrMsg,'GetWindSpeed')
+   if ( InputPosition(3) <= 0.0_ReKi ) then
+      if (.not. EqualRealNos(InputPosition(3), 0.0_ReKi) ) call SetErrStat(ErrID_Severe,'Height must not be negative.',ErrStat,ErrMsg,'GetWindSpeed')
+      WindSpeed = 0.0
+      return
    end if
       
    !> Let \f{eqnarray}{ V_h & = & V \, \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}}                                   & \mbox{power-law wind shear} \\
@@ -695,16 +656,60 @@ SUBROUTINE GetWindSpeed(InputPosition, p, m, op, WindSpeed, ErrStat, ErrMsg)
          + ( op%HShr   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
          +  op%VLinShr * ( InputPosition(3) - p%RefHt ) )/p%RefLength  ) &                  ! vertical linear shear
          +  op%VGust                                                                        ! gust speed
+
+   ! convert global to local: Global wind = R(op%Delta) * R(op%Upflow) * [local wind] = R(op%Delta) * R(op%Upflow) * [V1, 0, op%VZ]
          
-   WindSpeed(1) =  V1 * CosDelta
-   WindSpeed(2) = -V1 * SinDelta
-   WindSpeed(3) =  op%VZ
+   ! apply upflow angle:
+   CosUpflow = COS( op%Upflow )
+   SinUpflow = SIN( op%Upflow )
+   V1_rotate = CosUpflow*V1 - SinUpflow*op%VZ
+   VZ_rotate = SinUpflow*V1 + CosUpflow*op%VZ
+         
+   ! apply wind direction:
+   WindSpeed(1) =  V1_rotate * CosDelta
+   WindSpeed(2) = -V1_rotate * SinDelta
+   WindSpeed(3) =  VZ_rotate
 
 
    RETURN
 
 END SUBROUTINE GetWindSpeed
 
+FUNCTION RotateWindSpeed(Vh, Vz, Delta, Upflow)
+   REAL(ReKi)                                            :: Vh                ! horizontal wind speed
+   REAL(ReKi)                                            :: Vz                ! vertical wind speed
+   REAL(ReKi)                                            :: Delta             ! wind direction
+   REAL(ReKi)                                            :: Upflow            ! upflow angle
+
+   REAL(R8Ki)                                            :: CosDelta          ! cosine of y%Delta
+   REAL(R8Ki)                                            :: SinDelta          ! sine of y%Delta
+   REAL(R8Ki)                                            :: V1_rotate         ! temporary storage for rotated horizontal velocity
+   REAL(R8Ki)                                            :: VZ_rotate         ! temporary storage for rotated vertical velocity
+
+   REAL(R8Ki)                                            :: CosUpflow         ! cosine of y%Upflow
+   REAL(R8Ki)                                            :: SinUpflow         ! sine of y%Upflow
+   
+   
+   REAL(R8Ki)                                            :: RotateWindSpeed(3)
+
+   
+   ! apply upflow angle:
+   CosUpflow = COS( REAL(Upflow,R8Ki) )
+   SinUpflow = SIN( REAL(Upflow,R8Ki) )
+   
+   V1_rotate = CosUpflow*Vh - SinUpflow*Vz
+   Vz_rotate = SinUpflow*Vh + CosUpflow*Vz
+         
+   
+   ! apply wind direction:
+   CosDelta = COS( REAL(Delta,R8Ki) )
+   SinDelta = SIN( REAL(Delta,R8Ki) )
+   
+   RotateWindSpeed(1) =  V1_rotate * CosDelta
+   RotateWindSpeed(2) = -V1_rotate * SinDelta
+   RotateWindSpeed(3) =  Vz_rotate
+   
+END FUNCTION RotateWindSpeed
 
 
 !> This function should be deleted ASAP.  Its purpose is to reproduce results of AeroDyn 12.57;
@@ -741,13 +746,9 @@ FUNCTION WindInf_ADhack_diskVel( t, p, m,ErrStat, ErrMsg )
       !-------------------------------------------------------------------------------------------------
       ! calculate the wind speed at this time (note that it is not the full uniform wind equation!)
       !-------------------------------------------------------------------------------------------------
+      WindInf_ADhack_diskVel = RotateWindSpeed(op%V, op%VZ, op%Delta, op%Upflow)
    
-         WindInf_ADhack_diskVel(1) =  op%V * COS( op%Delta )
-         WindInf_ADhack_diskVel(2) = -op%V * SIN( op%Delta )
-         WindInf_ADhack_diskVel(3) =  op%VZ
-      
-   
-      RETURN
+   RETURN
 
 END FUNCTION WindInf_ADhack_diskVel
 
@@ -977,6 +978,144 @@ SUBROUTINE IfW_UniformWind_GetOP( t, p, m, OP_out )
 
 END SUBROUTINE IfW_UniformWind_GetOP
 
+
+!====================================================================================================
+SUBROUTINE Uniform_to_FF(p, m, p_ff, ErrStat, ErrMsg)
+
+   USE IfW_FFWind_Base
+
+   TYPE(IfW_UniformWind_ParameterType),      INTENT(IN   ) :: p                    !< UniformWind Parameters
+   TYPE(IfW_UniformWind_MiscVarType),        INTENT(INOUT) :: m                    !< Misc variables for optimization (not copied in glue code)
+   TYPE(IfW_FFWind_ParameterType),           INTENT(  OUT) :: p_ff                 !< FF Parameters
+   INTEGER(IntKi),                           INTENT(  OUT) :: ErrStat              !< error status
+   CHARACTER(*),                             INTENT(  OUT) :: ErrMsg               !< error message
+
+      ! local variables
+   REAL(DbKi)                           :: Time              !< time from the start of the simulation
+   REAL(ReKi)                           :: PositionXYZ(3,1)  !< Array of XYZ coordinates, 3xN
+   REAL(ReKi)                           :: Velocity(3,1)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
+   REAL(ReKi)                           :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
+   REAL(ReKi)                           :: n
+   
+   INTEGER(ReKi) ,            parameter :: dz = 5.0
+   INTEGER(ReKi) ,            parameter :: dy = 5.0
+   INTEGER(ReKi)                        :: i
+   INTEGER(ReKi)                        :: it
+   INTEGER(ReKi)                        :: iy
+   INTEGER(ReKi)                        :: iz
+   INTEGER(IntKi)                       :: ErrStat2
+   CHARACTER(ErrMsgLen)                 :: ErrMsg2
+   CHARACTER(*),              parameter :: RoutineName = 'Uniform_to_FF'
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   p_ff%WindFileFormat        = -1                             ! "Binary file format description number"                        -
+   p_ff%NFFComp               = 3                              ! "Number of wind components"                                    -
+   p_ff%Periodic              = .false.
+   p_ff%InterpTower           = .true.
+   p_ff%RefHt                 = p%RefHt
+   p_ff%NTGrids               = 0
+   p_ff%InvFFYD               = 1.0_ReKi / dy                  ! "reciprocal of delta y"                                        1/meters
+   p_ff%InvFFZD               = 1.0_ReKi / dz                  ! "reciprocal of delta z"                                        1/meters
+   
+      ! add roughly 10% to the width
+   n            = NINT( p%RefLength*1.1_ReKi*0.5_ReKi / dy )
+   p_ff%NYGrids = n*2+1                                        ! "Number of points in the lateral (y) direction of the grids"   -
+   p_ff%FFYHWid = 0.5_ReKi * dy * (p_ff%NYGrids-1)             ! "Half the grid width"                                          meters
+   
+   n            = NINT( p%RefLength*1.1_ReKi*0.5_ReKi / dz )
+   p_ff%NZGrids =  INT( p_ff%RefHt / dy ) + n + 1              ! "Number of points in the vertical (z) direction of the grids"  -
+   
+   p_ff%FFZHWid  =  0.5_ReKi * dz * (p_ff%NZGrids -1)          ! "Half the grid height"                                         meters
+   p_ff%GridBase =  p_ff%RefHt + n*dz - p_ff%FFZHWid*2.0_ReKi  ! "the height of the bottom of the grid"                         meters
+   
+   p_ff%InitXPosition  = 0.0_ReKi                              ! "the initial x position of grid (distance in FF is offset)"    meters
+   
+
+   ! time will be the smallest delta t in this Uniform wind file
+   if (p%NumDataLines < 2) then
+      p_ff%FFDTime = 600.0_ReKi ! doesn't matter what the time step is
+   else
+      p_ff%FFDTime = HUGE(p_ff%FFDTime)                        ! "Delta time"                                                   seconds
+      do i=2,p%NumDataLines
+         p_ff%FFDTime = min(p_ff%FFDTime, p%TData(i) - p%TData(i-1))
+      end do
+
+      if (p_ff%FFDTime < 0.0001) then
+         call SetErrStat( ErrID_Fatal, "Smallest time step in uniform wind file is less that 0.0001 seconds. Increase the time step "//&
+                          " to convert to a FF file.", ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      
+   end if
+      
+   p_ff%FFRate = 1.0_ReKi / p_ff%FFDTime                       ! "Data rate (1/FFDTime)"                                         Hertz
+   
+   
+   p_ff%AddMeanAfterInterp  =  .FALSE.                         ! "Add the mean wind speed after interpolating at a given height?" -
+   p_ff%WindProfileType = WindProfileType_PL                   ! "Wind profile type (0=constant;1=logarithmic;2=power law)"       -
+   p_ff%PLExp = GetAverageVal(p%VSHR)                          ! "Power law exponent (used for PL wind profile type only)"        -
+   p_ff%Z0 = 0.0_ReKi                                          ! "Surface roughness length (used for LOG wind profile type only)" -
+   
+   if (p%NumDataLines < 2) then
+      p_ff%NFFSteps = 2                                        ! "Number of time steps in the FF array"                         -
+   else
+      p_ff%NFFSteps = NINT(p%TData(p%NumDataLines) / p_ff%FFDTime) + 1
+   end if
+   
+   p_ff%TotalTime = (p_ff%NFFSteps-1) * p_ff%FFDTime           ! "The total time of the simulation"                             seconds
+
+   
+   call AllocAry( p_ff%FFData, p_ff%NZGrids,p_ff%NYGrids,p_ff%NFFComp, p_ff%NFFSteps, 'p%FF%FFData', ErrStat2, ErrMsg2 )   
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      
+   PositionXYZ = 0.0_ReKi
+   do it = 1,p_ff%NFFSteps
+      Time = (it-1)*p_ff%FFDTime
+      
+      do iy = 1,p_ff%NYGrids
+         PositionXYZ(2,1) = (iy-1)*dy - p_ff%FFYHWid
+         
+         do iz=1,p_ff%NZGrids
+            PositionXYZ(3,1) = (iz-1)*dz + p_ff%GridBase
+            
+            call IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m, ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            
+            p_ff%FFData(iz,iy,:,it) = Velocity(:,1)
+            
+         end do ! iz
+      end do ! iy
+   end do ! it
+   
+   ! compute some averages for this simulation
+   p_ff%MeanFFWS = GetAverageVal(p%V)                          ! "Mean wind speed (advection speed)"
+   p_ff%InvMFFWS = 1.0_ReKi / p_ff%MeanFFWS
+   
+   RETURN
+
+CONTAINS
+
+   FUNCTION GetAverageVal(Ary) RESULT(Avg)
+      REAL(ReKi), intent(in)  :: Ary(:)
+      REAL(ReKi)              :: Avg
+
+      if (p%NumDataLines < 2) then
+         Avg = Ary(1)
+      else
+         Avg = p%TData(1) * Ary(1) ! in case tData(1)/=0
+         do i=2,p%NumDataLines
+            Avg = Avg + (p%TData(i)-p%TData(i-1)) * (Ary(i)+Ary(i-1))/2.0_ReKi
+         end do
+         Avg = Avg / (p%TData(p%NumDataLines)-p%TData(1))
+      end if
+
+   END FUNCTION GetAverageVal
+   
+END SUBROUTINE Uniform_to_FF
+!====================================================================================================
 
 !====================================================================================================
 END MODULE IfW_UniformWind

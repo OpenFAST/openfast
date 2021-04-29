@@ -52,6 +52,7 @@ typedef   ^        InitOutputType LOGICAL               RotFrame_y   {:}  -   - 
 typedef   ^        InitOutputType LOGICAL               RotFrame_x   {:}  -   -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)" -
 typedef   ^        InitOutputType LOGICAL               RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef   ^        InitOutputType IntKi                 DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
 
 # ..... Blade Input file data........................................................................
 typedef   ^        BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
@@ -108,6 +109,11 @@ typedef   ^        BD_InputFile    CHARACTER(ChanLen)  OutList    {:} - - "List 
 typedef   ^        BD_InputFile    LOGICAL             SumPrint    -  - - "Print summary data to file? (.sum)"	-
 typedef   ^        BD_InputFile    CHARACTER(20)       OutFmt      -  - - "Format specifier" -
 
+# ..... BldNdOuts ............................................................................................
+typedef   ^        BD_InputFile   IntKi                BldNd_NumOuts          -  - - "Number of requested output channels per blade node (BD_BldNdOuts)"  -
+typedef   ^        BD_InputFile   CHARACTER(ChanLen)   BldNd_OutList         {:} - - "List of user-requested output channels (BD_BldNdOuts)"      -
+typedef   ^        BD_InputFile   IntKi                BldNd_BlOutNd         {:} - - "The blade nodes to actually output (BD_BldNdOuts)" -
+typedef   ^        BD_InputFile   CHARACTER(1024)      BldNd_BlOutNd_Str      -  - - "String to parse for the blade nodes to actually output (BD_BldNdOuts)" -
 
 
 # ..... States
@@ -184,7 +190,6 @@ typedef   ^        ParameterType  ^             Jacobian         {:}{:}    - -  
 typedef   ^        ParameterType  ^             uu0              {:}{:}{:} - -  "Initial Disp/Rot value at quadrature point (at T=0)" -
 typedef   ^        ParameterType  ^             rrN0             {:}{:}{:} - -  "Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element)" -
 typedef   ^        ParameterType  ^             E10              {:}{:}{:} - -  "Initial E10 at quadrature point" -
-typedef   ^        ParameterType  ^             SP_Coef          {:}{:}{:} - -  "Coefficients for cubic spline interpolation; index 1 = [1, kp_member-1]; index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms); index 3 = [1,4] (each column of kp_coord)" -
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        ParameterType IntKi          nodes_per_elem   -         - -  "Finite element (GLL) nodes per element" -
@@ -209,6 +214,7 @@ typedef   ^        ParameterType OutParmType    OutParam        {:}        - -  
 typedef   ^        ParameterType IntKi          NNodeOuts        -         - -  "Number of nodes to output data to a file[0 - 9]"	-
 typedef   ^        ParameterType IntKi          OutNd           {9}        - -  "Nodes whose values will be output"	-
 typedef   ^        ParameterType IntKi          NdIndx          {:}        - -  "Index into BldMotion mesh (to number the nodes for output without using collocated nodes)"	-
+typedef   ^        ParameterType IntKi          NdIndxInverse   {:}        - -  "Index from BldMotion mesh to unique nodes (to number the nodes for output without using collocated nodes)"	-
 typedef   ^        ParameterType IntKi          OutNd2NdElem    {:}{:}     - -  "To go from an output node number to a node/elem pair" -
 typedef   ^        ParameterType CHARACTER(20)  OutFmt           -         - -  "Format specifier" -
 typedef   ^        ParameterType Logical        UsePitchAct      -         - -  "Whether to use a pitch actuator inside BeamDyn" (flag) 
@@ -223,6 +229,11 @@ typedef   ^        ParameterType Logical        tngt_stf_fd      -         - -  
 typedef   ^        ParameterType Logical        tngt_stf_comp    -         - -  "Flag to compare finite differenced and analytical tangent stifness" - 
 typedef   ^        ParameterType R8Ki           tngt_stf_pert    -         - -  "Perturbation size for computing finite differenced tangent stiffness" - 
 typedef   ^        ParameterType R8Ki           tngt_stf_difftol -         - -  "When comparing tangent stiffness matrix, stop simulation if error greater than this" -
+# .... BD_BlNdOuts ........................................................................................................
+typedef   ^        ParameterType IntKi          BldNd_NumOuts           -  - -  "[BD_BldNdOuts] Number of requested output channels per blade node"  -
+typedef   ^        ParameterType IntKi          BldNd_TotNumOuts        -  - -  "[BD_BldNdOuts] Total number of requested output channels of blade node information (equal to BldNd_NumOuts * BldNd_BlOutNd)" -
+typedef   ^        ParameterType OutParmType    BldNd_OutParam         {:} - -  "[BD_BldNdOuts] Names and units (and other characteristics) of all requested output parameters"        -
+typedef   ^        ParameterType IntKi          BldNd_BlOutNd          {:} - -  "[BD_BldNdOuts] The blade nodes to actually output" -
 # .... arrays for optimization ........................................................................................................
 typedef   ^        ParameterType    R8Ki        QPtw_Shp_Shp_Jac       {:}{:}{:}{:}  - - "optimization variable: QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem) = p%Shp(i,idx_qp)*p%Shp(j,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_Shp_ShpDer        {:}{:}{:}     - - "optimization variable: QPtw_Shp_ShpDer(idx_qp,i,j) = p%Shp(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)" -

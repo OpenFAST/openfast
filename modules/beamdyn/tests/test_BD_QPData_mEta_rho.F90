@@ -34,8 +34,8 @@ subroutine test_BD_QPData_mEta_rho()
     baselineRR0mEta = (/ 0.0, 0.0, 0.0 /)
     
     ! allocate and build the custom input types
-    parametertype = simpleParameterType()
-    miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
+    parametertype = simpleParameterType(1,16,16,0,1)
+    miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%dof_node, parametertype%elem_total, parametertype%nodes_per_elem)
     
     ! allocate the results
     call BD_QPData_mEta_rho(parametertype, miscvartype)
@@ -46,4 +46,5 @@ subroutine test_BD_QPData_mEta_rho()
             @assertEqual(baselineRR0mEta, miscvartype%qp%RR0mEta(:,i,j), tolerance, testname)
         end do
     end do
+    call BD_DestroyParam(parametertype, ErrStat, ErrMsg)
 end subroutine

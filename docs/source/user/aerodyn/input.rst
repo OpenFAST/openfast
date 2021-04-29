@@ -10,10 +10,11 @@ file is required. This driver file specifies initialization inputs
 normally provided to AeroDyn by OpenFAST, as well as the per-time-step
 inputs to AeroDyn.
 
-As an example,  the ``driver.dvr`` file is the main driver, the ``input.dat`` is the primary input file, the ``blade.dat`` file contains the blade
-geometry data, and the ``airfoil.dat`` file contains the airfoil
-angle of attack, lift, drag, moment coefficients, and pressure
-coefficients.  Example input files are included in :numref:`ad_appendix`.
+As an example,  the ``driver.dvr`` file is the main driver, the ``input.dat`` is
+the primary input file, the ``blade.dat`` file contains the blade geometry data,
+and the ``airfoil.dat`` file contains the airfoil angle of attack, lift, drag,
+moment coefficients, and pressure coefficients.  Example input files are
+included in :numref:`ad_appendix`.
 
 No lines should be added or removed from the input files, except in
 tables where the number of rows is specified and comment lines in the
@@ -64,9 +65,7 @@ improved tower clearance.
 
 The I/O SETTINGS section controls the creation of the results file. If
 ``OutFileRoot`` is specified, the results file will have the filename
-*OutFileRoot.#.out*, where the ‘\ *#*\ ’ character is an integer
-number corresponding to a test case line found in the COMBINED-CASE
-ANALYSIS section described below. If an empty string is provided for
+*OutFileRoot.out*. If an empty string is provided for
 ``OutFileRoot``, then the driver file’s root name will be used
 instead. If ``TabDel`` is ``TRUE``, a TAB character is used between
 columns in the output file; if FALSE, fixed-width is used otherwise.
@@ -114,6 +113,19 @@ match the time step for the aerodynamic calculations (``DTAero``) as
 specified in the primary AeroDyn input file, and ``Tmax`` is the total
 simulation time.
 
+Note that ``dT`` should be the same for each of the cases listed in the 
+COMBINED-CASE ANALYSIS section. All of the cases will be output to the same
+file, with a ``Case`` column listed next to the ``Time`` output column 
+for help with data processing.
+
+For further debugging capability, the AeroDyn driver now also has the
+ability to read the combined case input data as a time-history file. 
+In place of a row in the COMBINED-CASE ANALYSIS table, a separate input file
+can be listed instead. The name of the file should be preceded with the ``@``
+character, to indicate the data is a time-history file in a separate text
+input file. An example is provided in 
+:numref:`ad_appendix`
+
 AeroDyn Primary Input File
 --------------------------
  
@@ -151,10 +163,13 @@ for ``DTAero`` may be used to indicate that AeroDyn should employ the
 time step prescribed by the driver code (OpenFAST or the standalone driver
 program).
 
-Set ``WakeMod`` to 0 if you want to disable rotor wake/induction
-effects or 1 to include these effects using the BEM theory model. When
-``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used.
-``WakeMod`` cannot be set to 2 during linearization analyses.
+Set ``WakeMod`` to 0 if you want to disable rotor wake/induction effects or 1 to
+include these effects using the (quasi-steady) BEM theory model. When
+``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also
+referred to as dynamic inflow or dynamic wake model).  When ``WakeMod`` is set
+to 3, the free vortex wake model is used, also referred to as OLAF (see
+:numref:`OLAF`). ``WakeMod`` cannot be set to 2 or 3 during linearization
+analyses.
 
 Set ``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
 to enable UA; ``AFAeroMod`` must be 1 during linearization analyses
@@ -165,11 +180,12 @@ potential-flow influence of the tower on the fluid flow local to the
 blade, 1 to enable the standard potential-flow model, or 2 to include
 the Bak correction in the potential-flow model. 
 
-Set the ``TwrShadow``
-flag to TRUE to include the influence of the tower on the flow local to
-the blade based on the downstream tower shadow model or FALSE to disable
-these effects. If the tower influence from potential flow and tower
-shadow are both enabled, the two influences will be superimposed. 
+Set the ``TwrShadow`` to 0 to disable to the tower shadow model,
+1 to enable the Powles tower shadow model, or 2 to use the Eames tower
+shadow model. These models calculate the influence of the tower on the 
+flow local to the blade based on the downstream tower shadow model. If
+the tower influence from potential flow and tower shadow are both
+enabled, the two influences will be superimposed. 
 
 Set the ``TwrAero`` flag to TRUE to calculate fluid drag loads on the
 tower or FALSE to disable these effects. 
@@ -185,6 +201,15 @@ Set the ``CavitCheck`` flag to TRUE to perform a cavitation check for MHK
 turbines or FALSE to disable this calculation. If ``CavitCheck`` is
 TRUE, ``AFAeroMod`` must be set to 1 because the cavitation check does
 not function with unsteady airfoil aerodynamics.
+
+Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
+option is only available for ``WakeMod = 1`` or ``2``.  See section
+:numref:`AeroAcoustics` for information on how to use this feature.
+
+The ``AA_InputFile`` is used to specify the input file for the aeroacoustics
+sub-module. See :numref:`AeroAcoustics` for information on how to use this
+feature.
+
 
 Environmental Conditions
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -257,6 +282,16 @@ to use a model where tau1 varies with time.
 If ``DBEMT_Mod=1`` (constant-tau1 model), set ``tau1_const`` to the time 
 constant to use for DBEMT.
 
+OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The input parameters in this section are used only when ``WakeMod = 3``.
+
+The settings for the free vortex wake model are set in the OLAF input file
+described in :numref:`OLAF-Input-Files`.  ``OLAFInputFileName`` is the filename
+for this input file.
+
+
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -317,7 +352,7 @@ Specify the number of airfoil data input files to be used using
 file names should be in quotations and can contain an absolute path or a
 relative path e.g., “C:\\airfoils\\S809_CLN_298.dat” or
 “airfoils\\S809_CLN_298.dat”. If you use relative paths, it is
-relative to the location of the current working directory. The blade
+relative to the location of the file in which it is specified. The blade
 data input files will reference these airfoil data using their line
 identifier, where the first airfoil file is numbered 1 and the last
 airfoil file is numbered ``NumAFfiles``.
@@ -345,7 +380,7 @@ Tower Influence and Aerodynamics
 
 The input parameters in this section pertain to the tower influence
 and/or tower drag calculations and are only used when ``TwrPotent`` >
-0, ``TwrShadow = TRUE``, or ``TwrAero = TRUE``.
+0, ``TwrShadow`` > 0, or ``TwrAero = TRUE``.
 
 ``NumTwrNds`` is the user-specified number of tower analysis nodes and
 determines the number of rows in the subsequent table (after two table
@@ -355,10 +390,19 @@ time; we recommend that ``NumTwrNds`` be between 10 and 20 to balance
 accuracy with computational expense. For each node, ``TwrElev``
 specifies the local elevation of the tower node above ground (or above
 MSL for offshore wind turbines or above the seabed for MHK turbines),
-``TwrDiam`` specifies the local tower diameter, and ``TwrCd``
-specifies the local tower drag-force coefficient. ``TwrElev`` must be
-entered in monotonically increasing order—from the lowest (tower-base)
-to the highest (tower-top) elevation. See Figure 2.
+``TwrDiam`` specifies the local tower diameter, ``TwrCd`` specifies the
+local tower drag-force coefficient, and ``TwrTI`` specifiest the
+turbulence intensity used in the Eames tower shadow model
+(``TwrShadow`` = 2). ``TwrElev`` must be entered in monotonically
+increasing order—from the lowest (tower-base) to the highest 
+(tower-top) elevation. Values of ``TwrTI`` between 0.05 and 0.4 are
+recommended.  Values larger than 0.4 up to 1 will trigger a warning
+that the results will need to be interpretted carefully, but the code
+will allow such values for scientific investigation purposes.
+See :numref:`fig:TwrGeom`.
+
+
+.. _AD-Outputs:
 
 Outputs
 ~~~~~~~
@@ -367,10 +411,12 @@ Specifying ``SumPrint`` to TRUE causes AeroDyn to generate a summary
 file with name ``OutFileRoot**.AD.sum*. ``OutFileRoot`` is either
 specified in the I/O SETTINGS section of the driver input file when
 running AeroDyn standalone, or by the OpenFAST program when running a
-coupled simulation. See section 5.2 for summary file details.
+coupled simulation. See :numref:`sec:ad_SumFile` for summary file details.
 
 AeroDyn can output aerodynamic and kinematic quantities at up to nine
-nodes along the tower and up to nine nodes along each blade.
+nodes specified along the tower and up to nine nodes along each blade.
+For outputs at every blade node, see :numref:`AD-Nodal-Outputs`.
+
 ``NBlOuts`` specifies the number of blade nodes that output is
 requested for (0 to 9) and ``BlOutNd`` on the next line is a list
 ``NBlOuts`` long of node numbers between 1 and ``NumBlNds``
@@ -389,6 +435,7 @@ quantities are actually output at these nodes.
 
 .. figure:: figs/ad_tower_geom.png
    :width: 60%
+   :name: fig:TwrGeom
    :align: center
 
    AeroDyn Tower Geometry
@@ -414,10 +461,15 @@ unknown/invalid channel name, it warns the users but will remove the
 suspect channel from the output file. Please refer to Appendix E for a
 complete list of possible output parameters.
 
+.. _AD-Nodal-Outputs:
+
+.. include:: ADNodalOutputs.rst
+
+
 .. _airfoil_data_input_file:
 
 Airfoil Data Input File
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 The airfoil data input files themselves (one for each airfoil) include
 tables containing coefficients of lift force, drag force, and pitching
@@ -434,7 +486,7 @@ pitching-moment, and minimum pressure coefficients as a function of AoA.
 When ``InterpOrd`` is 1, linear interpolation is used; when
 ``InterpOrd`` is 3, the data will be interpolated with cubic splines;
 if the keyword ``DEFAULT`` is entered in place of a numerical value,
-``InterpOrd`` is set to 3.
+``InterpOrd`` is set to 1.
 
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
 local ``BlChord`` squared), but is currently unused by AeroDyn.
@@ -451,18 +503,20 @@ exterior shape of the airfoil. The airfoil shape is currently unused by
 AeroDyn, but when AeroDyn is coupled to OpenFAST, the airfoil shape will be
 used by OpenFAST for blade surface visualization when enabled.
 
+``BL_file`` is the name of the file containing boundary-layer characteristics
+of the profile. It is ignored if the aeroacoustic module is not used.
+
 Specify the number of Reynolds number- or aerodynamic-control
 setting-dependent tables of data for the given airfoil via the
-``NumTabs`` setting. **Currently, AeroDyn can only use the first table
-in any given airfoil file, so you should set ``NumTabs = 1`` and you
-will need to make separate airfoil data input files and run separate
-simulations if you need to analyze data for different Reynolds numbers
-or aerodynamic-control settings.** The remaining parameters in the
+``NumTabs`` setting. The remaining parameters in the
 airfoil data input files are entered separately for each table.
 
-``Re`` and ``Ctrl`` are the Reynolds number (in millions) and
-aerodynamic-control setting for the included table, **but are both
-currently unused by AeroDyn**.
+``Re`` and ``UserProp`` are the Reynolds number (in millions) and
+aerodynamic-control (or user property) setting for the included table.
+These values are used only when the ``AFTabMod`` parameter in the 
+primary AeroDyn input file is set to use 2D interpolation based on 
+``Re`` or ``UserProp``. If 1D interpolation (based only on angle of attack)
+is used, only the first table in the file will be used.
 
 Set ``InclUAdata`` to TRUE if you are including the 32 UA model
 parameters (required when ``AFAeroMod = 2`` in the AeroDyn primary
@@ -606,19 +660,31 @@ input file):
    UA are disabled; if the keyword ``DEFAULT`` is entered in place of a
    numerical value, ``UACutOut`` is set to 45.
 
--  ``filtCutOff`` is the cut-off frequency (-3 dB corner frequency)
-   (in Hz) of the low-pass filter applied to the AoA input to UA, as
+-  ``filtCutOff`` is the cut-off reduced frequency
+   of the low-pass filter applied to the AoA input to UA, as
    well as to the pitch rate and pitch acceleration derived from AoA
    within UA; if the keyword ``DEFAULT`` is entered in place of a
-   numerical value, ``filtCutOff`` is set to 20.
+   numerical value, ``filtCutOff`` is set to 0.5.
 
 ``NumAlf`` is the number of distinct AoA entries and determines the
 number of rows in the subsequent table of static airfoil coefficients;
 ``NumAlf`` must be greater than or equal to one (``NumAlf = 1``
-implies constant coefficients, regardless of the AoA). AeroDyn will
-interpolate the data provided via linear interpolation or via cubic
-splines, depending on the setting of input ``InterpOrd`` above. For
-each AoA, you must set the AoA (in degrees), ``alpha``, the lift-force
+implies constant coefficients, regardless of the AoA). 
+
+AeroDyn will
+interpolate on AoA using the data provided via linear interpolation or via cubic
+splines, depending on the setting of input ``InterpOrd`` above. 
+If ``AFTabMod`` is set to ``1``, only the first airfoil table in each file
+will be used. If ``AFTabMod`` is set to ``2``, AeroDyn will find the
+airfoil tables that bound the computed Reynolds number,
+and linearly interpolate between the tables, using the logarithm of the Reynolds numbers.
+If ``AFTabMod`` is set to ``3``, it will find the bounding airfoil 
+tables based on the ``UserProp`` field and linearly interpolate the tables
+based on it. Note that OpenFAST currently sets the ``UserProp`` input value to ``0`` 
+unless the DLL controller is used and sets the value, 
+so using this feature may require a code change.
+
+For each AoA, you must set the AoA (in degrees), ``alpha``, the lift-force
 coefficient, ``Coefs``\ (:,1), the drag-force coefficient,
 ``Coefs(:,2)``, and optionally the pitching-moment coefficient,
 ``Coefs(:,3)``, and minimum pressure coefficient,
@@ -639,8 +705,7 @@ minimum pressure coefficients may be absent from the file.
 .. _blade_data_input_file:
 
 Blade Data Input File
-~~~~~~~~~~~~~~~~~~~~~
-
+---------------------
 
 The blade data input file contains the nodal discretization, geometry,
 twist, chord, and airfoil identifier for a blade. Separate files are

@@ -1,0 +1,11 @@
+Example Time-Series Input File for UnsteadyAero Driver
+
+
+This file has 8 header lines followed by three columns of data:
+
+
+Time     Angle of Attack     VRel      omega
+(s)       (deg)              (m/s)    (rad/s)
+0.0       0                  10        0
+0.01      0                  10        0
+0.02      0                  10        0

@@ -40,30 +40,19 @@ module UA_Dvr_Subs
       character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
          ! Local variables  
-         
-      integer                                          :: i                    ! generic integer for counting
-      integer                                          :: j                    ! generic integer for counting
-      character(   2)                                  :: strI                 ! string version of the loop counter
-
       integer                                          :: UnIn                 ! Unit number for the input file
       integer                                          :: UnEchoLocal          ! The local unit number for this module's echo file
       character(1024)                                  :: EchoFile             ! Name of HydroDyn echo file  
-      character(1024)                                  :: Line                 ! String to temporarially hold value of read line   
-      character(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-      character(1024)                                  :: TmpFmt               ! Temporary storage for format statement
       character(1024)                                  :: FileName             ! Name of HydroDyn input file  
 
-      real(ReKi)                                       :: TmpRealVar2(2)       !< Temporary real    array size 2
-      integer(IntKi)                                   :: TmpIntVar2(2)        !< Temporary integer array size 2
       integer(IntKi)                                   :: errStat2    ! Status of error message
       character(1024)                                  :: errMsg2     ! Error message if ErrStat /= ErrID_None
-      character(1024)                                  :: RoutineName
+      character(*), parameter                          :: RoutineName = 'ReadDriverInputFile'
    
          ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
       UnEchoLocal = -1
       ErrStat     = ErrID_None
       ErrMsg      = ''
-      RoutineName = 'ReadDriverInputFile'
       FileName = trim(inputFile)
    
       call GetNewUnit( UnIn )   
@@ -394,29 +383,31 @@ module UA_Dvr_Subs
 
    end subroutine ReadDriverInputFile
    
-   subroutine ReadTimeSeriesData( inputsFile, nSimSteps, timeArr, AOAarr, Uarr, ErrStat, ErrMsg )
+   subroutine ReadTimeSeriesData( inputsFile, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, ErrStat, ErrMsg )
       character(1024),               intent( in    )   :: inputsFile
       integer,                       intent(   out )   :: nSimSteps
       real(DbKi),allocatable,        intent(   out )   :: timeArr(:)
       real(ReKi),allocatable,        intent(   out )   :: AOAarr(:)
       real(ReKi),allocatable,        intent(   out )   :: Uarr(:) !RRD
+      real(ReKi),allocatable,        intent(   out )   :: OmegaArr(:)
       integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs  
       character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
       
-      real(DbKi)                                       :: tmpArr(3) !RRD changed from (2)
+      real(SiKi)                                       :: dt
+      real(DbKi)                                       :: tmpArr(4)
       integer(IntKi)                                   :: errStat2    ! Status of error message
       character(1024)                                  :: errMsg2     ! Error message if ErrStat /= ErrID_None
-      character(1024)                                  :: RoutineName
+      character(*), parameter                          :: RoutineName = 'ReadTimeSeriesData'
       character(1024)                                  :: FileName
       integer                                          :: UnIn
-      integer                                           :: i
+      integer                                          :: i
       integer, PARAMETER                               ::hdrlines=8 ! RRD
       
       ErrStat     = ErrID_None
       ErrMsg      = ''
-      RoutineName = 'ReadTimeSeriesData'
+      nSimSteps   = 0 ! allocate here in case errors occur
+      
       FileName = trim(inputsFile)
-      nSimSteps   = 0
       
       call GetNewUnit( UnIn )   
       call OpenFInpFile( UnIn, FileName, errStat2, errMsg2 )
@@ -431,7 +422,7 @@ module UA_Dvr_Subs
    
    
       !-------------------------------------------------------------------------------------------------
-      ! File header  7lines
+      ! Determine how many lines of data are in the file:
       !-------------------------------------------------------------------------------------------------
       do i=1,hdrlines !RRD
         call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 )
@@ -442,10 +433,9 @@ module UA_Dvr_Subs
          end if
       enddo
    
-       
       do
-         call  ReadAry( UnIn, FileName, tmpArr, 3, 'Data', 'Time-series data', errStat2, errMsg2  ) !RRD 2-->3
-            ! The assumption is that the only parsing error occurs at the end of the file and therefor we stop reading data
+         call  ReadAry( UnIn, FileName, tmpArr, 4, 'Data', 'Time-series data', errStat2, errMsg2  )
+            ! The assumption is that the only parsing error occurs at the end of the file and therefore we stop reading data
          if (errStat2 > ErrID_None) then
             exit
          else
@@ -453,38 +443,58 @@ module UA_Dvr_Subs
          end if        
       end do
       
+      !-------------------------------------------------------------------------------------------------
+      ! Allocate arrays to be read
+      !-------------------------------------------------------------------------------------------------
+      allocate ( timeArr( nSimSteps ), STAT=ErrStat2 )
+         if ( ErrStat2 /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'Error trying to allocate timeArr.', ErrStat, ErrMsg, RoutineName)  
+            call Cleanup()
+            return
+         end if
+         
+      allocate ( AOAarr( nSimSteps ), STAT=ErrStat2 )
+         if ( ErrStat2 /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'Error trying to allocate AOAarr.', ErrStat, ErrMsg, RoutineName)  
+            call Cleanup()
+            return
+         end if
+
+      allocate ( Uarr( nSimSteps ), OmegaArr( nSimSteps ), STAT=ErrStat2 )
+         if ( ErrStat2 /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'Error trying to allocate Uarr and OmegaArr.', ErrStat, ErrMsg, RoutineName)  
+            call Cleanup()
+            return
+         end if
+         
+         
+      !-------------------------------------------------------------------------------------------------
+      ! Read arrays from file
+      !-------------------------------------------------------------------------------------------------
       rewind(UnIn)
       do i=1,hdrlines !RRD
           call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 )
       enddo
-      allocate ( timeArr( nSimSteps ), STAT=ErrStat )
-         if ( ErrStat /= 0 ) then
-            call SetErrStat( ErrID_Fatal, 'Error trying to allocate timeArr.', ErrStat, ErrMsg, RoutineName)  
-            call Cleanup()
-            stop       
-         end if
-         
-      allocate ( AOAarr( nSimSteps ), STAT=ErrStat )
-         if ( ErrStat /= 0 ) then
-            call SetErrStat( ErrID_Fatal, 'Error trying to allocate AOAarr.', ErrStat, ErrMsg, RoutineName)  
-            call Cleanup()
-            stop       
-         end if
-
-      allocate ( Uarr( nSimSteps ), STAT=ErrStat ) !RRD
-         if ( ErrStat /= 0 ) then
-            call SetErrStat( ErrID_Fatal, 'Error trying to allocate Uarr.', ErrStat, ErrMsg, RoutineName)  
-            call Cleanup()
-            stop       
-         end if
-         
       do i = 1,nSimSteps
-         call  ReadAry( UnIn, FileName, tmpArr, 3, 'Data', 'Time-series data', errStat2, errMsg2  ) !RRD 2-->3
-         timeArr(i) = tmpArr(1)
-         AOAarr(i)  = real(tmpArr(2))
-         Uarr(i)  = real(tmpArr(3))
+         call  ReadAry( UnIn, FileName, tmpArr, 4, 'Data', 'Time-series data', errStat2, errMsg2  )
+         timeArr(i)  = tmpArr(1)
+         AOAarr(i)   = real(tmpArr(2),ReKi)
+         Uarr(i)     = real(tmpArr(3),ReKi)
+         OmegaArr(i) = real(tmpArr(4),ReKi)
       end do
       
+      if (nSimSteps > 1) then
+         dt = timeArr(2) - timeArr(1)
+         
+         do i = 2,nSimSteps-1
+            if (.not. EqualRealNos(dt, REAL(timeArr(i+1)-timeArr(i), SiKi) ) ) then
+               call SetErrStat( ErrID_Fatal, 'Times in InputsFile must be contain the same delta t.', ErrStat, ErrMsg, RoutineName)
+               exit !exit the do loop
+            end if
+         end do
+      end if
+               
+      call Cleanup()
          
       contains
       !====================================================================================================
@@ -502,16 +512,14 @@ module UA_Dvr_Subs
          
       end subroutine Cleanup
    end subroutine ReadTimeSeriesData
-   
-   subroutine Init_AFI(NumAFfiles, afNames, Flookup, UseCm, AFI_Params, ErrStat, ErrMsg)
+!--------------------------------------------------------------------------------------------------------------
+   subroutine Init_AFI(p, NumAFfiles, afNames, UseCm, AFI_Params, ErrStat, ErrMsg)
 
-   
-   
+   type(UA_ParameterType),intent(in)   :: p
    integer,             intent(in   )  :: NumAFfiles
    CHARACTER(1024),     intent(in   )  :: afNames(NumAFfiles)
-   logical,             intent(in   )  :: Flookup
    logical,             intent(in   )  :: UseCm
-   type(AFI_ParameterType), intent(  out)  :: AFI_Params
+   type(AFI_ParameterType), intent(  out)  :: AFI_Params(NumAFfiles)
    integer(IntKi),      intent(  out)  :: ErrStat                       ! Error status.
    character(*),        intent(  out)  :: ErrMsg                        ! Error message.
 
@@ -521,29 +529,16 @@ module UA_Dvr_Subs
    integer                  :: i
    integer(IntKi)           :: errStat2    ! Status of error message
    character(1024)          :: errMsg2     ! Error message if ErrStat /= ErrID_None
-   character(1024)          :: RoutineName
+   character(*), parameter  :: RoutineName = 'Init_AFI'
    
   ! Initialize the Airfoil Info module
       ! Setup Airfoil info
-   AFI_InitInputs%NumAFfiles = NumAFfiles
+   
    UnEc = 0
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-   RoutineName = 'Init_AFI'
    
-   
-   allocate ( AFI_InitInputs%FileNames( AFI_InitInputs%NumAFfiles ), STAT=ErrStat )
-      if ( ErrStat /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error trying to allocate AFI_InitInputs%FileNames.', ErrStat, ErrMsg, RoutineName)  
-         call Cleanup()
-         stop       
-      end if
-   
-   
-   do i=1,AFI_InitInputs%NumAFfiles
-      AFI_InitInputs%FileNames(i) = afNames(i) !InitInp%AF_File(i)
-   end do
    
       ! Set this to 1 to use the UA coefs
    !AFI_InitInputs%UA_Model    = 1
@@ -560,22 +555,23 @@ module UA_Dvr_Subs
    end if
    
    AFI_InitInputs%InCol_Cpmin = 0
-   
-   !AFI_InitInputs%Flookup     = Flookup
+   AFI_InitInputs%AFTabMod = AFITable_1 ! 1D-interpolation (on AoA only)
 
    
-   
-      ! Call AFI_Init to read in and process the airfoil files.
-      ! This includes creating the spline coefficients to be used for interpolation.
+   do i=1,NumAFfiles
+      AFI_InitInputs%FileName = afNames(i) !InitInp%AF_File(i)
+      
+         ! Call AFI_Init to read in and process the airfoil files.
+         ! This includes creating the spline coefficients to be used for interpolation.
 
-   call AFI_Init ( AFI_InitInputs, AFI_Params, errStat2, errMsg2, UnEc )
-      call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
- 
-   
+      call AFI_Init ( AFI_InitInputs, AFI_Params(i), errStat2, errMsg2, UnEc )
+         call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+            call Cleanup()
+            return
+         end if
+   end do
+
    call Cleanup()
    
    
@@ -598,15 +594,39 @@ module UA_Dvr_Subs
    end subroutine Init_AFI  
    
    
+   subroutine WriteAFITables(AFI_Params,OutRootName)
    
+      type(AFI_ParameterType), intent(in)          :: AFI_Params
+      character(ErrMsgLen)   , intent(in)          :: OutRootName
+      
+      integer(IntKi)                               :: unOutFile
+      integer(IntKi)                               :: row
+      integer(IntKi)                               :: ErrStat
+      character(ErrMsgLen)                         :: ErrMsg
+      
+      CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) RETURN
+
+      CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.Coefs.out', ErrStat, ErrMsg )
+         if (ErrStat >= AbortErrLev) then
+            call WrScr(Trim(ErrMsg))
+            return
+         end if
+
    
-   
-   
-   
-   
-   
-   
-   
+      WRITE (unOutFile,'(/,A/)') 'These predictions were generated by UnsteadyAero Driver on '//CurDate()//' at '//CurTime()//'.'
+      WRITE (unOutFile,'(/,A/)')  ' '
+         ! note that this header assumes we have Cm and unsteady aero coefficients
+      WRITE(unOutFile, '(20(A20,1x))') 'Alpha', 'Cl', 'Cd', 'Cm', 'f_st', 'cl_fs', 'f_st2', 'cn_fs'
+      WRITE(unOutFile, '(20(A20,1x))') '(deg)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)'
+
+      do row=1,size(AFI_Params%Table(1)%Alpha)
+         WRITE(unOutFile, '(20(F20.6,1x))') AFI_Params%Table(1)%Alpha(row)*R2D, AFI_Params%Table(1)%Coefs(row,:) 
+      end do
+      
+      CLOSE(unOutFile)
+      
+   end subroutine WriteAFITables
    
    
    

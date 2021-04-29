@@ -54,7 +54,7 @@ typedef     ^                 ^                 SiKi                 WvHiCOffD  
 typedef     ^                 ^                 SiKi                 WvLowCOffS        -        -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                 WvHiCOffS         -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 
-typedef     ^                 ^                 CHARACTER(10)        OutList           {18}     -        -        "This should really be dimensioned with MaxOutPts"    -
+typedef     ^                 ^                 CHARACTER(ChanLen)   OutList           {18}     -        -        "This should really be dimensioned with MaxOutPts"    -
 typedef     ^                 ^                 LOGICAL              OutAll            -        -        -        ""    -
 typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""    -
 typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
@@ -62,8 +62,8 @@ typedef     ^                 ^                 INTEGER              NumOutAll  
 
 # Define outputs from the initialization routine here:
 #
-typedef     ^                 InitOutputType    CHARACTER(10)        WriteOutputHdr    {:}      -        -        ""    -
-typedef     ^                 ^                 CHARACTER(10)        WriteOutputUnt    {:}      -        -        ""    -
+typedef     ^                 InitOutputType    CHARACTER(ChanLen)   WriteOutputHdr    {:}      -        -        ""    -
+typedef     ^                 ^                 CHARACTER(ChanLen)   WriteOutputUnt    {:}      -        -        ""    -
 typedef     ^                 ^                 SiKi                 WaveElevSeries2   {:}{:}   -        -        "" (m)
 #                                                                                                                 "Instantaneous elevation time-series at each of the points given by WaveElevXY.  Used for making movies of the waves. First index is the timestep. Second index is XY point number corresponding to second index of WaveElevXY." (m)
 typedef     ^                 ^                 SiKi                 WaveAcc2D         {:}{:}{:} -       -        "" (m/s^2)
@@ -137,7 +137,7 @@ typedef     ^                 ^                 INTEGER              NumOuts    
 typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
 typedef     ^                 ^                 CHARACTER(20)        OutFmt            -        -        -        ""        -
 typedef     ^                 ^                 CHARACTER(20)        OutSFmt           -        -        -        ""        -
-typedef     ^                 ^                 CHARACTER(10)        Delim             -        -        -        ""        -
+typedef     ^                 ^                 CHARACTER(ChanLen)   Delim             -        -        -        ""        -
 typedef     ^                 ^                 INTEGER              UnOutFile         -        -        -        ""        -
 
 

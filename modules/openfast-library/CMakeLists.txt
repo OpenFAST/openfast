@@ -18,10 +18,12 @@ if(APPLE OR UNIX)
   add_definitions(-DIMPLICIT_DLLEXPORT)
 endif()
 
-generate_f90_types(src/FAST_Registry.txt FAST_Types.f90 -noextrap)
+if (GENERATE_TYPES)
+  generate_f90_types(src/FAST_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FAST_Types.f90 -noextrap)
+endif()
 
-add_library(openfast_prelib
-  FAST_Types.f90)
+add_library(openfast_prelib src/FAST_Types.f90)
+
 target_link_libraries(openfast_prelib
   nwtclibs
   ifwlib
@@ -35,13 +37,13 @@ target_link_libraries(openfast_prelib
   orcaflexlib
   extptfm_mckflib
   openfoamtypeslib
-  sctypeslib
+  scdataextypeslib
   feamlib
   moordynlib
   icedynlib
   icefloelib
   maplib
-  )
+)
 
 add_library(openfast_postlib
   src/FAST_Lin.f90
@@ -49,10 +51,24 @@ add_library(openfast_postlib
   src/FAST_Subs.f90
   src/FAST_Solver.f90
   )
-target_link_libraries(openfast_postlib openfast_prelib scfastlib foamfastlib versioninfolib)
+target_link_libraries(openfast_postlib openfast_prelib scdataexlib foamfastlib versioninfolib)
 
 add_library(openfastlib src/FAST_Library.f90)
-target_link_libraries(openfastlib openfast_postlib openfast_prelib scfastlib foamfastlib)
+target_link_libraries(openfastlib openfast_postlib openfast_prelib scdataexlib foamfastlib)
+
+string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
+string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
+if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
+  # With variable tracking enabled, the compile step frequently aborts on large modules and
+  # restarts with this option off. Disabling in Release mode avoids this problem when compiling with
+  # full optimizations, but leaves it enabled for RelWithDebInfo which adds both -O2 and -g flags.
+  # https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
+  set_source_files_properties(
+    src/FAST_Subs.f90 src/FAST_Types.f90 src/FAST_Library.f90
+    PROPERTIES
+      COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments"
+  )
+endif()
 
 install(TARGETS openfastlib openfast_prelib openfast_postlib
   EXPORT ${CMAKE_PROJECT_NAME}Libraries

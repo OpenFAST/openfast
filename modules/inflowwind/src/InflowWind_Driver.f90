@@ -167,7 +167,9 @@ PROGRAM InflowWind_Driver
    CLSettingsFlags%PointsOutputInit    =  .FALSE.        ! Points output file not started
    CLSettingsFlags%Verbose             =  .FALSE.        ! Turn on verbose error reporting?
    CLSettingsFlags%VVerbose            =  .FALSE.        ! Turn on very verbose error reporting?
-
+   CLSettingsFlags%WrHAWC              =  .FALSE.        ! don't convert to HAWC format
+   CLSettingsFlags%WrBladed            =  .FALSE.        ! don't convert to Bladed format
+   CLSettingsFlags%WrVTK               =  .FALSE.        ! don't convert to VTK format
 
       ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
    Settings       =  CLSettings
@@ -234,7 +236,7 @@ PROGRAM InflowWind_Driver
       CALL ReadDvrIptFile( CLSettings%DvrIptFileName, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL ProgAbort( ErrMsg )
-      ELSEIF ( ErrStat /= 0 ) THEN
+      ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
          ErrStat  =  ErrID_None
       ENDIF
@@ -273,6 +275,9 @@ PROGRAM InflowWind_Driver
 
    ELSE
 
+      SettingsFlags%WrHAWC = .FALSE.
+      SettingsFlags%WrBladed = .FALSE.
+      SettingsFlags%WrVTK = .FALSE.
 
          ! VVerbose error reporting
       IF ( IfWDriver_Verbose >= 10_IntKi ) CALL WrScr('No driver input file used. Updating driver settings with command line arguments')
@@ -449,10 +454,11 @@ PROGRAM InflowWind_Driver
    IF ( SettingsFlags%DvrIptFile )  THEN
       CALL GetRoot( Settings%DvrIptFileName, InflowWind_InitInp%RootName )
    ELSE
-      InflowWind_InitInp%RootName = ""
+      CALL GetRoot( InflowWind_InitInp%InputFileName, InflowWind_InitInp%RootName )
+      !InflowWind_InitInp%RootName = ""
    END IF
-   !CALL GetRoot( InflowWind_InitInp%InputFileName, InflowWind_InitInp%RootName )
-
+   InflowWind_InitInp%RootName = trim(InflowWind_InitInp%RootName)//'.IfW'
+   
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
 
@@ -478,12 +484,67 @@ PROGRAM InflowWind_Driver
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'InflowWind_Init CALL returned without errors.'//NewLine)
 
 
+      ! Convert InflowWind file to HAWC format
+   IF (SettingsFlags%WrHAWC) THEN
+      
+      CALL InflowWind_Convert2HAWC( InflowWind_InitInp%RootName, InflowWind_p, InflowWind_MiscVars, ErrStat, ErrMsg )
+      
+      IF (ErrStat > ErrID_None) THEN
+         CALL WrScr( TRIM(ErrMsg) )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+            CALL WrScr(NewLine//' InflowWind_Convert2HAWC returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
+         END IF
+      ELSE
+         IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'InflowWind_Convert2HAWC CALL returned without errors.'//NewLine)
+      END IF
+      
+   END IF ! Write HAWC2 files
+   
+
+      ! Convert InflowWind file to Native Bladed format
+   IF (SettingsFlags%WrBladed) THEN
+      CALL InflowWind_Convert2Bladed( InflowWind_InitInp%RootName, InflowWind_p, InflowWind_MiscVars, ErrStat, ErrMsg )
+      
+      IF (ErrStat > ErrID_None) THEN
+         CALL WrScr( TRIM(ErrMsg) )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+            CALL WrScr(NewLine//' InflowWind_Convert2Bladed returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
+         END IF
+      ELSE
+         IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'InflowWind_Convert2Bladed CALL returned without errors.'//NewLine)
+      END IF
+   END IF
+
+   IF (SettingsFlags%WrVTK) THEN
+      CALL InflowWind_Convert2VTK( InflowWind_InitInp%RootName, InflowWind_p, InflowWind_MiscVars, ErrStat, ErrMsg )
+      
+      IF (ErrStat > ErrID_None) THEN
+         CALL WrScr( TRIM(ErrMsg) )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+            CALL WrScr(NewLine//' InflowWind_Convert2VTK returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
+         END IF
+      ELSE
+         IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'InflowWind_Convert2VTK CALL returned without errors.'//NewLine)
+      END IF
+   
+   END IF
+   
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Other Setup -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
    !  Setup any additional things
 
+if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTcalc) then ! we can skip all of this if we haven't asked for any output
 
       ! Timestep -- The timestep for the calling InflowWind_CalcOutput may need to be changed to what is in the file if the
       !  DT = DEFAULT option was used in the driver input file.  This does not need to be changed in the InflowWind_Parameters
@@ -796,7 +857,7 @@ PROGRAM InflowWind_Driver
    ENDIF
    
 
-
+end if
 
 
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -888,9 +949,9 @@ CONTAINS
    SUBROUTINE DriverCleanup()
 
 
-      CLOSE( Settings%WindGridOutputUnit )
-      CLOSE( Settings%PointsOutputUnit )
-      CLOSE( Settings%FFTOutputUnit )
+      if (Settings%WindGridOutputUnit  > -1_IntKi ) CLOSE( Settings%WindGridOutputUnit )
+      if (Settings%PointsOutputUnit    > -1_IntKi ) CLOSE( Settings%PointsOutputUnit )
+      if (Settings%FFTOutputUnit       > -1_IntKi ) CLOSE( Settings%FFTOutputUnit )
 
 
          ! Find out how long this actually took

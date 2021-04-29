@@ -1,0 +1,251 @@
+###################################################################################################################################
+# Registry for AeroAcoustics module in the FAST Modularization Framework
+# This Registry file is used to create AeroDyn_Types which contains data used in the AeroDyn module.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>     <ModuleName/ModName>     <TypeName>     <FieldType>     <FieldName>     <Dims>     <IO>     <DNAME>     <DESCRIP>     <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# File last committed $Date: 2016-03-14 12:13:10 -0600 (Mon, 14 Mar 2016) $
+# (File) Revision #: $Rev: 201 $
+# URL: $HeadURL: https://windsvn.nrel.gov/WT_Perf/branches/v4.x/Source/dependencies/AeroDyn/AeroDyn_Registry.txt $
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include     Registry_NWTC_Library.txt
+usefrom     AirfoilInfo_Registry.txt
+#
+# ..... Input file data ...........................................................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Blade Input file data .....................................................................................................
+typedef     AeroAcoustics/AA    AA_BladePropsType    ReKi                TEThick          -    -     -     ""     -
+typedef     ^                   AA_BladePropsType    ReKi                TEAngle          -    -     -     ""     -
+#
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+typedef     AeroAcoustics/AA    InitInputType        CHARACTER(1024)     InputFile        -     -     -     "Name of the input file"     -
+typedef     ^                   InitInputType        IntKi               NumBlades        -     -     -     "Number of blades on the turbine"
+typedef     ^                   InitInputType        IntKi               NumBlNds         -     -     -     "Number of blade nodes"
+typedef     ^                   InitInputType        CHARACTER(1024)     RootName         -     -     -     "RootName for writing output files"     -
+typedef     ^                   InitInputType        ReKi                BlSpn           {:}{:}    -     -     "Span at blade node"     m
+typedef     ^                   InitInputType        ReKi                BlChord         {:}{:}    -     -     "Chord at blade node"     m
+typedef     ^                   InitInputType        ReKi                AirDens          -     -     -     "Air density"     kg/m^3
+typedef     ^                   InitInputType        ReKi                KinVisc          -     -     -     "Kinematic air viscosity"     m^2/s
+typedef     ^                   InitInputType        ReKi                SpdSound         -     -     -     "Speed of sound"     m/s
+typedef     ^                   InitInputType        ReKi                HubHeight         -     -     -     "Hub Height"     m
+typedef     ^                   InitInputType        IntKi               BlAFID          {:}{:} -     -     "Index of airfoil data file for blade node location [array of numBladeNodes by numBlades]"        -
+typedef     ^                   InitInputType        AFI_ParameterType   AFInfo          {:}     -     -      "Airfoil information structure containing the aerodynamic center and airfoil shape coordinates"
+#
+# Define outputs from the initialization routine here:
+typedef     ^                   InitOutputType       CHARACTER(20)  WriteOutputHdr       {:}    -     -     "Names of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(20)  WriteOutputUnt       {:}    -     -     "Units of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(20)  WriteOutputHdrforPE  {:}    -     -     "Names of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(20)  WriteOutputUntforPE  {:}    -     -     "Units of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputHdrSep    {:}    -     -     "Names of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputUntSep    {:}    -     -     "Units of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputHdrNodes    {:}    -     -     "Names of the output-to-file channels"     -
+typedef     ^                   InitOutputType       CHARACTER(25)  WriteOutputUntNodes    {:}    -     -     "Units of the output-to-file channels"     -
+typedef     ^                   InitOutputType       character(1)           delim            -      -     -   "column delimiter" "-"
+typedef     ^                   InitOutputType       ProgDesc            Ver              -     -     -     "This module's name, version, and date"     -
+typedef     ^                   InitOutputType       ReKi                AirDens          -     -     -     "Air density"     kg/m^3
+#
+
+# ..... Primary Input file data ...................................................................................................
+typedef     ^                   AA_InputFile         DbKi                DT_AA            -     -     -     "Time interval for aerodynamic calculations {or "default"}"     s
+typedef     ^                   AA_InputFile         IntKi               IBLUNT           -     -     -     "FLAG TO COMPUTE BLUNTNESS NOISE"     -
+typedef     ^                   AA_InputFile         IntKi               ILAM             -     -     -     "FLAG TO COMPUTE LBL NOISE {1=steady model, 2=Beddoes-Leishman unsteady model}"     -
+typedef     ^                   AA_InputFile         IntKi               ITIP             -     -     -     "FLAG TO COMPUTE TIP NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
+typedef     ^                   AA_InputFile         IntKi               ITRIP            -     -     -     "FLAG TO TRIP BOUNDARY LAYER {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
+typedef     ^                   AA_InputFile         IntKi               ITURB            -     -     -     "FLAG TO COMPUTE TBLTE NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
+typedef     ^                   AA_InputFile         IntKi               IInflow          -     -     -     "FLAG TO COMPUTE Turbulent Inflow NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
+typedef     ^                   AA_InputFile         IntKi               X_BLMethod       -     -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Pretabulated"     -
+typedef     ^                   AA_InputFile         IntKi               TICalcMeth       -     -     -     "TICalcMeth"     -
+typedef     ^                   AA_InputFile         IntKi               NReListBL        -     -     -    "Number of values of ReListBL"     -
+typedef     ^                   AA_InputFile         Logical             aweightflag      -     -     -    "Integer a weighting call"     -
+typedef     ^                   AA_InputFile         Logical             ROUND            -     -     -     "LOGICAL INDICATING ROUNDED TIP"     -
+typedef     ^                   AA_InputFile         ReKi                ALPRAT           -     -     -     "TIP LIFT CURVE SLOPE"     -
+typedef     ^                   AA_InputFile         IntKi               AA_Bl_Prcntge    -     -     -     "see the AeroAcoustics input file for description  "     -
+typedef     ^                   AA_InputFile         IntKi               NrObsLoc         -     -     -     "Number of observer locations "     -
+typedef     ^                   AA_InputFile         ReKi                ObsX            {:}    -     -     "Observer location in tower-base coordinate X horizontal"     m
+typedef     ^                   AA_InputFile         ReKi                ObsY            {:}    -     -     "Observer location in tower-base coordinate Y lateral"          m
+typedef     ^                   AA_InputFile         ReKi                ObsZ            {:}    -     -     "Observer location in tower-base coordinate Z vertical"          m
+typedef     ^                   AA_InputFile         AA_BladePropsType   BladeProps      {:}    -     -     "blade property information from blade input files"     -
+typedef     ^                   AA_InputFile         IntKi               NrOutFile        -     -     -     "Nr of output files"     -
+typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
+typedef     ^                   AA_InputFile         CHARACTER(1024)     TICalcTabFile    -     -     -     "Name of the file containing the table for incident turbulence intensity" -
+typedef     ^                   AA_InputFile         CHARACTER(1024)     FTitle           -     -     -     "File Title: the 2nd line of the input file, which contains a description of its contents" -
+typedef     ^                   AA_InputFile         DBKi                AAStart         -     -     -     "Time after which to calculate AA"     s
+typedef     ^                   AA_InputFile         ReKi                Lturb           -     -     -      "Turbulent lengthscale in Amiet model"     -
+typedef     ^                   AA_InputFile         ReKi                AvgV            -     -      -     "Average wind speed to compute incident turbulence intensity"  m    
+typedef     ^                   AA_InputFile         ReKi                ReListBL            {:}    -     -     ""          
+typedef     ^                   AA_InputFile         ReKi                AoAListBL           {:}    -     -     ""         deg
+typedef     ^                   AA_InputFile         ReKi                Pres_DispThick         {:}{:}{:}    -     -     ""         
+typedef     ^                   AA_InputFile         ReKi                Suct_DispThick         {:}{:}{:}    -     -     ""         
+typedef     ^                   AA_InputFile         ReKi                Pres_BLThick         {:}{:}{:}    -     -     ""         
+typedef     ^                   AA_InputFile         ReKi                Suct_BLThick         {:}{:}{:}    -     -     ""         
+typedef     ^                   AA_InputFile         ReKi                Pres_Cf         {:}{:}{:}    -     -     ""         
+typedef     ^                   AA_InputFile         ReKi                Suct_Cf         {:}{:}{:}    -     -     ""         
+typedef     ^                   AA_InputFile         ReKi                Pres_EdgeVelRat         {:}{:}{:}    -     -     ""         
+typedef     ^                   AA_InputFile         ReKi                Suct_EdgeVelRat         {:}{:}{:}    -     -     ""         
+typedef     ^                   AA_InputFile         ReKi                TI_Grid_In          {:}{:}    -     -     ""    
+typedef     ^                   AA_InputFile         ReKi                dz_turb_in                  -     -      -     ""  m    
+typedef     ^                   AA_InputFile         ReKi                dy_turb_in                  -     -      -     ""  m    
+     
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+#
+typedef     ^                   ContinuousStateType  SiKi                DummyContState   -     -     -     "Remove this variable if you have continuous states"        -
+#
+# Define discrete (nondifferentiable) states here:
+typedef     ^                   DiscreteStateType    ReKi                MeanVrel        {:}{:} -     -     "Vrel Cumu. Mean"        -
+typedef     ^                   DiscreteStateType    ReKi                VrelSq          {:}{:} -     -     "Vrel Squared Store"        -
+typedef     ^                   DiscreteStateType    ReKi                TIVrel          {:}{:} -     -     "Vrel St. deviat"        -
+typedef     ^                   DiscreteStateType    ReKi                VrelStore       {:}{:}{:} -     -     "Vrel Store for fft - dissipation"        -
+typedef     ^                   DiscreteStateType    ReKi                TIVx          {:}{:} -     -     "Vx St. deviat"        -
+typedef     ^                   DiscreteStateType    ReKi                MeanVxVyVz        {:}{:} -     -     "Vrel Cumu. Mean"        -
+typedef     ^                   DiscreteStateType    ReKi                VxSq          {:}{:} -     -     "Vxl Squared Store"        -
+typedef     ^                   DiscreteStateType    ReKi                allregcounter      {:}{:} -     -     ""        -
+typedef     ^                   DiscreteStateType    ReKi                VxSqRegion         {:}{:} -     -     ""        -
+typedef     ^                   DiscreteStateType    ReKi                RegVxStor       {:}{:}{:} -     -     "VxVyVz Store for fft or TI - dissipation"        -
+typedef     ^                   DiscreteStateType    ReKi                RegionTIDelete         {:}{:} -     -     ""        -
+#
+# Define constraint states here:
+typedef     ^                   ConstraintStateType  SiKi                DummyConstrState -     -     -     "Remove this variable if you have  states"        -
+#                                                                                          
+# Define "other" states here:                                                             
+typedef     ^                   OtherStateType       SiKi                DummyOtherState  -     -     -     "Remove this variable if you have  states"        -
+#
+# Define misc/optimization variables (any data that are not considered actual states) here:
+##typedef   ^                   MiscVarType          ReKi                DisturbedInflow        {:}{:}{:}     -     -     "InflowOnBlade values modified by tower influence"     m/s
+typedef     ^                   MiscVarType          ReKi                AllOuts                {:}           -     -     "An array holding the value of all of the calculated (not only selected) output channels"     -
+typedef     ^                   MiscVarType          ReKi                ChordAngleTE           {:}{:}{:}     -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SpanAngleTE            {:}{:}{:}     -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                ChordAngleLE           {:}{:}{:}     -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SpanAngleLE            {:}{:}{:}     -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                rTEtoObserve           {:}{:}{:}     -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                rLEtoObserve           {:}{:}{:}     -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                LE_Location            {:}{:}{:}        -     -     "Height of Leading Edge for calculation of TI and Scales if needed"     -
+typedef     ^                   MiscVarType          ReKi                RotSpeedAoA             -            -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLLBL                 {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLP                   {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLS                   {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLALPH                {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLTBL                 {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLTIP                 {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLTI                  {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLTIGui               {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                SPLBLUNT               {:}           -     -     "C"     -
+typedef     ^                   MiscVarType          ReKi                CfVar                  {:}  -     -     "Output Skin friction coef Pressure Side"     -
+typedef     ^                   MiscVarType          ReKi                d99Var                 {:}  -     -     "BL Output "     -
+typedef     ^                   MiscVarType          ReKi                dStarVar               {:}  -     -     "BL Output "     -
+typedef     ^                   MiscVarType          ReKi                EdgeVelVar                 {:}  -     -     "BL Output "     -
+typedef     ^                   MiscVarType          IntKi               speccou                -    -     -     "Secptrum counter every XX seconds new spectrum"     -
+typedef     ^                   MiscVarType          IntKi               filesopen                -    -     -     "check if file is open"     -
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef     ^                   ParameterType        DbKi                DT                      -      -     -     "Time step for continuous state integration & discrete state update"     seconds
+typedef     ^                   ParameterType        IntKi               IBLUNT                  -      -     -     "Bluntness noise model"     -
+typedef     ^                   ParameterType        IntKi               ILAM                    -      -     -     "LBL noise model "     -
+typedef     ^                   ParameterType        IntKi               ITIP                    -      -     -     "Tip noise model"     -
+typedef     ^                   ParameterType        IntKi               ITRIP                   -      -     -     "Trip boundary layer"     -
+typedef     ^                   ParameterType        IntKi               ITURB                   -      -     -     "Tblte noise model"     -
+typedef     ^                   ParameterType        IntKi               IInflow                 -      -     -     "Turbulent inflow noise model"     -
+typedef     ^                   ParameterType        IntKi               X_BLMethod              -      -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Pretabulated"     -
+typedef     ^                   ParameterType        IntKi               TICalcMeth              -      -     -     ""     -
+typedef     ^                   ParameterType        Logical             ROUND                   -      -     -     "Logical indicating rounded tip"     -
+typedef     ^                   ParameterType        ReKi                ALPRAT                  -      -     -     "TIP LIFT CURVE SLOPE"     -
+typedef     ^                   ParameterType        IntKi               NumBlades               -      -     -     "Number of blades on the turbine"     -
+typedef     ^                   ParameterType        IntKi               NumBlNds                -      -     -     "Number of nodes on each blade"     -
+typedef     ^                   ParameterType        ReKi                AirDens                 -      -     -     "Air density"     kg/m^3
+typedef     ^                   ParameterType        ReKi                KinVisc                 -      -     -     "Kinematic air viscosity"     m^2/s
+typedef     ^                   ParameterType        ReKi                SpdSound                -      -     -     "Speed of sound"     m/s
+typedef     ^                   ParameterType        ReKi                HubHeight                -      -     -     "Hub height"     m
+typedef     ^                   ParameterType        ReKi                toptip                -      -     -     "Top Tip Height = Hub height plus radius"     m
+typedef     ^                   ParameterType        ReKi                bottip                -      -     -     "Bottom Tip Height = Hub height minus radius"     m
+typedef     ^                   ParameterType        ReKi                rotorregionlimitsVert      {:}     -     -     ""     
+typedef     ^                   ParameterType        ReKi                rotorregionlimitsHorz      {:}     -     -     ""     
+typedef     ^                   ParameterType        ReKi                rotorregionlimitsalph      {:}     -     -     ""     
+typedef     ^                   ParameterType        ReKi                rotorregionlimitsrad      {:}     -     -     ""     
+typedef     ^                   ParameterType        IntKi               NrObsLoc                -      -     -     "Number of observer locations "     -
+typedef     ^                   ParameterType        Logical             aweightflag             -      -     -     " "     -
+typedef     ^                   ParameterType        Logical             TxtFileOutput           -      -     -     " "     -
+typedef     ^                   ParameterType        DBKi                AAStart                -     -     -     "Time after which to calculate AA"     s
+typedef     ^                   ParameterType        ReKi                ObsX                   {:}     -     -     "Observer location in tower-base coordinate X horizontal"     m
+typedef     ^                   ParameterType        ReKi                ObsY                   {:}     -     -     "Observer location in tower-base coordinate Y lateral"          m
+typedef     ^                   ParameterType        ReKi                ObsZ                   {:}     -     -     "Observer location in tower-base coordinate Z vertical"          m
+typedef     ^                   ParameterType        ReKi                FreqList               {:}     -     -     "List of Acoustic Frequencies to Calculate"     Hz
+typedef     ^                   ParameterType        ReKi                Aweight               {:}     -     -     "List of Acoustic Frequencies a weighting"     dB
+typedef     ^                   ParameterType        ReKi                Fsample                 -     -      -     "Sampling Frequency 1/delta(t) - 1/(simulation time step)"     Hz
+typedef     ^                   ParameterType        IntKi               total_sample            -      -     -     "Total FFT Sample amount for dissipation calculation"     -
+typedef     ^                   ParameterType        IntKi               total_sampleTI            -      -     -     "Total FFT Sample amount for dissipation calculation"     -
+typedef     ^                   ParameterType        IntKi               AA_Bl_Prcntge           -      -     -     "The Percentage of the Blade which the noise is calculated"     %
+typedef     ^                   ParameterType        IntKi               startnode               -      -     -     "Corersponding node to the noise calculation percentage of the blade"     -
+typedef     ^                   ParameterType        ReKi                Lturb                   -     -      -     "Turbulent lengthscale in Amiet model"  m    
+typedef     ^                   ParameterType        ReKi                AvgV                   -     -      -     "Average wind speed to compute incident turbulence intensity"  m    
+typedef     ^                   ParameterType        ReKi                dz_turb_in                  -     -      -     ""  m    
+typedef     ^                   ParameterType        ReKi                dy_turb_in                  -     -      -     ""  m    
+typedef     ^                   ParameterType        ReKi                TI_Grid_In          {:}{:}    -     -     ""         
+typedef     ^                   ParameterType        CHARACTER(1024)     FTitle                 -     -     -     "File Title: the 2nd line of the input file, which contains a description of its contents" -
+
+# parameters for output
+typedef     ^                   ParameterType        character(20)       outFmt           -      -     -   "Format specifier" "-"
+typedef     ^                   ParameterType        IntKi               NrOutFile        -     -     -     "Nr of output files"     -
+typedef     ^                   ParameterType        character(1)        delim            -      -     -   "column delimiter" "-"
+typedef     ^                   ParameterType        IntKi               NumOuts                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
+typedef     ^                   ParameterType        IntKi               NumOutsForPE                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
+typedef     ^                   ParameterType        IntKi               NumOutsForSep                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
+typedef     ^                   ParameterType        IntKi               NumOutsForNodes               -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
+typedef     ^                   ParameterType        IntKi               unOutFile        -      -     -   "unit number for writing output file" "-"
+typedef     ^                   ParameterType        IntKi               unOutFile2        -      -     -   "unit number for writing output file" "-"
+typedef     ^                   ParameterType        IntKi               unOutFile3        -      -     -   "unit number for writing output file" "-"
+typedef     ^                   ParameterType        IntKi               unOutFile4        -      -     -   "unit number for writing output file" "-"
+typedef     ^                   ParameterType        CHARACTER(1024)     RootName                -      -     -     "RootName for writing output files"     -
+typedef     ^                   ParameterType        OutParmType         OutParam               {:}     -     -     "Names and units (and other characteristics) of all requested output parameters"     -
+typedef     ^                   ParameterType        ReKi                StallStart                {:}{:}  -     -     "ation"     -
+typedef     ^                   ParameterType        ReKi                TEThick                {:}{:}  -     -     "ation"     -
+typedef     ^                   ParameterType        ReKi                TEAngle                {:}{:}  -     -     "ation"     -
+typedef     ^                   ParameterType        ReKi                AerCent                {:}{:}{:}   -     -     "ation"     -
+typedef     ^                   ParameterType        IntKi               BlAFID                 {:}{:} -     -     "Index of airfoil data file for blade node location [array of numBladeNodes by numBlades]"        -
+typedef     ^                   ParameterType        AFI_ParameterType   AFInfo                 {:}     -     -      "Airfoil information structure containing the aerodynamic center and airfoil shape coordinates"
+typedef     ^                   ParameterType        ReKi                AFLECo                 {:}{:}{:}  -     -     "Dimensionalized "
+typedef     ^                   ParameterType        ReKi                AFTECo                 {:}{:}{:}  -     - 
+typedef     ^                   ParameterType        ReKi                BlSpn                  {:}{:}  -     -     "Span at blade node"     m
+typedef     ^                   ParameterType        ReKi                BlChord                {:}{:}  -     -     "Chord at blade node"     m
+typedef     ^                   ParameterType        ReKi                ReListBL            {:}  -     -     "BL list of Reynolds"     -
+typedef     ^                   ParameterType        ReKi                AOAListBL           {:}  -     -     "BL list of Angle Of Attack "     deg
+typedef     ^                   ParameterType        ReKi                dStarAll1             {:}{:}{:}  -     -     "Output Disp Thickness Suction Side"     m
+typedef     ^                   ParameterType        ReKi                dStarAll2             {:}{:}{:}  -     -     "Output Disp Thickness Pressure Side"     m
+typedef     ^                   ParameterType        ReKi                d99All1               {:}{:}{:}  -     -     "Output B.L. Thickness Suction Side"     m
+typedef     ^                   ParameterType        ReKi                d99All2               {:}{:}{:}  -     -     "Output B.L. Thickness Pressure Side"     m
+typedef     ^                   ParameterType        ReKi                CfAll1                {:}{:}{:}  -     -     "Output Skin friction coef Suction Side"    - 
+typedef     ^                   ParameterType        ReKi                CfAll2                {:}{:}{:}  -     -     "Output Skin friction coef Pressure Side"     -
+typedef     ^                   ParameterType        ReKi                EdgeVelRat1                {:}{:}{:}  -     -     "Output Edge Velocity Ratio Suction"    - 
+typedef     ^                   ParameterType        ReKi                EdgeVelRat2                {:}{:}{:}  -     -     "Output Edge Velocity Ratio Pressure Side"     -
+typedef     ^                   ParameterType        ReKi                AFThickGuida             {:}{:}  -     -     "1 and 10 percent thickness t/c used for Simplified Guidati"     
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+
+typedef     ^                   InputType            ReKi                RotGtoL     {:}{:}{:}{:}     -     -     "3x3 rotation matrix transform a vector from the local airfoil coordinate system to the global inertial coordinate system"     -
+typedef     ^                   InputType            ReKi                AeroCent_G  {:}{:}{:}     -     -     "location in global coordinates of the blade element aerodynamic center.  1st index = vector components, 2nd index = blade node, 3rd index = blade"     -
+typedef     ^                   InputType            ReKi                Vrel        {:}{:}        -     -     "Vrel"     -
+typedef     ^                   InputType            ReKi                AoANoise    {:}{:}        -     -     "Angle of attack"     -
+typedef     ^                   InputType            ReKi                Inflow      {:}{:}{:}     -     -     "atmospheric undisturbed flow on blade"
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+typedef     ^                   OutputType           ReKi                SumSpecNoise      {:}{:}{:}     -     -     "Spectra of summed noise level of each blade and blade nodes for each receiver and frequency"     SPL
+typedef     ^                   OutputType           ReKi                SumSpecNoiseSep   {:}{:}{:}     -     -     "Spectra of summed noise level of all blades and blade nodes for each receiver and frequency"     SPL
+typedef     ^                   OutputType           ReKi                OASPL          {:}{:}{:}     -     -     "summed noise level for each blade and blade nodes and receiver "     SPL
+typedef     ^                   OutputType           ReKi                OASPL_Mech     {:}{:}{:}{:}     -     -     "5 different mechanism noise level for each blade and blade nodes and receiver "     SPL
+typedef     ^                   OutputType           ReKi                DirectiviOutput     {:}     -     -     " "     SPL
+typedef     ^                   OutputType           ReKi                OutLECoords     {:}{:}{:}{:}     -     -     " "     m
+typedef     ^                   OutputType           ReKi                PtotalFreq      {:}{:}   -      -      "SPL for each observer and frequency"
+
+# Define outputs that are not on this mesh here:
+typedef     ^                   OutputType           ReKi                WriteOutputForPE       {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
+typedef     ^                   OutputType           ReKi                WriteOutput            {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
+typedef     ^                   OutputType           ReKi                WriteOutputSep         {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"
+typedef     ^                   OutputType           ReKi                WriteOutputNode        {:}        -     -     "Data to be written to an output file: see WriteOutputHdr for names of each variable"     "see WriteOutputUnt"

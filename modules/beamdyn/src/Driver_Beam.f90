@@ -81,11 +81,11 @@ PROGRAM BeamDyn_Driver_Program
    
    CALL NWTC_Init()
       ! Display the copyright notice
-   CALL DispCopyrightLicense( version )   
+   CALL DispCopyrightLicense( version%Name )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
    
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
@@ -98,8 +98,7 @@ PROGRAM BeamDyn_Driver_Program
       
       ! initialize the BD_InitInput values not in the driver input file
    BD_InitInput%RootName = TRIM(BD_Initinput%InputFile)
-   BD_InitInput%RootDisp = matmul(transpose(BD_InitInput%RootOri),BD_InitInput%GlbPos) - BD_InitInput%GlbPos
-   BD_InitInput%RootVel(1:3) = matmul(BD_InitInput%RootOri, Cross_Product( BD_InitInput%RootVel(4:6), BD_InitInput%GlbPos ))  ! set translational velocities based on rotation and GlbPos.
+   BD_InitInput%RootDisp = 0.d0
    BD_InitInput%DynamicSolve = DvrData%DynamicSolve      ! QuasiStatic options handled within the BD code.
  
    t_global = DvrData%t_initial

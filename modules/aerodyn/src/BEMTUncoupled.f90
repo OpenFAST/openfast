@@ -21,9 +21,11 @@
 module BEMTUnCoupled
  
    use NWTC_Library
+   use AirfoilInfo
    use AirfoilInfo_Types
    use UnsteadyAero
    use UnsteadyAero_Types
+   use BEMT_Types
 
 
    implicit none
@@ -35,6 +37,8 @@ module BEMTUnCoupled
    real(ReKi),     public, parameter  :: BEMT_MaxInduction(2) = (/1.5_ReKi, 1.0_ReKi /)  ! largest magnitude of axial (1) and tangential (2) induction factors
    real(ReKi),     public, parameter  :: BEMT_MinInduction(2) = -1.0_ReKi
 
+   real(ReKi),     public, parameter  :: BEMT_lowerBoundTSR = 1.0_ReKi
+   real(ReKi),     public, parameter  :: BEMT_upperBoundTSR = 2.0_ReKi 
    
    !1e-6 works for double precision, but not single precision 
    real(ReKi),     public, parameter  :: BEMT_epsilon2 = 10.0_ReKi*sqrt(epsilon(1.0_ReKi)) !this is the tolerance in radians for values around singularities in phi (i.e., phi=0 and phi=pi/2); must be large enough so that EqualRealNos(BEMT_epsilon2, 0.0_ReKi) is false
@@ -42,14 +46,14 @@ module BEMTUnCoupled
    
    private
    
-   public :: Compute_UA_AirfoilCoefs
-   public :: ComputeSteadyAirfoilCoefs
-   public :: UncoupledErrFn
+   public :: GetRelativeVelocity
+   public :: GetReynoldsNumber
    public :: BEMTU_InductionWithResidual
    public :: ApplySkewedWakeCorrection
    public :: Transform_ClCd_to_CxCy
+   public :: getHubTipLossCorrection
+   public :: limitInductionFactors
    
-   public :: BEMTU_Wind
    public :: VelocityIsZero
 contains
    
@@ -69,36 +73,40 @@ contains
    end function VelocityIsZero
 !..................................................................................................................................   
    
-   subroutine BEMTU_Wind( axInduction, tanInduction, Vx, Vy,  chord, nu, W, Re )
+   subroutine GetReynoldsNumber( axInduction, tanInduction, Vx, Vy,  chord, nu, Re )
 
-    
     ! in
-    real(ReKi), intent(in) :: axInduction, tanInduction, Vx, Vy
-    real(ReKi), intent(in) :: chord, nu
+    real(ReKi), intent(in)             :: axInduction, tanInduction, Vx, Vy
+    real(ReKi), intent(in)             :: chord, nu
 
     ! out
-    real(ReKi), intent(out) :: Re, W
+    real(ReKi), intent(out)            :: Re      ! Reynolds number
     
-    
-    
+    real(ReKi)                         :: W       ! relative velocity
 
-    ! avoid numerical errors when angle is close to 0 or 90 deg
-    ! and other induction factor is at some ridiculous value
-    ! this only occurs when iterating on Reynolds number
-    ! during the phi sweep where a solution has not been found yet
-    !if ( abs(axInduction) > 10 ) then
-    !    W = Vy*(1+tanInduction)/cos(phi)
-    !else if ( abs(tanInduction) > 10 ) then
-    !    W = Vx*(1-axInduction)/sin(phi)
-    !else
-        W = sqrt((Vx*(1-axInduction))**2 + (Vy*(1+tanInduction))**2)
-    !end if
+    W = sqrt((Vx*(1-axInduction))**2 + (Vy*(1+tanInduction))**2)
 
-    Re = W * chord / nu
+    Re =  W * chord / nu
     if ( EqualRealNos(Re, 0.0_ReKi) ) Re = 0.001  ! Do this to avoid a singularity when we take log(Re) in the airfoil lookup.
 
-   end subroutine BEMTU_Wind
+   end subroutine GetReynoldsNumber
+!..................................................................................................................................
+   subroutine GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, Vrel, v_ac )
 
+   ! in
+   real(ReKi), intent(in)             :: axInduction, tanInduction, Vx, Vy
+
+   ! out
+   real(ReKi), intent(out)            :: Vrel    ! relative velocity
+   real(ReKi), intent(out)            :: v_ac(2) ! components of relative velocity
+
+      v_ac(1) = Vx*(1-axInduction)
+      v_ac(2) = Vy*(1+tanInduction)
+
+      Vrel    = TwoNorm(v_ac)
+
+   end subroutine GetRelativeVelocity
+!..................................................................................................................................
 subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
    real(ReKi),             intent(in   ) :: phi
    logical,                intent(in   ) :: useAIDrag
@@ -127,131 +135,25 @@ subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
    end if
    
 end subroutine Transform_ClCd_to_CxCy
+!----------------------------------------------------------------------------------------------------------------------------------
 
-!----------------------------------------------------------------------------------------------------------------------------------  
-subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
-                      Cl, Cd, Cm, Cpmin, errStat, errMsg )
-! This routine is called from BEMTU_InductionWithResidual and possibly BEMT_CalcOutput.
-! Determine the Cl, Cd, Cm, coeficients for a given angle of attack
-!..................................................................................................................................
-   real(ReKi),             intent(in   ) :: AOA
-   real(ReKi),             intent(in   ) :: Re           ! Unused in the current version!     
-   type(AFInfoType),       intent(in   ) :: AFInfo
-   real(ReKi),             intent(  out) :: Cl, Cd, Cm, Cpmin
-   integer(IntKi),         intent(  out) :: errStat       ! Error status of the operation
-   character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None 
-   
-
-   real                            :: IntAFCoefs(4)                ! The interpolated airfoil coefficients.
-   real(reki)                      :: Alpha
-   integer                         :: s1      
-      
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   IntAFCoefs = 0.0_ReKi ! initialize in case we only don't have 4 columns in the airfoil data (i.e., so cm is zero if not in the file)
-      
-      
-    
-      
-   
-      ! NOTE: we use Table(1) because the right now we can only interpolate with AOA and not Re or other variables.  If we had multiple tables stored
-      ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
-      !
-   s1 = size(AFInfo%Table(1)%Coefs,2)
-   
-   Alpha = AOA
-   call MPi2Pi ( Alpha ) ! change AOA into range of -pi to pi
-   IntAFCoefs(1:s1) = CubicSplineInterpM( Alpha  &
-                                          , AFInfo%Table(1)%Alpha &
-                                          , AFInfo%Table(1)%Coefs &
-                                          , AFInfo%Table(1)%SplineCoefs &
-                                          , ErrStat, ErrMsg )
-   
-  
-   Cl    = IntAFCoefs(1)
-   Cd    = IntAFCoefs(2)
-   Cm    = 0.0_Reki  !Set these to zero unless there is data to be read in
-   Cpmin = 0.0_Reki
-     
-   IF ( AFInfo%ColCm > 0 ) Cm = IntAFCoefs(AFInfo%ColCm)
-         
-   IF ( AFInfo%ColCpmin > 0 ) Cpmin = IntAFCoefs(AFInfo%ColCpmin)
-      
-             
-end subroutine ComputeSteadyAirfoilCoefs
-   
-!----------------------------------------------------------------------------------------------------------------------------------  
-subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
-                      p_UA, xd_UA, OtherState_UA, y_UA, m_UA, &
-                      Cl, Cd, Cm, errStat, errMsg )
-! This routine is called from BEMTU_InductionWithResidual and possibly BEMT_CalcOutput.
-! Determine the Cl, Cd, Cm coeficients for a given angle of attack
-!..................................................................................................................................
-   real(ReKi),                   intent(in   ) :: AOA                !< angle of attack, radians
-   real(ReKi),                   intent(in   ) :: U                  !< Vrel, m/s
-   real(ReKi),                   intent(in   ) :: Re                 ! Unused in the current version!
-   type(AFInfoType),             intent(in   ) :: AFInfo
-   type(UA_ParameterType),       intent(in   ) :: p_UA               ! Parameters
-   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA              ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA      ! Other states at Time
-   type(UA_OutputType),          intent(inout) :: y_UA               !
-   type(UA_MiscVarType),         intent(inout) :: m_UA               ! misc/optimization variables
-   real(ReKi),                   intent(  out) :: Cl, Cd, Cm
-   integer(IntKi),               intent(  out) :: errStat            ! Error status of the operation
-   character(*),                 intent(  out) :: errMsg             ! Error message if ErrStat /= ErrID_None 
-   
-   integer(intKi)                              :: ErrStat2           ! temporary Error status
-   character(ErrMsgLen)                        :: ErrMsg2            ! temporary Error message
-   character(*), parameter                     :: RoutineName = 'Compute_UA_AirfoilCoefs'
-  
-   
-   type(UA_InputType)              :: u_UA
-      
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   u_UA%alpha = AOA   
-   u_UA%Re    = Re
-   u_UA%U     = U
-   
-   call UA_CalcOutput(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, y_UA, m_UA, errStat2, errMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
-      if (errStat >= AbortErrLev) return
-
-   Cl         = y_UA%Cl
-   Cd         = y_UA%Cd
-   Cm         = y_UA%Cm
-                  
-       
-end subroutine Compute_UA_AirfoilCoefs
 !----------------------------------------------------------------------------------------------------------------------------------
 !>This is the residual calculation for the uncoupled BEM solve
-real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal, chord, AFInfo, &
-                              Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst,  &
-                              axInduction, tanInduction,  IsValidSolution, ErrStat, ErrMsg)
+real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValidSolution, ErrStat, ErrMsg, a, ap ) result (ResidualVal)
       
 
-
+   type(BEMT_ParameterType),intent(in   ) :: p                  !< parameters
+   type(BEMT_InputType),    intent(in   ) :: u                  !< Inputs at t
+   integer(IntKi),          intent(in   ) :: i                  !< index for blade node
+   integer(IntKi),          intent(in   ) :: j                  !< index for blade
+   
    real(ReKi),             intent(in   ) :: phi
-   real(ReKi),             intent(in   ) :: AOA
-   real(ReKi),             intent(in   ) :: Re
-   integer,                intent(in   ) :: numBlades
-   real(ReKi),             intent(in   ) :: rlocal      
-   real(ReKi),             intent(in   ) :: chord         
-   type(AFInfoType),       intent(in   ) :: AFInfo
-   real(ReKi),             intent(in   ) :: Vx
-   real(ReKi),             intent(in   ) :: Vy
-   logical,                intent(in   ) :: useTanInd 
-   logical,                intent(in   ) :: useAIDrag
-   logical,                intent(in   ) :: useTIDrag
-   logical,                intent(in   ) :: useHubLoss
-   logical,                intent(in   ) :: useTipLoss
-   real(ReKi),             intent(in   ) :: hubLossConst
-   real(ReKi),             intent(in   ) :: tipLossConst
-   real(ReKi),             intent(  out) :: axInduction, tanInduction
+   type(AFI_ParameterType),intent(in   ) :: AFInfo
    logical,                intent(  out) :: IsValidSolution !< this is set to false if k<=1 in the propeller brake region or k<-1 in the momentum region, indicating an invalid solution
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   real(ReKi), optional,   intent(  out) :: a         ! computed axial induction
+   real(ReKi), optional,   intent(  out) :: ap        ! computed tangential induction
   
    ! Local variables
    
@@ -259,104 +161,64 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
    character(ErrMsgLen)                  :: ErrMsg2            ! temporary Error message
    character(*), parameter               :: RoutineName = 'BEMTU_InductionWithResidual'
    
-   real(ReKi)                            :: fzero
+   real(ReKi)                            :: AOA  ! angle of attack
+   real(ReKi)                            :: axInduction
+   real(ReKi)                            :: tanInduction
 
-   real(ReKi)                            :: Cl, Cd, Cx, Cy, Cm, Cpmin
+   real(ReKi)                            :: Re
+   real(ReKi)                            :: Cx, Cy
+   TYPE(AFI_OutputType)                  :: AFI_interp
    
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-   BEMTU_InductionWithResidual = 0.0_ReKi
+   ResidualVal = 0.0_ReKi
    IsValidSolution = .true.
    
    ! make these return values consistent with what is returned in inductionFactors routine:
     
       ! Set the local version of the induction factors
-   if ( ( useTiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .or. ( useHubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
+   if ( p%FixedInductions(i,j) ) then
       ! We are simply going to bail if we are using tiploss and tipLossConst = 0 or using hubloss and hubLossConst=0, regardless of phi! [do this before checking if Vx or Vy is zero or you'll get jumps in the induction and loads]
       axInduction  =  1.0_ReKi
       tanInduction =  0.0_ReKi
-   elseif ( EqualRealNos(phi, 0.0_ReKi) .or. VelocityIsZero(Vx) .OR. VelocityIsZero(Vy) ) then 
+   elseif ( EqualRealNos(phi, 0.0_ReKi) .or. VelocityIsZero(u%Vx(i,j)) .OR. VelocityIsZero(u%Vy(i,j)) ) then 
       axInduction  =  0.0_ReKi
       tanInduction =  0.0_ReKi
    else !if ( (.NOT. VelocityIsZero(Vx)) .AND. (.NOT. VelocityIsZero(Vy)) ) then 
 
-      call ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, Cl, Cd, Cm, Cpmin, errStat2, errMsg2 )       !bjj: would be nice if this could be done outside this routine (so we don't copy AFInfo so much)
+      AOA = phi - u%theta(i,j)
+      
+   ! FIX ME: Note that the Re used here is computed assuming axInduction and tanInduction are 0. Is that a problem for 2D Re interpolation on airfoils? or should update solve method to take this into account?
+      call GetReynoldsNumber( 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%kinVisc, Re)
+
+      call AFI_ComputeAirfoilCoefs( AOA, Re, u%UserProp(i,j),  AFInfo, AFI_interp, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
          if (ErrStat >= AbortErrLev) return
       
-         ! Compute Cx, Cy given Cl, Cd and phi, we honor the useAIDrag and useTIDrag flag because Cx,Cy are only used for the solution of inductions
-      call Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )  
+      ! Compute Cx, Cy given Cl, Cd and phi, we honor the useAIDrag and useTIDrag flag because Cx,Cy are only used for the solution of inductions
+      call Transform_ClCd_to_CxCy( phi, p%useAIDrag, p%useTIDrag, AFI_interp%Cl, AFI_interp%Cd, Cx, Cy )  
       
       
          ! Determine axInduction, tanInduction for the current Cl, Cd, phi
-      call inductionFactors( rlocal, chord, phi, Cx, Cy, numBlades, &
-                              Vx, Vy, useTanInd, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
-                              fzero, axInduction, tanInduction, IsValidSolution)
-      BEMTU_InductionWithResidual = fzero  ! the residual
+      call inductionFactors( u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, p%numBlades, &
+                              u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useHubLoss, p%useTipLoss,  p%hubLossConst(i,j), p%tipLossConst(i,j), &
+                              ResidualVal, axInduction, tanInduction, IsValidSolution)
       
    end if
       
+   if (present(a )) a  = axInduction
+   if (present(ap)) ap = tanInduction
    
 end function BEMTU_InductionWithResidual
-
-
-      ! This is the residual calculation for the uncoupled BEM solve
-
-real(ReKi) function UncoupledErrFn(phi, theta, Re, numBlades, rlocal, chord, AFInfo, &
-                              Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
-                              IsValidSolution, ErrStat, ErrMsg)
-      
-
-
-   real(ReKi),             intent(in   ) :: phi
-   real(ReKi),             intent(in   ) :: theta
-   real(ReKi),             intent(in   ) :: Re
-   integer,                intent(in   ) :: numBlades
-   real(ReKi),             intent(in   ) :: rlocal      
-   real(ReKi),             intent(in   ) :: chord         
-   type(AFInfoType),       intent(in   ) :: AFInfo
-   real(ReKi),             intent(in   ) :: Vx
-   real(ReKi),             intent(in   ) :: Vy
-   logical,                intent(in   ) :: useTanInd 
-   logical,                intent(in   ) :: useAIDrag
-   logical,                intent(in   ) :: useTIDrag
-   logical,                intent(in   ) :: useHubLoss
-   logical,                intent(in   ) :: useTipLoss
-   real(ReKi),             intent(in   ) :: hubLossConst
-   real(ReKi),             intent(in   ) :: tipLossConst
-   integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
-   logical,                intent(  out) :: IsValidSolution !< this is set to false if k<=1 in the propeller brake region or k<-1 in the momentum region, indicating an invalid solution
-   character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-  
-   ! Local variables
-   
-   real(ReKi)                            :: axInduction, tanInduction, AoA
-   
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-    
-   AOA = phi - theta
-   
-                
-   UncoupledErrFn = BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal, chord, AFInfo, &
-                           Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
-                           axInduction, tanInduction, IsValidSolution, ErrStat, ErrMsg)
-
-   
-end function UncoupledErrFn
-
-                              
-subroutine ApplySkewedWakeCorrection( yawCorrFactor, Vx, Vy, azimuth, chi0, tipRatio, a, ap, chi, FirstWarn )
+!-----------------------------------------------------------------------------------------
+subroutine ApplySkewedWakeCorrection( yawCorrFactor, azimuth, chi0, tipRatio, a, chi, FirstWarn )
    
    real(ReKi),                intent(in   ) :: yawCorrFactor ! set to 15*pi/32 previously; now allowed to be input (to better match data) 
-   real(ReKi),                intent(in   ) :: Vx
-   real(ReKi),                intent(in   ) :: Vy
    real(ReKi),                intent(in   ) :: azimuth
    real(ReKi),                intent(in   ) :: chi0 
    real(ReKi),                intent(in   ) :: tipRatio            ! r/Rtip 
    real(ReKi),                intent(inout) :: a 
-   real(ReKi),                intent(inout) :: ap 
    real(ReKi),                intent(  out) :: chi
    logical(IntKi),            intent(inout) :: FirstWarn       ! If this is the first warning about invalid skew
    
@@ -376,7 +238,7 @@ subroutine ApplySkewedWakeCorrection( yawCorrFactor, Vx, Vy, azimuth, chi0, tipR
       if (FirstWarn) then
          call WrScr( 'Warning: SkewedWakeCorrection encountered a large value of chi ('//trim(num2lstr(chi*R2D))// &
             ' deg), so the yaw correction will be limited. This warning will not be repeated though the condition may persist. See the AD15 chi output channels, and'// &
-            ' consider turning off the Pitt/Peters skew model (set SkewMod=1) if this condition persists.')
+            ' consider turning off the Pitt/Peters skew model (set SkewMod=1) if this condition persists.'//NewLine)
          FirstWarn = .false.
       end if
          
@@ -429,36 +291,15 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
    real(ReKi) :: g1, g2, g3
    real(ReKi) :: temp  ! temporary variable so we don't have to calculate 2.0_ReKi*F*k multiple times
    real(ReKi), parameter :: InductionLimit = 1000000.0_ReKi
-   real(ReKi), parameter :: MaxTnInd = BEMT_MaxInduction(2)
-   real(ReKi), parameter :: MaxAxInd = BEMT_MaxInduction(1)
-   real(ReKi), parameter :: MinTnInd = BEMT_MinInduction(2)
-   real(ReKi), parameter :: MinAxInd = BEMT_MinInduction(1)
-   
+  
    logical    :: momentumRegion
 
    
    IsValidSolution  = .true.
    
    !.....................................................
-   ! Some special cases (bjj commented out because we have taken care of these in BEMTU_InductionWithResidual, the only routine that calls this function)
+   ! Some special cases have already been taken care of in BEMTU_InductionWithResidual, the only routine that calls this function
    !.....................................................
-   !if ( ( useTiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .or. ( useHubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
-   !   ! We are simply going to bail if we are using tiploss and tipLossConst = 0 or using hubloss and hubLossConst=0, regardless of phi!
-   !   fzero =  0.0_ReKi
-   !   a     =  1.0_ReKi
-   !   ap    = -1.0_ReKi
-   !   return      
-   !else if ( EqualRealNos(phi, 0.0_ReKi) ) then 
-   !   fzero =  0.0_ReKi
-   !   a     =  1.0_ReKi
-   !   if (wakerotation) then 
-   !      ap = -1.0_ReKi
-   !   else
-   !      ap = 0.0_ReKi
-   !   end if
-   !   
-   !   return
-   !end if
    
    !.....................................................
    ! Temporary variables:
@@ -529,10 +370,7 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
       
       if (k<=1.0_ReKi) then ! k <= 1 cannot be a solution in propeller brake region (this is equivalent to a<1.0)
          IsValidSolution = .false.
-      else if (a > MaxAxInd) then ! propeller brake region is for induction factors > 1, but not too large; 
-         ! note that we use k in the residual equation instead of a in the propeller brake region, so we can put the limit here
-         a = MaxAxInd
-      end if         
+      end if
       
    end if
 
@@ -561,13 +399,8 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
          else
             ap = kp/(1.0_ReKi-kp)
          end if
-         
-         ! bandaid so that this doesn't blow up. Note that we're not using ap in the residual calculation, so we can modify it here.
-         ap = min( ap, MaxTnInd)
-         ap = max( ap, MinTnInd)
-         
-      end if
-         
+
+      endif
             
    else 
       
@@ -588,22 +421,29 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
          fzero = - cphi/lambda_r*(1-kp)
       else       
          fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
-
-         ! bandaid so that axial induction doesn't blow up
-         a = max(a,MinAxInd)
       end if
       
    else  ! propeller brake region
       fzero = sphi*(1-k) - cphi/lambda_r*(1-kp)
    end if
-    
-   if (.not. IsValidSolution) then
-      a = 0.0_ReKi
-      ap = 0.0_ReKi
+
+end subroutine inductionFactors
+!-----------------------------------------------------------------------------------------
+subroutine limitInductionFactors(a,ap)
+   real(ReKi), intent(inout)           :: a   ! axial induction
+   real(ReKi), intent(inout), optional :: ap  ! tangential induction
+   
+   ! Impose limits on axial induction
+   a = max( a, BEMT_MinInduction(1) )
+   a = min( a, BEMT_MaxInduction(1) )
+      
+   if (present(ap)) then
+      ! Impose limits on tangential induction
+      ap = max( ap, BEMT_MinInduction(2) )
+      ap = min( ap, BEMT_MaxInduction(2) )
    end if
    
-   
-end subroutine inductionFactors
+end subroutine limitInductionFactors
 !-----------------------------------------------------------------------------------------
 !> This function computes \f$F\f$, the hub/tip loss correction
 real(reKi) function getHubTipLossCorrection(sphi, useHubLoss, useTipLoss, hubLossConst, tipLossConst) result(F)

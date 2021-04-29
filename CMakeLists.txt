@@ -28,12 +28,33 @@ if (NOT CMAKE_BUILD_TYPE)
     "Choose the build type: Debug Release" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
+option(GENERATE_TYPES "Use the openfast-regsitry to autogenerate types modules" off)
 option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
-option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" off)
+option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
+option(BUILD_FASTFARM "Enable building FAST.Farm" off)
+option(OPENMP "Enable OpenMP support" off)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  # Configure the default install path to openfast/install
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH "OpenFAST install directory" FORCE)
+endif()
+if(APPLE)
+  option(CMAKE_MACOSX_RPATH "Use RPATH runtime linking" on)
+endif()
+
+# Precompiler/preprocessor flag configuration
+# Do this before configuring modules so that the flags are included
+option(BUILD_TESTING "Build the testing tree." OFF)
+if(BUILD_TESTING)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+endif()
+option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
+if(BUILD_OPENFAST_SIMULINK_API)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DCOMPILE_SIMULINK")
+endif()
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
@@ -47,7 +68,7 @@ if (FPE_TRAP_ENABLED)
 endif (FPE_TRAP_ENABLED)
 
 # Setup dependencies
-if (CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
+if (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
   find_package(MKL)
 endif()
 if (MKL_FOUND)
@@ -60,18 +81,15 @@ else()
   find_package(LAPACK REQUIRED)
 endif()
 
-########################################################################
-# Test option configuration
-# Do this before configuring modules so that precompiler flags are included
-option(BUILD_TESTING "Build the testing tree." OFF)
-if(BUILD_TESTING)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
-endif()
+# Set the RPATH after configuring the install prefix
+include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 
 ########################################################################
 # Build rules for OpenFAST Registry
 #
-add_subdirectory(modules/openfast-registry)
+if(GENERATE_TYPES)
+  add_subdirectory(modules/openfast-registry)
+endif()
 
 ########################################################################
 # OpenFAST modules
@@ -98,7 +116,9 @@ set(OPENFAST_MODULES
   icedyn
   icefloe
   map
-  )
+  wakedynamics
+  awae
+)
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
 set_registry_includes("modules" ${OPENFAST_MODULES})
@@ -143,11 +163,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
   DESTINATION lib/cmake/OpenFAST)
 
 ########################################################################
-# Configure the default install path to openfast/install
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH
-    "OpenFAST install directory" FORCE)
-endif()
 
 # Option configuration
 if(BUILD_TESTING)
