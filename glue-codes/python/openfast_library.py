@@ -38,6 +38,7 @@ class FastLibAPI(CDLL):
         ### MAKE THIS 8 OR 11
         self._num_inputs = c_int(8)
         self._inp_array = (c_double * 10)(0.0, )  # 10 is hard-coded in FAST_Library as MAXInitINPUTS
+        self._inp_array[0] - -1.0  # Sensor type - 
 
         self.output_values = None
         self.ended = False
