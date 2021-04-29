@@ -8,15 +8,17 @@ from ctypes import (
     c_char,
     c_bool
 )
+import os
+from typing import List
 import numpy as np
 
 
 class FastLibAPI(CDLL):
-    def __init__(self, library_path, input_file_name, t_max):
+    def __init__(self, library_path: str, input_file_name: str, t_max: float):
         super().__init__(library_path)
         self.library_path = library_path
-        self.input_file_name = input_file_name
-        self.t_max = t_max
+        self.input_file_name = create_string_buffer(os.path.abspath(input_file_name).encode('utf-8'))
+        self.t_max = c_double(t_max)
 
         self._initialize_routines()
 
@@ -100,11 +102,7 @@ class FastLibAPI(CDLL):
         self.FAST_End.restype = c_int
 
     @property
-    def fatal_error(self):
-        return self.error_status.value >= self.abort_error_level.value
-        
-    @property
-    def fatal_error(self):
+    def fatal_error(self) -> bool:
         return self.error_status.value >= self.abort_error_level.value
 
     def fast_init(self):
@@ -203,7 +201,9 @@ class FastLibAPI(CDLL):
         return int(self.t_max.value / self.dt.value) + 1
 
     @property
-    def output_channel_names(self):
+    def output_channel_names(self) -> List:
+        if len(self._channel_names.value.split()) == 0:
+            return []
         output_channel_names = self._channel_names.value.split()
         output_channel_names = [n.decode('UTF-8') for n in output_channel_names]        
         return output_channel_names
