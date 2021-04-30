@@ -1831,7 +1831,7 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
          arr(k) = dvr%PLExp                       ; k=k+1 ! shear exp, not set if CompInflow=1
 
          ! 6 base DOF
-         rotations  = GetSmllRotAngs(dvr%WT(iWT)%ptMesh%Orientation(:,:,1), errStat2, errmsg2); ! NOTE: this is not accurate
+         rotations  = EulerExtract(dvr%WT(iWT)%ptMesh%Orientation(:,:,1)); 
          arr(k) = dvr%WT(iWT)%ptMesh%Position(1,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(1,1); k=k+1 ! surge
          arr(k) = dvr%WT(iWT)%ptMesh%Position(2,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(2,1); k=k+1 ! sway
          arr(k) = dvr%WT(iWT)%ptMesh%Position(3,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(3,1); k=k+1 ! heave
