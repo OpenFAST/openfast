@@ -2061,9 +2061,9 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
 
          ! Moment caused by moving tower top buoyant force from tower top to nacelle reference point
       MovvectorTT = Twrpostop - NactmpPos
-      MovmomentTT(1) = MovvectorTT(2,k) * TwrforceBtop(3,k) - MovvectorTT(3,k) * TwrforceBtop(2,k)
-      MovmomentTT(2) = MovvectorTT(3,k) * TwrforceBtop(1,k) - MovvectorTT(1,k) * TwrforceBtop(3,k)
-      MovmomentTT(3) = MovvectorTT(1,k) * TwrforceBtop(2,k) - MovvectorTT(2,k) * TwrforceBtop(1,k)
+      MovmomentTT(1) = MovvectorTT(2) * TwrforceBtop(3) - MovvectorTT(3) * TwrforceBtop(2)
+      MovmomentTT(2) = MovvectorTT(3) * TwrforceBtop(1) - MovvectorTT(1) * TwrforceBtop(3)
+      MovmomentTT(3) = MovvectorTT(1) * TwrforceBtop(2) - MovvectorTT(2) * TwrforceBtop(1)
 
          ! Buoyant forces and moments in global coordinates, combined at nacelle reference point
       NacFBtmp = NacforceB + TwrforceBtop
