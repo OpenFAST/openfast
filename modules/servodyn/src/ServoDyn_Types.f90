@@ -435,6 +435,7 @@ IMPLICIT NONE
     LOGICAL  :: EXavrSWAP      !< Use extendend avr SWAP [-]
     INTEGER(IntKi)  :: NumCableControl      !< Number of cable control channels requested [-]
     INTEGER(IntKi)  :: NumStC_Control      !< Number of cable StC channels requested [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: StCMeasNumPerChan      !< Number of cable StC channel to average on each control channel sent to DLL [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -11374,6 +11375,18 @@ ENDIF
     DstParamData%EXavrSWAP = SrcParamData%EXavrSWAP
     DstParamData%NumCableControl = SrcParamData%NumCableControl
     DstParamData%NumStC_Control = SrcParamData%NumStC_Control
+IF (ALLOCATED(SrcParamData%StCMeasNumPerChan)) THEN
+  i1_l = LBOUND(SrcParamData%StCMeasNumPerChan,1)
+  i1_u = UBOUND(SrcParamData%StCMeasNumPerChan,1)
+  IF (.NOT. ALLOCATED(DstParamData%StCMeasNumPerChan)) THEN 
+    ALLOCATE(DstParamData%StCMeasNumPerChan(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%StCMeasNumPerChan.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%StCMeasNumPerChan = SrcParamData%StCMeasNumPerChan
+ENDIF
  END SUBROUTINE SrvD_CopyParam
 
  SUBROUTINE SrvD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -11430,6 +11443,9 @@ DO i1 = LBOUND(ParamData%SStC,1), UBOUND(ParamData%SStC,1)
   CALL StC_DestroyParam( ParamData%SStC(i1), ErrStat, ErrMsg )
 ENDDO
   DEALLOCATE(ParamData%SStC)
+ENDIF
+IF (ALLOCATED(ParamData%StCMeasNumPerChan)) THEN
+  DEALLOCATE(ParamData%StCMeasNumPerChan)
 ENDIF
  END SUBROUTINE SrvD_DestroyParam
 
@@ -11711,6 +11727,11 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! EXavrSWAP
       Int_BufSz  = Int_BufSz  + 1  ! NumCableControl
       Int_BufSz  = Int_BufSz  + 1  ! NumStC_Control
+  Int_BufSz   = Int_BufSz   + 1     ! StCMeasNumPerChan allocated yes/no
+  IF ( ALLOCATED(InData%StCMeasNumPerChan) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! StCMeasNumPerChan upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%StCMeasNumPerChan)  ! StCMeasNumPerChan
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -12220,6 +12241,21 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumStC_Control
     Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%StCMeasNumPerChan) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%StCMeasNumPerChan,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StCMeasNumPerChan,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%StCMeasNumPerChan,1), UBOUND(InData%StCMeasNumPerChan,1)
+        IntKiBuf(Int_Xferred) = InData%StCMeasNumPerChan(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SrvD_PackParam
 
  SUBROUTINE SrvD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -12833,6 +12869,24 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%NumStC_Control = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StCMeasNumPerChan not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%StCMeasNumPerChan)) DEALLOCATE(OutData%StCMeasNumPerChan)
+    ALLOCATE(OutData%StCMeasNumPerChan(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%StCMeasNumPerChan.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%StCMeasNumPerChan,1), UBOUND(OutData%StCMeasNumPerChan,1)
+        OutData%StCMeasNumPerChan(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE SrvD_UnPackParam
 
  SUBROUTINE SrvD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

@@ -136,7 +136,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    TYPE(SrvD_InputFile)                           :: InputFileData  ! Data stored in the module's input file
    TYPE(StC_InitInputType)                        :: StC_InitInp    ! data to initialize StC module
    TYPE(StC_InitOutputType)                       :: StC_InitOut    ! data from StC module initialization (not used)
-   character(64),       allocatable               :: StCControlRequestor(:)  !< text string of which StC requests which cable control channel
+   type(StC_CtrlChanInitInfoType)                 :: StC_CtrlChanInitInfo    !< initial values for StC damping, stiffness, etc to pass to controller
    INTEGER(IntKi)                                 :: i              ! loop counter
    INTEGER(IntKi)                                 :: j              ! loop counter
    INTEGER(IntKi)                                 :: K              ! loop counter
@@ -409,7 +409,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
 
       ! Setup the StC_CtrlChans
-   call StC_CtrlChan_Setup(p,p%NumStC_Control,StCControlRequestor,ErrStat2,ErrMsg2)
+   call StC_CtrlChan_Setup(m,p,StC_CtrlChanInitInfo,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
 
@@ -453,7 +453,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%AirDens      = InitInp%AirDens
       p%AvgWindSpeed = InitInp%AvgWindSpeed
       
-      CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, StCControlRequestor, UnSum, ErrStat2, ErrMsg2 )
+      CALL BladedInterface_Init(u, p, m, y, InputFileData, InitInp, StC_CtrlChanInitInfo, UnSum, ErrStat2, ErrMsg2 )
          if (Failed())  return;
          
       m%LastTimeCalled   = - m%dll_data%DLL_DT  ! we'll initialize the last time the DLL was called as -1 DLL_DT.
@@ -605,6 +605,7 @@ contains
       CALL SrvD_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitInput(StC_InitInp, ErrStat2, ErrMsg2 )
       CALL StC_DestroyInitOutput(StC_InitOut, ErrStat2, ErrMsg2 )
+      CALL StC_DestroyCtrlChanInitInfoType(StC_CtrlChanInitInfo, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 END SUBROUTINE SrvD_Init
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1066,52 +1067,49 @@ end subroutine StC_Substruc_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the control channels for the StCs
 !!    These control channel signals are then passed back to all StC and they will pick out only the channels they are linking to
-subroutine StC_CtrlChan_Setup(p,NumStC_Control,StCControlRequestor,ErrStat,ErrMsg)
-   type(SrvD_ParameterType),                    intent(in   )  :: p                       !< Parameters
-   integer(IntKi),                              intent(  out)  :: NumStC_Control          !< Number of StC_control channels requested
-   character(64),       allocatable,            intent(  out)  :: StCControlRequestor(:)  !< text string of which StC requests which cable control channel
-   integer(IntKi),                              intent(  out)  :: ErrStat                 !< Error status of the operation
-   character(*),                                intent(  out)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
+subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,ErrStat,ErrMsg)
+   type(SrvD_ParameterType),                    intent(inout)  :: p                 !< Parameters
+   type(SrvD_MiscVarType),                      intent(inout)  :: m                 !< Misc (optimization) variables -- contains u and y for StCs where resizing may occur
+   type(StC_CtrlChanInitInfoType),              intent(  out)  :: CtrlChanInitInfo  !< initial values for damping, stiffness, etc to pass to controller
+   integer(IntKi),                              intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                                intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
    integer(IntKi)             :: ErrStat2       ! temporary Error status of the operation
    character(ErrMsgLen)       :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)             :: i              ! Counter for the input interp order
    integer(IntKi)             :: j              ! Counter for the instances
-   integer(IntKi),allocatable :: ChanUsed(:)    ! To check if a channel number was requested and by whom
    character(*), parameter    :: RoutineName = 'StC_CtrlChan_Setup'
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   ! Step through all StC instances to find total number of channels
-   NumStC_Control=0_IntKi
+   ! Step through all StC instances to find the highest number channel requested
+   p%NumStC_Control=0_IntKi
    do i=1,p%NumBStC  ! Blade
-      do j=1,size(p%BStC(i)%StC_CChan)
-         if (p%BStC(i)%StC_CChan(j) > 0)     NumStC_Control = NumStC_Control + 1
-      enddo
+      p%NumStC_Control = max(p%NumStC_Control,maxval(p%BStC(i)%StC_CChan))
    enddo
    do i=1,p%NumNStC  ! Nacelle
-      do j=1,size(p%NStC(i)%StC_CChan)
-         if (p%NStC(i)%StC_CChan(j) > 0)     NumStC_Control = NumStC_Control + 1
-      enddo
+      p%NumStC_Control = max(p%NumStC_Control,maxval(p%NStC(i)%StC_CChan))
    enddo
    do i=1,p%NumTStC  ! Tower
-      do j=1,size(p%TStC(i)%StC_CChan)
-         if (p%TStC(i)%StC_CChan(j) > 0)     NumStC_Control = NumStC_Control + 1
-      enddo
+      p%NumStC_Control = max(p%NumStC_Control,maxval(p%TStC(i)%StC_CChan))
    enddo
    do i=1,p%NumSStC  ! SubStructure
-      do j=1,size(p%SStC(i)%StC_CChan)
-         if (p%SStC(i)%StC_CChan(j) > 0)     NumStC_Control = NumStC_Control + 1
-      enddo
+      p%NumStC_Control = max(p%NumStC_Control,maxval(p%SStC(i)%StC_CChan))
    enddo
 
-   if (NumStC_Control==0) return    ! No reason to do anything else
+   if (p%NumStC_Control==0) return    ! No reason to do anything else
 
-   ! Allocate StCControlRequestor
-   allocate(StCControlRequestor(NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate StCControlRequestor array') ) return;
-   allocate(ChanUsed(NumStC_Control),            STAT=ErrStat2);  if ( AllErr('Could not allocate ChanUsed array') ) return;
-   ChanUsed = 0
+   ! Allocate StC averaging info (if multiple StC's request same channel, average the measured data for those channels
+   allocate(p%StCMeasNumPerChan(p%NumStC_Control),           STAT=ErrStat2); if ( AllErr('Could not allocate StCMeasNumPerChan') ) return;
+   p%StCMeasNumPerChan = 0
+   ! Allocate data to pass to dll initialization -- we need to populate this data now so initial values get to controller at init
+   allocate(CtrlChanInitInfo%Requestor(p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate Requestor array') ) return;
+   allocate(CtrlChanInitInfo%InitStiff(   3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitStiff    array') ) return;
+   allocate(CtrlChanInitInfo%InitDamp(    3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitDamp     array') ) return;
+   allocate(CtrlChanInitInfo%InitBrake(   3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitBrake    array') ) return;
+   allocate(CtrlChanInitInfo%InitMeasDisp(3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitMeasDisp array') ) return;
+   allocate(CtrlChanInitInfo%InitMeasVel( 3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitMeasVel  array') ) return;
 
    ! Set info about which StC requested which channel
    do i=1,p%NumBStC  ! Blade
@@ -1128,19 +1126,20 @@ subroutine StC_CtrlChan_Setup(p,NumStC_Control,StCControlRequestor,ErrStat,ErrMs
    enddo
 
    ! Warn about duplicate channels
-   do i=1,NumStC_Control
-      if (ChanUsed(i)>1) then
+   do i=1,p%NumStC_Control
+      if (p%StCMeasNumPerChan(i)>1) then
          call SetErrStat(ErrID_Warn,NewLine//' Multiple StC instances using StC control channel '//&
-               '#'//trim(Num2LStr(i))//' from controller: '//trim(StCControlRequestor(i))//'.'//&
+               '#'//trim(Num2LStr(i))//' from controller: '//trim(CtrlChanInitInfo%Requestor(i))//'.'//&
                ' StC outputs to controller will be averaged.',ErrStat,ErrMsg,RoutineName)
       endif
    enddo
-!FIXME: set initial values to pass to controller for first call
-!dll_data%PrevStCCmdStiff(1:3,I)
-!dll_data%PrevStCCmdDamp( 1:3,I)
-!dll_data%PrevStCCmdBrake(1:3,I)
 
-   call Cleanup()
+   ! Set all the initial values to pass to the controller for first call and ensure all inputs/outputs for control are sized same
+   call StC_SetDLLinputs(p,m,CtrlChanInitInfo%InitMeasDisp,CtrlChanInitInfo%InitMeasVel,ErrStat2,ErrMsg2,.TRUE.)  ! Do resizing if needed
+      if (Failed())  return;
+   call StC_SetInitDLLinputs(p,m,CtrlChanInitInfo%InitStiff,CtrlChanInitInfo%InitDamp,CtrlChanInitInfo%InitBrake,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
 contains
    subroutine ChanCheck(iNum,Location,CChan)    ! Assemble info about who requested which channel
       integer(IntKi),              intent(in) :: iNum          ! instance number
@@ -1148,21 +1147,20 @@ contains
       integer(IntKi), allocatable, intent(in) :: CChan(:)      ! Channel request set from that StC instance
       do j=1,size(CChan)
          if (CChan(j) > 0) then
-            ChanUsed(CChan(j)) = ChanUsed(CChan(j)) + 1
-            if (len_trim(StCControlRequestor(CChan(j)))>1) then
-               StCControlRequestor(CChan(j)) = trim(StCControlRequestor(CChan(j)))//', '//Location//'StC'//trim(Num2LStr(iNum))
+            p%StCMeasNumPerChan(CChan(j)) = p%StCMeasNumPerChan(CChan(j)) + 1
+            if (len_trim(CtrlChanInitInfo%Requestor(CChan(j)))>1) then
+               CtrlChanInitInfo%Requestor(CChan(j)) = trim(CtrlChanInitInfo%Requestor(CChan(j)))//', '//Location//'StC'//trim(Num2LStr(iNum))
             else
-               StCControlRequestor(CChan(j)) = Location//'StC'//trim(Num2LStr(iNum))
+               CtrlChanInitInfo%Requestor(CChan(j)) = Location//'StC'//trim(Num2LStr(iNum))
             endif
-            ! Name blade number if needed
-            if (Location=='B') StCControlRequestor(CChan(j)) = trim(StCControlRequestor(CChan(j)))//'_B'//trim(Num2LStr(j))
+            ! Name blade number if needed -- i.e. BStC1_B2
+            if (Location=='B') CtrlChanInitInfo%Requestor(CChan(j)) = trim(CtrlChanInitInfo%Requestor(CChan(j)))//'_B'//trim(Num2LStr(j))
          endif
       enddo
    end subroutine ChanCheck
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
-      if (Failed)    call Cleanup()
    end function Failed
    logical function AllErr(Msg)
       character(*), intent(in) :: Msg
@@ -1170,11 +1168,7 @@ contains
          CALL SetErrStat( ErrID_Fatal, Msg, ErrStat, ErrMsg, RoutineName )
       endif
       AllErr = ErrStat >= AbortErrLev
-      if (AllErr)    call Cleanup()
    end function AllErr
-   subroutine Cleanup()    ! Ignore any errors here
-      if (allocated(ChanUsed))   deallocate(ChanUsed)
-   end subroutine Cleanup
 end subroutine StC_CtrlChan_Setup
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4221,7 +4215,7 @@ SUBROUTINE StCControl_CalcOutput( t, u, p, x, xd, z, OtherState, StC_CmdStiff, S
       endif
 
       !...................................................................
-      ! Calculate the cable control channels -- NOTE: each StC instance will only use the channel data if StC_CMODE is set to 
+      ! Calculate the cable control channels -- NOTE: each StC instance will only use the channel data if StC_CMODE is set to
       !...................................................................
          ! User-defined cable control from Bladed-style DLL
       if (p%DLL_Ramp) then
@@ -4244,6 +4238,266 @@ SUBROUTINE StCControl_CalcOutput( t, u, p, x, xd, z, OtherState, StC_CmdStiff, S
          if (allocated(StC_CmdBrake))  StC_CmdBrake(1:3,1:p%NumStC_Control) = m%dll_data%StCCmdBrake(1:3,1:p%NumStC_Control)
       end if
 END SUBROUTINE StCControl_CalcOutput
+
+subroutine StC_SetDLLinputs(p,m,MeasDisp,MeasVel,ErrStat,ErrMsg,InitResize)
+   type(SrvD_ParameterType),     intent(in   )  :: p                 !< Parameters
+   type(SrvD_MiscVarType),       intent(inout)  :: m                 !< Misc (optimization) variables
+   real(SiKi),    allocatable,   intent(inout)  :: MeasDisp(:,:)     !< StC measured displacement signals to DLL (3,p%NumStC_Control)
+   real(SiKi),    allocatable,   intent(inout)  :: MeasVel(:,:)      !< StC measured velocity     signals to DLL (3,p%NumStC_Control)
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   logical,       optional,      intent(in   )  :: InitResize        !< resize arrays during initialization?
+
+   integer(IntKi)                               :: i,j               !< Generic counters
+   type(StC_OutputType)                         :: y_tmp             ! copy of y -- for resizing as needed.
+   character(*), parameter                      :: RoutineName = 'StC_SetDLLinputs'
+   integer(IntKi)                               :: ErrStat2          ! temporary Error status of the operation
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message if ErrStat /= ErrID_None
+
+      ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! Only proceed if we have have StC controls with the extended swap and legacy interface
+   if (p%NumStC_Control <= 0 .or. .not. p%UseLegacyInterface .or. .not. p%EXavrSWAP)    return
+   if (.not. allocated(MeasDisp) .or. .not. allocated(MeasVel)) then
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = "StC control signal matrices not allocated.  Programming error somewhere."
+      if (Failed()) return
+   endif
+
+   if (present(InitResize)) then
+      if (InitResize) then
+         ! Resize the u% arrays from each StC and copy its original data back in if
+         ! needed -- we will size these all the same for simpler calculations later
+         do i=1,p%NumBStC  ! Blade
+            call ResizeStCoutput( i,m%y_BStC(i))
+         enddo
+         do i=1,p%NumNStC  ! Nacelle
+            call ResizeStCoutput( i,m%y_NStC(i))
+         enddo
+         do i=1,p%NumTStC  ! Tower
+            call ResizeStCoutput( i,m%y_TStC(i))
+         enddo
+         do i=1,p%NumSStC  ! SubStructure
+            call ResizeStCoutput( i,m%y_SStC(i))
+         enddo
+      endif
+   endif
+
+   ! Retrieve the data from each StC instance
+   do i=1,p%NumBStC  ! Blade
+      call GetMeas(i,p%BStC(i)%StC_CChan,m%y_BStC(i))
+   enddo
+   do i=1,p%NumNStC  ! Nacelle
+      call GetMeas(i,p%NStC(i)%StC_CChan,m%y_NStC(i))
+   enddo
+   do i=1,p%NumTStC  ! Tower
+      call GetMeas(i,p%TStC(i)%StC_CChan,m%y_TStC(i))
+   enddo
+   do i=1,p%NumSStC  ! SubStructure
+      call GetMeas(i,p%SStC(i)%StC_CChan,m%y_SStC(i))
+   enddo
+
+   ! If any of the channels are serving multiple StC instances, average them
+   do i=1,p%NumStC_Control
+      if (p%StCMeasNumPerChan(i)>1) then
+         MeasDisp(1:3,i)   = MeasDisp(1:3,i) / real(p%StCMeasNumPerChan(i),SiKi)
+         MeasVel( 1:3,i)   = MeasVel( 1:3,i) / real(p%StCMeasNumPerChan(i),SiKi)
+      endif
+   enddo
+
+contains
+   subroutine ResizeStCoutput(iNum,y)    ! Assemble info about who requested which channel
+      integer(IntKi),               intent(in   )  :: iNum     ! instance number
+      type(StC_OutputType),         intent(inout)  :: y        ! outputs from the StC instance -- will contain allocated Cmd output values if used
+      type(StC_OutputType)                         :: y_tmp    ! copy of y -- for resizing as needed
+      if (allocated(y%MeasDisp) .and. allocated(y%MeasVel)) then    ! either all or none will be allocated
+         if (p%NumStC_Control > min(size(y%MeasDisp,2),size(y%MeasVel,2))) then
+            call StC_CopyOutput(y,y_tmp,MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
+
+            if (allocated(y%MeasDisp)) deallocate(y%MeasDisp)
+            call AllocAry(y%MeasDisp,3,p%NumStC_Control,"y%MeasDisp",ErrStat2,ErrMsg2);   if (Failed())  return;
+            y%MeasDisp = 0.0_ReKi
+            do i=1,min(p%NumStC_Control,size(y%MeasDisp,2))
+               y%MeasDisp(1:3,i) = y_tmp%MeasDisp(1:3,i)
+            enddo
+
+            if (allocated(y%MeasVel)) deallocate(y%MeasVel)
+            call AllocAry(y%MeasVel,3,p%NumStC_Control,"y%MeasVel",ErrStat2,ErrMsg2);   if (Failed())  return;
+            y%MeasVel = 0.0_ReKi
+            do i=1,min(p%NumStC_Control,size(y%MeasVel,2))
+               y%MeasVel(1:3,i) = y_tmp%MeasVel(1:3,i)
+            enddo
+
+            call Cleanup()
+         endif
+      else
+         if (.not. allocated(y%MeasDisp)) then
+            call AllocAry(y%MeasDisp,3,p%NumStC_Control,"y%MeasDisp",ErrStat2,ErrMsg2);   if (Failed())  return;
+            y%MeasDisp = 0.0_ReKi
+         endif
+         if (.not. allocated(y%MeasVel)) then
+            call AllocAry(y%MeasVel, 3,p%NumStC_Control,"y%MeasVel", ErrStat2,ErrMsg2);   if (Failed())  return;
+            y%MeasVel  = 0.0_ReKi
+         endif
+      endif
+   end subroutine ResizeStCoutput
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   subroutine Cleanup()
+      call StC_DestroyOutput(y_tmp,ErrStat2,ErrMsg2)   ! ignore error messages
+   end subroutine Cleanup
+   subroutine GetMeas(iNum,CChan,y)    ! Assemble info about who requested which channel
+      integer(IntKi),               intent(in)  :: iNum        ! instance number
+      integer(IntKi),   allocatable,intent(in)  :: CChan(:)    ! Channel request set from that StC instance
+      type(StC_OutputType),         intent(in)  :: y           ! outputs from the StC instance
+      do j=1,size(CChan)
+         if (CChan(j) > 0) then
+            MeasDisp(1:3,CChan(j)) = MeasDisp(1:3,CChan(j)) + real(y%MeasDisp(1:3,CChan(j)),SiKi)
+            MeasVel( 1:3,CChan(j)) = MeasVel( 1:3,CChan(j)) + real(y%MeasVel( 1:3,CChan(j)),SiKi)
+         endif
+      enddo
+   end subroutine GetMeas
+end subroutine StC_SetDLLinputs
+
+subroutine StC_SetInitDLLinputs(p,m,InitStiff,InitDamp,InitBrake,ErrStat,ErrMsg)
+   type(SrvD_ParameterType),  intent(in   )  :: p                 !< Parameters
+   type(SrvD_MiscVarType),    intent(inout)  :: m                 !< Misc (optimization) variables
+   real(SiKi), allocatable,   intent(inout)  :: InitStiff(:,:)    !< initial stiffness -- from input file     normally output of DLL (3,p%NumStC_Control)
+   real(SiKi), allocatable,   intent(inout)  :: InitDamp(:,:)     !< Initial damping   -- from input file     normally output of DLL (3,p%NumStC_Control)
+   real(SiKi), allocatable,   intent(inout)  :: InitBrake(:,:)    !< Initial brake     -- from input file (?) normally output of DLL (3,p%NumStC_Control)
+   integer(IntKi),            intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),              intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                            :: i,j               !< Generic counters
+   type(StC_InputType)                       :: u_tmp             ! copy of u -- for resizing as needed.
+   character(*), parameter                   :: RoutineName = 'StC_SetInitDLLinputs'
+   integer(IntKi)                            :: ErrStat2          ! temporary Error status of the operation
+   character(ErrMsgLen)                      :: ErrMsg2           ! temporary Error message if ErrStat /= ErrID_None
+
+
+      ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! Only proceed if we have have StC controls with the extended swap and legacy interface
+   if (p%NumStC_Control <= 0 .or. .not. p%UseLegacyInterface .or. .not. p%EXavrSWAP)    return
+   if (.not. allocated(InitStiff) .or. .not. allocated(InitDamp) .or. .not. allocated(InitBrake)) then
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = "StC control signal matrices not allocated.  Programming error somewhere."
+      if (Failed()) return
+   endif
+
+   ! Resize the u% arrays from each StC and copy its original data back in if
+   ! needed -- we will size these all the same for simpler calculations later
+   do i=1,p%NumBStC  ! Blade
+      call ResizeStCinput( i,m%u_BStC(1,i))
+   enddo
+   do i=1,p%NumNStC  ! Nacelle
+      call ResizeStCinput( i,m%u_NStC(1,i))
+   enddo
+   do i=1,p%NumTStC  ! Tower
+      call ResizeStCinput( i,m%u_TStC(1,i))
+   enddo
+   do i=1,p%NumSStC  ! SubStructure
+      call ResizeStCinput( i,m%u_SStC(1,i))
+   enddo
+
+   ! Retrieve the data from each StC instance
+   do i=1,p%NumBStC  ! Blade
+      call GetMeas(i,p%BStC(i)%StC_CChan,m%u_BStC(1,i))
+   enddo
+   do i=1,p%NumNStC  ! Nacelle
+      call GetMeas(i,p%NStC(i)%StC_CChan,m%u_NStC(1,i))
+   enddo
+   do i=1,p%NumTStC  ! Tower
+      call GetMeas(i,p%TStC(i)%StC_CChan,m%u_TStC(1,i))
+   enddo
+   do i=1,p%NumSStC  ! SubStructure
+      call GetMeas(i,p%SStC(i)%StC_CChan,m%u_SStC(1,i))
+   enddo
+
+   ! If any of the channels are serving multiple StC instances, average them
+   do i=1,p%NumStC_Control
+      if (p%StCMeasNumPerChan(i)>1) then
+         InitStiff(1:3,i)  = InitStiff(1:3,i) / real(p%StCMeasNumPerChan(i),SiKi)
+         InitDamp( 1:3,i)  = InitDamp( 1:3,i) / real(p%StCMeasNumPerChan(i),SiKi)
+         InitBrake(1:3,i)  = InitBrake(1:3,i) / real(p%StCMeasNumPerChan(i),SiKi)
+      endif
+   enddo
+
+contains
+   subroutine ResizeStCinput(iNum,u)    ! Assemble info about who requested which channel
+      integer(IntKi),               intent(in   )  :: iNum     ! instance number
+      type(StC_InputType),          intent(inout)  :: u        ! inputs from the StC instance -- will contain allocated Cmd input values if used
+      type(StC_InputType)                          :: u_tmp    ! copy of u -- for resizing as needed
+      if (allocated(u%CmdStiff) .and. allocated(u%CmdDamp) .and. allocated(u%CmdBrake)) then    ! either all or none will be allocated
+         if (p%NumStC_Control > min(size(u%CmdStiff,2),size(u%CmdDamp,2),size(u%CmdBrake,2))) then
+            call StC_CopyInput(u,u_tmp,MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
+
+            if (allocated(u%CmdStiff)) deallocate(u%CmdStiff)
+            call AllocAry(u%CmdStiff,3,p%NumStC_Control,"u%CmdStiff",ErrStat2,ErrMsg2);   if (Failed())  return;
+            u%CmdStiff = 0.0_ReKi
+            do i=1,min(p%NumStC_Control,size(u%CmdStiff,2))
+               u%CmdStiff(1:3,i) = u_tmp%CmdStiff(1:3,i)
+            enddo
+
+            if (allocated(u%CmdDamp)) deallocate(u%CmdDamp)
+            call AllocAry(u%CmdDamp,3,p%NumStC_Control,"u%CmdDamp",ErrStat2,ErrMsg2);   if (Failed())  return;
+            u%CmdDamp = 0.0_ReKi
+            do i=1,min(p%NumStC_Control,size(u%CmdDamp,2))
+               u%CmdDamp(1:3,i) = u_tmp%CmdDamp(1:3,i)
+            enddo
+
+            if (allocated(u%CmdBrake)) deallocate(u%CmdBrake)
+            call AllocAry(u%CmdBrake,3,p%NumStC_Control,"u%CmdBrake",ErrStat2,ErrMsg2);   if (Failed())  return;
+            u%CmdBrake = 0.0_ReKi
+            do i=1,min(p%NumStC_Control,size(u%CmdBrake,2))
+               u%CmdBrake(1:3,i) = u_tmp%CmdBrake(1:3,i)
+            enddo
+
+            call Cleanup()
+         endif
+      else
+         if (.not. allocated(u%CmdStiff)) then
+            call AllocAry(u%CmdStiff,3,p%NumStC_Control,"u%CmdStiff",ErrStat2,ErrMsg2);   if (Failed())  return;
+            u%CmdStiff = 0.0_ReKi
+         endif
+         if (.not. allocated(u%CmdDamp)) then
+            call AllocAry(u%CmdDamp, 3,p%NumStC_Control,"u%CmdDamp", ErrStat2,ErrMsg2);   if (Failed())  return;
+            u%CmdDamp  = 0.0_ReKi
+         endif
+         if (.not. allocated(u%CmdBrake)) then
+            call AllocAry(u%CmdBrake,3,p%NumStC_Control,"u%CmdBrake",ErrStat2,ErrMsg2);   if (Failed())  return;
+            u%CmdBrake = 0.0_ReKi
+         endif
+      endif
+   end subroutine ResizeStCinput
+   subroutine GetMeas(iNum,CChan,u)    ! Assemble info about who requested which channel
+      integer(IntKi),               intent(in)  :: iNum        ! instance number
+      integer(IntKi),   allocatable,intent(in)  :: CChan(:)    ! Channel request set from that StC instance
+      type(StC_InputType),          intent(in)  :: u           ! inputs from the StC instance -- will contain allocated Cmd input values if used
+      do j=1,min(p%NumStC_Control,size(u%CmdStiff))     ! u% arrays may be smaller than total number of channels, so only populate up to that size
+         if (CChan(j) > 0) then
+            InitStiff(1:3,CChan(j)) = InitStiff(1:3,CChan(j)) + real(u%CmdStiff(1:3,CChan(j)),SiKi)
+            InitDamp( 1:3,CChan(j)) = InitDamp( 1:3,CChan(j)) + real(u%CmdDamp( 1:3,CChan(j)),SiKi)
+            InitBrake(1:3,CChan(j)) = InitBrake(1:3,CChan(j)) + real(u%CmdBrake(1:3,CChan(j)),SiKi)
+         endif
+      enddo
+   end subroutine GetMeas
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   subroutine Cleanup()
+      call StC_DestroyInput(u_tmp,ErrStat2,ErrMsg2)   ! ignore error messages
+   end subroutine Cleanup
+end subroutine StC_SetInitDLLinputs
 
 END MODULE ServoDyn
 !**********************************************************************************************************************************

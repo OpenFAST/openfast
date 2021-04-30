@@ -273,7 +273,7 @@ SUBROUTINE CallBladedLegacyDLL ( u, p, dll_data, ErrStat, ErrMsg, ChannelNameUni
 END SUBROUTINE CallBladedLegacyDLL
 !==================================================================================================================================
 !> This routine initializes variables used in the Bladed DLL interface.
-SUBROUTINE BladedInterface_Init(u, p, m, y, InputFileData, InitInp, StCControlRequestor, UnSum, ErrStat, ErrMsg)
+SUBROUTINE BladedInterface_Init(u, p, m, y, InputFileData, InitInp, StC_CtrlChanInitInfo, UnSum, ErrStat, ErrMsg)
    
    TYPE(SrvD_InputType),           INTENT(INOUT)  :: u               !< An initial guess for the input; input mesh must be defined
    TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
@@ -282,7 +282,7 @@ SUBROUTINE BladedInterface_Init(u, p, m, y, InputFileData, InitInp, StCControlRe
                                                                      !!   only the output mesh is initialized)
    TYPE(SrvD_InputFile),           INTENT(INOUT)  :: InputFileData   !< Data stored in the module's input file
    TYPE(SrvD_InitInputType),       INTENT(IN   )  :: InitInp         !< Input data for initialization routine
-   character(64),    allocatable,  intent(in   )  :: StCControlRequestor(:)  !< text string of which StC requests which cable control channel
+   type(StC_CtrlChanInitInfoType), intent(inout)  :: StC_CtrlChanInitInfo    !< initial values for StC damping, stiffness, etc to pass to controller  (out so we can MOVE_ALLOC)
    INTEGER(IntKi),                 INTENT(IN   )  :: UnSum           !< summary file number (>0 when set)
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
@@ -461,7 +461,7 @@ SUBROUTINE BladedInterface_Init(u, p, m, y, InputFileData, InitInp, StCControlRe
 
    !> Initialize the extended avrSWAP if used
    if (p%UseLegacyInterface .and. p%EXavrSWAP) then
-      call EXavrSWAP_Init( InitInp, u, p, y, m%dll_data, StCControlRequestor, UnSum, ErrStat2, ErrMsg2)
+      call EXavrSWAP_Init( InitInp, u, p, y, m%dll_data, StC_CtrlChanInitInfo, UnSum, ErrStat2, ErrMsg2)
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
    endif

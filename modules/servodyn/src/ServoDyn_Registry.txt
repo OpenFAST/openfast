@@ -424,6 +424,7 @@ typedef	^	ParameterType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue c
 typedef	^	ParameterType	Logical	EXavrSWAP	-	-	-	"Use extendend avr SWAP"	-
 typedef	^	ParameterType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
 typedef	^	ParameterType	IntKi	NumStC_Control	-	-	-	"Number of cable StC channels requested"	-
+typedef	^	ParameterType	IntKi	StCMeasNumPerChan	{:}	-	-	"Number of cable StC channel to average on each control channel sent to DLL"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:

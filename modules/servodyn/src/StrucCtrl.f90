@@ -97,6 +97,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       INTEGER(IntKi)                                :: NumOuts
       TYPE(StC_InputFile)                           :: InputFileData ! Data stored in the module's input file
       INTEGER(IntKi)                                :: i_pt          ! Generic counter for mesh point
+      INTEGER(IntKi)                                :: i             ! Generic counter for mesh point
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionP
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
       REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
@@ -313,6 +314,46 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       ! Set the interval value to tell ServoDyn we are using (we don't actually change this in StC)
    Interval = p%DT
+
+
+      ! Initialize the input and output arrays for control channels
+      !     NOTE: these will get resized later in ServoDyn!!!!
+   if (maxval(p%StC_CChan) > 0) then
+      call AllocAry( u%CmdStiff, 3, maxval(p%StC_CChan), 'u%CmdStiff', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( u%CmdDamp,  3, maxval(p%StC_CChan), 'u%CmdDamp',  ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( u%CmdBrake, 3, maxval(p%StC_CChan), 'u%CmdBrake', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( y%MeasDisp, 3, maxval(p%StC_CChan), 'y%MeasDisp', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( y%MeasVel,  3, maxval(p%StC_CChan), 'y%MeasVel',  ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      ! Initialize to zero (if we asked for channel 9, the first 8 channel entries are zero)
+      u%CmdStiff  =  0.0_ReKi
+      u%CmdDamp   =  0.0_ReKi
+      u%CmdBrake  =  0.0_ReKi
+      y%MeasDisp  =  0.0_ReKi
+      y%MeasVel   =  0.0_ReKi
+      ! Check that dimensions of x are what we expect
+      if (size(p%StC_CChan) /= size(x%StC_x,2)) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Error in setup of StC_Chan array -- does not match expected dimensionality of x%StC_x"
+         if (Failed())  return;
+      endif
+      ! Set actual values for channels requested
+      do i=1,size(p%StC_CChan)
+         if (p%StC_CChan(i) > 0) then
+            u%CmdStiff(1:3,i)  = (/ p%K_X, p%K_Y, p%K_Z /)
+            u%CmdDamp( 1:3,i)  = (/ p%C_X, p%C_Y, p%C_Z /)
+            !u%CmdBrake --- leave this at zero for now (no input file method to set it)
+            !  The states are sized by (6,NumMeshPts).  NumMeshPts is then used to set
+            !  size of StC_CChan as well.  For safety, we will check it here.
+            y%MeasDisp(1:3,i)  = (/ x%StC_x(1,i), x%StC_x(3,i), x%StC_x(5,i) /)
+            y%MeasVel( 1:3,i)  = (/ x%StC_x(2,i), x%StC_x(4,i), x%StC_x(6,i) /)
+         endif
+      enddo
+   endif
 
    call cleanup()
 !................................

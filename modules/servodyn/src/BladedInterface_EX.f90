@@ -70,22 +70,22 @@ MODULE BladedInterface_EX
 CONTAINS
 !==================================================================================================================================
 !> This routine sets the input and output necessary for the extended interface.
-SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, StCControlRequestor, UnSum, ErrStat, ErrMsg)
-   type(SrvD_InitInputType),     intent(in   )  :: InitInp        !< Input data for initialization routine
-   type(SrvD_InputType),         intent(inout)  :: u              !< Inputs at t (setting up mesh)
-   type(SrvD_ParameterType),     intent(in   )  :: p              !< Parameters
-   type(SrvD_OutputType),        intent(inout)  :: y              !< Initial system outputs (outputs are not calculated)
-   type(BladedDLLType),          intent(inout)  :: dll_data       !< data for the Bladed DLL
-   character(64),    allocatable,intent(in   )  :: StCControlRequestor(:)  !< text string of which StC requests which cable control channel
-   integer(IntKi),               intent(in   )  :: UnSum          !< Unit number for summary file (>0 when active)
-   integer(IntKi),               intent(  out)  :: ErrStat        !< Error status of the operation
-   character(ErrMsgLen),         intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   character(*),                 parameter      :: RoutineName='EXavrSWAP_Init'
-   character(1024),              allocatable    :: SumInfo(:)     ! Description strings for each avrSWAP record -- only used for summary file writing
-   character(3),                 allocatable    :: DataFlow(:)    ! Direction of data flow -- only used for summary file writing
-   character(64),                allocatable    :: Requestor(:)   ! Info on module requesting the channel
-   integer(IntKi)                               :: ErrStat2
-   character(ErrMsgLen)                         :: ErrMsg2
+SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, StC_CtrlChanInitInfo, UnSum, ErrStat, ErrMsg)
+   type(SrvD_InitInputType),        intent(in   )  :: InitInp        !< Input data for initialization routine
+   type(SrvD_InputType),            intent(inout)  :: u              !< Inputs at t (setting up mesh)
+   type(SrvD_ParameterType),        intent(in   )  :: p              !< Parameters
+   type(SrvD_OutputType),           intent(inout)  :: y              !< Initial system outputs (outputs are not calculated)
+   type(BladedDLLType),             intent(inout)  :: dll_data       !< data for the Bladed DLL
+   type(StC_CtrlChanInitInfoType),  intent(in   )  :: StC_CtrlChanInitInfo    !< initial values for StC damping, stiffness, etc to pass to controller
+   integer(IntKi),                  intent(in   )  :: UnSum          !< Unit number for summary file (>0 when active)
+   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+   character(ErrMsgLen),            intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   character(*),                    parameter      :: RoutineName='EXavrSWAP_Init'
+   character(1024),                 allocatable    :: SumInfo(:)     ! Description strings for each avrSWAP record -- only used for summary file writing
+   character(3),                    allocatable    :: DataFlow(:)    ! Direction of data flow -- only used for summary file writing
+   character(64),                   allocatable    :: Requestor(:)   ! Info on module requesting the channel
+   integer(IntKi)                                  :: ErrStat2
+   character(ErrMsgLen)                            :: ErrMsg2
 
       ! Initialize ErrStat and ErrMsg
    ErrStat = ErrID_None
@@ -267,14 +267,14 @@ contains
       integer(IntKi)    :: I,J   ! Generic counters
 
       ! Error check the Cable Ctrl
-      if (.not. allocated(StCControlRequestor)) then
+      if (.not. allocated(StC_CtrlChanInitInfo%Requestor)) then
          ErrStat2=ErrID_Fatal
-         ErrMsg2='StC control string array indicating which module requested cable controls is missing (StCControlRequestor)'
+         ErrMsg2='StC control string array indicating which module requested cable controls is missing (StC_CtrlChanInitInfo%Requestor)'
          if (Failed())  return
       endif
-      if (size(StCControlRequestor) /= p%NumStC_Control) then
+      if (size(StC_CtrlChanInitInfo%Requestor) /= p%NumStC_Control) then
          ErrStat2=ErrID_Fatal
-         ErrMsg2='Size of StC control string array (StCControlRequestor) does not match the number of requested cable control channels.'
+         ErrMsg2='Size of StC control string array (StC_CtrlChanInitInfo%Requestor) does not match the number of requested cable control channels.'
          if (Failed())  return
       endif
       if ( p%NumStC_Control*StCCtrl_ChanPerSet > StCCtrl_MaxChan ) then
@@ -283,8 +283,8 @@ contains
                   ' channel sets ('//trim(Num2LStr(p%NumStC_Control*StCCtrl_ChanPerSet))//' individual channels),'// &
                   ' but only '//trim(Num2LStr(StCCtrl_MaxChan))//' individual channels are available'
          call WrSCr('StC channels requested: ')
-         do I=1,size(StCControlRequestor)
-            call WrScr('   '//trim(Num2LStr(I))//'  '//trim(StCControlRequestor(I)))
+         do I=1,size(StC_CtrlChanInitInfo%Requestor)
+            call WrScr('   '//trim(Num2LStr(I))//'  '//trim(StC_CtrlChanInitInfo%Requestor(I)))
          enddo
          if (Failed())  return
       endif
@@ -321,21 +321,21 @@ contains
       if (UnSum > 0) then
          do I=1,p%NumStC_Control
             J=StCCtrl_StartIdx + ((I-1)*StCCtrl_ChanPerSet-1)    ! Index into the full avrSWAP (minus 1 so counting is simpler)
-            call WrSumInfoSendFrom(J+1, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Disp_X')
-            call WrSumInfoSendFrom(J+2, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Disp_Y')
-            call WrSumInfoSendFrom(J+3, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Disp_Z')
-            call WrSumInfoSendFrom(J+4, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_X')
-            call WrSumInfoSendFrom(J+5, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_Y')
-            call WrSumInfoSendFrom(J+6, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_Z')
-            call WrSumInfoRcvd(    J+7, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_X')
-            call WrSumInfoRcvd(    J+8, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_Y')
-            call WrSumInfoRcvd(    J+9, StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_Z')
-            call WrSumInfoRcvd(    J+10,StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_X')
-            call WrSumInfoRcvd(    J+11,StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_Y')
-            call WrSumInfoRcvd(    J+12,StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_Z')
-            call WrSumInfoRcvd(    J+13,StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_X')
-            call WrSumInfoRcvd(    J+14,StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_Y')
-            call WrSumInfoRcvd(    J+15,StCControlRequestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_Z')
+            call WrSumInfoSendFrom(J+1, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Disp_X')
+            call WrSumInfoSendFrom(J+2, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Disp_Y')
+            call WrSumInfoSendFrom(J+3, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Disp_Z')
+            call WrSumInfoSendFrom(J+4, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_X')
+            call WrSumInfoSendFrom(J+5, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_Y')
+            call WrSumInfoSendFrom(J+6, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_Z')
+            call WrSumInfoRcvd(    J+7, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_X')
+            call WrSumInfoRcvd(    J+8, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_Y')
+            call WrSumInfoRcvd(    J+9, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_Z')
+            call WrSumInfoRcvd(    J+10,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_X')
+            call WrSumInfoRcvd(    J+11,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_Y')
+            call WrSumInfoRcvd(    J+12,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_Z')
+            call WrSumInfoRcvd(    J+13,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_X')
+            call WrSumInfoRcvd(    J+14,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_Y')
+            call WrSumInfoRcvd(    J+15,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_Z')
          enddo
       endif
    end subroutine InitStCCtrl

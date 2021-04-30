@@ -89,6 +89,19 @@ typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input
 typedef	^	InitInputType	LOGICAL	UseInputFile_PrescribeFrc	-	.TRUE.	-	"Read from the input file.  If false, must parse the string info passed"	-
 typedef	^	InitInputType	FileInfoType	PassedPrescribeFrcData	-	-	-	"Prescribed forces input file as FileInfoType (set by driver/glue code)"	-
 
+# ..... StC CtrlChan Info   .......................................................................................................
+# This is a convenience type to simplify some setup initialization
+# The controller is initialized after the StC's, but we want to pass the initial condition info into the controller
+#	Use case: controller does not change stiffness, but does change damping.  We must pass the stiffness from the StC to the controller
+#				 anyhow so that it is in the dll_data%StCCmdStiff.  The controller won't touch the stiffness, but the dll_data%StCCmdStiff
+#				 will overwrite the stiffness value in the StC (the StC instance does not know stiffness is not commanded by controller).
+typedef	^	StC_CtrlChanInitInfoType	CHARACTER(64)	Requestor	{:}	-	-	"text string of which StC requests which cable control channel" -
+typedef	^	StC_CtrlChanInitInfoType	SiKi	InitStiff			{:}{:}	-	-	"StC stiffness at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init"	"N/m"
+typedef	^	StC_CtrlChanInitInfoType	SiKi	InitDamp			{:}{:}	-	-	"StC damping at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init"	"N/(m/s)"
+typedef	^	StC_CtrlChanInitInfoType	SiKi	InitBrake			{:}{:}	-	-	"StC braking signal at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init"	"N"
+typedef	^	StC_CtrlChanInitInfoType	SiKi	InitMeasDisp			{:}{:}	-	-	"StC measured local displacement signal from StC at initialization  (3,NumStC_Control)"	"m"
+typedef	^	StC_CtrlChanInitInfoType	SiKi	InitMeasVel			{:}{:}	-	-	"StC measured local velocity     signal from StC at initialization (3,NumStC_Control)"	"m/s"
+
 
 # Define outputs from the initialization routine here:
 typedef ^ InitOutputType SiKi DummyInitOut - - - "dummy init output" -
@@ -189,8 +202,8 @@ typedef	^		^				ReKi	CmdBrake	{:}{:}	-	-	"StC braking signal"	"N/(m/s)"
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef ^   OutputType          MeshType        Mesh                     {:}         -         -         "Loads at the StC reference points in the inertial frame" -
-typedef	^		^				ReKi	RelDisp	{:}{:}	-	-	"StC mass relative displacement (local coordinates) signal to controller" "m"
-typedef	^		^				ReKi	RelVel	{:}{:}	-	-	"StC mass relative velocity (local coordinates) signal to controller" "m/s"
+typedef	^		^				ReKi	MeasDisp	{:}{:}	-	-	"StC measured relative displacement of tmd mass (local coordinates) signal to controller" "m"
+typedef	^		^				ReKi	MeasVel	{:}{:}	-	-	"StC measured relative velocity     of tmd mass (local coordinates) signal to controller" "m/s"
 
 # Define outputs that are not on this mesh here:
 #typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
