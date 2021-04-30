@@ -1691,15 +1691,17 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    REAL(ReKi), DIMENSION(3)                         :: BlglobCB         !< Global offset between aerodynamic center and center of buoyancy of blade node j
    REAL(ReKi), DIMENSION(3)                         :: BlglobCBplus     !< Global offset between aerodynamic center and center of buoyancy of blade node j+1
    REAL(ReKi), DIMENSION(3)                         :: HubglobCB        !< Global offset between aerodynamic center and center of buoyancy of hub node
-   REAL(ReKi), DIMENSION(3)                         :: NacglobCB        !< Global offset between tower top and center of buoyancy of nacelle node
+   REAL(ReKi), DIMENSION(3)                         :: NacglobCB        !< Global offset between nacelle reference position and center of buoyancy of nacelle node
    REAL(ReKi), DIMENSION(3)                         :: BltmpPos         !< Global position of blade node j, adjusted to place the origin at the seabed
    REAL(ReKi), DIMENSION(3)                         :: BltmpPosplus     !< Global position of blade node j+1, adjusted to place the origin at the seabed
    REAL(ReKi), DIMENSION(3)                         :: TwrtmpPos        !< Global position of tower node j, adjusted to place the origin at the seabed
    REAL(ReKi), DIMENSION(3)                         :: TwrtmpPosplus    !< Global position of tower node j+1, adjusted to place the origin at the seabed
    REAL(ReKi), DIMENSION(3)                         :: HubtmpPos        !< Global position of hub node, adjusted to place the origin at the seabed
+   REAL(ReKi), DIMENSION(3)                         :: NactmpPos        !< Global position of nacelle node, adjusted to place the origin at the seabed
    REAL(ReKi), DIMENSION(3)                         :: BlposCB          !< Global position of the center of buoyancy of blade node j, adjusted to place the origin at the seabed
    REAL(ReKi), DIMENSION(3)                         :: BlposCBplus      !< Global position of the center of buoyancy of blade node j+1, adjusted to place the origin at the seabed
    REAL(ReKi), DIMENSION(3,p%NumBlades)             :: Blposroot        !< Global position of the center of buoyancy of blade root, adjusted to place the origin at the seabed
+   REAL(ReKi), DIMENSION(3)                         :: Twrpostop        !< Global position of the center of buoyancy of tower top, adjusted to place the origin at the seabed
    REAL(ReKi)                                       :: BlheadAng        !< Heading angle of blade element j
    REAL(ReKi)                                       :: BlinclAng        !< Inclination angle of blade element j
    REAL(ReKi)                                       :: TwrheadAng       !< Heading angle of tower element j
@@ -1738,8 +1740,10 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    REAL(ReKi), DIMENSION(3)                         :: HubMBtmp         !< Buoyant moment at hub node in global coordinates, passed to m%HubMB
    REAL(ReKi), DIMENSION(3)                         :: NacFBtmp         !< Buoyant force at nacelle node in global coordinates, passed to m%NacFB
    REAL(ReKi), DIMENSION(3)                         :: NacMBtmp         !< Buoyant moment at nacelle node in global coordinates, passed to m%NacMB
-   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: Movvector        !< Vector from hub center to center of buoyancy of blade root
-   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: Movmoment        !< Moment from moving blade root buoyant force from blade root to hub center
+   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: MovvectorBR      !< Vector from hub center to center of buoyancy of blade root
+   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: MovmomentBR      !< Moment from moving blade root buoyant force from blade root to hub center
+   REAL(ReKi), DIMENSION(3)                         :: MovvectorTT      !< Vector from nacelle reference position to center of buoyancy of tower top
+   REAL(ReKi), DIMENSION(3)                         :: MovmomentTT      !< Moment from moving tower top buoyant force from tower top to nacelle reference position
    CHARACTER(*), PARAMETER                          :: RoutineName = 'CalcBuoyantLoads'
 
 
@@ -1754,6 +1758,9 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    HubMBtmp = 0.0_ReKi
    NacFBtmp = 0.0_ReKi
    NacMBtmp = 0.0_ReKi
+   TwrforceBtop = 0.0_ReKi
+   TwrmomentBtop = 0.0_ReKi
+   Twrpostop = 0.0_ReKi
 
       ! Blades
    do k = 1,p%NumBlades ! loop through all blades
@@ -1920,7 +1927,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          TwrmomentBplus = TwrmomentB * p%TwrAxCent(j)
          TwrmomentB = TwrmomentB * ( 1 - p%TwrAxCent(j) )
 
-            ! Buoyant force and moment on tower top in global coordinates, saved for later use
+            ! Buoyant force and moment on tower top and node position in global coordinates, saved for later use
          if ( j==p%NumTwrNds - 1 ) then
             TwrforceBtop(1) = p%AirDens * p%Gravity * pi * p%TwrRad(j+1)**2 * TwrtmpPosplus(3) * sin( TwrinclAng ) * cos( TwrheadAng )
             TwrforceBtop(2) = p%AirDens * p%Gravity * pi * p%TwrRad(j+1)**2 * TwrtmpPosplus(3) * sin( TwrinclAng ) * sin( TwrheadAng )
@@ -1928,6 +1935,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
             TwrmomentBtop(1) = -p%AirDens * p%Gravity * pi * p%TwrRad(j+1)**4 / 4.0_ReKi * sin( TwrinclAng ) * sin( TwrheadAng )
             TwrmomentBtop(2) = p%AirDens * p%Gravity * pi * p%TwrRad(j+1)**4 / 4.0_ReKi * sin( TwrinclAng ) * cos( TwrheadAng )
             TwrmomentBtop(3) = 0.0_ReKi
+            Twrpostop = TwrtmpPosplus
          end if
 
             ! Buoyant force and moment in global coordinates, expressed per unit length
@@ -2000,10 +2008,10 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
 
          ! Moment caused by moving blade root buoyant force from blade root to hub center
       do k = 1,p%NumBlades ! loop through all blades
-         Movvector(:,k) = Blposroot(:,k) - HubtmpPos
-         Movmoment(1,k) = Movvector(2,k) * BlforceBroot(3,k) - Movvector(3,k) * BlforceBroot(2,k)
-         Movmoment(2,k) = Movvector(3,k) * BlforceBroot(1,k) - Movvector(1,k) * BlforceBroot(3,k)
-         Movmoment(3,k) = Movvector(1,k) * BlforceBroot(2,k) - Movvector(2,k) * BlforceBroot(1,k)
+         MovvectorBR(:,k) = Blposroot(:,k) - HubtmpPos
+         MovmomentBR(1,k) = MovvectorBR(2,k) * BlforceBroot(3,k) - MovvectorBR(3,k) * BlforceBroot(2,k)
+         MovmomentBR(2,k) = MovvectorBR(3,k) * BlforceBroot(1,k) - MovvectorBR(1,k) * BlforceBroot(3,k)
+         MovmomentBR(3,k) = MovvectorBR(1,k) * BlforceBroot(2,k) - MovvectorBR(2,k) * BlforceBroot(1,k)
       end do ! k = blades
 
          ! Buoyant forces and moments in global coordinates, combined at hub center
@@ -2011,7 +2019,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       HubMBtmp = HubmomentB
       do k = 1,p%NumBlades ! loop through all blades
          HubFBtmp = HubFBtmp + BlforceBroot(:,k)
-         HubMBtmp = HubMBtmp + BlmomentBroot(:,k) + Movmoment(:,k)
+         HubMBtmp = HubMBtmp + BlmomentBroot(:,k) + MovmomentBR(:,k)
       end do ! k = blades
    
          ! Pass to m variable
@@ -2035,7 +2043,10 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          call SetErrStat( ErrID_Fatal, 'The nacelle cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
             if (ErrStat >= AbortErrLev) return
 
-         ! Global offset between tower top and center of buoyancy of nacelle node
+         ! Global position of nacelle node, adjusted to place the origin at the seabed
+      NactmpPos = u%NacelleMotion%Position(:,1) + u%NacelleMotion%TranslationDisp(:,1) - ( p%WtrDpth + p%MSL2SWL )
+
+         ! Global offset between nacelle reference position and center of buoyancy of nacelle node
       NacglobCB = matmul( [p%NacCenBx, p%NacCenBy, p%NacCenBz ], u%NacelleMotion%Orientation(:,:,1) )
          
          ! Buoyant force at nacelle node in global coordinates
@@ -2043,14 +2054,20 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       NacforceB(2) = 0.0_ReKi
       NacforceB(3) = p%AirDens * p%Gravity * p%VolNac
       
-         ! Buoyant moment in global coordinates, caused by moving buoyant force from center of buoyancy to tower top
+         ! Buoyant moment in global coordinates, caused by moving buoyant force from center of buoyancy to nacelle reference point
       NacmomentB(1) = NacglobCB(2) * NacforceB(3)
       NacmomentB(2) = -NacglobCB(1) * NacforceB(3)
       NacmomentB(3) = 0.0_ReKi
 
-         ! Buoyant forces and moments in global coordinates, combined at tower top
+         ! Moment caused by moving tower top buoyant force from tower top to nacelle reference point
+      MovvectorTT = Twrpostop - NactmpPos
+      MovmomentTT(1) = MovvectorTT(2,k) * TwrforceBtop(3,k) - MovvectorTT(3,k) * TwrforceBtop(2,k)
+      MovmomentTT(2) = MovvectorTT(3,k) * TwrforceBtop(1,k) - MovvectorTT(1,k) * TwrforceBtop(3,k)
+      MovmomentTT(3) = MovvectorTT(1,k) * TwrforceBtop(2,k) - MovvectorTT(2,k) * TwrforceBtop(1,k)
+
+         ! Buoyant forces and moments in global coordinates, combined at nacelle reference point
       NacFBtmp = NacforceB + TwrforceBtop
-      NacMBtmp = NacmomentB + TwrmomentBtop
+      NacMBtmp = NacmomentB + TwrmomentBtop + MovmomentTT
    
          ! Pass to m variable
       m%NacFB = NacFBtmp
