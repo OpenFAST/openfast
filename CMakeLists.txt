@@ -35,6 +35,7 @@ option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
+option(BUILD_FASTFARM "Enable building FAST.Farm" off)
 option(OPENMP "Enable OpenMP support" off)
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   # Configure the default install path to openfast/install
@@ -67,7 +68,7 @@ if (FPE_TRAP_ENABLED)
 endif (FPE_TRAP_ENABLED)
 
 # Setup dependencies
-if (CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
+if (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
   find_package(MKL)
 endif()
 if (MKL_FOUND)
@@ -115,6 +116,8 @@ set(OPENFAST_MODULES
   icedyn
   icefloe
   map
+  wakedynamics
+  awae
 )
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")

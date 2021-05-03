@@ -2119,7 +2119,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       
          ! get rotation matrix for moment of inertia orientations
          call RodrigMat(I_n, R_I, errStat, errMsg)
-         IF ( errStat > AbortErrLev ) RETURN
+         IF ( errStat >= AbortErrLev ) RETURN
 
          ! globally-oreinted moment of inertia matrix for joint
          Irl_mat = 0.0

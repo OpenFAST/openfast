@@ -31,7 +31,8 @@ typedef	^	InitInputType	R8Ki	PlatformOrient	{3}{3}	-	-	"platform orientation for
 typedef	^	InitInputType	DbKi	Tmax	-	-	-	"max time from glue code"	s
 typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
-typedef	^	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
+typedef	^	InitInputType	IntKi	NumSC2CtrlGlob	-	-	-	"number of global controller inputs [from supercontroller]"	-
+typedef	^	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of turbine specific controller inputs [from supercontroller]"	-
 typedef	^	InitInputType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
 typedef	^	InitInputType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True]"	-
 typedef	^	InitInputType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
@@ -40,10 +41,14 @@ typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference posit
 typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 typedef	^	InitInputType	LOGICAL	UseInputFile	-	.TRUE.	-	"read input from input file"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
-#ADD in the TMD submodule input file passing her
+#ADD in the TMD submodule input file passing here
 typedef	^	InitInputType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
 typedef	^	InitInputType	CHARACTER(64)	CableControlRequestor	{:}	-	-	"Array with text info about which module requested the cable control channel (size of NumCableControl).  This is just for diagnostics."	-
 typedef	^	InitInputType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue code -- required to set m%u_xStC sizes" -
+#ADD in the TMD submodule input file passing here
+typedef	^	InitInputType	ReKi	fromSCGlob	{:}	-	-	"Initial global inputs to the controller [from the supercontroller]"	-
+typedef	^	InitInputType	ReKi	fromSC	{:}	-	-	"Initial turbine specific inputs to the controller [from the supercontroller]"	-
+
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -166,7 +171,7 @@ typedef	^	BladedDLLType	ReKi	BlAirfoilCom	3	-	-	"Commanded Airfoil UserProp for 
 typedef	^	BladedDLLType	ReKi	PrevBlAirfoilCom	3	-	-	"Previously commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables)"	-
 typedef	^	BladedDLLType	ReKi	ElecPwr_prev	-	-	-	"Electrical power (from previous step), sent to Bladed DLL"	W
 typedef	^	BladedDLLType	ReKi	GenTrq_prev	-	-	-	"Electrical generator torque (from previous step), sent to Bladed DLL"	N-m
-typedef	^	BladedDLLType	SiKi	SCoutput	{:}	-	-	"controller output to supercontroller"	-
+typedef	^	BladedDLLType	SiKi	toSC	{:}	-	-	"controller output to supercontroller"	-
 typedef	^	BladedDLLType	logical	initialized	-	-	-	"flag that determines if DLL has been called (for difference between CalcOutput and UpdateStates)"	-
 typedef	^	BladedDLLType	INTEGER	NumLogChannels	-	-	-	"number of log channels from controller"	-
 typedef	^	BladedDLLType	OutParmType	LogChannels_OutParam	{:}	-	-	"Names and units (and other characteristics) of logging outputs from DLL"	-
@@ -425,6 +430,7 @@ typedef	^	ParameterType	Logical	EXavrSWAP	-	-	-	"Use extendend avr SWAP"	-
 typedef	^	ParameterType	IntKi	NumCableControl	-	-	-	"Number of cable control channels requested"	-
 typedef	^	ParameterType	IntKi	NumStC_Control	-	-	-	"Number of cable StC channels requested"	-
 typedef	^	ParameterType	IntKi	StCMeasNumPerChan	{:}	-	-	"Number of cable StC channel to average on each control channel sent to DLL"	-
+typedef ^       ParameterType   LOGICAL UseSC   -       -       -       "Supercontroller on/off flag" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -464,7 +470,8 @@ typedef	^	InputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angu
 typedef	^	InputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
 typedef	^	InputType	ReKi	HorWindV	-	-	-	"Horizontal hub-height wind velocity magnitude"	m/s
 typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"	radians
-typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the supercontroller"	-
+typedef	^	InputType	SiKi	fromSC	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
+typedef	^	InputType	SiKi	fromSCglob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
 typedef	^	InputType	MeshType	PtfmMotionMesh	-	-	-	"Platform motion mesh at platform reference point" -
 typedef	^	InputType	MeshType	BStCMotionMesh	{:}{:}	-	-	"StC module blade        input motion mesh" -
@@ -485,7 +492,6 @@ typedef	^	OutputType	ReKi	GenTrq	-	-	-	"Electrical generator torque"	N-m
 typedef	^	OutputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
 typedef	^	OutputType	ReKi	ElecPwr	-	-	-	"Electrical power"	W
 typedef	^	OutputType	ReKi	TBDrCon	{:}	-	-	"Instantaneous tip-brake drag constant, Cd*Area"
-typedef	^	OutputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
 typedef	^	OutputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the Lidar"	-
 typedef	^	OutputType	ReKi	CableDeltaL	{:}	-	-	"Cable control -- Length change request (passed to MD or SD)"	m
 typedef	^	OutputType	ReKi	CableDeltaLdot	{:}	-	-	"Cable control -- Length change rate request (passed to MD or SD)"	m/s
@@ -493,4 +499,4 @@ typedef	^	OutputType	MeshType	BStCLoadMesh	{:}{:}	-	-	"StC module blade        o
 typedef	^	OutputType	MeshType	NStCLoadMesh	{:}	-	-	"StC module nacelle      output load mesh" -
 typedef	^	OutputType	MeshType	TStCLoadMesh	{:}	-	-	"StC module tower        output load mesh" -
 typedef	^	OutputType	MeshType	SStCLoadMesh	{:}	-	-	"StC module substructure output load mesh" -
-
+typedef	^	OutputType	SiKi	toSC	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-

@@ -42,6 +42,9 @@ if(BUILD_OPENFAST_CPP_API)
   set(CTEST_OPENFASTCPP_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast-cpp/openfastcpp" CACHE FILEPATH "Specify the OpenFAST C++ executable to use in testing.")
 endif()
 
+# Set the FASTFarm executable configuration option and default
+set(CTEST_FASTFARM_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast-farm/FAST.Farm" CACHE FILEPATH "Specify the FASTFarm executable to use in testing.")
+
 # Set the AeroDyn executable configuration option and default
 set(CTEST_AERODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/aerodyn_driver" CACHE FILEPATH "Specify the AeroDyn driver executable to use in testing.")
 
@@ -85,28 +88,60 @@ foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
   DESTINATION "${CTEST_BINARY_DIR}/glue-codes/openfast/")
 endforeach()
 
+## fastfarm seed
+foreach(turbineDirectory 5MW_Baseline)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast-farm/${turbineDirectory}"
+  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/fast-farm/")
+endforeach()
+
 # add the tests
 include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
 
+# Copy the DISCON controllers to the 5MW turbine directories
 set(src "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/5MW_Baseline/ServoData")
-set(dest "${CTEST_BINARY_DIR}/glue-codes/openfast/5MW_Baseline/ServoData/")
+
+set(of_dest "${CTEST_BINARY_DIR}/glue-codes/openfast/5MW_Baseline/ServoData/")
 add_custom_command(
-  OUTPUT "${dest}/DISCON.dll"
+  OUTPUT "${of_dest}/DISCON.dll"
   DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${dest}"
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${of_dest}"
 )
 add_custom_command(
-  OUTPUT "${dest}/DISCON_ITIBarge.dll"
+  OUTPUT "${of_dest}/DISCON_ITIBarge.dll"
   DEPENDS DISCON_ITIBarge
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_ITI/build/DISCON_ITIBarge.dll" "${dest}"
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_ITI/build/DISCON_ITIBarge.dll" "${of_dest}"
   )
 add_custom_command(
-  OUTPUT "${dest}/DISCON_OC3Hywind.dll"
+  OUTPUT "${of_dest}/DISCON_OC3Hywind.dll"
   DEPENDS DISCON_OC3Hywind
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${dest}"
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${of_dest}"
+)
+
+set(ff_dest "${CTEST_BINARY_DIR}/glue-codes/fast-farm/5MW_Baseline/ServoData/")
+add_custom_command(
+  OUTPUT "${ff_dest}/DISCON_WT1.dll"
+  DEPENDS DISCON
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT1.dll"
+)
+add_custom_command(
+  OUTPUT "${ff_dest}/DISCON_WT2.dll"
+  DEPENDS DISCON
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT2.dll"
+)
+add_custom_command(
+  OUTPUT "${ff_dest}/DISCON_WT3.dll"
+  DEPENDS DISCON
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT3.dll"
 )
 
 add_custom_target(
   regression_tests
-  DEPENDS openfast "${dest}/DISCON.dll" "${dest}/DISCON_ITIBarge.dll" "${dest}/DISCON_OC3Hywind.dll"
+  DEPENDS
+    openfast
+    "${of_dest}/DISCON.dll"
+    "${of_dest}/DISCON_ITIBarge.dll"
+    "${of_dest}/DISCON_OC3Hywind.dll"
+    "${ff_dest}/DISCON_WT1.dll"
+    "${ff_dest}/DISCON_WT2.dll"
+    "${ff_dest}/DISCON_WT3.dll"
 )
