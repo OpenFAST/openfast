@@ -43,20 +43,25 @@ TYPE(MD_OutputType)                     :: y           !< Initial system outputs
 TYPE(MD_MiscVarType)                    :: m           !< Initial misc/optimization variables
 TYPE(MD_InitOutputType)                 :: InitOutData !< Output for initialization routine
 
+INTEGER, PARAMETER :: InputStringLength = 179          !< Fixed length for all lines of the string-based input file
+
 CONTAINS
 
 !===============================================================================================================
 !---------------------------------------------- MD INIT --------------------------------------------------------
 !===============================================================================================================
-!FIXME: add g_C, rhoW_C, WtrDepth_C, and PtfmInit_C to the interface  -- make PtfmInit_C an array size 6
-SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
+SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
 
     !TEMPORARY hack until Waves handling is finalized
     USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_y0, WaveGrid_dx, WaveGrid_dy, WaveGrid_nx, WaveGrid_ny, WaveGrid_nz
 
-    INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileNameLength_C
-    CHARACTER(KIND=C_CHAR)                         , INTENT(IN   )   :: MD_InputFileName_C(InputFileNameLength_C)
+    TYPE(C_PTR)                                    , INTENT(IN   )   :: MD_InputFileString_C
+    INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
+    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: G_C
+    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: RHO_C
+    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DEPTH_C
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6)
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelNames_C
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelUnits_C
@@ -64,17 +69,16 @@ SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannel
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025) 
 
     ! Local Variables
+    CHARACTER(InputStringLength), DIMENSION(InputFileStringLength_C) :: InputFileStrings
     CHARACTER(KIND=C_CHAR, LEN=1), DIMENSION(:), POINTER             :: character_pointer
-    CHARACTER(InputFileNameLength_C)                                 :: MD_InputFileName
+    CHARACTER, DIMENSION(InputStringLength)                          :: single_line_character_array
+    CHARACTER(InputStringLength)                                     :: single_line_chars
     CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelNames_C(:)
     CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelUnits_C(:)
     REAL(DbKi)                                                       :: DTcoupling
-    INTEGER(IntKi)                                                   :: ErrStat
-    CHARACTER(ErrMsgLen)                                             :: ErrMsg
-    INTEGER                                                          :: I
-
-    INTEGER(IntKi)                                                   :: ErrStat2       ! temporary error status of the operation
-    CHARACTER(ErrMsgLen)                                             :: ErrMsg2        ! temporary error message
+    INTEGER(IntKi)                                                   :: ErrStat, ErrStat2
+    CHARACTER(ErrMsgLen)                                             :: ErrMsg, ErrMsg2
+    INTEGER                                                          :: I, J
 
     ! NOTE: Wave info will be handled differently in the future.  So the following is a temporary hack until that is finalized
     ! Hard coded for 10 wave steps.  Doesn't actually matter since it will get zeroed
@@ -84,26 +88,43 @@ SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannel
     ErrStat = ErrID_None
     ErrMsg  = ""
 
-    ! Convert the MD input filename from C to Fortran
-    MD_InputFileName = TRANSFER(MD_InputFileName_C, MD_InputFileName)
-    I = INDEX(MD_InputFileName,C_NULL_CHAR) - 1            ! if this has a c null character at the end...
-    IF ( I > 0 ) MD_InputFileName = MD_InputFileName(1:I)  ! remove it
-    PRINT *, 'Inside MD_INIT_C: the passed input filename is ', MD_InputFileName
+    ! Convert the string-input from C-style character arrays (char**) to a Fortran-style array of characters.
+    ! TODO: Add error checking
+    CALL C_F_pointer(MD_InputFileString_C, character_pointer, [InputFileStringLength_C * InputStringLength])
+    DO i = 0, InputFileStringLength_C - 1
+       single_line_character_array = character_pointer(i * InputStringLength + 1 : i * InputStringLength + InputStringLength)
+       DO j = 1, InputStringLength
+          single_line_chars(j:j) = single_line_character_array(j)
+       END DO
+       InputFileStrings(i + 1) = single_line_chars
+    END DO
+    PRINT *, 'InputFileStrings = ', InputFileStrings
+
+    ! Store string-inputs as type FileInfoType
+    CALL InitFileInfo(InputFileStrings, InitInp%PassedPrimaryInputData, ErrStat, ErrMsg)           
+    IF (ErrStat .NE. 0) THEN 
+       PRINT *, "MD_INIT_C: Failed to convert main input file to FileInfoType"
+       PRINT *, ErrMsg
+    END IF
 
     ! Set other inputs for calling MD_Init
     DTcoupling               = REAL(DT_C, DbKi)
-    InitInp%FileName         = MD_InputFileName
+    InitInp%FileName         = 'notUsed'
     InitInp%RootName         = 'MDroot'
+    InitInp%UsePrimaryInputFile = .FALSE.
 
     ! Environment variables -- These should be passed in from C.
-    InitInp%g                = 9.806         ! Set this from a value passed in from C
-    InitInp%rhoW             = 1000.0_ReKi   ! Set this from a value passed in from C
-    InitInp%WtrDepth         = 100.0_ReKi    ! Set this from a value passed in from C
+    InitInp%g                = REAL(G_C, DbKi)
+    InitInp%rhoW             = REAL(RHO_C, DbKi)
+    InitInp%WtrDepth         = REAL(DEPTH_C, DbKi)
 
     ! Platform position (x,y,z,Rx,Ry,Rz) -- where rotations are small angle assumption in radians.
     ! This data is used to set the CoupledKinematics mesh that will be used at each timestep call
     CALL AllocAry (InitInp%PtfmInit, 6, 'InitInp%PtfmInit', ErrStat2, ErrMsg2 ); IF (Failed()) RETURN
-    InitInp%PtfmInit         = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+    DO I = 1,6
+        InitInp%PtfmInit(I)  = REAL(PtfmInit_C(I),ReKi)
+    END DO
+    PRINT *, 'InitInp%PtfmInit = ', InitInp%PtfmInit
 
     ! Wave INformation - THIS IS A SHORT TERM HACK
     ! Fake wave info -- completely still, with no dynamic pressure terms
@@ -143,6 +164,12 @@ SUBROUTINE MD_INIT_C(MD_InputFileName_C, InputFileNameLength_C, DT_C, NumChannel
     END DO
     OutputChannelNames_C = C_LOC(tmp_OutputChannelNames_C)
     OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
+
+    ! Clean up variables and set up for IFW_CALCOUTPUT_C
+    CALL MD_DestroyInitInput( InitInp, ErrStat, ErrMsg )
+    IF (ErrStat /= 0) THEN
+        PRINT *, ErrMsg
+    END IF
 
     IF (ErrStat /= 0) THEN
         ErrStat_C = ErrID_Fatal

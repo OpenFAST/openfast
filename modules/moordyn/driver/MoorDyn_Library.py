@@ -1,3 +1,25 @@
+#**********************************************************************************************************************************
+# LICENSING
+# Copyright (C) 2021 Nicole Mendoza
+#
+# This file is part of MoorDyn.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#**********************************************************************************************************************************
+#
+# This is the Python-C interface library for MoorDyn
+# Usage: THIS LIBRARY IS NOT TO BE CHANGED OR EDITED BY THE USER
 from ctypes import (
 	CDLL,
     POINTER,
@@ -36,9 +58,13 @@ class MoorDynLibAPI(CDLL):
     # _initialize_routines ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
         self.MD_INIT_C.argtypes = [
-            POINTER(c_char),                      # IN: input filename
-            POINTER(c_int),                       # IN: input filename length
+            POINTER(c_char_p),                    # IN: input file string
+            POINTER(c_int),                       # IN: input file string length
             POINTER(c_double),                    # IN: dt
+            POINTER(c_double),                    # IN: g
+            POINTER(c_double),                    # IN: rho_water
+            POINTER(c_double),                    # IN: depth_water
+            POINTER(c_float),                     # IN: platform initial position
             POINTER(c_int),                       # OUT: number of channels
             POINTER(c_char),                      # OUT: output channel names
             POINTER(c_char),                      # OUT: output channel units
@@ -64,30 +90,38 @@ class MoorDynLibAPI(CDLL):
         self.MD_END_C.restype = c_int
 
     # md_init ------------------------------------------------------------------------------------------------------------
-    def md_init(self, input_filename):
+    def md_init(self, input_file_string, input_file_string_length, g, rho_water, depth_water, platform_init_pos):
 
         print('MoorDyn_Library.py: Running MD_INIT_C .....')
 
         # Convert the string into a c_char byte array
-        input_filename_c = create_string_buffer(len(input_filename))
-        for i, param in enumerate(input_filename):
-            input_filename_c[i] = param.encode('utf-8')
-        input_filename_length = len(input_filename)
+        input_string_array = (c_char_p * len(input_file_string))()
+        for i, param in enumerate(input_file_string):
+            input_string_array[i] = param.encode('utf-8')
+
+        # Convert the positions array into c_float array
+        init_positions_c = (c_float * 6)(0.0, )
+        for i, p in enumerate(platform_init_pos):
+            init_positions_c[i] = c_float(p)
 
         self._numChannels = c_int(0)
 
         self.MD_INIT_C(
-            input_filename_c,                      # IN: input filename
-            byref(c_int(input_filename_length)),   # IN: input filename length
+            input_string_array,                    # IN: input file string
+            byref(c_int(input_file_string_length)),# IN: input file string length
             byref(c_double(self.dt)),              # IN: time step (dt)
+            byref(c_double(g)),                    # IN: g
+            byref(c_double(rho_water)),            # IN: rho_water
+            byref(c_double(depth_water)),          # IN: depth_water
+            init_positions_c,                      # IN: platform initial position
             byref(self._numChannels),              # OUT: number of channels
             self._channel_names,                   # OUT: output channel names
             self._channel_units,                   # OUT: output channel units
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.fatal_error:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
+        if self.error_status.value != 0:
+            print(f"md_init Error {self.error_status.value}: {self.error_message.value}")
             return
 
         # Initialize output channels
@@ -105,7 +139,7 @@ class MoorDynLibAPI(CDLL):
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.fatal_error:
+        if self.error_status.value != 0:
             print(f"Error {self.error_status.value}: {self.error_message.value}")
             return
 
@@ -120,7 +154,7 @@ class MoorDynLibAPI(CDLL):
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.fatal_error:
+        if self.error_status.value != 0:
             print(f"Error {self.error_status.value}: {self.error_message.value}")
             return
 
@@ -135,7 +169,7 @@ class MoorDynLibAPI(CDLL):
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.fatal_error:
+        if self.error_status.value != 0:
             print(f"Error {self.error_status.value}: {self.error_message.value}")
             return
 
