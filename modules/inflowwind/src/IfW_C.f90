@@ -79,9 +79,16 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
     CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelNames_C(:)
     CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelUnits_C(:)
     REAL(DbKi)                                                       :: TimeInterval
-    INTEGER                                                          :: ErrStat
-    CHARACTER(ErrMsgLen)                                             :: ErrMsg
+    INTEGER                                                          :: ErrStat                    !< aggregated error message
+    CHARACTER(ErrMsgLen)                                             :: ErrMsg                     !< aggregated error message
+    INTEGER                                                          :: ErrStat2                   !< temporary error status  from a call
+    CHARACTER(ErrMsgLen)                                             :: ErrMsg2                    !< temporary error message from a call
     INTEGER                                                          :: I, J, K
+    character(*), parameter                                          :: RoutineName = 'IFW_INIT_C' !< for error handling
+
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
 
    ! Convert the string-input from C-style character arrays (char**) to a Fortran-style array of characters.
    ! TODO: Add error checking
@@ -104,17 +111,10 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
    END DO
 
    ! Store string-inputs as type FileInfoType within InflowWind_InitInputType
-   CALL InitFileInfo(InputFileStrings, InitInp%PassedFileData, ErrStat, ErrMsg)           
-   IF (ErrStat .NE. 0) THEN 
-      PRINT *, "IFW_INIT_C: Failed to convert main input file to FileInfoType"
-      PRINT *, ErrMsg
-   END IF
-
-   CALL InitFileInfo(InputUniformStrings, InitInp%WindType2Data, ErrStat, ErrMsg)        
-   IF (ErrStat .NE. 0) THEN 
-      PRINT *, "IFW_INIT_C: Failed to convert uniform input file to FileInfoType"
-      PRINT *, ErrMsg
-   END IF
+   CALL InitFileInfo(InputFileStrings, InitInp%PassedFileData, ErrStat2, ErrMsg2)
+      if (Failed())  return
+   CALL InitFileInfo(InputUniformStrings, InitInp%WindType2Data, ErrStat2, ErrMsg2)        
+      if (Failed())  return
 
    ! Set other inputs for calling InflowWind_Init
    InitInp%NumWindPoints         = NumWindPts_C              
@@ -125,17 +125,22 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
    TimeInterval                  = REAL(DT_C, DbKi)
 
    ! Call the main subroutine InflowWind_Init - only need InitInp and TimeInterval as inputs, the rest are set by InflowWind_Init
-   CALL InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, y, m, TimeInterval, InitOutData, ErrStat, ErrMsg )
-   IF (ErrStat .NE. 0) THEN 
-      PRINT *, "IFW_INIT_C: Main InflowWind_Init subroutine failed!"
-      PRINT *, ErrMsg
-   ELSE
-      PRINT*, "IFW_INIT_C: Successfully called InflowWind_Init ....."
-   END IF
+   CALL InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
+      if (Failed())  return
 
    ! Convert the outputs of InflowWind_Init from Fortran to C
-   ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%WriteOutputHdr)))
-   ALLOCATE(tmp_OutputChannelUnits_C(size(InitOutData%WriteOutputUnt)))
+   ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%WriteOutputHdr)),STAT=ErrStat2)
+      if (ErrStat2 /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate WriteOutputHdr array"
+      endif
+      if (Failed())  return
+   ALLOCATE(tmp_OutputChannelUnits_C(size(InitOutData%WriteOutputUnt)),STAT=ErrStat2)
+      if (ErrStat2 /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate WriteOutputUnt array"
+      endif
+      if (Failed())  return
    NumChannels_C = size(InitOutData%WriteOutputHdr)
 
    DO I = 1,NumChannels_C
@@ -145,21 +150,32 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
    OutputChannelNames_C = C_LOC(tmp_OutputChannelNames_C)
    OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
 
-   if (ErrStat /= 0) then
-      ErrStat_C = ErrID_Fatal
-   else
-      ErrStat_C = ErrID_None
-   end if
-   ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
-
    ! Clean up variables and set up for IFW_CALCOUTPUT_C
-   CALL InflowWind_CopyInput(InputGuess, InputData, MESH_UPDATECOPY, ErrStat, ErrMsg )
-   CALL InflowWind_DestroyInput(InputGuess, ErrStat, ErrMsg ) 
+   CALL InflowWind_CopyInput(InputGuess, InputData, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+      if (Failed())  return
+   CALL InflowWind_CopyConstrState(ConstrStateGuess, ConstrStates, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+      if (Failed())  return
 
-   CALL InflowWind_CopyConstrState(ConstrStateGuess, ConstrStates, MESH_UPDATECOPY, ErrStat, ErrMsg )
-   CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat, ErrMsg ) 
+   call Cleanup()
+   call SetErr()
 
-   PRINT*, "DONE WITH IFW_INIT_C!"
+CONTAINS
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) then
+         call Cleanup()
+         call SetErr()
+      endif
+   end function Failed
+   subroutine Cleanup()    ! NOTE: we are ignoring any error reporting from here
+      CALL InflowWind_DestroyInput(InputGuess, ErrStat2, ErrMsg2 )
+      CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat2, ErrMsg2 )
+   end subroutine Cleanup 
+   subroutine SetErr()
+      ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
+      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+   end subroutine SetErr
 
 END SUBROUTINE IFW_INIT_C
 
@@ -168,48 +184,51 @@ END SUBROUTINE IFW_INIT_C
 !===============================================================================================================
 
 SUBROUTINE IFW_CALCOUTPUT_C(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_CALCOUTPUT_C')
+   REAL(C_DOUBLE)                , INTENT(IN   )      :: Time_C
+   REAL(C_FLOAT)                 , INTENT(IN   )      :: Positions_C(3*InitInp%NumWindPoints)
+   REAL(C_FLOAT)                 , INTENT(  OUT)      :: Velocities_C(3*InitInp%NumWindPoints)
+   REAL(C_FLOAT)                 , INTENT(  OUT)      :: OutputChannelValues_C(p%NumOuts)
+   INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
+   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
 
-REAL(C_DOUBLE)                , INTENT(IN   )      :: Time_C
-REAL(C_FLOAT)                 , INTENT(IN   )      :: Positions_C(3*InitInp%NumWindPoints)
-REAL(C_FLOAT)                 , INTENT(  OUT)      :: Velocities_C(3*InitInp%NumWindPoints)
-REAL(C_FLOAT)                 , INTENT(  OUT)      :: OutputChannelValues_C(p%NumOuts)
-INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+   ! Local variables
+   REAL(DbKi)                                         :: Time
+   INTEGER                                            :: ErrStat                          !< aggregated error message
+   CHARACTER(ErrMsgLen)                               :: ErrMsg                           !< aggregated error message
+   INTEGER                                            :: ErrStat2                         !< temporary error status  from a call
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2                          !< temporary error message from a call
+   character(*), parameter                            :: RoutineName = 'IFW_CALCOUTPUT_C' !< for error handling
 
-! Local variables
-REAL(DbKi)                                         :: Time
-INTEGER                                            :: ErrStat
-CHARACTER(ErrMsgLen)                               :: ErrMsg
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
 
-! Convert the inputs from C to Fortran
-Time = REAL(Time_C,DbKi)
-InputData%PositionXYZ = reshape( real(Positions_C,ReKi), (/3, InitInp%NumWindPoints/) )
+   ! Convert the inputs from C to Fortran
+   Time = REAL(Time_C,DbKi)
+   InputData%PositionXYZ = reshape( real(Positions_C,ReKi), (/3, InitInp%NumWindPoints/) )
 
-! Call the main subroutine InflowWind_CalcOutput to get the velocities
-CALL InflowWind_CalcOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat, ErrMsg )
-IF (ErrStat .NE. 0) THEN
-   PRINT *, "IFW_CALCOUTPUT_C: InflowWind_CalcOutput failed"
-   PRINT *, ErrMsg
-ELSE
-   PRINT*, "IFW_CALCOUTPUT_C: Successfully called InflowWind_CalcOutput ....."
-END IF
+   ! Call the main subroutine InflowWind_CalcOutput to get the velocities
+   CALL InflowWind_CalcOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat2, ErrMsg2 )
+      if (Failed())  return
 
-! Get velocities out of y and flatten them (still in same spot in memory)
-Velocities_C = reshape( REAL(y%VelocityUVW, C_FLOAT), (/3*InitInp%NumWindPoints/) ) ! VelocityUVW is 2D array of ReKi (might need reshape or make into pointer); size [3,N]
+   ! Get velocities out of y and flatten them (still in same spot in memory)
+   Velocities_C = reshape( REAL(y%VelocityUVW, C_FLOAT), (/3*InitInp%NumWindPoints/) ) ! VelocityUVW is 2D array of ReKi (might need reshape or make into pointer); size [3,N]
 
-! Get the output channel info out of y
-OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
+   ! Get the output channel info out of y
+   OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
-! Convert the outputs of InflowWind_CalcOutput from Fortran to C
-if (ErrStat /= 0) then
-   ErrStat_C = ErrID_Fatal
-else
-   ErrStat_C = ErrID_None
-end if
-ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
+   call SetErr()
 
-PRINT*, "DONE WITH IFW_CALCOUTPUT_C!"
-
+CONTAINS
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call SetErr()
+   end function Failed
+   subroutine SetErr()
+      ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
+      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+   end subroutine SetErr
 END SUBROUTINE IFW_CALCOUTPUT_C
 
 !===============================================================================================================
@@ -218,32 +237,23 @@ END SUBROUTINE IFW_CALCOUTPUT_C
 
 SUBROUTINE IFW_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_END_C')
 
-INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+   INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
+   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
 
-! Local variables
-INTEGER                                            :: ErrStat
-CHARACTER(ErrMsgLen)                               :: ErrMsg
+   ! Local variables
+   INTEGER                                            :: ErrStat
+   CHARACTER(ErrMsgLen)                               :: ErrMsg
 
-! Call the main subroutine InflowWind_End
-CALL InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat, ErrMsg )
-IF (ErrStat .NE. 0) THEN
-   PRINT *, "IFW_END_C: InflowWind_End failed"
-   PRINT *, ErrMsg
-ELSE
-   PRINT*, "IFW_END_C: Successfully called InflowWind_END ....."
-END IF
+   ! Call the main subroutine InflowWind_End
+   CALL InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat, ErrMsg )
 
-! Convert the outputs of InflowWind_End from Fortran to C
-if (ErrStat /= 0) then
-   ErrStat_C = ErrID_Fatal
-else
-   ErrStat_C = ErrID_None
-end if
-ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
+   call SetErr()
 
-PRINT*, "DONE WITH IFW_END_C!"
-
+CONTAINS
+   subroutine SetErr()
+      ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
+      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+   end subroutine SetErr
 END SUBROUTINE IFW_END_C
 
 END MODULE
