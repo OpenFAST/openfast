@@ -2589,8 +2589,8 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
          RETURN        
       end if
 
-         ! SpdSound - Speed of sound in air (m/s):
-   CALL ReadVar( UnIn, InputFile, p%SpdSound, "SpdSound", "Speed of sound in air (m/s)", ErrStat2, ErrMsg2, UnEc)
+         ! SpdSound - Speed of sound in working fluid (m/s):
+   CALL ReadVar( UnIn, InputFile, p%SpdSound, "SpdSound", "Speed of sound in working fluid (m/s)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()

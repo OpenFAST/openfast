@@ -17,7 +17,7 @@ False         CompAA             - Flag to compute AeroAcoustics calculation [on
 ======  Environmental Conditions  ===================================================================
 "default"     AirDens            - Air density (kg/m^3)
 "default"     KinVisc            - Kinematic viscosity of working fluid (m^2/s)
-"default"     SpdSound           - Speed of sound in air (m/s)
+"default"     SpdSound           - Speed of sound in working fluid (m/s)
 "default"     Patm               - Atmospheric pressure (Pa) [used only when CavitCheck=True]
 "default"     Pvap               - Vapour pressure of working fluid (Pa) [used only when CavitCheck=True]
 ======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3]

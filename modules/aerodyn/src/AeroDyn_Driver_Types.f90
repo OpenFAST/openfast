@@ -221,7 +221,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: AnalysisType      !< 0=Steady Wind, 1=InflowWind [-]
     REAL(ReKi)  :: FldDens      !< Density of working fluid [kg/m^3]
     REAL(ReKi)  :: KinVisc      !< Kinematic viscosity of working fluid [m^2/s]
-    REAL(ReKi)  :: SpdSound      !< Speed of sound in air [m/s]
+    REAL(ReKi)  :: SpdSound      !< Speed of sound in working fluid [m/s]
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure of working fluid [Pa]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]

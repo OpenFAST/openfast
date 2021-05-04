@@ -160,7 +160,7 @@ typedef   ^                         ^            IntKi                   MHK    
 typedef   ^                         ^            IntKi                   AnalysisType     -      -     -   "0=Steady Wind, 1=InflowWind" "-"
 typedef   ^                         ^            ReKi                    FldDens          -      -     -   "Density of working fluid" "kg/m^3"
 typedef   ^                         ^            ReKi                    KinVisc          -      -     -   "Kinematic viscosity of working fluid" "m^2/s"
-typedef   ^                         ^            ReKi                    SpdSound         -      -     -   "Speed of sound in air" "m/s"
+typedef   ^                         ^            ReKi                    SpdSound         -      -     -   "Speed of sound in working fluid" "m/s"
 typedef   ^                         ^            ReKi                    Patm             -      -     -   "Atmospheric pressure" "Pa"
 typedef   ^                         ^            ReKi                    Pvap             -      -     -   "Vapour pressure of working fluid" "Pa"
 typedef   ^                         ^            ReKi                    WtrDpth          -      -     -   "Water depth" "m"
