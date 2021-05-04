@@ -163,7 +163,7 @@ for t in time:
 # IFW_END: Only need to call ifw_end once
 ifwlib.ifw_end()
 
-print("We have successfully run inflowWind!")
+# print("We have successfully run inflowWind!")
 exit()
 
 # If IFW fails, need to kill driver program

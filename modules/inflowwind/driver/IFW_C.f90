@@ -129,8 +129,6 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
    IF (ErrStat .NE. 0) THEN 
       PRINT *, "IFW_INIT_C: Main InflowWind_Init subroutine failed!"
       PRINT *, ErrMsg
-   ELSE
-      PRINT*, "IFW_INIT_C: Successfully called InflowWind_Init ....."
    END IF
 
    ! Convert the outputs of InflowWind_Init from Fortran to C
@@ -145,11 +143,11 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
    OutputChannelNames_C = C_LOC(tmp_OutputChannelNames_C)
    OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
 
-   if (ErrStat /= 0) then
+   IF (ErrStat /= 0) THEN
       ErrStat_C = ErrID_Fatal
-   else
+   ELSE
       ErrStat_C = ErrID_None
-   end if
+   END IF
    ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
    ! Clean up variables and set up for IFW_CALCOUTPUT_C
@@ -159,7 +157,7 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
    CALL InflowWind_CopyConstrState(ConstrStateGuess, ConstrStates, MESH_UPDATECOPY, ErrStat, ErrMsg )
    CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat, ErrMsg ) 
 
-   PRINT*, "DONE WITH IFW_INIT_C!"
+   ! PRINT*, "DONE WITH IFW_INIT_C!"
 
 END SUBROUTINE IFW_INIT_C
 
@@ -190,8 +188,6 @@ CALL InflowWind_CalcOutput( Time, InputData, p, ContStates, DiscStates, ConstrSt
 IF (ErrStat .NE. 0) THEN
    PRINT *, "IFW_CALCOUTPUT_C: InflowWind_CalcOutput failed"
    PRINT *, ErrMsg
-ELSE
-   PRINT*, "IFW_CALCOUTPUT_C: Successfully called InflowWind_CalcOutput ....."
 END IF
 
 ! Get velocities out of y and flatten them (still in same spot in memory)
@@ -201,14 +197,14 @@ Velocities_C = reshape( REAL(y%VelocityUVW, C_FLOAT), (/3*InitInp%NumWindPoints/
 OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
 ! Convert the outputs of InflowWind_CalcOutput from Fortran to C
-if (ErrStat /= 0) then
+IF (ErrStat /= 0) THEN
    ErrStat_C = ErrID_Fatal
-else
+ELSE
    ErrStat_C = ErrID_None
-end if
+END IF
 ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
-PRINT*, "DONE WITH IFW_CALCOUTPUT_C!"
+! PRINT*, "DONE WITH IFW_CALCOUTPUT_C!"
 
 END SUBROUTINE IFW_CALCOUTPUT_C
 
@@ -230,19 +226,17 @@ CALL InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStates, OtherSt
 IF (ErrStat .NE. 0) THEN
    PRINT *, "IFW_END_C: InflowWind_End failed"
    PRINT *, ErrMsg
-ELSE
-   PRINT*, "IFW_END_C: Successfully called InflowWind_END ....."
 END IF
 
 ! Convert the outputs of InflowWind_End from Fortran to C
-if (ErrStat /= 0) then
+IF (ErrStat /= 0) THEN
    ErrStat_C = ErrID_Fatal
-else
+ELSE
    ErrStat_C = ErrID_None
-end if
+END IF
 ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
-PRINT*, "DONE WITH IFW_END_C!"
+! PRINT*, "DONE WITH IFW_END_C!"
 
 END SUBROUTINE IFW_END_C
 
