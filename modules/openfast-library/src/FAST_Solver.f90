@@ -42,7 +42,6 @@ MODULE FAST_Solver
    USE ServoDyn
    USE SubDyn
    USE OpenFOAM
-   USE SuperController
    Use ExtPtfm_MCKF
    
 
@@ -95,7 +94,7 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, y_ED, y_SrvD, u_SrvD, MeshMapD
             
             DO K = 1,p_FAST%nBeams ! Loop through all blades
                                     
-               CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), BD%y(k)%BldMotion )
+               CALL Transfer_Line2_to_Line2( y_AD%rotors(1)%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), BD%y(k)%BldMotion )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
             END DO
@@ -107,7 +106,7 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, y_ED, y_SrvD, u_SrvD, MeshMapD
                CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         
-               CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
+               CALL Transfer_Line2_to_Line2( y_AD%rotors(1)%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
             END DO
@@ -234,7 +233,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
       ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
          
          DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
-            CALL Transfer_Line2_to_Point( y_AD%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
+            CALL Transfer_Line2_to_Point( y_AD%rotors(1)%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          END DO
                   
@@ -250,9 +249,9 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
    END IF
       
                   
+   u_ED%TowerPtLoads%Force  = 0.0_ReKi
+   u_ED%TowerPtLoads%Moment = 0.0_ReKi
    IF ( p_FAST%CompAero == Module_AD14 ) THEN   
-      u_ED%TowerPtLoads%Force  = 0.0_ReKi
-      u_ED%TowerPtLoads%Moment = 0.0_ReKi
             
          ! add aero force to the tower, if it's provided:
       IF ( y_AD14%Twr_OutputLoads%Committed ) THEN
@@ -273,8 +272,8 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
       
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
       
-      IF ( y_AD%TowerLoad%Committed ) THEN
-         CALL Transfer_Line2_to_Point( y_AD%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%TowerMotion, y_ED%TowerLn2Mesh )
+      IF ( y_AD%rotors(1)%TowerLoad%Committed ) THEN
+         CALL Transfer_Line2_to_Point( y_AD%rotors(1)%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%rotors(1)%TowerMotion, y_ED%TowerLn2Mesh )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)         
       END IF
             
@@ -282,6 +281,10 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
       u_ED%TowerPtLoads%Force  = 0.0_ReKi
       u_ED%TowerPtLoads%Moment = 0.0_ReKi      
    END IF
+
+   ! Initialize here so because we may be adding loads from SrvD/NStC with AD nacelle drag:
+   u_ED%NacelleLoads%Force = 0.0_ReKi
+   u_ED%NacelleLoads%Moment = 0.0_ReKi
 
       ! ED inputs from ServoDyn
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
@@ -363,7 +366,16 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
    u_ED%TwrAddedMass  = 0.0_ReKi
    u_ED%PtfmAddedMass = 0.0_ReKi
                
-   
+   IF ( p_FAST%CompAero == Module_AD ) THEN ! we have to do this after the nacelle loads from StrucCtrl NStC
+         IF ( u_AD%rotors(1)%NacelleMotion%Committed ) THEN
+            CALL Transfer_Point_to_Point( y_AD%rotors(1)%NacelleLoad, MeshMapData%u_ED_NacelleLoads, MeshMapData%AD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_AD%rotors(1)%NacelleMotion, y_ED%NacelleMotion )
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               
+            u_ED%NacelleLoads%Force  = u_ED%NacelleLoads%Force +  MeshMapData%u_ED_NacelleLoads%Force
+            u_ED%NacelleLoads%Moment = u_ED%NacelleLoads%Moment + MeshMapData%u_ED_NacelleLoads%Moment
+         END IF
+   END IF
+
       ! add damping in blades and tower for linearization convergence
    if (p_FAST%CalcSteady) then
    
@@ -392,7 +404,7 @@ END SUBROUTINE ED_InputSolve
 !> This routine determines the points in space where InflowWind needs to compute wind speeds.
 SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_AD, y_ED, ErrStat, ErrMsg )
 
-   TYPE(InflowWind_InputType),     INTENT(INOUT)   :: u_IfW(:)    !< The inputs to InflowWind
+   TYPE(InflowWind_InputType),     INTENT(INOUT)   :: u_IfW       !< The inputs to InflowWind
    TYPE(InflowWind_ParameterType), INTENT(IN   )   :: p_IfW       !< The parameters to InflowWind   
    TYPE(AD14_InputType),           INTENT(IN)      :: u_AD14      !< The input meshes (already calculated) from AeroDyn14
    TYPE(AD_InputType),             INTENT(IN)      :: u_AD        !< The input meshes (already calculated) from AeroDyn
@@ -420,7 +432,7 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
    Node = 0      
    IF (p_FAST%CompServo == MODULE_SrvD) THEN
       Node = Node + 1
-      u_IfW(1)%PositionXYZ(:,Node) = y_ED%HubPtMotion%Position(:,1) ! undisplaced position. Maybe we want to use the displaced position (y_ED%HubPtMotion%TranslationDisp) at some point in time.
+      u_IfW%PositionXYZ(:,Node) = y_ED%HubPtMotion%Position(:,1) ! undisplaced position. Maybe we want to use the displaced position (y_ED%HubPtMotion%TranslationDisp) at some point in time.
    END IF       
             
    IF (p_FAST%CompAero == MODULE_AD14) THEN   
@@ -428,46 +440,53 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
       DO K = 1,SIZE(u_AD14%InputMarkers)
          DO J = 1,u_AD14%InputMarkers(K)%nnodes  !this mesh isn't properly set up (it's got the global [absolute] position and no reference position)
             Node = Node + 1
-            u_IfW(1)%PositionXYZ(:,Node) = u_AD14%InputMarkers(K)%Position(:,J)
+            u_IfW%PositionXYZ(:,Node) = u_AD14%InputMarkers(K)%Position(:,J)
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
       END DO !K = 1,p%NumBl         
                   
       DO J=1,u_AD14%Twr_InputMarkers%nnodes
          Node = Node + 1      
-         u_IfW(1)%PositionXYZ(:,Node) = u_AD14%Twr_InputMarkers%TranslationDisp(:,J) + u_AD14%Twr_InputMarkers%Position(:,J)
+         u_IfW%PositionXYZ(:,Node) = u_AD14%Twr_InputMarkers%TranslationDisp(:,J) + u_AD14%Twr_InputMarkers%Position(:,J)
       END DO      
          
    ELSEIF (p_FAST%CompAero == MODULE_AD) THEN               
       
-      DO K = 1,SIZE(u_AD%BladeMotion)
-         DO J = 1,u_AD%BladeMotion(k)%Nnodes
+      DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
+         DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
             
             Node = Node + 1
-            u_IfW(1)%PositionXYZ(:,Node) = u_AD%BladeMotion(k)%TranslationDisp(:,j) + u_AD%BladeMotion(k)%Position(:,j)
+            u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(:,j) + u_AD%rotors(1)%BladeMotion(k)%Position(:,j)
             
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
       END DO !K = 1,p%NumBl         
 
-      DO J=1,u_AD%TowerMotion%nnodes
+      DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
          Node = Node + 1
-         u_IfW(1)%PositionXYZ(:,Node) = u_AD%TowerMotion%TranslationDisp(:,J) + u_AD%TowerMotion%Position(:,J)
+         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(1)%TowerMotion%Position(:,J)
       END DO      
+      
+      if (u_AD%rotors(1)%NacelleMotion%Committed) then
+         Node = Node + 1
+         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(1)%NacelleMotion%Position(:,1)
+      end if
+      
+!      if (u_AD%HubMotion%Committed) then
+!         Node = Node + 1
+!         u_IfW%PositionXYZ(:,Node) = u_AD%HubMotion%TranslationDisp(:,1) + u_AD%HubMotion%Position(:,1)
+!      end if
                   
-         ! vortex points from FVW in AD15
+      ! vortex points from FVW in AD15 (should be at then end, since not "rotor dependent"
       if (allocated(OtherSt_AD%WakeLocationPoints)) then
          do J=1,size(OtherSt_AD%WakeLocationPoints,DIM=2)
             Node = Node + 1
-            u_IfW(1)%PositionXYZ(:,Node) = OtherSt_AD%WakeLocationPoints(:,J)
-            ! rewrite the history of this so that extrapolation doesn't make a mess of things
-            do k=2,size(u_IfW)
-               if (allocated(u_IfW(k)%PositionXYZ))   u_IfW(k)%PositionXYZ(:,Node) = u_IfW(1)%PositionXYZ(:,Node)
-            end do
+            u_IfW%PositionXYZ(:,Node) = OtherSt_AD%WakeLocationPoints(:,J)
          enddo
       end if
+      
    END IF
    
                
-   CALL IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW(1) )
+   CALL IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
 
 
 END SUBROUTINE IfW_InputSolve
@@ -529,24 +548,39 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
       end if
       
       
-      NumBl  = size(u_AD%InflowOnBlade,3)
-      Nnodes = size(u_AD%InflowOnBlade,2)
+      NumBl  = size(u_AD%rotors(1)%InflowOnBlade,3)
+      Nnodes = size(u_AD%rotors(1)%InflowOnBlade,2)
       
       do k=1,NumBl
          do j=1,Nnodes
-            u_AD%InflowOnBlade(:,j,k) = y_IfW%VelocityUVW(:,node)
+            u_AD%rotors(1)%InflowOnBlade(:,j,k) = y_IfW%VelocityUVW(:,node)
             node = node + 1
          end do
       end do
                   
-      if ( allocated(u_AD%InflowOnTower) ) then
-         Nnodes = size(u_AD%InflowOnTower,2)
+      if ( allocated(u_AD%rotors(1)%InflowOnTower) ) then
+         Nnodes = size(u_AD%rotors(1)%InflowOnTower,2)
          do j=1,Nnodes
-            u_AD%InflowOnTower(:,j) = y_IfW%VelocityUVW(:,node)
+            u_AD%rotors(1)%InflowOnTower(:,j) = y_IfW%VelocityUVW(:,node)
             node = node + 1
          end do      
       end if
-         ! velocity at vortex wake points velocity array handoff here
+
+      if (u_AD%rotors(1)%NacelleMotion%NNodes > 0) then
+         u_AD%rotors(1)%InflowOnNacelle(:) = y_IfW%VelocityUVW(:,node)
+         node = node + 1
+      else
+         u_AD%rotors(1)%InflowOnNacelle = 0.0_ReKi
+      end if
+         
+!      if (u_AD%HubMotion%NNodes > 0) then
+!         u_AD%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
+!         node = node + 1
+!      else
+!         u_AD%InflowOnHub = 0.0_ReKi
+!      end if
+
+      ! vortex points from FVW in AD15 (should be at then end, since not "rotor dependent"
       if ( allocated(u_AD%InflowWakeVel) ) then
          Nnodes = size(u_AD%InflowWakeVel,DIM=2)
          do j=1,Nnodes
@@ -555,35 +589,52 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
          end do
       end if
 
-         
    ELSEIF ( p_FAST%CompInflow == MODULE_OpFM ) THEN
       node = 2 !start of inputs to AD15
 
-      NumBl  = size(u_AD%InflowOnBlade,3)
-      Nnodes = size(u_AD%InflowOnBlade,2)
+      NumBl  = size(u_AD%rotors(1)%InflowOnBlade,3)
+      Nnodes = size(u_AD%rotors(1)%InflowOnBlade,2)
       
       do k=1,NumBl
          do j=1,Nnodes
-            u_AD%InflowOnBlade(1,j,k) = y_OpFM%u(node)
-            u_AD%InflowOnBlade(2,j,k) = y_OpFM%v(node)
-            u_AD%InflowOnBlade(3,j,k) = y_OpFM%w(node)
+            u_AD%rotors(1)%InflowOnBlade(1,j,k) = y_OpFM%u(node)
+            u_AD%rotors(1)%InflowOnBlade(2,j,k) = y_OpFM%v(node)
+            u_AD%rotors(1)%InflowOnBlade(3,j,k) = y_OpFM%w(node)
             node = node + 1
          end do
       end do
                   
-      if ( allocated(u_AD%InflowOnTower) ) then
-         Nnodes = size(u_AD%InflowOnTower,2)
+      if ( allocated(u_AD%rotors(1)%InflowOnTower) ) then
+         Nnodes = size(u_AD%rotors(1)%InflowOnTower,2)
          do j=1,Nnodes
-            u_AD%InflowOnTower(1,j) = y_OpFM%u(node)
-            u_AD%InflowOnTower(2,j) = y_OpFM%v(node)
-            u_AD%InflowOnTower(3,j) = y_OpFM%w(node)
+            u_AD%rotors(1)%InflowOnTower(1,j) = y_OpFM%u(node)
+            u_AD%rotors(1)%InflowOnTower(2,j) = y_OpFM%v(node)
+            u_AD%rotors(1)%InflowOnTower(3,j) = y_OpFM%w(node)
             node = node + 1
          end do      
-      end if      
+      end if
+      
+      if (u_AD%rotors(1)%NacelleMotion%NNodes > 0) then
+         u_AD%rotors(1)%InflowOnNacelle(1) = y_OpFM%u(node)
+         u_AD%rotors(1)%InflowOnNacelle(2) = y_OpFM%v(node)
+         u_AD%rotors(1)%InflowOnNacelle(3) = y_OpFM%w(node)
+         node = node + 1
+      else
+         u_AD%rotors(1)%InflowOnNacelle = 0.0_ReKi
+      end if
+      
+!      if (u_AD%HubMotion%NNodes > 0) then
+!         u_AD%InflowOnHub(1) = y_OpFM%u(node)
+!         u_AD%InflowOnHub(2) = y_OpFM%v(node)
+!         u_AD%InflowOnHub(3) = y_OpFM%w(node)
+!         node = node + 1
+!      else
+!         u_AD%InflowOnHub = 0.0_ReKi
+!      end if
       
    ELSE
       
-      u_AD%InflowOnBlade = 0.0_ReKi ! whole array
+      u_AD%rotors(1)%InflowOnBlade = 0.0_ReKi ! whole array
       
    END IF
    
@@ -623,22 +674,22 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_SrvD, y_ED, BD, MeshMapData, Err
    !-------------------------------------------------------------------------------------------------
    
       ! tower
-   IF (u_AD%TowerMotion%Committed) THEN
+   IF (u_AD%rotors(1)%TowerMotion%Committed) THEN
       
-      CALL Transfer_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
+      CALL Transfer_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TowerMotion' )      
             
    END IF
    
       
       ! hub
-   CALL Transfer_Point_to_Point( y_ED%HubPtMotion, u_AD%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
+   CALL Transfer_Point_to_Point( y_ED%HubPtMotion, u_AD%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%HubMotion' )      
    
    
       ! blade root   
    DO k=1,size(y_ED%BladeRootMotion)
-      CALL Transfer_Point_to_Point( y_ED%BladeRootMotion(k), u_AD%BladeRootMotion(k), MeshMapData%ED_P_2_AD_P_R(k), ErrStat2, ErrMsg2 )
+      CALL Transfer_Point_to_Point( y_ED%BladeRootMotion(k), u_AD%rotors(1)%BladeRootMotion(k), MeshMapData%ED_P_2_AD_P_R(k), ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeRootMotion('//trim(num2lstr(k))//')' )      
    END DO
       
@@ -647,20 +698,29 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_SrvD, y_ED, BD, MeshMapData, Err
    IF (p_FAST%CompElast == Module_ED ) THEN
       
       DO k=1,size(y_ED%BladeLn2Mesh)
-         CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(k), u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
+         CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )   
       END DO
       
    ELSEIF (p_FAST%CompElast == Module_BD ) THEN
       
          ! get them from BeamDyn
-      DO k=1,size(u_AD%BladeMotion)
-         CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
+      DO k=1,size(u_AD%rotors(1)%BladeMotion)
+         CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )   
       END DO
       
+   END IF
+      
+      ! nacelle
+   IF (u_AD%rotors(1)%NacelleMotion%Committed) THEN
+      
+      CALL Transfer_Point_to_Point( y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
    END IF
+      
+
    
    
       ! Set Conrol parameter (i.e. flaps) if using ServoDyn
@@ -670,9 +730,9 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_SrvD, y_ED, BD, MeshMapData, Err
       !  This is passed to AD15 to be interpolated with the airfoil table userprop column
       !  (might be used for airfoil flap angles for example)
    if (p_FAST%CompServo == Module_SrvD) then
-      DO k_bl=1,size(u_AD%UserProp,DIM=2)
-          DO k_bn=1,size(u_AD%UserProp,DIM=1)
-            u_AD%UserProp(k_bn , k_bl) = y_SrvD%BlAirfoilCom(k_bl)      ! Must be same units as given in airfoil (no unit conversions handled in code)
+      DO k_bl=1,size(u_AD%rotors(1)%UserProp,DIM=2)
+          DO k_bn=1,size(u_AD%rotors(1)%UserProp,DIM=1)
+            u_AD%rotors(1)%UserProp(k_bn , k_bl) = y_SrvD%BlAirfoilCom(k_bl)      ! Must be same units as given in airfoil (no unit conversions handled in code)
           END DO
       END DO
    endif
@@ -864,6 +924,7 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
    !  u_AD14%MulTabLoc(IElements,IBlades) = ???
    
 END SUBROUTINE AD14_InputSolve_NoIfW
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for ServoDyn
 SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y_SD, MeshMapData, ErrStat, ErrMsg )
@@ -901,19 +962,13 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
    IF ( p_FAST%CompInflow == Module_IfW )  THEN 
 
       u_SrvD%WindDir  = ATAN2( y_IfW%VelocityUVW(2,1), y_IfW%VelocityUVW(1,1) )
-      u_SrvD%YawErr   = u_SrvD%WindDir - y_ED%YawAngle
       u_SrvD%HorWindV = SQRT( y_IfW%VelocityUVW(1,1)**2 + y_IfW%VelocityUVW(2,1)**2 )
 
    ELSEIF ( p_FAST%CompInflow == Module_OpFM )  THEN 
       
       u_SrvD%WindDir  = ATAN2( y_OpFM%v(1), y_OpFM%u(1) )
-      u_SrvD%YawErr   = u_SrvD%WindDir - y_ED%YawAngle
       u_SrvD%HorWindV = SQRT( y_OpFM%u(1)**2 + y_OpFM%v(1)**2 )
-      
-      if ( allocated(u_SrvD%SuperController) ) then
-         u_SrvD%SuperController = y_OpFM%SuperController
-      end if
-            
+
    ELSE  ! No wind inflow
 
       u_SrvD%WindDir  = 0.0
@@ -922,6 +977,8 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
    ENDIF
 
    
+
+
 
       
       ! ServoDyn inputs from combination of InflowWind and ElastoDyn
@@ -943,7 +1000,7 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
          ! translate "b" system output from BD into "c" system for SrvD
       do k=1,p_FAST%nBeams
          u_SrvD%RootMxc(k) =  y_BD(k)%RootMxr*COS(y_ED%BlPitch(k)) + y_BD(k)%RootMyr*SIN(y_ED%BlPitch(k))
-         u_SrvD%RootMyc(k) = -y_BD(k)%RootMxr*SIN(y_ED%BlPitch(k)) + y_BD(k)%RootMyr*COS(y_ED%BlPitch(k))      
+         u_SrvD%RootMyc(k) = -y_BD(k)%RootMxr*SIN(y_ED%BlPitch(k)) + y_BD(k)%RootMyr*COS(y_ED%BlPitch(k))
       end do
       
    ELSE
@@ -4031,20 +4088,25 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
       END IF
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
                
-      AD%Input(1)%HubMotion%RemapFlag = .FALSE.
+      AD%Input(1)%rotors(1)%HubMotion%RemapFlag = .FALSE.
 
-      IF (AD%Input(1)%TowerMotion%Committed) THEN
-          AD%Input(1)%TowerMotion%RemapFlag = .FALSE.
+      IF (AD%Input(1)%rotors(1)%TowerMotion%Committed) THEN
+          AD%Input(1)%rotors(1)%TowerMotion%RemapFlag = .FALSE.
           
-         IF (AD%y%TowerLoad%Committed) THEN
-                  AD%y%TowerLoad%RemapFlag = .FALSE.
+         IF (AD%y%rotors(1)%TowerLoad%Committed) THEN
+                  AD%y%rotors(1)%TowerLoad%RemapFlag = .FALSE.
          END IF      
-      END IF      
+      END IF
       
-      DO k=1,SIZE(AD%Input(1)%BladeMotion)
-         AD%Input(1)%BladeRootMotion(k)%RemapFlag = .FALSE.
-         AD%Input(1)%BladeMotion(    k)%RemapFlag = .FALSE.
-                AD%y%BladeLoad(      k)%RemapFlag = .FALSE.
+      IF (AD%Input(1)%rotors(1)%NacelleMotion%Committed) THEN
+         AD%Input(1)%rotors(1)%NacelleMotion%RemapFlag = .FALSE.
+         AD%y%rotors(1)%NacelleLoad%RemapFlag = .FALSE.
+      END IF
+      
+      DO k=1,SIZE(AD%Input(1)%rotors(1)%BladeMotion)
+         AD%Input(1)%rotors(1)%BladeRootMotion(k)%RemapFlag = .FALSE.
+         AD%Input(1)%rotors(1)%BladeMotion(    k)%RemapFlag = .FALSE.
+                AD%y%rotors(1)%BladeLoad(      k)%RemapFlag = .FALSE.
       END DO
                                     
    END IF
@@ -4233,7 +4295,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
             RETURN
          END IF
          
-      DO K=1,NumBl         
+      DO K=1,NumBl
          CALL MeshMapCreate( ED%y%BladeRootMotion(K), BD%Input(1,k)%RootMotion, MeshMapData%ED_P_2_BD_P(K), ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_BD_BladeRootMotion('//TRIM(Num2LStr(K))//')' )
          CALL MeshMapCreate( BD%y(k)%ReactionForce, ED%Input(1)%HubPtLoad,  MeshMapData%BD_P_2_ED_P(K), ErrStat2, ErrMsg2 )
@@ -4247,7 +4309,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
             RETURN
          END IF
          
-      DO K=1,NumBl         
+      DO K=1,NumBl
          CALL MeshMapCreate( ED%y%HubPtMotion, BD%Input(1,k)%HubMotion, MeshMapData%ED_P_2_BD_P_Hub(K), ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_BD_HubMotion('//TRIM(Num2LStr(K))//')' )
       END DO      
@@ -4439,7 +4501,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
             RETURN
          END IF      
          
-      ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)                  
+      ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)
       ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_B(NumBl), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
             CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_B.', &
@@ -4448,42 +4510,52 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
          END IF
          
          
-
+         
 !-------------------------
 !  ElastoDyn <-> AeroDyn
 !-------------------------
          
          ! blade root meshes
       DO K=1,NumBl         
-         CALL MeshMapCreate( ED%y%BladeRootMotion(K), AD%Input(1)%BladeRootMotion(K), MeshMapData%ED_P_2_AD_P_R(K), ErrStat2, ErrMsg2 )
+         CALL MeshMapCreate( ED%y%BladeRootMotion(K), AD%Input(1)%rotors(1)%BladeRootMotion(K), MeshMapData%ED_P_2_AD_P_R(K), ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_AD_RootMotion('//TRIM(Num2LStr(K))//')' )
       END DO
       
       
          ! Hub point mesh
-      CALL MeshMapCreate( ED%y%HubPtMotion, AD%Input(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
+      CALL MeshMapCreate( ED%y%HubPtMotion, AD%Input(1)%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_AD_HubMotion' )
       
       
          ! Tower mesh:
-      IF ( AD%Input(1)%TowerMotion%Committed ) THEN
-         CALL MeshMapCreate( ED%y%TowerLn2Mesh, AD%Input(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
+      IF ( AD%Input(1)%rotors(1)%TowerMotion%Committed ) THEN
+         CALL MeshMapCreate( ED%y%TowerLn2Mesh, AD%Input(1)%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_AD_TowerMotion' )
             
-         IF ( AD%y%TowerLoad%Committed ) THEN            
-            CALL MeshMapCreate( AD%y%TowerLoad, ED%Input(1)%TowerPtLoads,  MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2 )
+         IF ( AD%y%rotors(1)%TowerLoad%Committed ) THEN            
+            CALL MeshMapCreate( AD%y%rotors(1)%TowerLoad, ED%Input(1)%TowerPtLoads,  MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_2_ED_TowerLoad' )
          END IF         
       END IF
+            
+            ! Nacelle mesh:
+         IF ( AD%Input(1)%rotors(1)%NacelleMotion%Committed ) THEN
+            CALL MeshMapCreate( ED%y%NacelleMotion, AD%Input(1)%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_AD_NacelleMotion' )
+            CALL MeshMapCreate( AD%y%rotors(1)%NacelleLoad, ED%Input(1)%NacelleLoads,  MeshMapData%AD_P_2_ED_P_N, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_2_ED_NacelleLoads' )
+               
+            CALL MeshCopy( ED%Input(1)%NacelleLoads, MeshMapData%u_ED_NacelleLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_NacelleLoads' )
+         END IF
       
-                     
       IF ( p_FAST%CompElast == Module_ED ) then
          
             ! Blade meshes: 
          DO K=1,NumBl         
-            CALL MeshMapCreate( ED%y%BladeLn2Mesh(K), AD%Input(1)%BladeMotion(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
+            CALL MeshMapCreate( ED%y%BladeLn2Mesh(K), AD%Input(1)%rotors(1)%BladeMotion(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_AD_BladeMotion('//TRIM(Num2LStr(K))//')' )
-            CALL MeshMapCreate( AD%y%BladeLoad(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
+            CALL MeshMapCreate( AD%y%rotors(1)%BladeLoad(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_2_ED_BladeLoad('//TRIM(Num2LStr(K))//')' )
          END DO
          
@@ -4495,9 +4567,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
             
          ! connect AD mesh with BeamDyn
          DO K=1,NumBl         
-            CALL MeshMapCreate( BD%y(k)%BldMotion, AD%Input(1)%BladeMotion(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
+            CALL MeshMapCreate( BD%y(k)%BldMotion, AD%Input(1)%rotors(1)%BladeMotion(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_2_AD_BladeMotion('//TRIM(Num2LStr(K))//')' )
-            CALL MeshMapCreate( AD%y%BladeLoad(K), BD%Input(1,k)%DistrLoad,  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
+            CALL MeshMapCreate( AD%y%rotors(1)%BladeLoad(K), BD%Input(1,k)%DistrLoad,  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_2_BD_BladeLoad('//TRIM(Num2LStr(K))//')' )
          END DO
          
@@ -5032,7 +5104,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    END IF
 
    IF ( p_FAST%CompInflow == Module_IfW ) THEN
-      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(:), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(1), ED%y, ErrStat2, ErrMsg2 )
+      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(1), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(this_state), ED%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
    ! OpenFOAM is the driver and it sets these inputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
@@ -5295,7 +5367,6 @@ SUBROUTINE SolveOption2a_Inp2BD(this_time, this_state, p_FAST, m_FAST, ED, BD, A
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
-
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
    
    
@@ -5324,7 +5395,7 @@ SUBROUTINE SolveOption2a_Inp2BD(this_time, this_state, p_FAST, m_FAST, ED, BD, A
          CALL Transfer_ED_to_BD(ED%y, BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
       END IF
-      
+         
 
 END SUBROUTINE SolveOption2a_Inp2BD
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -5390,7 +5461,7 @@ SUBROUTINE SolveOption2b_Inp2IfW(this_time, this_state, p_FAST, m_FAST, ED, BD, 
    
    IF (p_FAST%CompInflow == Module_IfW) THEN
       ! must be done after ED_CalcOutput and before AD_CalcOutput and SrvD
-      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(:), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(1), ED%y, ErrStat2, ErrMsg2 )
+      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(1), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(this_state), ED%y, ErrStat2, ErrMsg2 ) ! do we want this to be curr states
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
    ! ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
@@ -5399,7 +5470,7 @@ SUBROUTINE SolveOption2b_Inp2IfW(this_time, this_state, p_FAST, m_FAST, ED, BD, 
    !   CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%y, SrvD%y, OpFM, ErrStat2, ErrMsg2 )
    !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    END IF
-   
+            
    
 END SUBROUTINE SolveOption2b_Inp2IfW
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -5419,7 +5490,6 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
-
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
    
    
@@ -5460,20 +5530,20 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
                         
       CALL AD14_InputSolve_IfW( p_FAST, AD14%Input(1), IfW%y, OpFM%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        
+         
    ELSE IF ( p_FAST%CompAero == Module_AD ) THEN 
                         
       CALL AD_InputSolve_IfW( p_FAST, AD%Input(1), IfW%y, OpFM%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
    END IF
-   
-   
+      
+                       
    IF ( p_FAST%CompServo == Module_SrvD  ) THEN
 
       CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%y, IfW%y, OpFM%y, BD%y, SD%y, MeshMapData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
    
 END SUBROUTINE SolveOption2c_Inp2AD_SrvD
@@ -5555,6 +5625,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
 
    END IF
       
+
    IF ( p_FAST%CompInflow == Module_OpFM ) THEN
    ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
    !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
@@ -5576,9 +5647,9 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
             
 END SUBROUTINE SolveOption2
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routines advances the states of each module 
+!> This routines advances the states of each module
 SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                                MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg, WriteThisStep )
+                               MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg, WriteThisStep )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial simulation time (almost always 0)
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< integer time step   
@@ -5752,10 +5823,6 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          CALL AD_UpdateStates( t_module, n_t_module, AD%Input, AD%InputTimes, AD%p, AD%x(STATE_PRED), &
                                AD%xd(STATE_PRED), AD%z(STATE_PRED), AD%OtherSt(STATE_PRED), AD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            ! We don't want to extrapolate any values for the WakeLocations (those are exactly calculated) 
-         if (allocated(AD%OtherSt(STATE_PRED)%WakeLocationPoints)) then
-            AD%OtherSt(STATE_CURR)%WakeLocationPoints = AD%OtherSt(STATE_PRED)%WakeLocationPoints
-         endif
       END DO !j_ss
    END IF            
 
@@ -6022,23 +6089,18 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ErrMsg  = ""
       
       ! ElastoDyn
-      !write(*,*) 'ED%Input(1)%PLATFORMPTMESH%Force', ED%Input(1)%PLATFORMPTMESH%Force
-      !write(*,*) 'ED%Input(2)%PLATFORMPTMESH%Force', ED%Input(2)%PLATFORMPTMESH%Force
-      !write(*,*) 'ED%Input(3)%PLATFORMPTMESH%Force', ED%Input(3)%PLATFORMPTMESH%Force
       CALL ED_Input_ExtrapInterp(ED%Input, ED%InputTimes, ED%u, t_global_next, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-      !write(*,*) 'ED%u%PLATFORMPTMESH%Force', ED%u%PLATFORMPTMESH%Force
+
       DO j = p_FAST%InterpOrder, 1, -1
          CALL ED_CopyInput (ED%Input(j),  ED%Input(j+1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
          ED%InputTimes(j+1) = ED%InputTimes(j)
-         !ED_OutputTimes(j+1) = ED_OutputTimes(j)
       END DO
   
       CALL ED_CopyInput (ED%u,  ED%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
       ED%InputTimes(1)  = t_global_next
-      !ED_OutputTimes(1) = t_global_next 
   
       
       ! BeamDyn

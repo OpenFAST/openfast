@@ -113,7 +113,7 @@ program AeroDyn_Driver
 
 
 
-         call Dvr_WriteOutputLine(DvrData%OutFileData, nt, RotAzimuth, AD%y%WriteOutput, DvrData%Cases(iCase), iCase, errStat, errMsg)
+         call Dvr_WriteOutputLine(DvrData%OutFileData, nt, RotAzimuth, AD%y%rotors(1)%WriteOutput, DvrData%Cases(iCase), iCase, errStat, errMsg)
             call CheckError()
 
 

@@ -2119,6 +2119,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       
          ! get rotation matrix for moment of inertia orientations
          call RodrigMat(I_n, R_I, errStat, errMsg)
+         IF ( errStat >= AbortErrLev ) RETURN
 
          ! globally-oreinted moment of inertia matrix for joint
          Irl_mat = 0.0
@@ -2183,16 +2184,12 @@ SUBROUTINE RodrigMat(a, R, errStat, errMsg)
 
    REAL(ReKi)                         :: vec(3)  ! scaled and adjusted input vector
    REAL(ReKi)                         :: factor  ! denomenator used for scaling                     
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
    factor = Dot_Product(a,a)
+   ! Return the identity if the vector is zero.  We are defining it this way because of how this is used
    if ( EqualRealNos(factor, 0.0_ReKi) ) then
-   !IF ((a(1) == 0) .AND. (a(2)==0)) THEN    ! return identity if vertical
-   !      CALL EYE(R, errStat,errMsg)
-   !   IF (a(3) < 0) THEN
-   !      R = -R
-   !   END IF
-   !
-      errStat = ErrID_Fatal
-      errMsg  = 'RodrigMat encountered vector of zero length'
+      CALL EYE(R, errStat,errMsg)
    else IF ( EqualRealNos(a(1), 0.0_ReKi) .AND. EqualRealNos(a(2), 0.0_ReKi) ) THEN    ! return identity if vertical
       CALL EYE(R, errStat,errMsg)
       IF (a(3) < 0) THEN
@@ -2652,8 +2649,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    m%F_B_End = 0.0_ReKi
    y%Mesh%Force  = 0.0_ReKi
    y%Mesh%Moment = 0.0_ReKi
-   F_WMG(1) = 0.0_ReKi
-   F_WMG(2) = 0.0_ReKi
    
    ! Loop through each member
    DO im = 1, p%NMembers    
@@ -2687,7 +2682,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          z2      = pos2(3)
          r1      = mem%RMG(i  )                         ! outer radius element nodes including marine growth
          r2      = mem%RMG(i+1)
-         dRdl_mg = mem%dRdl_mg(i)                                    ! mass of element including marine growth
+         dRdl_mg = mem%dRdl_mg(i)                                    ! Taper of element including marine growth
          a_s1    = u%Mesh%TranslationAcc(:, mem%NodeIndx(i  ))
          alpha_s1= u%Mesh%RotationAcc   (:, mem%NodeIndx(i  ))
          omega_s1= u%Mesh%RotationVel   (:, mem%NodeIndx(i  ))
@@ -2701,6 +2696,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! should lumped half-element coefficients get combined at initialization? <<<
               
             ! ------------------ marine growth: Sides: Section 4.1.2 --------------------  
+            F_WMG = 0.0_ReKi
 
             ! lower node
             !m%F_WMG(3, mem%NodeIndx(i  )) = m%F_WMG(3, mem%NodeIndx(i  )) - mem%m_mg_l(i)*g ! weight force  : Note: this is a constant
@@ -2816,7 +2812,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                      a0   = rh/((C_1)*cosPhi)             ! simplified from what's in ConicalCalcs.ipynb
                      a0b0 = a0*b0
                      C_2  = a0b0*rh*cosPhi - r1**3
-                     cl   = (0.75*a0b0*r1**2*cosPhi + 0.75*r1**4*C_1 + r1*C_1*C_2) / (dRdl_mg*C_1*C_2)
+                     cl   = -(-0.75*a0b0*rh**2*cosPhi + 0.75*r1**4*C_1 + r1*C_1*C_2) / (dRdl_mg*C_1*C_2)
                      cr   = (0.75*a0b0*dRdl_mg*rh**2*sinPhi)/(C_1*C_2)
                      cx   = cr*cosPhi + cl*sinPhi 
                      Vs   = pi*(a0b0*rh*cosPhi - r1**3)/(3.0*dRdl_mg)       

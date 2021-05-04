@@ -2,12 +2,11 @@ module test_NWTC_RandomNumber
 
     use pFUnit_mod
     use NWTC_RandomNumber
+    use nwtc_library_test_tools
     
     implicit none
 
-    integer, parameter :: stdout=6
-    character(9), parameter :: nullfile="/dev/null"
-    character(11), parameter :: terminal="/dev/stdout"
+    character(1024), parameter :: dumpfile="randnumber.temp"
 
 contains
     
@@ -45,9 +44,9 @@ subroutine test_INTRINSIC()
     p%RandSeed(1) = 1
     p%RandSeed(2) = 2
 
-    open(unit=stdout, file=nullfile, status="old")
+    call hide_terminal_output()
     call RandNum_Init(p, error_status, error_message)
-    open(unit=stdout, file=terminal, status="old")
+    call show_terminal_output()
     @assertEqual( 0, error_status )
 
     ! We cant use this test since it will fail for various machine/compiler combinations
