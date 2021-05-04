@@ -166,7 +166,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: AirDens      !< Air density [kg/m^3]
     REAL(ReKi)  :: WtrDens      !< Water density [kg/m^3]
     REAL(ReKi)  :: KinVisc      !< Kinematic viscosity of working fluid [m^2/s]
-    REAL(ReKi)  :: SpdSound      !< Speed of sound in air [m/s]
+    REAL(ReKi)  :: SpdSound      !< Speed of sound in working fluid [m/s]
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure of working fluid [Pa]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]

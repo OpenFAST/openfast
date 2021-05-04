@@ -123,7 +123,7 @@ typedef ^   FAST_ParameterType  ReKi    Gravity	    -	-	-	"Gravitational acceler
 typedef ^   FAST_ParameterType  ReKi    AirDens     -   -   -   "Air density" kg/m^3
 typedef ^   FAST_ParameterType  ReKi    WtrDens     -   -   -   "Water density" kg/m^3
 typedef ^   FAST_ParameterType  ReKi    KinVisc     -   -   -   "Kinematic viscosity of working fluid" m^2/s
-typedef ^   FAST_ParameterType  ReKi    SpdSound    -   -   -   "Speed of sound in air" m/s
+typedef ^   FAST_ParameterType  ReKi    SpdSound    -   -   -   "Speed of sound in working fluid" m/s
 typedef ^   FAST_ParameterType  ReKi    Patm        -   -   -   "Atmospheric pressure" Pa
 typedef ^   FAST_ParameterType  ReKi    Pvap        -   -   -   "Vapour pressure of working fluid" Pa
 typedef ^   FAST_ParameterType  ReKi    WtrDpth     -   -   -   "Water depth" m
