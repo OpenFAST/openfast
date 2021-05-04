@@ -1,16 +1,18 @@
 Performance-Profiling and Optimization
 ======================================
-The OpenFAST team has been engaged in performance-profiling and optimization
-work in an effort to improve the time-to-solution performance for the most
-computationally expensive use cases. This work is supported by Intel® through
-its designation of NREL as an
+A major focus of he OpenFAST team is performance-profiling and optimization
+of the OpenFAST software with the goal of improving time-to-solution performance
+for the most computationally expensive use cases. The process generally involves
+initial profiling and hotspot analysis, then identifying specific subroutines to
+target for optimization in the physics modules and glue-code of OpenFAST.
+
+A portion of this work was supported by Intel® through its designation of NREL as an
 `Intel® Parallel Computing Center (IPCC) <https://software.intel.com/en-us/ipcc>`_.
 
-After initial profiling and hotspot analysis, specific subroutines in the
-physics modules of OpenFAST were targeted for optimization. Among other
-takeaways, it was learned that the memory alignment of the derived data
-types could yield a significant increase in performance. Ultimately, tuning
-the Intel® tools to perform best on NREL's hardware and adding high level
+The findings and recommended programming practices are presented here. This is
+a working document and will be updating as additional studies are completed.
+
+Tuning the Intel® tools to perform best on NREL's hardware and adding high level
 multithreading yielded a maximum 3.8x time-to-solution improvement for one
 of the benchmark cases.
 
