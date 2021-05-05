@@ -324,7 +324,7 @@ typedef	^	MiscVarType	StC_OutputType	y_NStC	{:}	-	-	"StC module outputs - nacell
 typedef	^	MiscVarType	StC_OutputType	y_TStC	{:}	-	-	"StC module outputs - tower"	-
 typedef	^	MiscVarType	StC_OutputType	y_SStC	{:}	-	-	"StC module outputs - substructure"	-
 typedef	^	MiscVarType	SrvD_ModuleMapType	SrvD_MeshMap	-	-	-	"Mesh mapping from inputs/output meshes to StC input/output meshes"	-
-typedef	^	MiscVarType	IntKi	PrevTstepN	0	-	-	"Previous timestep N for tracking when in predictor/corrector loop for setting StC u values"	-
+typedef	^	MiscVarType	IntKi	PrevTstepNcall	-	-1	-	"Previous timestep N for tracking when in predictor/corrector loop for setting StC u values"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

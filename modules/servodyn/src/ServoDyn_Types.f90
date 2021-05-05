@@ -337,7 +337,7 @@ IMPLICIT NONE
     TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_TStC      !< StC module outputs - tower [-]
     TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_SStC      !< StC module outputs - substructure [-]
     TYPE(SrvD_ModuleMapType)  :: SrvD_MeshMap      !< Mesh mapping from inputs/output meshes to StC input/output meshes [-]
-    INTEGER(IntKi) , DIMENSION(1:0)  :: PrevTstepN      !< Previous timestep N for tracking when in predictor/corrector loop for setting StC u values [-]
+    INTEGER(IntKi)  :: PrevTstepNcall = -1      !< Previous timestep N for tracking when in predictor/corrector loop for setting StC u values [-]
   END TYPE SrvD_MiscVarType
 ! =======================
 ! =========  SrvD_ParameterType  =======
@@ -9335,7 +9335,7 @@ ENDIF
       CALL SrvD_Copymodulemaptype( SrcMiscData%SrvD_MeshMap, DstMiscData%SrvD_MeshMap, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-    DstMiscData%PrevTstepN = SrcMiscData%PrevTstepN
+    DstMiscData%PrevTstepNcall = SrcMiscData%PrevTstepNcall
  END SUBROUTINE SrvD_CopyMisc
 
  SUBROUTINE SrvD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -9796,7 +9796,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz  = Int_BufSz  + SIZE(InData%PrevTstepN)  ! PrevTstepN
+      Int_BufSz  = Int_BufSz  + 1  ! PrevTstepNcall
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -10413,10 +10413,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-    DO i1 = LBOUND(InData%PrevTstepN,1), UBOUND(InData%PrevTstepN,1)
-      IntKiBuf(Int_Xferred) = InData%PrevTstepN(i1)
-      Int_Xferred = Int_Xferred + 1
-    END DO
+    IntKiBuf(Int_Xferred) = InData%PrevTstepNcall
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_PackMisc
 
  SUBROUTINE SrvD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -11243,12 +11241,8 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    i1_l = LBOUND(OutData%PrevTstepN,1)
-    i1_u = UBOUND(OutData%PrevTstepN,1)
-    DO i1 = LBOUND(OutData%PrevTstepN,1), UBOUND(OutData%PrevTstepN,1)
-      OutData%PrevTstepN(i1) = IntKiBuf(Int_Xferred)
-      Int_Xferred = Int_Xferred + 1
-    END DO
+    OutData%PrevTstepNcall = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SrvD_UnPackMisc
 
  SUBROUTINE SrvD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )

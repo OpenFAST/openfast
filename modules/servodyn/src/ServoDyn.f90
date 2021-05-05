@@ -1288,8 +1288,9 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    INTEGER(IntKi)                                 :: k               ! loop counter for blade in BStC
    INTEGER(IntKi)                                 :: order
    TYPE(SrvD_InputType)                           :: u_interp        ! interpolated input
-      ! Local variables:
-
+   REAL(ReKi),                      ALLOCATABLE   :: StC_CmdStiff(:,:)  !< StC_CmdStiff command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
+   REAL(ReKi),                      ALLOCATABLE   :: StC_CmdDamp(:,:)   !< StC_CmdDamp  command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
+   REAL(ReKi),                      ALLOCATABLE   :: StC_CmdBrake(:,:)  !< StC_CmdBrake command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
 
    INTEGER(IntKi)                                 :: ErrStat2        ! Error status of the operation (occurs after initial error)
    CHARACTER(ErrMsgLen)                           :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
@@ -1352,18 +1353,27 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    CALL TipBrake_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       if (Failed()) return;
    
-   !...............................................................................................................................   
+   !...............................................................................................................................
    ! update states in StrucCtrl submodule, if necessary:
-   !...............................................................................................................................   
+   !...............................................................................................................................
+   ! Calculate the StC control chan for t_next, and save that in temporary.
+   if ( p%NumStC_Control > 0 ) then
+      call AllocAry(StC_CmdStiff, 3, p%NumStC_Control, 'StC_CmdStiff', ErrStat2, ErrMsg2 );  if (Failed()) return;
+      call AllocAry(StC_CmdDamp,  3, p%NumStC_Control, 'StC_CmdDamp' , ErrStat2, ErrMsg2 );  if (Failed()) return;
+      call AllocAry(StC_CmdBrake, 3, p%NumStC_Control, 'StC_CmdBrake', ErrStat2, ErrMsg2 );  if (Failed()) return;
+      call StCControl_CalcOutput( t_next, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, m, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+   endif
    ! Nacelle StrucCtrl
    do j=1,p%NumNStC
-      ! update the StC inputs with SrvD u(:) values
+      ! update the StC inputs with SrvD u(:) values.
       do i=1,p%InterpOrder+1
          CALL Transfer_Point_to_Point( Inputs(i)%NStCMotionMesh(j), m%u_NStC(i,j)%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat2, ErrMsg2 )
             if (Failed()) return;
       enddo
-      !TODO: set inputs for StC controls channels from dll call above
-      !  -- If this is new timestep call, then move stored dll control values back in m%u_StC
+      ! update commanded signals (if exist)
+      call SetStCInput_CtrlChans(m%u_NStC(:,j))
+      ! Now call updatestates
       call StC_UpdateStates( t, n, m%u_NStC(:,j), InputTimes, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
    enddo
@@ -1375,8 +1385,9 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
          CALL Transfer_Point_to_Point( Inputs(i)%TStCMotionMesh(j), m%u_TStC(i,j)%Mesh(1), m%SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat2, ErrMsg2 )
             if (Failed()) return;
       enddo
-      !TODO: set inputs for StC controls channels from dll call above
-      !  -- If this is new timestep call, then move stored dll control values back in m%u_StC
+      ! update commanded signals (if exist)
+      call SetStCInput_CtrlChans(m%u_TStC(:,j))
+      ! Now call updatestates
       call StC_UpdateStates( t, n, m%u_TStC(:,j), InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
    enddo
@@ -1390,8 +1401,9 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
                if (Failed()) return;
          enddo
       enddo
-      !TODO: set inputs for StC controls channels from dll call above
-      !  -- If this is new timestep call, then move stored dll control values back in m%u_StC
+      ! update commanded signals (if exist)
+      call SetStCInput_CtrlChans(m%u_BStC(:,j))
+      ! Now call updatestates
       call StC_UpdateStates( t, n, m%u_BStC(:,j), InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
    enddo
@@ -1403,12 +1415,15 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
          CALL Transfer_Point_to_Point( Inputs(i)%SStCMotionMesh(j), m%u_SStC(i,j)%Mesh(1), m%SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat2, ErrMsg2 )
             if (Failed()) return;
       enddo
-      !TODO: set inputs for StC controls channels from dll call above
-      !  -- If this is new timestep call, then move stored dll control values back in m%u_StC
+      ! update commanded signals (if exist)
+      call SetStCInput_CtrlChans(m%u_SStC(:,j))
+      ! Now call updatestates
       call StC_UpdateStates( t, n, m%u_SStC(:,j), InputTimes, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
    enddo
 
+   ! If we incrimented timestep, save this info so we can properly set the control channel inputs for next time
+   if ( n > m%PrevTstepNcall )   m%PrevTstepNcall = n
 
    !...................................................................
    ! Compute ElecPwr and GenTrq for controller (and DLL needs this saved):
@@ -1435,8 +1450,28 @@ CONTAINS
    SUBROUTINE Cleanup()
       CALL SrvD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+      if (allocated(StC_CmdStiff))  deallocate(StC_CmdStiff)
+      if (allocated(StC_CmdDamp))   deallocate(StC_CmdDamp)
+      if (allocated(StC_CmdBrake))  deallocate(StC_CmdBrake)
    END SUBROUTINE Cleanup
+   subroutine SetStCInput_CtrlChans(u_StC)
+      type(StC_InputType), intent(inout)  :: u_StC(:)    !< Inputs at InputTimes
+      !  -- not all StC instances will necessarily be looking for this, so these inputs might not be allocated)
+      if (allocated(u_StC(1)%CmdStiff) .and. allocated(u_StC(1)%CmdDamp) .and. allocated(u_StC(1)%CmdBrake)) then
+         if ( n > m%PrevTstepNcall ) then
+            ! Cycle u%CmdStiff and others -- we are at a new timestep.
+            do i=p%InterpOrder,1,-1   ! step oldest to newest
+               u_StC(i)%CmdStiff = u_StC(i+1)%CmdStiff
+               u_StC(i)%CmdDamp  = u_StC(i+1)%CmdDamp 
+               u_StC(i)%CmdBrake = u_StC(i+1)%CmdBrake
+            enddo
+         endif
+         ! Now set the current commanded values
+         u_StC(1)%CmdStiff(1:3,1:p%NumStC_Control) = StC_CmdStiff(1:3,1:p%NumStC_Control)
+         u_StC(1)%CmdDamp( 1:3,1:p%NumStC_Control) = StC_CmdDamp( 1:3,1:p%NumStC_Control)
+         u_StC(1)%CmdBrake(1:3,1:p%NumStC_Control) = StC_CmdBrake(1:3,1:p%NumStC_Control)
+      endif
+   end subroutine SetStCInput_CtrlChans
 
 END SUBROUTINE SrvD_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1538,6 +1573,9 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    INTEGER(IntKi)                                 :: I                      ! Generic loop index
    INTEGER(IntKi)                                 :: K                      ! Blade index
    INTEGER(IntKi)                                 :: J                      ! Structural control instance at location
+   REAL(ReKi),                      ALLOCATABLE   :: StC_CmdStiff(:,:)     !< StC_CmdStiff command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
+   REAL(ReKi),                      ALLOCATABLE   :: StC_CmdDamp(:,:)      !< StC_CmdDamp  command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
+   REAL(ReKi),                      ALLOCATABLE   :: StC_CmdBrake(:,:)     !< StC_CmdBrake command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
    CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_CalcOutput'
@@ -1556,7 +1594,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
          ! Initialize the DLL controller in CalcOutput ONLY if it hasn't already been initialized in SrvD_UpdateStates
       IF (.NOT. m%dll_data%initialized) THEN
          CALL DLL_controller_call(t, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            if (Failed()) return;
       END IF
 
       !  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
@@ -1576,94 +1614,99 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
       ! Torque control:
    CALL Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )      !  calculates ElecPwr, which Pitch_CalcOutput will use in the user pitch routine
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed()) return;
 
       ! Pitch control:
    CALL Pitch_CalcOutput( t, u, p, x, xd, z, OtherState, y%BlPitchCom, y%ElecPwr, m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed()) return;
 
       ! Yaw control:
    CALL Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m,ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed()) return;
 
       ! Tip brake control:
    CALL TipBrake_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed()) return;
    
       ! Airfoil control:
    CALL AirfoilControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%BlAirfoilCom, m, ErrStat, ErrMsg )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed()) return;
 
       ! Cable control:
    CALL CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, y%CableDeltaL, y%CableDeltaLdot, m, ErrStat, ErrMsg )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+      if (Failed()) return;
 
 
    !...............................................................................................................................   
    ! Compute the StrucCtrl outputs
    !...............................................................................................................................   
+   ! Calculate the StC control chan for t_next, and save that in temporary.
+   if ( p%NumStC_Control > 0 ) then
+      call AllocAry(StC_CmdStiff, 3, p%NumStC_Control, 'StC_CmdStiff', ErrStat2, ErrMsg2 );  if (Failed()) return;
+      call AllocAry(StC_CmdDamp,  3, p%NumStC_Control, 'StC_CmdDamp' , ErrStat2, ErrMsg2 );  if (Failed()) return;
+      call AllocAry(StC_CmdBrake, 3, p%NumStC_Control, 'StC_CmdBrake', ErrStat2, ErrMsg2 );  if (Failed()) return;
+      call StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, m, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+   endif
    do j=1,p%NumNStC       ! Nacelle
       ! Set inputs
       CALL Transfer_Point_to_Point( u%NStCMotionMesh(j), m%u_NStC(1,j)%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
-      !TODO: add pass through of StC control channels here
+         if (Failed()) return;
+      ! Set StC control channels
+      call SetStCInput_CtrlChans(m%u_NStC(1,j))
       ! call Calc
       CALL StC_CalcOutput( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%y_NStC(j), m%NStC(j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed()) return;
       ! Set NStC outputs
       CALL Transfer_Point_to_Point( m%y_NStC(j)%Mesh(1), y%NStCLoadMesh(j), m%SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat2, ErrMsg2, u%NStCMotionMesh(j), u%NStCMotionMesh(j) )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
-      !TODO: set output StC control channel info
+         if (Failed()) return;
    enddo
    do j=1,p%NumTStC       ! Tower
       CALL Transfer_Point_to_Point( u%TStCMotionMesh(j), m%u_TStC(1,j)%Mesh(1), m%SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
-      !TODO: add pass through of StC control channels here
+         if (Failed()) return;
+      ! Set StC control channels
+      call SetStCInput_CtrlChans(m%u_TStC(1,j))
       ! call Calc
       CALL StC_CalcOutput( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%y_TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed()) return;
       ! Set TStC outputs
       CALL Transfer_Point_to_Point( m%y_TStC(j)%Mesh(1), y%TStCLoadMesh(j), m%SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat2, ErrMsg2, u%TStCMotionMesh(j), u%TStCMotionMesh(j) )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
-      !TODO: set output StC control channel info
+         if (Failed()) return;
    enddo
    do j=1,p%NumBStC       ! Blades
       ! Set inputs
       do k=1,p%NumBl
          CALL Transfer_Point_to_Point( u%BStCMotionMesh(k,j), m%u_BStC(1,j)%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed()) return;
       enddo
-      !TODO: add pass through of StC control channels here
+      ! Set StC control channels
+      call SetStCInput_CtrlChans(m%u_BStC(1,j))
       ! call Calc
       CALL StC_CalcOutput( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed()) return;
       ! Set BStC outputs
       do k=1,p%NumBl
          CALL Transfer_Point_to_Point( m%y_BStC(j)%Mesh(k), y%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed()) return;
       enddo
-      !TODO: set output StC control channel info
    enddo
    do j=1,p%NumSStC    ! Platform
       ! Set inputs
       CALL Transfer_Point_to_Point( u%SStCMotionMesh(j), m%u_SStC(1,j)%Mesh(1), m%SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
-      !TODO: add pass through of StC control channels here
+         if (Failed()) return;
+      ! Set StC control channels
+      call SetStCInput_CtrlChans(m%u_SStC(1,j))
       ! call Calc
       CALL StC_CalcOutput( t, m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%y_SStC(j), m%SStC(j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
+         if (Failed()) return;
       ! Set SStC outputs
       CALL Transfer_Point_to_Point( m%y_SStC(j)%Mesh(1), y%SStCLoadMesh(j), m%SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat2, ErrMsg2, u%SStCMotionMesh(j), u%SStCMotionMesh(j) )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );  IF (ErrStat >= AbortErrLev) RETURN
-      !TODO: set output StC control channel info
+         if (Failed()) return;
    enddo
 
+   ! Set StC info for DLL controller -- subroutine will check criteria
+   call StC_SetDLLinputs(p,m,m%dll_data%StCMeasDisp,m%dll_data%StCMeasVel,ErrStat2,ErrMsg2)
+      if (Failed())  return;
 
 
    !...............................................................................................................................   
@@ -1687,7 +1730,32 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       y%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
    ENDDO
 
+
+   call Cleanup()
+
    RETURN
+
+CONTAINS
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
+   SUBROUTINE Cleanup()
+      if (allocated(StC_CmdStiff))  deallocate(StC_CmdStiff)
+      if (allocated(StC_CmdDamp))   deallocate(StC_CmdDamp)
+      if (allocated(StC_CmdBrake))  deallocate(StC_CmdBrake)
+   END SUBROUTINE Cleanup
+   subroutine SetStCInput_CtrlChans(u_StC)
+      type(StC_InputType), intent(inout)  :: u_StC    !< Inputs at InputTimes
+      !  -- not all StC instances will necessarily be looking for this, so these inputs might not be allocated)
+      if (allocated(u_StC%CmdStiff) .and. allocated(u_StC%CmdDamp) .and. allocated(u_StC%CmdBrake)) then
+         u_StC%CmdStiff(1:3,1:p%NumStC_Control) = StC_CmdStiff(1:3,1:p%NumStC_Control)
+         u_StC%CmdDamp( 1:3,1:p%NumStC_Control) = StC_CmdDamp( 1:3,1:p%NumStC_Control)
+         u_StC%CmdBrake(1:3,1:p%NumStC_Control) = StC_CmdBrake(1:3,1:p%NumStC_Control)
+      endif
+   end subroutine SetStCInput_CtrlChans
+
 END SUBROUTINE SrvD_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for computing derivatives of continuous states.
@@ -4207,14 +4275,9 @@ END SUBROUTINE CableControl_CalcOutput
 !  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
 !  This is passed to AD15 to be interpolated with the airfoil table userprop column
 !  (might be used for airfoil flap angles for example)
-SUBROUTINE StCControl_CalcOutput( t, u, p, x, xd, z, OtherState, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, m, ErrStat, ErrMsg )
+SUBROUTINE StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, m, ErrStat, ErrMsg )
    REAL(DbKi),                     INTENT(IN   )  :: t                  !< Current simulation time in seconds
-   TYPE(SrvD_InputType),           INTENT(IN   )  :: u                  !< Inputs at t
    TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p                  !< Parameters
-   TYPE(SrvD_ContinuousStateType), INTENT(IN   )  :: x                  !< Continuous states at t
-   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
-   TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
-   TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
    REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdStiff(:,:)  !< StC_CmdStiff command signals (3,p%NumStC_Control)
    REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdDamp(:,:)   !< StC_CmdDamp  command signals (3,p%NumStC_Control)
    REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdBrake(:,:)  !< StC_CmdBrake command signals (3,p%NumStC_Control)
