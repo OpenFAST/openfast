@@ -153,8 +153,7 @@ if not noExec:
     else:
         raise SystemError("Platform could not be determined: platform.system -> {}".format(platform.system()))
 
-    t_max = 60.0
-    openfastlib = openfast_library.FastLibAPI(openfastlib_path, caseInputFile, t_max)
+    openfastlib = openfast_library.FastLibAPI(openfastlib_path, caseInputFile)
     openfastlib.fast_run()
     if openfastlib.fatal_error:
         sys.exit(1)

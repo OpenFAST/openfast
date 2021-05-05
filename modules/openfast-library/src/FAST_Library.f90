@@ -83,22 +83,23 @@ subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Deal
    ErrMsg_c = C_NULL_CHAR
 end subroutine
 !==================================================================================================================================
-subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
+subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, tmax_c, ErrStat_c, ErrMsg_c, ChannelNames_c, TMax, InitInpAry) BIND (C, NAME='FAST_Sizes')
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
-   REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
-   REAL(C_DOUBLE),         INTENT(IN   ) :: InitInpAry(MAXInitINPUTS)      
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumOuts_c      
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
+   REAL(C_DOUBLE),         INTENT(  OUT) :: tmax_c
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ChannelNames_c(ChanLen*MAXOUTPUTS+1)
+   REAL(C_DOUBLE), OPTIONAL, INTENT(IN   ) :: TMax      
+   REAL(C_DOUBLE), OPTIONAL, INTENT(IN   ) :: InitInpAry(MAXInitINPUTS) 
    
    ! local
    CHARACTER(IntfStrLen)               :: InputFileName   
@@ -112,30 +113,38 @@ subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, N
    
       ! initialize variables:   
    n_t_global = 0
-   
-   ExternInitData%TMax       = TMax
-   ExternInitData%TurbineID  = -1        ! we're not going to use this to simulate a wind farm
-   ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
-   ExternInitData%NumCtrl2SC = 0
-   ExternInitData%NumSC2Ctrl = 0
-   ExternInitData%SensorType = NINT(InitInpAry(1))   
-   ! -- MATLAB Integration --
-   ! Make sure fast farm integration is false
-   ExternInitData%FarmIntegration = .false.
 
-   IF ( NINT(InitInpAry(2)) == 1 ) THEN
-      ExternInitData%LidRadialVel = .true.
+   IF (PRESENT(InitInpAry)) THEN
+      IF (PRESENT(TMax)) THEN
+         ExternInitData%TMax = TMax
+      END IF
+      ExternInitData%TurbineID  = -1        ! we're not going to use this to simulate a wind farm
+      ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
+      ExternInitData%NumCtrl2SC = 0
+      ExternInitData%NumSC2Ctrl = 0
+      ExternInitData%SensorType = NINT(InitInpAry(1))   
+      ! -- MATLAB Integration --
+      ! Make sure fast farm integration is false
+      ExternInitData%FarmIntegration = .false.
+   
+      IF ( NINT(InitInpAry(2)) == 1 ) THEN
+         ExternInitData%LidRadialVel = .true.
+      ELSE
+         ExternInitData%LidRadialVel = .false.
+      END IF
+      
+      CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData)
+
    ELSE
-      ExternInitData%LidRadialVel = .false.
+
+      CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName)
+
    END IF
-   
-   
-   
-   CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
                   
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, SUM( Turbine(iTurb)%y_FAST%numOuts ))
    dt_c          = Turbine(iTurb)%p_FAST%dt
+   tmax_c        = Turbine(iTurb)%p_FAST%TMax
 
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR

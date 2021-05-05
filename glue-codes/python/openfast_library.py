@@ -14,11 +14,10 @@ import numpy as np
 
 
 class FastLibAPI(CDLL):
-    def __init__(self, library_path: str, input_file_name: str, t_max: float):
+    def __init__(self, library_path: str, input_file_name: str):
         super().__init__(library_path)
         self.library_path = library_path
         self.input_file_name = create_string_buffer(os.path.abspath(input_file_name).encode('utf-8'))
-        self.t_max = c_double(t_max)
 
         self._initialize_routines()
 
@@ -26,6 +25,7 @@ class FastLibAPI(CDLL):
         self.n_turbines = c_int(1)
         self.i_turb = c_int(0)
         self.dt = c_double(0.0)
+        self.t_max = c_double(0.0)
         self.abort_error_level = c_int(99)
         self.num_outs = c_int(0)
         self._channel_names = create_string_buffer(20 * 4000)
@@ -40,7 +40,7 @@ class FastLibAPI(CDLL):
         ### MAKE THIS 8 OR 11
         self._num_inputs = c_int(8)
         self._inp_array = (c_double * 10)(0.0, )  # 10 is hard-coded in FAST_Library as MAXInitINPUTS
-        self._inp_array[0] - -1.0  # Sensor type - 
+        self._inp_array[0] = -1.0  # Sensor type - 
 
         self.output_values = None
         self.ended = False
@@ -55,15 +55,16 @@ class FastLibAPI(CDLL):
 
         self.FAST_Sizes.argtype = [
             POINTER(c_int),         # iTurb IN
-            POINTER(c_double),      # TMax IN
-            POINTER(c_double),      # InitInpAry IN; 10 is hard coded in the C++ interface
             POINTER(c_char),        # InputFileName_c IN
             POINTER(c_int),         # AbortErrLev_c OUT
             POINTER(c_int),         # NumOuts_c OUT
             POINTER(c_double),      # dt_c OUT
+            POINTER(c_double),      # tmax_c OUT
             POINTER(c_int),         # ErrStat_c OUT
             POINTER(c_char),        # ErrMsg_c OUT
-            POINTER(c_char)         # ChannelNames_c OUT
+            POINTER(c_char),        # ChannelNames_c OUT
+            POINTER(c_double),      # TMax OPTIONAL IN
+            POINTER(c_double)       # InitInpAry OPTIONAL IN
         ]
         self.FAST_Sizes.restype = c_int
 
@@ -117,15 +118,16 @@ class FastLibAPI(CDLL):
 
         self.FAST_Sizes(
             byref(self.i_turb),
-            byref(self.t_max),
-            byref(self._inp_array),
             self.input_file_name,
             byref(self.abort_error_level),
             byref(self.num_outs),
             byref(self.dt),
+            byref(self.t_max),
             byref(self.error_status),
             self.error_message,
-            self._channel_names
+            self._channel_names,
+            None,   # Optional arguments must pass C-Null pointer; with ctypes, use None.
+            None    # Optional arguments must pass C-Null pointer; with ctypes, use None.
         )
         if self.fatal_error:
             print(f"Error {self.error_status.value}: {self.error_message.value}")

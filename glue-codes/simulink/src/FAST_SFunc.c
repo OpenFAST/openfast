@@ -207,7 +207,7 @@ static void mdlInitializeSizes(SimStruct *S)
        FAST_AllocateTurbines(&nTurbines, &ErrStat, ErrMsg);
        if (checkError(S)) return;
 
-       FAST_Sizes(&iTurb, &TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
+       FAST_Sizes(&iTurb, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames, &TMax, InitInputAry);
        n_t_global = -1;
        if (checkError(S)) return;
 
