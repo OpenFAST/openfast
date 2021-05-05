@@ -156,6 +156,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_stop      !< Stop forces [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_ext      !< External forces (user defined) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_fr      !< Friction forces [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: K      !< Stiffness -- might be changed if controller controls this [N/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C_ctrl      !< Controlled Damping (On/Off) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C_Brake      !< Braking Damping [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_table      !< Tabled Stiffness [-]
@@ -2681,6 +2682,20 @@ IF (ALLOCATED(SrcMiscData%F_fr)) THEN
   END IF
     DstMiscData%F_fr = SrcMiscData%F_fr
 ENDIF
+IF (ALLOCATED(SrcMiscData%K)) THEN
+  i1_l = LBOUND(SrcMiscData%K,1)
+  i1_u = UBOUND(SrcMiscData%K,1)
+  i2_l = LBOUND(SrcMiscData%K,2)
+  i2_u = UBOUND(SrcMiscData%K,2)
+  IF (.NOT. ALLOCATED(DstMiscData%K)) THEN 
+    ALLOCATE(DstMiscData%K(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%K.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%K = SrcMiscData%K
+ENDIF
 IF (ALLOCATED(SrcMiscData%C_ctrl)) THEN
   i1_l = LBOUND(SrcMiscData%C_ctrl,1)
   i1_u = UBOUND(SrcMiscData%C_ctrl,1)
@@ -2884,6 +2899,9 @@ ENDIF
 IF (ALLOCATED(MiscData%F_fr)) THEN
   DEALLOCATE(MiscData%F_fr)
 ENDIF
+IF (ALLOCATED(MiscData%K)) THEN
+  DEALLOCATE(MiscData%K)
+ENDIF
 IF (ALLOCATED(MiscData%C_ctrl)) THEN
   DEALLOCATE(MiscData%C_ctrl)
 ENDIF
@@ -2974,6 +2992,11 @@ ENDIF
   IF ( ALLOCATED(InData%F_fr) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! F_fr upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_fr)  ! F_fr
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! K allocated yes/no
+  IF ( ALLOCATED(InData%K) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! K upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%K)  ! K
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! C_ctrl allocated yes/no
   IF ( ALLOCATED(InData%C_ctrl) ) THEN
@@ -3124,6 +3147,26 @@ ENDIF
       DO i2 = LBOUND(InData%F_fr,2), UBOUND(InData%F_fr,2)
         DO i1 = LBOUND(InData%F_fr,1), UBOUND(InData%F_fr,1)
           ReKiBuf(Re_Xferred) = InData%F_fr(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%K) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%K,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%K,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%K,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%K,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%K,2), UBOUND(InData%K,2)
+        DO i1 = LBOUND(InData%K,1), UBOUND(InData%K,1)
+          ReKiBuf(Re_Xferred) = InData%K(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -3485,6 +3528,29 @@ ENDIF
       DO i2 = LBOUND(OutData%F_fr,2), UBOUND(OutData%F_fr,2)
         DO i1 = LBOUND(OutData%F_fr,1), UBOUND(OutData%F_fr,1)
           OutData%F_fr(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! K not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%K)) DEALLOCATE(OutData%K)
+    ALLOCATE(OutData%K(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%K.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%K,2), UBOUND(OutData%K,2)
+        DO i1 = LBOUND(OutData%K,1), UBOUND(OutData%K,1)
+          OutData%K(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO

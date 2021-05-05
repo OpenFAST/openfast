@@ -191,7 +191,6 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    call Init_Misc( p, m, ErrStat2, ErrMsg2 )
    if (Failed())  return;
 
-
    ! Allocate continuous states (x)
    call AllocAry(x%StC_x, 6, p%NumMeshPts, 'x%StC_x',  ErrStat2,ErrMsg2)
    if (Failed())  return;
@@ -389,6 +388,14 @@ CONTAINS
       call AllocAry(m%C_Brake, 3, p%NumMeshPts, 'C_Brake', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%C_Brake = 0.0_ReKi
       call AllocAry(m%F_table, 3, p%NumMeshPts, 'F_table', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_table = 0.0_ReKi
       call AllocAry(m%F_k    , 3, p%NumMeshPts, 'F_k'    , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_k     = 0.0_ReKi
+
+      ! Set spring constants to value from input file
+      call AllocAry(m%K      , 3, p%NumMeshPts, 'K'      , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return
+      do i_pt=1,p%NumMeshPts
+         m%K(1,i_pt) = p%K_X
+         m%K(2,i_pt) = p%K_Y
+         m%K(3,i_pt) = p%K_Z
+      enddo
 
       ! indexing
       m%PrescribedInterpIdx = 0_IntKi ! index tracker for PrescribedForce option
@@ -788,9 +795,9 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             ! inertial contributions from mass of tuned mass dampers and acceleration of point
             ! forces and moments in local coordinates
-            m%F_P(1,i_pt) =  p%K_X * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_Y_P(1) - F_Z_P(1) + m%F_table(1,i_pt)
-            m%F_P(2,i_pt) =  p%K_Y * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_X_P(2) - F_Z_P(2) + m%F_table(2,i_pt)
-            m%F_P(3,i_pt) =  p%K_Z * x%StC_x(5,i_pt) + m%C_ctrl(3,i_pt) * x%StC_x(6,i_pt) + m%C_Brake(3,i_pt) * x%StC_x(6,i_pt) - m%F_stop(3,i_pt) - m%F_ext(3,i_pt) - m%F_fr(3,i_pt) - F_X_P(3) - F_Y_P(3) + m%F_table(3,i_pt)
+            m%F_P(1,i_pt) =  m%K(1,i_pt) * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_Y_P(1) - F_Z_P(1) + m%F_table(1,i_pt)
+            m%F_P(2,i_pt) =  m%K(2,i_pt) * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_X_P(2) - F_Z_P(2) + m%F_table(2,i_pt)
+            m%F_P(3,i_pt) =  m%K(3,i_pt) * x%StC_x(5,i_pt) + m%C_ctrl(3,i_pt) * x%StC_x(6,i_pt) + m%C_Brake(3,i_pt) * x%StC_x(6,i_pt) - m%F_stop(3,i_pt) - m%F_ext(3,i_pt) - m%F_fr(3,i_pt) - F_X_P(3) - F_Y_P(3) + m%F_table(3,i_pt)
 
             m%M_P(1,i_pt) =  - F_Y_P(3)  * x%StC_x(3,i_pt)  +  F_Z_P(2) * x%StC_x(5,i_pt)
             m%M_P(2,i_pt) =    F_X_P(3)  * x%StC_x(1,i_pt)  -  F_Z_P(1) * x%StC_x(5,i_pt)
@@ -817,8 +824,8 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             ! inertial contributions from mass of tuned mass dampers and acceleration of point
             ! forces and moments in local coordinates
-            m%F_P(1,i_pt) =  p%K_X * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_XY_P(1) + m%F_table(1,i_pt)*(m%F_k(1,i_pt))
-            m%F_P(2,i_pt) =  p%K_Y * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_XY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
+            m%F_P(1,i_pt) =  m%K(1,i_pt) * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_XY_P(1) + m%F_table(1,i_pt)*(m%F_k(1,i_pt))
+            m%F_P(2,i_pt) =  m%K(2,i_pt) * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_XY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
             m%F_P(3,i_pt) = - F_XY_P(3)
 
             m%M_P(1,i_pt) = - F_XY_P(3) * x%StC_x(3,i_pt)
@@ -983,7 +990,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      REAL(ReKi), dimension(3)                        :: K          ! tuned mass damper stiffness
+      REAL(ReKi), dimension(3,p%NumMeshPts)           :: K          ! tuned mass damper stiffness
       Real(ReKi)                                      :: denom      ! denominator for omni-direction factors
       integer(IntKi)                                  :: i_pt       ! Generic counter for mesh point
 
@@ -1005,14 +1012,14 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          CALL StC_CalcStopForce(x,p,m%F_stop)
       END IF
 
-      ! Compute stiffness
+      ! Compute stiffness -- Note that this value may be overwritten by controller
       IF (p%Use_F_TBL) THEN ! use stiffness table
          CALL SpringForceExtrapInterp(x,p,m%F_table,ErrStat2,ErrMsg2);  if (Failed()) return;
          K = 0.0_ReKi
       ELSE ! use preset values
-         K(1) = p%K_X
-         K(2) = p%K_Y
-         K(3) = p%K_Z
+         K(1,:) = p%K_X
+         K(2,:) = p%K_Y
+         K(3,:) = p%K_Z
       END IF
 
 
@@ -1110,11 +1117,25 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          m%C_ctrl(1,:) = p%C_X
          m%C_ctrl(2,:) = p%C_Y
          m%C_ctrl(3,:) = p%C_Z
-
          m%C_Brake = 0.0_ReKi
          m%F_fr    = 0.0_ReKi
       ELSE IF (p%StC_CMODE == CMODE_Semi) THEN ! ground hook control
          CALL StC_GroundHookDamp(dxdt,x,u,p,m%rdisp_P,m%rdot_P,m%C_ctrl,m%C_Brake,m%F_fr)
+      ELSE IF (p%StC_CMODE == CMODE_ActiveDLL) THEN   ! Active control from DLL
+         call StC_ActiveCtrl_StiffDamp(u,p,m%K,m%C_ctrl,m%C_Brake)
+         m%F_fr    = 0.0_ReKi
+         if (.not. p%Use_F_TBL) then
+            K(1:3,:) = m%K(1:3,:)
+!FIXME: for the derivative, I don't know how this should be handled.
+!!!   Defaulting to how the stiffness table operates for now, but leaving
+!!!   this next code chunk in case it shuold be handed this way instead
+         !else
+         !   ! Make commanded stiffness a perturbation about the table value (to avoid double counting the table)
+         !   ! NOTE: This has not been verified and may have unintended consequences.
+         !   do i_pt=1,p%NumMeshPts
+         !      K(1:3,i_pt) = m%F_table(1:3,i_pt) - m%K(1:3,i_pt)
+         !   enddo
+         endif
       END IF
 
 
@@ -1123,7 +1144,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
          IF (p%StC_X_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_X) * x%StC_x(1,i_pt) &
+               dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_X) * x%StC_x(1,i_pt) &
                                    - ( m%C_ctrl( 1,i_pt)/p%M_X ) * x%StC_x(2,i_pt)                                   &
                                    - ( m%C_Brake(1,i_pt)/p%M_X ) * x%StC_x(2,i_pt)                                   &
                                    + m%Acc(1,i_pt) + m%F_fr(1,i_pt) / p%M_X
@@ -1135,7 +1156,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          END IF
          IF (p%StC_Y_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_Y) * x%StC_x(3,i_pt) &
+               dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_Y) * x%StC_x(3,i_pt) &
                                    - ( m%C_ctrl( 2,i_pt)/p%M_Y ) * x%StC_x(4,i_pt)                                   &
                                    - ( m%C_Brake(2,i_pt)/p%M_Y ) * x%StC_x(4,i_pt)                                   &
                                    + m%Acc(2,i_pt) + m%F_fr(2,i_pt) / p%M_Y
@@ -1147,7 +1168,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          END IF
          IF (p%StC_Z_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(6,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3) / p%M_Z) * x%StC_x(5,i_pt) &
+               dxdt%StC_x(6,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3,i_pt) / p%M_Z) * x%StC_x(5,i_pt) &
                                    - ( m%C_ctrl( 3,i_pt)/p%M_Z ) * x%StC_x(6,i_pt)                                   &
                                    - ( m%C_Brake(3,i_pt)/p%M_Z ) * x%StC_x(6,i_pt)                                   &
                                    + m%Acc(3,i_pt) + m%F_fr(3,i_pt) / p%M_Z
@@ -1161,13 +1182,13 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN   ! Only includes X and Y
                ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
          do i_pt=1,p%NumMeshPts
-            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_XY) * x%StC_x(1,i_pt)   &
+            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_XY) * x%StC_x(1,i_pt)   &
                                 - ( m%C_ctrl( 1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
                                 - ( m%C_Brake(1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
                                 +  m%Acc(1,i_pt) + 1/p%M_XY * ( m%F_fr(1,i_pt) )                                     &
                                 - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) - m%alpha_P(3,i_pt) ) * x%StC_x(3,i_pt)      &
                                +2 * m%omega_P(3,i_pt) * x%StC_x(4,i_pt)
-            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_XY) * x%StC_x(3,i_pt)   &
+            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_XY) * x%StC_x(3,i_pt)   &
                                 - ( m%C_ctrl( 2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
                                 - ( m%C_Brake(2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
                                 +  m%Acc(2,i_pt) + 1/p%M_XY * ( m%F_fr(2,i_pt) )                                     &
@@ -1568,9 +1589,28 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,rdisp_P,rdot_P,C_ctrl,C_Brake,F_fr)
 
       END IF
    enddo
-
-
 END SUBROUTINE StC_GroundHookDamp
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE StC_ActiveCtrl_StiffDamp(u,p,K_ctrl,C_ctrl,C_Brake)
+   TYPE(StC_InputType),                   INTENT(IN   )  :: u              !< Inputs at Time
+   TYPE(StC_ParameterType),               INTENT(IN   )  :: p              !< The module's parameter data
+   real(ReKi),                            intent(inout)  :: K_ctrl(:,:)    !< stiffness commanded by dll -- leave alone if no ctrl
+   real(ReKi),                            intent(inout)  :: C_ctrl(:,:)    !< damping   commanded by dll
+   real(ReKi),                            intent(inout)  :: C_Brake(:,:)   !< brake     commanded by dll
+   integer(IntKi)                                        :: i_pt           ! counter for mesh points
+   do i_pt=1,p%NumMeshPts
+      if (p%StC_CChan(i_pt) > 0) then     ! This index should have been checked at init, so won't check bounds here
+         K_ctrl( 1:3,i_pt)  = u%CmdStiff(1:3,p%StC_CChan(i_pt))
+         C_ctrl( 1:3,i_pt)  = u%CmdDamp( 1:3,p%StC_CChan(i_pt))
+         C_Brake(1:3,i_pt)  = u%CmdBrake(1:3,p%StC_CChan(i_pt))
+      else  ! Use parameters from file (as if no control) -- leave K value as that may be set by table prior
+         C_ctrl(1,:) = p%C_X
+         C_ctrl(2,:) = p%C_Y
+         C_ctrl(3,:) = p%C_Z
+         C_Brake = 0.0_ReKi
+      endif
+   enddo
+END SUBROUTINE StC_ActiveCtrl_StiffDamp
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Extrapolate or interpolate stiffness value based on stiffness table.
 SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
@@ -2051,16 +2091,16 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       ! Check control modes
    IF (  InputFileData%StC_CMODE /= ControlMode_None     .and. &
          InputFileData%StC_CMODE /= CMODE_Semi           .and. &
-         InputFileData%StC_CMode /= CMODE_ActiveDLL ) &
+         InputFileData%StC_CMODE /= CMODE_ActiveDLL ) &
          !InputFileData%StC_CMode /= CMODE_ActiveEXTERN   .and. &    ! Not an option at the moment --> 4 (active with Simulink control),
       CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active),'// &
             ' or 5 (active with DLL control) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
 
       ! Check control channel
    if ( InputFileData%StC_CMode == CMODE_ActiveDLL ) then
-      if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept ) then
+      if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept .and.  InputFileData%StC_DOF_MODE /= DOFMode_Omni ) then
          call SetErrStat( ErrID_Fatal, 'Control mode 4 (active with Simulink control), or 5 (active with DLL control) '// &
-               'can only be used with independent DOF (StC_DOF_Mode=1) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+               'can only be used with independent or omni DOF (StC_DOF_Mode=1 or 2) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
       endif
       if (InitInp%NumMeshPts > 1) then
          do i=2,InitInp%NumMeshPts  ! Warn if controlling multiple mesh points with single instance (blade TMD)
@@ -2245,7 +2285,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    endif
 
    ! StC Control channels
-   call AllocAry( p%StC_CChan, size(InputFileData%StC_CChan), 'p%StC_CChan', ErrStat2, ErrMsg2 )
+   call AllocAry( p%StC_CChan, p%NumMeshPts, 'p%StC_CChan', ErrStat2, ErrMsg2 )
    if (p%StC_CMODE == CMODE_ActiveDLL ) then
       p%StC_CChan = InputFileData%StC_CChan
    else

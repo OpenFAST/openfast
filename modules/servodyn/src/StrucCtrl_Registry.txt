@@ -124,6 +124,7 @@ typedef ^ 		OtherStateType 	Reki DummyOtherState - - - "Remove this variable if 
 typedef ^ 		MiscVarType  Reki			F_stop   {:}{:} - - "Stop forces" -
 typedef	^		MiscVarType  ReKi			F_ext	{:}{:}	-	-	"External forces (user defined)"	-
 typedef	^		MiscVarType  ReKi			F_fr	{:}{:}	-	-	"Friction forces"	-
+typedef	^		MiscVarType  ReKi			K	{:}{:}	-	-	"Stiffness -- might be changed if controller controls this" N/m
 typedef	^		MiscVarType  ReKi			C_ctrl	{:}{:}	-	-	"Controlled Damping (On/Off)"	-
 typedef	^		MiscVarType  ReKi			C_Brake	{:}{:}	-	-	"Braking Damping"	-
 typedef	^		MiscVarType  ReKi			F_table	{:}{:}	-	-	"Tabled Stiffness"	-
