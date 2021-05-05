@@ -570,7 +570,7 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
    call WrSumInfoSend(32, 'Blade 3 root out-of-plane bending moment (Nm) [SrvD input]')
    if (p%NumBl>1) call WrSumInfoSend(33, 'Blade 2 pitch angle (rad) [SrvD input]')
    if (p%NumBl>2) call WrSumInfoSend(34, 'Blade 3 pitch angle (rad) [SrvD input]')
-   call WrSumInfoSend(35, 'Generator contactor (-) [GenState from previous call to DLL (initialized to 1)]')
+   call WrSumInfoBiDr(35, 'Generator contactor (-) [GenState from previous call to DLL (initialized to 1)]')
    call WrSumInfoSend(37, 'Nacelle yaw angle from North (rad)')
    call WrSumInfoSend(49, 'Maximum number of characters in the "MESSAGE" argument (-) [size of ErrMsg argument plus 1 (we add one for the C NULL CHARACTER)]')
    call WrSumInfoSend(50, 'Number of characters in the "INFILE"  argument (-) [trimmed length of DLL_InFile parameter plus 1 (we add one for the C NULL CHARACTER)]')
@@ -604,7 +604,7 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
 
       ! Channels with info retrieved from the DLL (from Retrieve_avrSWAP routine)
    call WrSumInfoRcvd(35, 'Generator contactor (-) [sent to DLL at the next call]')
-   call WrSumInfoRcvd(36, 'Shaft brake status (-) [sent to DLL at the next call; anything other than 0 or 1 is an error] ')
+   call WrSumInfoBiDr(36, 'Shaft brake status (-) [sent to DLL at the next call; anything other than 0 or 1 is an error] ')
    call WrSumInfoRcvd(41, 'demanded yaw actuator torque [this output is ignored since record 29 is set to 0 by ServoDyn indicating yaw rate control]')
    IF ( dll_data%Ptch_Cntrl == GH_DISCON_PITCH_CONTROL_INDIVIDUAL )  then
       do K = 1,p%NumBl
@@ -648,6 +648,7 @@ contains
       write(UnSum,'(A)') ''
       write(UnSum,'(6x,8x,3x,A3,3x,A)') '-->','indicates from SrvD to DLL'
       write(UnSum,'(6x,8x,3x,A3,3x,A)') '<--','indicates from DLL to SrvD'
+      write(UnSum,'(6x,8x,3x,A3,3x,A)') '<->','indicates from bidirectional'
       write(UnSum,'(6x,A8,3x,A3,3x,A11)') 'Record #','   ','Description'
       write(UnSum,'(6x,A8,3x,A3,3x,A11)') '--------','   ','-----------'
       do I=1,size(SumInfo)
@@ -666,6 +667,12 @@ contains
       DataFlow(Record)  = '<--'
       SumInfo(Record)   = trim(Desc(1:min(len_trim(Desc),len(SumInfo(1)))))     ! prevent string length overrun
    end subroutine WrSumInfoRcvd
+   subroutine WrSumInfoBiDr(Record,Desc)
+      integer(IntKi),   intent(in   )  :: Record
+      character(*),     intent(in   )  :: Desc
+      DataFlow(Record)  = '<->'
+      SumInfo(Record)   = trim(Desc(1:min(len_trim(Desc),len(SumInfo(1)))))     ! prevent string length overrun
+   end subroutine WrSumInfoBiDr
 
 end subroutine WrLegacyChannelInfoToSummaryFile
 !==================================================================================================================================
