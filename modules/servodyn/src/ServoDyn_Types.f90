@@ -251,9 +251,11 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: PrevStCCmdStiff      !< Previous value for ramping StC stiffness from controller (3,NumStC_Control) [N/m]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: PrevStCCmdDamp      !< Previous value for ramping StC damping from controller (3,NumStC_Control) [N/(m/s)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: PrevStCCmdBrake      !< Previous value for ramping StC braking signal (3,NumStC_Control) [N/(m/s)]
+    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: PrevStCCmdForce      !< Previous value for ramping StC force   signal (3,NumStC_Control) [N/(m/s)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: StCCmdStiff      !< StC stiffness from controller (3,NumStC_Control) [N/m]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: StCCmdDamp      !< StC damping from controller (3,NumStC_Control) [N/(m/s)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: StCCmdBrake      !< StC braking signal (3,NumStC_Control) [N]
+    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: StCCmdForce      !< StC commanded force signal (3,NumStC_Control) [N]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: StCMeasDisp      !< StC measured local displacement signal from StC (3,NumStC_Control) [m]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: StCMeasVel      !< StC measured local velocity     signal from StC (3,NumStC_Control) [m/s]
   END TYPE BladedDLLType
@@ -3182,6 +3184,20 @@ IF (ALLOCATED(SrcBladedDLLTypeData%PrevStCCmdBrake)) THEN
   END IF
     DstBladedDLLTypeData%PrevStCCmdBrake = SrcBladedDLLTypeData%PrevStCCmdBrake
 ENDIF
+IF (ALLOCATED(SrcBladedDLLTypeData%PrevStCCmdForce)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%PrevStCCmdForce,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%PrevStCCmdForce,1)
+  i2_l = LBOUND(SrcBladedDLLTypeData%PrevStCCmdForce,2)
+  i2_u = UBOUND(SrcBladedDLLTypeData%PrevStCCmdForce,2)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%PrevStCCmdForce)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%PrevStCCmdForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%PrevStCCmdForce.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%PrevStCCmdForce = SrcBladedDLLTypeData%PrevStCCmdForce
+ENDIF
 IF (ALLOCATED(SrcBladedDLLTypeData%StCCmdStiff)) THEN
   i1_l = LBOUND(SrcBladedDLLTypeData%StCCmdStiff,1)
   i1_u = UBOUND(SrcBladedDLLTypeData%StCCmdStiff,1)
@@ -3223,6 +3239,20 @@ IF (ALLOCATED(SrcBladedDLLTypeData%StCCmdBrake)) THEN
     END IF
   END IF
     DstBladedDLLTypeData%StCCmdBrake = SrcBladedDLLTypeData%StCCmdBrake
+ENDIF
+IF (ALLOCATED(SrcBladedDLLTypeData%StCCmdForce)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%StCCmdForce,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%StCCmdForce,1)
+  i2_l = LBOUND(SrcBladedDLLTypeData%StCCmdForce,2)
+  i2_u = UBOUND(SrcBladedDLLTypeData%StCCmdForce,2)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%StCCmdForce)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%StCCmdForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%StCCmdForce.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%StCCmdForce = SrcBladedDLLTypeData%StCCmdForce
 ENDIF
 IF (ALLOCATED(SrcBladedDLLTypeData%StCMeasDisp)) THEN
   i1_l = LBOUND(SrcBladedDLLTypeData%StCMeasDisp,1)
@@ -3308,6 +3338,9 @@ ENDIF
 IF (ALLOCATED(BladedDLLTypeData%PrevStCCmdBrake)) THEN
   DEALLOCATE(BladedDLLTypeData%PrevStCCmdBrake)
 ENDIF
+IF (ALLOCATED(BladedDLLTypeData%PrevStCCmdForce)) THEN
+  DEALLOCATE(BladedDLLTypeData%PrevStCCmdForce)
+ENDIF
 IF (ALLOCATED(BladedDLLTypeData%StCCmdStiff)) THEN
   DEALLOCATE(BladedDLLTypeData%StCCmdStiff)
 ENDIF
@@ -3316,6 +3349,9 @@ IF (ALLOCATED(BladedDLLTypeData%StCCmdDamp)) THEN
 ENDIF
 IF (ALLOCATED(BladedDLLTypeData%StCCmdBrake)) THEN
   DEALLOCATE(BladedDLLTypeData%StCCmdBrake)
+ENDIF
+IF (ALLOCATED(BladedDLLTypeData%StCCmdForce)) THEN
+  DEALLOCATE(BladedDLLTypeData%StCCmdForce)
 ENDIF
 IF (ALLOCATED(BladedDLLTypeData%StCMeasDisp)) THEN
   DEALLOCATE(BladedDLLTypeData%StCMeasDisp)
@@ -3511,6 +3547,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! PrevStCCmdBrake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PrevStCCmdBrake)  ! PrevStCCmdBrake
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! PrevStCCmdForce allocated yes/no
+  IF ( ALLOCATED(InData%PrevStCCmdForce) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! PrevStCCmdForce upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PrevStCCmdForce)  ! PrevStCCmdForce
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! StCCmdStiff allocated yes/no
   IF ( ALLOCATED(InData%StCCmdStiff) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! StCCmdStiff upper/lower bounds for each dimension
@@ -3525,6 +3566,11 @@ ENDIF
   IF ( ALLOCATED(InData%StCCmdBrake) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! StCCmdBrake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%StCCmdBrake)  ! StCCmdBrake
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! StCCmdForce allocated yes/no
+  IF ( ALLOCATED(InData%StCCmdForce) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! StCCmdForce upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%StCCmdForce)  ! StCCmdForce
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! StCMeasDisp allocated yes/no
   IF ( ALLOCATED(InData%StCMeasDisp) ) THEN
@@ -3956,6 +4002,26 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%PrevStCCmdForce) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrevStCCmdForce,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrevStCCmdForce,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrevStCCmdForce,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrevStCCmdForce,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%PrevStCCmdForce,2), UBOUND(InData%PrevStCCmdForce,2)
+        DO i1 = LBOUND(InData%PrevStCCmdForce,1), UBOUND(InData%PrevStCCmdForce,1)
+          ReKiBuf(Re_Xferred) = InData%PrevStCCmdForce(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%StCCmdStiff) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4012,6 +4078,26 @@ ENDIF
       DO i2 = LBOUND(InData%StCCmdBrake,2), UBOUND(InData%StCCmdBrake,2)
         DO i1 = LBOUND(InData%StCCmdBrake,1), UBOUND(InData%StCCmdBrake,1)
           ReKiBuf(Re_Xferred) = InData%StCCmdBrake(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%StCCmdForce) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%StCCmdForce,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StCCmdForce,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%StCCmdForce,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StCCmdForce,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%StCCmdForce,2), UBOUND(InData%StCCmdForce,2)
+        DO i1 = LBOUND(InData%StCCmdForce,1), UBOUND(InData%StCCmdForce,1)
+          ReKiBuf(Re_Xferred) = InData%StCCmdForce(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -4545,6 +4631,29 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrevStCCmdForce not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PrevStCCmdForce)) DEALLOCATE(OutData%PrevStCCmdForce)
+    ALLOCATE(OutData%PrevStCCmdForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PrevStCCmdForce.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%PrevStCCmdForce,2), UBOUND(OutData%PrevStCCmdForce,2)
+        DO i1 = LBOUND(OutData%PrevStCCmdForce,1), UBOUND(OutData%PrevStCCmdForce,1)
+          OutData%PrevStCCmdForce(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StCCmdStiff not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -4610,6 +4719,29 @@ ENDIF
       DO i2 = LBOUND(OutData%StCCmdBrake,2), UBOUND(OutData%StCCmdBrake,2)
         DO i1 = LBOUND(OutData%StCCmdBrake,1), UBOUND(OutData%StCCmdBrake,1)
           OutData%StCCmdBrake(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StCCmdForce not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%StCCmdForce)) DEALLOCATE(OutData%StCCmdForce)
+    ALLOCATE(OutData%StCCmdForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%StCCmdForce.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%StCCmdForce,2), UBOUND(OutData%StCCmdForce,2)
+        DO i1 = LBOUND(OutData%StCCmdForce,1), UBOUND(OutData%StCCmdForce,1)
+          OutData%StCCmdForce(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO

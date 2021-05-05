@@ -324,6 +324,8 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
          if (Failed())  return;
       call AllocAry( u%CmdBrake, 3, maxval(p%StC_CChan), 'u%CmdBrake', ErrStat2, ErrMsg2 )
          if (Failed())  return;
+      call AllocAry( u%CmdForce, 3, maxval(p%StC_CChan), 'u%CmdForce', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
       call AllocAry( y%MeasDisp, 3, maxval(p%StC_CChan), 'y%MeasDisp', ErrStat2, ErrMsg2 )
          if (Failed())  return;
       call AllocAry( y%MeasVel,  3, maxval(p%StC_CChan), 'y%MeasVel',  ErrStat2, ErrMsg2 )
@@ -332,6 +334,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       u%CmdStiff  =  0.0_ReKi
       u%CmdDamp   =  0.0_ReKi
       u%CmdBrake  =  0.0_ReKi
+      u%CmdForce  =  0.0_ReKi
       y%MeasDisp  =  0.0_ReKi
       y%MeasVel   =  0.0_ReKi
       ! Check that dimensions of x are what we expect
@@ -345,7 +348,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
          if (p%StC_CChan(i) > 0) then
             u%CmdStiff(1:3,i)  = (/ p%K_X, p%K_Y, p%K_Z /)
             u%CmdDamp( 1:3,i)  = (/ p%C_X, p%C_Y, p%C_Z /)
-            !u%CmdBrake --- leave this at zero for now (no input file method to set it)
+            !u%CmdBrake and u%CmdForce--- leave these at zero for now (no input file method to set it)
             !  The states are sized by (6,NumMeshPts).  NumMeshPts is then used to set
             !  size of StC_CChan as well.  For safety, we will check it here.
             y%MeasDisp(1:3,i)  = (/ x%StC_x(1,i), x%StC_x(3,i), x%StC_x(5,i) /)
@@ -1122,7 +1125,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_CMODE == CMODE_Semi) THEN ! ground hook control
          CALL StC_GroundHookDamp(dxdt,x,u,p,m%rdisp_P,m%rdot_P,m%C_ctrl,m%C_Brake,m%F_fr)
       ELSE IF (p%StC_CMODE == CMODE_ActiveDLL) THEN   ! Active control from DLL
-         call StC_ActiveCtrl_StiffDamp(u,p,m%K,m%C_ctrl,m%C_Brake)
+         call StC_ActiveCtrl_StiffDamp(u,p,m%K,m%C_ctrl,m%C_Brake,m%F_ext)
          m%F_fr    = 0.0_ReKi
          if (.not. p%Use_F_TBL) then
             K(1:3,:) = m%K(1:3,:)
@@ -1277,7 +1280,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,rdisp_P,rdot_P,C_ctrl,C_Brake,F_fr)
    REAL(ReKi), dimension(:,:),            INTENT(IN   )     :: rdisp_P     !< translational displacement in local coordinates
    REAL(ReKi), dimension(:,:),            INTENT(IN   )     :: rdot_P      !< translational velocity     in local coordinates
    REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_ctrl      !< extrapolated/interpolated stiffness values
-   REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_Brake     !< extrapolated/interpolated stiffness values
+   REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_Brake     !< extrapolated/interpolated braking   values
    REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: F_fr        !< Friction forces
    INTEGER(IntKi)                                           :: i_pt        !< generic counter for mesh points
 
@@ -1591,23 +1594,26 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,rdisp_P,rdot_P,C_ctrl,C_Brake,F_fr)
    enddo
 END SUBROUTINE StC_GroundHookDamp
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE StC_ActiveCtrl_StiffDamp(u,p,K_ctrl,C_ctrl,C_Brake)
+SUBROUTINE StC_ActiveCtrl_StiffDamp(u,p,K_ctrl,C_ctrl,C_Brake,F_ctrl)
    TYPE(StC_InputType),                   INTENT(IN   )  :: u              !< Inputs at Time
    TYPE(StC_ParameterType),               INTENT(IN   )  :: p              !< The module's parameter data
    real(ReKi),                            intent(inout)  :: K_ctrl(:,:)    !< stiffness commanded by dll -- leave alone if no ctrl
    real(ReKi),                            intent(inout)  :: C_ctrl(:,:)    !< damping   commanded by dll
    real(ReKi),                            intent(inout)  :: C_Brake(:,:)   !< brake     commanded by dll
+   real(ReKi),                            intent(inout)  :: F_ctrl(:,:)    !< brake     commanded by dll
    integer(IntKi)                                        :: i_pt           ! counter for mesh points
    do i_pt=1,p%NumMeshPts
       if (p%StC_CChan(i_pt) > 0) then     ! This index should have been checked at init, so won't check bounds here
-         K_ctrl( 1:3,i_pt)  = u%CmdStiff(1:3,p%StC_CChan(i_pt))
-         C_ctrl( 1:3,i_pt)  = u%CmdDamp( 1:3,p%StC_CChan(i_pt))
-         C_Brake(1:3,i_pt)  = u%CmdBrake(1:3,p%StC_CChan(i_pt))
+         K_ctrl( 1:3,i_pt) = u%CmdStiff(1:3,p%StC_CChan(i_pt))
+         C_ctrl( 1:3,i_pt) = u%CmdDamp( 1:3,p%StC_CChan(i_pt))
+         C_Brake(1:3,i_pt) = u%CmdBrake(1:3,p%StC_CChan(i_pt))
+         F_ctrl(1:3,i_pt)  = u%CmdForce(1:3,p%StC_CChan(i_pt))
       else  ! Use parameters from file (as if no control) -- leave K value as that may be set by table prior
          C_ctrl(1,:) = p%C_X
          C_ctrl(2,:) = p%C_Y
          C_ctrl(3,:) = p%C_Z
-         C_Brake = 0.0_ReKi
+         C_Brake     = 0.0_ReKi
+         F_ctrl      = 0.0_ReKi
       endif
    enddo
 END SUBROUTINE StC_ActiveCtrl_StiffDamp

@@ -239,9 +239,11 @@ typedef	^	BladedDLLType	SiKi	CableDeltaLdot 	{:}	-	-	"The swap array: used to pa
 typedef	^	BladedDLLType	SiKi	PrevStCCmdStiff	{:}{:}	-	-	"Previous value for ramping StC stiffness from controller (3,NumStC_Control)"	"N/m"
 typedef	^	BladedDLLType	SiKi	PrevStCCmdDamp		{:}{:}	-	-	"Previous value for ramping StC damping from controller (3,NumStC_Control)"	"N/(m/s)"
 typedef	^	BladedDLLType	SiKi	PrevStCCmdBrake	{:}{:}	-	-	"Previous value for ramping StC braking signal (3,NumStC_Control)"	"N/(m/s)"
+typedef	^	BladedDLLType	SiKi	PrevStCCmdForce	{:}{:}	-	-	"Previous value for ramping StC force   signal (3,NumStC_Control)"	"N/(m/s)"
 typedef	^	BladedDLLType	SiKi	StCCmdStiff			{:}{:}	-	-	"StC stiffness from controller (3,NumStC_Control)"	"N/m"
 typedef	^	BladedDLLType	SiKi	StCCmdDamp			{:}{:}	-	-	"StC damping from controller (3,NumStC_Control)"	"N/(m/s)"
 typedef	^	BladedDLLType	SiKi	StCCmdBrake			{:}{:}	-	-	"StC braking signal (3,NumStC_Control)"	"N"
+typedef	^	BladedDLLType	SiKi	StCCmdForce			{:}{:}	-	-	"StC commanded force signal (3,NumStC_Control)"	"N"
 typedef	^	BladedDLLType	SiKi	StCMeasDisp			{:}{:}	-	-	"StC measured local displacement signal from StC (3,NumStC_Control)"	"m"
 typedef	^	BladedDLLType	SiKi	StCMeasVel			{:}{:}	-	-	"StC measured local velocity     signal from StC (3,NumStC_Control)"	"m/s"
 

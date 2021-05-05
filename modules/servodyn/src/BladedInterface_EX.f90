@@ -301,11 +301,15 @@ contains
          if (Failed())  return
       call AllocAry( dll_data%PrevStCCmdBrake, 3, p%NumStC_Control, 'PrevStCCmdBrake', ErrStat2, ErrMsg2 )
          if (Failed())  return
+      call AllocAry( dll_data%PrevStCCmdForce, 3, p%NumStC_Control, 'PrevStCCmdForce', ErrStat2, ErrMsg2 )
+         if (Failed())  return
       call AllocAry( dll_data%StCCmdStiff,     3, p%NumStC_Control, 'StCCmdStiff',     ErrStat2, ErrMsg2 )
          if (Failed())  return
       call AllocAry( dll_data%StCCmdDamp,      3, p%NumStC_Control, 'StCCmdDamp',      ErrStat2, ErrMsg2 )
          if (Failed())  return
       call AllocAry( dll_data%StCCmdBrake,     3, p%NumStC_Control, 'StCCmdBrake',     ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      call AllocAry( dll_data%StCCmdForce,     3, p%NumStC_Control, 'StCCmdForce',     ErrStat2, ErrMsg2 )
          if (Failed())  return
       ! Initialize to zeros -- These will be reinitialized to values from StC on first call
       dll_data%StCMeasDisp       =  0.0_SiKi
@@ -313,9 +317,11 @@ contains
       dll_data%PrevStCCmdStiff   =  0.0_SiKi
       dll_data%PrevStCCmdDamp    =  0.0_SiKi
       dll_data%PrevStCCmdBrake   =  0.0_SiKi
+      dll_data%PrevStCCmdForce   =  0.0_SiKi
       dll_data%StCCmdStiff       =  0.0_SiKi
       dll_data%StCCmdDamp        =  0.0_SiKi
       dll_data%StCCmdBrake       =  0.0_SiKi
+      dll_data%StCCmdForce       =  0.0_SiKi
 
       ! Create info for summary file about channels
       if (UnSum > 0) then
@@ -327,15 +333,18 @@ contains
             call WrSumInfoSendFrom(J+4, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_X')
             call WrSumInfoSendFrom(J+5, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_Y')
             call WrSumInfoSendFrom(J+6, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Vel_Z')
-            call WrSumInfoRcvd(    J+7, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_X')
-            call WrSumInfoRcvd(    J+8, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_Y')
-            call WrSumInfoRcvd(    J+9, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_Z')
-            call WrSumInfoRcvd(    J+10,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_X')
-            call WrSumInfoRcvd(    J+11,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_Y')
-            call WrSumInfoRcvd(    J+12,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_Z')
-            call WrSumInfoRcvd(    J+13,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_X')
-            call WrSumInfoRcvd(    J+14,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_Y')
-            call WrSumInfoRcvd(    J+15,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_Z')
+            call WrSumInfoRcvd(    J+7, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_X (override spring  constant)')
+            call WrSumInfoRcvd(    J+8, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_Y (override spring  constant)')
+            call WrSumInfoRcvd(    J+9, StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Stiff_Z (override spring  constant)')
+            call WrSumInfoRcvd(    J+10,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_X  (override damping constant)')
+            call WrSumInfoRcvd(    J+11,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_Y  (override damping constant)')
+            call WrSumInfoRcvd(    J+12,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Damp_Z  (override damping constant)')
+            call WrSumInfoRcvd(    J+13,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_X (braking force)')
+            call WrSumInfoRcvd(    J+14,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_Y (braking force)')
+            call WrSumInfoRcvd(    J+15,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Brake_Z (braking force)')
+            call WrSumInfoRcvd(    J+16,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Force_X (additional force)')
+            call WrSumInfoRcvd(    J+17,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Force_Y (additional force)')
+            call WrSumInfoRcvd(    J+18,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Force_Z (additional force)')
          enddo
       endif
    end subroutine InitStCCtrl
@@ -471,6 +480,7 @@ CONTAINS
             dll_data%avrswap(J+ 7:J+ 9) = dll_data%PrevStCCmdStiff(1:3,I)  ! StC initial stiffness -- StC_Stiff_X, StC_Stiff_Y, StC_Stiff_Z (N/m)
             dll_data%avrswap(J+10:J+12) = dll_data%PrevStCCmdDamp( 1:3,I)  ! StC initial damping   -- StC_Damp_X,  StC_Damp_Y,  StC_Damp_Z  (N/(m/s))
             dll_data%avrswap(J+13:J+15) = dll_data%PrevStCCmdBrake(1:3,I)  ! StC initial brake     -- StC_Brake_X, StC_Brake_Y, StC_Brake_Z (N)
+            dll_data%avrswap(J+16:J+18) = dll_data%PrevStCCmdForce(1:3,I)  ! StC initial brake     -- StC_Force_X, StC_Force_Y, StC_Force_Z (N)
          enddo
       endif
    end subroutine SetEXavrStC_Sensors
@@ -546,6 +556,7 @@ CONTAINS
          dll_data%StCCmdStiff(1:3,I) = dll_data%avrswap(J+ 7:J+ 9)  ! StC commmanded stiffness -- StC_Stiff_X, StC_Stiff_Y, StC_Stiff_Z (N/m)
          dll_data%StCCmdDamp( 1:3,I) = dll_data%avrswap(J+10:J+12)  ! StC commmanded damping   -- StC_Damp_X,  StC_Damp_Y,  StC_Damp_Z  (N/(m/s))
          dll_data%StCCmdBrake(1:3,I) = dll_data%avrswap(J+13:J+15)  ! StC commmanded brake     -- StC_Brake_X, StC_Brake_Y, StC_Brake_Z (N)
+         dll_data%StCCmdForce(1:3,I) = dll_data%avrswap(J+16:J+18)  ! StC commmanded brake     -- StC_Force_X, StC_Force_Y, StC_Force_Z (N)
       enddo
 
    end subroutine Retrieve_EXavrSWAP_StControls

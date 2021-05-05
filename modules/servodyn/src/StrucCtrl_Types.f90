@@ -122,6 +122,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: InitStiff      !< StC stiffness at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init [N/m]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: InitDamp      !< StC damping at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init [N/(m/s)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: InitBrake      !< StC braking signal at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init [N]
+    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: InitForce      !< StC external force signal at initialization  (3,NumStC_Control) -- passed from StC to let controller know the value during init (should be zero) [N]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: InitMeasDisp      !< StC measured local displacement signal from StC at initialization  (3,NumStC_Control) [m]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: InitMeasVel      !< StC measured local velocity     signal from StC at initialization (3,NumStC_Control) [m/s]
   END TYPE StC_CtrlChanInitInfoType
@@ -154,7 +155,7 @@ IMPLICIT NONE
 ! =========  StC_MiscVarType  =======
   TYPE, PUBLIC :: StC_MiscVarType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_stop      !< Stop forces [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_ext      !< External forces (user defined) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_ext      !< External forces (user defined or from controller) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_fr      !< Friction forces [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: K      !< Stiffness -- might be changed if controller controls this [N/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C_ctrl      !< Controlled Damping (On/Off) [-]
@@ -231,8 +232,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: StC_InputType
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: Mesh      !< Displacements at the StC reference point(s) P in the inertial frame [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CmdStiff      !< StC stiffness from controller [N/m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CmdDamp      !< StC damping from controller [N/(m/s)]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CmdBrake      !< StC braking signal [N/(m/s)]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CmdDamp      !< StC damping   from controller [N/(m/s)]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CmdBrake      !< StC braking   from controller [N/(m/s)]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CmdForce      !< StC force     from controller [N]
   END TYPE StC_InputType
 ! =======================
 ! =========  StC_OutputType  =======
@@ -1501,6 +1503,20 @@ IF (ALLOCATED(SrcCtrlChanInitInfoTypeData%InitBrake)) THEN
   END IF
     DstCtrlChanInitInfoTypeData%InitBrake = SrcCtrlChanInitInfoTypeData%InitBrake
 ENDIF
+IF (ALLOCATED(SrcCtrlChanInitInfoTypeData%InitForce)) THEN
+  i1_l = LBOUND(SrcCtrlChanInitInfoTypeData%InitForce,1)
+  i1_u = UBOUND(SrcCtrlChanInitInfoTypeData%InitForce,1)
+  i2_l = LBOUND(SrcCtrlChanInitInfoTypeData%InitForce,2)
+  i2_u = UBOUND(SrcCtrlChanInitInfoTypeData%InitForce,2)
+  IF (.NOT. ALLOCATED(DstCtrlChanInitInfoTypeData%InitForce)) THEN 
+    ALLOCATE(DstCtrlChanInitInfoTypeData%InitForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstCtrlChanInitInfoTypeData%InitForce.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstCtrlChanInitInfoTypeData%InitForce = SrcCtrlChanInitInfoTypeData%InitForce
+ENDIF
 IF (ALLOCATED(SrcCtrlChanInitInfoTypeData%InitMeasDisp)) THEN
   i1_l = LBOUND(SrcCtrlChanInitInfoTypeData%InitMeasDisp,1)
   i1_u = UBOUND(SrcCtrlChanInitInfoTypeData%InitMeasDisp,1)
@@ -1551,6 +1567,9 @@ IF (ALLOCATED(CtrlChanInitInfoTypeData%InitDamp)) THEN
 ENDIF
 IF (ALLOCATED(CtrlChanInitInfoTypeData%InitBrake)) THEN
   DEALLOCATE(CtrlChanInitInfoTypeData%InitBrake)
+ENDIF
+IF (ALLOCATED(CtrlChanInitInfoTypeData%InitForce)) THEN
+  DEALLOCATE(CtrlChanInitInfoTypeData%InitForce)
 ENDIF
 IF (ALLOCATED(CtrlChanInitInfoTypeData%InitMeasDisp)) THEN
   DEALLOCATE(CtrlChanInitInfoTypeData%InitMeasDisp)
@@ -1614,6 +1633,11 @@ ENDIF
   IF ( ALLOCATED(InData%InitBrake) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! InitBrake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%InitBrake)  ! InitBrake
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! InitForce allocated yes/no
+  IF ( ALLOCATED(InData%InitForce) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! InitForce upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%InitForce)  ! InitForce
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! InitMeasDisp allocated yes/no
   IF ( ALLOCATED(InData%InitMeasDisp) ) THEN
@@ -1725,6 +1749,26 @@ ENDIF
       DO i2 = LBOUND(InData%InitBrake,2), UBOUND(InData%InitBrake,2)
         DO i1 = LBOUND(InData%InitBrake,1), UBOUND(InData%InitBrake,1)
           ReKiBuf(Re_Xferred) = InData%InitBrake(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%InitForce) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitForce,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitForce,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitForce,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitForce,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%InitForce,2), UBOUND(InData%InitForce,2)
+        DO i1 = LBOUND(InData%InitForce,1), UBOUND(InData%InitForce,1)
+          ReKiBuf(Re_Xferred) = InData%InitForce(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -1884,6 +1928,29 @@ ENDIF
       DO i2 = LBOUND(OutData%InitBrake,2), UBOUND(OutData%InitBrake,2)
         DO i1 = LBOUND(OutData%InitBrake,1), UBOUND(OutData%InitBrake,1)
           OutData%InitBrake(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitForce not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%InitForce)) DEALLOCATE(OutData%InitForce)
+    ALLOCATE(OutData%InitForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitForce.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%InitForce,2), UBOUND(OutData%InitForce,2)
+        DO i1 = LBOUND(OutData%InitForce,1), UBOUND(OutData%InitForce,1)
+          OutData%InitForce(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -4554,6 +4621,20 @@ IF (ALLOCATED(SrcInputData%CmdBrake)) THEN
   END IF
     DstInputData%CmdBrake = SrcInputData%CmdBrake
 ENDIF
+IF (ALLOCATED(SrcInputData%CmdForce)) THEN
+  i1_l = LBOUND(SrcInputData%CmdForce,1)
+  i1_u = UBOUND(SrcInputData%CmdForce,1)
+  i2_l = LBOUND(SrcInputData%CmdForce,2)
+  i2_u = UBOUND(SrcInputData%CmdForce,2)
+  IF (.NOT. ALLOCATED(DstInputData%CmdForce)) THEN 
+    ALLOCATE(DstInputData%CmdForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%CmdForce.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%CmdForce = SrcInputData%CmdForce
+ENDIF
  END SUBROUTINE StC_CopyInput
 
  SUBROUTINE StC_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -4579,6 +4660,9 @@ IF (ALLOCATED(InputData%CmdDamp)) THEN
 ENDIF
 IF (ALLOCATED(InputData%CmdBrake)) THEN
   DEALLOCATE(InputData%CmdBrake)
+ENDIF
+IF (ALLOCATED(InputData%CmdForce)) THEN
+  DEALLOCATE(InputData%CmdForce)
 ENDIF
  END SUBROUTINE StC_DestroyInput
 
@@ -4655,6 +4739,11 @@ ENDIF
   IF ( ALLOCATED(InData%CmdBrake) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! CmdBrake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%CmdBrake)  ! CmdBrake
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! CmdForce allocated yes/no
+  IF ( ALLOCATED(InData%CmdForce) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! CmdForce upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%CmdForce)  ! CmdForce
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -4780,6 +4869,26 @@ ENDIF
       DO i2 = LBOUND(InData%CmdBrake,2), UBOUND(InData%CmdBrake,2)
         DO i1 = LBOUND(InData%CmdBrake,1), UBOUND(InData%CmdBrake,1)
           ReKiBuf(Re_Xferred) = InData%CmdBrake(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%CmdForce) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CmdForce,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CmdForce,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CmdForce,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CmdForce,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%CmdForce,2), UBOUND(InData%CmdForce,2)
+        DO i1 = LBOUND(InData%CmdForce,1), UBOUND(InData%CmdForce,1)
+          ReKiBuf(Re_Xferred) = InData%CmdForce(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -4935,6 +5044,29 @@ ENDIF
       DO i2 = LBOUND(OutData%CmdBrake,2), UBOUND(OutData%CmdBrake,2)
         DO i1 = LBOUND(OutData%CmdBrake,1), UBOUND(OutData%CmdBrake,1)
           OutData%CmdBrake(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CmdForce not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CmdForce)) DEALLOCATE(OutData%CmdForce)
+    ALLOCATE(OutData%CmdForce(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CmdForce.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%CmdForce,2), UBOUND(OutData%CmdForce,2)
+        DO i1 = LBOUND(OutData%CmdForce,1), UBOUND(OutData%CmdForce,1)
+          OutData%CmdForce(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -5464,6 +5596,14 @@ IF (ALLOCATED(u_out%CmdBrake) .AND. ALLOCATED(u1%CmdBrake)) THEN
     END DO
   END DO
 END IF ! check if allocated
+IF (ALLOCATED(u_out%CmdForce) .AND. ALLOCATED(u1%CmdForce)) THEN
+  DO i2 = LBOUND(u_out%CmdForce,2),UBOUND(u_out%CmdForce,2)
+    DO i1 = LBOUND(u_out%CmdForce,1),UBOUND(u_out%CmdForce,1)
+      b = -(u1%CmdForce(i1,i2) - u2%CmdForce(i1,i2))
+      u_out%CmdForce(i1,i2) = u1%CmdForce(i1,i2) + b * ScaleFactor
+    END DO
+  END DO
+END IF ! check if allocated
  END SUBROUTINE StC_Input_ExtrapInterp1
 
 
@@ -5553,6 +5693,15 @@ IF (ALLOCATED(u_out%CmdBrake) .AND. ALLOCATED(u1%CmdBrake)) THEN
       b = (t(3)**2*(u1%CmdBrake(i1,i2) - u2%CmdBrake(i1,i2)) + t(2)**2*(-u1%CmdBrake(i1,i2) + u3%CmdBrake(i1,i2)))* scaleFactor
       c = ( (t(2)-t(3))*u1%CmdBrake(i1,i2) + t(3)*u2%CmdBrake(i1,i2) - t(2)*u3%CmdBrake(i1,i2) ) * scaleFactor
       u_out%CmdBrake(i1,i2) = u1%CmdBrake(i1,i2) + b  + c * t_out
+    END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%CmdForce) .AND. ALLOCATED(u1%CmdForce)) THEN
+  DO i2 = LBOUND(u_out%CmdForce,2),UBOUND(u_out%CmdForce,2)
+    DO i1 = LBOUND(u_out%CmdForce,1),UBOUND(u_out%CmdForce,1)
+      b = (t(3)**2*(u1%CmdForce(i1,i2) - u2%CmdForce(i1,i2)) + t(2)**2*(-u1%CmdForce(i1,i2) + u3%CmdForce(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*u1%CmdForce(i1,i2) + t(3)*u2%CmdForce(i1,i2) - t(2)*u3%CmdForce(i1,i2) ) * scaleFactor
+      u_out%CmdForce(i1,i2) = u1%CmdForce(i1,i2) + b  + c * t_out
     END DO
   END DO
 END IF ! check if allocated

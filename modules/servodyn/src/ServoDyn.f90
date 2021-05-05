@@ -1124,6 +1124,7 @@ subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,ErrStat,ErrMsg)
    allocate(CtrlChanInitInfo%InitStiff(   3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitStiff    array') ) return;
    allocate(CtrlChanInitInfo%InitDamp(    3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitDamp     array') ) return;
    allocate(CtrlChanInitInfo%InitBrake(   3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitBrake    array') ) return;
+   allocate(CtrlChanInitInfo%InitForce(   3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitForce    array') ) return;
    allocate(CtrlChanInitInfo%InitMeasDisp(3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitMeasDisp array') ) return;
    allocate(CtrlChanInitInfo%InitMeasVel( 3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitMeasVel  array') ) return;
 
@@ -1153,7 +1154,7 @@ subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,ErrStat,ErrMsg)
    ! Set all the initial values to pass to the controller for first call and ensure all inputs/outputs for control are sized same
    call StC_SetDLLinputs(p,m,CtrlChanInitInfo%InitMeasDisp,CtrlChanInitInfo%InitMeasVel,ErrStat2,ErrMsg2,.TRUE.)  ! Do resizing if needed
       if (Failed())  return;
-   call StC_SetInitDLLinputs(p,m,CtrlChanInitInfo%InitStiff,CtrlChanInitInfo%InitDamp,CtrlChanInitInfo%InitBrake,ErrStat2,ErrMsg2)
+   call StC_SetInitDLLinputs(p,m,CtrlChanInitInfo%InitStiff,CtrlChanInitInfo%InitDamp,CtrlChanInitInfo%InitBrake,CtrlChanInitInfo%InitForce,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
 contains
@@ -1291,6 +1292,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    REAL(ReKi),                      ALLOCATABLE   :: StC_CmdStiff(:,:)  !< StC_CmdStiff command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
    REAL(ReKi),                      ALLOCATABLE   :: StC_CmdDamp(:,:)   !< StC_CmdDamp  command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
    REAL(ReKi),                      ALLOCATABLE   :: StC_CmdBrake(:,:)  !< StC_CmdBrake command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
+   REAL(ReKi),                      ALLOCATABLE   :: StC_CmdForce(:,:)  !< StC_CmdForce command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
 
    INTEGER(IntKi)                                 :: ErrStat2        ! Error status of the operation (occurs after initial error)
    CHARACTER(ErrMsgLen)                           :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
@@ -1361,7 +1363,8 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       call AllocAry(StC_CmdStiff, 3, p%NumStC_Control, 'StC_CmdStiff', ErrStat2, ErrMsg2 );  if (Failed()) return;
       call AllocAry(StC_CmdDamp,  3, p%NumStC_Control, 'StC_CmdDamp' , ErrStat2, ErrMsg2 );  if (Failed()) return;
       call AllocAry(StC_CmdBrake, 3, p%NumStC_Control, 'StC_CmdBrake', ErrStat2, ErrMsg2 );  if (Failed()) return;
-      call StCControl_CalcOutput( t_next, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, m, ErrStat2, ErrMsg2 )
+      call AllocAry(StC_CmdForce, 3, p%NumStC_Control, 'StC_CmdForce', ErrStat2, ErrMsg2 );  if (Failed()) return;
+      call StCControl_CalcOutput( t_next, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, StC_CmdForce, m, ErrStat2, ErrMsg2 )
          if (Failed()) return;
    endif
    ! Nacelle StrucCtrl
@@ -1453,23 +1456,26 @@ CONTAINS
       if (allocated(StC_CmdStiff))  deallocate(StC_CmdStiff)
       if (allocated(StC_CmdDamp))   deallocate(StC_CmdDamp)
       if (allocated(StC_CmdBrake))  deallocate(StC_CmdBrake)
+      if (allocated(StC_CmdForce))  deallocate(StC_CmdForce)
    END SUBROUTINE Cleanup
    subroutine SetStCInput_CtrlChans(u_StC)
       type(StC_InputType), intent(inout)  :: u_StC(:)    !< Inputs at InputTimes
       !  -- not all StC instances will necessarily be looking for this, so these inputs might not be allocated)
-      if (allocated(u_StC(1)%CmdStiff) .and. allocated(u_StC(1)%CmdDamp) .and. allocated(u_StC(1)%CmdBrake)) then
+      if (allocated(u_StC(1)%CmdStiff) .and. allocated(u_StC(1)%CmdDamp) .and. allocated(u_StC(1)%CmdBrake) .and. allocated(u_StC(1)%CmdForce)) then
          if ( n > m%PrevTstepNcall ) then
             ! Cycle u%CmdStiff and others -- we are at a new timestep.
             do i=p%InterpOrder,1,-1   ! step oldest to newest
                u_StC(i)%CmdStiff = u_StC(i+1)%CmdStiff
                u_StC(i)%CmdDamp  = u_StC(i+1)%CmdDamp 
                u_StC(i)%CmdBrake = u_StC(i+1)%CmdBrake
+               u_StC(i)%CmdForce = u_StC(i+1)%CmdForce
             enddo
          endif
          ! Now set the current commanded values
          u_StC(1)%CmdStiff(1:3,1:p%NumStC_Control) = StC_CmdStiff(1:3,1:p%NumStC_Control)
          u_StC(1)%CmdDamp( 1:3,1:p%NumStC_Control) = StC_CmdDamp( 1:3,1:p%NumStC_Control)
          u_StC(1)%CmdBrake(1:3,1:p%NumStC_Control) = StC_CmdBrake(1:3,1:p%NumStC_Control)
+         u_StC(1)%CmdForce(1:3,1:p%NumStC_Control) = StC_CmdForce(1:3,1:p%NumStC_Control)
       endif
    end subroutine SetStCInput_CtrlChans
 
@@ -1576,6 +1582,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    REAL(ReKi),                      ALLOCATABLE   :: StC_CmdStiff(:,:)     !< StC_CmdStiff command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
    REAL(ReKi),                      ALLOCATABLE   :: StC_CmdDamp(:,:)      !< StC_CmdDamp  command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
    REAL(ReKi),                      ALLOCATABLE   :: StC_CmdBrake(:,:)     !< StC_CmdBrake command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
+   REAL(ReKi),                      ALLOCATABLE   :: StC_CmdForce(:,:)     !< StC_CmdForce command signals (3,p%NumStC_Control) -- used only if p%NumStC_Ctrl > 0
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
    CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_CalcOutput'
@@ -1645,7 +1652,8 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       call AllocAry(StC_CmdStiff, 3, p%NumStC_Control, 'StC_CmdStiff', ErrStat2, ErrMsg2 );  if (Failed()) return;
       call AllocAry(StC_CmdDamp,  3, p%NumStC_Control, 'StC_CmdDamp' , ErrStat2, ErrMsg2 );  if (Failed()) return;
       call AllocAry(StC_CmdBrake, 3, p%NumStC_Control, 'StC_CmdBrake', ErrStat2, ErrMsg2 );  if (Failed()) return;
-      call StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, m, ErrStat2, ErrMsg2 )
+      call AllocAry(StC_CmdForce, 3, p%NumStC_Control, 'StC_CmdForce', ErrStat2, ErrMsg2 );  if (Failed()) return;
+      call StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, StC_CmdForce, m, ErrStat2, ErrMsg2 )
          if (Failed()) return;
    endif
    do j=1,p%NumNStC       ! Nacelle
@@ -1745,14 +1753,16 @@ CONTAINS
       if (allocated(StC_CmdStiff))  deallocate(StC_CmdStiff)
       if (allocated(StC_CmdDamp))   deallocate(StC_CmdDamp)
       if (allocated(StC_CmdBrake))  deallocate(StC_CmdBrake)
+      if (allocated(StC_CmdForce))  deallocate(StC_CmdForce)
    END SUBROUTINE Cleanup
    subroutine SetStCInput_CtrlChans(u_StC)
       type(StC_InputType), intent(inout)  :: u_StC    !< Inputs at InputTimes
       !  -- not all StC instances will necessarily be looking for this, so these inputs might not be allocated)
-      if (allocated(u_StC%CmdStiff) .and. allocated(u_StC%CmdDamp) .and. allocated(u_StC%CmdBrake)) then
+      if (allocated(u_StC%CmdStiff) .and. allocated(u_StC%CmdDamp) .and. allocated(u_StC%CmdBrake) .and. allocated(u_StC%CmdForce)) then
          u_StC%CmdStiff(1:3,1:p%NumStC_Control) = StC_CmdStiff(1:3,1:p%NumStC_Control)
          u_StC%CmdDamp( 1:3,1:p%NumStC_Control) = StC_CmdDamp( 1:3,1:p%NumStC_Control)
          u_StC%CmdBrake(1:3,1:p%NumStC_Control) = StC_CmdBrake(1:3,1:p%NumStC_Control)
+         u_StC%CmdForce(1:3,1:p%NumStC_Control) = StC_CmdForce(1:3,1:p%NumStC_Control)
       endif
    end subroutine SetStCInput_CtrlChans
 
@@ -3033,6 +3043,7 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
       write(UnSum, '(A34,I2)')         '    CCMode  -- cable control mode ',p%CCMode
    endif
 
+!FIXME add notes on StC_CCMode -- which ones are controlled
 END SUBROUTINE SrvD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing the yaw output: a yaw moment. This routine is used in both loose and tight coupling.
@@ -4275,12 +4286,13 @@ END SUBROUTINE CableControl_CalcOutput
 !  Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
 !  This is passed to AD15 to be interpolated with the airfoil table userprop column
 !  (might be used for airfoil flap angles for example)
-SUBROUTINE StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, m, ErrStat, ErrMsg )
+SUBROUTINE StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, StC_CmdForce, m, ErrStat, ErrMsg )
    REAL(DbKi),                     INTENT(IN   )  :: t                  !< Current simulation time in seconds
    TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p                  !< Parameters
    REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdStiff(:,:)  !< StC_CmdStiff command signals (3,p%NumStC_Control)
    REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdDamp(:,:)   !< StC_CmdDamp  command signals (3,p%NumStC_Control)
    REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdBrake(:,:)  !< StC_CmdBrake command signals (3,p%NumStC_Control)
+   REAL(ReKi),    ALLOCATABLE,     INTENT(INOUT)  :: StC_CmdForce(:,:)  !< StC_CmdForce command signals (3,p%NumStC_Control)
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m                  !< Misc (optimization) variables
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat            !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
@@ -4292,7 +4304,7 @@ SUBROUTINE StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake,
 
          ! Only proceed if we have have StC controls with the extended swap and legacy interface
       if (p%NumStC_Control <= 0 .or. .not. p%UseLegacyInterface .or. .not. p%EXavrSWAP)    return
-      if (.not. allocated(StC_CmdStiff) .or. .not. allocated(StC_CmdDamp) .or. .not. allocated(StC_CmdBrake)) then
+      if (.not. allocated(StC_CmdStiff) .or. .not. allocated(StC_CmdDamp) .or. .not. allocated(StC_CmdBrake) .or. .not. allocated(StC_CmdForce)) then
          ErrStat = ErrID_Fatal
          ErrMsg  = "StC control signal matrices not allocated.  Programming error somewhere."
          return
@@ -4316,10 +4328,15 @@ SUBROUTINE StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake,
             StC_CmdBrake(1:3,1:p%NumStC_Control)    = m%dll_data%PrevStCCmdBrake(1:3,1:p%NumStC_Control) + &
                          factor * ( m%dll_data%StCCmdBrake(1:3,1:p%NumStC_Control) - m%dll_data%PrevStCCmdBrake(1:3,1:p%NumStC_Control) )
          endif
+         if (allocated(StC_CmdForce)) then
+            StC_CmdForce(1:3,1:p%NumStC_Control)    = m%dll_data%PrevStCCmdForce(1:3,1:p%NumStC_Control) + &
+                         factor * ( m%dll_data%StCCmdForce(1:3,1:p%NumStC_Control) - m%dll_data%PrevStCCmdForce(1:3,1:p%NumStC_Control) )
+         endif
       else
          if (allocated(StC_CmdStiff))  StC_CmdStiff(1:3,1:p%NumStC_Control) = m%dll_data%StCCmdStiff(1:3,1:p%NumStC_Control)
          if (allocated(StC_CmdDamp))   StC_CmdDamp( 1:3,1:p%NumStC_Control) = m%dll_data%StCCmdDamp( 1:3,1:p%NumStC_Control)
          if (allocated(StC_CmdBrake))  StC_CmdBrake(1:3,1:p%NumStC_Control) = m%dll_data%StCCmdBrake(1:3,1:p%NumStC_Control)
+         if (allocated(StC_CmdForce))  StC_CmdForce(1:3,1:p%NumStC_Control) = m%dll_data%StCCmdForce(1:3,1:p%NumStC_Control)
       end if
 END SUBROUTINE StCControl_CalcOutput
 
@@ -4448,12 +4465,13 @@ contains
    end subroutine GetMeas
 end subroutine StC_SetDLLinputs
 
-subroutine StC_SetInitDLLinputs(p,m,InitStiff,InitDamp,InitBrake,ErrStat,ErrMsg)
+subroutine StC_SetInitDLLinputs(p,m,InitStiff,InitDamp,InitBrake,InitForce,ErrStat,ErrMsg)
    type(SrvD_ParameterType),  intent(in   )  :: p                 !< Parameters
    type(SrvD_MiscVarType),    intent(inout)  :: m                 !< Misc (optimization) variables
    real(SiKi), allocatable,   intent(inout)  :: InitStiff(:,:)    !< initial stiffness -- from input file     normally output of DLL (3,p%NumStC_Control)
    real(SiKi), allocatable,   intent(inout)  :: InitDamp(:,:)     !< Initial damping   -- from input file     normally output of DLL (3,p%NumStC_Control)
    real(SiKi), allocatable,   intent(inout)  :: InitBrake(:,:)    !< Initial brake     -- from input file (?) normally output of DLL (3,p%NumStC_Control)
+   real(SiKi), allocatable,   intent(inout)  :: InitForce(:,:)    !< Initial brake     -- from input file (?) normally output of DLL (3,p%NumStC_Control)
    integer(IntKi),            intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),              intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -4470,7 +4488,7 @@ subroutine StC_SetInitDLLinputs(p,m,InitStiff,InitDamp,InitBrake,ErrStat,ErrMsg)
 
       ! Only proceed if we have have StC controls with the extended swap and legacy interface
    if (p%NumStC_Control <= 0 .or. .not. p%UseLegacyInterface .or. .not. p%EXavrSWAP)    return
-   if (.not. allocated(InitStiff) .or. .not. allocated(InitDamp) .or. .not. allocated(InitBrake)) then
+   if (.not. allocated(InitStiff) .or. .not. allocated(InitDamp) .or. .not. allocated(InitBrake) .or. .not. allocated(InitForce)) then
       ErrStat2 = ErrID_Fatal
       ErrMsg2  = "StC control signal matrices not allocated.  Programming error somewhere."
       if (Failed()) return
@@ -4513,14 +4531,15 @@ subroutine StC_SetInitDLLinputs(p,m,InitStiff,InitDamp,InitBrake,ErrStat,ErrMsg)
          InitBrake(1:3,i)  = InitBrake(1:3,i) / real(p%StCMeasNumPerChan(i),SiKi)
       endif
    enddo
+   InitForce   = 0.0_ReKi 
 
 contains
    subroutine ResizeStCinput(iNum,u)    ! Assemble info about who requested which channel
       integer(IntKi),               intent(in   )  :: iNum     ! instance number
       type(StC_InputType),          intent(inout)  :: u        ! inputs from the StC instance -- will contain allocated Cmd input values if used
       type(StC_InputType)                          :: u_tmp    ! copy of u -- for resizing as needed
-      if (allocated(u%CmdStiff) .and. allocated(u%CmdDamp) .and. allocated(u%CmdBrake)) then    ! either all or none will be allocated
-         if (p%NumStC_Control > min(size(u%CmdStiff,2),size(u%CmdDamp,2),size(u%CmdBrake,2))) then
+      if (allocated(u%CmdStiff) .and. allocated(u%CmdDamp) .and. allocated(u%CmdBrake) .and. allocated(u%CmdForce)) then    ! either all or none will be allocated
+         if (p%NumStC_Control > min(size(u%CmdStiff,2),size(u%CmdDamp,2),size(u%CmdBrake,2),size(u%CmdForce,2))) then
             call StC_CopyInput(u,u_tmp,MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
 
             if (allocated(u%CmdStiff)) deallocate(u%CmdStiff)
@@ -4544,6 +4563,13 @@ contains
                u%CmdBrake(1:3,i) = u_tmp%CmdBrake(1:3,i)
             enddo
 
+            if (allocated(u%CmdForce)) deallocate(u%CmdForce)
+            call AllocAry(u%CmdForce,3,p%NumStC_Control,"u%CmdForce",ErrStat2,ErrMsg2);   if (Failed())  return;
+            u%CmdForce = 0.0_ReKi
+            do i=1,min(p%NumStC_Control,size(u%CmdForce,2))
+               u%CmdForce(1:3,i) = u_tmp%CmdForce(1:3,i)
+            enddo
+
             call Cleanup()
          endif
       else
@@ -4559,17 +4585,22 @@ contains
             call AllocAry(u%CmdBrake,3,p%NumStC_Control,"u%CmdBrake",ErrStat2,ErrMsg2);   if (Failed())  return;
             u%CmdBrake = 0.0_ReKi
          endif
+         if (.not. allocated(u%CmdForce)) then
+            call AllocAry(u%CmdForce,3,p%NumStC_Control,"u%CmdForce",ErrStat2,ErrMsg2);   if (Failed())  return;
+            u%CmdForce = 0.0_ReKi
+         endif
       endif
    end subroutine ResizeStCinput
    subroutine GetMeas(iNum,CChan,u)    ! Assemble info about who requested which channel
       integer(IntKi),               intent(in)  :: iNum        ! instance number
       integer(IntKi),   allocatable,intent(in)  :: CChan(:)    ! Channel request set from that StC instance
       type(StC_InputType),          intent(in)  :: u           ! inputs from the StC instance -- will contain allocated Cmd input values if used
-      do j=1,min(p%NumStC_Control,size(u%CmdStiff))     ! u% arrays may be smaller than total number of channels, so only populate up to that size
+      do j=1,min(p%NumStC_Control,size(u%CmdStiff))     ! u% arrays could be smaller than total number of channels, so only populate up to that size
          if (CChan(j) > 0) then
             InitStiff(1:3,CChan(j)) = InitStiff(1:3,CChan(j)) + real(u%CmdStiff(1:3,CChan(j)),SiKi)
             InitDamp( 1:3,CChan(j)) = InitDamp( 1:3,CChan(j)) + real(u%CmdDamp( 1:3,CChan(j)),SiKi)
             InitBrake(1:3,CChan(j)) = InitBrake(1:3,CChan(j)) + real(u%CmdBrake(1:3,CChan(j)),SiKi)
+            InitForce(1:3,CChan(j)) = InitForce(1:3,CChan(j)) + real(u%CmdForce(1:3,CChan(j)),SiKi)
          endif
       enddo
    end subroutine GetMeas
