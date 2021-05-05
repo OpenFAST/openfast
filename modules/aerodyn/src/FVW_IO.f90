@@ -297,7 +297,8 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    logical              :: bMirror
    !integer(IntKi)       :: ErrStat2
    !character(ErrMsgLen) :: ErrMsg2
-   real(Reki), dimension(:,:,:), allocatable :: dxdt_0 !<
+   real(Reki), dimension(:,:,:), allocatable :: Arr3D !<
+   real(Reki), dimension(:,:), allocatable :: Arr2D !<
 
    type(FVW_VTK_Misc)   :: mvtk
 
@@ -331,7 +332,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
          call vtk_dataset_polydata(m%W(iW)%CP_LL(1:3,1:p%W(iW)%nSpan),mvtk,bladeFrame)
          call vtk_point_data_init(mvtk)
-         call vtk_point_data_scalar(m%W(iW)%Gamma_ll(    1:p%W(iW)%nSpan),'Gamma_ll',mvtk)
+         call vtk_point_data_scalar(z%W(iW)%Gamma_ll(    1:p%W(iW)%nSpan),'Gamma_ll',mvtk)
          call vtk_point_data_vector(m%W(iW)%Vind_ll (1:3,1:p%W(iW)%nSpan),'Vind_ll',mvtk)
          call vtk_point_data_vector(m%W(iW)%Vtot_ll (1:3,1:p%W(iW)%nSpan),'Vtot_ll',mvtk)
          call vtk_point_data_vector(m%W(iW)%Vstr_ll (1:3,1:p%W(iW)%nSpan),'Vstr_ll',mvtk)
@@ -357,10 +358,12 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-        ! TODO TODO
-        ! allocate(dxdt_0(3, size(m%dxdt%W(iW)%r_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
-        ! call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,1:2), m%W(iW)%Gamma_LL(:),dxdt_0, bladeFrame=bladeFrame)
-        ! deallocate(dxdt_0)
+         allocate(Arr3D(3, size(m%dxdt%W(iW)%r_NW,2) , m%nNW+1)); Arr3D=0.0_ReKi ! Convection velocity
+         allocate(Arr2D(size(z%W(iW)%Gamma_LL), 1) )            ; Arr2D=0.0_ReKi
+         Arr2D(:,1)=z%W(iW)%Gamma_LL(:)
+         call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,1:2), Arr2D(:,1:1), Arr3D, bladeFrame=bladeFrame)
+         deallocate(Arr3D)
+         deallocate(Arr2D)
       else
          call WrVTK_Lattice(FileName, mvtk, x%W(iW)%r_NW(1:3,:,1:m%nNW+1), x%W(iW)%Gamma_NW(:,1:m%nNW), m%dxdt%W(iW)%r_NW(:,:,1:m%nNW+1), bladeFrame=bladeFrame)
       endif
