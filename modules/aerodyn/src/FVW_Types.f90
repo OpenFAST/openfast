@@ -157,7 +157,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: dl      !< Vector of elementary length along the LL [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Area      !< Area of each LL panel [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: diag_LL      !< Diagonal length of each LL panel [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Gamma_LL      !< Circulation on the wing lifting line (COPY of Constraint State) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vind_LL      !< Induced velocity on lifting line control points [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vtot_LL      !< Total velocity on lifting line control points [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vstr_LL      !< Structural velocity on LL CP [m/s]
@@ -3652,18 +3651,6 @@ IF (ALLOCATED(SrcWng_MiscVarTypeData%diag_LL)) THEN
   END IF
     DstWng_MiscVarTypeData%diag_LL = SrcWng_MiscVarTypeData%diag_LL
 ENDIF
-IF (ALLOCATED(SrcWng_MiscVarTypeData%Gamma_LL)) THEN
-  i1_l = LBOUND(SrcWng_MiscVarTypeData%Gamma_LL,1)
-  i1_u = UBOUND(SrcWng_MiscVarTypeData%Gamma_LL,1)
-  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Gamma_LL)) THEN 
-    ALLOCATE(DstWng_MiscVarTypeData%Gamma_LL(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Gamma_LL.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstWng_MiscVarTypeData%Gamma_LL = SrcWng_MiscVarTypeData%Gamma_LL
-ENDIF
 IF (ALLOCATED(SrcWng_MiscVarTypeData%Vind_LL)) THEN
   i1_l = LBOUND(SrcWng_MiscVarTypeData%Vind_LL,1)
   i1_u = UBOUND(SrcWng_MiscVarTypeData%Vind_LL,1)
@@ -4074,9 +4061,6 @@ ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%diag_LL)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%diag_LL)
 ENDIF
-IF (ALLOCATED(Wng_MiscVarTypeData%Gamma_LL)) THEN
-  DEALLOCATE(Wng_MiscVarTypeData%Gamma_LL)
-ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%Vind_LL)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%Vind_LL)
 ENDIF
@@ -4252,11 +4236,6 @@ ENDIF
   IF ( ALLOCATED(InData%diag_LL) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! diag_LL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%diag_LL)  ! diag_LL
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Gamma_LL allocated yes/no
-  IF ( ALLOCATED(InData%Gamma_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! Gamma_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Gamma_LL)  ! Gamma_LL
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Vind_LL allocated yes/no
   IF ( ALLOCATED(InData%Vind_LL) ) THEN
@@ -4686,21 +4665,6 @@ ENDIF
 
       DO i1 = LBOUND(InData%diag_LL,1), UBOUND(InData%diag_LL,1)
         ReKiBuf(Re_Xferred) = InData%diag_LL(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%Gamma_LL) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Gamma_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Gamma_LL,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%Gamma_LL,1), UBOUND(InData%Gamma_LL,1)
-        ReKiBuf(Re_Xferred) = InData%Gamma_LL(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -5546,24 +5510,6 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%diag_LL,1), UBOUND(OutData%diag_LL,1)
         OutData%diag_LL(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Gamma_LL not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Gamma_LL)) DEALLOCATE(OutData%Gamma_LL)
-    ALLOCATE(OutData%Gamma_LL(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Gamma_LL.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%Gamma_LL,1), UBOUND(OutData%Gamma_LL,1)
-        OutData%Gamma_LL(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
