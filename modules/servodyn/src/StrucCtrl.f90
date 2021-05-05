@@ -98,7 +98,6 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       TYPE(StC_InputFile)                           :: InputFileData ! Data stored in the module's input file
       INTEGER(IntKi)                                :: i_pt          ! Generic counter for mesh point
       INTEGER(IntKi)                                :: i             ! Generic counter for mesh point
-      REAL(ReKi), allocatable, dimension(:,:)       :: PositionP
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
       REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
 
@@ -117,8 +116,6 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ErrMsg  = ''
       NumOuts = 0
       UnEcho  = -1   ! will be > 0 if echo file is opened
-
-   InitOut%dummyInitOut = 0.0_SiKi  ! initialize this so compiler doesn't warn about un-set intent(out) variables
 
      ! Initialize the NWTC Subroutine Library
    CALL NWTC_Init( EchoLibVer=.FALSE. )
@@ -207,15 +204,15 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
    ! set positions and orientations for tuned mass dampers's
-   call AllocAry(PositionP,       3, p%NumMeshPts, 'PositionP',      ErrStat2,ErrMsg2);  if (Failed())  return;
-   call AllocAry(PositionGlobal,  3, p%NumMeshPts, 'PositionGlobal', ErrStat2,ErrMsg2);  if (Failed())  return;
-   call AllocAry(OrientationP, 3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(InitOut%RelPosition,  3, p%NumMeshPts, 'RelPosition',    ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(PositionGlobal,       3, p%NumMeshPts, 'PositionGlobal', ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(OrientationP,      3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2);  if (Failed())  return;
 
    ! Set the initial positions and orietantions for each point
    do i_pt = 1,p%NumMeshPts
-      PositionP(:,i_pt)      = (/ InputFileData%StC_P_X, InputFileData%StC_P_Y, InputFileData%StC_P_Z /)
-      OrientationP(:,:,i_pt) = InitInp%InitOrientation(:,:,i_pt)
-      PositionGlobal(:,i_pt) = InitInp%InitPosition(:,i_pt) + real( matmul(PositionP(:,i_pt),OrientationP(:,:,i_pt)), ReKi)
+      InitOut%RelPosition(:,i_pt)   = (/ InputFileData%StC_P_X, InputFileData%StC_P_Y, InputFileData%StC_P_Z /)
+      OrientationP(:,:,i_pt)        = InitInp%InitOrientation(:,:,i_pt)
+      PositionGlobal(:,i_pt)        = InitInp%InitPosition(:,i_pt) + real( matmul(InitOut%RelPosition(:,i_pt),OrientationP(:,:,i_pt)), ReKi)
    enddo
 
     ! Define system output initializations (set up mesh) here:
@@ -413,7 +410,6 @@ CONTAINS
    !.........................................
    SUBROUTINE cleanup()
       if (UnEcho > 0)                  close(UnEcho)                    ! Close echo file
-      if (allocated(PositionP     ))   deallocate(PositionP     )
       if (allocated(PositionGlobal))   deallocate(PositionGlobal)
       if (allocated(OrientationP  ))   deallocate(OrientationP  )
       CALL StC_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)      ! Ignore warnings here.

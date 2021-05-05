@@ -401,6 +401,7 @@ typedef	^	ParameterType	ReKi	AfC_Mean	-	-	-	"Mean level for cosine cycling or st
 typedef	^	ParameterType	ReKi	AfC_Amp	-	-	-	"Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]"	-
 typedef	^	ParameterType	ReKi	AfC_Phase	-	-	-	"Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]"	deg
 typedef	^	ParameterType	IntKi	CCmode	-	-	-	"Cable control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL}" -
+typedef	^	ParameterType	IntKi	StCCmode	-	-	-	"Structural control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL}" -
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	IntKi	NumOuts_DLL	-	-	-	"Number of logging channels output from the DLL (set at initialization)"	-

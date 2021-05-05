@@ -222,6 +222,55 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       call Cleanup()
    END IF     
    
+
+      !............................................................................................
+      ! Setup and initialize the StC submodule (possibly multiple instances at each location)
+      !............................................................................................
+   if (UnSum >0) then
+      write(UnSum, '(A)') ''
+      write(UnSum, '(A)') SectionDivide
+      write(UnSum, '(A)')              ' Structural controls'
+   endif
+   call StC_Nacelle_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,m%y_NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Tower_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,m%y_TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Blade_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,m%y_BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+   call StC_Substruc_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,m%y_SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+      !............................................................................................
+      ! Setup and initialize the StC controls interface
+      !............................................................................................
+
+      ! Setup the StC_CtrlChans
+   call StC_CtrlChan_Setup(m,p,StC_CtrlChanInitInfo,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
+
+      !.............................................
+      ! Determine if the BladedDLL should be called
+      !     this must be done after StC initialization,
+      !     so can't do this in the set parameters routine
+      !.............................................
+
+   IF ( p%PCMode    == ControlMode_DLL .OR. &
+        p%YCMode    == ControlMode_DLL .OR. &
+        p%VSContrl  == ControlMode_DLL .OR. &
+        p%HSSBrMode == ControlMode_DLL .OR. &
+        p%AfCmode   == ControlMode_DLL .OR. &
+        p%CCmode    == ControlMode_DLL .OR. &
+        p%StCCMode  == ControlMode_DLL      ) THEN
+      p%UseBladedInterface = .TRUE.
+   ELSE
+      p%UseBladedInterface = .FALSE.
+   END IF
+
+
       !............................................................................................
       ! Define initial system states here:
       !............................................................................................
@@ -400,35 +449,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    Interval = p%DT      
 
  
-      !............................................................................................
-      ! Setup and initialize the StC submodule (possibly multiple instances at each location)
-      !............................................................................................
-   if (UnSum >0) then
-      write(UnSum, '(A)') ''
-      write(UnSum, '(A)') SectionDivide
-      write(UnSum, '(A)')              ' Structural controls'
-   endif
-   call StC_Nacelle_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,m%y_NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
-      if (Failed())  return;
-
-   call StC_Tower_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,m%y_TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
-      if (Failed())  return;
-
-   call StC_Blade_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,m%y_BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
-      if (Failed())  return;
-
-   call StC_Substruc_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,m%y_SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
-      if (Failed())  return;
-
-      !............................................................................................
-      ! Setup and initialize the StC controls interface
-      !............................................................................................
-
-      ! Setup the StC_CtrlChans
-   call StC_CtrlChan_Setup(m,p,StC_CtrlChanInitInfo,ErrStat2,ErrMsg2)
-      if (Failed())  return;
-
-
       !............................................................................................
       ! Setup and initialize the cable controls -- could be from Simulink or DLL
       !............................................................................................
@@ -717,6 +737,16 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,Srv
          call MeshMapCreate(   y(j)%Mesh(1), SrvD_y%NStCLoadMesh(j),   SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat2, ErrMsg2 )
             if (Failed()) return
 
+         ! A little bit of information about the StC location
+         if (unsum >0) then
+            write(UnSum, '(A26,i2)')               '    Nacelle StC instance: ',j
+            write(UnSum, '(10x,A)')                'Input file: '//trim(InputFileData%NStCfiles(j))
+            write(UnSum, '(10x,A36)')              'Initial location (global/inertial): '
+            write(UnSum, '(20x,3(2x,ES10.3e2))')   u(1,j)%Mesh(1)%Position(1:3,1)
+            write(UnSum, '(10x,A60)')              'Initial location relative to nacelle (nacelle coordinates): '
+            write(UnSum, '(20x,3(2x,ES10.3e2))')   StC_InitOut%RelPosition(1:3,1)
+         endif
+
          call Cleanup()
       enddo
    endif
@@ -827,6 +857,16 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
             if (Failed())  return
          call MeshMapCreate(   y(j)%Mesh(1), SrvD_y%TStCLoadMesh(j),   SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat2, ErrMsg2 )
             if (Failed()) return
+
+         ! A little bit of information about the StC location
+         if (unsum >0) then
+            write(UnSum, '(A24,i2)')               '    Tower StC instance: ',j
+            write(UnSum, '(10x,A)')                'Input file: '//trim(InputFileData%NStCfiles(j))
+            write(UnSum, '(10x,A36)')              'Initial location (global/inertial): '
+            write(UnSum, '(20x,3(2x,ES10.3e2))')   u(1,j)%Mesh(1)%Position(1:3,1)
+            write(UnSum, '(10x,A61)')              'Initial location relative to tower base (tower coordinates): '
+            write(UnSum, '(20x,3(2x,ES10.3e2))')   StC_InitOut%RelPosition(1:3,1)
+         endif
 
          call Cleanup()
       enddo
@@ -946,6 +986,18 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
                if (Failed()) return
          enddo
 
+         ! A little bit of information about the StC location
+         if (unsum >0) then
+            write(UnSum, '(A24,i2)')                  '    Blade StC instance: ',j
+            write(UnSum, '(10x,A)')                   'Input file: '//trim(InputFileData%NStCfiles(j))
+            do k=1,StC_InitInp%NumMeshPts
+               write(UnSum, '(10x,A6,I1,A29)')        'Blade ',k,' location (global/inertial): '
+               write(UnSum, '(20x,3(2x,ES10.3e2))')   u(1,j)%Mesh(k)%Position(1:3,1)
+               write(UnSum, '(10x,A6,I1,A54)')        'Blade ',k,' location relative to blade root (blade coordinates): '
+               write(UnSum, '(20x,3(2x,ES10.3e2))')   StC_InitOut%RelPosition(1:3,k)
+            enddo
+         endif
+
          call Cleanup()
       enddo
    endif
@@ -1057,6 +1109,16 @@ subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,Sr
          call MeshMapCreate(   y(j)%Mesh(1), SrvD_y%SStCLoadMesh(j),   SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat2, ErrMsg2 )
             if (Failed()) return
 
+         ! A little bit of information about the StC location
+         if (unsum >0) then
+            write(UnSum, '(A31,i2)')               '    Substructure StC instance: ',j
+            write(UnSum, '(10x,A)')                'Input file: '//trim(InputFileData%SStCfiles(j))
+            write(UnSum, '(10x,A36)')              'Initial location (global/inertial): '
+            write(UnSum, '(20x,3(2x,ES10.3e2))')   u(1,j)%Mesh(1)%Position(1:3,1)
+            write(UnSum, '(10x,A76)')              'Initial location relative to platform reference point (global coordinates): '
+            write(UnSum, '(20x,3(2x,ES10.3e2))')   StC_InitOut%RelPosition(1:3,1)
+         endif
+
          call Cleanup()
       enddo
    endif
@@ -1083,10 +1145,11 @@ end subroutine StC_Substruc_Setup
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the control channels for the StCs
 !!    These control channel signals are then passed back to all StC and they will pick out only the channels they are linking to
-subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,ErrStat,ErrMsg)
+subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,UnSum,ErrStat,ErrMsg)
    type(SrvD_ParameterType),                    intent(inout)  :: p                 !< Parameters
    type(SrvD_MiscVarType),                      intent(inout)  :: m                 !< Misc (optimization) variables -- contains u and y for StCs where resizing may occur
    type(StC_CtrlChanInitInfoType),              intent(  out)  :: CtrlChanInitInfo  !< initial values for damping, stiffness, etc to pass to controller
+   integer(IntKi),                              intent(in   )  :: UnSum          !< summary file number (>0 when set)
    integer(IntKi),                              intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                                intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -1099,19 +1162,33 @@ subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,ErrStat,ErrMsg)
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
+   ! NOTE:  For now we only have the option of the StC requesting the bladed interface
+   !        at the the ServoDyn level.  If we later add a Simulink interface, the logic
+   !        below for checking if the DLL interface was requested will need updating.
+   !        At that point it might be necessary to set an array for the p%StCCMode so
+   !        it is possible to tell which channel is from Simulink and which is from
+   !        the DLL.  But for now, we only allow the DLL.
+   ! NOTE:  Internally, each StC may have a semi-active control mode, but that is not
+   !        passed to ServoDyn, so we don't check for that here.
+
    ! Step through all StC instances to find the highest number channel requested
-   p%NumStC_Control=0_IntKi
+   p%NumStC_Control  = 0_IntKi
+   p%StCCMode        = 0_IntKi
    do i=1,p%NumBStC  ! Blade
       p%NumStC_Control = max(p%NumStC_Control,maxval(p%BStC(i)%StC_CChan))
+      if (p%BStC(i)%StC_CMode == ControlMode_DLL)  p%StCCMode  = ControlMode_DLL
    enddo
    do i=1,p%NumNStC  ! Nacelle
       p%NumStC_Control = max(p%NumStC_Control,maxval(p%NStC(i)%StC_CChan))
+      if (p%NStC(i)%StC_CMode == ControlMode_DLL)  p%StCCMode  = ControlMode_DLL
    enddo
    do i=1,p%NumTStC  ! Tower
       p%NumStC_Control = max(p%NumStC_Control,maxval(p%TStC(i)%StC_CChan))
+      if (p%TStC(i)%StC_CMode == ControlMode_DLL)  p%StCCMode  = ControlMode_DLL
    enddo
    do i=1,p%NumSStC  ! SubStructure
       p%NumStC_Control = max(p%NumStC_Control,maxval(p%SStC(i)%StC_CChan))
+      if (p%SStC(i)%StC_CMode == ControlMode_DLL)  p%StCCMode  = ControlMode_DLL
    enddo
 
    if (p%NumStC_Control==0) return    ! No reason to do anything else
@@ -1120,13 +1197,20 @@ subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,ErrStat,ErrMsg)
    allocate(p%StCMeasNumPerChan(p%NumStC_Control),           STAT=ErrStat2); if ( AllErr('Could not allocate StCMeasNumPerChan') ) return;
    p%StCMeasNumPerChan = 0
    ! Allocate data to pass to dll initialization -- we need to populate this data now so initial values get to controller at init
-   allocate(CtrlChanInitInfo%Requestor(p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate Requestor array') ) return;
+   allocate(CtrlChanInitInfo%Requestor(     p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate Requestor array')    ) return;
    allocate(CtrlChanInitInfo%InitStiff(   3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitStiff    array') ) return;
    allocate(CtrlChanInitInfo%InitDamp(    3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitDamp     array') ) return;
    allocate(CtrlChanInitInfo%InitBrake(   3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitBrake    array') ) return;
    allocate(CtrlChanInitInfo%InitForce(   3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitForce    array') ) return;
    allocate(CtrlChanInitInfo%InitMeasDisp(3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitMeasDisp array') ) return;
    allocate(CtrlChanInitInfo%InitMeasVel( 3,p%NumStC_Control), STAT=ErrStat2);  if ( AllErr('Could not allocate InitMeasVel  array') ) return;
+   CtrlChanInitInfo%Requestor    = ""
+   CtrlChanInitInfo%InitStiff    = 0.0_SiKi
+   CtrlChanInitInfo%InitDamp     = 0.0_SiKi
+   CtrlChanInitInfo%InitBrake    = 0.0_SiKi 
+   CtrlChanInitInfo%InitForce    = 0.0_SiKi
+   CtrlChanInitInfo%InitMeasDisp = 0.0_SiKi
+   CtrlChanInitInfo%InitMeasVel  = 0.0_SiKi
 
    ! Set info about which StC requested which channel
    do i=1,p%NumBStC  ! Blade
@@ -1151,10 +1235,32 @@ subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,ErrStat,ErrMsg)
       endif
    enddo
 
+   ! Put inflo in summary file
+   if (unsum >0) then
+      if (p%NumStC_Control > 0) then
+         write(UnSum, '(A53)')         '    StCs controlled by Bladed DLL interface:            '
+         write(UnSum, '(A53)')         '       StC control group      StC instances             '
+         write(UnSum, '(A53)')         '       -----------------      --------------------------'
+         do i=1,p%NumStC_Control
+            if (p%StCMeasNumPerChan(i)==1) then
+               write(UnSum,'(9x,I2,21x,A)') i,trim(CtrlChanInitInfo%Requestor(i))
+            elseif (p%StCMeasNumPerChan(i)>1) then
+               write(UnSum,'(9x,I2,A1,20x,A)') i,'*',trim(CtrlChanInitInfo%Requestor(i))
+            endif
+         enddo
+         if (maxval(p%StCMeasNumPerChan)>1) then
+            write(UnSum,'(7x,A)') '* indicates channel measurements will be averaged from the requesting StC instances'
+         endif
+      endif
+   endif
+
    ! Set all the initial values to pass to the controller for first call and ensure all inputs/outputs for control are sized same
    call StC_SetDLLinputs(p,m,CtrlChanInitInfo%InitMeasDisp,CtrlChanInitInfo%InitMeasVel,ErrStat2,ErrMsg2,.TRUE.)  ! Do resizing if needed
       if (Failed())  return;
    call StC_SetInitDLLinputs(p,m,CtrlChanInitInfo%InitStiff,CtrlChanInitInfo%InitDamp,CtrlChanInitInfo%InitBrake,CtrlChanInitInfo%InitForce,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+   ! Duplicates the Cmd channel data (so that they are allocated for first UpdateStates routine)
+   call StC_InitExtrapInputs(p,m,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
 contains
@@ -1464,11 +1570,11 @@ CONTAINS
       if (allocated(u_StC(1)%CmdStiff) .and. allocated(u_StC(1)%CmdDamp) .and. allocated(u_StC(1)%CmdBrake) .and. allocated(u_StC(1)%CmdForce)) then
          if ( n > m%PrevTstepNcall ) then
             ! Cycle u%CmdStiff and others -- we are at a new timestep.
-            do i=p%InterpOrder,1,-1   ! step oldest to newest
-               u_StC(i)%CmdStiff = u_StC(i+1)%CmdStiff
-               u_StC(i)%CmdDamp  = u_StC(i+1)%CmdDamp 
-               u_StC(i)%CmdBrake = u_StC(i+1)%CmdBrake
-               u_StC(i)%CmdForce = u_StC(i+1)%CmdForce
+            do i=p%InterpOrder,1,-1   ! shift back in time in reverse order -- oldest (InterpOrder+1) to newest (1)
+               u_StC(i+1)%CmdStiff = u_StC(i)%CmdStiff
+               u_StC(i+1)%CmdDamp  = u_StC(i)%CmdDamp 
+               u_StC(i+1)%CmdBrake = u_StC(i)%CmdBrake
+               u_StC(i+1)%CmdForce = u_StC(i)%CmdForce
             enddo
          endif
          ! Now set the current commanded values
@@ -2979,37 +3085,6 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
    p%NumSStC   = InputFileData%NumSStC
 
       !.............................................
-      ! Determine if the BladedDLL should be called
-      !.............................................
-
-   IF ( p%PCMode    == ControlMode_DLL .OR. &
-        p%YCMode    == ControlMode_DLL .OR. &
-        p%VSContrl  == ControlMode_DLL .OR. &
-        p%HSSBrMode == ControlMode_DLL      ) THEN
-
-      p%UseBladedInterface = .TRUE.
-
-   ELSE
-      p%UseBladedInterface = .FALSE.
-   END IF
-
-      !.............................................
-      ! Parameters for file output (not including Bladed DLL logging outputs)
-      !.............................................
-   p%NumOuts = InputFileData%NumOuts
-   p%NumOuts_DLL = 0 ! set to zero and overwritten if/when the DLL uses it
-
-   CALL SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%NumBl; sets: p%OutParam.
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) RETURN
-
-   IF ( InputFileData%TabDelim ) THEN
-      p%Delim = TAB
-   ELSE
-      p%Delim = ' '
-   END IF           
-
-      !.............................................
       ! Save values for AfCmode - Airfoil control
       !.............................................
    p%AfCmode      =  InputFileData%AfCmode
@@ -3043,7 +3118,23 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
       write(UnSum, '(A34,I2)')         '    CCMode  -- cable control mode ',p%CCMode
    endif
 
-!FIXME add notes on StC_CCMode -- which ones are controlled
+
+      !.............................................
+      ! Parameters for file output (not including Bladed DLL logging outputs)
+      !.............................................
+   p%NumOuts = InputFileData%NumOuts
+   p%NumOuts_DLL = 0 ! set to zero and overwritten if/when the DLL uses it
+
+   CALL SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%NumBl; sets: p%OutParam.
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) RETURN
+
+   IF ( InputFileData%TabDelim ) THEN
+      p%Delim = TAB
+   ELSE
+      p%Delim = ' '
+   END IF           
+
 END SUBROUTINE SrvD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing the yaw output: a yaw moment. This routine is used in both loose and tight coupling.
@@ -4355,7 +4446,7 @@ subroutine StC_SetDLLinputs(p,m,MeasDisp,MeasVel,ErrStat,ErrMsg,InitResize)
    integer(IntKi)                               :: ErrStat2          ! temporary Error status of the operation
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message if ErrStat /= ErrID_None
 
-      ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+      ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -4482,7 +4573,7 @@ subroutine StC_SetInitDLLinputs(p,m,InitStiff,InitDamp,InitBrake,InitForce,ErrSt
    character(ErrMsgLen)                      :: ErrMsg2           ! temporary Error message if ErrStat /= ErrID_None
 
 
-      ! Initialize ErrStat -- This isn't curently needed, but if a user routine is created, it might be wanted then
+      ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -4595,7 +4686,7 @@ contains
       integer(IntKi),               intent(in)  :: iNum        ! instance number
       integer(IntKi),   allocatable,intent(in)  :: CChan(:)    ! Channel request set from that StC instance
       type(StC_InputType),          intent(in)  :: u           ! inputs from the StC instance -- will contain allocated Cmd input values if used
-      do j=1,min(p%NumStC_Control,size(u%CmdStiff))     ! u% arrays could be smaller than total number of channels, so only populate up to that size
+      do j=1,min(p%NumStC_Control,size(CChan))  ! the channel request list for a given StC instance may be smaller than the total channel set 
          if (CChan(j) > 0) then
             InitStiff(1:3,CChan(j)) = InitStiff(1:3,CChan(j)) + real(u%CmdStiff(1:3,CChan(j)),SiKi)
             InitDamp( 1:3,CChan(j)) = InitDamp( 1:3,CChan(j)) + real(u%CmdDamp( 1:3,CChan(j)),SiKi)
@@ -4613,6 +4704,48 @@ contains
       call StC_DestroyInput(u_tmp,ErrStat2,ErrMsg2)   ! ignore error messages
    end subroutine Cleanup
 end subroutine StC_SetInitDLLinputs
+
+subroutine StC_InitExtrapInputs(p,m,ErrStat,ErrMsg)
+   type(SrvD_ParameterType),  intent(in   )  :: p                 !< Parameters
+   type(SrvD_MiscVarType),    intent(inout)  :: m                 !< Misc (optimization) variables
+   integer(IntKi),            intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),              intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   integer(IntKi)                            :: i,j               !< Generic counters
+   character(*), parameter                   :: RoutineName = 'StC_InitExtrapInputs'
+   integer(IntKi)                            :: ErrStat2          ! temporary Error status of the operation
+   character(ErrMsgLen)                      :: ErrMsg2           ! temporary Error message if ErrStat /= ErrID_None
+
+      ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Copy the inputs(1) to the others (this copies the measured data over as well)
+   do i=1,p%NumBStC  ! Blade
+      do j=2,p%InterpOrder+1
+         call StC_CopyInput(m%u_BStC(1,i),m%u_BStC(j,i),MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
+      enddo
+   enddo
+   do i=1,p%NumNStC  ! Nacelle
+      do j=2,p%InterpOrder+1
+         call StC_CopyInput(m%u_NStC(1,i),m%u_NStC(j,i),MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
+      enddo
+   enddo
+   do i=1,p%NumTStC  ! Tower
+      do j=2,p%InterpOrder+1
+         call StC_CopyInput(m%u_TStC(1,i),m%u_TStC(j,i),MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
+      enddo
+   enddo
+   do i=1,p%NumSStC  ! SubStructure
+      do j=2,p%InterpOrder+1
+         call StC_CopyInput(m%u_SStC(1,i),m%u_SStC(j,i),MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
+      enddo
+   enddo
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+end subroutine StC_InitExtrapInputs
 
 END MODULE ServoDyn
 !**********************************************************************************************************************************

@@ -414,6 +414,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: AfC_Amp      !< Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1] [-]
     REAL(ReKi)  :: AfC_Phase      !< Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1] [deg]
     INTEGER(IntKi)  :: CCmode      !< Cable control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} [-]
+    INTEGER(IntKi)  :: StCCmode      !< Structural control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     INTEGER(IntKi)  :: NumOuts_DLL      !< Number of logging channels output from the DLL (set at initialization) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -11517,6 +11518,7 @@ ENDIF
     DstParamData%AfC_Amp = SrcParamData%AfC_Amp
     DstParamData%AfC_Phase = SrcParamData%AfC_Phase
     DstParamData%CCmode = SrcParamData%CCmode
+    DstParamData%StCCmode = SrcParamData%StCCmode
     DstParamData%NumOuts = SrcParamData%NumOuts
     DstParamData%NumOuts_DLL = SrcParamData%NumOuts_DLL
     DstParamData%RootName = SrcParamData%RootName
@@ -11818,6 +11820,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Amp
       Re_BufSz   = Re_BufSz   + 1  ! AfC_Phase
       Int_BufSz  = Int_BufSz  + 1  ! CCmode
+      Int_BufSz  = Int_BufSz  + 1  ! StCCmode
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts_DLL
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -12208,6 +12211,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%AfC_Phase
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CCmode
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%StCCmode
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
@@ -12751,6 +12756,8 @@ ENDIF
     OutData%AfC_Phase = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%CCmode = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%StCCmode = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

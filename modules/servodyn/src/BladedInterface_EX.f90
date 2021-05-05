@@ -345,6 +345,8 @@ contains
             call WrSumInfoRcvd(    J+16,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Force_X (additional force)')
             call WrSumInfoRcvd(    J+17,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Force_Y (additional force)')
             call WrSumInfoRcvd(    J+18,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- StC_Force_Z (additional force)')
+            call WrSumInfoRcvd(    J+19,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- Reserved for future')
+            call WrSumInfoRcvd(    J+20,StC_CtrlChanInitInfo%Requestor(I),'StC control channel group '//trim(Num2LStr(I))//' -- Reserved for future')
          enddo
       endif
    end subroutine InitStCCtrl
@@ -353,6 +355,7 @@ contains
 
    subroutine WrBladedSumInfoToFile()
       integer(IntKi)    :: I  !< generic counter
+      character(21)     :: RqstrStr
       write(UnSum,'(A)') ''
       write(UnSum,'(A)') '   Legacy Bladed DLL interface with Extended avrSWAP'
       write(UnSum,'(A)') '          channel usage by SrvD:'
@@ -362,7 +365,14 @@ contains
       write(UnSum,'(6x,A8,3x,A3,3x,A21,3x,A11)') 'Record #','   ','Requested by         ','Description'
       write(UnSum,'(6x,A8,3x,A3,3x,A21,3x,A11)') '--------','   ','---------------------','-----------'
       do I=1,size(SumInfo)
-         if (len_trim(SumInfo(I)) > 0 )  write(UnSum,'(8x,I4,5x,A3,4x,A21,2x,A)')  I,DataFlow(I),Requestor(I),trim(SumInfo(I))
+         if (len_trim(SumInfo(I)) > 0 ) then
+            if (len_trim(Requestor(I)) <= 21) then
+               RqstrStr = trim(Requestor(I))
+               write(UnSum,'(8x,I4,5x,A3,4x,A21,2x,A)')  I,DataFlow(I),RqstrStr,trim(SumInfo(I))
+            else
+               write(UnSum,'(8x,I4,5x,A3,4x,A,2x,A)')    I,DataFlow(I),Requestor(I),trim(SumInfo(I))
+            endif
+         endif
       enddo
    end subroutine WrBladedSumInfoToFile
 

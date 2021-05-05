@@ -129,7 +129,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  StC_InitOutputType  =======
   TYPE, PUBLIC :: StC_InitOutputType
-    REAL(SiKi)  :: DummyInitOut      !< dummy init output [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: RelPosition      !< StC position relative to reference point (3,NumMeshPts) [m]
   END TYPE StC_InitOutputType
 ! =======================
 ! =========  StC_ContinuousStateType  =======
@@ -197,7 +197,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: P_SP      !< Positive stop position (maximum mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: N_SP      !< Negative stop position (minimum X mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
-    INTEGER(IntKi)  :: StC_CMODE      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
+    INTEGER(IntKi)  :: StC_CMODE      !< control mode {0:none; 1: Semi-Active Control Mode; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
     REAL(ReKi)  :: StC_X_C_HIGH      !< StC X high damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: StC_X_C_LOW      !< StC X low damping for ground hook control [N/(m/s)]
@@ -2011,13 +2011,28 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'StC_CopyInitOutput'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstInitOutputData%DummyInitOut = SrcInitOutputData%DummyInitOut
+IF (ALLOCATED(SrcInitOutputData%RelPosition)) THEN
+  i1_l = LBOUND(SrcInitOutputData%RelPosition,1)
+  i1_u = UBOUND(SrcInitOutputData%RelPosition,1)
+  i2_l = LBOUND(SrcInitOutputData%RelPosition,2)
+  i2_u = UBOUND(SrcInitOutputData%RelPosition,2)
+  IF (.NOT. ALLOCATED(DstInitOutputData%RelPosition)) THEN 
+    ALLOCATE(DstInitOutputData%RelPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RelPosition.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%RelPosition = SrcInitOutputData%RelPosition
+ENDIF
  END SUBROUTINE StC_CopyInitOutput
 
  SUBROUTINE StC_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -2029,6 +2044,9 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(InitOutputData%RelPosition)) THEN
+  DEALLOCATE(InitOutputData%RelPosition)
+ENDIF
  END SUBROUTINE StC_DestroyInitOutput
 
  SUBROUTINE StC_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2066,7 +2084,11 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyInitOut
+  Int_BufSz   = Int_BufSz   + 1     ! RelPosition allocated yes/no
+  IF ( ALLOCATED(InData%RelPosition) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! RelPosition upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RelPosition)  ! RelPosition
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2094,8 +2116,26 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    ReKiBuf(Re_Xferred) = InData%DummyInitOut
-    Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%RelPosition) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RelPosition,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RelPosition,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RelPosition,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RelPosition,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%RelPosition,2), UBOUND(InData%RelPosition,2)
+        DO i1 = LBOUND(InData%RelPosition,1), UBOUND(InData%RelPosition,1)
+          ReKiBuf(Re_Xferred) = InData%RelPosition(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE StC_PackInitOutput
 
  SUBROUTINE StC_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2111,6 +2151,8 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'StC_UnPackInitOutput'
@@ -2124,8 +2166,29 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%DummyInitOut = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RelPosition not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%RelPosition)) DEALLOCATE(OutData%RelPosition)
+    ALLOCATE(OutData%RelPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%RelPosition.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%RelPosition,2), UBOUND(OutData%RelPosition,2)
+        DO i1 = LBOUND(OutData%RelPosition,1), UBOUND(OutData%RelPosition,1)
+          OutData%RelPosition(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE StC_UnPackInitOutput
 
  SUBROUTINE StC_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
