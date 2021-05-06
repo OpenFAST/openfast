@@ -343,13 +343,13 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ! Set actual values for channels requested
       do i=1,size(p%StC_CChan)
          if (p%StC_CChan(i) > 0) then
-            u%CmdStiff(1:3,i)  = (/ p%K_X, p%K_Y, p%K_Z /)
-            u%CmdDamp( 1:3,i)  = (/ p%C_X, p%C_Y, p%C_Z /)
+            u%CmdStiff(1:3,p%StC_CChan(i))  = (/ p%K_X, p%K_Y, p%K_Z /)
+            u%CmdDamp( 1:3,p%StC_CChan(i))  = (/ p%C_X, p%C_Y, p%C_Z /)
             !u%CmdBrake and u%CmdForce--- leave these at zero for now (no input file method to set it)
             !  The states are sized by (6,NumMeshPts).  NumMeshPts is then used to set
             !  size of StC_CChan as well.  For safety, we will check it here.
-            y%MeasDisp(1:3,i)  = (/ x%StC_x(1,i), x%StC_x(3,i), x%StC_x(5,i) /)
-            y%MeasVel( 1:3,i)  = (/ x%StC_x(2,i), x%StC_x(4,i), x%StC_x(6,i) /)
+            y%MeasDisp(1:3,p%StC_CChan(i))  = (/ x%StC_x(1,i), x%StC_x(3,i), x%StC_x(5,i) /)
+            y%MeasVel( 1:3,p%StC_CChan(i))  = (/ x%StC_x(2,i), x%StC_x(4,i), x%StC_x(6,i) /)
          endif
       enddo
    endif
@@ -958,6 +958,21 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             enddo
          endif
       END IF
+
+      ! Set output values for the measured displacements for  
+      do i=1,size(p%StC_CChan)
+         if (p%StC_CChan(i) > 0) then
+            if (p%StC_DOF_MODE == DOFMode_Indept .or. p%StC_DOF_MODE == DOFMode_Omni) then
+               !  The states are sized by (6,NumMeshPts).  NumMeshPts is then used to set
+               !  size of StC_CChan as well.  For safety, we will check it here.
+               y%MeasDisp(1:3,p%StC_CChan(i))  = (/ x%StC_x(1,i), x%StC_x(3,i), x%StC_x(5,i) /)
+               y%MeasVel( 1:3,p%StC_CChan(i))  = (/ x%StC_x(2,i), x%StC_x(4,i), x%StC_x(6,i) /)
+            else
+               y%MeasDisp(1:3,p%StC_CChan(i))  = 0.0_ReKi
+               y%MeasVel( 1:3,p%StC_CChan(i))  = 0.0_ReKi
+            endif
+         endif
+      enddo
 
       call CleanUp()
 

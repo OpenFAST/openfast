@@ -2844,6 +2844,8 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
    ErrMsg  = ''
    p%DT = InputFileData%DT
 
+   ! Extended avrSWAP array
+   p%EXavrSWAP    =  InputFiledata%EXavrSWAP
   
       !.............................................
       ! Pitch control parameters
@@ -4394,7 +4396,7 @@ SUBROUTINE StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake,
       ErrMsg  = ""
 
          ! Only proceed if we have have StC controls with the extended swap and legacy interface
-      if (p%NumStC_Control <= 0 .or. .not. p%UseLegacyInterface .or. .not. p%EXavrSWAP)    return
+      if ((p%NumStC_Control <= 0) .or. (.not. p%EXavrSWAP))    return
       if (.not. allocated(StC_CmdStiff) .or. .not. allocated(StC_CmdDamp) .or. .not. allocated(StC_CmdBrake) .or. .not. allocated(StC_CmdForce)) then
          ErrStat = ErrID_Fatal
          ErrMsg  = "StC control signal matrices not allocated.  Programming error somewhere."
@@ -4451,7 +4453,7 @@ subroutine StC_SetDLLinputs(p,m,MeasDisp,MeasVel,ErrStat,ErrMsg,InitResize)
    ErrMsg  = ""
 
       ! Only proceed if we have have StC controls with the extended swap and legacy interface
-   if (p%NumStC_Control <= 0 .or. .not. p%UseLegacyInterface .or. .not. p%EXavrSWAP)    return
+   if ((p%NumStC_Control <= 0) .or. (.not. p%EXavrSWAP))    return
    if (.not. allocated(MeasDisp) .or. .not. allocated(MeasVel)) then
       ErrStat2 = ErrID_Fatal
       ErrMsg2  = "StC control signal matrices not allocated.  Programming error somewhere."
@@ -4577,9 +4579,9 @@ subroutine StC_SetInitDLLinputs(p,m,InitStiff,InitDamp,InitBrake,InitForce,ErrSt
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Only proceed if we have have StC controls with the extended swap and legacy interface
-   if (p%NumStC_Control <= 0 .or. .not. p%UseLegacyInterface .or. .not. p%EXavrSWAP)    return
-   if (.not. allocated(InitStiff) .or. .not. allocated(InitDamp) .or. .not. allocated(InitBrake) .or. .not. allocated(InitForce)) then
+      ! Only proceed if we have have StC controls with the extended swap
+   if ((p%NumStC_Control <= 0) .or. (.not. p%EXavrSWAP))    return
+   if ((.not. allocated(InitStiff)) .or. (.not. allocated(InitDamp)) .or. (.not. allocated(InitBrake)) .or. (.not. allocated(InitForce))) then
       ErrStat2 = ErrID_Fatal
       ErrMsg2  = "StC control signal matrices not allocated.  Programming error somewhere."
       if (Failed()) return
@@ -4622,7 +4624,7 @@ subroutine StC_SetInitDLLinputs(p,m,InitStiff,InitDamp,InitBrake,InitForce,ErrSt
          InitBrake(1:3,i)  = InitBrake(1:3,i) / real(p%StCMeasNumPerChan(i),SiKi)
       endif
    enddo
-   InitForce   = 0.0_ReKi 
+   InitForce   = 0.0_ReKi
 
 contains
    subroutine ResizeStCinput(iNum,u)    ! Assemble info about who requested which channel

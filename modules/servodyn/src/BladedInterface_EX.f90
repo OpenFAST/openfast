@@ -277,6 +277,16 @@ contains
          ErrMsg2='Size of StC control string array (StC_CtrlChanInitInfo%Requestor) does not match the number of requested cable control channels.'
          if (Failed())  return
       endif
+      if (  (size(StC_CtrlChanInitInfo%InitMeasDisp,2) /= p%NumStC_Control) .or. &
+            (size(StC_CtrlChanInitInfo%InitMeasVel ,2) /= p%NumStC_Control) .or. &
+            (size(StC_CtrlChanInitInfo%InitStiff   ,2) /= p%NumStC_Control) .or. &
+            (size(StC_CtrlChanInitInfo%InitDamp    ,2) /= p%NumStC_Control) .or. &
+            (size(StC_CtrlChanInitInfo%InitBrake   ,2) /= p%NumStC_Control) .or. &
+            (size(StC_CtrlChanInitInfo%InitForce   ,2) /= p%NumStC_Control) ) then
+         ErrStat2=ErrID_Fatal
+         ErrMsg2='Size of StC control initialization arrays  (StC_CtrlChanInitInfo%Init*) do not match the number of requested cable control channels.  Programming error somewhere.'
+         if (Failed())  return
+      endif
       if ( p%NumStC_Control*StCCtrl_ChanPerSet > StCCtrl_MaxChan ) then
          ErrStat2=ErrID_Fatal
          ErrMsg2='Maximum number of cable control channels exceeded:  requested '//trim(Num2LStr(p%NumStC_Control))// &
@@ -311,17 +321,17 @@ contains
          if (Failed())  return
       call AllocAry( dll_data%StCCmdForce,     3, p%NumStC_Control, 'StCCmdForce',     ErrStat2, ErrMsg2 )
          if (Failed())  return
-      ! Initialize to zeros -- These will be reinitialized to values from StC on first call
-      dll_data%StCMeasDisp       =  0.0_SiKi
-      dll_data%StCMeasVel        =  0.0_SiKi
-      dll_data%PrevStCCmdStiff   =  0.0_SiKi
-      dll_data%PrevStCCmdDamp    =  0.0_SiKi
-      dll_data%PrevStCCmdBrake   =  0.0_SiKi
-      dll_data%PrevStCCmdForce   =  0.0_SiKi
-      dll_data%StCCmdStiff       =  0.0_SiKi
-      dll_data%StCCmdDamp        =  0.0_SiKi
-      dll_data%StCCmdBrake       =  0.0_SiKi
-      dll_data%StCCmdForce       =  0.0_SiKi
+      ! Initialize to values passed in
+      dll_data%StCMeasDisp       =  real(StC_CtrlChanInitInfo%InitMeasDisp,SiKi)
+      dll_data%StCMeasVel        =  real(StC_CtrlChanInitInfo%InitMeasVel ,SiKi)
+      dll_data%PrevStCCmdStiff   =  real(StC_CtrlChanInitInfo%InitStiff   ,SiKi)
+      dll_data%PrevStCCmdDamp    =  real(StC_CtrlChanInitInfo%InitDamp    ,SiKi)
+      dll_data%PrevStCCmdBrake   =  real(StC_CtrlChanInitInfo%InitBrake   ,SiKi)
+      dll_data%PrevStCCmdForce   =  real(StC_CtrlChanInitInfo%InitForce   ,SiKi)
+      dll_data%StCCmdStiff       =  real(StC_CtrlChanInitInfo%InitStiff   ,SiKi)
+      dll_data%StCCmdDamp        =  real(StC_CtrlChanInitInfo%InitDamp    ,SiKi)
+      dll_data%StCCmdBrake       =  real(StC_CtrlChanInitInfo%InitBrake   ,SiKi)
+      dll_data%StCCmdForce       =  real(StC_CtrlChanInitInfo%InitForce   ,SiKi)
 
       ! Create info for summary file about channels
       if (UnSum > 0) then
