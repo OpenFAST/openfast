@@ -115,21 +115,24 @@ feature.
 Environmental Conditions
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-``AirDens`` specifies the fluid density and must be a value greater
-than zero; a typical value is around 1.225 kg/m\ :sup:`3` for air (wind
+Environmental conditions are now specified in driver input files but are left in
+the AeroDyn primary input file for legacy compatibility. Use the keyword 
+``DEFAULT`` to pass in values specified by the driver input file. Otherwise, 
+values given in the AeroDyn primary input file will overwrite those given in the
+driver input file. ``AirDens`` specifies the fluid density and must be a value
+greater than zero; a typical value is around 1.225 kg/m\ :sup:`3` for air (wind
 turbines) and 1025 kg/m\ :sup:`3` for seawater (MHK turbines).
-``KinVisc`` specifies the kinematic viscosity of the air (used in the
+``KinVisc`` specifies the kinematic viscosity of the fluid (used in the
 Reynolds number calculation); a typical value is around 1.460E-5
 m\ :sup:`2`/s for air (wind turbines) and 1.004E-6 m\ :sup:`2`/s for
-seawater (MHK turbines). ``SpdSound`` is the speed of sound in air
+seawater (MHK turbines). ``SpdSound`` is the speed of sound in the fluid
 (used to calculate the Mach number within the unsteady airfoil
-aerodynamics calculations); a typical value is around 340.3 m/s. The
-last three parameters in this section are only used when
+aerodynamics calculations); a typical value is around 340.3 m/s for air. The
+last two parameters in this section are only used when
 ``CavitCheck = TRUE`` for MHK turbines. ``Patm`` is the atmospheric
 pressure above the free surface; typically around 101,325 Pa. ``Pvap``
 is the vapor pressure of the fluid; for seawater this is typically
-around 2,000 Pa. ``FluidDepth`` is the distance from the hub center to
-the free surface.
+around 2,000 Pa.
 
 Blade-Element/Momentum Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
