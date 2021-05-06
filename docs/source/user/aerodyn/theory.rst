@@ -1,8 +1,8 @@
 
 .. _AD_theory:
 
-AeroDynTheory
-=============
+AeroDyn Theory
+==============
 
 This theory manual is work in progress, please refer to the AeroDyn manual for more details. 
 
