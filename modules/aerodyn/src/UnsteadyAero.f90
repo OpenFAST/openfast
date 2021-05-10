@@ -45,6 +45,7 @@ private
    integer(intki), parameter         :: UA_Gonzalez      = 2   ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]
    integer(intki), parameter         :: UA_MinnemaPierce = 3   ! UAMod = 3 [Minnema/Pierce variant (changes in Cc and Cm)]
    integer(intki), parameter, public :: UA_HGM           = 4   ! UAMod = 4 [continuous variant of HGM (Hansen) model]
+   integer(intki), parameter, public :: UA_OYE           = 5   ! UAMod = 5 [continuous Oye model]
    
    real(ReKi),     parameter :: Gonzalez_factor = 0.2_ReKi   ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
 
@@ -1229,7 +1230,7 @@ subroutine UA_ValidateInput(InitInp, AFInfo, ErrStat, ErrMsg)
 
    !>>> remove after this feature gets tested better:
    if (InitInp%UAMod == UA_HGM ) then
-      call SetErrStat( ErrID_Fatal, "UAMod cannot be 4 (continuous HGM model) in this version of OpenFAST.", ErrStat, ErrMsg, RoutineName )
+      call SetErrStat( ErrID_Warn, "UAMod 4 (continuous HGM model) is in beta for this version of OpenFAST.", ErrStat, ErrMsg, RoutineName )
    end if
    !<<<
 
@@ -1947,8 +1948,13 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
        ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
     x4 = max( min( x%x(4), 1.0_R8Ki ), 0.0_R8Ki )
     
+if (p%ShedEffect) then
     dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34
     dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34
+else
+    dxdt%x(1) = 0.0_ReKi
+    dxdt%x(2) = 0.0_ReKi
+endif
     dxdt%x(3) = -1.0_R8Ki / BL_p%T_p                                     * x%x(3) +         1.0_ReKi / BL_p%T_p  * Clp
     dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                    *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_interp%f_st
 
@@ -1981,7 +1987,11 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
     alpha_34 = atan2(vx_34, u%v_ac(2) )                                    ! page 5 definitions
     
     ! Variables derived from states
+if (p%ShedEffect) then
     alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
+else
+    alphaE  = alpha_34
+endif
     call MPi2Pi(alphaE)
 
 END SUBROUTINE Get_HGM_constants
@@ -2405,6 +2415,7 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
       delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)
       
 ! bjj: do we need to check that u%alpha is between -pi and + pi?
+      ! y%Cl = AFI_interp%Cl < TODO consider using this in front of x4 for "true" Cl
       y%Cl = x4 * (alphaE - BL_p%alpha0) * BL_p%c_lalpha  + (1.0_ReKi - x4) * cl_fs  + pi * Tu * u%omega       ! Eq. 78
       y%Cd = AFI_interp%Cd + (u%alpha - alphaE) * y%Cl + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime    ! Eq. 79
       

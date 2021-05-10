@@ -65,7 +65,7 @@ contains
    !!  - chord_LL_CP: chord on LL cp  
    subroutine Wings_Panelling_Init(Meshes, p, m, ErrStat, ErrMsg )
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
-      type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+      type(FVW_ParameterType),         intent(inout)  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
@@ -100,16 +100,19 @@ contains
             ErrMsg ='TODO different discretization InputMesh / vortex code'; ErrStat=ErrID_Fatal; return
          endif
          do iSpan = 1, p%nSpan+1
-            m%s_LL    (iSpan, iW) = s_in(iSpan)
-            m%chord_LL(iSpan, iW) = p%chord(iSpan,iW)
+            p%s_LL    (iSpan, iW) = s_in(iSpan)
+            p%chord_LL(iSpan, iW) = p%chord(iSpan,iW)
          enddo
          ! --- Control points spanwise location
          ! NOTE: we use the cos approximation of VanGarrel. For equispacing, it returns mid point
          !       otherwise, points are slightly closer to panels that are shorter
-         !call Meshing('middle'           , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
-         call Meshing('fullcosineapprox' , m%s_LL(:,iW), p%nSpan, m%s_CP_LL(:,iW))
-         call InterpArray(m%s_LL(:,iW), m%chord_LL(:,iW), m%s_CP_LL(:,iW), m%chord_CP_LL(:,iW))
+         !call Meshing('middle'           , p%s_LL(:,iW), p%nSpan, p%s_CP_LL(:,iW))
+         call Meshing('fullcosineapprox' , p%s_LL(:,iW), p%nSpan, p%s_CP_LL(:,iW))
+         call InterpArray(p%s_LL(:,iW), p%chord_LL(:,iW), p%s_CP_LL(:,iW), p%chord_CP_LL(:,iW))
+
+         deallocate(s_in)
       enddo
+
    end subroutine Wings_Panelling_Init
    !----------------------------------------------------------------------------------------------------------------------------------
    !> Based on an input mesh, sets the following:
@@ -144,9 +147,9 @@ contains
          do iSpan = 1,p%nSpan+1
             P_ref = Meshes(iW)%Position(1:3, iSpan )+Meshes(iW)%TranslationDisp(1:3, iSpan)
             DP_LE(1:3) =  0.0
-            DP_LE(1)   = -m%chord_LL(iSpan,iW)/4.
+            DP_LE(1)   = -p%chord_LL(iSpan,iW)/4.
             DP_TE(1:3) =  0.0
-            DP_TE(1)   = +3.*m%chord_LL(iSpan,iW)/4. 
+            DP_TE(1)   = +3.*p%chord_LL(iSpan,iW)/4. 
             m%LE(1:3, iSpan, iW) = P_ref + DP_LE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
             m%TE(1:3, iSpan, iW) = P_ref + DP_TE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
          enddo         
@@ -190,7 +193,6 @@ contains
             m%diag_LL(iSpan, iW) = TwoNorm(DP3)
          end do
       enddo
-!FIXME: does it make sense to use the position mesh for this info?
       ! --- Lifting Line/ Bound Circulation panel
       ! For now: goes from 1/4 chord to TE
       ! More panelling options may be considered in the future
@@ -205,17 +207,17 @@ contains
       ! For now: placed exactly on the LL panel
       ! NOTE: separated from other loops just in case a special discretization is used
       do iW = 1,p%nWings
-         call InterpArray(m%s_LL(:,iW), m%r_LL(1,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
-         call InterpArray(m%s_LL(:,iW), m%r_LL(2,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
-         call InterpArray(m%s_LL(:,iW), m%r_LL(3,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
+         call InterpArray(p%s_LL(:,iW), m%r_LL(1,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
+         call InterpArray(p%s_LL(:,iW), m%r_LL(2,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
+         call InterpArray(p%s_LL(:,iW), m%r_LL(3,:,1,iW), p%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
       enddo
 
       ! --- Structural velocity on LL
       ! TODO: difference meshes in/LL
       do iW = 1,p%nWings
-         call InterpArray(m%s_LL(:,iW), Meshes(iW)%TranslationVel(1,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(1,:,iW))
-         call InterpArray(m%s_LL(:,iW), Meshes(iW)%TranslationVel(2,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(2,:,iW))
-         call InterpArray(m%s_LL(:,iW), Meshes(iW)%TranslationVel(3,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(3,:,iW))
+         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(1,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(1,:,iW))
+         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(2,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(2,:,iW))
+         call InterpArray(p%s_LL(:,iW), Meshes(iW)%TranslationVel(3,:) ,p%s_CP_LL(:,iW), m%Vstr_LL(3,:,iW))
       enddo
    end subroutine Wings_Panelling
 
@@ -266,6 +268,8 @@ contains
          do iW = 1, p%nWings !Loop over lifting lines
             Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
          enddo
+         m%Vind_LL=-9999._ReKi !< Safety 
+         m%Vtot_LL=-9999._ReKi !< Safety 
 
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
@@ -346,7 +350,7 @@ contains
       call AllocAry(Vcst,  3, p%nSpan, p%nWings, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
 
       ! Set m%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
-      call LiftingLineInducedVelocities(p, x, iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
+      call LiftingLineInducedVelocities(m%CP_LL, p, x, iNWStart+1, m, m%Vind_LL, ErrStat2, ErrMsg2);  if(Failed()) return;
 
       Vcst = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
 
@@ -374,7 +378,7 @@ contains
                    P4=x%r_NW(1:3,iSpan  ,iDepth+1,iW)
                    Gamm=GammaLastIter(iSpan, iW)
                    do iWCP=1,p%nWings
-                      call ui_quad_n1(m%CP_LL(1:3,1:p%nSpan,iWCP), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, p%WingRegParam, Vvar(1:3,1:p%nSpan,iWCP))
+                      call ui_quad_n1(m%CP_LL(1:3,1:p%nSpan,iWCP), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%Eps_NW(1,iSpan,iDepth,iW), Vvar(1:3,1:p%nSpan,iWCP))
                    enddo
                 enddo
              enddo
@@ -476,7 +480,7 @@ contains
             Vrel_norm = TwoNorm(Vrel)
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
-            Re = p%Chord(icp,iW) * Vrel_norm  / p%KinVisc / 1.0E6
+            Re = p%Chord(icp,iW) * Vrel_norm  / p%KinVisc  ! Reynolds number (not in Million)
 
             !if (p%CircSolvPolar==idPolarAeroDyn) then
                ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
