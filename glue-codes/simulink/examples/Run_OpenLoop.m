@@ -6,7 +6,7 @@
 % addpath(genpath('../../../install')); % cmake default install location
 
 % these variables are defined in the OpenLoop model's FAST_SFunc block:
-FAST_InputFileName = '../../../reg_tests/r-test/glue-codes/openfast/5MW_Land_DLL_WTurb/5MW_Land_DLL_WTurb.fst';
+FAST_InputFileName = '../../../reg_tests/r-test/glue-codes/openfast/AOC_WSt/AOC_WSt.fst';
 TMax               = 60; % seconds
 
 sim('OpenLoop.mdl',[0,TMax]);

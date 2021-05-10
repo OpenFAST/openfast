@@ -42,7 +42,7 @@ macro(set_fast_fortran)
 
   # Abort if we do not have gfortran or Intel Fortran Compiler.
   if (NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU" OR
-        ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel"))
+        ${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel"))
     message(FATAL_ERROR "OpenFAST requires either GFortran or Intel Fortran Compiler. Compiler detected by CMake: ${FCNAME}.")
   endif()
 
@@ -54,7 +54,7 @@ macro(set_fast_fortran)
     elseif("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "4.6.0")  
         message(FATAL_ERROR "A version of GNU GFortran greater than 4.6.0 is required. GFortran version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
     endif()
-  elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+  elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
     if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "11")
       message(FATAL_ERROR "A version of Intel ifort greater than 11 is required. ifort version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
     endif()
@@ -68,7 +68,7 @@ macro(set_fast_fortran)
   # Get OS/Compiler specific options
   if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
     set_fast_gfortran()
-  elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+  elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
     set_fast_intel_fortran()
   endif()
 endmacro(set_fast_fortran)
@@ -110,7 +110,7 @@ macro(set_fast_gfortran)
   # Disable stack reuse within routines: issues seen with gfortran 9.x, but others may also exhibit
   #   see section 3.16 of https://gcc.gnu.org/onlinedocs/gcc-9.2.0/gcc.pdf
   #   and https://github.com/OpenFAST/openfast/pull/595
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fstack-reuse='none'")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fstack-reuse=none")
 
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
@@ -120,7 +120,7 @@ macro(set_fast_gfortran)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace " )
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all,no-array-temps -pedantic -fbacktrace -finit-real=inf -finit-integer=9999." )
   endif()
 
   if(CYGWIN)
@@ -158,12 +158,16 @@ macro(set_fast_intel_fortran_posix)
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DOPENFAST_DOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "19")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double-size 128")
+    else()
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
+    endif()
   endif (DOUBLE_PRECISION)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all -traceback" )
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all,no-array-temps -traceback" )
   endif()
 
   # OPENMP
@@ -204,7 +208,11 @@ macro(set_fast_intel_fortran_windows)
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DOPENFAST_DOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "19")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real-size:64 /double-size:128")
+    else()
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
+    endif()
   endif (DOUBLE_PRECISION)
 
   # increase the default 2MB stack size to 16 MB
