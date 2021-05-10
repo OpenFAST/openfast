@@ -39,6 +39,11 @@ MODULE MoorDyn
    PUBLIC :: MD_CalcOutput
    PUBLIC :: MD_CalcContStateDeriv
    PUBLIC :: MD_End
+   PUBLIC :: MD_JacobianPContState 
+   PUBLIC :: MD_JacobianPInput 
+   PUBLIC :: MD_JacobianPDiscState 
+   PUBLIC :: MD_JacobianPConstrState 
+   PUBLIC :: MD_GetOP 
 
 CONTAINS
 
@@ -2108,6 +2113,10 @@ p%WaterKin  = 0
       other%dummy = 0
       xd%dummy    = 0
       z%dummy     = 0      
+      
+      if (InitInp%Linearize) then
+         call MD_Init_Jacobian(InitInp, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+      endif
       
       CALL WrScr('   MoorDyn initialization completed.')
       
@@ -6326,6 +6335,406 @@ p%WaterKin  = 0
    END SUBROUTINE Body_AddRod
 
 
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! ###### The following four routines are Jacobian routines for linearization capabilities #######
+! If the module does not implement them, set ErrStat = ErrID_Fatal in SD_Init() when InitInp%Linearize is .true.
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
+SUBROUTINE MD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x                  !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd                 !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z                  !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState         !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(INOUT) :: y                  !< Output (change to inout if a mesh copy is required); Output fields are not used by this routine, but type is available here so that mesh parameter information (i.e., connectivity) does not have to be recalculated for dYdu.
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdu(:,:)          !< Partial derivatives of output functions (Y) wrt the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdu(:,:)          !< Partial derivatives of continuous state functions (X) wrt the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddu(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdu(:,:)          !< Partial derivatives of constraint state functions (Z) wrt the inputs (u) [intent in to avoid deallocation]
+   
+   ! local variables
+   TYPE(MD_OutputType)          :: y_m, y_p
+   TYPE(MD_ContinuousStateType) :: x_m, x_p
+   TYPE(MD_InputType)           :: u_perturb
+   REAL(R8Ki)                   :: delta_p, delta_m   ! delta change in input (plus, minus)
+   INTEGER(IntKi)               :: i
+   integer(intKi)               :: ErrStat2
+   character(ErrMsgLen)         :: ErrMsg2
+   character(*), parameter      :: RoutineName = 'MD_JacobianPInput'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   ! get OP values here:
+   call MD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+   
+   ! make a copy of the inputs to perturb
+   call MD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   
+   IF ( PRESENT( dYdu ) ) THEN
+      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+      if (.not. allocated(dYdu) ) then
+         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1),'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call MD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+      call MD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+      do i=1,size(p%Jac_u_indx,1)
+         ! get u_op + delta_p u
+         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_Perturb_u( p, i, 1, u_perturb, delta_p )
+         ! compute y at u_op + delta_p u
+         call MD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get u_op - delta_m u
+         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_Perturb_u( p, i, -1, u_perturb, delta_m )
+         ! compute y at u_op - delta_m u
+         call MD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get central difference:
+         call MD_Compute_dY( p, y_p, y_m, delta_p, dYdu(:,i) )
+      end do
+      if(Failed()) return
+   END IF
+   IF ( PRESENT( dXdu ) ) THEN
+      if (.not. allocated(dXdu)) then
+         call AllocAry(dXdu, p%Jac_nx, size(p%Jac_u_indx,1), 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
+      endif
+      do i=1,size(p%Jac_u_indx,1)
+         ! get u_op + delta u
+         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_Perturb_u( p, i, 1, u_perturb, delta_p )
+         ! compute x at u_op + delta u
+         call MD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get u_op - delta u
+         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         call MD_Perturb_u( p, i, -1, u_perturb, delta_m )
+         ! compute x at u_op - delta u
+         call MD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         ! get central difference:
+         ! we may have had an error allocating memory, so we'll check
+         if(Failed()) return
+         ! get central difference:
+         call MD_Compute_dX( p, x_p, x_m, delta_p, dXdu(:,i) )
+      end do
+   END IF ! dXdu
+   IF ( PRESENT( dXddu ) ) THEN
+      if (allocated(dXddu)) deallocate(dXddu)
+   END IF
+   IF ( PRESENT( dZdu ) ) THEN
+      if (allocated(dZdu)) deallocate(dZdu)
+   END IF
+   call CleanUp()
+contains
+
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+
+   subroutine CleanUp()
+      call MD_DestroyContState(  x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
+      call MD_DestroyContState(  x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
+      call MD_DestroyOutput(     y_p, ErrStat2, ErrMsg2 )
+      call MD_DestroyOutput(     y_m, ErrStat2, ErrMsg2 )
+      call MD_DestroyInput(u_perturb, ErrStat2, ErrMsg2 )
+   end subroutine cleanup
+
+END SUBROUTINE MD_JacobianPInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
+SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
+   REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x                  !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd                 !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z                  !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState         !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(INOUT) :: y                  !< Output (change to inout if a mesh copy is required); Output fields are not used by this routine, but type is available here so that mesh parameter information (i.e., connectivity) does not have to be recalculated for dYdx.
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdx(:,:)          !< Partial derivatives of output functions wrt the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) wrt the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) wrt the continuous states (x) [intent in to avoid deallocation]
+   ! local variables
+   TYPE(MD_OutputType)          :: y_p, y_m
+   TYPE(MD_ContinuousStateType) :: x_p, x_m
+   TYPE(MD_ContinuousStateType) :: x_perturb
+   REAL(R8Ki)                   :: delta        ! delta change in input or state
+   INTEGER(IntKi)               :: i, k
+   INTEGER(IntKi)               :: idx
+   INTEGER(IntKi)               :: ErrStat2
+   CHARACTER(ErrMsgLen)         :: ErrMsg2
+   CHARACTER(*), PARAMETER      :: RoutineName = 'MD_JacobianPContState'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   ! make a copy of the continuous states to perturb NOTE: MESH_NEWCOPY
+   call MD_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   
+   IF ( PRESENT( dYdx ) ) THEN
+      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+      if (.not. allocated(dYdx)) then
+         call AllocAry(dYdx, p%Jac_ny, p%Jac_nx, 'dYdx', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call MD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call MD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+      do i=1,p%Jac_nx
+         ! get x_op + delta x
+         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_perturb_x(p, i, 1, x_perturb, delta )
+         ! compute y at x_op + delta x
+         call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get x_op - delta x
+         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_perturb_x(p, i, -1, x_perturb, delta )
+         ! compute y at x_op - delta x
+         call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get central difference:
+         call MD_Compute_dY( p, y_p, y_m, delta, dYdx(:,idx) )
+      end do
+      if(Failed()) return
+   END IF
+   
+   IF ( PRESENT( dXdx ) ) THEN
+      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+      if (.not. allocated(dXdx)) then
+         call AllocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      do i=1,p%Jac_nx
+         ! get x_op + delta x
+         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_perturb_x(p, i, 1, x_perturb, delta )
+         ! compute x at x_op + delta x
+         call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get x_op - delta x
+         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_perturb_x(p, i, -1, x_perturb, delta )
+         ! compute x at x_op - delta x
+         call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         if(Failed()) return
+         ! get central difference:
+         call MD_Compute_dX( p, x_p, x_m, delta, dXdx(:,idx) )
+      end do
+   END IF
+   IF ( PRESENT( dXddx ) ) THEN
+      if (allocated(dXddx)) deallocate(dXddx)
+   END IF
+   IF ( PRESENT( dZdx ) ) THEN
+      if (allocated(dZdx)) deallocate(dZdx)
+   END IF
+   call CleanUp()
+   
+contains
+
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_JacobianPContState') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+
+   subroutine CleanUp()
+      call MD_DestroyOutput(         y_p, ErrStat2, ErrMsg2 )
+      call MD_DestroyOutput(         y_m, ErrStat2, ErrMsg2 )
+      call MD_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
+      call MD_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
+      call MD_DestroyContState(x_perturb, ErrStat2, ErrMsg2 )
+   end subroutine cleanup
+
+END SUBROUTINE MD_JacobianPContState
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
+SUBROUTINE MD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
+   REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x                  !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd                 !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z                  !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState         !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(INOUT) :: y                  !< Output (change to inout if a mesh copy is required); Output fields are not used by this routine, but type is available here so that mesh parameter information (i.e., connectivity) does not have to be recalculated for dYdx.
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdxd(:,:) !< Partial derivatives of output functions (Y) wrt the discrete states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdxd(:,:) !< Partial derivatives of continuous state functions (X) wrt the  discrete states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddxd(:,:)!< Partial derivatives of discrete state functions (Xd) wrt the discrete states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdxd(:,:) !< Partial derivatives of constraint state functions (Z) wrt discrete states (xd) [intent in to avoid deallocation]
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   IF ( PRESENT( dYdxd ) ) THEN
+   END IF
+   IF ( PRESENT( dXdxd ) ) THEN
+   END IF
+   IF ( PRESENT( dXddxd ) ) THEN
+   END IF
+   IF ( PRESENT( dZdxd ) ) THEN
+   END IF
+END SUBROUTINE MD_JacobianPDiscState
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
+SUBROUTINE MD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+   REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x                  !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd                 !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z                  !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState         !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(INOUT) :: y                  !< Output (change to inout if a mesh copy is required); Output fields are not used by this routine, but type is available here so that mesh parameter information (i.e., connectivity) does not have to be recalculated for dYdx.
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdz(:,:)  !< Partial derivatives of output functions (Y) with respect to the constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdz(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddz(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdz(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the constraint states (z) [intent in to avoid deallocation]
+   ! local variables
+   character(*), parameter                                       :: RoutineName = 'MD_JacobianPConstrState'
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   IF ( PRESENT( dYdz ) ) THEN
+   END IF
+   IF ( PRESENT( dXdz ) ) THEN
+      if (allocated(dXdz)) deallocate(dXdz)
+   END IF
+   IF ( PRESENT( dXddz ) ) THEN
+      if (allocated(dXddz)) deallocate(dXddz)
+   END IF
+   IF ( PRESENT(dZdz) ) THEN
+   END IF
+END SUBROUTINE MD_JacobianPConstrState
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> Routine to pack the data structures representing the operating points into arrays for linearization.
+SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+   REAL(DbKi),                        INTENT(IN   ) :: t          !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p          !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x          !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd         !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z          !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(IN   ) :: y          !< Output at operating point
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: u_op(:)    !< values of linearized inputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: y_op(:)    !< values of linearized outputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: x_op(:)    !< values of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: xd_op(:)   !< values of linearized discrete states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: z_op(:)    !< values of linearized constraint states
+   ! Local
+   INTEGER(IntKi)                                                :: idx, i
+   INTEGER(IntKi)                                                :: nu
+   INTEGER(IntKi)                                                :: ny
+   INTEGER(IntKi)                                                :: ErrStat2
+   CHARACTER(ErrMsgLen)                                          :: ErrMsg2
+   CHARACTER(*), PARAMETER                                       :: RoutineName = 'MD_GetOP'
+   LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
+   TYPE(MD_ContinuousStateType)                                  :: dx          ! derivative of continuous states at operating point
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! inputs
+   IF ( PRESENT( u_op ) ) THEN
+      nu = size(p%Jac_u_indx,1) + u%CoupledKinematics%NNodes * 6  ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+      if (.not. allocated(u_op)) then
+         call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      idx = 1
+      FieldMask = .false.
+      FieldMask(MASKID_TranslationDisp) = .true.
+      FieldMask(MASKID_Orientation)     = .true.
+      FieldMask(MASKID_TranslationVel)  = .true.
+      FieldMask(MASKID_RotationVel)     = .true.
+      FieldMask(MASKID_TranslationAcc)  = .true.
+      FieldMask(MASKID_RotationAcc)     = .true.
+      ! fill in the u_op values from the input mesh
+      call PackMotionMesh(u%CoupledKinematics, u_op, idx, FieldMask=FieldMask)
+      
+      ! now do the active tensioning commands if there are any
+      do i=1,p%nCtrlChans
+         u_op(idx) = u%DeltaL(i)
+         idx = idx + 1
+         u_op(idx) = u%DeltaLdot(i)
+         idx = idx + 1
+      end do      
+   END IF
+   ! outputs
+   IF ( PRESENT( y_op ) ) THEN
+      ny = p%Jac_ny + y%CoupledLoads%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+      if (.not. allocated(y_op)) then
+         call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      idx = 1
+      call PackLoadMesh(y%CoupledLoads, y_op, idx)
+      do i=1,p%NumOuts
+         y_op(idx) = y%WriteOutput(i)
+         idx = idx + 1
+      end do
+   END IF
+   ! states
+   IF ( PRESENT( x_op ) ) THEN
+      if (.not. allocated(x_op)) then
+         call AllocAry(x_op, p%Jac_nx,'x_op',ErrStat2,ErrMsg2); if (Failed()) return
+      end if
+      do i=1, p%Jac_nx
+         x_op(i) = x%states(i)
+      end do
+   END IF
+   ! state derivatives?
+   IF ( PRESENT( dx_op ) ) THEN
+      if (.not. allocated(dx_op)) then
+         call AllocAry(dx_op, p%Jac_nx,'dx_op',ErrStat2,ErrMsg2); if(failed()) return
+      end if
+      call MD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) ; if(Failed()) return
+      do i=1, p%Jac_nx
+         dx_op(i) = dx%states(i)
+      end do
+   END IF
+   IF ( PRESENT( xd_op ) ) THEN
+      ! pass
+   END IF
+   IF ( PRESENT( z_op ) ) THEN
+      ! pass
+   END IF
+   call CleanUp()
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+
+   subroutine CleanUp()
+      call MD_DestroyContState(dx, ErrStat2, ErrMsg2);
+   end subroutine
+END SUBROUTINE MD_GetOP
+
+
+
+
+
    ! :::::::::::::::::::::::::: below are some wave related functions :::::::::::::::::::::::::::::::
    
    
@@ -6840,15 +7249,11 @@ p%WaterKin  = 0
       Real(DbKi), INTENT(IN)      :: rotMat(3,3)  ! rotation matrix (DCM)
       Real(DbKi)                  :: outMat(6,6)  ! rotated matrix
       
-      Real(DbKi)                  :: tempM(3,3)  
-      Real(DbKi)                  :: tempMrot(3,3)  
-
       ! the process for each of the following is to 
       ! 1. copy out the relevant 3x3 matrix section,
       ! 2. rotate it, and
       ! 3. paste it into the output 6x6 matrix
 
-      
       ! mass matrix
       outMat(1:3,1:3) = rotateM3(Min(1:3,1:3), rotMat)
 
@@ -7016,6 +7421,310 @@ p%WaterKin  = 0
       
    END SUBROUTINE LUsolve
 
+
+!====================================================================================================
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
+!! Do not change the order of this packing without changing subroutine !
+SUBROUTINE MD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
+   TYPE(MD_InitInputType)               , INTENT(IN   ) :: Init                  !< Init
+   TYPE(MD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
+   TYPE(MD_InputType)                , INTENT(IN   ) :: u                     !< inputs
+   TYPE(MD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
+   TYPE(MD_MiscVarType)              , INTENT(INOUT) :: m                     !< misc variables <<<<<<<<
+   TYPE(MD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
+   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
+   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
+   
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'SD_Init_Jacobian'
+   real(ReKi) :: dx, dy, dz, maxDim
+   
+   ! local variables:
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   !! --- System dimension
+   !dx = maxval(Init%Nodes(:,2))- minval(Init%Nodes(:,2))
+   !dy = maxval(Init%Nodes(:,3))- minval(Init%Nodes(:,3))
+   !dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
+   !maxDim = max(dx, dy, dz)
+   
+   ! --- System dimension
+   call Init_Jacobian_y(); if (Failed()) return
+   call Init_Jacobian_x(); if (Failed()) return
+   call Init_Jacobian_u(); if (Failed()) return
+
+contains
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init_Jacobian') 
+        Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+   
+   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized outputs.
+   SUBROUTINE Init_Jacobian_y()
+      INTEGER(IntKi) :: index_next, i
+      
+      ! Number of outputs
+      p%Jac_ny = y%CoupledLoads%nNodes * 6     & ! 3 forces + 3 moments at each node (moments may be zero)
+               + p%NumOuts                       ! WriteOutput values 
+      ! Storage info for each output (names, rotframe)
+      call AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
+      call AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
+      ! Names
+      index_next = 1
+      call PackLoadMesh_Names(  y%CoupledLoads, 'LinNames_y', InitOut%LinNames_y, index_next)  ! <<< should a specific name be provided here?
+      do i=1,p%NumOuts
+         InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
+      end do
+      
+      InitOut%RotFrame_y(:) = .false.
+   END SUBROUTINE Init_Jacobian_y
+
+   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
+   SUBROUTINE Init_Jacobian_x()
+      INTEGER(IntKi) :: i
+      INTEGER(IntKi) :: l
+      INTEGER(IntKi) :: N
+      
+      p%Jac_nx = m%Nx ! size of (continuous) state vector (includes the first derivatives)
+      
+      ! allocate space for the row/column names and for perturbation sizes
+      CALL AllocAry(InitOut%LinNames_x  , p%Jac_nx, 'LinNames_x'  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(InitOut%RotFrame_x  , p%Jac_nx, 'RotFrame_x'  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(InitOut%DerivOrder_x, p%Jac_nx, 'DerivOrder_x', ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(p%dx,                 p%Jac_nx, 'p%dx'        , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      ! set linearization output names and default perturbations, p%dx:
+      
+      DO l = 1,p%nFreeBodies                                          ! Body m%BodyList(m%FreeBodyIs(l))
+         p%dx( m%BodyStateIs1(l)   : m%BodyStateIs1(l)+2 ) = 0.1          ! body translational velocity [m/s]
+         p%dx( m%BodyStateIs1(l)+3 : m%BodyStateIs1(l)+5 ) = 0.1          ! body rotational velocity [rad/s]
+         p%dx( m%BodyStateIs1(l)+6 : m%BodyStateIs1(l)+8 ) = 0.2          ! body displacement [m]
+         p%dx( m%BodyStateIs1(l)+9 : m%BodyStateIs1(l)+11) = 0.02         ! body rotation [rad]
+         InitOut%LinNames_x(m%BodyStateIs1(l)  ) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+7) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+8) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+9) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+10)= 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
+         InitOut%LinNames_x(m%BodyStateIs1(l)+11)= 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'         
+      END DO      
+      DO l = 1,p%nFreeRods                                            ! Rod m%RodList(m%FreeRodIs(l))
+         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then               ! pinned rod
+            p%dx( m%RodStateIs1(l)   : m%RodStateIs1(l)+2 ) = 0.1         ! body rotational velocity [rad/s]
+            p%dx( m%RodStateIs1(l)+3 : m%RodStateIs1(l)+5 ) = 0.02        ! body rotation [rad]
+            InitOut%LinNames_x(m%RodStateIs1(l)  ) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(m%RodStateIs1(l)+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(m%RodStateIs1(l)+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
+         else                                                           ! free rod
+            p%dx( m%RodStateIs1(l)   : m%RodStateIs1(l)+2 ) = 0.1         ! body translational velocity [m/s]
+            p%dx( m%RodStateIs1(l)+3 : m%RodStateIs1(l)+5 ) = 0.02        ! body rotational velocity [rad/s]
+            p%dx( m%RodStateIs1(l)+6 : m%RodStateIs1(l)+8 ) = 0.1         ! body displacement [m]
+            p%dx( m%RodStateIs1(l)+9 : m%RodStateIs1(l)+11) = 0.02        ! body rotation [rad]
+            InitOut%LinNames_x(m%RodStateIs1(l)  ) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vx, m/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vy, m/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vz, m/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
+            InitOut%LinNames_x(m%RodStateIs1(l)+6) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Px, m'
+            InitOut%LinNames_x(m%RodStateIs1(l)+7) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Py, m'
+            InitOut%LinNames_x(m%RodStateIs1(l)+8) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Pz, m'
+            InitOut%LinNames_x(m%RodStateIs1(l)+9) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(m%RodStateIs1(l)+10)= 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(m%RodStateIs1(l)+11)= 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
+         end if
+      END DO      
+      DO l = 1,p%nFreeCons                                            ! Point m%ConnectList(m%FreeConIs(l))
+         p%dx( m%ConStateIs1(l)   : m%ConStateIs1(l)+2 ) = 0.1            ! point translational velocity [m/s]
+         p%dx( m%ConStateIs1(l)+3 : m%ConStateIs1(l)+5 ) = 0.1            ! point displacement [m]
+         InitOut%LinNames_x(m%RodStateIs1(l)  ) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vx, m/s'
+         InitOut%LinNames_x(m%RodStateIs1(l)+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vy, m/s'
+         InitOut%LinNames_x(m%RodStateIs1(l)+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vz, m/s'
+         InitOut%LinNames_x(m%RodStateIs1(l)+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Px, m'
+         InitOut%LinNames_x(m%RodStateIs1(l)+4) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Py, m'
+         InitOut%LinNames_x(m%RodStateIs1(l)+5) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Pz, m'
+      END DO      
+      DO l = 1,p%nLines                                               ! Line m%LineList(l)         
+         N = m%LineList(l)%N                                              ! number of segments in the line
+         p%dx( m%LineStateIs1(l)       : m%LineStateIs1(l)+3*N-4 ) = 0.1  ! line internal node translational velocity [m/s]
+         p%dx( m%LineStateIs1(l)+3*N-3 : m%LineStateIs1(l)+6*N-7 ) = 0.1  ! line internal node displacement [m]
+         DO i = 0,N-2
+            InitOut%LinNames_x( m%LineStateIs1(l)     +3*i  ) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vx, m/s'
+            InitOut%LinNames_x( m%LineStateIs1(l)     +3*i+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vy, m/s'
+            InitOut%LinNames_x( m%LineStateIs1(l)     +3*i+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vz, m/s'
+            InitOut%LinNames_x( m%LineStateIs1(l)+3*N +3*i-3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Px, m'
+            InitOut%LinNames_x( m%LineStateIs1(l)+3*N +3*i-2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Py, m'
+            InitOut%LinNames_x( m%LineStateIs1(l)+3*N +3*i-1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Pz, m'
+         END DO         
+      END DO
+            
+      InitOut%RotFrame_x   = .false.
+      InitOut%DerivOrder_x = 2      
+   END SUBROUTINE Init_Jacobian_x
+
+   SUBROUTINE Init_Jacobian_u()
+      REAL(R8Ki)     :: perturb
+      INTEGER(IntKi) :: i, j, idx, nu, i_meshField
+      ! Number of inputs
+      nu = u%CoupledKinematics%nNodes * 18 &   ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each node <<<<<<<
+         + size(u%DeltaL)*2                    ! a deltaL and rate of change for each active tension control channel
+      
+      ! --- Info of linearized inputs (Names, RotFrame, IsLoad)
+      call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      call AllocAry(InitOut%RotFrame_u, nu, 'RotFrame_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      call AllocAry(InitOut%IsLoad_u  , nu, 'IsLoad_u'  , ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      
+      InitOut%IsLoad_u   = .false. ! None of MoorDyn's inputs are loads
+      InitOut%RotFrame_u = .false. ! every input is on a mesh, which stores values in the global (not rotating) frame
+      
+      idx = 1
+      call PackMotionMesh_Names(u%CoupledKinematics, 'CoupledKinematics', InitOut%LinNames_u, idx) ! all 6 motion fields
+      
+      ! --- Jac_u_indx:  matrix to store index to help us figure out what the ith value of the u vector really means
+      ! (see perturb_u ... these MUST match )
+      ! column 1 indicates module's mesh and field
+      ! column 2 indicates the first index (x-y-z component) of the field
+      ! column 3 is the node
+      call allocAry( p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      idx = 1
+      !Module/Mesh/Field: u%CoupledKinematics%TranslationDisp  = 1;
+      !Module/Mesh/Field: u%CoupledKinematics%Orientation      = 2;
+      !Module/Mesh/Field: u%CoupledKinematics%TranslationVel   = 3;
+      !Module/Mesh/Field: u%CoupledKinematics%RotationVel      = 4;
+      !Module/Mesh/Field: u%CoupledKinematics%TranslationAcc   = 5;
+      !Module/Mesh/Field: u%CoupledKinematics%RotationAcc      = 6;
+      do i_meshField = 1,6
+         do i=1,u%CoupledKinematics%nNodes
+            do j=1,3
+               p%Jac_u_indx(idx,1) =  i_meshField     ! mesh field type (indicated by 1-6)
+               p%Jac_u_indx(idx,2) =  j               ! x, y, or z
+               p%Jac_u_indx(idx,3) =  i               ! node
+               idx = idx + 1
+            end do !j
+         end do !i
+      end do
+      ! now do the active tensioning commands if there are any
+      do i=1,p%nCtrlChans
+         p%Jac_u_indx(idx,1) =  10              ! 10-11 mean active tension changes (10: deltaL; 11: deltaLdot)
+         p%Jac_u_indx(idx,2) =  0               ! not used
+         p%Jac_u_indx(idx,3) =  i               ! indicates channel number
+         InitOut%LinNames_u(idx) = 'CtrlChan '//trim(num2lstr(i))//' DeltaL, m'
+         idx = idx + 1
+         
+         p%Jac_u_indx(idx,1) =  11
+         p%Jac_u_indx(idx,2) =  0
+         p%Jac_u_indx(idx,3) =  i               
+         InitOut%LinNames_u(idx) = 'CtrlChan '//trim(num2lstr(i))//' DeltaLdot, m/s'               
+         idx = idx + 1
+      end do
+
+      ! --- Default perturbations, p%du:
+      call allocAry( p%du, 11, 'p%du', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      perturb   = 2.0_R8Ki*D2R_D
+      p%du( 1) = perturb       ! u%CoupledKinematics%TranslationDisp  = 1;
+      p%du( 2) = perturb       ! u%CoupledKinematics%Orientation      = 2;
+      p%du( 3) = perturb       ! u%CoupledKinematics%TranslationVel   = 3;
+      p%du( 4) = perturb       ! u%CoupledKinematics%RotationVel      = 4;
+      p%du( 5) = perturb       ! u%CoupledKinematics%TranslationAcc   = 5;
+      p%du( 6) = perturb       ! u%CoupledKinematics%RotationAcc      = 6;
+      p%du(10) = 0.2_ReKi      ! deltaL [m]
+      p%du(11) = 0.2_ReKi      ! deltaLdot [m/s] 
+   END SUBROUTINE Init_Jacobian_u
+
+END SUBROUTINE MD_Init_Jacobian
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
+!! Do not change this without making sure subroutine MD_init_jacobian is consistant with this routine!
+SUBROUTINE MD_Perturb_u( p, n, perturb_sign, u, du )
+   TYPE(MD_ParameterType)              , INTENT(IN   ) :: p            !< parameters
+   INTEGER( IntKi )                    , INTENT(IN   ) :: n            !< number of array element to use
+   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   TYPE(MD_InputType)                  , INTENT(INOUT) :: u            !< perturbed MD inputs
+   REAL( R8Ki )                        , INTENT(  OUT) :: du           !< amount that specific input was perturbed
+   ! local variables
+   INTEGER :: fieldIndx
+   INTEGER :: node
+   fieldIndx = p%Jac_u_indx(n,2)
+   node      = p%Jac_u_indx(n,3)
+   du = p%du(  p%Jac_u_indx(n,1) )
+   ! determine which mesh we're trying to perturb and perturb the input:
+   SELECT CASE( p%Jac_u_indx(n,1) )
+   CASE ( 1)
+      u%CoupledKinematics%TranslationDisp( fieldIndx,node) = u%CoupledKinematics%TranslationDisp( fieldIndx,node) + du * perturb_sign
+   CASE ( 2)
+      CALL PerturbOrientationMatrix( u%CoupledKinematics%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+   CASE ( 3)
+      u%CoupledKinematics%TranslationVel( fieldIndx,node) = u%CoupledKinematics%TranslationVel( fieldIndx,node) + du * perturb_sign
+   CASE ( 4)
+      u%CoupledKinematics%RotationVel(fieldIndx,node) = u%CoupledKinematics%RotationVel(fieldIndx,node) + du * perturb_sign
+   CASE ( 5)
+      u%CoupledKinematics%TranslationAcc( fieldIndx,node) = u%CoupledKinematics%TranslationAcc( fieldIndx,node) + du * perturb_sign
+   CASE ( 6)
+      u%CoupledKinematics%RotationAcc(fieldIndx,node) = u%CoupledKinematics%RotationAcc(fieldIndx,node) + du * perturb_sign
+   CASE (10)
+      u%deltaL(node) = u%deltaL(node) + du * perturb_sign
+   CASE (11)
+      u%deltaLdot(node) = u%deltaLdot(node) + du * perturb_sign
+   END SELECT
+END SUBROUTINE MD_Perturb_u
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine MD_init_jacobian is consistant with this routine!
+SUBROUTINE MD_Compute_dY(p, y_p, y_m, delta, dY)
+   TYPE(MD_ParameterType)            , INTENT(IN   ) :: p     !< parameters
+   TYPE(MD_OutputType)               , INTENT(IN   ) :: y_p   !< MD outputs at \f$ u + \Delta_p u \f$ or \f$ z + \Delta_p z \f$ (p=plus)
+   TYPE(MD_OutputType)               , INTENT(IN   ) :: y_m   !< MD outputs at \f$ u - \Delta_m u \f$ or \f$ z - \Delta_m z \f$ (m=minus)
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:) !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   ! local variables:
+   INTEGER(IntKi) :: i              ! loop over outputs
+   INTEGER(IntKi) :: indx_first     ! index indicating next value of dY to be filled
+   indx_first = 1
+   call PackLoadMesh_dY(  y_p%CoupledLoads, y_m%CoupledLoads, dY, indx_first)
+   !call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first) ! all 6 motion fields
+   do i=1,p%NumOuts
+      dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
+   end do
+   dY = dY / (2.0_R8Ki*delta)
+END SUBROUTINE MD_Compute_dY
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the nth element of the x array (and mesh/field it corresponds to)
+!! Do not change this without making sure subroutine MD_init_jacobian is consistant with this routine!
+SUBROUTINE MD_Perturb_x( p, i, perturb_sign, x, dx )
+   TYPE(MD_ParameterType)      , INTENT(IN   ) :: p            !< parameters
+   INTEGER( IntKi )            , INTENT(IN   ) :: i         !< node number
+   INTEGER( IntKi )            , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   TYPE(MD_ContinuousStateType), INTENT(INOUT) :: x            !< perturbed SD states
+   REAL( R8Ki )                , INTENT(  OUT) :: dx           !< amount that specific state was perturbed
+
+   dx=p%dx(i)
+   x%states(i)    = x%states(i)    + dx * perturb_sign
+END SUBROUTINE MD_Perturb_x
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine MD_init_jacobian is consistant with this routine!
+SUBROUTINE MD_Compute_dX(p, x_p, x_m, delta, dX)
+   TYPE(MD_ParameterType)      , INTENT(IN   ) :: p                                !< parameters
+   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_p                              !< SD continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
+   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_m                              !< SD continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)
+   REAL(R8Ki)                  , INTENT(IN   ) :: delta                            !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(R8Ki)                  , INTENT(INOUT) :: dX(:)                            !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
+   INTEGER(IntKi) :: i ! loop over modes
+   do i=1,p%Jac_nx
+      dX(i) = x_p%states(i) - x_m%states(i)
+   end do
+   dX = dX / (2.0_R8Ki*delta)
+END SUBROUTINE MD_Compute_dX
 
 
 

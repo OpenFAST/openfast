@@ -545,6 +545,8 @@ typedef	^	^	MD_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	MD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	MD_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	MD_MiscVarType	m	-	-	-	"Misc/optimization variables"
+typedef	^	^	MD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
+typedef	^	^	MD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	MD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 

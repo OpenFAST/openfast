@@ -31,6 +31,7 @@ typedef   ^           ^                LOGICAL            UsePrimaryInputFile   
 typedef   ^           ^                FileInfoType       PassedPrimaryInputData -   -       -  "Primary input file as FileInfoType (set by driver/glue code) -- String array with metadata"   -
 typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
 #typedef   ^           ^                CHARACTER(ChanLen) OutList        {:}   ""   -   "string containing list of output channels requested in input file"
+typedef   ^           ^                Logical            Linearize      -   .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
 
 #typedef   ^       ^                    DbKi         UGrid                  {:}{:}{:} -  -   "water velocities time series at each grid point"            -
 #typedef   ^       ^                    DbKi         UdGrid                 {:}{:}{:} -  -   "water accelerations time series at each grid point"            -
@@ -269,6 +270,15 @@ typedef   ^            InitOutputType  CHARACTER(ChanLen)  writeOutputHdr  {:} "
 typedef   ^            ^               CHARACTER(ChanLen)  writeOutputUnt  {:} ""  -   "second line of output file contents: units"
 typedef   ^            ^               ProgDesc            Ver              -  ""  -   "this module's name, version, and date"
 typedef   ^            ^               LOGICAL             CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for drive line active tensioning is requested"   -
+# --- InitOutputs for linearization ---
+typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
+typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
+typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_u   {:}  -   -   "Names of the inputs used in linearization" -
+typedef   ^            ^               LOGICAL                RotFrame_y   {:}  -   -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+typedef   ^            ^               LOGICAL                RotFrame_x   {:}  -   -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)" -
+typedef   ^            ^               LOGICAL                RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+typedef   ^            ^               LOGICAL                IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef   ^            ^               IntKi                  DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
 
 
 ## ============================== Define Continuous states here: =====================================================================================================================================
@@ -363,6 +373,13 @@ typedef   ^       ^                    DbKi         px                 {:}      
 typedef   ^       ^                    DbKi         py                 {:}          -  -   ""            -
 typedef   ^       ^                    DbKi         pz                 {:}          -  -   ""            -
 typedef   ^       ^                    DbKi         tWave              {:}          -  -   "wave data time step array"            -
+# --- Parameters for linearization ---
+typedef   ^       ^                    Integer      Nx0                -            -  -   "copy of initial size of system state vector, for linearization routines" -
+typedef   ^       ^                    Integer      Jac_u_indx         {:}{:}       -  -   "matrix to help fill/pack the u vector in computing the jacobian" -
+typedef   ^       ^                    R8Ki         du                 {:}          -  -   "vector that determines size of perturbation for u (inputs)"
+typedef   ^       ^                    R8Ki         dx                 {:}          -  -   "vector that determines size of perturbation for x (continuous states)"
+typedef   ^       ^                    Integer      Jac_ny              -           -  -   "number of outputs in jacobian matrix" -
+typedef   ^       ^                    Integer      Jac_nx              -           -  -   "number of continuous states in jacobian matrix" -
 
 
 # ============================== Inputs ============================================================================================================================================
