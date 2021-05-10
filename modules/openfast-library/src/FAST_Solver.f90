@@ -3293,6 +3293,7 @@ CONTAINS
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
       CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
+      INTEGER(IntKi)             :: nb_local
          
       IF ( calcJacobian ) THEN
          CALL ED_DestroyInput( u_ED_perturb, ErrStat3, ErrMsg3 )
@@ -3313,8 +3314,8 @@ CONTAINS
          CALL BD_DestroyInput( u_BD_perturb, ErrStat3, ErrMsg3 )
             IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
          if (allocated(y_BD_perturb)) then
-            do nb=1,size(y_BD_perturb) 
-               CALL BD_DestroyOutput(y_BD_perturb(nb), ErrStat3, ErrMsg3 )
+            do nb_local=1,size(y_BD_perturb) 
+               CALL BD_DestroyOutput(y_BD_perturb(nb_local), ErrStat3, ErrMsg3 )
                   IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
             end do
             deallocate(y_BD_perturb)
