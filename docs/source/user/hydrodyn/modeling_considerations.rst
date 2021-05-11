@@ -173,8 +173,7 @@ use to subdivide members into multiple elements (and nodes). HydroDyn
 may further refine the geometry at the free surface, flat seabed,
 marine-growth region, and filled-fluid free surface.
 
-.. TODO 7.5.2 is the theory section which does not yet exist.
-The rules HydroDyn uses for refinement may be found in Section 7.5.2.
+.. TODO 7.5.2 is the theory section which does not yet exist. The rules HydroDyn uses for refinement may be found in Section 7.5.2.
 
 Due to the exponential decay of hydrodynamic loads with depth, a higher
 resolution near the water free surface is required to capture
