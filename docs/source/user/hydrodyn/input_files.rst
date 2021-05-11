@@ -445,7 +445,7 @@ particle kinematics velocity.
 
 The sub-surface current model follows a power law,
 
-,
+.. TODO Add this equation!
 
 where *Z* is the local depth below the SWL (negative downward), is the
 water depth (equal to **WtrDpth** + **MSL2SWL**), and is the current
@@ -455,6 +455,8 @@ convention as **WaveDir**.
 
 The near-surface current model follows a linear relationship down to a
 reference depth such that,
+
+.. TODO Add these equations!
 
 otherwise, ,
 
@@ -631,6 +633,8 @@ loads on the platform (in addition to other hydrodynamic terms
 calculated by HydroDyn), per the following equation.
 
 ,
+
+.. TODO Add this equation
 
 where corresponds to the **AddF0** 6x1 static load (preload) vector,
 :math:`\left\lbrack C \right\rbrack` corresponds to the **AddCLin** 6x6

@@ -462,6 +462,8 @@ applied within HydroDyn.)
 In its most general form, the 6x6 linear hydrostatic restoring matrix of
 a floating platform is given by the equation below.
 
+.. TODO add these equations!
+
 ,
 
 where:
