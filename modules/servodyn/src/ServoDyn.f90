@@ -4506,6 +4506,7 @@ contains
       integer(IntKi),               intent(in   )  :: iNum     ! instance number
       type(StC_OutputType),         intent(inout)  :: y        ! outputs from the StC instance -- will contain allocated Cmd output values if used
       type(StC_OutputType)                         :: y_tmp    ! copy of y -- for resizing as needed
+      integer(IntKi)                               :: i_local
       if (allocated(y%MeasDisp) .and. allocated(y%MeasVel)) then    ! either all or none will be allocated
          if (p%NumStC_Control > min(size(y%MeasDisp,2),size(y%MeasVel,2))) then
             call StC_CopyOutput(y,y_tmp,MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
@@ -4513,15 +4514,15 @@ contains
             if (allocated(y%MeasDisp)) deallocate(y%MeasDisp)
             call AllocAry(y%MeasDisp,3,p%NumStC_Control,"y%MeasDisp",ErrStat2,ErrMsg2);   if (Failed())  return;
             y%MeasDisp = 0.0_ReKi
-            do i=1,min(p%NumStC_Control,size(y%MeasDisp,2))
-               y%MeasDisp(1:3,i) = y_tmp%MeasDisp(1:3,i)
+            do i_local=1,min(p%NumStC_Control,size(y_tmp%MeasDisp,2))
+               y%MeasDisp(1:3,i_local) = y_tmp%MeasDisp(1:3,i_local)
             enddo
 
             if (allocated(y%MeasVel)) deallocate(y%MeasVel)
             call AllocAry(y%MeasVel,3,p%NumStC_Control,"y%MeasVel",ErrStat2,ErrMsg2);   if (Failed())  return;
             y%MeasVel = 0.0_ReKi
-            do i=1,min(p%NumStC_Control,size(y%MeasVel,2))
-               y%MeasVel(1:3,i) = y_tmp%MeasVel(1:3,i)
+            do i_local=1,min(p%NumStC_Control,size(y_tmp%MeasVel,2))
+               y%MeasVel(1:3,i_local) = y_tmp%MeasVel(1:3,i_local)
             enddo
 
             call Cleanup()
@@ -4631,6 +4632,7 @@ contains
       integer(IntKi),               intent(in   )  :: iNum     ! instance number
       type(StC_InputType),          intent(inout)  :: u        ! inputs from the StC instance -- will contain allocated Cmd input values if used
       type(StC_InputType)                          :: u_tmp    ! copy of u -- for resizing as needed
+      integer(IntKi)                               :: i_local
       if (allocated(u%CmdStiff) .and. allocated(u%CmdDamp) .and. allocated(u%CmdBrake) .and. allocated(u%CmdForce)) then    ! either all or none will be allocated
          if (p%NumStC_Control > min(size(u%CmdStiff,2),size(u%CmdDamp,2),size(u%CmdBrake,2),size(u%CmdForce,2))) then
             call StC_CopyInput(u,u_tmp,MESH_NEWCOPY,ErrStat2,ErrMsg2);    if (Failed())  return;
@@ -4638,29 +4640,29 @@ contains
             if (allocated(u%CmdStiff)) deallocate(u%CmdStiff)
             call AllocAry(u%CmdStiff,3,p%NumStC_Control,"u%CmdStiff",ErrStat2,ErrMsg2);   if (Failed())  return;
             u%CmdStiff = 0.0_ReKi
-            do i=1,min(p%NumStC_Control,size(u%CmdStiff,2))
-               u%CmdStiff(1:3,i) = u_tmp%CmdStiff(1:3,i)
+            do i_local=1,min(p%NumStC_Control,size(u_tmp%CmdStiff,2))
+               u%CmdStiff(1:3,i_local) = u_tmp%CmdStiff(1:3,i_local)
             enddo
 
             if (allocated(u%CmdDamp)) deallocate(u%CmdDamp)
             call AllocAry(u%CmdDamp,3,p%NumStC_Control,"u%CmdDamp",ErrStat2,ErrMsg2);   if (Failed())  return;
             u%CmdDamp = 0.0_ReKi
-            do i=1,min(p%NumStC_Control,size(u%CmdDamp,2))
-               u%CmdDamp(1:3,i) = u_tmp%CmdDamp(1:3,i)
+            do i_local=1,min(p%NumStC_Control,size(u_tmp%CmdDamp,2))
+               u%CmdDamp(1:3,i_local) = u_tmp%CmdDamp(1:3,i_local)
             enddo
 
             if (allocated(u%CmdBrake)) deallocate(u%CmdBrake)
             call AllocAry(u%CmdBrake,3,p%NumStC_Control,"u%CmdBrake",ErrStat2,ErrMsg2);   if (Failed())  return;
             u%CmdBrake = 0.0_ReKi
-            do i=1,min(p%NumStC_Control,size(u%CmdBrake,2))
-               u%CmdBrake(1:3,i) = u_tmp%CmdBrake(1:3,i)
+            do i_local=1,min(p%NumStC_Control,size(u_tmp%CmdBrake,2))
+               u%CmdBrake(1:3,i_local) = u_tmp%CmdBrake(1:3,i_local)
             enddo
 
             if (allocated(u%CmdForce)) deallocate(u%CmdForce)
             call AllocAry(u%CmdForce,3,p%NumStC_Control,"u%CmdForce",ErrStat2,ErrMsg2);   if (Failed())  return;
             u%CmdForce = 0.0_ReKi
-            do i=1,min(p%NumStC_Control,size(u%CmdForce,2))
-               u%CmdForce(1:3,i) = u_tmp%CmdForce(1:3,i)
+            do i_local=1,min(p%NumStC_Control,size(u_tmp%CmdForce,2))
+               u%CmdForce(1:3,i_local) = u_tmp%CmdForce(1:3,i_local)
             enddo
 
             call Cleanup()
