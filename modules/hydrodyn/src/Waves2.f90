@@ -343,7 +343,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0Norm.',ErrStat,ErrMsg,'Waves2_Init')
 
       DO I=0,InitInp%NStepWave2
-         WaveElevC0Norm(I) = CMPLX( InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I) ) / REAL(InitInp%NStepWave2)
+         WaveElevC0Norm(I) = CMPLX( InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I), SiKi ) / REAL(InitInp%NStepWave2,SiKi)
       ENDDO
 
       !--------------------------------------------------------------------------------
@@ -642,13 +642,13 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
 
                ! Reset the \f$ H_{\mu^-} \f$ terms to zero before calculating.
-            WaveVel2xCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveVel2yCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveVel2zCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2xCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2yCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2zCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveDynP2CDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2xCDiff = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveVel2yCDiff = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveVel2zCDiff = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2xCDiff = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2yCDiff = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2zCDiff = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveDynP2CDiff = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
 
 
                ! \f$ \mu^- \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^-} \f$ terms used in the IFFT to find the timeseries.
@@ -683,8 +683,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                         !!             +  \left( |\vec{k_n}| \sin \theta_n - |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                      WaveElevxyPrime0  = exp( - ImagNmbr &
-                              *  (  ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) - k_m * COS( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
-                                 +  ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
+                              *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) - k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
+                                 +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
 
 
                         ! Get value for \f$ B^- \f$ for the n,m index pair
@@ -694,10 +694,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                         !> Calculate \f$ U^- \f$ terms for the velocity calculations (\f$B^-\f$ provided by waves2::transfuncb_minus)
                         ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                         !> * \f$ _x{U}_{nm}^- = B_{nm}^- \left(k_n \cos \theta_n - k_m \cos \theta_m \right) \f$
-                     Ux_nm_minus = B_minus * ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) - k_m * COS( D2R*InitInp%WaveDirArr(m) ) )
+                     Ux_nm_minus = B_minus * ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) - k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) )
 
                         !> * \f$ _y{U}_{nm}^- = B_{nm}^- \left(k_n \sin \theta_n - k_m \sin \theta_m \right) \f$
-                     Uy_nm_minus = B_minus * ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R*InitInp%WaveDirArr(m) ) )
+                     Uy_nm_minus = B_minus * ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) )
 
                         !> * \f$ _z{U}_{nm}^- = \imath B_{nm}^- k_{nm} \tanh \left( k_{nm} ( h + z ) \right) \f$
                      Uz_nm_minus = ImagNmbr * B_minus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
@@ -711,7 +711,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
                         !> Dynamic pressure
                         !> * \f$ P_{nm}^- = \rho_\mathrm{w} B_{nm}^- \omega_{\mu^-} \f$
-                     DynP_nm_minus  = InitInp%WtrDens * B_minus * Omega_minus
+                     DynP_nm_minus  = REAL(InitInp%WtrDens,SiKi) * B_minus * Omega_minus
 
 
 
@@ -1013,21 +1013,21 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
 
                ! Reset the \f$ H_{\mu^+} \f$ terms to zero before calculating.
-            WaveVel2xCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveVel2yCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveVel2zCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2xCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2yCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2zCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveDynP2CSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2xCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveVel2yCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveVel2zCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2xCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2yCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2zCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveDynP2CSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
 
-            WaveVel2xCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveVel2yCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveVel2zCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2xCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2yCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveAcc2zCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
-            WaveDynP2CSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2xCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveVel2yCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveVel2zCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2xCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2yCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveAcc2zCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+            WaveDynP2CSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
 
 
                !---------------
@@ -1069,8 +1069,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                      !!             +  |\vec{k_n}| \sin \theta_n ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  (  2.0_SiKi * k_n * COS( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
-                              +  2.0_SiKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
+                           *  (  2.0_SiKi * k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
+                              +  2.0_SiKi * k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
 
 
                      ! Get value for \f$ B+ \f$ for the n,m index pair
@@ -1080,10 +1080,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                      !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by waves2::transfuncb_plus)
                      ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                      !> * \f$ _x{U}_{nn}^+ = B_{nn}^+ 2 k_n \cos \theta_n \f$
-                  Ux_nm_plus = B_plus * 2.0_SiKi * k_n * COS( D2R*InitInp%WaveDirArr(n) )
+                  Ux_nm_plus = B_plus * 2.0_SiKi * k_n * COS( D2R_S*InitInp%WaveDirArr(n) )
 
                      !> * \f$ _y{U}_{nn}^+ = B_{nn}^+ 2 k_n \sin \theta_n \f$
-                  Uy_nm_plus = B_plus * 2.0_SiKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) )
+                  Uy_nm_plus = B_plus * 2.0_SiKi * k_n * SIN( D2R_S*InitInp%WaveDirArr(n) )
 
                      !> * \f$ _z{U}_{nn}^+ = \imath B_{nn}^+ k_{nn} \tanh \left( k_{nn} ( h + z ) \right) \f$
                   Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
@@ -1097,7 +1097,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
                      !> Dynamic pressure
                      !> * \f$ P_{nn}^+ = \rho_\mathrm{w} B_{nn}^+ \omega_{\mu^+} \f$
-                  DynP_nm_plus  = InitInp%WtrDens * B_plus * Omega_plus
+                  DynP_nm_plus  = REAL(InitInp%WtrDens, SiKi) * B_plus * Omega_plus
 
 
 
@@ -1171,8 +1171,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                         !!             +  \left( |\vec{k_n}| \sin \theta_n + |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                      WaveElevxyPrime0  = exp( - ImagNmbr &
-                              *  (  ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) + k_m * COS( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
-                                 +  ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
+                              *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) + k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
+                                 +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
 
 
                         ! Get value for \f$ B+ \f$ for the n,m index pair
@@ -1182,10 +1182,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                         !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by waves2::transfuncb_plus)
                         ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                         !> * \f$ _x{U}_{nm}^+ = B_{nm}^+ \left(k_n \cos \theta_n + k_m \cos \theta_m \right) \f$
-                     Ux_nm_plus = B_plus * ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) + k_m * COS( D2R*InitInp%WaveDirArr(m) ) )
+                     Ux_nm_plus = B_plus * ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) + k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) )
 
                         !> * \f$ _y{U}_{nm}^+ = B_{nm}^+ \left(k_n \sin \theta_n + k_m \sin \theta_m \right) \f$
-                     Uy_nm_plus = B_plus * ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R*InitInp%WaveDirArr(m) ) )
+                     Uy_nm_plus = B_plus * ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) )
 
                         !> * \f$ _z{U}_{nm}^+ = \imath B_{nm}^+ k_{nm} \tanh \left( k_{nm} ( h + z ) \right) \f$
                      Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
@@ -1199,7 +1199,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
                         !> Dynamic pressure
                         !> * \f$ P_{nm}^+ = \rho_\mathrm{w} B_{nm}^+ \omega_{\mu^+} \f$
-                     DynP_nm_plus  = InitInp%WtrDens * B_plus * Omega_plus
+                     DynP_nm_plus  = REAL(InitInp%WtrDens,SiKi) * B_plus * Omega_plus
 
 
 
@@ -1439,7 +1439,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
   
             ! Note that TmpFreqSeries was allocated in the calling routine.  Probably bad programming
             ! practice, but I didn't want to have to allocate it at each point.
-         TmpFreqSeries  =  CMPLX(0.0_SiKi, 0.0_SiKi)
+         TmpFreqSeries  =  CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
          WaveElevSeriesAtXY   =  0.0_SiKi
 
             ! \f$ \mu^- \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^-} \f$ terms used in the IFFT to find the timeseries.
@@ -1471,7 +1471,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_minus routine.
 
-                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi !4.0_SiKi
+                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi !4.0_SiKi
 
 
                      ! Calculate the terms \f$ n,m \f$ necessary for calculations
@@ -1485,8 +1485,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                      !!             +  \left( |\vec{k_n}| \sin \theta_n - |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  ( ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) - k_m * COS( D2R*InitInp%WaveDirArr(m) ) ) * XCoord  &
-                              + ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R*InitInp%WaveDirArr(m) ) ) * YCoord  ))
+                           *  ( ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) - k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * XCoord  &
+                              + ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * YCoord  ))
 
 
                      !> ### Calculate the inner summation \f$ H^-(\omega_{\mu^-}) \f$ terms for the velocity, acceleration, and pressure. ###
@@ -1567,8 +1567,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
   
             ! Note that TmpFreqSeries was allocated in the calling routine.  Probably bad programming
             ! practice, but I didn't want to have to allocate it at each point.
-         TmpFreqSeries  =  CMPLX(0.0_SiKi, 0.0_SiKi)     ! used for first term
-         TmpFreqSeries2 =  CMPLX(0.0_SiKi, 0.0_SiKi)     ! used for second term
+         TmpFreqSeries  =  CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)     ! used for first term
+         TmpFreqSeries2 =  CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)     ! used for second term
          WaveElevSeriesAtXY   =  0.0_SiKi
 
 
@@ -1607,8 +1607,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                   !!             +  |\vec{k_n}| \sin \theta_n ~ y \right] \right) \f$
 
                WaveElevxyPrime0  = exp( - ImagNmbr &
-                        *  (  2.0_SiKi * k_n * COS( D2R*InitInp%WaveDirArr(n) ) * XCoord  &
-                           +  2.0_SiKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) ) * YCoord  ))
+                        *  (  2.0_SiKi * k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) * XCoord  &
+                           +  2.0_SiKi * k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) * YCoord  ))
 
                   ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                   ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
@@ -1663,7 +1663,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                      !!          +  (R_n+R_m) \right] \f$
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_plus routine.
-                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi
+                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi
 
                      !> Calculate the dot product of the wavenumbers with the (x,y) location
                      !! This is given by:
@@ -1674,8 +1674,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                      !!             +  \left( |\vec{k_n}| \sin \theta_n + |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  (  ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) + k_m * COS( D2R*InitInp%WaveDirArr(m) ) ) * XCoord  &
-                              +  ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R*InitInp%WaveDirArr(m) ) ) * YCoord  ))
+                           *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) + k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * XCoord  &
+                              +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * YCoord  ))
 
 
 
@@ -1778,7 +1778,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
 
                ! Calculation of B_minus
-            TransFuncB_minus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_SiKi * Omega_n * Omega_m ) &          
+            TransFuncB_minus  =  REAL(InitInp%Gravity*InitInp%Gravity,SiKi) / ( 4.0_SiKi * Omega_n * Omega_m ) &          
                                  * COSHNumOvrCOSHDen(k_nm, REAL(InitInp%WtrDpth,SiKi), z)  * D_minus / ( Omega_n - Omega_m )
 
 
@@ -1839,7 +1839,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
             D_plus     =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
                ! Calculation of B_plus
-            TransFuncB_plus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_SiKi * Omega_n * Omega_m ) &
+            TransFuncB_plus  =  REAL(InitInp%Gravity*InitInp%Gravity,SiKi) / ( 4.0_SiKi * Omega_n * Omega_m ) &
                                  * COSHNumOvrCOSHDen(k_nm, REAL(InitInp%WtrDpth,SiKi), z)  * D_plus / ( Omega_n + Omega_m )
 
 
@@ -1955,7 +1955,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                ! Calculate the two pieces of the numerator
             Num1  = SqrtRnMinusRm * ( SQRT(R_m) * ( k_n*k_n - R_n*R_n ) - SQRT(R_n) * ( k_m*k_m - R_m*R_m ) )
 
-            Num2  = 2*SqrtRnMinusRm*SqrtRnMinusRm*( k_n * k_m * COS( D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m) ) + R_n*R_m )
+            Num2  = 2*SqrtRnMinusRm*SqrtRnMinusRm*( k_n * k_m * COS( D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitInp%WaveDirArr(m) ) + R_n*R_m )
 
                ! Calculate the denominator
             Den   = SqrtRnMinusRm*SqrtRnMinusRm - k_nm * tanh( k_nm * InitInp%WtrDpth )
@@ -2019,7 +2019,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
             ! Calculate the two pieces of the numerator
          Num1  = SqrtRnPlusRm * ( SQRT(R_m) * ( k_n*k_n - R_n*R_n ) + SQRT(R_n) * ( k_m*k_m - R_m*R_m ) )
 
-         Num2  = 2*SqrtRnPlusRm*SqrtRnPlusRm*( k_n * k_m * COS( D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m) ) - R_n*R_m )
+         Num2  = 2*SqrtRnPlusRm*SqrtRnPlusRm*( k_n * k_m * COS( D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitInp%WaveDirArr(m) ) - R_n*R_m )
 
             ! Calculate the denominator
          Den   = SqrtRnPlusRm*SqrtRnPlusRm - k_nm * tanh( k_nm * InitInp%WtrDpth )
@@ -2053,7 +2053,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
             k_nm_minus = 0.0_SiKi            ! This is just to eliminate any numerical error
          ELSE
                !bjj: added abs() because we were getting very small negative numbers here (which should be 0). 
-            k_nm_minus = sqrt( abs( k_n * k_n + k_m * k_m - 2 * k_n * k_m * cos( D2R*InitInp%WaveDirArr(n) - D2R*InitINp%WaveDirArr(m) )  ) )
+            k_nm_minus = sqrt( abs( k_n * k_n + k_m * k_m - 2 * k_n * k_m * cos( D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitINp%WaveDirArr(m) )  ) )
          ENDIF
 
       END FUNCTION k_nm_minus
@@ -2078,7 +2078,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
          IF (n == m ) THEN
             k_nm_plus = 2.0_SiKi * k_n       ! This is just to eliminate any numerical error.
          ELSE
-            k_nm_plus = sqrt( k_n * k_n + k_m * k_m + 2 * k_n * k_m * cos( D2R*InitInp%WaveDirArr(n) - D2R*InitINp%WaveDirArr(m) )  )
+            k_nm_plus = sqrt( k_n * k_n + k_m * k_m + 2_SiKi * k_n * k_m * cos( D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitINp%WaveDirArr(m) )  )
          ENDIF
 
       END FUNCTION k_nm_plus
