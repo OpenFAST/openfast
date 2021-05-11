@@ -24,9 +24,9 @@ loading uncoupled from OpenFAST.
 HydroDyn allows for multiple approaches for calculating the hydrodynamic
 loads on a structure:
 
-- Potential-flow theory solution
-- Strip-theory solution
-- Hybrid combination of the tower
+* Potential-flow theory solution
+* Strip-theory solution
+* Hybrid combination of the tower
 
 Waves generated internally
 within HydroDyn can be regular (periodic) or irregular (stochastic) and

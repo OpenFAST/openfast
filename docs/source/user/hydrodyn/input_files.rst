@@ -160,28 +160,28 @@ wave spectrum (at the difference and sum frequencies).
 **WaveMod** specifies the incident wave kinematics model. The options
 are:
 
--  0: none = still water
+* 0: none = still water
 
--  1: regular (periodic) waves
+* 1: regular (periodic) waves
 
--  1P#: regular (periodic) waves with user-specified phase, for example
-   1P20.0 for regular waves with a 20˚ phase (without P#, the phase
-   will be random, based on **WaveSeed**); 0˚ phase represents a
-   cosine function, starting at the peak and decreasing in time
+* 1P#: regular (periodic) waves with user-specified phase, for example
+  1P20.0 for regular waves with a 20˚ phase (without P#, the phase
+  will be random, based on **WaveSeed**); 0˚ phase represents a
+  cosine function, starting at the peak and decreasing in time
 
--  2: Irregular (stochastic) waves based on the JONSWAP or
-   Pierson-Moskowitz frequency spectrum
+* 2: Irregular (stochastic) waves based on the JONSWAP or
+  Pierson-Moskowitz frequency spectrum
 
--  3: Irregular (stochastic) waves based on a white-noise frequency
+* 3: Irregular (stochastic) waves based on a white-noise frequency
    spectrum
 
--  4: Irregular (stochastic) waves based on a user-defined frequency
-   spectrum from routine *UserWaveSpctrm()*; see Appendix D for
-   compiling instructions
+* 4: Irregular (stochastic) waves based on a user-defined frequency
+  spectrum from routine *UserWaveSpctrm()*; see Appendix D for
+  compiling instructions
 
--  5: Externally generated wave-elevation time series
+* 5: Externally generated wave-elevation time series
 
--  6: Externally generated full wave-kinematics time series
+* 6: Externally generated full wave-kinematics time series
 
 Option 4 requires that the *UserWaveSpctrm()* subroutine of the
 *Waves.f90* source file be implemented by the user, and will require

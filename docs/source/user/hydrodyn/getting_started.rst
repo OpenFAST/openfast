@@ -5,8 +5,8 @@ Installation and Getting Started
 HydroDyn is included in the OpenFAST software repository and consists
 of two major components:
 
-- `hydrodyn_driver` is the standalone HydroDyn executable
-- `hydrodynlib` is the OpenFAST module library; it is most commonly
+* `hydrodyn_driver` is the standalone HydroDyn executable
+* `hydrodynlib` is the OpenFAST module library; it is most commonly
   used when driven through the HydroDyn driver or the OpenFAST glue code  
 
 For installation instructions, see :ref:`installation`. In sections where

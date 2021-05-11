@@ -301,27 +301,27 @@ undisplaced position of the substructure (the wave kinematics are not
 recomputed at the displaced position). Nevertheless, HydroDyn uses the
 substructure motions in the following calculations:
 
--  The structural displacements of the WRP are used in the calculation
+*  The structural displacements of the WRP are used in the calculation
    of the hydrostatic loads (i.e., the change in buoyancy with
    substructure displacement) in the potential-flow solution.
 
--  The structural velocities and accelerations of the WRP are used in
+*  The structural velocities and accelerations of the WRP are used in
    the calculation of the wave-radiation loads (i.e., the radiation
    memory effect and added mass) in the potential-flow solution.
 
--  The structural displacements and velocities of the WRP are used in
+*  The structural displacements and velocities of the WRP are used in
    the calculation of the additional platform loads (via the Platform
    Additional Stiffness and Damping).
 
--  The structural velocities of the substructure nodes are used in the
+*  The structural velocities of the substructure nodes are used in the
    calculation of the viscous-drag loads in the strip-theory solution
    (e.g., the relative form of Morison’s equation is applied).
 
--  The structural accelerations of the substructure nodes are used in
+*  The structural accelerations of the substructure nodes are used in
    the calculation of the added-mass, marine-growth mass inertia, and
    filled-fluid mass inertia loads in the strip-theory solution.
 
--  When coupled to FAST, the hydrodynamic loads computed by HydroDyn are
+*  When coupled to FAST, the hydrodynamic loads computed by HydroDyn are
    applied to the displaced position of the substructure (i.e., the
    displaced platform in ElastoDyn and/or the displaced substructure
    in SubDyn), but are based on wave kinematics at the undisplaced
@@ -534,14 +534,14 @@ For the first-order potential-flow solution, HydroDyn requires data from
 the WAMIT files with *.1, .3*, and *.hst* extensions. When creating
 these files, one should keep in mind:
 
--  The *.1* file must contain the 6×6 added-mass matrix at infinite
+*  The *.1* file must contain the 6×6 added-mass matrix at infinite
    frequency (period = zero). Additionally, the *.1* file must contain
    the 6×6 damping matrix over a large range from low frequency to high
    frequency (the damping should approach zero at both ends of the
    range). A range of 0.0 to 5.0 rad/s with a discretization of 0.05
    rad/s is suggested.
 
--  The .\ *3* file must contain the first-order wave-excitation
+*  The .\ *3* file must contain the first-order wave-excitation
    (diffraction) loads (3 forces and 3 moments) per unit wave amplitude
    across frequencies and directions where there is wave energy. A range
    of 0.0 to 5.0 rad/s with a discretization of 0.05 rad/s is suggested
@@ -551,7 +551,7 @@ these files, one should keep in mind:
    magnitude/phase and real/imaginary components of the first-order
    wave-excitation loads, only the latter are used by HydroDyn.
 
--  The .\ *hst* file should account for the restoring provided by
+*  The .\ *hst* file should account for the restoring provided by
    buoyancy, but not the restoring provided by body mass or moorings.
    (The hydrostatic file is not frequency dependent.) An important thing
    to keep in mind is that the pitch and roll restoring of a floating
@@ -579,7 +579,7 @@ second-order full sum-frequency solution, HydroDyn requires WAMIT files
 with .\ *10s*, .\ *11s*, or .\ *12s* extensions. When creating any of
 these files, one should keep in mind:
 
--  The second-order frequency-domain solution is dependent on
+*  The second-order frequency-domain solution is dependent on
    first-order body motions, whose accuracy is impacted by properly
    setting the 6×6 rigid-body mass matrix and center of gravity of the
    complete floating wind system and the 6×6 mooring system restoring
@@ -589,7 +589,7 @@ these files, one should keep in mind:
    (Thus, obtaining the first-order and second-order WAMIT files
    requires distinct WAMIT runs.)
 
--  The .\ *7*, .\ *8*, and .\ *9* files contain the diagonal of the
+*  The .\ *7*, .\ *8*, and .\ *9* files contain the diagonal of the
    difference-frequency QTF, based on the first-order potential-flow
    solution. The files contain the second-order mean-drift loads (3
    forces and 3 moments) per unit wave amplitude squared at each
@@ -599,7 +599,7 @@ these files, one should keep in mind:
    and real/imaginary components of the second-order wave-excitation
    loads, only the latter are used by HydroDyn.
 
--  The *10d*, .\ *11d*, and .\ *12d*, or .\ *10s*, .\ *11s*, and
+*  The *10d*, .\ *11d*, and .\ *12d*, or .\ *10s*, .\ *11s*, and
    .\ *12s* files contain the full difference- and sum-frequency QTFs,
    respectively, based on the first-order or first- plus second-order
    potential-flow solutions. The files contain the second-order
@@ -611,23 +611,23 @@ these files, one should keep in mind:
    of the second-order wave-excitation loads, only the latter are used
    by HydroDyn.
 
--  The frequencies and directions in the WAMIT files do not need to be
+*  The frequencies and directions in the WAMIT files do not need to be
    evenly spaced.
 
--  The discretization of the first set of directions does not need to be
+*  The discretization of the first set of directions does not need to be
    the same as the discretization of the second set of directions;
    however, the matrix of direction pairs must be fully populated (not
    sparse). Both sets of directions should span across the desired
    range—the full direction range of (-180 to 180] degrees with a
    discretization of 10 degrees is suggested.
 
--  The frequencies should span the range where there is first-order wave
+*  The frequencies should span the range where there is first-order wave
    energy and the frequency discretization should be such that the
    differences and sums between pairs of frequencies span the range
    where there is second-order wave energy. A range of 0.25 to 2.75
    rad/s with a discretization of 0.05 rad/s is suggested.
 
--  Second-order hydrodynamic theory dictates that difference-frequency
+*  Second-order hydrodynamic theory dictates that difference-frequency
    QTFs are conjugate symmetric between frequency pairs and
    sum-frequency QTFs are symmetric between frequency pairs. Due to this
    symmetry, the QTFs (the *10d*, .\ *11d*, or .\ *12d*, .\ *10s*,
