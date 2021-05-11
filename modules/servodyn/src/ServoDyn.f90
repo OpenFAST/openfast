@@ -48,6 +48,8 @@ MODULE ServoDyn
    LOGICAL, PARAMETER, PUBLIC           :: Cmpl4LV    = .FALSE.                           ! Is the module being compiled for Labview?
 #endif
 
+
+!FIXME: the following changes with linearization update
       ! indices into linearization arrays
    INTEGER, PARAMETER :: Indx_u_Yaw     = 1
    INTEGER, PARAMETER :: Indx_u_YawRate = 2
@@ -528,54 +530,9 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%RotSpeedRef = InitInp%RotSpeedRef
 
    if (InitInp%Linearize) then
-
-      ! If the module does allow linearization, return the appropriate Jacobian row/column names here:
-      ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u
-
-      CALL AllocAry( InitOut%RotFrame_y, SrvD_Indx_Y_WrOutput+p%NumOuts, 'RotFrame_y', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
-      
-      CALL AllocAry( InitOut%LinNames_y, SrvD_Indx_Y_WrOutput+p%NumOuts, 'LinNames_y', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
-         
-      do i=1,size(SrvD_Indx_Y_BlPitchCom) ! NOTE: potentially limit to NumBl
-         InitOut%LinNames_y(SrvD_Indx_Y_BlPitchCom(i)) = 'BlPitchCom('//trim(num2lstr(i))//'), rad'
-         InitOut%RotFrame_y(SrvD_Indx_Y_BlPitchCom(i)) = .true.
-      end do
-      InitOut%LinNames_y(SrvD_Indx_Y_YawMom)  = 'YawMom, Nm'
-      InitOut%RotFrame_y(SrvD_Indx_Y_YawMom)  = .false.
-
-      InitOut%LinNames_y(SrvD_Indx_Y_GenTrq)  = 'GenTrq, Nm'
-      InitOut%RotFrame_y(SrvD_Indx_Y_GenTrq)  = .false.
-
-      InitOut%LinNames_y(SrvD_Indx_Y_ElecPwr) = 'ElecPwr, W'
-      InitOut%RotFrame_y(SrvD_Indx_Y_ElecPwr) = .false.
-
-      do i=1,p%NumOuts
-         InitOut%LinNames_y(i+SrvD_Indx_Y_WrOutput) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-         InitOut%RotFrame_y(i+SrvD_Indx_Y_WrOutput) = ANY( p%OutParam(i)%Indx == BlPitchC ) ! the only WriteOutput values in the rotating frame are BlPitch commands
-      end do
-
-
-      CALL AllocAry( InitOut%RotFrame_u, 3, 'RotFrame_u', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-
-      CALL AllocAry( InitOut%IsLoad_u, 3, 'IsLoad_u', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-
-      CALL AllocAry( InitOut%LinNames_u, 3, 'LinNames_u', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-
-      InitOut%LinNames_u(Indx_u_Yaw    ) = 'Yaw, rad'
-      InitOut%LinNames_u(Indx_u_YawRate) = 'YawRate, rad/s'
-      InitOut%LinNames_u(Indx_u_HSS_Spd) = 'HSS_Spd, rad/s'
-      InitOut%RotFrame_u = .false.  ! none of these are in the rotating frame
-      InitOut%IsLoad_u   = .false.  ! none of these linearization inputs are loads
-
+      call SrvD_Init_Jacobian(InitInp, p, u, y, InitOut, ErrStat2, ErrMsg2);  if(Failed()) return;
    else
-
       p%TrimCase = TrimCase_none
-
    end if
 
 
@@ -644,7 +601,368 @@ contains
       CALL StC_DestroyCtrlChanInitInfoType(StC_CtrlChanInitInfo, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 END SUBROUTINE SrvD_Init
+
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Initialize everything needed for linearization
+subroutine SrvD_Init_Jacobian( InitInp, p, u, y, InitOut, ErrStat, ErrMsg )
+   type(SrvD_InitInputType),     intent(in   )  :: InitInp     !< Input data for initialization routine
+   type(SrvD_ParameterType),     intent(inout)  :: p           !< Parameters
+   type(SrvD_InputType),         intent(in   )  :: u           !< An initial guess for the input; input mesh must be defined
+   type(SrvD_OutputType),        intent(in   )  :: y           !< outputs 
+   type(SrvD_InitOutputType),    intent(inout)  :: InitOut     !< Output for initialization routine
+   integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   ! local variables:
+   character(*), parameter                      :: RoutineName = 'SrvD_Init_Jacobian'
+   integer(IntKi)                               :: ErrStat2    ! temporary Error status of the operation
+   character(ErrMsgLen)                         :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
+   real(ReKi)                                   :: dx
+   real(R8Ki)                                   :: du_t, du_r
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! --- System dimension
+      ! rough estimate based on tower length
+   dx = 0.2_ReKi*Pi/180.0_ReKi * max(TwoNorm(InitInp%NacPosition - InitInp%TwrBasePos), 1.0_ReKi)
+      ! for translation inputs
+   du_t = 0.2_R8Ki*Pi_R8/180.0_R8Ki * max(real(TwoNorm(InitInp%NacPosition - InitInp%TwrBasePos),R8Ki), 1.0_R8Ki)
+      ! for rotation inputs
+   du_r = 0.2_R8Ki * Pi_R8 / 180.0_R8Ki
+
+   ! initialize jacobian indices
+   call SrvD_Init_Jacobian_y();           if (ErrStat >= AbortErrLev)   return;
+   call SrvD_Init_Jacobian_x(dx);         if (ErrStat >= AbortErrLev)   return;
+   call SrvD_Init_Jacobian_u(du_t,du_r);  if (ErrStat >= AbortErrLev)   return;
+
+   ! To figure out what is going on, use this to print stuff to screen
+   !call CheckInfo()
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+   !> This routine initializes the Jacobian parameters and
+   !! initialization outputs for the linearized outputs.
+   subroutine SrvD_Init_Jacobian_y()
+      integer(IntKi)             :: i, j, index_next
+      ! determine how many outputs there are in the Jacobian
+      p%Jac_ny = 0
+
+      ! outputs always passed 
+      p%Jac_ny = p%Jac_ny              &
+            + size(y%BlPitchCom)       &  ! y%BlPitchCom(:)
+            + 1                        &  ! y%YawMom
+            + 1                        &  ! y%GenTrq
+            + 1                        &  ! y%ElecPwr
+            + p%NumOuts                   ! user requested outputs
+
+      ! StC related outputs
+      p%Jac_ny = p%Jac_ny              &
+            + p%NumBStC * 6 * p%NumBl  &  ! 3 Force, 3 Moment at each BStC instance on each blade
+            + p%NumNStC * 6            &  ! 3 Force, 3 Moment at each NStC instance
+            + p%NumTStC * 6            &  ! 3 Force, 3 Moment at each TStC instance
+            + p%NumSStC * 6               ! 3 Force, 3 Moment at each SStC instance
+ 
+      !--------------------------------
+      ! linearization output names
+      !--------------------------------
+      call AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2);  if (Failed())  return;
+      call AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat2, ErrMsg2);  if (Failed())  return;
+      InitOut%RotFrame_y = .false.        ! Meshes are in global, not rotating frame
+      index_next = 1                      ! Index counter initialize
+
+      ! y%BlPitchCom -- NOTE: assumed order of these outputs
+      do i=1,size(y%BlPitchCom)
+         InitOut%LinNames_y(index_next) = 'BlPitchCom('//trim(num2lstr(i))//'), rad'
+         InitOut%RotFrame_y(index_next) = .true.
+         index_next = index_next + 1
+      end do
+ 
+      ! y%YawMom     -- not in rotating frame
+      InitOut%LinNames_y(index_next)  = 'YawMom, Nm';    index_next = index_next + 1
+ 
+      ! y%GenPwr     -- not in rotating frame
+      InitOut%LinNames_y(index_next)  = 'GenTrq, Nm';    index_next = index_next + 1
+ 
+      ! y%ElecPwr    -- not in rotating frame
+      InitOut%LinNames_y(index_next) = 'ElecPwr, W';     index_next = index_next + 1
+ 
+      ! StC related outputs
+      do j=1,p%NumBStC     ! Blade
+         do i=1,p%NumBl
+            call PackLoadMesh_Names( y%BStCLoadMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+         enddo
+      enddo
+      do j=1,p%NumNStC     ! Nacelle
+         call PackLoadMesh_Names( y%NStCLoadMesh(j), 'Nacelle StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+      enddo
+      do j=1,p%NumTStC     ! Tower
+         call PackLoadMesh_Names( y%TStCLoadMesh(j), 'Tower StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+      enddo
+      do j=1,p%NumSStC     ! Sub-tructure
+         call PackLoadMesh_Names( y%SStCLoadMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+      enddo
+ 
+      ! y%OutParam   -- Some outputs are in rotating frame
+      do i=1,p%NumOuts
+         InitOut%LinNames_y(index_next) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BlPitchC )  ! WriteOutput BlPitch commands
+         ! Blade StC local output channels
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_XQ  )  ! Blade StC X displacements
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_XQD )  ! Blade StC X displacement velocities
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_YQ  )  ! Blade StC Y displacements
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_YQD )  ! Blade StC Y displacement velocities
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_ZQ  )  ! Blade StC Z displacements
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_ZQD )  ! Blade StC Z displacement velocities
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Fxl )  ! Blade StC local forces and moments
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Fyl )  ! Blade StC local forces and moments
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Fzl )  ! Blade StC local forces and moments
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Mxl )  ! Blade StC local forces and moments
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Myl )  ! Blade StC local forces and moments
+         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Mzl )  ! Blade StC local forces and moments
+         index_next = index_next + 1
+      end do
+   end subroutine SrvD_Init_Jacobian_y
+
+   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
+   subroutine SrvD_Init_Jacobian_x(dx)
+      real(ReKi), intent(in   )  :: dx    ! default perturbation size
+      integer(IntKi)             :: i, j, k, index_next
+      p%Jac_nx = 0                  ! no states other than StC states 
+      ! StC related states
+      p%Jac_nx = p%Jac_nx                    &
+            + p%NumBStC * 2 * 3 * p%NumBl    &  ! 3 displacement state, 3 displacement state derivatives at each BStC instance on each blade
+            + p%NumNStC * 2 * 3              &  ! 3 displacement state, 3 displacement state derivatives at each NStC instance
+            + p%NumTStC * 2 * 3              &  ! 3 displacement state, 3 displacement state derivatives at each TStC instance
+            + p%NumSStC * 2 * 3                 ! 3 displacement state, 3 displacement state derivatives at each SStC instance
+ 
+      ! allocate space for the row/column names and for perturbation sizes
+      CALL AllocAry(InitOut%LinNames_x  , p%Jac_nx, 'LinNames_x'  ,   ErrStat2, ErrMsg2);  if (Failed())  return;
+      CALL AllocAry(InitOut%RotFrame_x  , p%Jac_nx, 'RotFrame_x'  ,   ErrStat2, ErrMsg2);  if (Failed())  return;
+      CALL AllocAry(InitOut%DerivOrder_x, p%Jac_nx, 'DerivOrder_x',   ErrStat2, ErrMsg2);  if (Failed())  return;
+      CALL AllocAry(p%dx,                 p%Jac_nx, 'x perturbation', ErrStat2, ErrMsg2);  if (Failed())  return;
+      ! Set default perturbation size
+      !  NOTE: this is an array in case it becomes necessary to set the StC perturbation differently
+      p%dx  =  dx
+
+      ! Initialize RotFrame and DerivOrder
+      InitOut%RotFrame_x   = .false.
+      InitOut%DerivOrder_x = 2
+      !--------------------------------
+      ! linearization state names
+      !--------------------------------
+      index_next = 0                      ! Index counter initialize
+      do j=1,p%NumBStC     ! Blade StC -- displacement state
+         do k=1,p%NumBl
+            InitOut%LinNames_x(index_next+1) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state X  m';         ! x      x%BStC(j)%x(1,k)
+            InitOut%LinNames_x(index_next+2) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Y  m';         ! y      x%BStC(j)%x(3,k)
+            InitOut%LinNames_x(index_next+3) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Z  m';         ! z      x%BStC(j)%x(5,k)
+            InitOut%LinNames_x(index_next+4) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s';   ! x-dot  x%BStC(j)%x(2,k)
+            InitOut%LinNames_x(index_next+5) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s';   ! y-dot  x%BStC(j)%x(4,k)
+            InitOut%LinNames_x(index_next+6) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s';   ! z-dot  x%BStC(j)%x(6,k)
+            InitOut%RotFrame_x(index_next+1:index_next+6) = .true.
+            index_next = index_next + 6
+         enddo
+      enddo
+      do j=1,p%NumNStC     ! Nacelle StC -- displacement state
+         InitOut%LinNames_x(index_next+1) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%NStC(j)%x(1,1)
+         InitOut%LinNames_x(index_next+2) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%NStC(j)%x(3,1)
+         InitOut%LinNames_x(index_next+3) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%NStC(j)%x(5,1)
+         InitOut%LinNames_x(index_next+4) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%NStC(j)%x(2,1)
+         InitOut%LinNames_x(index_next+5) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%NStC(j)%x(4,1)
+         InitOut%LinNames_x(index_next+6) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%NStC(j)%x(6,1)
+         index_next = index_next + 6
+      enddo
+      do j=1,p%NumTStC     ! Tower StC -- displacement state
+         InitOut%LinNames_x(index_next+1) = 'Tower StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%TStC(j)%x(1,1)
+         InitOut%LinNames_x(index_next+2) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%TStC(j)%x(3,1)
+         InitOut%LinNames_x(index_next+3) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%TStC(j)%x(5,1)
+         InitOut%LinNames_x(index_next+4) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%TStC(j)%x(2,1)
+         InitOut%LinNames_x(index_next+5) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%TStC(j)%x(4,1)
+         InitOut%LinNames_x(index_next+6) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%TStC(j)%x(6,1)
+         index_next = index_next + 6
+      enddo
+      do j=1,p%NumSStC     ! Substructure StC -- displacement state
+         InitOut%LinNames_x(index_next+1) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%SStC(j)%x(1,1)
+         InitOut%LinNames_x(index_next+2) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%SStC(j)%x(3,1)
+         InitOut%LinNames_x(index_next+3) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%SStC(j)%x(5,1)
+         InitOut%LinNames_x(index_next+4) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%SStC(j)%x(2,1)
+         InitOut%LinNames_x(index_next+5) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%SStC(j)%x(4,1)
+         InitOut%LinNames_x(index_next+6) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%SStC(j)%x(6,1)
+         index_next = index_next + 6
+      enddo
+   end subroutine SrvD_Init_Jacobian_x
+
+   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized inputs 
+   subroutine SrvD_Init_Jacobian_u(du_t,du_r)
+      real(R8Ki), intent(in   )  :: du_t           ! default perturbation size for input translations
+      real(R8Ki), intent(in   )  :: du_r           ! default perturbation size for input rotations
+      integer(IntKi)             :: i, j, k, index_next
+      integer(IntKi)             :: i_meshField    ! Counter for mesh fields
+      ! Standard inputs
+      p%Jac_nu = 3                           ! Yaw, YawRate, HSS_Spd
+      ! StC related inputs
+      p%Jac_nu = p%Jac_nu                 &
+            + p%NumBStC  * 18 * p%NumBl   &  ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each BStC instance on each blade
+            + p%NumNStC  * 18             &  ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each NStC instance
+            + p%NumTStC  * 18             &  ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each TStC instance
+            + p%NumSStC  * 18                ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each SStC instance
+ 
+      ! allocate space for the row/column names and for perturbation sizes
+      ! --- Info of linearized inputs (Names, RotFrame, IsLoad)
+      call AllocAry(InitOut%LinNames_u, p%Jac_nu, 'LinNames_u',     ErrStat2, ErrMsg2);   if (Failed())  return;
+      call AllocAry(InitOut%RotFrame_u, p%Jac_nu, 'RotFrame_u',     ErrStat2, ErrMsg2);   if (Failed())  return;
+      call AllocAry(InitOut%IsLoad_u,   p%Jac_nu, 'IsLoad_u'  ,     ErrStat2, ErrMsg2);   if (Failed())  return;
+      ! --- Jac_u_indx:  matrix to store index to help us figure out what the ith value of the u vector really means
+      !     column 1 indicates module's mesh and field perturbation index (index to p%du)
+      !     column 2 indicates the first index (x-y-z component) of the field
+      !     column 3 is the node
+      call allocAry( p%Jac_u_indx, p%Jac_nu, 3,   'p%Jac_u_indx',   ErrStat2, ErrMsg2);   if (Failed())  return;
+      ! perturbation sizes
+      CALL AllocAry(p%du,               6,        'u perturbation', ErrStat2, ErrMsg2);   if (Failed())  return;
+      p%du( 1) = du_t      ! u%*Mesh%TranslationDisp  = 1;
+      p%du( 2) = du_r      ! u%*Mesh%Orientation      = 2;
+      p%du( 3) = du_t      ! u%*Mesh%TranslationVel   = 3;
+      p%du( 4) = du_r      ! u%*Mesh%RotationVel      = 4;
+      p%du( 5) = du_t      ! u%*Mesh%TranslationAcc   = 5;
+      p%du( 6) = du_r      ! u%*Mesh%RotationAcc      = 6;
+
+      ! Initialize RotFrame_u and IsLoad_u
+      InitOut%RotFrame_u   = .false.   ! every StC input is on a mesh, which stores values in the global (not rotating) frame
+      InitOut%IsLoad_u     = .false.   ! No loads present
+
+      !--------------------------------
+      ! linearization input names
+      !--------------------------------
+      index_next = 1
+      ! u%Yaw     -- not in rotating frame
+      InitOut%LinNames_u(index_next)  = 'Yaw, rad';         index_next = index_next + 1
+ 
+      ! u%YawRate -- not in rotating frame
+      InitOut%LinNames_u(index_next)  = 'YawRate, rad/s';   index_next = index_next + 1
+ 
+      ! u%HSS_Spd -- not in rotating frame
+      InitOut%LinNames_u(index_next)  = 'HSS_Spd, rad/s';   index_next = index_next + 1
+ 
+      ! StC related inputs
+      do j=1,p%NumBStC     ! Blade
+         do i=1,p%NumBl
+            call PackMotionMesh_Names( u%BStCMotionMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+         enddo
+      enddo
+      do j=1,p%NumNStC     ! Nacelle
+         call PackMotionMesh_Names( u%NStCMotionMesh(j), 'Nacelle StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+      enddo
+      do j=1,p%NumTStC     ! Tower
+         call PackMotionMesh_Names( u%TStCMotionMesh(j), 'Tower StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+      enddo
+      do j=1,p%NumSStC     ! Structure
+         call PackMotionMesh_Names( u%SStCMotionMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+      enddo
+
+      !--------------------------------
+      ! linearization perturbation size
+      !--------------------------------
+      index_next = 1
+      ! u%Yaw     -- not in rotating frame
+      p%Jac_u_indx(index_next,1:3) = (/ 2, 1, 1 /)    ! rotation, component and node are irrelevant
+      index_next = index_next + 1
+      ! u%YawRate -- not in rotating frame
+      p%Jac_u_indx(index_next,1:3) = (/ 4, 1, 1 /)    ! rotation vel, component and node are irrelevant
+      index_next = index_next + 1
+      ! u%HSS_Spd -- not in rotating frame
+      p%Jac_u_indx(index_next,1:3) = (/ 4, 1, 1 /)    ! rotation vel, component and node are irrelevant
+      index_next = index_next + 1
+
+      ! Blade StC instances
+      do j=1,p%NumBStC
+         do i=1,p%NumBl
+            do i_meshField = 1,6
+               do k=1,3
+                  p%Jac_u_indx(index_next,1) =  i_meshField    ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
+                  p%Jac_u_indx(index_next,2) =  k              ! component (x,y,z) 
+                  p%Jac_u_indx(index_next,3) =  1              ! Node: all single point meshes on inputs 
+                  index_next = index_next + 1
+               enddo
+            enddo
+         enddo
+      enddo
+      ! Nacelle StC instances
+      do j=1,p%NumNStC
+         do i_meshField = 1,6
+            do k=1,3
+               p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
+               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z) 
+               p%Jac_u_indx(index_next,3) =  1                 ! Node: all single point meshes on inputs 
+               index_next = index_next + 1
+            enddo
+         enddo
+      enddo
+      ! Tower StC instances
+      do j=1,p%NumTStC
+         do i_meshField = 1,6
+            do k=1,3
+               p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
+               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z) 
+               p%Jac_u_indx(index_next,3) =  1                 ! Node: all single point meshes on inputs 
+               index_next = index_next + 1
+            enddo
+         enddo
+      enddo
+      ! Substructure StC instances
+      do j=1,p%NumSStC
+         do i_meshField = 1,6
+            do k=1,3
+               p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
+               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z) 
+               p%Jac_u_indx(index_next,3) =  1                 ! Node: all single point meshes on inputs 
+               index_next = index_next + 1
+            enddo
+         enddo
+      enddo
+   end subroutine SrvD_Init_Jacobian_u
+
+   subroutine CheckInfo()
+      character(1)   :: Flag,FlagLoad
+      integer(IntKi) :: i
+      ! print out some info
+      if (allocated(InitOut%LinNames_y)) then
+         call WrScr('LinNames_y')
+         do i=1,size(InitOut%LinNames_y)
+            Flag='F'
+            if (InitOut%RotFrame_y(i)) Flag='T'
+            call WrScr('    '//Num2LStr(i)//Flag//'      '//InitOut%LinNames_y(i))
+         enddo
+      endif
+      if (allocated(InitOut%LinNames_x)) then
+         call WrScr('LinNames_x')
+         do i=1,size(InitOut%LinNames_x)
+            Flag='F'
+            if (InitOut%RotFrame_x(i)) Flag='T'
+            call WrScr('    '//Num2LStr(i)//Flag//'      '//trim(Num2LStr(InitOut%DerivOrder_x(i)))//'     '//InitOut%LinNames_x(i))
+         enddo
+      endif
+      if (allocated(InitOut%LinNames_u)) then
+         call WrScr('Perturb Size u')
+         do i=1,size(p%du)
+            call WrScr('          '//trim(Num2LStr(i))//'        '//trim(Num2LStr(p%du(i))))
+         enddo
+         call WrScr('LinNames_u')
+         do i=1,size(InitOut%LinNames_u)
+            Flag='F'
+            FlagLoad='F'
+            if (InitOut%RotFrame_u(i)) Flag='T'
+            if (InitOut%IsLoad_u(i)) FlagLoad='T'
+            call WrScr('    '//Num2LStr(i)//Flag//'      '//FlagLoad//'      ('//   &
+                              trim(Num2LStr(p%Jac_u_indx(i,1)))//','//trim(Num2LStr(p%Jac_u_indx(i,2)))//','//trim(Num2LStr(p%Jac_u_indx(i,3)))//  &
+                           ')     '//InitOut%LinNames_u(i))
+         enddo
+      endif
+   end subroutine CheckInfo
+end subroutine SrvD_Init_Jacobian
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the data structures for the structural control (StC) module -- Nacelle Instances
@@ -861,7 +1179,7 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
          ! A little bit of information about the StC location
          if (unsum >0) then
             write(UnSum, '(A24,i2)')               '    Tower StC instance: ',j
-            write(UnSum, '(10x,A)')                'Input file: '//trim(InputFileData%NStCfiles(j))
+            write(UnSum, '(10x,A)')                'Input file: '//trim(InputFileData%TStCfiles(j))
             write(UnSum, '(10x,A36)')              'Initial location (global/inertial): '
             write(UnSum, '(20x,3(2x,ES10.3e2))')   u(1,j)%Mesh(1)%Position(1:3,1)
             write(UnSum, '(10x,A61)')              'Initial location relative to tower base (tower coordinates): '
@@ -2089,7 +2407,6 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
 
 
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
@@ -2553,8 +2870,8 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
       if (InputFileData%YCMode /= ControlMode_NONE) &
          call SetErrStat(ErrID_Fatal,"YCMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
       
-      if ((InputFileData%NumNStC + InputFileData%NumTStC + InputFileData%NumBStC + InputFileData%NumSStC) > 0_IntKi) &
-         call SetErrStat(ErrID_Fatal,"StrucCtrl module is not currently allowed in linearization. NumNStC, NumTStC, NumBStC, and NumSStC must all be ZERO.",ErrStat,ErrMsg,RoutineName)
+!      if ((InputFileData%NumNStC + InputFileData%NumTStC + InputFileData%NumBStC + InputFileData%NumSStC) > 0_IntKi) &
+!         call SetErrStat(ErrID_Fatal,"StrucCtrl module is not currently allowed in linearization. NumNStC, NumTStC, NumBStC, and NumSStC must all be ZERO.",ErrStat,ErrMsg,RoutineName)
       
       if (InitInp%TrimCase /= TrimCase_none) then
          if (InitInp%TrimCase /= TrimCase_yaw .and. InitInp%TrimCase /= TrimCase_torque .and. InitInp%TrimCase /=  TrimCase_pitch) then
@@ -4561,6 +4878,7 @@ contains
    subroutine GetMeas(iNum,CChan,y)    ! Assemble info about who requested which channel
       integer(IntKi),               intent(in)  :: iNum        ! instance number
       integer(IntKi),   allocatable,intent(in)  :: CChan(:)    ! Channel request set from that StC instance
+
       type(StC_OutputType),         intent(in)  :: y           ! outputs from the StC instance
       do j=1,size(CChan)
          if (CChan(j) > 0) then
@@ -4762,6 +5080,8 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function Failed
 end subroutine StC_InitExtrapInputs
+
+
 
 END MODULE ServoDyn
 !**********************************************************************************************************************************
