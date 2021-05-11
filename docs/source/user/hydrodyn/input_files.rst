@@ -618,14 +618,6 @@ potential) loads in all 6 DOFs derived by the indirect method, and
 (.*12s*) total (quadratic plus second-order potential) loads in all 6
 DOFs derived by the direct method, respectively.
 
-.. TODO: Remove for TCF
-
-Floating Platform Force Flags
------------------------------
-This release requires that all platform force flags be set to TRUE.
-Future releases will allow you to turn on/off one or more of the six
-platform force components.
-
 Platform Additional Stiffness and Damping
 -----------------------------------------
 The vectors and matrices of this section are used to generate additional
