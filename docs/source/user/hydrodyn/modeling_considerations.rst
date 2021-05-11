@@ -372,7 +372,7 @@ strip-theory (Morison) only, or a hybrid model containing both.
 Potential-flow theory based on frequency-to-time-domain transforms is
 enabled when **PotMod** is set to 1. In this case, you must run WAMIT
 (or equivalent) in a pre-processing step and HydroDyn will use the WAMIT
-output files—see :nemref:`hd-modeling-floating-systems-potential-flow`
+output files—see :numref:`hd-modeling-floating-systems-potential-flow`
 for guidance. For a potential-flow-only
 model, do not create any strip-theory joints or members in the input
 file. The WAMIT model should account for all of the members in the
