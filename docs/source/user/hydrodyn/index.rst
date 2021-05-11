@@ -61,7 +61,7 @@ state-space approach, with a state-space model derived through the
 `SS_Fitting <https://www.nrel.gov/wind/nwtc/ss-fitting.html>`_
 preprocessor. The second-order terms can be derived from the full
 difference- and sum-frequency quadratic transfer functions (QTFs) or the
-difference-frequency terms can be estimated via Standing et al.’s [REF]
+difference-frequency terms can be estimated via Standing et al.’s :cite:`Standing:1987`
 extension to Newman’s approximation, based only on first-order
 coefficients. The use of FIT is not yet documented in this manual.
 
