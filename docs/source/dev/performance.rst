@@ -1,16 +1,16 @@
 Performance-Profiling and Optimization
 ======================================
-A major focus of he OpenFAST team is performance-profiling and optimization
+A major focus of the OpenFAST team is performance-profiling and optimization
 of the OpenFAST software with the goal of improving time-to-solution performance
 for the most computationally expensive use cases. The process generally involves
 initial profiling and hotspot analysis, then identifying specific subroutines to
-target for optimization in the physics modules and glue-code of OpenFAST.
+target for optimization in the physics modules and glue-codes.
 
 A portion of this work was supported by Intel® through its designation of NREL as an
 `Intel® Parallel Computing Center (IPCC) <https://software.intel.com/en-us/ipcc>`_.
 
-The findings and recommended programming practices are presented here. This is
-a working document and will be updating as additional studies are completed.
+The procedures, findings, and recommended programming practices are presented here.
+This is a working document and will be updating as additional studies are completed.
 
 Tuning the Intel® tools to perform best on NREL's hardware and adding high level
 multithreading yielded a maximum 3.8x time-to-solution improvement for one
@@ -233,23 +233,52 @@ code. However, the process of tuning code requires developers to
 understand the language as well as the tools available (compilers,
 performance libraries, etc) in order to generate the highest
 performance. This section identifies programming patterns to use
-Fortran and the Intel® Fortran compiler most effectively.
+Fortran and the Intel® Fortran compiler effectively. Developers
+should also reference the Intel® Fortran compiler documentation
+regarding `optimization <https://software.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/optimization-and-programming-guide.html>`_,
+in general, and especially the sections on
+`automatic vectorization <https://software.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/optimization-and-programming-guide/vectorization/automatic-vectorization.html>`_
+and `coarrays <https://software.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/optimization-and-programming-guide/coarrays-1.html>`_.
 
 Optimization report
 ~~~~~~~~~~~~~~~~~~~
-Fortran compilers have multiple levels of optimization available
-from no optimization to extreme optimization tuned to a particular
-machine architecture and operating system combination. Timing tests
-alone are not a good indication for the compiler's ability to optimize
-a particular portion of code. Therefore, developers should generate
-optimization reports to get line-by-line reporting on optimizations
-such as vectorization, parallelization, memory and cache usage,
-threading, and others.
+When evaluating compiler optimization performance in a complex
+software, timing tests alone are not a good indication for the
+compiler's ability to optimize particular lines of code. For
+low-level information on the compilers attempts in optimization,
+developers should generate optimization reports to get
+line-by-line reporting on various metrics such as vectorization,
+parallelization, memory and cache usage, threading, and others.
+Developers should refer to the Intel® Fortran compiler documentation
+on `optimization reports <https://software.intel.com/content/www/us/en/develop/articles/vectorization-and-optimization-reports.html>`_.
 
-https://software.intel.com/content/www/us/en/develop/articles/vectorization-and-optimization-reports.html
+For Linux and macOS, the OpenFAST CMake configuration has compiler
+flags for generating optimization reports available but commented
+in the `set_fast_intel_fortran_posix` macro in `openfast/cmake/OpenfastFortranOptions.cmake`.
+Primarily, the `qopt-report-phase` and `qopt-report` flags should
+be used. See the optimization report options `documentation <https://software.intel.com/content/www/us/en/develop/documentation/fortran-compiler-developer-guide-and-reference/top/compiler-reference/compiler-options/compiler-option-details/optimization-report-options/qopt-report-qopt-report.html>`_
+for more information on additional flags and configurations.
 
-- Link to flags for optimization report settings
-- Detail the process for generating the optrpt
+With compiler flags correctly configured, the copmiler will output
+files with the extension `.optrpt` alongside the intermediate compile
+artifacts like ``.o`` files. The compile process will state that
+additional files are being generated:
+
+.. code-block::
+
+  ifort: remark #10397: optimization reports are generated in *.optrpt files in the output location
+
+And the additional files should be located in the corresponding
+``CMakeFiles`` directory for each compile target. For example,
+the optimization report for the VersionInfo module in OpenFAST
+are at:
+
+.. code-block::
+
+  >> ls -l openfast/build/modules/version/CMakeFiles/versioninfolib.dir/src/
+  -rw-r--r--  2740 May 12 23:10 VersionInfo.f90.o
+  -rw-r--r--     0 May 12 23:10 VersionInfo.f90.o.provides.build
+  -rw-r--r--   668 May 12 23:10 VersionInfo.f90.optrpt
 
 Operator Strength Reduction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
