@@ -420,3 +420,38 @@ areas:
 .. analysis of code optimization. Specifically, the vectorization and openmp
 .. reports were analyzed to determine
 
+
+Linearization routine profiling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. TODO: Is there somewhere to link to WEIS?
+
+In an effort to understand performance characteristics of the linearization
+capability in OpenFAST, profiling was performed on the linearization-specific
+routines within the FAST Library. Because these routines require
+constructing large matrices, this is a computationally intensive process
+with a high rate of memory access. A high-level flow of data in the
+linearization algorithm in the ``FAST_Linearize_OP`` subroutine is given below.
+
+.. mermaid::
+
+  graph TD;
+    Construct-Module-Jacobian-->Calculate-Module-OP;
+    Calculate-Module-OP-->Construct-GlueCode-State-Matrices;
+    Calculate-Module-OP-->Construct-GlueCode-Jacobians;
+
+Each enabled physics module constructs module-level matrices in their respective
+``<Module>_Jacobian`` and ``<Module>_GetOP`` routines, and the collection of these
+are assembled into global matrices in ``Glue_Jacobians`` and ``Glue_StateMatrices``.
+In a top-down comparison of total CPU time in ``FAST_Linearize_OP``, we see that
+the construction of the glue-code state matrices is the most expensive step.
+The HydroDyn Jacobian computation is also expensive relative to other module
+Jacobian computations. 
+
+.. TODO: add details on the range of size of the matrices
+
+.. figure:: images/TopDown_FAST_LinearizeOP.jpg
+   :width: 100%
+   :align: center
+
+Analyzing the ``Glue_StateMatrices`` routine reveals that the matrix multiplication
+
