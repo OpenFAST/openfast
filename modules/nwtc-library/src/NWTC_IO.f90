@@ -6211,7 +6211,7 @@ END SUBROUTINE CheckR16Var
    DO
 
       IF ( PRESENT(UnEc) )  THEN
-         if (UnEc > 0) WRITE(UnEc, '(A)')  FileInfo%Lines(LineNum)
+         if (UnEc > 0) WRITE(UnEc, '(A)')  trim(FileInfo%Lines(LineNum))
       ENDIF
       OutLine = adjustl(trim(FileInfo%Lines(LineNum)))   ! remove leading whitespace
 
