@@ -330,6 +330,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
       if (Failed())  return;
    ENDIF
 
+!FIXME: there is something a little strange here.  RandSeed(2) is an integer, but what if we get an error on the next read?
    READ (Line,*,IOSTAT=ErrStat2) InputFileData%Waves%WaveSeed(2)
    InputFileData%Waves%RNG%RandSeed(2) = InputFileData%Waves%WaveSeed(2)
 
