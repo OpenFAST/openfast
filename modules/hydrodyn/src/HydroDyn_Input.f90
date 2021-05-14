@@ -274,11 +274,13 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    CHARACTER(1)                                     :: Line1                ! The first character of an input line
    INTEGER(IntKi)                                   :: ErrStat2
    CHARACTER(ErrMsgLen)                             :: ErrMsg2
+   CHARACTER(*),  PARAMETER                         :: RoutineName = 'HydroDynInput_GetInput'
    
    
       ! Initialize local data
 
    UnEchoLocal  = -1
+   UnIn         = -1
    Frmt         = "( 2X, L11, 2X, A, T30, ' - ', A )"         
    ErrStat      = ErrID_None         
    ErrMsg       = ""   
@@ -289,14 +291,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    FileName = TRIM(InitInp%InputFile)
 
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup() 
-         RETURN
-      END IF
+   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 );              if (Failed())  return;
+   CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 );  if (Failed())  return;
 
 
    !CALL WrScr( 'Opening HydroDyn input file:  '//FileName )
@@ -307,28 +303,14 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
    CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 1', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup() 
-         RETURN
-      END IF
-      
+      if (Failed())  return;
       
    CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 2', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup() 
-         RETURN
-      END IF
+      if (Failed())  return;
 
      ! Echo Input Files.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )      
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup() 
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! If we are Echoing the input then we should re-read the first three lines so that we can echo them
       ! using the NWTC_Library routines.  The echoing is done inside those routines via a global variable
@@ -338,24 +320,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       EchoFile = TRIM(InitInp%OutRootName)//'.HD.ech'
       CALL OpenEcho ( UnEchoLocal, TRIM(EchoFile), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
+         if (Failed())  return;
          
       REWIND(UnIn)
 
       CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 1', ErrStat2, ErrMsg2, UnEchoLocal )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' ) 
+         if (Failed())  return;
 
       CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 2', ErrStat2, ErrMsg2, UnEchoLocal )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+         if (Failed())  return;
 
          ! Echo Input Files. Note this line is prevented from being echoed by the ReadVar routine. (bjj: is that still true?)
 
       CALL ReadVar ( UnIn, FileName, InputFileData%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEchoLocal )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+         if (Failed())  return;
 
    END IF
    !-------------------------------------------------------------------------------------------------
@@ -363,43 +341,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WtrDens - Water density.
-
    CALL ReadVarWDefault ( UnIn, FileName, InputFileData%Waves%WtrDens, 'WtrDens', 'Water density', InitInp%defWtrDens, ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WtrDpth - Water depth
-
    CALL ReadVarWDefault ( UnIn, FileName, InputFileData%Morison%WtrDpth, 'WtrDpth', 'Water depth', InitInp%defWtrDpth, ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! MSL2SWL
-
    CALL ReadVarWDefault ( UnIn, FileName, InputFileData%Morison%MSL2SWL, 'MSL2SWL', 'MSL to SWL offset', InitInp%defMSL2SWL, ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    !-------------------------------------------------------------------------------------------------
@@ -407,23 +362,12 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Wave header', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WaveMod - Wave kinematics model switch.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveModChr, 'WaveMod', 'Wave kinematics model switch', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
    CALL Conv2UC( InputFileData%Waves%WaveModChr )    ! Convert Line to upper case.
 
@@ -432,141 +376,59 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveStMod, 'WaveStMod', &
       'Model switch for stretching incident wave kinematics to instantaneous free surface', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
+      if (Failed())  return;
 
       ! WaveTMax - Analysis time for incident wave calculations.
-
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveTMax, 'WaveTMax', &
                               'Analysis time for incident wave calculations', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WaveDT - Time step for incident wave calculations
-
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDT, 'WaveDT', &
                         'Time step for incident wave calculations', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
-
+      if (Failed())  return;
 
       ! WaveHs - Significant wave height
-
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveHs, 'WaveHs', 'Significant wave height', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
+      if (Failed())  return;
 
       ! WaveTp - Peak spectral period.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveTp, 'WaveTp', 'Peak spectral period', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WavePkShp - Peak shape parameter.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WavePkShpChr, 'WavePkShp', 'Peak shape parameter', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WvLowCOff - Low Cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).  
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WvLowCOff, 'WvLowCOff', 'Lower wave cut-off frequency', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
      ! WvHiCOff - High Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).  
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WvHiCOff, 'WvHiCOff', 'Upper wave cut-off frequency', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
    
       ! WaveDir - Mean wave heading direction.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDir, 'WaveDir', 'Mean wave heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WaveDirMod -  Directional spreading function {0: None, 1: COS2S}       (-) [Used only if WaveMod=2]
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDirMod, 'WaveDirMod', 'Directional spreading function', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WaveDirSpread -  Spreading coefficient [only used if WaveMod=2 and WaveDirMod=1]
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDirSpread, 'WaveDirSpread', 'Wave direction spreading coefficient', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WaveNDir -  The number of wave directions to calculate [must be odd; only used if WaveDirMod=1]
-
    CALL ReadVar (UnIn, FileName, InputFileData%Waves%WaveNDir, 'WaveNDir', 'Number of wave directions to calculate', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WaveDirRange - Full range of the wave directions from WaveDir - WaveDirRange/2 to WaveDir + WaveDirRange/2 (only used if WaveMod=2 and WaveDirMod=1)
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDirRange, 'WaveDirRange', 'Maximum wave heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Negative values should be treated as positive.
    InputFileData%Waves%WaveDirRange =  ABS( InputFileData%Waves%WaveDirRange )
@@ -574,27 +436,19 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ! WaveSeed(1)
    CALL ReadVar( UnIn, FileName, InputFileData%Waves%WaveSeed(1), 'WaveSeed(1)', "Random seed #1", ErrStat2, ErrMsg2, UnEchoLocal)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput')
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
    InputFileData%Waves%RNG%RandSeed(1) = InputFileData%Waves%WaveSeed(1)
 
       !WaveSeed(2)
    CALL ReadVar( UnIn, FileName, Line, 'WaveSeed(2)', "Random seed #2", ErrStat2, ErrMsg2, UnEchoLocal)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput')
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+      if (Failed())  return;
 
    READ (Line,*,IOSTAT=ErrStat2) Line1  ! check the first character to make sure we don't have T/F, which can be interpreted as 1/-1 or 0 in Fortran
    CALL Conv2UC( Line1 )
    IF ( (Line1 == 'T') .OR. (Line1 == 'F') ) THEN
-      CALL SetErrStat( ErrID_Fatal, ' WaveSeed(2): Invalid RNG type.', ErrStat, ErrMsg, 'HydroDynInput_GetInput')
-      CALL Cleanup()
-      RETURN
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = ' WaveSeed(2): Invalid RNG type.'
+      if (Failed())  return;
    ENDIF
 
    READ (Line,*,IOSTAT=ErrStat2) InputFileData%Waves%WaveSeed(2)
@@ -612,46 +466,26 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
       IF ( InputFileData%Waves%RNG%RNG_type == "RANLUX") THEN
          InputFileData%Waves%RNG%pRNG = pRNG_RANLUX
       ELSE
-         CALL SetErrStat( ErrID_Fatal, ' WaveSeed(2): Invalid alternative random number generator.', ErrStat, ErrMsg, 'HydroDynInput_GetInput')
-         CALL Cleanup()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = ' WaveSeed(2): Invalid alternative random number generator.'
+         if (Failed())  return;
       ENDIF
 
    ENDIF
 
       ! WaveNDAmp - Flag for normally distributed amplitudes.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveNDAmp, 'WaveNDAmp', 'Normally distributed amplitudes', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
+      if (Failed())  return;
 
       ! WvKinFile
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WvKinFile, 'WvKinFile', &
                                     'Root name of wave kinematics files', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
-
+      if (Failed())  return;
 
       ! NWaveElev
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves%NWaveElev, 'NWaveElev', &
                                   'Number of points where the incident wave elevations can be output', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
       ! This check is needed here instead of being located in HydroDynInput_ProcessInputData() because
@@ -659,44 +493,26 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
       ! been allocated and populated.
 
    IF ( InputFileData%Waves%NWaveElev < 0 .OR. InputFileData%Waves%NWaveElev > 9 ) THEN
-
-      CALL SetErrStat( ErrID_Fatal, 'NWaveElev must be greater than or equal to zero and less than 10.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      CALL CleanUp()
-      RETURN
-
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = 'NWaveElev must be greater than or equal to zero and less than 10.'
+      if (Failed())  return;
    ELSE
 
          ! allocate space for the output location arrays:
-      CALL AllocAry( InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, 'WaveElevxi' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      CALL AllocAry( InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, 'WaveElevyi' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF      
+      CALL AllocAry( InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, 'WaveElevxi' , ErrStat2, ErrMsg2);  if (Failed())  return;
+      CALL AllocAry( InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, 'WaveElevyi' , ErrStat2, ErrMsg2);  if (Failed())  return;
       
    END IF
 
       ! WaveElevxi
-
    CALL ReadAry ( UnIn, FileName, InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, 'WaveElevxi', &
                            'List of xi-coordinates for points where the incident wave elevations can be output', ErrStat2,  ErrMsg2, UnEchoLocal)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WaveElevyi
-
    CALL ReadAry ( UnIn, FileName, InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, 'WaveElevyi', &
                            'List of yi-coordinates for points where the incident wave elevations can be output', ErrStat2,  ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
 
@@ -705,74 +521,32 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Waves 2nd order', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WvDiffQTFF     - Second order waves -- difference forces
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvDiffQTFF, 'WvDiffQTFF', 'Full difference QTF second order kinematic forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! WvSumQTFF      - Second order waves -- sum forces
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvSumQTFF, 'WvSumQTFF', 'Full sum QTF  second order kinematic forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
-
-
-        ! WvLowCOffD   -- Minimum frequency used in the difference methods (rad/s)              [Only used if DiffQTF /= 0]
-
+      ! WvLowCOffD   -- Minimum frequency used in the difference methods (rad/s)              [Only used if DiffQTF /= 0]
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvLowCOffD, 'WvLowCOffD', 'Minimum frequency used in second order difference forces', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
-
-        ! WvHiCOffD   -- Maximum frequency used in the difference methods  (rad/s)              [Only used if DiffQTF /= 0]
-
+      ! WvHiCOffD   -- Maximum frequency used in the difference methods  (rad/s)              [Only used if DiffQTF /= 0]
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvHiCOffD, 'WvHiCOffD', 'Maximum frequency used in second order difference forces', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
-
-        ! WvLowCOffS   -- Minimum frequency used in the        sum-QTF     (rad/s)              [Only used if  SumQTF /= 0]
-
+      ! WvLowCOffS   -- Minimum frequency used in the        sum-QTF     (rad/s)              [Only used if  SumQTF /= 0]
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvLowCOffS, 'WvLowCOffS', 'Minimum frequency used in second order sum forces', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
-
-        ! WvHiCOffS   -- Maximum frequency used in the        sum-QTF      (rad/s)              [Only used if  SumQTF /= 0]
-
+      ! WvHiCOffS   -- Maximum frequency used in the        sum-QTF      (rad/s)              [Only used if  SumQTF /= 0]
    CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvHiCOffS, 'WvHiCOffS', 'Maximum frequency used in second order sum forces', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
 
@@ -781,100 +555,46 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Current header', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! CurrMod - Current profile model switch
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrMod, 'CurrMod', 'Current profile model switch', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
+      if (Failed())  return;
 
       ! CurrSSV0 - Sub-surface current velocity at still water level
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrSSV0, 'CurrSSV0', 'Sub-surface current velocity at still water level', &
                          ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
 
       ! CurrSSDirChr - Sub-surface current heading direction
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrSSDirChr, 'CurrSSDirChr', 'Sub-surface current heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
    CALL Conv2UC( InputFileData%Current%CurrSSDirChr )    ! Convert Line to upper case.
 
 
       ! CurrNSRef - Near-surface current reference depth.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrNSRef, 'CurrNSRef', 'Near-surface current reference depth', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! CurrNSV0 - Near-surface current velocity at still water level.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrNSV0, 'CurrNSV0', 'Near-surface current velocity at still water level', &
                            ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! CurrNSDir - Near-surface current heading direction.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrNSDir, 'CurrNSDir', 'Near-surface current heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! CurrDIV - Depth-independent current velocity.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrDIV, 'CurrDIV', 'Depth-independent current velocity', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! CurrDIDir - Depth-independent current heading direction.
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrDIDir, 'CurrDIDir', 'Depth-independent current heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
 
@@ -883,98 +603,48 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Floating platform header', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
+      if (Failed())  return;
 
       ! PotMod - State indicating potential flow model used in the simulation. 0=none, 1=WAMIT, 2=FIT
-
    CALL ReadVar ( UnIn, FileName, InputFileData%PotMod, 'PotMod', 'Potential flow model', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! ExctnMod  - Wave Excitation model {0: None, 1: DFT, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
-
    CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT%ExctnMod, 'ExctnMod', &
                                  'Wave Excitation model', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
-
   CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT%RdtnMod, 'RdtnMod', &
                                  'Radiation memory-effect model', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! RdtnTMax - Analysis time for wave radiation kernel calculations
       ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
-
    CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT%RdtnTMax, 'RdtnTMax', &
                                  'Analysis time for wave radiation kernel calculations', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! RdtnDT - Time step for wave radiation kernel calculations
-
-
    CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT%Conv_Rdtn%RdtnDTChr, 'RdtnDT', 'Time step for wave radiation kernel calculations', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! NBody - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data 
       !         contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there 
       !         are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
-
    CALL ReadVar ( UnIn, FileName, InputFileData%NBody, 'NBody', 'Number of WAMIT bodies', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! NBodyMod - Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 
       !            2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms 
       !            between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]
-
    CALL ReadVar ( UnIn, FileName, InputFileData%NBodyMod, 'NBodyMod', 'Body coupling model', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-      ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
+      if (Failed())  return;
       
          ! allocate space for the WAMIT-related data arrays:
-               
    if ( InputFileData%NBodyMod == 1 )  then
       InputFileData%nWAMITObj = 1  ! Special case where all data in a single WAMIT input file as opposed to  InputFileData%NBody number of separate input files.
       InputFileData%vecMultiplier = InputFileData%NBody
@@ -983,111 +653,61 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
       InputFileData%vecMultiplier = 1
    end if
    
-   CALL AllocAry( InputFileData%PotFile  , InputFileData%nWAMITObj, 'PotFile'   , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%WAMITULEN, InputFileData%nWAMITObj, 'WAMITULEN' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%PtfmRefxt, InputFileData%NBody, 'PtfmRefxt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%PtfmRefyt, InputFileData%NBody, 'PtfmRefyt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%PtfmRefzt, InputFileData%NBody, 'PtfmRefzt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%PtfmRefztRot, InputFileData%NBody, 'PtfmRefztRot' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%PtfmVol0 , InputFileData%NBody, 'PtfmVol0'  , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%PtfmCOBxt, InputFileData%NBody, 'PtfmCOBxt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%PtfmCOByt, InputFileData%NBody, 'PtfmCOByt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InputFileData%PotFile      , InputFileData%nWAMITObj, 'PotFile'      , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%WAMITULEN    , InputFileData%nWAMITObj, 'WAMITULEN'    , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%PtfmRefxt    , InputFileData%NBody,     'PtfmRefxt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%PtfmRefyt    , InputFileData%NBody,     'PtfmRefyt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%PtfmRefzt    , InputFileData%NBody,     'PtfmRefzt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%PtfmRefztRot , InputFileData%NBody,     'PtfmRefztRot' , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%PtfmVol0     , InputFileData%NBody,     'PtfmVol0'     , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%PtfmCOBxt    , InputFileData%NBody,     'PtfmCOBxt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
+   CALL AllocAry( InputFileData%PtfmCOByt    , InputFileData%NBody,     'PtfmCOByt'    , ErrStat2, ErrMsg2);   if (Failed())  return;
 
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF      
+
+      ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
    call ReadFileList ( UnIn, FileName, InputFileData%PotFile, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
    !CALL ReadAry ( UnIn, FileName, InputFileData%PotFile, InputFileData%nWAMITObj, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! WAMITULEN - WAMIT characteristic body length scale
-
    CALL ReadAry ( UnIn, FileName, InputFileData%WAMITULEN, InputFileData%nWAMITObj, 'WAMITULEN', 'WAMIT characteristic body length scale', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! PtfmRefxt  - The xt offset of the body reference point(s) from (0,0,0) (meters)
-
    CALL ReadAry ( UnIn, FileName, InputFileData%PtfmRefxt, InputFileData%NBody, 'PtfmRefxt', &
       'xt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! PtfmRefyt  - The yt offset of the body reference point(s) from (0,0,0) (meters)
-
    CALL ReadAry ( UnIn, FileName, InputFileData%PtfmRefyt, InputFileData%NBody, 'PtfmRefyt', &
       'yt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! PtfmRefzt  - The zt offset of the body reference point(s) from (0,0,0) (meters)
-
    CALL ReadAry ( UnIn, FileName, InputFileData%PtfmRefzt, InputFileData%NBody, 'PtfmRefzt', &
       'zt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! PtfmRefztRot  - The rotation about zt of the body reference frame(s) from xt/yt (deg)
-
    CALL ReadAry ( UnIn, FileName, InputFileData%PtfmRefztRot, InputFileData%NBody, 'PtfmRefzt', &
       'The rotation about zt of the body reference frame(s) from xt/yt', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
    InputFileData%PtfmRefztRot = InputFileData%PtfmRefztRot*D2R_D ! Convert to radians
    
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
-
    CALL ReadAry ( UnIn, FileName, InputFileData%PtfmVol0, InputFileData%NBody, 'PtfmVol0', &
       'Displaced volume of water when the platform is in its undisplaced position', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! PtfmCOBxt  - The xt offset of the center of buoyancy (COB) from the WAMIT reference point
-
    CALL ReadAry ( UnIn, FileName, InputFileData%PtfmCOBxt, InputFileData%NBody, 'PtfmCOBxt', &
       'xt offset of the center of buoyancy (COB) from the WAMIT reference point', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! PtfmCOByt - The yt offset of the center of buoyancy (COB) from the WAMIT reference point
-
    CALL ReadAry ( UnIn, FileName, InputFileData%PtfmCOByt, InputFileData%NBody, 'PtfmCOByt', &
       'yt offset of the center of buoyancy (COB) from the WAMIT reference point', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
    
 !bjj: should we add this?
@@ -1107,59 +727,26 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
      ! Header
-
    CALL ReadCom( UnIn, FileName, '2nd order forces header (WAMIT2 module)', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
         ! MnDrift    -- Mean drift forces computed from WAMIT file: {0: No mean drift, [7, 8, 9, 10, 11, or 12]: WAMIT file to use}
-
    CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT2%MnDrift, 'MnDrift', 'Mean drift forces computed from WAMIT file: {0: No mean drift, [7, 8, 9, 10, 11, or 12]: WAMIT file to use}', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
         ! NewmanApp  -- Slow drift forces computed with Newman's approximation from  WAMIT file: {0: No mean drift, [7, 8, 9, 10, 11, or 12]: WAMIT file to use}
-
    CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT2%NewmanApp, 'NewmanApp', 'Mean drift forces computed from WAMIT file: {0: No mean drift, [7, 8, 9, 10, 11, or 12]: WAMIT file to use}', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
         ! DiffQTF    -- Full Difference-Frequency forces computed with full QTFs from WAMIT file: {0: No difference-frequency forces, [10, 11, or 12]: WAMIT file to use} -- Only one of MnDrift, NewmanApp, or DiffQYT can be non-zero
-
    CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT2%DiffQTF, 'DiffQTF', 'Full Difference-Frequency forces computed with full QTFs from WAMIT file: '// &
        '{0: No difference-frequency forces, [10, 11, or 12]: WAMIT file to use} -- Only one of MnDrift, NewmanApp, or DiffQYT can be non-zero', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
         ! SumQTF     -- Full        Sum-Frequency forces computed with full QTFs from WAMIT file: {0: No        Sum-frequency forces, [10, 11, or 12]: WAMIT file to use}
-
    CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT2%SumQTF, 'SumQTF', 'Full Sum-Frequency forces computed with full QTFs from WAMIT file: {0: No Sum-frequency forces, [10, 11, or 12]: WAMIT file to use}', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
 
@@ -1168,33 +755,23 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! If NBodyMod = 1 then vecMultiplier = NBody and nWAMITObj = 1
    ! Else                 vecMultiplier = 1     and nWAMITObj = NBody
-   CALL AllocAry( InputFileData%AddF0,     InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddF0'    , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%AddCLin,   InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddCLin'  , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%AddBLin,   InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddBLin'  , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( InputFileData%AddBQuad,  InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddBQuad' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( tmpVec1, InputFileData%nWAMITObj, 'tmpVec1', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   CALL AllocAry( tmpVec2, 6*InputFileData%NBody,   'tmpVec2', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InputFileData%AddF0,     InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddF0'    , ErrStat2, ErrMsg2);                                   if (Failed())  return; 
+   CALL AllocAry( InputFileData%AddCLin,   InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddCLin'  , ErrStat2, ErrMsg2);    if (Failed())  return; 
+   CALL AllocAry( InputFileData%AddBLin,   InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddBLin'  , ErrStat2, ErrMsg2);    if (Failed())  return;
+   CALL AllocAry( InputFileData%AddBQuad,  InputFileData%vecMultiplier*6, InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddBQuad' , ErrStat2, ErrMsg2);    if (Failed())  return;
+   CALL AllocAry( tmpVec1, InputFileData%nWAMITObj, 'tmpVec1', ErrStat2, ErrMsg2);  if (Failed())  return;
+   CALL AllocAry( tmpVec2, 6*InputFileData%NBody,   'tmpVec2', ErrStat2, ErrMsg2);  if (Failed())  return;
 
    ! Header
-
    CALL ReadCom( UnIn, FileName, 'Additional stiffness and damping header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! AddF0 - Additional preload
    do i = 1,6*InputFileData%vecMultiplier   
       CALL ReadAry ( UnIn, FileName, tmpVec1, InputFileData%nWAMITObj, 'AddF0', &
                               ' Additional preload vector', ErrStat2,  ErrMsg2, UnEchoLocal )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
+         if (Failed())  return;
+
       do j = 1, InputFileData%nWAMITObj
          InputFileData%AddF0(i,j) = tmpVec1(j)
       end do
@@ -1207,12 +784,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
       write(strI,'(I1)') i
       call ReadAry ( UnIn, FileName, tmpVec2, 6*InputFileData%NBody, 'AddCLin', &
                            ' Row '//strI//' of the additional linear stiffness matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
+         if (Failed())  return;
 
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      if (ErrStat >= AbortErrLev) then
-         call CleanUp()
-         return
-      end if
       do j = 1, InputFileData%nWAMITObj
          startIndx = 6*InputFileData%vecMultiplier*(j-1) + 1
          endIndx   = startIndx + 6*InputFileData%vecMultiplier - 1
@@ -1228,12 +801,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
       WRITE(strI,'(I1)') I
       CALL ReadAry ( UnIn, FileName, tmpVec2, 6*InputFileData%NBody, 'AddBLin', &
                            ' Row '//strI//' of the additional linear damping matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
+         if (Failed())  return;
 
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
       do j = 1, InputFileData%nWAMITObj
          startIndx = 6*InputFileData%vecMultiplier*(j-1) + 1
          endIndx   = startIndx + 6*InputFileData%vecMultiplier - 1
@@ -1249,12 +818,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
       WRITE(strI,'(I1)') I
       CALL ReadAry ( UnIn, FileName, tmpVec2, 6*InputFileData%NBody, 'AddBQuad', &
                            ' Row '//strI//' of the additional quadratic damping matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
+         if (Failed())  return;
 
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
       do j = 1, InputFileData%nWAMITObj
          startIndx = 6*InputFileData%vecMultiplier*(j-1) + 1
          endIndx   = startIndx + 6*InputFileData%vecMultiplier - 1
@@ -1269,56 +834,31 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    
    
        ! Header
-      
    CALL ReadCom( UnIn, FileName, 'Axial coefs header', ErrStat2, ErrMsg2, UnEchoLocal )
-   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-   
+      if (Failed())  return;
    
       ! NAxCoef - Number of axial coefficients
-   
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NAxCoefs, 'NAxCoefs', 'Number of axial coefficients', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
    
          ! Table header
-      
-      CALL ReadCom( UnIn, FileName, 'Axial coefficient table header', ErrStat2, ErrMsg2, UnEchoLocal )
-   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+   CALL ReadCom( UnIn, FileName, 'Axial coefficient table header', ErrStat2, ErrMsg2, UnEchoLocal )
+      if (Failed())  return;
       
          ! Table header
-      
-      CALL ReadCom( UnIn, FileName, 'Axial coefficient table header', ErrStat2, ErrMsg2, UnEchoLocal )
-   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-   
+   CALL ReadCom( UnIn, FileName, 'Axial coefficient table header', ErrStat2, ErrMsg2, UnEchoLocal )
+      if (Failed())  return;
+  
+ 
    IF ( InputFileData%Morison%NAxCoefs > 0 ) THEN
-      
       
          ! Allocate memory for Axial Coef-related arrays
          
       ALLOCATE ( InputFileData%Morison%AxialCoefs(InputFileData%Morison%NAxCoefs), STAT = ErrStat2 )
-      IF ( ErrStat2 /= 0 ) THEN      
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for AxialCoefs array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+      IF ( ErrStat2 /= 0 ) THEN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for AxialCoefs array.'
+         if (Failed())  return;
       END IF
           
       DO I = 1,InputFileData%Morison%NAxCoefs
@@ -1330,9 +870,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
          END IF      
        
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Failed to read axial coefficients.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-            CALL CleanUp()
-            RETURN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read axial coefficients.'
+            if (Failed())  return;
          END IF 
          
          IF ( InputFileData%Echo ) THEN
@@ -1350,45 +890,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Member joints header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! NJoints - Number of member joints
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NJoints, 'NJoints', 'Number of member joints', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
          ! Table header
-
-      CALL ReadCom( UnIn, FileName, 'Member joints table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+   CALL ReadCom( UnIn, FileName, 'Member joints table header', ErrStat2, ErrMsg2, UnEchoLocal )
+      if (Failed())  return;
 
          ! Table header
-
-      CALL ReadCom( UnIn, FileName, 'Member joints table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+   CALL ReadCom( UnIn, FileName, 'Member joints table header', ErrStat2, ErrMsg2, UnEchoLocal )
+      if (Failed())  return;
 
    IF ( InputFileData%Morison%NJoints > 0 ) THEN
 
@@ -1397,9 +912,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ALLOCATE ( InputFileData%Morison%InpJoints(InputFileData%Morison%NJoints), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for InpJoints array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for InpJoints array.'
+         if (Failed())  return;
       END IF
 
       DO I = 1,InputFileData%Morison%NJoints
@@ -1407,13 +922,15 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
          READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
          IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpJoints(I)%JointID, InputFileData%Morison%InpJoints(I)%Position(1), InputFileData%Morison%InpJoints(I)%Position(2), InputFileData%Morison%InpJoints(I)%Position(3), InputFileData%Morison%InpJoints(I)%JointAxID, InputFileData%Morison%InpJoints(I)%JointOvrlp
+            READ(Line,*,IOSTAT=ErrStat2)  InputFileData%Morison%InpJoints(I)%JointID, InputFileData%Morison%InpJoints(I)%Position(1),     &
+                                          InputFileData%Morison%InpJoints(I)%Position(2), InputFileData%Morison%InpJoints(I)%Position(3), &
+                                          InputFileData%Morison%InpJoints(I)%JointAxID, InputFileData%Morison%InpJoints(I)%JointOvrlp
          END IF
 
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Failed to read joints.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-            CALL CleanUp()
-            RETURN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read joints.'
+            if (Failed())  return;
          END IF
 
          IF ( InputFileData%Echo ) THEN
@@ -1433,42 +950,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Member cross-section properties header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! NPropSets - Number of member cross-section property sets
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NPropSets, 'NPropSets', 'Number of member cross-section property sets', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Member cross-section properties table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Member cross-section properties table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
    IF ( InputFileData%Morison%NPropSets > 0 ) THEN
 
@@ -1477,9 +972,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ALLOCATE ( InputFileData%Morison%MPropSets(InputFileData%Morison%NPropSets), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for MPropSets array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for MPropSets array.'
+         if (Failed())  return;
       END IF
 
 
@@ -1492,9 +987,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
          END IF
 
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Failed to read member cross-section properties.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-            CALL CleanUp()
-            RETURN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read member cross-section properties.'
+            if (Failed())  return;
          END IF
             
          IF ( InputFileData%Echo ) THEN
@@ -1515,46 +1010,31 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Simple hydrodynamic coefficients header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Simple hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Simple hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
    IF (ErrStat2 == 0) THEN
-      READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%SimplCd, InputFileData%Morison%SimplCdMG, InputFileData%Morison%SimplCa, InputFileData%Morison%SimplCaMG, InputFileData%Morison%SimplCp, InputFileData%Morison%SimplCpMG, InputFileData%Morison%SimplAxCd, InputFileData%Morison%SimplAxCdMG, InputFileData%Morison%SimplAxCa, InputFileData%Morison%SimplAxCaMG, InputFileData%Morison%SimplAxCp, InputFileData%Morison%SimplAxCpMG
+      READ(Line,*,IOSTAT=ErrStat2)  InputFileData%Morison%SimplCd, InputFileData%Morison%SimplCdMG, InputFileData%Morison%SimplCa,        &
+                                    InputFileData%Morison%SimplCaMG, InputFileData%Morison%SimplCp, InputFileData%Morison%SimplCpMG,      &
+                                    InputFileData%Morison%SimplAxCd, InputFileData%Morison%SimplAxCdMG, InputFileData%Morison%SimplAxCa,  &
+                                    InputFileData%Morison%SimplAxCaMG, InputFileData%Morison%SimplAxCp, InputFileData%Morison%SimplAxCpMG
    END IF
 
    IF ( ErrStat2 /= 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'Failed to read simple hydrodynamic coefficients.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      CALL CleanUp()
-      RETURN
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = 'Failed to read simple hydrodynamic coefficients.'
+      if (Failed())  return;
    END IF
 
    IF ( InputFileData%Echo ) THEN
@@ -1570,45 +1050,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Depth-based hydrodynamic coefficients header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! NCoefDpth - Number of depth-based hydrodynamic coefficient property sets
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NCoefDpth, 'NCoefDpth', 'Number of depth-based hydrodynamic coefficient property sets', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Depth-based hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Depth-based hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    IF ( InputFileData%Morison%NCoefDpth > 0 ) THEN
@@ -1618,9 +1073,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ALLOCATE ( InputFileData%Morison%CoefDpths(InputFileData%Morison%NCoefDpth), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for CoefDpths array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for CoefDpths array.'
+         if (Failed())  return;
       END IF
                   
       DO I = 1,InputFileData%Morison%NCoefDpth
@@ -1635,9 +1090,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
          END IF
 
          IF (ErrStat2 /= 0) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Failed to read depth-based coefficient array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-            CALL CleanUp()
-            RETURN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read depth-based coefficient array.'
+            if (Failed())  return;
          END IF
 
          IF ( InputFileData%Echo ) THEN
@@ -1655,46 +1110,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Member-based hydrodynamic coefficients header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! NCoefMembers - Number of member-based hydrodynamic coefficient property sets
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NCoefMembers, 'NCoefMembers', 'Number of member-based hydrodynamic coefficient property sets', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Member-based hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Member-based hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    IF ( InputFileData%Morison%NCoefMembers > 0 ) THEN
@@ -1704,9 +1133,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ALLOCATE ( InputFileData%Morison%CoefMembers(InputFileData%Morison%NCoefMembers), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for CoefMembers array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for CoefMembers array.'
+         if (Failed())  return;
       END IF
 
       DO I = 1,InputFileData%Morison%NCoefMembers
@@ -1731,9 +1160,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
        
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Failed to read member cross-section properties.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-            CALL CleanUp()
-            RETURN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read member cross-section properties.'
+            if (Failed())  return;
          END IF
 
          IF ( InputFileData%Echo ) THEN
@@ -1752,45 +1181,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Members header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! NMembers - Number of members in the input file
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NMembers, 'NMembers', 'Number of members', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Members table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Members table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    IF ( InputFileData%Morison%NMembers > 0 ) THEN
@@ -1800,9 +1204,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ALLOCATE ( InputFileData%Morison%InpMembers(InputFileData%Morison%NMembers), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN         
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for InpMembers array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for InpMembers array.'
+         if (Failed())  return;
       END IF
 
       DO I = 1,InputFileData%Morison%NMembers
@@ -1817,9 +1221,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
          END IF
 
          IF ( ErrStat2 /= 0 ) THEN         
-            CALL SetErrStat( ErrID_Fatal, 'Failed to read member properties.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-            CALL CleanUp()
-            RETURN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read member properties.'
+            if (Failed())  return;
          END IF
 
          IF ( InputFileData%Echo ) THEN
@@ -1837,45 +1241,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Filled members header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! NFillGroups - Number of fill groups
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NFillGroups, 'NFillGroups', 'Number of fill groups', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Fill groups table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Fill groups table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    IF ( InputFileData%Morison%NFillGroups > 0 ) THEN
@@ -1885,9 +1264,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ALLOCATE ( InputFileData%Morison%FilledGroups(InputFileData%Morison%NFillGroups), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for FilledGroups array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for FilledGroups array.'
+         if (Failed())  return;
       END IF
 
       DO I = 1,InputFileData%Morison%NFillGroups
@@ -1898,17 +1277,17 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
             READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%FilledGroups(I)%FillNumM
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Failed to read FillNumM.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Failed to read FillNumM.'
+               if (Failed())  return;
             END IF
 
 
             ALLOCATE ( InputFileData%Morison%FilledGroups(I)%FillMList(InputFileData%Morison%FilledGroups(I)%FillNumM), STAT = ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for FillMList array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error allocating space for FillMList array.'
+               if (Failed())  return;
             END IF
 
 
@@ -1916,9 +1295,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
                                          InputFileData%Morison%FilledGroups(I)%FillFSLoc, InputFileData%Morison%FilledGroups(I)%FillDensChr
 
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Failed to read filled group properties.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Failed to read filled group properties.'
+               if (Failed())  return;
             END IF
             
             IF ( InputFileData%Echo ) THEN
@@ -1938,46 +1317,21 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Marine growth by depth header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
 
       ! NMGDepths - Number marine growth depths
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NMGDepths, 'NMGDepths', 'Number marine growth depths', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Marine growth by depth table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Marine growth by depth table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    IF ( InputFileData%Morison%NMGDepths > 0 ) THEN
@@ -1987,9 +1341,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ALLOCATE ( InputFileData%Morison%MGDepths(InputFileData%Morison%NMGDepths), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for MGDepths array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for MGDepths array.'
+         if (Failed())  return;
       END IF
 
       DO I = 1,InputFileData%Morison%NMGDepths
@@ -2001,9 +1355,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
          END IF
 
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Failed to read marine growth depth properties.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-            CALL CleanUp()
-            RETURN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read marine growth depth properties.'
+            if (Failed())  return;
          END IF
          
          IF ( InputFileData%Echo ) THEN
@@ -2020,45 +1374,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Member output list header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
       ! NMOutputs - Number of members to output
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NMOutputs, 'NMOutputs', 'Number of members to output', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Member output list table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
       ! Table header
-
    CALL ReadCom( UnIn, FileName, 'Member output list table header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    IF ( InputFileData%Morison%NMOutputs > 0 ) THEN
@@ -2068,9 +1397,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ALLOCATE ( InputFileData%Morison%MOutLst(InputFileData%Morison%NMOutputs), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for MOutLst array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for MOutLst array.'
+         if (Failed())  return;
       END IF      
 
 
@@ -2082,61 +1411,61 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
             READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%MOutLst(I)%MemberID, InputFileData%Morison%MOutLst(I)%NOutLoc
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Failed to read NOutLoc.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Failed to read NOutLoc.'
+               if (Failed())  return;
             END IF      
 
             
             ALLOCATE ( InputFileData%Morison%MOutLst(I)%NodeLocs(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for NodeLocs array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error allocating space for NodeLocs array.'
+               if (Failed())  return;
             END IF      
 
 
             ALLOCATE ( InputFileData%Morison%MOutLst(I)%MeshIndx1(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for %MeshIndx1 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error allocating space for %MeshIndx1 array.'
+               if (Failed())  return;
             END IF      
             ALLOCATE ( InputFileData%Morison%MOutLst(I)%MemberIndx1(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for %MemberIndx1 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error allocating space for %MemberIndx1 array.'
+               if (Failed())  return;
             END IF
 
             ALLOCATE ( InputFileData%Morison%MOutLst(I)%MeshIndx2(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for %MeshIndx2 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error allocating space for %MeshIndx2 array.'
+               if (Failed())  return;
             END IF      
             ALLOCATE ( InputFileData%Morison%MOutLst(I)%MemberIndx2(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for %MemberIndx2 array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error allocating space for %MemberIndx2 array.'
+               if (Failed())  return;
             END IF    
 
             ALLOCATE ( InputFileData%Morison%MOutLst(I)%s(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
 
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating space for s array.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Error allocating space for s array.'
+               if (Failed())  return;
             END IF      
 
             READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%MOutLst(I)%MemberID,  InputFileData%Morison%MOutLst(I)%NOutLoc,  &
                                          InputFileData%Morison%MOutLst(I)%NodeLocs
 
             IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Failed to read member output list properties.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-               CALL CleanUp()
-               RETURN
+               ErrStat2 = ErrID_Fatal
+               ErrMsg2  = 'Failed to read member output list properties.'
+               if (Failed())  return;
             END IF
 
             IF ( InputFileData%Echo ) THEN
@@ -2154,55 +1483,32 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Joint output list header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
       ! NJOutputs - Number of joints to output
-
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NJOutputs, 'NJOutputs', 'Number of joints to output', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
    IF ( InputFileData%Morison%NJOutputs > 0 ) THEN
 
       ALLOCATE ( InputFileData%Morison%JOutLst(InputFileData%Morison%NJOutputs), STAT = ErrStat2 )
 
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for JOutLst data structures.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for JOutLst data structures.'
+         if (Failed())  return;
       END IF      
 
       CALL AllocAry( tmpArray, InputFileData%Morison%NJOutputs, 'temporary array for Joint outputs', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
+         if (Failed())  return;
 
       CALL ReadAry ( UnIn, FileName, tmpArray, InputFileData%Morison%NJOutputs, 'JOutLst', 'Joint output list', ErrStat2,  ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+         if (Failed())  return;
 
       DO I = 1,InputFileData%Morison%NJOutputs
-
          InputFileData%Morison%JOutLst(I)%JointID = tmpArray(I)
-
       END DO
 
       DEALLOCATE(tmpArray)   
@@ -2213,17 +1519,13 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
       
       ALLOCATE ( tmpArray(1), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating space for temporary array for Joint outputs.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )         
-         CALL Cleanup()         
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating space for temporary array for Joint outputs.'
+         if (Failed())  return;
       END IF
       
       CALL ReadAry ( UnIn, FileName, tmpArray, 1, 'JOutLst', 'Joint output list', ErrStat2,  ErrMsg2, UnEchoLocal )      
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
+         if (Failed())  return;
       
       DEALLOCATE(tmpArray)
       !we just want to read the line for echoing purposes when there are actually 0 Joint Outputs.
@@ -2235,68 +1537,29 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
    CALL ReadCom( UnIn, FileName, 'Output header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
          ! HDSum - Whether or not to generate a summary file
-
    CALL ReadVar ( UnIn, FileName, InputFileData%HDSum, 'HDSum', 'Generate a HydroDyn summary file', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
          ! OutAll - Whether or not to output information for every member and joint
-
    CALL ReadVar ( UnIn, FileName, InputFileData%OutAll, 'OutAll', 'Generate all member and joint outputs', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
+      if (Failed())  return;
 
          ! OutSwtch - Specify how to write to an output file
-
    CALL ReadVar ( UnIn, FileName, InputFileData%OutSwtch, 'OutSwtch', 'Specify how to write to an output file', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
         ! OutFmt - Format for numerical outputs
-
    CALL ReadVar ( UnIn, FileName, InputFileData%OutFmt, 'OutFmt', 'Format for numerical outputs', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
          ! OutSFmt - Format for output column headers
-
    CALL ReadVar ( UnIn, FileName, InputFileData%OutSFmt, 'OutSFmt', 'Format for output column headers', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
 
    !-------------------------------------------------------------------------------------------------
@@ -2313,30 +1576,19 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !      RETURN
    !   END IF
    CALL ReadCom( UnIn, FileName, 'Outputs header', ErrStat2, ErrMsg2, UnEchoLocal )
-   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
       
          ! OutList - list of requested parameters to output to a file
-
    ALLOCATE( InputFileData%UserOutputs(4583), Stat=ErrStat2)  ! Total possible number of output channels:  Waves2 = 18 + SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4032 + HydroDyn=519   =  4583
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating UserOutputs.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL CleanUp()
-         RETURN
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Error allocating UserOutputs.'
+         if (Failed())  return;
       END IF
    
    CALL ReadOutputList ( UnIn, FileName, InputFileData%UserOutputs, InputFileData%NUserOutputs, &
                                               'OutList', 'List of user requested outputs', ErrStat2, ErrMsg2, UnEchoLocal )
-   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
+      if (Failed())  return;
 
    
    !-------------------------------------------------------------------------------------------------
@@ -2349,20 +1601,18 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 CONTAINS
    !..............................
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
    SUBROUTINE Cleanup()
-   
       IF (ALLOCATED(tmpArray)) DEALLOCATE(tmpArray)         
-   
          ! Close input file
-      CLOSE ( UnIn )
-
+      if (UnIn > 0)  close ( UnIn )
          ! Cleanup the Echo file and global variables
       CALL CleanupEchoFile( InputFileData%Echo, UnEchoLocal )
-      
-      
    END SUBROUTINE Cleanup
-   
-
 END SUBROUTINE HydroDynInput_GetInput
 
 
