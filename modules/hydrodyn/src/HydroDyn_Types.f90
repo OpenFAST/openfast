@@ -43,6 +43,7 @@ USE Morison_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs = 537      ! The maximum number of output channels supported by this module [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxUserOutputs = 4583      !  Total possible number of output channels:  Waves2 = 18 + SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4032 + HydroDyn=519   =  4583 [-]
 ! =========  HydroDyn_InputFile  =======
   TYPE, PUBLIC :: HydroDyn_InputFile
     LOGICAL  :: EchoFlag      !< Echo the input file [-]

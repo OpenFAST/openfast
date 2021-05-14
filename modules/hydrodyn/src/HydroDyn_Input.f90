@@ -244,7 +244,7 @@ END SUBROUTINE CleanupEchoFile
 
 
 !====================================================================================================
-SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, ErrMsg )
 !     This public subroutine reads the input required for HydroDyn from the file whose name is an
 !     input parameter.
 !----------------------------------------------------------------------------------------------------
@@ -253,6 +253,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
       ! Passed variables
 
    TYPE(HydroDyn_InitInputType),  INTENT( IN    )   :: InitInp              ! the hydrodyn data
+   TYPE(FileInfoType),            INTENT( IN    )   :: InFileInfo           !< The derived type for holding the file information
    TYPE(HydroDyn_InputFile),      INTENT( INOUT )   :: InputFileData        ! the hydrodyn input file data
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -274,7 +275,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    CHARACTER(1)                                     :: Line1                ! The first character of an input line
    INTEGER(IntKi)                                   :: ErrStat2
    CHARACTER(ErrMsgLen)                             :: ErrMsg2
-   CHARACTER(*),  PARAMETER                         :: RoutineName = 'HydroDynInput_GetInput'
+   CHARACTER(*),  PARAMETER                         :: RoutineName = 'HydroDyn_ParaseInput'
    
    
       ! Initialize local data
@@ -666,7 +667,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
    call ReadFileList ( UnIn, FileName, InputFileData%PotFile, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
-   !CALL ReadAry ( UnIn, FileName, InputFileData%PotFile, InputFileData%nWAMITObj, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
       if (Failed())  return;
 
       ! WAMITULEN - WAMIT characteristic body length scale
@@ -713,10 +713,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 !bjj: should we add this?
 !test for numerical stability
 !      IF ( FP_InitData%RdtnDT <= FP_InitData%RdtnTMax*EPSILON(FP_InitData%RdtnDT) )  THEN  ! Test RdtnDT and RdtnTMax to ensure numerical stability -- HINT: see the use of OnePlusEps."
-!         ErrMsg  = ' RdtnDT must be greater than '//TRIM ( Num2LStr( RdtnTMax*EPSILON(RdtnDT) ) )//' seconds.'
 !         ErrStat = ErrID_Fatal
-!         CLOSE( UnIn )
-!         RETURN
+!         ErrMsg2 = ' RdtnDT must be greater than '//TRIM ( Num2LStr( RdtnTMax*EPSILON(RdtnDT) ) )//' seconds.'
+!         if (Failed())  return;
 !      END IF
 
 
@@ -762,7 +761,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    CALL AllocAry( tmpVec1, InputFileData%nWAMITObj, 'tmpVec1', ErrStat2, ErrMsg2);  if (Failed())  return;
    CALL AllocAry( tmpVec2, 6*InputFileData%NBody,   'tmpVec2', ErrStat2, ErrMsg2);  if (Failed())  return;
 
-   ! Header
+      ! Header
    CALL ReadCom( UnIn, FileName, 'Additional stiffness and damping header', ErrStat2, ErrMsg2, UnEchoLocal )
       if (Failed())  return;
 
@@ -778,7 +777,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    end do
    
       ! AddCLin
-
    do i=1,6*InputFileData%vecMultiplier
 
       write(strI,'(I1)') i
@@ -795,7 +793,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
        ! AddBLin
-
    DO I=1,6*InputFileData%vecMultiplier
 
       WRITE(strI,'(I1)') I
@@ -812,7 +809,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
        ! AddBQuad
-
    DO I=1,6*InputFileData%vecMultiplier
 
       WRITE(strI,'(I1)') I
@@ -841,11 +837,11 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NAxCoefs, 'NAxCoefs', 'Number of axial coefficients', ErrStat2, ErrMsg2, UnEchoLocal )
       if (Failed())  return;
    
-         ! Table header
+      ! Table header
    CALL ReadCom( UnIn, FileName, 'Axial coefficient table header', ErrStat2, ErrMsg2, UnEchoLocal )
       if (Failed())  return;
       
-         ! Table header
+      ! Table header
    CALL ReadCom( UnIn, FileName, 'Axial coefficient table header', ErrStat2, ErrMsg2, UnEchoLocal )
       if (Failed())  return;
   
@@ -853,7 +849,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    IF ( InputFileData%Morison%NAxCoefs > 0 ) THEN
       
          ! Allocate memory for Axial Coef-related arrays
-         
       ALLOCATE ( InputFileData%Morison%AxialCoefs(InputFileData%Morison%NAxCoefs), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
@@ -907,9 +902,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    IF ( InputFileData%Morison%NJoints > 0 ) THEN
 
-
          ! Allocate memory for Joint-related arrays
-
       ALLOCATE ( InputFileData%Morison%InpJoints(InputFileData%Morison%NJoints), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
@@ -969,7 +962,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
          ! Allocate memory for Member cross-section property set-related arrays
-
       ALLOCATE ( InputFileData%Morison%MPropSets(InputFileData%Morison%NPropSets), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
@@ -1068,9 +1060,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    IF ( InputFileData%Morison%NCoefDpth > 0 ) THEN
 
-
          ! Allocate memory for depth-based coefficient arrays
-
       ALLOCATE ( InputFileData%Morison%CoefDpths(InputFileData%Morison%NCoefDpth), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
@@ -1128,9 +1118,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    IF ( InputFileData%Morison%NCoefMembers > 0 ) THEN
 
-
          ! Allocate memory for Member-based coefficient arrays
-
       ALLOCATE ( InputFileData%Morison%CoefMembers(InputFileData%Morison%NCoefMembers), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
@@ -1199,9 +1187,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    IF ( InputFileData%Morison%NMembers > 0 ) THEN
 
-
          ! Allocate memory for Members arrays
-
       ALLOCATE ( InputFileData%Morison%InpMembers(InputFileData%Morison%NMembers), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN         
          ErrStat2 = ErrID_Fatal
@@ -1259,9 +1245,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    IF ( InputFileData%Morison%NFillGroups > 0 ) THEN
 
-
          ! Allocate memory for filled group arrays
-
       ALLOCATE ( InputFileData%Morison%FilledGroups(InputFileData%Morison%NFillGroups), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
@@ -1336,9 +1320,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    IF ( InputFileData%Morison%NMGDepths > 0 ) THEN
 
-
          ! Allocate memory for marine growth depths array
-
       ALLOCATE ( InputFileData%Morison%MGDepths(InputFileData%Morison%NMGDepths), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
@@ -1392,9 +1374,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
    IF ( InputFileData%Morison%NMOutputs > 0 ) THEN
 
-
          ! Allocate memory for filled group arrays
-
       ALLOCATE ( InputFileData%Morison%MOutLst(InputFileData%Morison%NMOutputs), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
@@ -1567,24 +1547,12 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, InputFileData, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-
-   !CALL ReadCom( UnIn, FileName, 'Floating Platform Outputs header', ErrStat2, ErrMsg2, UnEchoLocal )
-   !
-   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   !   IF (ErrStat >= AbortErrLev) THEN
-   !      CALL CleanUp()
-   !      RETURN
-   !   END IF
    CALL ReadCom( UnIn, FileName, 'Outputs header', ErrStat2, ErrMsg2, UnEchoLocal )
       if (Failed())  return;
       
-         ! OutList - list of requested parameters to output to a file
-   ALLOCATE( InputFileData%UserOutputs(4583), Stat=ErrStat2)  ! Total possible number of output channels:  Waves2 = 18 + SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4032 + HydroDyn=519   =  4583
-      IF (ErrStat2 /= 0) THEN
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = 'Error allocating UserOutputs.'
-         if (Failed())  return;
-      END IF
+      ! OutList - list of requested parameters to output to a file
+   call AllocAry( InputFileData%UserOutputs, MaxUserOutputs, 'InputFileData%UserOutputs', ErrStat2, ErrMsg2 )  ! MaxUserOutputs is set in registry 
+      if (Failed())  return;
    
    CALL ReadOutputList ( UnIn, FileName, InputFileData%UserOutputs, InputFileData%NUserOutputs, &
                                               'OutList', 'List of user requested outputs', ErrStat2, ErrMsg2, UnEchoLocal )
@@ -1613,7 +1581,7 @@ CONTAINS
          ! Cleanup the Echo file and global variables
       CALL CleanupEchoFile( InputFileData%Echo, UnEchoLocal )
    END SUBROUTINE Cleanup
-END SUBROUTINE HydroDynInput_GetInput
+END SUBROUTINE HydroDyn_ParseInput
 
 
 

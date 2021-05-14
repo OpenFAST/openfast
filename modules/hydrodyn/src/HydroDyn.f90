@@ -344,23 +344,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
       CALL DispNVD( HydroDyn_ProgDesc )        
       
-      
-      
-      
-      IF ( InitInp%UseInputFile ) THEN
-         
-                  
-         ! Parse all HydroDyn-related input files and populate the *_InitInputType derived types
-         
-         CALL HydroDynInput_GetInput( InitInp, InputFileData, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL CleanUp()
-               RETURN
-            END IF
-         
-      END IF
-
 
       IF ( InitInp%UseInputFile ) THEN
          CALL ProcessComFile( InitInp%InputFile, InFileInfo, ErrStat2, ErrMsg2 )
@@ -373,7 +356,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             CALL Cleanup()
             RETURN
          ENDIF
-                        
       ELSE
          CALL NWTC_Library_CopyFileInfoType( InitInp%PassedFileData, InFileInfo, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -381,17 +363,22 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             CALL Cleanup()
             RETURN
          ENDIF          
-         
       ENDIF
 
 
-           
+
+      ! Parse all HydroDyn-related input and populate the InputFileData structure 
+      CALL HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
       
       
          ! Verify all the necessary initialization data. Do this at the HydroDynInput module-level 
          !   because the HydroDynInput module is also responsible for parsing all this 
          !   initialization data from a file
-
 
       CALL HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
