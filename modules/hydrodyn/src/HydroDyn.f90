@@ -368,7 +368,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
 
       ! Parse all HydroDyn-related input and populate the InputFileData structure 
-      CALL HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
+      CALL HydroDyn_ParseInput( InitInp%InputFile, InitInp%OutRootName, InitInp%defWtrDens, InitInp%defWtrDpth, InitInp%defMSL2SWL, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()

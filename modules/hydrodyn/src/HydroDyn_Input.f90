@@ -31,71 +31,10 @@ MODULE HydroDyn_Input
    USE                              NWTC_RandomNumber
    IMPLICIT                         NONE
 
-   PRIVATE :: CleanupEchoFile
    PRIVATE :: CheckMeshOutput
 
 CONTAINS
    
-SUBROUTINE ReadFileList ( UnIn, Fil, CharAry, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-
-      ! Argument declarations:
-
-   INTEGER,      INTENT(IN)          :: UnIn                                       !< I/O unit for input file.
-   INTEGER,      INTENT(IN)          :: UnEc                                       !< I/O unit for echo file (if > 0).
-   INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
-   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !< Error message
-
-   CHARACTER(*), INTENT(INOUT)       :: CharAry(:)                                 !< Character array being read (calling routine dimensions it to max allowable size).
-
-   CHARACTER(*), INTENT(IN)          :: Fil                                        !< Name of the input file.
-   CHARACTER(*), INTENT(IN)          :: AryDescr                                   !< Text string describing the variable.
-   CHARACTER(*), INTENT(IN)          :: AryName                                    !< Text string containing the variable name.
-
-
-      ! Local declarations:
-
-   INTEGER                          :: MaxAryLen                                   ! Maximum length of the array being read
-   INTEGER                          :: NumWords                                    ! Number of words contained on a line
-
-   CHARACTER(1000)                  :: OutLine                                     ! Character string read from file, containing output list
-   CHARACTER(3)                     :: EndOfFile
-
-
-      ! Initialize some values
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   MaxAryLen  = SIZE(CharAry)
-
-   CharAry = ''
-   
-   ! Read the line containing output parameters and store them in CharAry(:).
-
-   CALL ReadVar ( UnIn, Fil, OutLine, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-      
-   NumWords = CountWords( OutLine )    ! The number of words in OutLine.
-
-
-      ! Check to see if we found the required number of words.
-
-   IF ( NumWords < MaxAryLen )  THEN
-       
-      ErrStat = ErrID_Fatal
-      ErrMsg = 'ReadOutputList: Did not find the required number of Potfile strings on the input file line: only found '//TRIM( Int2LStr(NumWords) )//'.'
-      RETURN
-
-   ELSE
-
-      CALL GetWords ( OutLine, CharAry(1:NumWords), NumWords )
-
-   END IF
-
-   RETURN
-   
-END SUBROUTINE ReadFileList
-
 !====================================================================================================
 FUNCTION CheckMeshOutput( output, numMemberOut, MOutLst, numJointOut )
 !     The routine
@@ -216,158 +155,100 @@ SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat
       END IF
    END DO
    
-   
-   
 END SUBROUTINE PrintBadChannelWarning
 
 
-!====================================================================================================
-SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
-!     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to
-!     any existing echo information
-!----------------------------------------------------------------------------------------------------
-   LOGICAL,                       INTENT( IN    )   :: EchoFlag             ! local version of echo flag
-   INTEGER,                       INTENT( IN    )   :: UnEcho               !  echo unit number
-
-
-      ! Close this module's echo file
-
-   IF ( EchoFlag ) THEN
-    CLOSE(UnEcho)
-   END IF
-
-
-
-END SUBROUTINE CleanupEchoFile
-
-
-
 
 !====================================================================================================
-SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth, defMSL2SWL, FileInfo_In, InputFileData, ErrStat, ErrMsg )
 !     This public subroutine reads the input required for HydroDyn from the file whose name is an
 !     input parameter.
 !----------------------------------------------------------------------------------------------------
 
-
       ! Passed variables
-
-   TYPE(HydroDyn_InitInputType),  INTENT( IN    )   :: InitInp              ! the hydrodyn data
-   TYPE(FileInfoType),            INTENT( IN    )   :: InFileInfo           !< The derived type for holding the file information
-   TYPE(HydroDyn_InputFile),      INTENT( INOUT )   :: InputFileData        ! the hydrodyn input file data
-   INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
-   CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
+   CHARACTER(*),                  intent(in   ) :: InputFileName        !< The name of the input file, for putting in echo file.
+   CHARACTER(*),                  intent(in   ) :: OutRootName          !< The rootname of the echo file, possibly opened in this routine
+   real(ReKi),                    intent(in   ) :: defWtrDens           !< default value for water density
+   real(ReKi),                    intent(in   ) :: defWtrDpth           !< default value for water depth
+   real(ReKi),                    intent(in   ) :: defMSL2SWL           !< default value for mean sea level to still water level
+   TYPE(FileInfoType),            INTENT(IN   ) :: FileInfo_In          !< The derived type for holding the file information
+   TYPE(HydroDyn_InputFile),      INTENT(INOUT) :: InputFileData        ! the hydrodyn input file data
+   INTEGER,                       INTENT(  OUT) :: ErrStat              ! returns a non-zero value when an error occurs
+   CHARACTER(*),                  INTENT(  OUT) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
       ! Local variables
-
-   INTEGER                                          :: I, j                 ! generic integer for counting
-   CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
-   INTEGER                                          :: UnIn                 ! Unit number for the input file
-   INTEGER                                          :: UnEchoLocal          ! The local unit number for this module's echo file
-   CHARACTER(1024)                                  :: EchoFile             ! Name of HydroDyn echo file
-   CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line
-   CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file
-   CHARACTER(  35)                                  :: Frmt                 ! Output format for logical parameters. (matches NWTC Subroutine Library format)
-   real(ReKi), ALLOCATABLE                          :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
-   integer(IntKi)                                   :: startIndx, endIndx   ! indices into working arrays
-   INTEGER, ALLOCATABLE                             :: tmpArray(:)          ! Temporary array storage of the joint output list
-   CHARACTER(1)                                     :: Line1                ! The first character of an input line
-   INTEGER(IntKi)                                   :: ErrStat2
-   CHARACTER(ErrMsgLen)                             :: ErrMsg2
-   CHARACTER(*),  PARAMETER                         :: RoutineName = 'HydroDyn_ParaseInput'
-   
+   INTEGER                                      :: I, j                 ! generic integer for counting
+   CHARACTER(   2)                              :: strI                 ! string version of the loop counter
+   INTEGER                                      :: UnEc                 ! The local unit number for this module's echo file
+   CHARACTER(1024)                              :: EchoFile             ! Name of HydroDyn echo file
+   CHARACTER(1024)                              :: Line                 ! String to temporarially hold value of read line
+   real(ReKi), ALLOCATABLE                      :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
+   integer(IntKi)                               :: startIndx, endIndx   ! indices into working arrays
+   INTEGER, ALLOCATABLE                         :: tmpArray(:)          ! Temporary array storage of the joint output list
+   REAL(ReKi), ALLOCATABLE                      :: tmpReArray(:)        ! Temporary array storage of the joint output list
+   CHARACTER(1)                                 :: Line1                ! The first character of an input line
+   INTEGER(IntKi)                               :: CurLine              !< Current entry in FileInfo_In%Lines array
+   INTEGER(IntKi)                               :: ErrStat2
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2
+   CHARACTER(*),  PARAMETER                     :: RoutineName = 'HydroDyn_ParaseInput'
    
       ! Initialize local data
-
-   UnEchoLocal  = -1
-   UnIn         = -1
-   Frmt         = "( 2X, L11, 2X, A, T30, ' - ', A )"         
-   ErrStat      = ErrID_None         
-   ErrMsg       = ""   
+   UnEc     = -1
+   ErrStat  =  ErrID_None         
+   ErrMsg   =  ""   
    InputFileData%Echo = .FALSE.  ! initialize for error handling (cleanup() routine)
    
-   !-------------------------------------------------------------------------------------------------
-   ! Open the file
-   !-------------------------------------------------------------------------------------------------
-   FileName = TRIM(InitInp%InputFile)
-
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 );              if (Failed())  return;
-   CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 );  if (Failed())  return;
-
-
-   !CALL WrScr( 'Opening HydroDyn input file:  '//FileName )
-
 
    !-------------------------------------------------------------------------------------------------
-   ! File header
+   ! General settings 
    !-------------------------------------------------------------------------------------------------
 
-   CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 1', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
-      
-   CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 2', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
+   CurLine = 3    ! Skip the first three lines as they are known to be header lines and separators
+   call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
 
-     ! Echo Input Files.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
-
-      ! If we are Echoing the input then we should re-read the first three lines so that we can echo them
-      ! using the NWTC_Library routines.  The echoing is done inside those routines via a global variable
-      ! which we must store, set, and then replace on error or completion.
-
-   IF ( InputFileData%Echo ) THEN
-
-      EchoFile = TRIM(InitInp%OutRootName)//'.HD.ech'
-      CALL OpenEcho ( UnEchoLocal, TRIM(EchoFile), ErrStat2, ErrMsg2 )
+   if ( InputFileData%Echo ) then
+      EchoFile = TRIM(OutRootName)//'.HD.ech'
+      CALL OpenEcho ( UnEc, TRIM(EchoFile), ErrStat2, ErrMsg2 )
          if (Failed())  return;
-         
-      REWIND(UnIn)
+      WRITE(UnEc, '(A)') 'Echo file for AeroDyn 15 primary input file: '//trim(InputFileName)
+      ! Write the first three lines into the echo file
+      WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(1))
+      WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(2))
 
-      CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 1', ErrStat2, ErrMsg2, UnEchoLocal )
-         if (Failed())  return;
+      CurLine = 3
+      call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+   endif
 
-      CALL ReadCom( UnIn, FileName, 'HydroDyn input file header line 2', ErrStat2, ErrMsg2, UnEchoLocal )
-         if (Failed())  return;
 
-         ! Echo Input Files. Note this line is prevented from being echoed by the ReadVar routine. (bjj: is that still true?)
-
-      CALL ReadVar ( UnIn, FileName, InputFileData%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEchoLocal )
-         if (Failed())  return;
-
-   END IF
    !-------------------------------------------------------------------------------------------------
    ! Environmental conditions section
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! WtrDens - Water density.
-   CALL ReadVarWDefault ( UnIn, FileName, InputFileData%Waves%WtrDens, 'WtrDens', 'Water density', InitInp%defWtrDens, ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%Waves%WtrDens, defWtrDens, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WtrDpth - Water depth
-   CALL ReadVarWDefault ( UnIn, FileName, InputFileData%Morison%WtrDpth, 'WtrDpth', 'Water depth', InitInp%defWtrDpth, ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDpth', InputFileData%Morison%WtrDpth, defWtrDpth, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! MSL2SWL
-   CALL ReadVarWDefault ( UnIn, FileName, InputFileData%Morison%MSL2SWL, 'MSL2SWL', 'MSL to SWL offset', InitInp%defMSL2SWL, ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'MSL2SWL', InputFileData%Morison%MSL2SWL, defMSL2SWL, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
 
    !-------------------------------------------------------------------------------------------------
    ! Data section for waves
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Wave header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! WaveMod - Wave kinematics model switch.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveModChr, 'WaveMod', 'Wave kinematics model switch', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveMod', InputFileData%Waves%WaveModChr, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
    CALL Conv2UC( InputFileData%Waves%WaveModChr )    ! Convert Line to upper case.
@@ -377,58 +258,55 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
 
 
       ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveStMod, 'WaveStMod', &
-      'Model switch for stretching incident wave kinematics to instantaneous free surface', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveStMod', InputFileData%Waves%WaveStMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveTMax - Analysis time for incident wave calculations.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveTMax, 'WaveTMax', &
-                              'Analysis time for incident wave calculations', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveTMax', InputFileData%Waves%WaveTMax, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveDT - Time step for incident wave calculations
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDT, 'WaveDT', &
-                        'Time step for incident wave calculations', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveDT', InputFileData%Waves%WaveDT, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveHs - Significant wave height
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveHs, 'WaveHs', 'Significant wave height', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveHs', InputFileData%Waves%WaveHs, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveTp - Peak spectral period.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveTp, 'WaveTp', 'Peak spectral period', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveTp', InputFileData%Waves%WaveTp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WavePkShp - Peak shape parameter.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WavePkShpChr, 'WavePkShp', 'Peak shape parameter', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WavePkShp', InputFileData%Waves%WavePkShpChr, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvLowCOff - Low Cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).  
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WvLowCOff, 'WvLowCOff', 'Lower wave cut-off frequency', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvLowCOff', InputFileData%Waves%WvLowCOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
      ! WvHiCOff - High Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).  
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WvHiCOff, 'WvHiCOff', 'Upper wave cut-off frequency', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvHiCOff', InputFileData%Waves%WvHiCOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
    
       ! WaveDir - Mean wave heading direction.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDir, 'WaveDir', 'Mean wave heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveDir', InputFileData%Waves%WaveDir, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveDirMod -  Directional spreading function {0: None, 1: COS2S}       (-) [Used only if WaveMod=2]
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDirMod, 'WaveDirMod', 'Directional spreading function', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveDirMod', InputFileData%Waves%WaveDirMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveDirSpread -  Spreading coefficient [only used if WaveMod=2 and WaveDirMod=1]
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDirSpread, 'WaveDirSpread', 'Wave direction spreading coefficient', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveDirSpread', InputFileData%Waves%WaveDirSpread, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveNDir -  The number of wave directions to calculate [must be odd; only used if WaveDirMod=1]
-   CALL ReadVar (UnIn, FileName, InputFileData%Waves%WaveNDir, 'WaveNDir', 'Number of wave directions to calculate', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveNDir', InputFileData%Waves%WaveNDir, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveDirRange - Full range of the wave directions from WaveDir - WaveDirRange/2 to WaveDir + WaveDirRange/2 (only used if WaveMod=2 and WaveDirMod=1)
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveDirRange, 'WaveDirRange', 'Maximum wave heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveDirRange', InputFileData%Waves%WaveDirRange, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Negative values should be treated as positive.
@@ -436,12 +314,12 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
 
 
       ! WaveSeed(1)
-   CALL ReadVar( UnIn, FileName, InputFileData%Waves%WaveSeed(1), 'WaveSeed(1)', "Random seed #1", ErrStat2, ErrMsg2, UnEchoLocal)
+   call ParseVar( FileInfo_In, CurLine, 'WaveSeed(1)', InputFileData%Waves%WaveSeed(1), ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
    InputFileData%Waves%RNG%RandSeed(1) = InputFileData%Waves%WaveSeed(1)
 
       !WaveSeed(2)
-   CALL ReadVar( UnIn, FileName, Line, 'WaveSeed(2)', "Random seed #2", ErrStat2, ErrMsg2, UnEchoLocal)
+   call ParseVar( FileInfo_In, CurLine, 'WaveSeed(2)', Line, ErrStat2, ErrMsg2, UnEc )    ! Read into a string and then parse
       if (Failed())  return;
 
    READ (Line,*,IOSTAT=ErrStat2) Line1  ! check the first character to make sure we don't have T/F, which can be interpreted as 1/-1 or 0 in Fortran
@@ -474,20 +352,18 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
 
    ENDIF
 
+
       ! WaveNDAmp - Flag for normally distributed amplitudes.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WaveNDAmp, 'WaveNDAmp', 'Normally distributed amplitudes', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WaveNDAmp', InputFileData%Waves%WaveNDAmp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvKinFile
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%WvKinFile, 'WvKinFile', &
-                                    'Root name of wave kinematics files', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvKinFile', InputFileData%Waves%WvKinFile, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! NWaveElev
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves%NWaveElev, 'NWaveElev', &
-                                  'Number of points where the incident wave elevations can be output', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NWaveElev', InputFileData%Waves%NWaveElev, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-
 
       ! This check is needed here instead of being located in HydroDynInput_ProcessInputData() because
       ! we need to allocate arrays.  If _GetInput() was skipped, then these array would already have
@@ -497,152 +373,134 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
       ErrStat2 = ErrID_Fatal
       ErrMsg2  = 'NWaveElev must be greater than or equal to zero and less than 10.'
       if (Failed())  return;
-   ELSE
-
-         ! allocate space for the output location arrays:
-      CALL AllocAry( InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, 'WaveElevxi' , ErrStat2, ErrMsg2);  if (Failed())  return;
-      CALL AllocAry( InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, 'WaveElevyi' , ErrStat2, ErrMsg2);  if (Failed())  return;
-      
    END IF
 
+      ! allocate space for the output location arrays:
+   CALL AllocAry( InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, 'WaveElevxi' , ErrStat2, ErrMsg2);  if (Failed())  return;
+   CALL AllocAry( InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, 'WaveElevyi' , ErrStat2, ErrMsg2);  if (Failed())  return;
+      
       ! WaveElevxi
-   CALL ReadAry ( UnIn, FileName, InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, 'WaveElevxi', &
-                           'List of xi-coordinates for points where the incident wave elevations can be output', ErrStat2,  ErrMsg2, UnEchoLocal)
+   call ParseAry ( FileInfo_In, CurLine, 'WaveElevxi.', InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveElevyi
-   CALL ReadAry ( UnIn, FileName, InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, 'WaveElevyi', &
-                           'List of yi-coordinates for points where the incident wave elevations can be output', ErrStat2,  ErrMsg2, UnEchoLocal )
+   call ParseAry ( FileInfo_In, CurLine, 'WaveElevyi.', InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-
 
 
    !-------------------------------------------------------------------------------------------------
    ! Data section for 2nd Order Waves 
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Waves 2nd order', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! WvDiffQTFF     - Second order waves -- difference forces
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvDiffQTFF, 'WvDiffQTFF', 'Full difference QTF second order kinematic forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvDiffQTF', InputFileData%Waves2%WvDiffQTFF, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvSumQTFF      - Second order waves -- sum forces
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvSumQTFF, 'WvSumQTFF', 'Full sum QTF  second order kinematic forces flag', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvSumQTF', InputFileData%Waves2%WvSumQTFF, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvLowCOffD   -- Minimum frequency used in the difference methods (rad/s)              [Only used if DiffQTF /= 0]
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvLowCOffD, 'WvLowCOffD', 'Minimum frequency used in second order difference forces', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvLowCOffD', InputFileData%Waves2%WvLowCOffD, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvHiCOffD   -- Maximum frequency used in the difference methods  (rad/s)              [Only used if DiffQTF /= 0]
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvHiCOffD, 'WvHiCOffD', 'Maximum frequency used in second order difference forces', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvHiCOffD', InputFileData%Waves2%WvHiCOffD, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvLowCOffS   -- Minimum frequency used in the        sum-QTF     (rad/s)              [Only used if  SumQTF /= 0]
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvLowCOffS, 'WvLowCOffS', 'Minimum frequency used in second order sum forces', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvLowCOffS', InputFileData%Waves2%WvLowCOffS, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvHiCOffS   -- Maximum frequency used in the        sum-QTF      (rad/s)              [Only used if  SumQTF /= 0]
-   CALL ReadVar ( UnIn, FileName, InputFileData%Waves2%WvHiCOffS, 'WvHiCOffS', 'Maximum frequency used in second order sum forces', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'WvHiCOffS', InputFileData%Waves2%WvHiCOffS, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-
 
 
    !-------------------------------------------------------------------------------------------------
    ! Data section for current
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Current header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! CurrMod - Current profile model switch
-   CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrMod, 'CurrMod', 'Current profile model switch', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'CurrMod', InputFileData%Current%CurrMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! CurrSSV0 - Sub-surface current velocity at still water level
-   CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrSSV0, 'CurrSSV0', 'Sub-surface current velocity at still water level', &
-                         ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'CurrSSV0', InputFileData%Current%CurrSSV0, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
 
       ! CurrSSDirChr - Sub-surface current heading direction
-   CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrSSDirChr, 'CurrSSDirChr', 'Sub-surface current heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'CurrSSDir', InputFileData%Current%CurrSSDirChr, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
    CALL Conv2UC( InputFileData%Current%CurrSSDirChr )    ! Convert Line to upper case.
 
 
       ! CurrNSRef - Near-surface current reference depth.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrNSRef, 'CurrNSRef', 'Near-surface current reference depth', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'CurrNSRef', InputFileData%Current%CurrNSRef, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! CurrNSV0 - Near-surface current velocity at still water level.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrNSV0, 'CurrNSV0', 'Near-surface current velocity at still water level', &
-                           ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'CurrNSV0', InputFileData%Current%CurrNSV0, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! CurrNSDir - Near-surface current heading direction.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrNSDir, 'CurrNSDir', 'Near-surface current heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'CurrNSDir', InputFileData%Current%CurrNSDir, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! CurrDIV - Depth-independent current velocity.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrDIV, 'CurrDIV', 'Depth-independent current velocity', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'CurrDIV', InputFileData%Current%CurrDIV, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! CurrDIDir - Depth-independent current heading direction.
-   CALL ReadVar ( UnIn, FileName, InputFileData%Current%CurrDIDir, 'CurrDIDir', 'Depth-independent current heading direction', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'CurrDIDir', InputFileData%Current%CurrDIDir, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-
 
 
    !-------------------------------------------------------------------------------------------------
    ! Data section for floating platform
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Floating platform header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! PotMod - State indicating potential flow model used in the simulation. 0=none, 1=WAMIT, 2=FIT
-   CALL ReadVar ( UnIn, FileName, InputFileData%PotMod, 'PotMod', 'Potential flow model', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'PotMod', InputFileData%PotMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! ExctnMod  - Wave Excitation model {0: None, 1: DFT, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
-   CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT%ExctnMod, 'ExctnMod', &
-                                 'Wave Excitation model', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'ExctnMod', InputFileData%WAMIT%ExctnMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
-  CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT%RdtnMod, 'RdtnMod', &
-                                 'Radiation memory-effect model', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'RdtnMod', InputFileData%WAMIT%RdtnMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! RdtnTMax - Analysis time for wave radiation kernel calculations
       ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
-   CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT%RdtnTMax, 'RdtnTMax', &
-                                 'Analysis time for wave radiation kernel calculations', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'RdtnTMax', InputFileData%WAMIT%RdtnTMax, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! RdtnDT - Time step for wave radiation kernel calculations
-   CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT%Conv_Rdtn%RdtnDTChr, 'RdtnDT', 'Time step for wave radiation kernel calculations', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'RdtnDT', InputFileData%WAMIT%Conv_Rdtn%RdtnDTChr, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! NBody - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data 
       !         contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there 
       !         are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
-   CALL ReadVar ( UnIn, FileName, InputFileData%NBody, 'NBody', 'Number of WAMIT bodies', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NBody', InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! NBodyMod - Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 
       !            2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms 
       !            between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]
-   CALL ReadVar ( UnIn, FileName, InputFileData%NBodyMod, 'NBodyMod', 'Body coupling model', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NBodyMod', InputFileData%NBodyMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
       
          ! allocate space for the WAMIT-related data arrays:
@@ -666,50 +524,43 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
 
 
       ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
-   call ReadFileList ( UnIn, FileName, InputFileData%PotFile, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'PotFile', InputFileData%PotFile, InputFileData%nWAMITObj, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WAMITULEN - WAMIT characteristic body length scale
-   CALL ReadAry ( UnIn, FileName, InputFileData%WAMITULEN, InputFileData%nWAMITObj, 'WAMITULEN', 'WAMIT characteristic body length scale', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'WAMITULEN', InputFileData%WAMITULEN, InputFileData%nWAMITObj, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! PtfmRefxt  - The xt offset of the body reference point(s) from (0,0,0) (meters)
-   CALL ReadAry ( UnIn, FileName, InputFileData%PtfmRefxt, InputFileData%NBody, 'PtfmRefxt', &
-      'xt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'PtfmRefxt', InputFileData%PtfmRefxt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! PtfmRefyt  - The yt offset of the body reference point(s) from (0,0,0) (meters)
-   CALL ReadAry ( UnIn, FileName, InputFileData%PtfmRefyt, InputFileData%NBody, 'PtfmRefyt', &
-      'yt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'PtfmRefyt', InputFileData%PtfmRefyt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! PtfmRefzt  - The zt offset of the body reference point(s) from (0,0,0) (meters)
-   CALL ReadAry ( UnIn, FileName, InputFileData%PtfmRefzt, InputFileData%NBody, 'PtfmRefzt', &
-      'zt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'PtfmRefzt', InputFileData%PtfmRefzt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! PtfmRefztRot  - The rotation about zt of the body reference frame(s) from xt/yt (deg)
-   CALL ReadAry ( UnIn, FileName, InputFileData%PtfmRefztRot, InputFileData%NBody, 'PtfmRefzt', &
-      'The rotation about zt of the body reference frame(s) from xt/yt', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'PtfmRefzt', InputFileData%PtfmRefzt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
    InputFileData%PtfmRefztRot = InputFileData%PtfmRefztRot*D2R_D ! Convert to radians
    
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
-   CALL ReadAry ( UnIn, FileName, InputFileData%PtfmVol0, InputFileData%NBody, 'PtfmVol0', &
-      'Displaced volume of water when the platform is in its undisplaced position', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'PtfmVol0', InputFileData%PtfmVol0, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! PtfmCOBxt  - The xt offset of the center of buoyancy (COB) from the WAMIT reference point
-   CALL ReadAry ( UnIn, FileName, InputFileData%PtfmCOBxt, InputFileData%NBody, 'PtfmCOBxt', &
-      'xt offset of the center of buoyancy (COB) from the WAMIT reference point', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'PtfmCOBxt', InputFileData%PtfmCOBxt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! PtfmCOByt - The yt offset of the center of buoyancy (COB) from the WAMIT reference point
-   CALL ReadAry ( UnIn, FileName, InputFileData%PtfmCOByt, InputFileData%NBody, 'PtfmCOByt', &
-      'yt offset of the center of buoyancy (COB) from the WAMIT reference point', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseAry( FileInfo_In, CurLine, 'PtfmCOByt', InputFileData%PtfmCOByt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-
    
+
 !bjj: should we add this?
 !test for numerical stability
 !      IF ( FP_InitData%RdtnDT <= FP_InitData%RdtnTMax*EPSILON(FP_InitData%RdtnDT) )  THEN  ! Test RdtnDT and RdtnTMax to ensure numerical stability -- HINT: see the use of OnePlusEps."
@@ -723,35 +574,32 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
    !-------------------------------------------------------------------------------------------------
    ! Data section for 2nd order WAMIT forces
    !-------------------------------------------------------------------------------------------------
-
-
-     ! Header
-   CALL ReadCom( UnIn, FileName, '2nd order forces header (WAMIT2 module)', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
         ! MnDrift    -- Mean drift forces computed from WAMIT file: {0: No mean drift, [7, 8, 9, 10, 11, or 12]: WAMIT file to use}
-   CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT2%MnDrift, 'MnDrift', 'Mean drift forces computed from WAMIT file: {0: No mean drift, [7, 8, 9, 10, 11, or 12]: WAMIT file to use}', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'MnDrift', InputFileData%WAMIT2%MnDrift, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
         ! NewmanApp  -- Slow drift forces computed with Newman's approximation from  WAMIT file: {0: No mean drift, [7, 8, 9, 10, 11, or 12]: WAMIT file to use}
-   CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT2%NewmanApp, 'NewmanApp', 'Mean drift forces computed from WAMIT file: {0: No mean drift, [7, 8, 9, 10, 11, or 12]: WAMIT file to use}', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NewmanApp', InputFileData%WAMIT2%NewmanApp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
         ! DiffQTF    -- Full Difference-Frequency forces computed with full QTFs from WAMIT file: {0: No difference-frequency forces, [10, 11, or 12]: WAMIT file to use} -- Only one of MnDrift, NewmanApp, or DiffQYT can be non-zero
-   CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT2%DiffQTF, 'DiffQTF', 'Full Difference-Frequency forces computed with full QTFs from WAMIT file: '// &
-       '{0: No difference-frequency forces, [10, 11, or 12]: WAMIT file to use} -- Only one of MnDrift, NewmanApp, or DiffQYT can be non-zero', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'DiffQTF', InputFileData%WAMIT2%DiffQTF, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-
 
         ! SumQTF     -- Full        Sum-Frequency forces computed with full QTFs from WAMIT file: {0: No        Sum-frequency forces, [10, 11, or 12]: WAMIT file to use}
-   CALL ReadVar ( UnIn, FileName, InputFileData%WAMIT2%SumQTF, 'SumQTF', 'Full Sum-Frequency forces computed with full QTFs from WAMIT file: {0: No Sum-frequency forces, [10, 11, or 12]: WAMIT file to use}', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'SumQTF', InputFileData%WAMIT2%SumQTF, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-
 
 
    !-------------------------------------------------------------------------------------------------
    ! Floating Platform Additional Stiffness and Damping Section
    !-------------------------------------------------------------------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
+
    ! If NBodyMod = 1 then vecMultiplier = NBody and nWAMITObj = 1
    ! Else                 vecMultiplier = 1     and nWAMITObj = NBody
    CALL AllocAry( InputFileData%AddF0,     InputFileData%vecMultiplier*6, InputFileData%nWAMITObj, 'InputFileData%AddF0'    , ErrStat2, ErrMsg2);                                   if (Failed())  return; 
@@ -761,14 +609,9 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
    CALL AllocAry( tmpVec1, InputFileData%nWAMITObj, 'tmpVec1', ErrStat2, ErrMsg2);  if (Failed())  return;
    CALL AllocAry( tmpVec2, 6*InputFileData%NBody,   'tmpVec2', ErrStat2, ErrMsg2);  if (Failed())  return;
 
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Additional stiffness and damping header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
       ! AddF0 - Additional preload
    do i = 1,6*InputFileData%vecMultiplier   
-      CALL ReadAry ( UnIn, FileName, tmpVec1, InputFileData%nWAMITObj, 'AddF0', &
-                              ' Additional preload vector', ErrStat2,  ErrMsg2, UnEchoLocal )
+      call ParseAry( FileInfo_In, CurLine, 'AddF0', tmpVec1, InputFileData%nWAMITObj, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
 
       do j = 1, InputFileData%nWAMITObj
@@ -780,8 +623,8 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
    do i=1,6*InputFileData%vecMultiplier
 
       write(strI,'(I1)') i
-      call ReadAry ( UnIn, FileName, tmpVec2, 6*InputFileData%NBody, 'AddCLin', &
-                           ' Row '//strI//' of the additional linear stiffness matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
+      call ParseAry( FileInfo_In, CurLine, ' Row '//strI//' of the additional linear stiffness matrix', &
+                     tmpVec2, 6*InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
 
       do j = 1, InputFileData%nWAMITObj
@@ -795,9 +638,8 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
        ! AddBLin
    DO I=1,6*InputFileData%vecMultiplier
 
-      WRITE(strI,'(I1)') I
-      CALL ReadAry ( UnIn, FileName, tmpVec2, 6*InputFileData%NBody, 'AddBLin', &
-                           ' Row '//strI//' of the additional linear damping matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
+      call ParseAry( FileInfo_In, CurLine, ' Row '//strI//' of the additional linear damping matrix', &
+                     tmpVec2, 6*InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
 
       do j = 1, InputFileData%nWAMITObj
@@ -811,9 +653,8 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
        ! AddBQuad
    DO I=1,6*InputFileData%vecMultiplier
 
-      WRITE(strI,'(I1)') I
-      CALL ReadAry ( UnIn, FileName, tmpVec2, 6*InputFileData%NBody, 'AddBQuad', &
-                           ' Row '//strI//' of the additional quadratic damping matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
+      call ParseAry( FileInfo_In, CurLine, ' Row '//strI//' of the additional quadratic damping matrix', &
+                     tmpVec2, 6*InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
 
       do j = 1, InputFileData%nWAMITObj
@@ -827,26 +668,22 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
    !-------------------------------------------------------------------------------------------------
    !  Axial Coefficients Section
    !-------------------------------------------------------------------------------------------------
-   
-   
-       ! Header
-   CALL ReadCom( UnIn, FileName, 'Axial coefs header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
    
       ! NAxCoef - Number of axial coefficients
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NAxCoefs, 'NAxCoefs', 'Number of axial coefficients', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NAxCoef', InputFileData%Morison%NAxCoefs, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
    
       ! Table header
-   CALL ReadCom( UnIn, FileName, 'Axial coefficient table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-      
-      ! Table header
-   CALL ReadCom( UnIn, FileName, 'Axial coefficient table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Axial coefficient table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Axial coefficient table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
   
- 
    IF ( InputFileData%Morison%NAxCoefs > 0 ) THEN
+      CALL AllocAry( tmpReArray, 4, 'temporary array for AxialCoefs', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
       
          ! Allocate memory for Axial Coef-related arrays
       ALLOCATE ( InputFileData%Morison%AxialCoefs(InputFileData%Morison%NAxCoefs), STAT = ErrStat2 )
@@ -858,49 +695,37 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
           
       DO I = 1,InputFileData%Morison%NAxCoefs
             ! read the table entries   AxCoefID   CdAx  CaAx    in the HydroDyn input file
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line 
-            
-         IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%AxialCoefs(I)%AxCoefID, InputFileData%Morison%AxialCoefs(I)%AxCd, InputFileData%Morison%AxialCoefs(I)%AxCa, InputFileData%Morison%AxialCoefs(I)%AxCp
-         END IF      
-       
-         IF ( ErrStat2 /= 0 ) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Failed to read axial coefficients.'
+         call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
             if (Failed())  return;
-         END IF 
-         
-         IF ( InputFileData%Echo ) THEN
-            WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-         END IF
-         
+         InputFileData%Morison%AxialCoefs(I)%AxCoefID = NINT(tmpReArray(1))
+         InputFileData%Morison%AxialCoefs(I)%AxCd     =      tmpReArray(2)
+         InputFileData%Morison%AxialCoefs(I)%AxCa     =      tmpReArray(3)
+         InputFileData%Morison%AxialCoefs(I)%AxCp     =      tmpReArray(4)
       END DO
-      
+
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
-   
+
    
    !-------------------------------------------------------------------------------------------------
    ! Member Joints Section
    !-------------------------------------------------------------------------------------------------
-
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Member joints header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NJoints - Number of member joints
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NJoints, 'NJoints', 'Number of member joints', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NJoints', InputFileData%Morison%NJoints, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
-         ! Table header
-   CALL ReadCom( UnIn, FileName, 'Member joints table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-         ! Table header
-   CALL ReadCom( UnIn, FileName, 'Member joints table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+      ! Table header
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Joints table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Joints table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
    IF ( InputFileData%Morison%NJoints > 0 ) THEN
+      CALL AllocAry( tmpReArray, 6, 'temporary array for InpJoints', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
 
          ! Allocate memory for Joint-related arrays
       ALLOCATE ( InputFileData%Morison%InpJoints(InputFileData%Morison%NJoints), STAT = ErrStat2 )
@@ -912,54 +737,40 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
 
       DO I = 1,InputFileData%Morison%NJoints
             ! read the table entries   JointID   Jointxi     Jointyi    Jointzi      JointAxID   JointOvrlp    in the HydroDyn input file
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
-
-         IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat2)  InputFileData%Morison%InpJoints(I)%JointID, InputFileData%Morison%InpJoints(I)%Position(1),     &
-                                          InputFileData%Morison%InpJoints(I)%Position(2), InputFileData%Morison%InpJoints(I)%Position(3), &
-                                          InputFileData%Morison%InpJoints(I)%JointAxID, InputFileData%Morison%InpJoints(I)%JointOvrlp
-         END IF
-
-         IF ( ErrStat2 /= 0 ) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Failed to read joints.'
+         call ParseAry( FileInfo_In, CurLine, ' joints table line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
             if (Failed())  return;
-         END IF
-
-         IF ( InputFileData%Echo ) THEN
-            WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-         END IF
-
+         InputFileData%Morison%InpJoints(I)%JointID      =  NINT(tmpReArray(1))
+         InputFileData%Morison%InpJoints(I)%Position(1)  =       tmpReArray(2)
+         InputFileData%Morison%InpJoints(I)%Position(2)  =       tmpReArray(3)
+         InputFileData%Morison%InpJoints(I)%Position(3)  =       tmpReArray(4)
+         InputFileData%Morison%InpJoints(I)%JointAxID    =  NINT(tmpReArray(5))
+         InputFileData%Morison%InpJoints(I)%JointOvrlp   =  NINT(tmpReArray(6))
       END DO
 
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
-
-
 
 
    !-------------------------------------------------------------------------------------------------
    ! Member Cross-section Properties Section
    !-------------------------------------------------------------------------------------------------
-
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Member cross-section properties header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NPropSets - Number of member cross-section property sets
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NPropSets, 'NPropSets', 'Number of member cross-section property sets', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NPropSets', InputFileData%Morison%NPropSets, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   CALL ReadCom( UnIn, FileName, 'Member cross-section properties table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-      ! Table header
-   CALL ReadCom( UnIn, FileName, 'Member cross-section properties table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'MPropSets table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'MPropSets table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
    IF ( InputFileData%Morison%NPropSets > 0 ) THEN
 
+      CALL AllocAry( tmpReArray, 3, 'temporary array for MPropSets', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
 
          ! Allocate memory for Member cross-section property set-related arrays
       ALLOCATE ( InputFileData%Morison%MPropSets(InputFileData%Morison%NPropSets), STAT = ErrStat2 )
@@ -969,96 +780,71 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
          if (Failed())  return;
       END IF
 
-
       DO I = 1,InputFileData%Morison%NPropSets
-
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
-
-         IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat) InputFileData%Morison%MPropSets(I)%PropSetID, InputFileData%Morison%MPropSets(I)%PropD, InputFileData%Morison%MPropSets(I)%PropThck
-         END IF
-
-         IF ( ErrStat2 /= 0 ) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Failed to read member cross-section properties.'
+         call ParseAry( FileInfo_In, CurLine, ' MPropSets line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
             if (Failed())  return;
-         END IF
-            
-         IF ( InputFileData%Echo ) THEN
-            WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-         END IF
-
+         InputFileData%Morison%MPropSets(I)%PropSetID = NINT(tmpReArray(1))
+         InputFileData%Morison%MPropSets(I)%PropD     =      tmpReArray(2)
+         InputFileData%Morison%MPropSets(I)%PropThck  =      tmpReArray(3)
       END DO
 
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
-
-
-
 
 
    !-------------------------------------------------------------------------------------------------
    ! Simple hydrodynamic coefficients Section
    !-------------------------------------------------------------------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
+      ! Table header
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Simple hydrodynamic coefficients header', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL AllocAry( tmpReArray, 12, 'temporary array for Simple hydrodynamic coefficients', ErrStat2, ErrMsg2 )
+      if (Failed())  return;
+   call ParseAry( FileInfo_In, CurLine, 'Simple hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Simple hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   InputFileData%Morison%SimplCd       = tmpReArray( 1)
+   InputFileData%Morison%SimplCdMG     = tmpReArray( 2)
+   InputFileData%Morison%SimplCa       = tmpReArray( 3)
+   InputFileData%Morison%SimplCaMG     = tmpReArray( 4)
+   InputFileData%Morison%SimplCp       = tmpReArray( 5)
+   InputFileData%Morison%SimplCpMG     = tmpReArray( 6)
+   InputFileData%Morison%SimplAxCd     = tmpReArray( 7)
+   InputFileData%Morison%SimplAxCdMG   = tmpReArray( 8)
+   InputFileData%Morison%SimplAxCa     = tmpReArray( 9)
+   InputFileData%Morison%SimplAxCaMG   = tmpReArray(10)
+   InputFileData%Morison%SimplAxCp     = tmpReArray(11)
+   InputFileData%Morison%SimplAxCpMG   = tmpReArray(12)
 
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Simple hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-
-   READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
-
-   IF (ErrStat2 == 0) THEN
-      READ(Line,*,IOSTAT=ErrStat2)  InputFileData%Morison%SimplCd, InputFileData%Morison%SimplCdMG, InputFileData%Morison%SimplCa,        &
-                                    InputFileData%Morison%SimplCaMG, InputFileData%Morison%SimplCp, InputFileData%Morison%SimplCpMG,      &
-                                    InputFileData%Morison%SimplAxCd, InputFileData%Morison%SimplAxCdMG, InputFileData%Morison%SimplAxCa,  &
-                                    InputFileData%Morison%SimplAxCaMG, InputFileData%Morison%SimplAxCp, InputFileData%Morison%SimplAxCpMG
-   END IF
-
-   IF ( ErrStat2 /= 0 ) THEN
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = 'Failed to read simple hydrodynamic coefficients.'
-      if (Failed())  return;
-   END IF
-
-   IF ( InputFileData%Echo ) THEN
-      WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-   END IF
-
-
+   if (allocated(tmpReArray))      deallocate(tmpReArray)
 
 
    !-------------------------------------------------------------------------------------------------
    ! Depth-based Hydrodynamic Coefficients Section
    !-------------------------------------------------------------------------------------------------
-
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Depth-based hydrodynamic coefficients header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NCoefDpth - Number of depth-based hydrodynamic coefficient property sets
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NCoefDpth, 'NCoefDpth', 'Number of depth-based hydrodynamic coefficient property sets', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NCoefDpth', InputFileData%Morison%NCoefDpth, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   CALL ReadCom( UnIn, FileName, 'Depth-based hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-      ! Table header
-   CALL ReadCom( UnIn, FileName, 'Depth-based hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Depth-based hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Depth-based hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
    IF ( InputFileData%Morison%NCoefDpth > 0 ) THEN
+
+      CALL AllocAry( tmpReArray, 13, 'temporary array for CoefDpths', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
 
          ! Allocate memory for depth-based coefficient arrays
       ALLOCATE ( InputFileData%Morison%CoefDpths(InputFileData%Morison%NCoefDpth), STAT = ErrStat2 )
@@ -1069,54 +855,48 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
       END IF
                   
       DO I = 1,InputFileData%Morison%NCoefDpth
-
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
-
-         IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefDpths(I)%Dpth, InputFileData%Morison%CoefDpths(I)%DpthCd, InputFileData%Morison%CoefDpths(I)%DpthCdMG, &
-                                         InputFileData%Morison%CoefDpths(I)%DpthCa, InputFileData%Morison%CoefDpths(I)%DpthCaMG, InputFileData%Morison%CoefDpths(I)%DpthCp, InputFileData%Morison%CoefDpths(I)%DpthCpMG, &
-                                         InputFileData%Morison%CoefDpths(I)%DpthAxCd, InputFileData%Morison%CoefDpths(I)%DpthAxCdMG, InputFileData%Morison%CoefDpths(I)%DpthAxCa, &
-                                         InputFileData%Morison%CoefDpths(I)%DpthAxCaMG, InputFileData%Morison%CoefDpths(I)%DpthAxCp, InputFileData%Morison%CoefDpths(I)%DpthAxCpMG
-         END IF
-
-         IF (ErrStat2 /= 0) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Failed to read depth-based coefficient array.'
+         call ParseAry( FileInfo_In, CurLine, ' CoefDpths coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
             if (Failed())  return;
-         END IF
 
-         IF ( InputFileData%Echo ) THEN
-            WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-         END IF
-
+         InputFileData%Morison%CoefDpths(I)%Dpth         = tmpReArray( 1)
+         InputFileData%Morison%CoefDpths(I)%DpthCd       = tmpReArray( 2)
+         InputFileData%Morison%CoefDpths(I)%DpthCdMG     = tmpReArray( 3)
+         InputFileData%Morison%CoefDpths(I)%DpthCa       = tmpReArray( 4)
+         InputFileData%Morison%CoefDpths(I)%DpthCaMG     = tmpReArray( 5)
+         InputFileData%Morison%CoefDpths(I)%DpthCp       = tmpReArray( 6)
+         InputFileData%Morison%CoefDpths(I)%DpthCpMG     = tmpReArray( 7)
+         InputFileData%Morison%CoefDpths(I)%DpthAxCd     = tmpReArray( 8)
+         InputFileData%Morison%CoefDpths(I)%DpthAxCdMG   = tmpReArray( 9)
+         InputFileData%Morison%CoefDpths(I)%DpthAxCa     = tmpReArray(10)
+         InputFileData%Morison%CoefDpths(I)%DpthAxCaMG   = tmpReArray(11)
+         InputFileData%Morison%CoefDpths(I)%DpthAxCp     = tmpReArray(12)
+         InputFileData%Morison%CoefDpths(I)%DpthAxCpMG   = tmpReArray(13)
       END DO
 
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Member-based Hydrodynamic Coefficients Section
    !-------------------------------------------------------------------------------------------------
-
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Member-based hydrodynamic coefficients header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NCoefMembers - Number of member-based hydrodynamic coefficient property sets
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NCoefMembers, 'NCoefMembers', 'Number of member-based hydrodynamic coefficient property sets', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NCoefMembers', InputFileData%Morison%NCoefMembers, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   CALL ReadCom( UnIn, FileName, 'Member-based hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-      ! Table header
-   CALL ReadCom( UnIn, FileName, 'Member-based hydrodynamic coefficients table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member-based hydrodynamic coefficients table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member-based hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
    IF ( InputFileData%Morison%NCoefMembers > 0 ) THEN
+
+      CALL AllocAry( tmpReArray, 25, 'temporary array for CoefMembers', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
 
          ! Allocate memory for Member-based coefficient arrays
       ALLOCATE ( InputFileData%Morison%CoefMembers(InputFileData%Morison%NCoefMembers), STAT = ErrStat2 )
@@ -1127,63 +907,55 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
       END IF
 
       DO I = 1,InputFileData%Morison%NCoefMembers
-
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
-
-         IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%CoefMembers(I)%MemberID,      &
-                                         InputFileData%Morison%CoefMembers(I)%MemberCd1,     InputFileData%Morison%CoefMembers(I)%MemberCd2,     &
-                                         InputFileData%Morison%CoefMembers(I)%MemberCdMG1,   InputFileData%Morison%CoefMembers(I)%MemberCdMG2,   &
-                                         InputFileData%Morison%CoefMembers(I)%MemberCa1,     InputFileData%Morison%CoefMembers(I)%MemberCa2,     &
-                                         InputFileData%Morison%CoefMembers(I)%MemberCaMG1,   InputFileData%Morison%CoefMembers(I)%MemberCaMG2,   &
-                                         InputFileData%Morison%CoefMembers(I)%MemberCp1,     InputFileData%Morison%CoefMembers(I)%MemberCp2,     &
-                                         InputFileData%Morison%CoefMembers(I)%MemberCpMG1,   InputFileData%Morison%CoefMembers(I)%MemberCpMG2,   &
-                                         InputFileData%Morison%CoefMembers(I)%MemberAxCd1,   InputFileData%Morison%CoefMembers(I)%MemberAxCd2,   &
-                                         InputFileData%Morison%CoefMembers(I)%MemberAxCdMG1, InputFileData%Morison%CoefMembers(I)%MemberAxCdMG2, &
-                                         InputFileData%Morison%CoefMembers(I)%MemberAxCa1,   InputFileData%Morison%CoefMembers(I)%MemberAxCa2,   &
-                                         InputFileData%Morison%CoefMembers(I)%MemberAxCaMG1, InputFileData%Morison%CoefMembers(I)%MemberAxCaMG2, &
-                                         InputFileData%Morison%CoefMembers(I)%MemberAxCp1,   InputFileData%Morison%CoefMembers(I)%MemberAxCp2,   &
-                                         InputFileData%Morison%CoefMembers(I)%MemberAxCpMG1, InputFileData%Morison%CoefMembers(I)%MemberAxCpMG2
-         END IF
-
-       
-         IF ( ErrStat2 /= 0 ) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Failed to read member cross-section properties.'
+         call ParseAry( FileInfo_In, CurLine, 'Member-based hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
             if (Failed())  return;
-         END IF
 
-         IF ( InputFileData%Echo ) THEN
-            WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-         END IF
-
+         InputFileData%Morison%CoefMembers(I)%MemberID         = NINT(tmpReArray( 1))
+         InputFileData%Morison%CoefMembers(I)%MemberCd1        =      tmpReArray( 2)
+         InputFileData%Morison%CoefMembers(I)%MemberCd2        =      tmpReArray( 3)
+         InputFileData%Morison%CoefMembers(I)%MemberCdMG1      =      tmpReArray( 4)
+         InputFileData%Morison%CoefMembers(I)%MemberCdMG2      =      tmpReArray( 5)
+         InputFileData%Morison%CoefMembers(I)%MemberCa1        =      tmpReArray( 6)
+         InputFileData%Morison%CoefMembers(I)%MemberCa2        =      tmpReArray( 7)
+         InputFileData%Morison%CoefMembers(I)%MemberCaMG1      =      tmpReArray( 8)
+         InputFileData%Morison%CoefMembers(I)%MemberCaMG2      =      tmpReArray( 9)
+         InputFileData%Morison%CoefMembers(I)%MemberCp1        =      tmpReArray(10)
+         InputFileData%Morison%CoefMembers(I)%MemberCp2        =      tmpReArray(11)
+         InputFileData%Morison%CoefMembers(I)%MemberCpMG1      =      tmpReArray(12)
+         InputFileData%Morison%CoefMembers(I)%MemberCpMG2      =      tmpReArray(13)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCd1      =      tmpReArray(14)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCd2      =      tmpReArray(15)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCdMG1    =      tmpReArray(16)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCdMG2    =      tmpReArray(17)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCa1      =      tmpReArray(18)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCa2      =      tmpReArray(19)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCaMG1    =      tmpReArray(20)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCaMG2    =      tmpReArray(21)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCp1      =      tmpReArray(22)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCp2      =      tmpReArray(23)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCpMG1    =      tmpReArray(24)
+         InputFileData%Morison%CoefMembers(I)%MemberAxCpMG2    =      tmpReArray(25)
       END DO
 
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
-
 
 
    !-------------------------------------------------------------------------------------------------
    ! Members Section
    !-------------------------------------------------------------------------------------------------
-
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Members header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))   ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NMembers - Number of members in the input file
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NMembers, 'NMembers', 'Number of members', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NMembers', InputFileData%Morison%NMembers, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   CALL ReadCom( UnIn, FileName, 'Members table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-      ! Table header
-   CALL ReadCom( UnIn, FileName, 'Members table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Members table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Members table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
    IF ( InputFileData%Morison%NMembers > 0 ) THEN
 
@@ -1196,52 +968,42 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
       END IF
 
       DO I = 1,InputFileData%Morison%NMembers
-         !ReadStr ( UnIn, Fil, Line, 'Joint table', VarDescr, ErrStat )
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
-
-         IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,   InputFileData%Morison%InpMembers(I)%MJointID1,    &
-                                        InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
-                                        InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MDivSize,     &
-                                        InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%PropPot
-         END IF
-
-         IF ( ErrStat2 /= 0 ) THEN         
+         ! We can't use the ParseAry here since PropPot is a logical
+         Line = FileInfo_In%Lines(CurLine)
+         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,   InputFileData%Morison%InpMembers(I)%MJointID1,    &
+                                     InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
+                                     InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MDivSize,     &
+                                     InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%PropPot
+         IF ( ErrStat2 /= 0 ) THEN
             ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Failed to read member properties.'
+            ErrMsg2  = 'Error reading members table row '//trim( Int2LStr(I))//', line '  &
+                        //trim( Int2LStr(FileInfo_In%FileLine(CurLine)))//' of file '//trim(FileInfo_In%FileList(FileInfo_In%FileIndx(CurLine)))
             if (Failed())  return;
          END IF
 
-         IF ( InputFileData%Echo ) THEN
-            WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-         END IF
-
+         if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))     ! Echo this line
+         CurLine = CurLine+1
       END DO
 
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Filled Members Section
    !-------------------------------------------------------------------------------------------------
-
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Filled members header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))   ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NFillGroups - Number of fill groups
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NFillGroups, 'NFillGroups', 'Number of fill groups', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NFillGroups', InputFileData%Morison%NFillGroups, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   CALL ReadCom( UnIn, FileName, 'Fill groups table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-      ! Table header
-   CALL ReadCom( UnIn, FileName, 'Fill groups table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Fill groups table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Fill groups table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
    IF ( InputFileData%Morison%NFillGroups > 0 ) THEN
 
@@ -1254,42 +1016,34 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
       END IF
 
       DO I = 1,InputFileData%Morison%NFillGroups
+         ! We can't use the ParseAry here since the number of entries is indicated by the first entry 
+         Line = FileInfo_In%Lines(CurLine)
 
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
-
-         IF (ErrStat2 == 0) THEN
-
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%FilledGroups(I)%FillNumM
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Failed to read FillNumM.'
-               if (Failed())  return;
-            END IF
-
-
-            ALLOCATE ( InputFileData%Morison%FilledGroups(I)%FillMList(InputFileData%Morison%FilledGroups(I)%FillNumM), STAT = ErrStat2 )
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Error allocating space for FillMList array.'
-               if (Failed())  return;
-            END IF
-
-
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%FilledGroups(I)%FillNumM,  InputFileData%Morison%FilledGroups(I)%FillMList,   &
-                                         InputFileData%Morison%FilledGroups(I)%FillFSLoc, InputFileData%Morison%FilledGroups(I)%FillDensChr
-
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Failed to read filled group properties.'
-               if (Failed())  return;
-            END IF
-            
-            IF ( InputFileData%Echo ) THEN
-               WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-            END IF
-
+         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%FilledGroups(I)%FillNumM
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read FillNumM.'
+            if (Failed())  return;
          END IF
 
+         ALLOCATE ( InputFileData%Morison%FilledGroups(I)%FillMList(InputFileData%Morison%FilledGroups(I)%FillNumM), STAT = ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Error allocating space for FillMList array.'
+            if (Failed())  return;
+         END IF
+
+         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%FilledGroups(I)%FillNumM,  InputFileData%Morison%FilledGroups(I)%FillMList,   &
+                                      InputFileData%Morison%FilledGroups(I)%FillFSLoc, InputFileData%Morison%FilledGroups(I)%FillDensChr
+
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read filled group properties.'
+            if (Failed())  return;
+         END IF
+
+         if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))     ! Echo this line
+         CurLine = CurLine+1
       END DO
 
    END IF
@@ -1298,27 +1052,22 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
    !-------------------------------------------------------------------------------------------------
    ! Marine Growth by Depth Section
    !-------------------------------------------------------------------------------------------------
-
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Marine growth by depth header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NMGDepths - Number marine growth depths
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NMGDepths, 'NMGDepths', 'Number marine growth depths', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NMGDepths', InputFileData%Morison%NMGDepths, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   CALL ReadCom( UnIn, FileName, 'Marine growth by depth table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-      ! Table header
-   CALL ReadCom( UnIn, FileName, 'Marine growth by depth table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Marine growth by depth table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Marine growth by depth table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
    IF ( InputFileData%Morison%NMGDepths > 0 ) THEN
+      CALL AllocAry( tmpReArray, 3, 'temporary array for marine growth table', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
 
          ! Allocate memory for marine growth depths array
       ALLOCATE ( InputFileData%Morison%MGDepths(InputFileData%Morison%NMGDepths), STAT = ErrStat2 )
@@ -1329,48 +1078,31 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
       END IF
 
       DO I = 1,InputFileData%Morison%NMGDepths
-
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
-
-         IF (ErrStat2 == 0) THEN
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%MGDepths(I)%MGDpth, InputFileData%Morison%MGDepths(I)%MGThck, InputFileData%Morison%MGDepths(I)%MGDens
-         END IF
-
-         IF ( ErrStat2 /= 0 ) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2  = 'Failed to read marine growth depth properties.'
-            if (Failed())  return;
-         END IF
-         
-         IF ( InputFileData%Echo ) THEN
-            WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-         END IF
-
+         call ParseAry( FileInfo_In, CurLine, ' Marine growth table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
+         InputFileData%Morison%MGDepths(I)%MGDpth  = tmpReArray(1)
+         InputFileData%Morison%MGDepths(I)%MGThck  = tmpReArray(2)
+         InputFileData%Morison%MGDepths(I)%MGDens  = tmpReArray(3)
       END DO
 
+      if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
 
 
    !-------------------------------------------------------------------------------------------------
    ! Member Output List Section
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Member output list header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NMOutputs - Number of members to output
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NMOutputs, 'NMOutputs', 'Number of members to output', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NMOutputs', InputFileData%Morison%NMOutputs, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! Table header
-   CALL ReadCom( UnIn, FileName, 'Member output list table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
-      ! Table header
-   CALL ReadCom( UnIn, FileName, 'Member output list table header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member output list table header line 1: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Member output list table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
+   CurLine = CurLine + 1
 
    IF ( InputFileData%Morison%NMOutputs > 0 ) THEN
 
@@ -1385,96 +1117,87 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
 
       DO I = 1,InputFileData%Morison%NMOutputs
 
-         READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
+         ! We can't use the ParseAry here since the number of entries is indicated by the first entry 
+         Line = FileInfo_In%Lines(CurLine)
 
-         IF (ErrStat2 == 0) THEN
+         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%MOutLst(I)%MemberID, InputFileData%Morison%MOutLst(I)%NOutLoc
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read NOutLoc.'
+            if (Failed())  return;
+         END IF      
+         
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%NodeLocs(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Error allocating space for NodeLocs array.'
+            if (Failed())  return;
+         END IF      
 
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%MOutLst(I)%MemberID, InputFileData%Morison%MOutLst(I)%NOutLoc
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Failed to read NOutLoc.'
-               if (Failed())  return;
-            END IF      
-
-            
-            ALLOCATE ( InputFileData%Morison%MOutLst(I)%NodeLocs(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Error allocating space for NodeLocs array.'
-               if (Failed())  return;
-            END IF      
-
-
-            ALLOCATE ( InputFileData%Morison%MOutLst(I)%MeshIndx1(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Error allocating space for %MeshIndx1 array.'
-               if (Failed())  return;
-            END IF      
-            ALLOCATE ( InputFileData%Morison%MOutLst(I)%MemberIndx1(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Error allocating space for %MemberIndx1 array.'
-               if (Failed())  return;
-            END IF
-
-            ALLOCATE ( InputFileData%Morison%MOutLst(I)%MeshIndx2(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Error allocating space for %MeshIndx2 array.'
-               if (Failed())  return;
-            END IF      
-            ALLOCATE ( InputFileData%Morison%MOutLst(I)%MemberIndx2(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Error allocating space for %MemberIndx2 array.'
-               if (Failed())  return;
-            END IF    
-
-            ALLOCATE ( InputFileData%Morison%MOutLst(I)%s(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
-
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Error allocating space for s array.'
-               if (Failed())  return;
-            END IF      
-
-            READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%MOutLst(I)%MemberID,  InputFileData%Morison%MOutLst(I)%NOutLoc,  &
-                                         InputFileData%Morison%MOutLst(I)%NodeLocs
-
-            IF ( ErrStat2 /= 0 ) THEN
-               ErrStat2 = ErrID_Fatal
-               ErrMsg2  = 'Failed to read member output list properties.'
-               if (Failed())  return;
-            END IF
-
-            IF ( InputFileData%Echo ) THEN
-               WRITE( UnEchoLocal, '(A)' ) TRIM(Line)
-            END IF
-
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%MeshIndx1(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Error allocating space for %MeshIndx1 array.'
+            if (Failed())  return;
          END IF
 
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%MemberIndx1(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Error allocating space for %MemberIndx1 array.'
+            if (Failed())  return;
+         END IF
+
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%MeshIndx2(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Error allocating space for %MeshIndx2 array.'
+            if (Failed())  return;
+         END IF      
+
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%MemberIndx2(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Error allocating space for %MemberIndx2 array.'
+            if (Failed())  return;
+         END IF    
+
+         ALLOCATE ( InputFileData%Morison%MOutLst(I)%s(InputFileData%Morison%MOutLst(I)%NOutLoc), STAT = ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Error allocating space for s array.'
+            if (Failed())  return;
+         END IF      
+
+         READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%MOutLst(I)%MemberID,  InputFileData%Morison%MOutLst(I)%NOutLoc,  &
+                                      InputFileData%Morison%MOutLst(I)%NodeLocs
+
+         IF ( ErrStat2 /= 0 ) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = 'Failed to read member output list properties.'
+            if (Failed())  return;
+         END IF
+
+         if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))     ! Echo this line
+         CurLine = CurLine+1
       END DO
 
    END IF
 
+
    !-------------------------------------------------------------------------------------------------
    ! Joint Output List Section
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Joint output list header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
-
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! NJOutputs - Number of joints to output
-   CALL ReadVar ( UnIn, FileName, InputFileData%Morison%NJOutputs, 'NJOutputs', 'Number of joints to output', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'NJOutputs', InputFileData%Morison%NJOutputs, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
    IF ( InputFileData%Morison%NJOutputs > 0 ) THEN
 
       ALLOCATE ( InputFileData%Morison%JOutLst(InputFileData%Morison%NJOutputs), STAT = ErrStat2 )
-
       IF ( ErrStat2 /= 0 ) THEN
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = 'Error allocating space for JOutLst data structures.'
@@ -1484,7 +1207,7 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
       CALL AllocAry( tmpArray, InputFileData%Morison%NJOutputs, 'temporary array for Joint outputs', ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
-      CALL ReadAry ( UnIn, FileName, tmpArray, InputFileData%Morison%NJOutputs, 'JOutLst', 'Joint output list', ErrStat2,  ErrMsg2, UnEchoLocal )
+      call ParseAry( FileInfo_In, CurLine, 'JOutLst table row '//trim( Int2LStr(I)), tmpArray, InputFileData%Morison%NJOutputs, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
 
       DO I = 1,InputFileData%Morison%NJOutputs
@@ -1495,68 +1218,53 @@ SUBROUTINE HydroDyn_ParseInput( InitInp, InFileInfo, InputFileData, ErrStat, Err
       
    ELSE
       
-      ! There are no Joint Outputs, but there is a line to be parsed in the input file!
-      
-      ALLOCATE ( tmpArray(1), STAT = ErrStat2 )
-      IF ( ErrStat2 /= 0 ) THEN
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = 'Error allocating space for temporary array for Joint outputs.'
-         if (Failed())  return;
-      END IF
-      
-      CALL ReadAry ( UnIn, FileName, tmpArray, 1, 'JOutLst', 'Joint output list', ErrStat2,  ErrMsg2, UnEchoLocal )      
-         if (Failed())  return;
-      
-      DEALLOCATE(tmpArray)
-      !we just want to read the line for echoing purposes when there are actually 0 Joint Outputs.
-      
+      ! There are no Joint Outputs, but there is a line here.  We don't parse it since we don't want to error on it
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write line to echo
+      CurLine = CurLine + 1
+
    END IF
    
+
    !-------------------------------------------------------------------------------------------------
    ! Data section for OUTPUT
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Output header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
 
          ! HDSum - Whether or not to generate a summary file
-   CALL ReadVar ( UnIn, FileName, InputFileData%HDSum, 'HDSum', 'Generate a HydroDyn summary file', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'HDSum', InputFileData%HDSum, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
          ! OutAll - Whether or not to output information for every member and joint
-   CALL ReadVar ( UnIn, FileName, InputFileData%OutAll, 'OutAll', 'Generate all member and joint outputs', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'OutAll', InputFileData%OutAll, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
          ! OutSwtch - Specify how to write to an output file
-   CALL ReadVar ( UnIn, FileName, InputFileData%OutSwtch, 'OutSwtch', 'Specify how to write to an output file', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'OutSwtch', InputFileData%OutSwtch, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
-
         ! OutFmt - Format for numerical outputs
-   CALL ReadVar ( UnIn, FileName, InputFileData%OutFmt, 'OutFmt', 'Format for numerical outputs', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'OutFmt', InputFileData%OutFmt, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
          ! OutSFmt - Format for output column headers
-   CALL ReadVar ( UnIn, FileName, InputFileData%OutSFmt, 'OutSFmt', 'Format for output column headers', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ParseVar( FileInfo_In, CurLine, 'OutSFmt', InputFileData%OutSFmt, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
 
    !-------------------------------------------------------------------------------------------------
    ! Data section for FLOATING PLATFORM OUTPUTS
    !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName, 'Outputs header', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
       
       ! OutList - list of requested parameters to output to a file
    call AllocAry( InputFileData%UserOutputs, MaxUserOutputs, 'InputFileData%UserOutputs', ErrStat2, ErrMsg2 )  ! MaxUserOutputs is set in registry 
       if (Failed())  return;
    
-   CALL ReadOutputList ( UnIn, FileName, InputFileData%UserOutputs, InputFileData%NUserOutputs, &
-                                              'OutList', 'List of user requested outputs', ErrStat2, ErrMsg2, UnEchoLocal )
-      if (Failed())  return;
+   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%UserOutputs, &
+            InputFileData%NUserOutputs, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return;
 
    
    !-------------------------------------------------------------------------------------------------
@@ -1575,11 +1283,12 @@ CONTAINS
       if (Failed)    call Cleanup()
    end function Failed
    SUBROUTINE Cleanup()
-      IF (ALLOCATED(tmpArray)) DEALLOCATE(tmpArray)         
-         ! Close input file
-      if (UnIn > 0)  close ( UnIn )
+      IF (ALLOCATED(tmpArray  )) DEALLOCATE(tmpArray  )
+      IF (ALLOCATED(tmpReArray)) DEALLOCATE(tmpReArray)
+      IF (ALLOCATED(tmpVec1   )) DEALLOCATE(tmpVec1   )
+      IF (ALLOCATED(tmpVec2   )) DEALLOCATE(tmpVec2   )
          ! Cleanup the Echo file and global variables
-      CALL CleanupEchoFile( InputFileData%Echo, UnEchoLocal )
+      if (UnEc > 0)  close ( UnEc )
    END SUBROUTINE Cleanup
 END SUBROUTINE HydroDyn_ParseInput
 
