@@ -545,7 +545,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
       if (Failed())  return;
 
       ! PtfmRefztRot  - The rotation about zt of the body reference frame(s) from xt/yt (deg)
-   call ParseAry( FileInfo_In, CurLine, 'PtfmRefzt', InputFileData%PtfmRefzt, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
+   call ParseAry( FileInfo_In, CurLine, 'PtfmRefztRot', InputFileData%PtfmRefztRot, InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
    InputFileData%PtfmRefztRot = InputFileData%PtfmRefztRot*D2R_D ! Convert to radians
    
@@ -986,7 +986,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          CurLine = CurLine+1
       END DO
 
-      if (allocated(tmpReArray))      deallocate(tmpReArray)
    END IF
 
 
