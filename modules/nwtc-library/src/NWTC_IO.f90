@@ -4788,6 +4788,7 @@ END SUBROUTINE CheckR16Var
       NumLines = 0      ! Initialize counter for non-comment populated lines
       TmpFileLine = 0   ! Line number that was passed in 
       NumCommChars = LEN_TRIM( CommChars )   ! Number of globally specified CommChars
+      TmpStringArray = ""
 
          ! Find how many non-comment lines we have
       do i=1,size(StringArray)
@@ -4820,16 +4821,17 @@ END SUBROUTINE CheckR16Var
       ALLOCATE( FileInfo%FileIndx(FileInfo%NumLines) )
       ALLOCATE( FileInfo%FileList(FileInfo%NumFiles) )
 
+      FileInfo%FileIndx = FileInfo%NumFiles
+      FileInfo%FileList = (/ "passed file info" /)
+      FileInfo%Lines    = ""  ! initialize empty in case of error
+      FileInfo%FileLine =  0  ! initialize empyt in case of later error
       DO i = 1, FileInfo%NumLines
          IF ( LEN_TRIM(TmpStringArray(i)) > MaxFileInfoLineLen ) THEN
             CALL SetErrStat( ErrID_Fatal, 'Input string '//trim(Num2LStr(i))//' exceeds the bounds of FileInfoType.' , ErrStat, ErrMsg, RoutineName )
-            RETURN
          END IF
-         FileInfo%Lines(i)    = TmpStringArray(i)
+         FileInfo%Lines(i)    = trim(TmpStringArray(i))
          FileInfo%FileLine(i) = TmpFileLine(i)
       END DO      
-      FileInfo%FileIndx = FileInfo%NumFiles
-      FileInfo%FileList = (/ "passed file info" /)
 
    END SUBROUTINE InitFileInfo_FromStringArray
 !=======================================================================
