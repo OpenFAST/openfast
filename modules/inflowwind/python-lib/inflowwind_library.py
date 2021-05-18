@@ -1,6 +1,6 @@
 #**********************************************************************************************************************************
 # LICENSING
-# Copyright (C) 2021 Nicole Mendoza
+# Copyright (C) 2021 National Renewable Energy Laboratory
 #
 # This file is part of InflowWind.
 #
@@ -92,26 +92,24 @@ class InflowWindLibAPI(CDLL):
         self.IFW_END_C.restype = c_int
 
     # ifw_init ------------------------------------------------------------------------------------------------------------
-    def ifw_init(self, input_strings, input_string_length, uniform_string, uniform_string_length):
+    def ifw_init(self, input_string_array, uniform_string_array):
 
-        #print('inflowwind_library.py: Running IFW_INIT_C .....')
-
-        # Set up inputs
-        input_string_array = (c_char_p * len(input_strings))()
-        for i, param in enumerate(input_strings):
-            input_string_array[i] = param.encode('utf-8')
+        # Set up inputs: Pass single NULL joined string
+        input_string = '\x00'.join(input_string_array)
+        input_string = input_string.encode('utf-8')
+        input_string_length = len(input_string)
         
-        uniform_string_array = (c_char_p * len(uniform_string))()
-        for i, param in enumerate(uniform_string):
-            uniform_string_array[i] = param.encode('utf-8')
+        uniform_string = '\x00'.join(uniform_string_array)
+        uniform_string = uniform_string.encode('utf-8')
+        uniform_string_length = len(uniform_string)
         
         self._numChannels = c_int(0)
 
         # Run IFW_INIT_C
         self.IFW_INIT_C(
-            input_string_array,                    # IN: input file string
+            c_char_p(input_string),                # IN: input file string
             byref(c_int(input_string_length)),     # IN: input file string length
-            uniform_string_array,                  # IN: uniform file string
+            c_char_p(uniform_string),              # IN: uniform file string
             byref(c_int(uniform_string_length)),   # IN: uniform file string length
             byref(c_int(self.numWindPts)),         # IN: number of wind points
             byref(c_double(self.dt)),              # IN: time step (dt)

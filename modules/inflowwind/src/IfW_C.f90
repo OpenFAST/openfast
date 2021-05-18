@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2021 Nicole Mendoza
+! Copyright (C) 2021 National Renewable Energy Laboratory
 !
 ! This file is part of InflowWind.
 !
@@ -21,7 +21,7 @@ MODULE InflowWindAPI
 
     USE ISO_C_BINDING
     USE InflowWind
-    USE InflowWind_Subs
+!    USE InflowWind_Subs
     USE InflowWind_Types
     USE NWTC_Library
 
@@ -52,11 +52,11 @@ CONTAINS
 !===============================================================================================================
 !--------------------------------------------- IFW INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformStrings_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
+SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformString_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
 
-    TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileStrings_C
+    TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C
-    TYPE(C_PTR)                                    , INTENT(IN   )   :: InputUniformStrings_C
+    TYPE(C_PTR)                                    , INTENT(IN   )   :: InputUniformString_C
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputUniformStringLength_C
     INTEGER(C_INT)                                 , INTENT(IN   )   :: NumWindPts_C
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
@@ -67,14 +67,8 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025) 
 
     ! Local Variables
-    CHARACTER(InputStringLength), DIMENSION(InputFileStringLength_C) :: InputFileStrings
-    CHARACTER(InputStringLength), DIMENSION(InputUniformStringLength_C) :: InputUniformStrings
-    CHARACTER(kind=C_char, len=1), DIMENSION(:), POINTER             :: character_pointer
-    CHARACTER(kind=C_char, len=1), DIMENSION(:), POINTER             :: character_pointer2
-    CHARACTER, DIMENSION(InputStringLength)                          :: single_line_character_array
-    CHARACTER, DIMENSION(InputStringLength)                          :: single_line_character_array2
-    CHARACTER(InputStringLength)                                     :: single_line_chars
-    CHARACTER(InputStringLength)                                     :: single_line_chars2
+    CHARACTER(kind=C_char, len=InputFileStringLength_C),    POINTER  :: InputFileString            !< Input file as a single string with NULL chracter separating lines
+    CHARACTER(kind=C_char, len=InputUniformStringLength_C), POINTER  :: UniformFileString          !< Input file as a single string with NULL chracter separating lines -- Uniform wind file
 
     CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelNames_C(:)
     CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelUnits_C(:)
@@ -90,38 +84,26 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
-   ! Convert the string-input from C-style character arrays (char**) to a Fortran-style array of characters.
-   ! TODO: Add error checking
-   CALL C_F_pointer(InputFileStrings_C, character_pointer, [InputFileStringLength_C * InputStringLength])
-   DO i = 0, InputFileStringLength_C - 1
-      single_line_character_array = character_pointer(i * InputStringLength + 1 : i * InputStringLength + InputStringLength)
-      DO j = 1, InputStringLength
-         single_line_chars(j:j) = single_line_character_array(j)
-      END DO
-      InputFileStrings(i + 1) = single_line_chars
-   END DO
-
-   CALL C_F_pointer(InputUniformStrings_C, character_pointer2, [InputUniformStringLength_C * InputStringLength])
-   DO i = 0, InputUniformStringLength_C - 1
-      single_line_character_array2 = character_pointer2(i * InputStringLength + 1 : i * InputStringLength + InputStringLength)
-      DO j = 1, InputStringLength
-         single_line_chars2(j:j) = single_line_character_array2(j)
-      END DO
-      InputUniformStrings(i + 1) = single_line_chars2
-   END DO
+   ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
+   CALL C_F_pointer(InputFileString_C, InputFileString)
+   CALL C_F_pointer(InputUniformString_C, UniformFileString)
 
    ! Store string-inputs as type FileInfoType within InflowWind_InitInputType
-   CALL InitFileInfo(InputFileStrings, InitInp%PassedFileData, ErrStat2, ErrMsg2)
-      if (Failed())  return
-   CALL InitFileInfo(InputUniformStrings, InitInp%WindType2Data, ErrStat2, ErrMsg2)        
-      if (Failed())  return
+   CALL InitFileInfo(InputFileString, InitInp%PassedFileData, ErrStat2, ErrMsg2);   if (Failed())  return
+   InitInp%UseInputFile          = .FALSE.
+
+   ! store Uniform File strings if they are non-zero sized
+   if (len(UniformFileString) > 1) then 
+      CALL InitFileInfo(UniformFileString, InitInp%WindType2Data, ErrStat2, ErrMsg2);  if (Failed())  return
+      InitInp%WindType2UseInputFile = .FALSE.
+   else  ! Default to reading from disk
+      InitInp%WindType2UseInputFile = .TRUE.
+   endif
 
    ! Set other inputs for calling InflowWind_Init
    InitInp%NumWindPoints         = NumWindPts_C              
    InitInp%InputFileName         = "passed_ifw_file"         ! dummy
    InitInp%RootName              = "ifwRoot"                 ! used for making echo files
-   InitInp%UseInputFile          = .FALSE.
-   InitInp%WindType2UseInputFile = .FALSE.                   
    TimeInterval                  = REAL(DT_C, DbKi)
 
    ! Call the main subroutine InflowWind_Init - only need InitInp and TimeInterval as inputs, the rest are set by InflowWind_Init
@@ -151,9 +133,9 @@ SUBROUTINE IFW_INIT_C(InputFileStrings_C, InputFileStringLength_C, InputUniformS
    OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
 
    ! Clean up variables and set up for IFW_CALCOUTPUT_C
-   CALL InflowWind_CopyInput(InputGuess, InputData, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+   CALL InflowWind_CopyInput(InputGuess, InputData, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
       if (Failed())  return
-   CALL InflowWind_CopyConstrState(ConstrStateGuess, ConstrStates, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+   CALL InflowWind_CopyConstrState(ConstrStateGuess, ConstrStates, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
    call Cleanup()
