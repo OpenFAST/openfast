@@ -5567,12 +5567,12 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       AllOut( BAzimuth(k)) = .true.
       AllOut( BPitch  (k)) = .true.
 
-      !   AllOut( BAeroFx( k)) = .true.
-      !   AllOut( BAeroFy( k)) = .true.
-      !   AllOut( BAeroFz( k)) = .true.
-      !   AllOut( BAeroMx( k)) = .true.
-      !   AllOut( BAeroMy( k)) = .true.
-      !   AllOut( BAeroMz( k)) = .true.
+      !   AllOut( BFldFx( k)) = .true.
+      !   AllOut( BFldFy( k)) = .true.
+      !   AllOut( BFldFz( k)) = .true.
+      !   AllOut( BFldMx( k)) = .true.
+      !   AllOut( BFldMy( k)) = .true.
+      !   AllOut( BFldMz( k)) = .true.
 
       do j=1,9
          AllOut(BNVUndx(j,k)) = .true.
