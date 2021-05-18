@@ -222,7 +222,7 @@ END SUBROUTINE WvStretch_Init
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, defWtrDens, defWtrDpth, defMSL2SWL, InitOut, ErrStat, ErrMsg )
+SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(HydroDyn_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine.
@@ -241,9 +241,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, d
                                                                         !!   Input is the suggested time from the glue code; 
                                                                         !!   Output is the actual coupling interval that will be used 
                                                                         !!   by the glue code.
-      REAL(ReKi),                         INTENT(IN   )  :: defWtrDens  !< Default water density from the driver; may be overwritten
-      REAL(ReKi),                         INTENT(IN   )  :: defWtrDpth  !< Default water depth from the driver; may be overwritten
-      REAL(ReKi),                         INTENT(IN   )  :: defMSL2SWL  !< Default mean sea level to still water level from the driver; may be overwritten
       TYPE(HydroDyn_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -364,7 +361,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, d
                   
          ! Parse all HydroDyn-related input files and populate the *_InitInputType derived types
          
-         CALL HydroDynInput_GetInput( InitLocal, defWtrDens, defWtrDpth, defMSL2SWL, ErrStat2, ErrMsg2 )
+         CALL HydroDynInput_GetInput( InitLocal, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
