@@ -73,6 +73,11 @@ IMPLICIT NONE
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: Gravity      !< Gravity force [Nm/s^2]
     INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: defFldDens      !< Default fluid density from the driver; may be overwritten [kg/m^3]
+    REAL(ReKi)  :: defKinVisc      !< Default kinematic viscosity from the driver; may be overwritten [m^2/s]
+    REAL(ReKi)  :: defSpdSound      !< Default speed of sound from the driver; may be overwritten [m/s]
+    REAL(ReKi)  :: defPatm      !< Default atmospheric pressure from the driver; may be overwritten [Pa]
+    REAL(ReKi)  :: defPvap      !< Default vapor pressure from the driver; may be overwritten [Pa]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
   END TYPE AD_InitInputType
@@ -729,6 +734,11 @@ ENDIF
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%MHK = SrcInitInputData%MHK
+    DstInitInputData%defFldDens = SrcInitInputData%defFldDens
+    DstInitInputData%defKinVisc = SrcInitInputData%defKinVisc
+    DstInitInputData%defSpdSound = SrcInitInputData%defSpdSound
+    DstInitInputData%defPatm = SrcInitInputData%defPatm
+    DstInitInputData%defPvap = SrcInitInputData%defPvap
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
     DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
  END SUBROUTINE AD_CopyInitInput
@@ -833,6 +843,11 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! MHK
+      Re_BufSz   = Re_BufSz   + 1  ! defFldDens
+      Re_BufSz   = Re_BufSz   + 1  ! defKinVisc
+      Re_BufSz   = Re_BufSz   + 1  ! defSpdSound
+      Re_BufSz   = Re_BufSz   + 1  ! defPatm
+      Re_BufSz   = Re_BufSz   + 1  ! defPvap
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
       Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -947,6 +962,16 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defFldDens
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defKinVisc
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defSpdSound
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defPatm
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defPvap
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WtrDpth
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%MSL2SWL
@@ -1092,6 +1117,16 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%defFldDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defKinVisc = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defSpdSound = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defPatm = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defPvap = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%WtrDpth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%MSL2SWL = ReKiBuf(Re_Xferred)

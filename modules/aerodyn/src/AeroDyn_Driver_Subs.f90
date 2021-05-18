@@ -186,7 +186,7 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    dvr%out%unOutFile = -1
 
    ! --- Initialize aerodyn 
-   call Init_AeroDyn(iCase, dvr, AD, dvr%dt, dvr%FldDens, dvr%KinVisc, dvr%SpdSound, dvr%Patm, dvr%Pvap, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
+   call Init_AeroDyn(iCase, dvr, AD, dvr%dt, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
    if (iCase==1) then
@@ -368,16 +368,11 @@ end subroutine Dvr_CleanUp
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize aerodyn module based on driver data
-subroutine Init_AeroDyn(iCase, dvr, AD, dt, defFldDens, defKinVisc, defSpdSound, defPatm, defPvap, InitOutData, errStat, errMsg)
+subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: iCase
-   type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(Dvr_SimData), target,    intent(inout) :: dvr           ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
    real(DbKi),                   intent(inout) :: dt            ! interval
-   real(ReKi),                   intent(in   ) :: defFldDens    !< Default air density from the driver; may be overwritten
-   real(ReKi),                   intent(in   ) :: defKinVisc    !< Default kinematic viscosity from the driver; may be overwritten
-   real(ReKi),                   intent(in   ) :: defSpdSound   !< Default speed of sound from the driver; may be overwritten
-   real(ReKi),                   intent(in   ) :: defPatm       !< Default atmospheric pressure from the driver; may be overwritten
-   real(ReKi),                   intent(in   ) :: defPvap       !< Default vapor pressure from the driver; may be overwritten
    type(AD_InitOutputType),      intent(  out) :: InitOutData   ! Output data for initialization
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -387,7 +382,7 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, defFldDens, defKinVisc, defSpdSound,
    integer(IntKi)                              :: iWT
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
-   type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
+   type(AD_InitInputType)                      :: InitInData    ! Input data for initialization
    type(WTData), pointer :: wt ! Alias to shorten notation
    logical :: needInit
    errStat = ErrID_None
@@ -414,12 +409,17 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, defFldDens, defKinVisc, defSpdSound,
          call Cleanup()
          return
       end if
-      InitInData%InputFile = dvr%AD_InputFile
-      InitInData%RootName  = dvr%out%Root
-      InitInData%Gravity   = 9.80665_ReKi
-      InitInData%MHK       = dvr%MHK
-      InitInData%WtrDpth   = dvr%WtrDpth
-      InitInData%MSL2SWL   = dvr%MSL2SWL
+      InitInData%InputFile   = dvr%AD_InputFile
+      InitInData%RootName    = dvr%out%Root
+      InitInData%Gravity     = 9.80665_ReKi
+      InitInData%MHK         = dvr%MHK
+      InitInData%defFldDens  = dvr%FldDens
+      InitInData%defKinVisc  = dvr%KinVisc
+      InitInData%defSpdSound = dvr%SpdSound
+      InitInData%defPatm     = dvr%Patm
+      InitInData%defPvap     = dvr%Pvap
+      InitInData%WtrDpth     = dvr%WtrDpth
+      InitInData%MSL2SWL     = dvr%MSL2SWL
       ! Init data per rotor
       do iWT=1,dvr%numTurbines
          wt => dvr%WT(iWT)
@@ -439,8 +439,7 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, defFldDens, defKinVisc, defSpdSound,
          end do
       enddo
       ! --- Call AD_init
-      call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, defFldDens, defKinVisc, defSpdSound, defPatm, defPvap, &
-                   InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
 
       if (iCase==1) then
          ! Add writeoutput units and headers to driver, same for all cases and rotors!
