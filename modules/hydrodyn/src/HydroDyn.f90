@@ -347,10 +347,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
       IF ( InitInp%UseInputFile ) THEN
          CALL ProcessComFile( InitInp%InputFile, InFileInfo, ErrStat2, ErrMsg2 )
-         ! For diagnostic purposes, the following can be used to display the contents
-         ! of the InFileInfo data structure.
-         ! call Print_FileInfo_Struct( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
-
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
@@ -365,6 +361,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ENDIF          
       ENDIF
 
+      ! For diagnostic purposes, the following can be used to display the contents
+      ! of the InFileInfo data structure.
+      ! call Print_FileInfo_Struct( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
 
 
       ! Parse all HydroDyn-related input and populate the InputFileData structure 
