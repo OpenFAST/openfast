@@ -41,6 +41,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: ADInputFile      !< Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info [-]
     LOGICAL  :: CompElast      !< flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
   END TYPE ED_InitInputType
 ! =======================
 ! =========  ED_InitOutputType  =======
@@ -49,7 +50,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
-    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Initial blade pitch angles [radians]
     REAL(ReKi)  :: BladeLength      !< Blade length (for AeroDyn) [meters]
     REAL(ReKi)  :: TowerHeight      !< Tower Height [meters]
@@ -112,7 +112,6 @@ IMPLICIT NONE
 ! =========  ED_InputFile  =======
   TYPE, PUBLIC :: ED_InputFile
     REAL(DbKi)  :: DT      !< Requested integration time for ElastoDyn [seconds]
-    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     LOGICAL  :: FlapDOF1      !< First flapwise blade mode DOF [-]
     LOGICAL  :: FlapDOF2      !< Second flapwise blade mode DOF [-]
     LOGICAL  :: EdgeDOF      !< Edgewise blade mode DOF [-]
@@ -899,6 +898,7 @@ CONTAINS
     DstInitInputData%ADInputFile = SrcInitInputData%ADInputFile
     DstInitInputData%CompElast = SrcInitInputData%CompElast
     DstInitInputData%RootName = SrcInitInputData%RootName
+    DstInitInputData%Gravity = SrcInitInputData%Gravity
  END SUBROUTINE ED_CopyInitInput
 
  SUBROUTINE ED_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -952,6 +952,7 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%ADInputFile)  ! ADInputFile
       Int_BufSz  = Int_BufSz  + 1  ! CompElast
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
+      Re_BufSz   = Re_BufSz   + 1  ! Gravity
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -995,6 +996,8 @@ CONTAINS
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    ReKiBuf(Re_Xferred) = InData%Gravity
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_PackInitInput
 
  SUBROUTINE ED_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1044,6 +1047,8 @@ CONTAINS
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%Gravity = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_UnPackInitInput
 
  SUBROUTINE ED_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -1090,7 +1095,6 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitOutputData%NumBl = SrcInitOutputData%NumBl
-    DstInitOutputData%Gravity = SrcInitOutputData%Gravity
 IF (ALLOCATED(SrcInitOutputData%BlPitch)) THEN
   i1_l = LBOUND(SrcInitOutputData%BlPitch,1)
   i1_u = UBOUND(SrcInitOutputData%BlPitch,1)
@@ -1350,7 +1354,6 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumBl
-      Re_BufSz   = Re_BufSz   + 1  ! Gravity
   Int_BufSz   = Int_BufSz   + 1     ! BlPitch allocated yes/no
   IF ( ALLOCATED(InData%BlPitch) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BlPitch upper/lower bounds for each dimension
@@ -1507,8 +1510,6 @@ ENDIF
       ENDIF
     IntKiBuf(Int_Xferred) = InData%NumBl
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Gravity
-    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%BlPitch) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1820,8 +1821,6 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%NumBl = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%Gravity = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlPitch not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -3589,7 +3588,6 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstInputFileData%DT = SrcInputFileData%DT
-    DstInputFileData%Gravity = SrcInputFileData%Gravity
     DstInputFileData%FlapDOF1 = SrcInputFileData%FlapDOF1
     DstInputFileData%FlapDOF2 = SrcInputFileData%FlapDOF2
     DstInputFileData%EdgeDOF = SrcInputFileData%EdgeDOF
@@ -4127,7 +4125,6 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Db_BufSz   = Db_BufSz   + 1  ! DT
-      Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! FlapDOF1
       Int_BufSz  = Int_BufSz  + 1  ! FlapDOF2
       Int_BufSz  = Int_BufSz  + 1  ! EdgeDOF
@@ -4458,8 +4455,6 @@ ENDIF
 
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Gravity
-    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FlapDOF1, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FlapDOF2, IntKiBuf(1))
@@ -5196,8 +5191,6 @@ ENDIF
   Int_Xferred  = 1
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%Gravity = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%FlapDOF1 = TRANSFER(IntKiBuf(Int_Xferred), OutData%FlapDOF1)
     Int_Xferred = Int_Xferred + 1
     OutData%FlapDOF2 = TRANSFER(IntKiBuf(Int_Xferred), OutData%FlapDOF2)

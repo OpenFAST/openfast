@@ -368,7 +368,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
 
    IF ( OnGrid ) THEN      ! The tower points don't use this
 
-      CALL GetInterpValues()
+      CALL GetInterpValues(); if (ErrStat/=ErrID_None) return
       
       !-------------------------------------------------------------------------------------------------
       ! Interpolate on the grid
@@ -393,7 +393,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
 
       IF (p%InterpTower) THEN
          
-         CALL GetInterpValues()
+         CALL GetInterpValues(); if (ErrStat/=ErrID_None) return
          
       !-------------------------------------------------------------------------------------------------
       ! Interpolate on the bottom of the grid to the ground
@@ -485,6 +485,10 @@ CONTAINS
                RETURN
             ENDIF
          ENDIF
+         if (IYLO<0) then
+            STOP
+         endif
+
          
       !-------------------------------------------------------------------------------------------------
       ! Get normalization values for 3d-linear interpolation on the grid

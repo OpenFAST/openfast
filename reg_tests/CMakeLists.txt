@@ -34,6 +34,9 @@ endif()
 # Set the default plotting flag to OFF
 option(CTEST_PLOT_ERRORS "Generate plots of regression test errors." OFF)
 
+# Do not display outputs when running openfast, store in log file
+option(CTEST_RUN_VERBOSE_FLAG  "Display run outputs or store to log file." OFF)
+
 # Set the OpenFAST executable configuration option and default
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
@@ -46,7 +49,7 @@ endif()
 set(CTEST_FASTFARM_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast-farm/FAST.Farm" CACHE FILEPATH "Specify the FASTFarm executable to use in testing.")
 
 # Set the AeroDyn executable configuration option and default
-set(CTEST_AERODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/aerodyn_driver" CACHE FILEPATH "Specify the AeroDyn driver executable to use in testing.")
+set(CTEST_AERODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/aerodyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the AeroDyn driver executable to use in testing.")
 
 # Set the BeamDyn executable configuration option and default
 set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/beamdyn/beamdyn_driver" CACHE FILEPATH "Specify the BeamDyn driver executable to use in testing.")

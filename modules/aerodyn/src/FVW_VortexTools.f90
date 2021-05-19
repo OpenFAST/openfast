@@ -187,6 +187,18 @@ contains
       enddo
    end subroutine
 
+   subroutine VecToLattice2D(PointVectors, LatticeVals, iHeadP)
+      real(Reki), dimension(:,:),        intent(in   )  :: PointVectors   !< nVal x n
+      real(ReKi), dimension(:,:),        intent(inout)  :: LatticeVals    !< nVal x nSpan
+      integer(IntKi),                    intent(inout)  :: iHeadP         !< Index indicating where to start in PointVectors
+      integer(IntKi) :: iSpan
+      do iSpan = 1, size(LatticeVals,2)
+         LatticeVals(:, iSpan) = PointVectors(:, iHeadP)
+         iHeadP=iHeadP+1
+      enddo
+   end subroutine
+
+
    subroutine LatticeToPoints(LatticePoints, iDepthStart, Points, iHeadP)
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points 3 x nSpan x nDepth
       integer(IntKi),                  intent(in   )  :: iDepthStart    !< Start index for depth dimension
@@ -210,6 +222,19 @@ contains
       enddo
 
    endsubroutine LatticeToPoints
+
+   subroutine LatticeToPoints2D(LatticePoints, Points, iHeadP)
+      real(Reki), dimension(:,:),     intent(in   )  :: LatticePoints  !< Points 3 x nSpan 
+      real(ReKi), dimension(:,:),      intent(inout)  :: Points         !< 
+      integer(IntKi),                  intent(inout)  :: iHeadP         !< Index indicating where to start in Points
+      ! Local
+      integer(IntKi) :: iSpan, iDepth
+      do iSpan = 1, size(LatticePoints,2)
+         Points(1:3,iHeadP) = LatticePoints(1:3, iSpan)
+         iHeadP=iHeadP+1
+      enddo
+   endsubroutine LatticeToPoints2D
+
 
    subroutine LatticeToSegments(LatticePoints, LatticeGamma, LatticeEpsilon, iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity, bHackEpsilon )
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points  3 x nSpan x nDepth

@@ -1,5 +1,4 @@
-Time   WndSpeed   ShearExp     RotSpd     Pitch          Yaw 
-(s)   (m/s)       (-)          (rpm)      (deg)         (deg)
+# Time_[s] WndSpeed_[m/s]  ShearExp_[-]  RotSpd_[rpm] Pitch_[deg]  Yaw_[deg]
 0.0    4.00000000  0.00000000   2.0        0.00000000    100.00000000
 0.05   4.00000000  0.00000000   2.0        0.00000000     90.00000000
 0.10   4.00000000  0.00000000   2.0        0.00000000     80.00000000

@@ -51,6 +51,9 @@ IMPLICIT NONE
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(DbKi)  :: DT      !< Supplied by Driver:  Simulation time step [(sec)]
     REAL(ReKi)  :: Gravity      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
+    REAL(ReKi)  :: defWtrDens      !< Default water density from the driver; may be overwritten                       [(kg/m^3)]
+    REAL(ReKi)  :: defWtrDpth      !< Default water depth from the driver; may be overwritten                         [m]
+    REAL(ReKi)  :: defMSL2SWL      !< Default mean sea level to still water level from the driver; may be overwritten [m]
     REAL(DbKi)  :: TMax      !< Supplied by Driver:  The total simulation time [(sec)]
     LOGICAL  :: HasIce      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
@@ -256,6 +259,9 @@ CONTAINS
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%DT = SrcInitInputData%DT
     DstInitInputData%Gravity = SrcInitInputData%Gravity
+    DstInitInputData%defWtrDens = SrcInitInputData%defWtrDens
+    DstInitInputData%defWtrDpth = SrcInitInputData%defWtrDpth
+    DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
     DstInitInputData%TMax = SrcInitInputData%TMax
     DstInitInputData%HasIce = SrcInitInputData%HasIce
 IF (ALLOCATED(SrcInitInputData%WaveElevXY)) THEN
@@ -609,6 +615,9 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
+      Re_BufSz   = Re_BufSz   + 1  ! defWtrDens
+      Re_BufSz   = Re_BufSz   + 1  ! defWtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! defMSL2SWL
       Db_BufSz   = Db_BufSz   + 1  ! TMax
       Int_BufSz  = Int_BufSz  + 1  ! HasIce
   Int_BufSz   = Int_BufSz   + 1     ! WaveElevXY allocated yes/no
@@ -853,6 +862,12 @@ ENDIF
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Gravity
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defWtrDens
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defWtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defMSL2SWL
     Re_Xferred = Re_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%TMax
     Db_Xferred = Db_Xferred + 1
@@ -1396,6 +1411,12 @@ ENDIF
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%Gravity = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defWtrDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defWtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defMSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
