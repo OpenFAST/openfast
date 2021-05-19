@@ -482,9 +482,11 @@ SUBROUTINE AllBldNdOuts_SetParameters( p, InputFileData, ErrStat, ErrMsg )
    ErrMsg  = ""
 
       ! Check if the requested blades exist
-   IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) .OR. (InputFileData%BldNd_BladesOut > p%NumBl) ) THEN
-      CALL SetErrStat( ErrID_Warn, " Number of blades to output data at all bladed nodes (BldNd_BladesOut) must be between 0 and "//TRIM(Num2LStr(p%NumBl))//".", ErrStat, ErrMsg, RoutineName)
+   IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) ) THEN
       p%BldNd_BladesOut = 0_IntKi
+   ELSE IF ((InputFileData%BldNd_BladesOut > p%NumBl) ) THEN
+      CALL SetErrStat( ErrID_Warn, " Number of blades to output data at all blade nodes (BldNd_BladesOut) must be less than "//TRIM(Num2LStr(p%NumBl))//".", ErrStat, ErrMsg, RoutineName)
+      p%BldNd_BladesOut = p%NumBl ! NOTE: we are forgiving and plateau to numBlades      
    ELSE
       p%BldNd_BladesOut = InputFileData%BldNd_BladesOut
    ENDIF
@@ -504,6 +506,8 @@ SUBROUTINE AllBldNdOuts_SetParameters( p, InputFileData, ErrStat, ErrMsg )
       p%BldNd_NumOuts = InputFileData%BldNd_NumOuts
    ENDIF
 
+   if (p%BldNd_BladesOut==0) p%BldNd_NumOuts = 0
+   
       ! Set the total number of outputs ( requested channel groups * number requested nodes * number requested blades )
    p%BldNd_TotNumOuts = p%BldNodes*p%BldNd_BladesOut*p%BldNd_NumOuts !p%BldNd_NumOuts * size(p%BldNd_BlOutNd) * size(p%BldNd_BladesOut)
 

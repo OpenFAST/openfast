@@ -74,7 +74,15 @@ function(of_regression_aeroacoustic TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression_aeroacoustic)
 
-# beamdyn
+# FAST Farm
+function(ff_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeFASTFarmRegressionCase.py")
+  set(FASTFARM_EXECUTABLE "${CTEST_FASTFARM_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/fast-farm")
+  regression(${TEST_SCRIPT} ${FASTFARM_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(ff_regression)
+
 # openfast linearized
 function(of_regression_linear TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastLinearRegressionCase.py")
@@ -83,6 +91,15 @@ function(of_regression_linear TESTNAME LABEL)
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression_linear)
+
+# openfast c-interface
+function(of_regression_cpp TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastCppRegressionCase.py")
+  set(OPENFAST_CPP_EXECUTABLE "${CTEST_OPENFASTCPP_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast-cpp")
+  regression(${TEST_SCRIPT} ${OPENFAST_CPP_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(of_regression_cpp)
 
 # aerodyn
 function(ad_regression TESTNAME LABEL)
@@ -155,6 +172,11 @@ of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf"
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore")
 
+# OpenFAST C++ API test
+if(BUILD_OPENFAST_CPP_API)
+  of_regression_cpp("5MW_Land_DLL_WTurb_cpp" "openfast;cpp")
+endif()
+
 # AeroAcoustic regression test
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
@@ -164,6 +186,10 @@ of_regression_linear("Ideal_Beam_Fixed_Free_Linear" "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
 of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;servodyn")
 of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;servodyn")
+
+# FAST Farm regression tests
+ff_regression("TSinflow"  "fastfarm")
+ff_regression("LESinflow"  "fastfarm")
 
 # AeroDyn regression tests
 ad_regression("ad_timeseries_shutdown"      "aerodyn;bem")
@@ -183,6 +209,7 @@ hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
 hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
+hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
 
 # SubDyn regression tests
 sd_regression("SD_Cable_5Joints"                              "subdyn;offshore")
