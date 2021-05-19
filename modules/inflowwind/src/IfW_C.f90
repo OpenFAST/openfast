@@ -64,7 +64,7 @@ SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformSt
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelNames_C
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelUnits_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
-    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025) 
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025)
 
     ! Local Variables
     CHARACTER(kind=C_char, len=InputFileStringLength_C),    POINTER  :: InputFileString            !< Input file as a single string with NULL chracter separating lines
@@ -171,7 +171,7 @@ SUBROUTINE IFW_CALCOUTPUT_C(Time_C,Positions_C,Velocities_C,OutputChannelValues_
    REAL(C_FLOAT)                 , INTENT(  OUT)      :: Velocities_C(3*InitInp%NumWindPoints)
    REAL(C_FLOAT)                 , INTENT(  OUT)      :: OutputChannelValues_C(p%NumOuts)
    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(1025)
 
    ! Local variables
    REAL(DbKi)                                         :: Time
@@ -209,7 +209,7 @@ CONTAINS
    end function Failed
    subroutine SetErr()
       ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+      ErrMsg_C = TRANSFER( trim(ErrMsg)//' at T='//trim(Num2Lstr(Time))//C_NULL_CHAR, ErrMsg_C )
    end subroutine SetErr
 END SUBROUTINE IFW_CALCOUTPUT_C
 
@@ -220,7 +220,7 @@ END SUBROUTINE IFW_CALCOUTPUT_C
 SUBROUTINE IFW_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_END_C')
 
    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(1025)
 
    ! Local variables
    INTEGER                                            :: ErrStat
