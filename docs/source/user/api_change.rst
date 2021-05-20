@@ -10,8 +10,14 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v2.6.0 to OpenFAST `dev`
+OpenFAST v3.0.0 to OpenFAST `dev`
 ---------------------------------
+No changes.
+
+
+
+OpenFAST v2.6.0 to OpenFAST v3.0.0
+----------------------------------
 No changes.
 
 
