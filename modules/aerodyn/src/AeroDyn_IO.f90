@@ -2656,7 +2656,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       else
          Msg = 'No'
       end if   
-      WRITE (UnSu,Ec_LgFrmt) InputFileData%AIDrag, 'AIDrag', "Include the drag term in the tangential-induction calculation? "//TRIM(Msg)      
+      WRITE (UnSu,Ec_LgFrmt) InputFileData%TIDrag, 'TIDrag', "Include the drag term in the tangential-induction calculation? "//TRIM(Msg)      
       
       ! IndToler
       WRITE (UnSu,Ec_ReFrmt) InputFileData%IndToler, 'IndToler', "Convergence tolerance for BEM induction factors (radians)"     
