@@ -155,8 +155,17 @@ CONTAINS
       CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat2, ErrMsg2 )
    end subroutine Cleanup 
    subroutine SetErr()
+      ! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
+      ! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
+      ! inadvertant buffer overrun -- that can lead to bad things.
+      integer(IntKi) :: CMsgLen
       ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+      CMsgLen = size(ErrMsg_C) - 1    ! Max length of ErrMsg_C without C_NULL_CHAR (probably 1024)
+      if (ErrMsgLen > CMsgLen) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
+         ErrMsg_C = TRANSFER( trim(ErrMsg(1:CMsgLen))//C_NULL_CHAR, ErrMsg_C )
+      else
+         ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+      endif
    end subroutine SetErr
 
 END SUBROUTINE IFW_INIT_C
@@ -208,8 +217,17 @@ CONTAINS
       if (Failed)    call SetErr()
    end function Failed
    subroutine SetErr()
+      ! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
+      ! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
+      ! inadvertant buffer overrun -- that can lead to bad things.
+      integer(IntKi) :: CMsgLen
       ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-      ErrMsg_C = TRANSFER( trim(ErrMsg)//' at T='//trim(Num2Lstr(Time))//C_NULL_CHAR, ErrMsg_C )
+      CMsgLen = size(ErrMsg_C) - 1    ! Max length of ErrMsg_C without C_NULL_CHAR
+      if (ErrMsgLen > CMsgLen) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
+         ErrMsg_C = TRANSFER( trim(ErrMsg(1:CMsgLen))//C_NULL_CHAR, ErrMsg_C )
+      else
+         ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+      endif
    end subroutine SetErr
 END SUBROUTINE IFW_CALCOUTPUT_C
 
@@ -233,8 +251,17 @@ SUBROUTINE IFW_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_END_C')
 
 CONTAINS
    subroutine SetErr()
+      ! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
+      ! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
+      ! inadvertant buffer overrun -- that can lead to bad things.
+      integer(IntKi) :: CMsgLen
       ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+      CMsgLen = size(ErrMsg_C) - 1    ! Max length of ErrMsg_C without C_NULL_CHAR
+      if (ErrMsgLen > CMsgLen) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
+         ErrMsg_C = TRANSFER( trim(ErrMsg(1:CMsgLen))//C_NULL_CHAR, ErrMsg_C )
+      else
+         ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+      endif
    end subroutine SetErr
 END SUBROUTINE IFW_END_C
 
