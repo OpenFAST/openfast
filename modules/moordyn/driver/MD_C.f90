@@ -124,7 +124,6 @@ SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, R
     DO I = 1,6
         InitInp%PtfmInit(I)  = REAL(PtfmInit_C(I),ReKi)
     END DO
-    PRINT *, 'InitInp%PtfmInit = ', InitInp%PtfmInit
 
     ! Wave INformation - THIS IS A SHORT TERM HACK
     ! Fake wave info -- completely still, with no dynamic pressure terms
