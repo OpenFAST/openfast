@@ -21,7 +21,6 @@ MODULE InflowWindAPI
 
     USE ISO_C_BINDING
     USE InflowWind
-!    USE InflowWind_Subs
     USE InflowWind_Types
     USE NWTC_Library
 
@@ -44,8 +43,6 @@ TYPE(InflowWind_ConstraintStateType)    :: ConstrStates      !< Constraint state
 TYPE(InflowWind_OtherStateType)         :: OtherStates       !< Initial other/optimization states
 TYPE(InflowWind_OutputType)             :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
 TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
-
-INTEGER, PARAMETER :: InputStringLength = 179                !< Fixed length for all lines of the string-based input file
 
 CONTAINS
 
@@ -77,7 +74,7 @@ SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformSt
     CHARACTER(ErrMsgLen)                                             :: ErrMsg                     !< aggregated error message
     INTEGER                                                          :: ErrStat2                   !< temporary error status  from a call
     CHARACTER(ErrMsgLen)                                             :: ErrMsg2                    !< temporary error message from a call
-    INTEGER                                                          :: I, J, K
+    INTEGER                                                          :: I
     character(*), parameter                                          :: RoutineName = 'IFW_INIT_C' !< for error handling
 
    ! Initialize error handling
