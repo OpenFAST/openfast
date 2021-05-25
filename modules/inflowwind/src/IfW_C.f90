@@ -24,27 +24,50 @@ MODULE InflowWindAPI
     USE InflowWind_Types
     USE NWTC_Library
 
-IMPLICIT NONE
+   IMPLICIT NONE
 
-PUBLIC :: IFW_INIT_C
-PUBLIC :: IFW_CALCOUTPUT_C
-PUBLIC :: IFW_END_C
+   PUBLIC :: IFW_INIT_C
+   PUBLIC :: IFW_CALCOUTPUT_C
+   PUBLIC :: IFW_END_C
 
-! Accessible to all routines inside module
-TYPE(InflowWind_InputType)              :: InputGuess        !< An initial guess for the input; the input mesh must be defined, returned by Init
-TYPE(InflowWind_InputType)              :: InputData         !< Created by IFW_CALCOUTPUT_C and used by IFW_END_C
-TYPE(InflowWind_InitInputType)          :: InitInp
-TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
-TYPE(InflowWind_ParameterType)          :: p                 !< Parameters
-TYPE(InflowWind_ContinuousStateType)    :: ContStates        !< Initial continuous states
-TYPE(InflowWind_DiscreteStateType)      :: DiscStates        !< Initial discrete states
-TYPE(InflowWind_ConstraintStateType)    :: ConstrStateGuess  !< Initial guess of the constraint states
-TYPE(InflowWind_ConstraintStateType)    :: ConstrStates      !< Constraint states at Time
-TYPE(InflowWind_OtherStateType)         :: OtherStates       !< Initial other/optimization states
-TYPE(InflowWind_OutputType)             :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
-TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
+   ! Accessible to all routines inside module
+   TYPE(InflowWind_InputType)              :: InputGuess        !< An initial guess for the input; the input mesh must be defined, returned by Init
+   TYPE(InflowWind_InputType)              :: InputData         !< Created by IFW_CALCOUTPUT_C and used by IFW_END_C
+   TYPE(InflowWind_InitInputType)          :: InitInp
+   TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
+   TYPE(InflowWind_ParameterType)          :: p                 !< Parameters
+   TYPE(InflowWind_ContinuousStateType)    :: ContStates        !< Initial continuous states
+   TYPE(InflowWind_DiscreteStateType)      :: DiscStates        !< Initial discrete states
+   TYPE(InflowWind_ConstraintStateType)    :: ConstrStateGuess  !< Initial guess of the constraint states
+   TYPE(InflowWind_ConstraintStateType)    :: ConstrStates      !< Constraint states at Time
+   TYPE(InflowWind_OtherStateType)         :: OtherStates       !< Initial other/optimization states
+   TYPE(InflowWind_OutputType)             :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
+   TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
+
+   !  This must exactly match the value in the python-lib. If ErrMsgLen changes
+   !  at some point in the nwtc-library, this should be updated, but the logic
+   !  exists to correctly handle different lengths of the strings
+   integer(IntKi),   parameter            :: ErrMsgLen_C=1025
 
 CONTAINS
+
+!> This routine sets the error status in C_CHAR for export to calling code.
+!! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
+!! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
+!! inadvertant buffer overrun -- that can lead to bad things.
+subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
+   integer,                intent(in   )  :: ErrStat                 !< aggregated error message (fortran type)
+   character(ErrMsgLen),   intent(in   )  :: ErrMsg                  !< aggregated error message (fortran type)
+   integer(c_int),         intent(  out)  :: ErrStat_C
+   character(kind=c_char), intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+   ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
+   if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
+      ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
+   else
+      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
+   endif
+end subroutine SetErr
+
 
 !===============================================================================================================
 !--------------------------------------------- IFW INIT --------------------------------------------------------
@@ -61,7 +84,7 @@ SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformSt
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelNames_C
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelUnits_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
-    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025)
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(ErrMsgLen_C)
 
     ! Local Variables
     CHARACTER(kind=C_char, len=InputFileStringLength_C),    POINTER  :: InputFileString            !< Input file as a single string with NULL chracter separating lines
@@ -105,7 +128,11 @@ SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformSt
 
    ! Call the main subroutine InflowWind_Init - only need InitInp and TimeInterval as inputs, the rest are set by InflowWind_Init
    CALL InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
-      if (Failed())  return
+      if (Failed())  then
+print*,'ErrStat_C: ',ErrStat_C
+print*,'ErrMsg_C:  ',ErrMsg_C
+         return
+      endif
 
    ! Convert the outputs of InflowWind_Init from Fortran to C
    ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%WriteOutputHdr)),STAT=ErrStat2)
@@ -136,7 +163,7 @@ SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformSt
       if (Failed())  return
 
    call Cleanup()
-   call SetErr()
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 CONTAINS
    logical function Failed()
@@ -144,27 +171,13 @@ CONTAINS
       Failed = ErrStat >= AbortErrLev
       if (Failed) then
          call Cleanup()
-         call SetErr()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
    subroutine Cleanup()    ! NOTE: we are ignoring any error reporting from here
       CALL InflowWind_DestroyInput(InputGuess, ErrStat2, ErrMsg2 )
       CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat2, ErrMsg2 )
    end subroutine Cleanup 
-   subroutine SetErr()
-      ! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
-      ! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
-      ! inadvertant buffer overrun -- that can lead to bad things.
-      integer(IntKi) :: CMsgLen
-      ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-      CMsgLen = size(ErrMsg_C) - 1    ! Max length of ErrMsg_C without C_NULL_CHAR (probably 1024)
-      if (ErrMsgLen > CMsgLen) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
-         ErrMsg_C = TRANSFER( trim(ErrMsg(1:CMsgLen))//C_NULL_CHAR, ErrMsg_C )
-      else
-         ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
-      endif
-   end subroutine SetErr
-
 END SUBROUTINE IFW_INIT_C
 
 !===============================================================================================================
@@ -177,7 +190,7 @@ SUBROUTINE IFW_CALCOUTPUT_C(Time_C,Positions_C,Velocities_C,OutputChannelValues_
    REAL(C_FLOAT)                 , INTENT(  OUT)      :: Velocities_C(3*InitInp%NumWindPoints)
    REAL(C_FLOAT)                 , INTENT(  OUT)      :: OutputChannelValues_C(p%NumOuts)
    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(1025)
+   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local variables
    REAL(DbKi)                                         :: Time
@@ -205,27 +218,14 @@ SUBROUTINE IFW_CALCOUTPUT_C(Time_C,Positions_C,Velocities_C,OutputChannelValues_
    ! Get the output channel info out of y
    OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
-   call SetErr()
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 CONTAINS
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
-      if (Failed)    call SetErr()
+      if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
-   subroutine SetErr()
-      ! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
-      ! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
-      ! inadvertant buffer overrun -- that can lead to bad things.
-      integer(IntKi) :: CMsgLen
-      ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-      CMsgLen = size(ErrMsg_C) - 1    ! Max length of ErrMsg_C without C_NULL_CHAR
-      if (ErrMsgLen > CMsgLen) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
-         ErrMsg_C = TRANSFER( trim(ErrMsg(1:CMsgLen))//C_NULL_CHAR, ErrMsg_C )
-      else
-         ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
-      endif
-   end subroutine SetErr
 END SUBROUTINE IFW_CALCOUTPUT_C
 
 !===============================================================================================================
@@ -235,7 +235,7 @@ END SUBROUTINE IFW_CALCOUTPUT_C
 SUBROUTINE IFW_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_END_C')
 
    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(1025)
+   CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local variables
    INTEGER                                            :: ErrStat
@@ -244,22 +244,8 @@ SUBROUTINE IFW_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_END_C')
    ! Call the main subroutine InflowWind_End
    CALL InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, ErrStat, ErrMsg )
 
-   call SetErr()
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
-CONTAINS
-   subroutine SetErr()
-      ! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
-      ! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
-      ! inadvertant buffer overrun -- that can lead to bad things.
-      integer(IntKi) :: CMsgLen
-      ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-      CMsgLen = size(ErrMsg_C) - 1    ! Max length of ErrMsg_C without C_NULL_CHAR
-      if (ErrMsgLen > CMsgLen) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
-         ErrMsg_C = TRANSFER( trim(ErrMsg(1:CMsgLen))//C_NULL_CHAR, ErrMsg_C )
-      else
-         ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
-      endif
-   end subroutine SetErr
 END SUBROUTINE IFW_END_C
 
 END MODULE
