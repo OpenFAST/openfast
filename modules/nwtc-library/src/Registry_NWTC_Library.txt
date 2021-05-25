@@ -28,8 +28,8 @@ usefrom   NWTC_Library  FileInfoType        IntKi                    NumLines
 usefrom     ^             ^                 IntKi                    NumFiles
 usefrom     ^             ^                 IntKi                    FileLine  {:}
 usefrom     ^             ^                 IntKi                    FileIndx  {:}
-usefrom     ^             ^                 CHARACTER(1024)          FileList  {:}
-usefrom     ^             ^                 CHARACTER(1024)          Lines     {:}
+usefrom     ^             ^                 CHARACTER(MaxFileInfoLineLen)  FileList  {:}
+usefrom     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines     {:}
 
 usefrom   NWTC_Library  Quaternion          ReKi                     q0
 usefrom     ^             ^                 ReKi                     v  {3}

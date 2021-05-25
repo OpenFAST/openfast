@@ -1,6 +1,6 @@
 #**********************************************************************************************************************************
 # LICENSING
-# Copyright (C) 2021 Nicole Mendoza
+# Copyright (C) 2021 National Renewable Energy Laboratory
 #
 # This file is part of InflowWind.
 #
@@ -38,11 +38,20 @@ from ctypes import (
 import numpy as np
 
 class InflowWindLibAPI(CDLL):
+    error_levels = {
+        0: "None",
+        1: "Info",
+        2: "Warning",
+        3: "Severe Error",
+        4: "Fatal Error"
+    }
+
     def __init__(self, library_path):
         super().__init__(library_path)
         self.library_path = library_path
 
         self._initialize_routines()
+        self.ended = False
 
         # Create buffers for class data
         self.abort_error_level = c_int(4)
@@ -92,26 +101,24 @@ class InflowWindLibAPI(CDLL):
         self.IFW_END_C.restype = c_int
 
     # ifw_init ------------------------------------------------------------------------------------------------------------
-    def ifw_init(self, input_strings, input_string_length, uniform_string, uniform_string_length):
+    def ifw_init(self, input_string_array, uniform_string_array):
 
-        print('inflowwind_library.py: Running IFW_INIT_C .....')
-
-        # Set up inputs
-        input_string_array = (c_char_p * len(input_strings))()
-        for i, param in enumerate(input_strings):
-            input_string_array[i] = param.encode('utf-8')
+        # Set up inputs: Pass single NULL joined string
+        input_string = '\x00'.join(input_string_array)
+        input_string = input_string.encode('utf-8')
+        input_string_length = len(input_string)
         
-        uniform_string_array = (c_char_p * len(uniform_string))()
-        for i, param in enumerate(uniform_string):
-            uniform_string_array[i] = param.encode('utf-8')
+        uniform_string = '\x00'.join(uniform_string_array)
+        uniform_string = uniform_string.encode('utf-8')
+        uniform_string_length = len(uniform_string)
         
         self._numChannels = c_int(0)
 
         # Run IFW_INIT_C
         self.IFW_INIT_C(
-            input_string_array,                    # IN: input file string
+            c_char_p(input_string),                # IN: input file string
             byref(c_int(input_string_length)),     # IN: input file string length
-            uniform_string_array,                  # IN: uniform file string
+            c_char_p(uniform_string),              # IN: uniform file string
             byref(c_int(uniform_string_length)),   # IN: uniform file string length
             byref(c_int(self.numWindPts)),         # IN: number of wind points
             byref(c_double(self.dt)),              # IN: time step (dt)
@@ -121,20 +128,15 @@ class InflowWindLibAPI(CDLL):
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.fatal_error:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
+
+        self.check_error()
         
         # Initialize output channels
         self._channel_output_array = (c_double * self._numChannels.value)(0.0, )
         self._channel_output_values = np.empty( (self.numTimeSteps, self._numChannels.value) )
 
-        print('inflowwind_library.py: Completed IFW_INIT_C')
-
     # ifw_calcOutput ------------------------------------------------------------------------------------------------------------
     def ifw_calcOutput(self, time, positions, velocities, outputChannelValues):
-
-        print('inflowwind_library.py: Running IFW_CALCOUTPUT_C .....')
 
         # Set up inputs
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
@@ -155,9 +157,8 @@ class InflowWindLibAPI(CDLL):
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.fatal_error:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
+
+        self.check_error()
 
         # Convert output channel values back into python
         for k in range(0,self._numChannels.value):
@@ -171,25 +172,25 @@ class InflowWindLibAPI(CDLL):
             velocities[j,2] = velocities_flat_c[count+2]
             count = count + 3
 
-        print('inflowwind_library.py: Completed IFW_CALCOUTPUT_C')
-
     # ifw_end ------------------------------------------------------------------------------------------------------------
     def ifw_end(self):
+        if not self.ended:
+            self.ended = True
+            # Run IFW_END_C
+            self.IFW_END_C(
+                byref(self.error_status),
+                self.error_message
+            )
 
-        print('inflowwind_library.py: Running IFW_END_C .....')
-
-        # Run IFW_END_C
-        self.IFW_END_C(
-            byref(self.error_status),
-            self.error_message
-        )
-        if self.fatal_error:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
-
-        print('inflowwind_library.py: Completed IFW_END_C')
+            self.check_error()
 
     # other functions ----------------------------------------------------------------------------------------------------------
-    @property
-    def fatal_error(self):
-        return self.error_status.value >= self.abort_error_level.value
+    def check_error(self):
+        if self.error_status.value == 0:
+            return
+        elif self.error_status.value < self.abort_error_level.value:
+            print(f"{self.error_levels[self.error_status.value]}: {self.error_message.value.decode('ascii')}")
+        else:
+            print(f"{self.error_levels[self.error_status.value]}: {self.error_message.value.decode('ascii')}")
+            self.ifw_end()
+            raise Exception("\nInflowWind terminated prematurely.")

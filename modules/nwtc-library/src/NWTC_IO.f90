@@ -83,6 +83,11 @@ MODULE NWTC_IO
 
 !=======================================================================
 
+   INTERFACE InitFileInfo
+      MODULE PROCEDURE InitFileInfo_FromNullCString
+      MODULE PROCEDURE InitFileInfo_FromStringArray
+   END INTERFACE
+
       !> \copydoc nwtc_io::allcary1
    INTERFACE AllocAry
       MODULE PROCEDURE AllCAry1
@@ -3353,6 +3358,10 @@ END SUBROUTINE CheckR16Var
       character(45)                      :: TmpStr45
       write(U,*)  '-------------- Print_FileInfo_Struct ------------'
       write(U,*)  '  info stored in the FileInfo data type'
+      if (.not. allocated(FileInfo%FileLine) .and. .not. allocated(FileInfo%FileIndx) .and. .not. allocated(FileInfo%Lines)) then
+         write(U,*) '            Data not allocated'
+         return
+      endif
       write(U,*)  '        %NumLines           (integer): ',FileInfo%NumLines
       write(U,*)  '        %NumFiles           (integer): ',FileInfo%NumFiles
       write(U,*)  '        %FileList  (array of strings): ',size(FileInfo%FileList)
@@ -4461,7 +4470,84 @@ END SUBROUTINE CheckR16Var
    RETURN
    END SUBROUTINE PremEOF
 !=======================================================================
-   SUBROUTINE InitFileInfo( StringArray, FileInfo, ErrStat, ErrMsg )
+!> The following takes an input file as a C_Char string with C_NULL_CHAR deliniating line endings
+   subroutine InitFileInfo_FromNullCString(FileString, FileInfo, ErrStat, ErrMsg)
+      CHARACTER(kind=C_char,len=*), intent(in   )  :: FileString  !< input file as single C string with C_NULL_CHAR separated lines
+      TYPE(FileInfoType),           intent(  out)  :: FileInfo
+      INTEGER(IntKi),               intent(  out)  :: ErrStat
+      CHARACTER(*),                 intent(  out)  :: ErrMsg
+
+      integer                                    :: ErrStat2                   !< temporary error status  from a call
+      character(ErrMsgLen)                       :: ErrMsg2                    !< temporary error message from a call
+      character(MaxFileInfoLineLen), allocatable :: FileStringArray(:)
+      character(*),                    parameter :: RoutineName = 'InitFileInfo_FromNullCString'
+      integer :: idx, NumLines, MaxLineLen, NullLoc, Line
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      NumLines = 0      ! Initialize counter for lines
+      NullLoc  = 0
+      MaxLineLen = 0
+
+         ! Find how many non-comment lines we have
+      do idx=1,len(FileString)
+         if(FileString(idx:idx) == C_NULL_CHAR) then
+            MaxLineLen = max(MaxLineLen,idx-NullLoc)
+            NumLines = NumLines + 1    ! Increment line number
+            NullLoc  = idx
+         endif 
+      enddo
+
+      if (NumLines == 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Input string contains no C_NULL_CHAR characters. "// &
+                  " Cannot separete passed file info into string array."
+         if (Failed()) return;
+      endif
+      if (MaxLineLen > MaxFileInfoLineLen) then
+         ErrStat2 = ErrID_Warn
+         ErrMsg2  = "Input string contains lines longer than "//trim(Num2LStr(MaxFileInfoLineLen))// &
+                  " characters.  Check that the flat input file string is properly C_NULL_CHAR delineated"
+         if (Failed()) return;
+      endif
+
+         ! Now allocate a string array
+      call AllocAry( FileStringArray, NumLines, "FileStringArray", ErrStat2, ErrMsg2 )
+      if (Failed()) return;
+      FileStringArray = ""
+
+         ! Now step through the FileString and parse it into the array
+      idx      = 1   ! Index of start
+      do Line=1,NumLines
+         ! Index into the next segment
+         NullLoc = index(FileString(idx:len(FileString)),C_NULL_CHAR)
+         ! started indexing at idx, so add that back in for location in FileString
+         NullLoc = NullLoc + idx - 1
+         if (NullLoc > 0) then
+            FileStringArray(Line) = trim(FileString(idx:NullLoc-1))
+         else
+            exit  ! exit loop as we didn't find any more
+         endif
+         idx = min(NullLoc + 1,len(FileString))    ! Start next segment of file, but overstep end
+      enddo
+
+         ! Pass through to the FileInfo initialize routine
+      call InitFileInfo(FileStringArray, FileInfo, ErrStat2, ErrMsg2)
+      if (Failed()) return;
+   contains
+      logical function Failed()
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         Failed = ErrStat >= AbortErrLev
+         if (Failed) then
+            call Cleanup()
+         endif
+      end function Failed
+      subroutine Cleanup()
+         if (allocated(FileStringArray))  deallocate(FileStringArray)
+      end subroutine Cleanup
+   end subroutine InitFileInfo_FromNullCString
+!=======================================================================
+   SUBROUTINE InitFileInfo_FromStringArray( StringArray, FileInfo, ErrStat, ErrMsg )
 
       CHARACTER(*), DIMENSION(:), INTENT(IN   ) :: StringArray
       TYPE(FileInfoType),         INTENT(  OUT) :: FileInfo
@@ -4472,7 +4558,7 @@ END SUBROUTINE CheckR16Var
       character(len=len(StringArray))  :: Line
       integer                          :: TmpFileLine(size(StringArray))
 
-      CHARACTER(*), PARAMETER :: RoutineName = 'InitFileInfo'
+      CHARACTER(*), PARAMETER :: RoutineName = 'InitFileInfo_FromStringArray'
       INTEGER :: i, NumLines, IC, NumCommChars, LineLen, FirstComm, CommLoc
 
       ErrStat = ErrID_None
@@ -4480,6 +4566,7 @@ END SUBROUTINE CheckR16Var
       NumLines = 0      ! Initialize counter for non-comment populated lines
       TmpFileLine = 0   ! Line number that was passed in 
       NumCommChars = LEN_TRIM( CommChars )   ! Number of globally specified CommChars
+      TmpStringArray = ""
 
          ! Find how many non-comment lines we have
       do i=1,size(StringArray)
@@ -4512,18 +4599,19 @@ END SUBROUTINE CheckR16Var
       ALLOCATE( FileInfo%FileIndx(FileInfo%NumLines) )
       ALLOCATE( FileInfo%FileList(FileInfo%NumFiles) )
 
-      DO i = 1, FileInfo%NumLines
-         IF ( LEN(TmpStringArray(i)) > LEN(FileInfo%Lines(i)) ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Input string exceeds the bounds of FileInfoType.' , ErrStat, ErrMsg, RoutineName )
-            RETURN
-         END IF
-         FileInfo%Lines(i)    = TmpStringArray(i)
-         FileInfo%FileLine(i) = TmpFileLine(i)
-      END DO      
       FileInfo%FileIndx = FileInfo%NumFiles
       FileInfo%FileList = (/ "passed file info" /)
+      FileInfo%Lines    = ""  ! initialize empty in case of error
+      FileInfo%FileLine =  0  ! initialize empyt in case of later error
+      DO i = 1, FileInfo%NumLines
+         IF ( LEN_TRIM(TmpStringArray(i)) > MaxFileInfoLineLen ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Input string '//trim(Num2LStr(i))//' exceeds the bounds of FileInfoType.' , ErrStat, ErrMsg, RoutineName )
+         END IF
+         FileInfo%Lines(i)    = trim(TmpStringArray(i))
+         FileInfo%FileLine(i) = TmpFileLine(i)
+      END DO      
 
-   END SUBROUTINE
+   END SUBROUTINE InitFileInfo_FromStringArray
 !=======================================================================
 !> This routine calls ScanComFile (nwtc_io::scancomfile) and ReadComFile (nwtc_io::readcomfile) 
 !! to move non-comments in a set of nested files starting with TopFile into the FileInfo (nwtc_io::fileinfo) structure.
