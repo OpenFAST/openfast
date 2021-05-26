@@ -38,6 +38,7 @@ from ctypes import (
 import numpy as np
 
 class InflowWindLibAPI(CDLL):
+    # Human readable error levels from IfW.
     error_levels = {
         0: "None",
         1: "Info",
@@ -51,21 +52,30 @@ class InflowWindLibAPI(CDLL):
         self.library_path = library_path
 
         self._initialize_routines()
-        self.ended = False
+        self.ended = False                  # For error handling at end
 
         # Create buffers for class data
         self.abort_error_level = c_int(4)
         self.error_status = c_int(0)
         self.error_message = create_string_buffer(1025)
 
+        # This buffer for the channel names and units is set arbitrarily large
+        # to start.  InflowWind only has a maximum of 9 outputs at present, but
+        # may be expanded.  Channel name and unit lengths are currently hard
+        # coded to 20 (this must match ChanLen in NWTC_Base.f90).
         self._channel_names = create_string_buffer(20 * 4000)
         self._channel_units = create_string_buffer(20 * 4000)
 
-        self.dt = c_double(0)
-        self.total_time = c_double(0)
-        self.numTimeSteps = c_int(0)
+        self.dt = c_double(0)               # InflowWind must be passed
+                                            # something for the dt, but it does
+                                            # not use it.
 
-        self.numWindPts = c_int(0)
+        self.numTimeSteps = c_int(0)        # initialize to no timesteps
+
+        self.numWindPts = c_int(0)          # Number of wind points we will
+                                            # request velocity information.
+                                            # Constant through entire use of
+                                            # inflowwind library instance.
 
     # _initialize_routines() ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
@@ -151,8 +161,8 @@ class InflowWindLibAPI(CDLL):
         # Run IFW_CALCOUTPUT_C
         self.IFW_CALCOUTPUT_C(
             byref(c_double(time)),                 # IN: time at which to calculate velocities
-            positions_flat_c,                      # IN: positions - specified by user
-            velocities_flat_c,                     # OUT: velocities at desired positions
+            positions_flat_c,                      # IN: positions - specified by user, flattened to 1D
+            velocities_flat_c,                     # OUT: velocities at desired positions, flattened to 1D
             outputChannelValues_c,                 # OUT: output channel values as described in input file
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
