@@ -1538,18 +1538,24 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
 
       do iW=1,p%nWings
          ! ---Condensed version of "BEMT_Set_UA_InitData"
-         allocate(Init_UA_Data%c(InitInp%numBladeNodes,1), STAT = errStat2) ! TODO TODO
+         allocate(Init_UA_Data%c(InitInp%numBladeNodes,1), STAT = errStat2)
          do i = 1,InitInp%numBladeNodes
             Init_UA_Data%c(i,1)      = p%W(iW)%chord(i) ! NOTE: InitInp chord move-allocd to p
          end do
          Init_UA_Data%dt              = interval          
-         Init_UA_Data%OutRootName     = 'Debug.UA'
+         Init_UA_Data%OutRootName     = InitInp%RootName
          Init_UA_Data%numBlades       = 1
          Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes ! At AeroDyn ndoes, not CP
+
          Init_UA_Data%UAMod           = InitInp%UAMod  
          Init_UA_Data%Flookup         = InitInp%Flookup
          Init_UA_Data%a_s             = InitInp%a_s ! Speed of sound, m/s  
          Init_UA_Data%ShedEffect      = .False. ! Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
+         Init_UA_Data%WrSum           = InitInp%SumPrint
+         allocate(Init_UA_Data%UAOff_innerNode(1), stat=errStat2)
+         allocate(Init_UA_Data%UAOff_outerNode(1), stat=errStat2)
+         Init_UA_Data%UAOff_innerNode(1) = InitInp%W(iW)%UAOff_innerNode
+         Init_UA_Data%UAOff_outerNode(1) = InitInp%W(iW)%UAOff_outerNode
 
          ! --- UA init
          allocate(m%W(iW)%u_UA(InitInp%numBladeNodes, 2), stat=errStat2) 
@@ -1558,12 +1564,13 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
          call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 ); if(Failed())return
          call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 ); if(Failed())return
 
-         ! --- FVW specific
-         if (p%CirculationMethod/=idCircPolarData) then 
-            ErrMsg2='Unsteady aerodynamic (`AFAeroMod>1`) is only available with a circulation solving using profile data (`CircSolvingMethod=1`)'; ErrStat2=ErrID_Fatal;
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_Init_Wrapper'); return
-         endif
       enddo
+
+      ! --- FVW specific
+      if (p%CirculationMethod/=idCircPolarData) then 
+         ErrMsg2='Unsteady aerodynamic (`AFAeroMod>1`) is only available with a circulation solving using profile data (`CircSolvingMethod=1`)'; ErrStat2=ErrID_Fatal;
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_Init_Wrapper'); return
+      endif
    endif
 contains
    logical function Failed()

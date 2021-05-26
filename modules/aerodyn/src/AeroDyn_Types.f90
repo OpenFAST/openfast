@@ -181,6 +181,8 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutList      !< List of user-requested output channels (AD_AllBldNdOuts) [-]
     CHARACTER(1024)  :: BldNd_BlOutNd_Str      !< String to parse for the blade nodes to actually output (AD_AllBldNdOuts) [-]
     INTEGER(IntKi)  :: BldNd_BladesOut      !< The blades to output (AD_AllBldNdOuts) [-]
+    REAL(ReKi)  :: UAStartRad      !< Starting [radius]
+    REAL(ReKi)  :: UAEndRad      !< Ending [radius]
     TYPE(RotInputFile) , DIMENSION(:), ALLOCATABLE  :: rotors      !< Rotor (blades and tower) input file data [-]
   END TYPE AD_InputFile
 ! =======================
@@ -3797,6 +3799,8 @@ IF (ALLOCATED(SrcInputFileData%BldNd_OutList)) THEN
 ENDIF
     DstInputFileData%BldNd_BlOutNd_Str = SrcInputFileData%BldNd_BlOutNd_Str
     DstInputFileData%BldNd_BladesOut = SrcInputFileData%BldNd_BladesOut
+    DstInputFileData%UAStartRad = SrcInputFileData%UAStartRad
+    DstInputFileData%UAEndRad = SrcInputFileData%UAEndRad
 IF (ALLOCATED(SrcInputFileData%rotors)) THEN
   i1_l = LBOUND(SrcInputFileData%rotors,1)
   i1_u = UBOUND(SrcInputFileData%rotors,1)
@@ -3947,6 +3951,8 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%BldNd_BlOutNd_Str)  ! BldNd_BlOutNd_Str
       Int_BufSz  = Int_BufSz  + 1  ! BldNd_BladesOut
+      Re_BufSz   = Re_BufSz   + 1  ! UAStartRad
+      Re_BufSz   = Re_BufSz   + 1  ! UAEndRad
   Int_BufSz   = Int_BufSz   + 1     ! rotors allocated yes/no
   IF ( ALLOCATED(InData%rotors) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! rotors upper/lower bounds for each dimension
@@ -4172,6 +4178,10 @@ ENDIF
     END DO ! I
     IntKiBuf(Int_Xferred) = InData%BldNd_BladesOut
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%UAStartRad
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%UAEndRad
+    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%rotors) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4432,6 +4442,10 @@ ENDIF
     END DO ! I
     OutData%BldNd_BladesOut = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%UAStartRad = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%UAEndRad = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! rotors not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

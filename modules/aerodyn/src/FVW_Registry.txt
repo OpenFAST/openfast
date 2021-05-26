@@ -220,6 +220,8 @@ typedef  FVW/FVW           Wng_InitInputType    IntKi                           
 typedef     ^                   ^               ReKi                             Chord             :  -  - "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 
 typedef     ^                   ^               ReKi                             RElm              :  -  - "radius of center of each element"  - 
 typedef     ^                   ^               IntKi                            iRotor            - -  -  "Index of rotor the wing belong to" -
+typedef     ^                   ^              INTEGER                  UAOff_innerNode          - - -   "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
+typedef     ^                   ^              INTEGER                  UAOff_outerNode          - - -   "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
 
 
 # FVW_InitInputType
@@ -235,6 +237,7 @@ typedef     ^                   ^              IntKi                            
 typedef     ^                   ^              LOGICAL                           UA_Flag           - - -   "logical flag indicating whether to use UnsteadyAero"        -
 typedef     ^                   ^              LOGICAL                           Flookup           - - -   "Use table lookup for f' and f'' "    -
 typedef     ^                   ^              ReKi                              a_s               - - -   "speed of sound"        m/s
+typedef     ^                   ^              LOGICAL                           SumPrint          - - -   "Whether to print summary file (primarially in in UA)"    -
 
 #.......... InputFileType ......
 # FVW_InputFile

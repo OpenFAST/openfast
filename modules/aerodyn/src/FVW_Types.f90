@@ -157,7 +157,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: dl      !< Vector of elementary length along the LL [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Area      !< Area of each LL panel [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: diag_LL      !< Diagonal length of each LL panel [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Gamma_LL      !< Circulation on the wing lifting line (COPY of Constraint State) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vind_LL      !< Induced velocity on lifting line control points [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vtot_LL      !< Total velocity on lifting line control points [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vstr_LL      !< Structural velocity on LL CP [m/s]
@@ -266,6 +265,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RElm      !< radius of center of each element [-]
     INTEGER(IntKi)  :: iRotor      !< Index of rotor the wing belong to [-]
+    INTEGER(IntKi)  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
+    INTEGER(IntKi)  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
   END TYPE Wng_InitInputType
 ! =======================
 ! =========  FVW_InitInputType  =======
@@ -281,6 +282,7 @@ IMPLICIT NONE
     LOGICAL  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
     LOGICAL  :: Flookup      !< Use table lookup for f' and f''  [-]
     REAL(ReKi)  :: a_s      !< speed of sound [m/s]
+    LOGICAL  :: SumPrint      !< Whether to print summary file (primarially in in UA) [-]
   END TYPE FVW_InitInputType
 ! =======================
 ! =========  FVW_InputFile  =======
@@ -3652,18 +3654,6 @@ IF (ALLOCATED(SrcWng_MiscVarTypeData%diag_LL)) THEN
   END IF
     DstWng_MiscVarTypeData%diag_LL = SrcWng_MiscVarTypeData%diag_LL
 ENDIF
-IF (ALLOCATED(SrcWng_MiscVarTypeData%Gamma_LL)) THEN
-  i1_l = LBOUND(SrcWng_MiscVarTypeData%Gamma_LL,1)
-  i1_u = UBOUND(SrcWng_MiscVarTypeData%Gamma_LL,1)
-  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Gamma_LL)) THEN 
-    ALLOCATE(DstWng_MiscVarTypeData%Gamma_LL(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Gamma_LL.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstWng_MiscVarTypeData%Gamma_LL = SrcWng_MiscVarTypeData%Gamma_LL
-ENDIF
 IF (ALLOCATED(SrcWng_MiscVarTypeData%Vind_LL)) THEN
   i1_l = LBOUND(SrcWng_MiscVarTypeData%Vind_LL,1)
   i1_u = UBOUND(SrcWng_MiscVarTypeData%Vind_LL,1)
@@ -4074,9 +4064,6 @@ ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%diag_LL)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%diag_LL)
 ENDIF
-IF (ALLOCATED(Wng_MiscVarTypeData%Gamma_LL)) THEN
-  DEALLOCATE(Wng_MiscVarTypeData%Gamma_LL)
-ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%Vind_LL)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%Vind_LL)
 ENDIF
@@ -4252,11 +4239,6 @@ ENDIF
   IF ( ALLOCATED(InData%diag_LL) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! diag_LL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%diag_LL)  ! diag_LL
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Gamma_LL allocated yes/no
-  IF ( ALLOCATED(InData%Gamma_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! Gamma_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Gamma_LL)  ! Gamma_LL
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Vind_LL allocated yes/no
   IF ( ALLOCATED(InData%Vind_LL) ) THEN
@@ -4686,21 +4668,6 @@ ENDIF
 
       DO i1 = LBOUND(InData%diag_LL,1), UBOUND(InData%diag_LL,1)
         ReKiBuf(Re_Xferred) = InData%diag_LL(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%Gamma_LL) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Gamma_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Gamma_LL,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%Gamma_LL,1), UBOUND(InData%Gamma_LL,1)
-        ReKiBuf(Re_Xferred) = InData%Gamma_LL(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -5546,24 +5513,6 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%diag_LL,1), UBOUND(OutData%diag_LL,1)
         OutData%diag_LL(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Gamma_LL not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Gamma_LL)) DEALLOCATE(OutData%Gamma_LL)
-    ALLOCATE(OutData%Gamma_LL(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Gamma_LL.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%Gamma_LL,1), UBOUND(OutData%Gamma_LL,1)
-        OutData%Gamma_LL(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -9366,6 +9315,8 @@ IF (ALLOCATED(SrcWng_InitInputTypeData%RElm)) THEN
     DstWng_InitInputTypeData%RElm = SrcWng_InitInputTypeData%RElm
 ENDIF
     DstWng_InitInputTypeData%iRotor = SrcWng_InitInputTypeData%iRotor
+    DstWng_InitInputTypeData%UAOff_innerNode = SrcWng_InitInputTypeData%UAOff_innerNode
+    DstWng_InitInputTypeData%UAOff_outerNode = SrcWng_InitInputTypeData%UAOff_outerNode
  END SUBROUTINE FVW_CopyWng_InitInputType
 
  SUBROUTINE FVW_DestroyWng_InitInputType( Wng_InitInputTypeData, ErrStat, ErrMsg )
@@ -9439,6 +9390,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%RElm)  ! RElm
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! iRotor
+      Int_BufSz  = Int_BufSz  + 1  ! UAOff_innerNode
+      Int_BufSz  = Int_BufSz  + 1  ! UAOff_outerNode
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -9517,6 +9470,10 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%iRotor
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%UAOff_innerNode
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%UAOff_outerNode
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_PackWng_InitInputType
 
@@ -9609,6 +9566,10 @@ ENDIF
   END IF
     OutData%iRotor = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%UAOff_innerNode = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%UAOff_outerNode = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackWng_InitInputType
 
  SUBROUTINE FVW_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -9667,6 +9628,7 @@ ENDIF
     DstInitInputData%UA_Flag = SrcInitInputData%UA_Flag
     DstInitInputData%Flookup = SrcInitInputData%Flookup
     DstInitInputData%a_s = SrcInitInputData%a_s
+    DstInitInputData%SumPrint = SrcInitInputData%SumPrint
  END SUBROUTINE FVW_CopyInitInput
 
  SUBROUTINE FVW_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -9783,6 +9745,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! UA_Flag
       Int_BufSz  = Int_BufSz  + 1  ! Flookup
       Re_BufSz   = Re_BufSz   + 1  ! a_s
+      Int_BufSz  = Int_BufSz  + 1  ! SumPrint
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -9914,6 +9877,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%a_s
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%SumPrint, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_PackInitInput
 
  SUBROUTINE FVW_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -10077,6 +10042,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%a_s = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%SumPrint = TRANSFER(IntKiBuf(Int_Xferred), OutData%SumPrint)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackInitInput
 
  SUBROUTINE FVW_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
