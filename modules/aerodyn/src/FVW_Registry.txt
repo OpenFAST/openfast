@@ -9,6 +9,8 @@ usefrom UnsteadyAero_Registry.txt
 
 #####################  Grid out          ###############
 typedef  FVW/FVW           GridOutType          CHARACTER(100)                   name              -  -   - "Grid name"  -
+typedef     ^                   ^               ReKi                             tStart            -  -  -  "Time at which outputs starts" -
+typedef     ^                   ^               ReKi                             tEnd              -  -  -  "Time at which outputs ends" -
 typedef     ^                   ^               ReKi                             DTout             -  -  -  "Output frequency of grid" -
 typedef     ^                   ^               ReKi                             xStart            -  -  -  "xStart" -
 typedef     ^                   ^               ReKi                             yStart            -  -  -  "yStart" -

@@ -204,41 +204,61 @@ CONTAINS
    subroutine ReadGridOut(sLine, GridOut)
       character(len=*),  intent(in)  :: sLine  !< full line
       type(GridOutType), intent(out) :: GridOut
-      character(255), allocatable :: StrArray(:) ! Array of strings extracted from line
+      character(255) :: StrArray(13) ! Array of strings extracted from line
       real(ReKi) :: DummyFloat
       ! Convert line to array of strings
-      CALL AllocAry(StrArray, 11, 'StrArray for grid out', ErrStat2, ErrMsg2); 
-      if (ErrStat2/=ErrID_None) return
       StrArray(:)='';
-      CALL ReadCAryFromStr(sLine, StrArray, 11, 'StrArray', 'StrArray', ErrStat2, ErrMsg2)! NOTE:No Error handling!
+      CALL ReadCAryFromStr(sLine, StrArray, 13, 'StrArray', 'StrArray', ErrStat2, ErrMsg2)! NOTE:No Error handling!
       ! Default to error
       ErrStat2=ErrID_Fatal
       ErrMsg2='Error reading OLAF grid outputs line: '//trim(sLine)
       ! Name
       GridOut%name =StrArray(1) 
-      ! Dtout
+      ! tStart
       call Conv2UC( StrArray(2) )
       if ( index(StrArray(2), "DEFAULT" ) == 1 ) then
+         GridOut%tStart  = 0.0_ReKi
+      else
+         if (.not. is_numeric(StrArray(2), GridOut%tStart) ) then 
+            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'. TStart needs to be numeric or "default".'
+            return
+         endif
+      endif
+      ! tEnd
+      call Conv2UC( StrArray(3) )
+      if ( index(StrArray(3), "DEFAULT" ) == 1 ) then
+         GridOut%tEnd  = 99999.0_ReKi ! TODO
+      else
+         if (.not. is_numeric(StrArray(3), GridOut%tEnd) ) then
+            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'. TEnd needs to be numeric or "default".'
+            return
+         endif
+      endif
+      ! Dtout
+      call Conv2UC( StrArray(4) )
+      if ( index(StrArray(4), "DEFAULT" ) == 1 ) then
          GridOut%DTout  = p%DTfvw
-      else if ( index(StrArray(2), "ALL" ) == 1 ) then
+      else if ( index(StrArray(4), "ALL" ) == 1 ) then
          GridOut%DTout  = p%DTaero
       else
-         if (.not. is_numeric(StrArray(2), GridOut%DTout) ) return
+         if (.not. is_numeric(StrArray(4), GridOut%DTout) ) then
+            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'. DTout needs to be numeric, "default" or "all".'
+            return
+         endif
       endif
       ! x,y,z
-      if (.not. is_numeric(StrArray( 3), GridOut%xStart) ) return
-      if (.not. is_numeric(StrArray( 4), GridOut%xEnd  ) ) return
-      if (.not. is_int    (StrArray( 5), GridOut%nx    ) ) return
-      if (.not. is_numeric(StrArray( 6), GridOut%yStart) ) return
-      if (.not. is_numeric(StrArray( 7), GridOut%yEnd  ) ) return
-      if (.not. is_int    (StrArray( 8), GridOut%ny    ) ) return
-      if (.not. is_numeric(StrArray( 9), GridOut%zStart) ) return
-      if (.not. is_numeric(StrArray(10), GridOut%zEnd  ) ) return
-      if (.not. is_int    (StrArray(11), GridOut%nz    ) ) return
+      if (.not. is_numeric(StrArray( 5), GridOut%xStart) ) return
+      if (.not. is_numeric(StrArray( 6), GridOut%xEnd  ) ) return
+      if (.not. is_int    (StrArray( 7), GridOut%nx    ) ) return
+      if (.not. is_numeric(StrArray( 8), GridOut%yStart) ) return
+      if (.not. is_numeric(StrArray( 9), GridOut%yEnd  ) ) return
+      if (.not. is_int    (StrArray(10), GridOut%ny    ) ) return
+      if (.not. is_numeric(StrArray(11), GridOut%zStart) ) return
+      if (.not. is_numeric(StrArray(12), GridOut%zEnd  ) ) return
+      if (.not. is_int    (StrArray(13), GridOut%nz    ) ) return
       ! Success
       ErrStat2=ErrID_None
       ErrMsg2=''
-      if(allocated(StrArray)) deallocate(StrArray)
    end subroutine ReadGridOut
 
 END SUBROUTINE FVW_ReadInputFile
