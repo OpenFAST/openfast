@@ -35,9 +35,14 @@ USE AirfoilInfo_Types
 USE UnsteadyAero_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelocity = 1      ! Grid stores velocity field [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelVorticity = 2      ! Grid stores velocity and vorticity [-]
 ! =========  GridOutType  =======
   TYPE, PUBLIC :: GridOutType
     CHARACTER(100)  :: name      !< Grid name [-]
+    INTEGER(IntKi)  :: type      !< Grid type [-]
+    REAL(ReKi)  :: tStart      !< Time at which outputs starts [-]
+    REAL(ReKi)  :: tEnd      !< Time at which outputs ends [-]
     REAL(ReKi)  :: DTout      !< Output frequency of grid [-]
     REAL(ReKi)  :: xStart      !< xStart [-]
     REAL(ReKi)  :: yStart      !< yStart [-]
@@ -49,6 +54,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ny      !< ny [-]
     INTEGER(IntKi)  :: nz      !< nz [-]
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uGrid      !< Grid velocity 3 x nz x ny x nx [-]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: omGrid      !< Grid vorticity 3 x nz x ny x nx [-]
     REAL(DbKi)  :: tLastOutput      !< Last output time [-]
   END TYPE GridOutType
 ! =======================
@@ -345,6 +351,9 @@ CONTAINS
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstGridOutTypeData%name = SrcGridOutTypeData%name
+    DstGridOutTypeData%type = SrcGridOutTypeData%type
+    DstGridOutTypeData%tStart = SrcGridOutTypeData%tStart
+    DstGridOutTypeData%tEnd = SrcGridOutTypeData%tEnd
     DstGridOutTypeData%DTout = SrcGridOutTypeData%DTout
     DstGridOutTypeData%xStart = SrcGridOutTypeData%xStart
     DstGridOutTypeData%yStart = SrcGridOutTypeData%yStart
@@ -373,6 +382,24 @@ IF (ALLOCATED(SrcGridOutTypeData%uGrid)) THEN
   END IF
     DstGridOutTypeData%uGrid = SrcGridOutTypeData%uGrid
 ENDIF
+IF (ALLOCATED(SrcGridOutTypeData%omGrid)) THEN
+  i1_l = LBOUND(SrcGridOutTypeData%omGrid,1)
+  i1_u = UBOUND(SrcGridOutTypeData%omGrid,1)
+  i2_l = LBOUND(SrcGridOutTypeData%omGrid,2)
+  i2_u = UBOUND(SrcGridOutTypeData%omGrid,2)
+  i3_l = LBOUND(SrcGridOutTypeData%omGrid,3)
+  i3_u = UBOUND(SrcGridOutTypeData%omGrid,3)
+  i4_l = LBOUND(SrcGridOutTypeData%omGrid,4)
+  i4_u = UBOUND(SrcGridOutTypeData%omGrid,4)
+  IF (.NOT. ALLOCATED(DstGridOutTypeData%omGrid)) THEN 
+    ALLOCATE(DstGridOutTypeData%omGrid(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGridOutTypeData%omGrid.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstGridOutTypeData%omGrid = SrcGridOutTypeData%omGrid
+ENDIF
     DstGridOutTypeData%tLastOutput = SrcGridOutTypeData%tLastOutput
  END SUBROUTINE FVW_CopyGridOutType
 
@@ -387,6 +414,9 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(GridOutTypeData%uGrid)) THEN
   DEALLOCATE(GridOutTypeData%uGrid)
+ENDIF
+IF (ALLOCATED(GridOutTypeData%omGrid)) THEN
+  DEALLOCATE(GridOutTypeData%omGrid)
 ENDIF
  END SUBROUTINE FVW_DestroyGridOutType
 
@@ -426,6 +456,9 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%name)  ! name
+      Int_BufSz  = Int_BufSz  + 1  ! type
+      Re_BufSz   = Re_BufSz   + 1  ! tStart
+      Re_BufSz   = Re_BufSz   + 1  ! tEnd
       Re_BufSz   = Re_BufSz   + 1  ! DTout
       Re_BufSz   = Re_BufSz   + 1  ! xStart
       Re_BufSz   = Re_BufSz   + 1  ! yStart
@@ -440,6 +473,11 @@ ENDIF
   IF ( ALLOCATED(InData%uGrid) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! uGrid upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%uGrid)  ! uGrid
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! omGrid allocated yes/no
+  IF ( ALLOCATED(InData%omGrid) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! omGrid upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%omGrid)  ! omGrid
   END IF
       Db_BufSz   = Db_BufSz   + 1  ! tLastOutput
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -473,6 +511,12 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%name(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%type
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%tStart
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%tEnd
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%DTout
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%xStart
@@ -523,6 +567,36 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%omGrid) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%omGrid,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%omGrid,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%omGrid,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%omGrid,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%omGrid,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%omGrid,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%omGrid,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%omGrid,4)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i4 = LBOUND(InData%omGrid,4), UBOUND(InData%omGrid,4)
+        DO i3 = LBOUND(InData%omGrid,3), UBOUND(InData%omGrid,3)
+          DO i2 = LBOUND(InData%omGrid,2), UBOUND(InData%omGrid,2)
+            DO i1 = LBOUND(InData%omGrid,1), UBOUND(InData%omGrid,1)
+              ReKiBuf(Re_Xferred) = InData%omGrid(i1,i2,i3,i4)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
     DbKiBuf(Db_Xferred) = InData%tLastOutput
     Db_Xferred = Db_Xferred + 1
  END SUBROUTINE FVW_PackGridOutType
@@ -561,6 +635,12 @@ ENDIF
       OutData%name(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%type = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%tStart = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%tEnd = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%DTout = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%xStart = ReKiBuf(Re_Xferred)
@@ -608,6 +688,39 @@ ENDIF
           DO i2 = LBOUND(OutData%uGrid,2), UBOUND(OutData%uGrid,2)
             DO i1 = LBOUND(OutData%uGrid,1), UBOUND(OutData%uGrid,1)
               OutData%uGrid(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! omGrid not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%omGrid)) DEALLOCATE(OutData%omGrid)
+    ALLOCATE(OutData%omGrid(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%omGrid.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i4 = LBOUND(OutData%omGrid,4), UBOUND(OutData%omGrid,4)
+        DO i3 = LBOUND(OutData%omGrid,3), UBOUND(OutData%omGrid,3)
+          DO i2 = LBOUND(OutData%omGrid,2), UBOUND(OutData%omGrid,2)
+            DO i1 = LBOUND(OutData%omGrid,1), UBOUND(OutData%omGrid,1)
+              OutData%omGrid(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
