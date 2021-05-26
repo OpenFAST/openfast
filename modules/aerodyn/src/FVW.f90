@@ -262,6 +262,10 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       nMax = nMax + m%GridOutputs(iGrid)%nx * m%GridOutputs(iGrid)%ny * m%GridOutputs(iGrid)%nz
       call AllocAry(m%GridOutputs(iGrid)%uGrid, 3, m%GridOutputs(iGrid)%nx,  m%GridOutputs(iGrid)%ny, m%GridOutputs(iGrid)%nz, 'uGrid', ErrStat2, ErrMsg2);
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      if (m%GridOutputs(iGrid)%type==idGridVelVorticity) then
+         call AllocAry(m%GridOutputs(iGrid)%omGrid, 3, m%GridOutputs(iGrid)%nx,  m%GridOutputs(iGrid)%ny, m%GridOutputs(iGrid)%nz, 'omGrid', ErrStat2, ErrMsg2);
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      endif
       m%GridOutputs(iGrid)%tLastOutput = -HUGE(1.0_DbKi)
    enddo
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )

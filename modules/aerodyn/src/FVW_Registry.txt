@@ -7,8 +7,12 @@ include Registry_NWTC_Library.txt
 usefrom AirfoilInfo_Registry.txt
 usefrom UnsteadyAero_Registry.txt
 
+#####################  Parameters        ###############
+param    FVW/FVW        -  IntKi    idGridVelocity          -  1  -  "Grid stores velocity field" -
+param    ^              -  IntKi    idGridVelVorticity      -  2  -  "Grid stores velocity and vorticity"                   -
 #####################  Grid out          ###############
 typedef  FVW/FVW           GridOutType          CHARACTER(100)                   name              -  -   - "Grid name"  -
+typedef     ^                   ^               IntKi                            type              -  -  -  "Grid type" -
 typedef     ^                   ^               ReKi                             tStart            -  -  -  "Time at which outputs starts" -
 typedef     ^                   ^               ReKi                             tEnd              -  -  -  "Time at which outputs ends" -
 typedef     ^                   ^               ReKi                             DTout             -  -  -  "Output frequency of grid" -
@@ -18,10 +22,11 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             xEnd              -  -  -  "xEnd" -
 typedef     ^                   ^               ReKi                             yEnd              -  -  -  "yEnd" -
 typedef     ^                   ^               ReKi                             zEnd              -  -  -  "zEnd" -
-typedef     ^                   ^               Intki                            nx                -  -  -  "nx" -
-typedef     ^                   ^               Intki                            ny                -  -  -  "ny" -
-typedef     ^                   ^               Intki                            nz                -  -  -  "nz" -
+typedef     ^                   ^               IntKi                            nx                -  -  -  "nx" -
+typedef     ^                   ^               IntKi                            ny                -  -  -  "ny" -
+typedef     ^                   ^               IntKi                            nz                -  -  -  "nz" -
 typedef     ^                   ^               ReKi                             uGrid    {:}{:}{:}{:} - -  "Grid velocity 3 x nz x ny x nx" -
+typedef     ^                   ^               ReKi                             omGrid   {:}{:}{:}{:} - -  "Grid vorticity 3 x nz x ny x nx" -
 typedef     ^                   ^               DbKi                             tLastOutput       -  -  -  "Last output time" -
 
 #####################  Segments         ###############
