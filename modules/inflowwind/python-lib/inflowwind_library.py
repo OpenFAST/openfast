@@ -21,7 +21,7 @@
 # This is the Python-C interface library for InflowWind
 # Usage: THIS LIBRARY IS NOT TO BE CHANGED OR EDITED BY THE USER
 from ctypes import (
-	CDLL,
+    CDLL,
     POINTER,
     create_string_buffer,
     byref,
@@ -37,7 +37,7 @@ from ctypes import (
 )
 import numpy as np
 
-class InflowWindLibAPI(CDLL):
+class InflowWindLib(CDLL):
     # Human readable error levels from IfW.
     error_levels = {
         0: "None",
@@ -47,6 +47,12 @@ class InflowWindLibAPI(CDLL):
         4: "Fatal Error"
     }
 
+    #   NOTE:   the error message length in Fortran is controlled by the
+    #           ErrMsgLen variable in the NWTC_Base.f90 file.  If that ever
+    #           changes, it may be necessary to update the corresponding size
+    #           here.
+    error_msg_c_len = 1025
+
     def __init__(self, library_path):
         super().__init__(library_path)
         self.library_path = library_path
@@ -55,31 +61,33 @@ class InflowWindLibAPI(CDLL):
         self.ended = False                  # For error handling at end
 
         # Create buffers for class data
-        self.abort_error_level = c_int(4)
-        self.error_status = c_int(0)
-        self.error_message = create_string_buffer(1025)
+        self.abort_error_level = 4
+        self.error_status_c = c_int(0)
+        self.error_message_c = create_string_buffer(self.error_msg_c_len)
 
         # This buffer for the channel names and units is set arbitrarily large
         # to start.  InflowWind only has a maximum of 9 outputs at present, but
         # may be expanded.  Channel name and unit lengths are currently hard
         # coded to 20 (this must match ChanLen in NWTC_Base.f90).
-        self._channel_names = create_string_buffer(20 * 4000)
-        self._channel_units = create_string_buffer(20 * 4000)
+        self._channel_names_c = create_string_buffer(20 * 4000 + 1)
+        self._channel_units_c = create_string_buffer(20 * 4000 + 1)
 
-        self.dt = c_double(0)               # InflowWind must be passed
+        self.dt = 0                         # InflowWind must be passed
                                             # something for the dt, but it does
                                             # not use it.
 
-        self.numTimeSteps = c_int(0)        # initialize to no timesteps
+        self.numTimeSteps = 0               # initialize to no timesteps
 
-        self.numWindPts = c_int(0)          # Number of wind points we will
+        self.numWindPts = 0                 # Number of wind points we will
                                             # request velocity information.
                                             # Constant through entire use of
                                             # inflowwind library instance.
 
+        self.numChannels = 0                # Number of channels returned
+
     # _initialize_routines() ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
-        self.IFW_INIT_C.argtypes = [
+        self.IfW_Init_c.argtypes = [
             POINTER(c_char_p),                    # input file string
             POINTER(c_int),                       # input file string length
             POINTER(c_char_p),                    # uniform file string
@@ -92,9 +100,9 @@ class InflowWindLibAPI(CDLL):
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
-        self.IFW_INIT_C.restype = c_int
+        self.IfW_Init_c.restype = c_int
 
-        self.IFW_CALCOUTPUT_C.argtypes = [
+        self.IfW_CalcOutput_c.argtypes = [
             POINTER(c_double),                    # Time_C
             POINTER(c_float),                     # Positions
             POINTER(c_float),                     # Velocities
@@ -102,13 +110,13 @@ class InflowWindLibAPI(CDLL):
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
-        self.IFW_CALCOUTPUT_C.restype = c_int
+        self.IfW_CalcOutput_c.restype = c_int
 
-        self.IFW_END_C.argtypes = [
+        self.IfW_End_c.argtypes = [
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
-        self.IFW_END_C.restype = c_int
+        self.IfW_End_c.restype = c_int
 
     # ifw_init ------------------------------------------------------------------------------------------------------------
     def ifw_init(self, input_string_array, uniform_string_array):
@@ -122,56 +130,55 @@ class InflowWindLibAPI(CDLL):
         uniform_string = uniform_string.encode('utf-8')
         uniform_string_length = len(uniform_string)
         
-        self._numChannels = c_int(0)
+        self._numChannels_c = c_int(0)
 
         # Run IFW_INIT_C
-        self.IFW_INIT_C(
+        self.IfW_Init_c(
             c_char_p(input_string),                # IN: input file string
             byref(c_int(input_string_length)),     # IN: input file string length
             c_char_p(uniform_string),              # IN: uniform file string
             byref(c_int(uniform_string_length)),   # IN: uniform file string length
             byref(c_int(self.numWindPts)),         # IN: number of wind points
             byref(c_double(self.dt)),              # IN: time step (dt)
-            byref(self._numChannels),              # OUT: number of channels
-            self._channel_names,                   # OUT: output channel names
-            self._channel_units,                   # OUT: output channel units
-            byref(self.error_status),              # OUT: ErrStat_C
-            self.error_message                     # OUT: ErrMsg_C
+            byref(self._numChannels_c),            # OUT: number of channels
+            self._channel_names_c,                 # OUT: output channel names as c_char
+            self._channel_units_c,                 # OUT: output channel units as c_char
+            byref(self.error_status_c),            # OUT: ErrStat_C
+            self.error_message_c                   # OUT: ErrMsg_C
         )
 
         self.check_error()
         
         # Initialize output channels
-        self._channel_output_array = (c_double * self._numChannels.value)(0.0, )
-        self._channel_output_values = np.empty( (self.numTimeSteps, self._numChannels.value) )
+        self.numChannels = self._numChannels_c.value
 
     # ifw_calcOutput ------------------------------------------------------------------------------------------------------------
     def ifw_calcOutput(self, time, positions, velocities, outputChannelValues):
 
         # Set up inputs
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
-        positions_flat_c = (c_float * (3 * self.numWindPts))(0.0, )
+        positions_flat_c = (c_float * (3 * self.numWindPts))(0.0,)
         for i, p in enumerate(positions_flat):
             positions_flat_c[i] = c_float(p)
 
-        velocities_flat_c = (c_float * (3 * self.numWindPts))(0.0, )
+        velocities_flat_c = (c_float * (3 * self.numWindPts))(0.0,)
 
-        outputChannelValues_c = (c_float * self._numChannels.value)(0.0, )
+        outputChannelValues_c = (c_float * self.numChannels)(0.0,)
 
         # Run IFW_CALCOUTPUT_C
-        self.IFW_CALCOUTPUT_C(
+        self.IfW_CalcOutput_c(
             byref(c_double(time)),                 # IN: time at which to calculate velocities
             positions_flat_c,                      # IN: positions - specified by user, flattened to 1D
             velocities_flat_c,                     # OUT: velocities at desired positions, flattened to 1D
             outputChannelValues_c,                 # OUT: output channel values as described in input file
-            byref(self.error_status),              # OUT: ErrStat_C
-            self.error_message                     # OUT: ErrMsg_C
+            byref(self.error_status_c),            # OUT: ErrStat_C
+            self.error_message_c                   # OUT: ErrMsg_C
         )
 
         self.check_error()
 
         # Convert output channel values back into python
-        for k in range(0,self._numChannels.value):
+        for k in range(0,self.numChannels):
             outputChannelValues[k] = float(outputChannelValues_c[k])
 
         # Reshape velocities into [N,3]
@@ -187,20 +194,36 @@ class InflowWindLibAPI(CDLL):
         if not self.ended:
             self.ended = True
             # Run IFW_END_C
-            self.IFW_END_C(
-                byref(self.error_status),
-                self.error_message
+            self.IfW_End_c(
+                byref(self.error_status_c),
+                self.error_message_c
             )
 
             self.check_error()
 
     # other functions ----------------------------------------------------------------------------------------------------------
     def check_error(self):
-        if self.error_status.value == 0:
+        if self.error_status_c.value == 0:
             return
-        elif self.error_status.value < self.abort_error_level.value:
-            print(f"{self.error_levels[self.error_status.value]}: {self.error_message.value.decode('ascii')}")
+        elif self.error_status_c.value < self.abort_error_level:
+            print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
         else:
-            print(f"{self.error_levels[self.error_status.value]}: {self.error_message.value.decode('ascii')}")
+            print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
             self.ifw_end()
             raise Exception("\nInflowWind terminated prematurely.")
+
+    @property
+    def output_channel_names(self):
+        if len(self._channel_names_c.value.split()) == 0:
+             return []
+        output_channel_names = self._channel_names_c.value.split()
+        output_channel_names = [n.decode('UTF-8') for n in output_channel_names]
+        return output_channel_names
+
+    @property
+    def output_channel_units(self):
+        if len(self._channel_units_c.value.split()) == 0:
+            return []
+        output_channel_units = self._channel_units_c.value.split()
+        output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
+        return output_channel_units

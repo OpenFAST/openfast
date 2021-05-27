@@ -54,6 +54,9 @@ target_link_libraries(ifwlib nwtclibs)
 # c-bindings interface library
 add_library(ifw_c_lib SHARED src/IfW_C.f90)
 target_link_libraries(ifw_c_lib ifwlib)
+if(APPLE OR UNIX)
+   target_compile_definitions(ifw_c_lib PUBLIC  -DIMPLICIT_DLLEXPORT)
+endif()
 
 set(IFW_DRIVER_SOURCES
   src/InflowWind_Driver_Types.f90

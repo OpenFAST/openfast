@@ -21,6 +21,7 @@ MODULE InflowWindAPI
 
     USE ISO_C_BINDING
     USE InflowWind
+    USE InflowWind_Subs, only: MaxOutPts
     USE InflowWind_Types
     USE NWTC_Library
 
@@ -72,8 +73,12 @@ end subroutine SetErr
 !===============================================================================================================
 !--------------------------------------------- IFW INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformString_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IFW_INIT_C')
-
+SUBROUTINE IfW_Init_c(InputFileString_C, InputFileStringLength_C, InputUniformString_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IfW_Init_c')
+   IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_Init_c
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_Init_c
+#endif
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputUniformString_C
@@ -81,8 +86,8 @@ SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformSt
     INTEGER(C_INT)                                 , INTENT(IN   )   :: NumWindPts_C
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
-    TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelNames_C
-    TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelUnits_C
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(ChanLen*MaxOutPts+1)
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(ChanLen*MaxOutPts+1)
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(ErrMsgLen_C)
 
@@ -90,14 +95,12 @@ SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformSt
     CHARACTER(kind=C_char, len=InputFileStringLength_C),    POINTER  :: InputFileString            !< Input file as a single string with NULL chracter separating lines
     CHARACTER(kind=C_char, len=InputUniformStringLength_C), POINTER  :: UniformFileString          !< Input file as a single string with NULL chracter separating lines -- Uniform wind file
 
-    CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelNames_C(:)
-    CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelUnits_C(:)
     REAL(DbKi)                                                       :: TimeInterval
     INTEGER                                                          :: ErrStat                    !< aggregated error message
     CHARACTER(ErrMsgLen)                                             :: ErrMsg                     !< aggregated error message
     INTEGER                                                          :: ErrStat2                   !< temporary error status  from a call
     CHARACTER(ErrMsgLen)                                             :: ErrMsg2                    !< temporary error message from a call
-    INTEGER                                                          :: I
+    INTEGER                                                          :: i,j,k
     character(*), parameter                                          :: RoutineName = 'IFW_INIT_C' !< for error handling
 
    ! Initialize error handling
@@ -128,33 +131,24 @@ SUBROUTINE IFW_INIT_C(InputFileString_C, InputFileStringLength_C, InputUniformSt
 
    ! Call the main subroutine InflowWind_Init - only need InitInp and TimeInterval as inputs, the rest are set by InflowWind_Init
    CALL InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
-      if (Failed())  then
-print*,'ErrStat_C: ',ErrStat_C
-print*,'ErrMsg_C:  ',ErrMsg_C
-         return
-      endif
+      if (Failed()) return
 
-   ! Convert the outputs of InflowWind_Init from Fortran to C
-   ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%WriteOutputHdr)),STAT=ErrStat2)
-      if (ErrStat2 /= 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Could not allocate WriteOutputHdr array"
-      endif
-      if (Failed())  return
-   ALLOCATE(tmp_OutputChannelUnits_C(size(InitOutData%WriteOutputUnt)),STAT=ErrStat2)
-      if (ErrStat2 /= 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Could not allocate WriteOutputUnt array"
-      endif
-      if (Failed())  return
+   ! Number of channels
    NumChannels_C = size(InitOutData%WriteOutputHdr)
 
-   DO I = 1,NumChannels_C
-      tmp_OutputChannelNames_C(I) = TRANSFER(InitOutData%WriteOutputHdr(I)//C_NULL_CHAR, tmp_OutputChannelNames_C(I))
-      tmp_OutputChannelUnits_C(I) = TRANSFER(InitOutData%WriteOutputUnt(I)//C_NULL_CHAR, tmp_OutputChannelUnits_C(I))
-   END DO
-   OutputChannelNames_C = C_LOC(tmp_OutputChannelNames_C)
-   OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
+   ! transfer the output channel names and units to c_char arrays for returning
+   k=1
+   do i=1,NumChannels_C
+      do j=1,ChanLen    ! max length of channel name.  Same for units
+         OutputChannelNames_C(k)=InitOutData%WriteOutputHdr(i)(j:j)
+         OutputChannelUnits_C(k)=InitOutData%WriteOutputUnt(i)(j:j)
+         k=k+1
+      enddo
+   enddo
+
+   ! null terminate the string
+   OutputChannelNames_C(k) = C_NULL_CHAR
+   OutputChannelUnits_C(k) = C_NULL_CHAR
 
    ! Clean up variables and set up for IFW_CALCOUTPUT_C
    CALL InflowWind_CopyInput(InputGuess, InputData, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
@@ -178,13 +172,18 @@ CONTAINS
       CALL InflowWind_DestroyInput(InputGuess, ErrStat2, ErrMsg2 )
       CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat2, ErrMsg2 )
    end subroutine Cleanup 
-END SUBROUTINE IFW_INIT_C
+END SUBROUTINE IfW_Init_c
 
 !===============================================================================================================
 !--------------------------------------------- IFW CALCOUTPUT --------------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE IFW_CALCOUTPUT_C(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_CALCOUTPUT_C')
+SUBROUTINE IfW_CalcOutput_c(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_CalcOutput_c')
+   IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_CalcOutput_c
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_CalcOutput_c
+#endif
    REAL(C_DOUBLE)                , INTENT(IN   )      :: Time_C
    REAL(C_FLOAT)                 , INTENT(IN   )      :: Positions_C(3*InitInp%NumWindPoints)
    REAL(C_FLOAT)                 , INTENT(  OUT)      :: Velocities_C(3*InitInp%NumWindPoints)
@@ -226,14 +225,18 @@ CONTAINS
       Failed = ErrStat >= AbortErrLev
       if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
-END SUBROUTINE IFW_CALCOUTPUT_C
+END SUBROUTINE IfW_CalcOutput_c
 
 !===============================================================================================================
 !--------------------------------------------------- IFW END ---------------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE IFW_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_END_C')
-
+SUBROUTINE IfW_End_c(ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_End_c')
+   IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_End_c
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_End_c
+#endif
    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(ErrMsgLen_C)
 
@@ -246,6 +249,6 @@ SUBROUTINE IFW_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='IFW_END_C')
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
-END SUBROUTINE IFW_END_C
+END SUBROUTINE IfW_End_c
 
 END MODULE
