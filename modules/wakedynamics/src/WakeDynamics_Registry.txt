@@ -62,17 +62,20 @@ typedef    ^              ContinuousStateType ReKi     DummyContState - - -  "Re
 
 # Define discrete (nondifferentiable) states here:
 typedef ^  DiscreteStateType   ReKi  xhat_plane        {:}{:} - -   "Orientations of wake planes, normal to wake planes"      -
+typedef ^  DiscreteStateType   ReKi  YawErr_filt       {:}    - -   "Time-filtered nacelle-yaw error at the wake planes"      rad
+typedef ^  DiscreteStateType   ReKi  psi_skew_filt      -     - -   "Time-filtered azimuth angle from skew vertical axis"      rad
+typedef ^  DiscreteStateType   ReKi  chi_skew_filt      -     - -   "Time-filtered inflow skew angle"      rad
+typedef ^  DiscreteStateType   ReKi  V_plane_filt      {:}{:} - -   "Time-filtered advection, deflection, and meandering velocity of wake planes"      m/s
 typedef ^  DiscreteStateType   ReKi  p_plane           {:}{:} - -   "Center positions of wake planes"      m
 typedef ^  DiscreteStateType   ReKi  x_plane           {:}    - -   "Downwind distance from rotor to each wake plane"      m
 typedef ^  DiscreteStateType   ReKi  Vx_wake           {:}{:} - -   "Axial wake velocity deficit at wake planes, distributed radially"      m/s
 typedef ^  DiscreteStateType   ReKi  Vr_wake           {:}{:} - -   "Radial wake velocity deficit at wake planes, distributed radially"      m/s
-typedef ^  DiscreteStateType   ReKi  V_plane_filt      {:}{:} - -   "Time-filtered advection, deflection, and meandering velocity of wake planes"      m/s
 typedef ^  DiscreteStateType   ReKi  Vx_wind_disk_filt {:}    - -   "Time-filtered rotor-disk-averaged ambient wind speed of wake planes, normal to planes"      m/s
 typedef ^  DiscreteStateType   ReKi  TI_amb_filt       {:}    - -   "Time-filtered ambient turbulence intensity of wind at wake planes"      -
 typedef ^  DiscreteStateType   ReKi  D_rotor_filt      {:}    - -   "Time-filtered rotor diameter associated with each wake plane"     m
 typedef ^  DiscreteStateType   ReKi  Vx_rel_disk_filt   -     - -   "Time-filtered rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk"      m/s
 typedef ^  DiscreteStateType   ReKi  Ct_azavg_filt     {:}    - -   "Time-filtered azimuthally averaged thrust force coefficient (normal to disk), distributed radially"      -
-typedef ^  DiscreteStateType   ReKi  YawErr_filt       {:}    - -   "Time-filtered nacelle-yaw error at the wake planes"      rad
+typedef ^  DiscreteStateType   ReKi  Cq_azavg_filt     {:}    - -   "Time-filtered azimuthally averaged torque coefficient (normal to disk), distributed radially"      -
 
 # Define constraint states here:
 typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "Remove this variable if you have constraint states" -
@@ -105,7 +108,9 @@ typedef ^ ParameterType  IntKi            NumPlanes      -  - -   "Number of wak
 typedef ^ ParameterType  IntKi            NumRadii       -  - -   "Number of radii in the radial finite-difference grid"      -
 typedef ^ ParameterType  ReKi             dr             -  - -   "Radial increment of radial finite-difference grid"      m
 typedef ^ ParameterType  ReKi             r             {:} - -   "Discretization of radial finite-difference grid"        m
-typedef ^ ParameterType  ReKi             filtParam      -  - -   "Low-pass time-filter parameter, with a value between 0 (minimum filtering) and 1 (maximum filtering) (exclusive)"      -
+typedef ^ ParameterType  ReKi             y             {:} - -   "Horizontal discretization of each wake plane (size ny=2nr-1)"        m
+typedef ^ ParameterType  ReKi             z             {:} - -   "Nomically-vertical discretization of each wake plane (size nz=2nr-1)"        m
+typedef ^ ParameterType  ReKi             filtParam      -  - -   "alpha, Low-pass time-filter parameter, with a value between 0 (minimum filtering) and 1 (maximum filtering) (exclusive)"      -
 typedef ^ ParameterType  ReKi             oneMinusFiltParam - - - "1.0 - filtParam" -
 typedef ^ ParameterType  ReKi             C_HWkDfl_O     -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor" m
 typedef ^ ParameterType  ReKi             C_HWkDfl_OY    -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error" m/rad
@@ -128,6 +133,9 @@ typedef ^ ParameterType  ReKi             C_WakeDiam     -  - -   "Calibrated pa
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef      ^      InputType          ReKi       xhat_disk            {3}     -      -      "Orientation of rotor centerline, normal to disk"      -
+typedef      ^      InputType          ReKi       YawErr                -      -      -      "Nacelle-yaw error at the wake planes"      rad
+typedef      ^      InputType          ReKi       psi_skew              -      -      -      "Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined"    rad
+typedef      ^      InputType          ReKi       chi_skew              -      -      -      "Inflow skew angle"    rad
 typedef      ^      InputType          ReKi       p_hub                {3}     -      -      "Center position of hub"      m
 typedef      ^      InputType          ReKi       V_plane              {:}{:}  -      -      "Advection, deflection, and meandering velocity of wake planes"      m/s
 typedef      ^      InputType          ReKi       Vx_wind_disk          -      -      -      "Rotor-disk-averaged ambient wind speed, normal to planes"      m/s
@@ -135,15 +143,18 @@ typedef      ^      InputType          ReKi       TI_amb                -      -
 typedef      ^      InputType          ReKi       D_rotor               -      -      -      "Rotor diameter"      m
 typedef      ^      InputType          ReKi       Vx_rel_disk           -      -      -      "Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk"      m/s
 typedef      ^      InputType          ReKi       Ct_azavg             {:}     -      -      "Azimuthally averaged thrust force coefficient (normal to disk), distributed radially"      -
-typedef      ^      InputType          ReKi       YawErr                -      -      -      "Nacelle-yaw error at the wake planes"      rad
+typedef      ^      InputType          ReKi       Cq_azavg             {:}     -      -      "Azimuthally averaged torque coefficient (normal to disk), distributed radially"      -
 
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef      ^      OutputType         ReKi       xhat_plane           {:}{:}  -      -      "Orientations of wake planes, normal to wake planes"      -
 typedef      ^      OutputType         ReKi       p_plane              {:}{:}  -      -      "Center positions of wake planes"      m
-typedef      ^      OutputType         ReKi       Vx_wake              {:}{:}  -      -      "Axial wake velocity deficit at wake planes, distributed radially"      m/s
-typedef      ^      OutputType         ReKi       Vr_wake              {:}{:}  -      -      "Radial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef      ^      OutputType         ReKi       Vx_wake              {:}{:}  -      -      "TODO Axial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef      ^      OutputType         ReKi       Vr_wake              {:}{:}  -      -      "TODO Radial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef      ^      OutputType         ReKi       Vx_wake2             {:}{:}{:} -    -      "Axial wake velocity deficit at wake planes, distributed across the plane"      m/s
+typedef      ^      OutputType         ReKi       Vy_wake2             {:}{:}{:} -    -      "Transverse horizontal wake velocity deficit at wake planes, distributed across the plane"      m/s
+typedef      ^      OutputType         ReKi       Vz_wake2             {:}{:}{:} -    -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane"      m/s
 typedef      ^      OutputType         ReKi       D_wake               {:}     -      -      "Wake diameters at wake planes"     m
 typedef      ^      OutputType         ReKi       x_plane              {:}     -      -      "Downwind distance from rotor to each wake plane"      m
 
