@@ -526,7 +526,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    xd%Cq_azavg_filt       = 0.0_ReKi
    OtherState%firstPass            = .true.     
    
-   print*,'534'
       ! miscvars to avoid the allocation per timestep
    allocate ( m%dvdr(0:p%NumRadii-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dvdr.', errStat, errMsg, RoutineName )   
@@ -1084,6 +1083,25 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    do i = 0, min(n+1,p%NumPlanes-1)
       call Axisymmetric2Cartesian(y%Vx_wake(:,i), y%Vr_wake(:,i), p%r, p%y, p%z, y%Vx_wake2(:,:,i), y%Vy_wake2(:,:,i), y%Vz_wake2(:,:,i))
    enddo
+
+   ! DEBUG check
+   do i = 0, min(n+1,p%NumPlanes-1)
+      if( any(abs(y%Vx_wake2(0:,0,i)-y%Vx_wake(:,i))>1e-9)) then
+         print*,'Problem Vx',i
+         print*,'y%Vx_wake2(0:,0,i)',y%Vx_wake2(0:,0,i)
+         print*,'y%Vx_wake(:,i)',y%Vx_wake(:,i)
+         !STOP
+      endif
+      !y%Vy_wake2(0:,0,:)
+      if (any(abs(y%Vy_wake2(0:,0,i)-y%Vr_wake(:,i))>1e-9)) then
+         print*,'Problem Vr',i
+         print*,'y%Vx_wake2(0:,0,i)',y%Vy_wake2(0:,0,i)
+         print*,'y%Vx_wake(:,i)',y%Vr_wake(:,i)
+         !STOP
+      endif
+   enddo
+
+
 
    
 end subroutine WD_CalcOutput

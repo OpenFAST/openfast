@@ -201,6 +201,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       !.................
          
       call AllocAry(y%AzimAvg_Ct, p%nr, 'y%AzimAvg_Ct (azimuth-averaged ct)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry(y%AzimAvg_Cq, p%nr, 'y%AzimAvg_Cq (azimuth-averaged cq)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       if ( InitInp%UseSC ) then
          call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -513,6 +514,7 @@ END SUBROUTINE FWrap_t0
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the FASTWrapper outputs based on what this instance of FAST computed.
 SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
+   use AeroDyn_IO, only: Calc_Chi0
 
    TYPE(FWrap_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(FWrap_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
@@ -529,6 +531,9 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    REAL(ReKi)                                      :: p0(3)       ! hub location (in FAST with 0,0,0 as turbine reference)
    REAL(R8Ki)                                      :: theta(3)    
    REAL(R8Ki)                                      :: orientation(3,3)    
+   real(R8Ki)                                      :: M_ph(3,3)                     ! Transformation from hub to "blade-rotor-plane": n,t,r (not the same as AeroDyn)
+   real(R8Ki)                                      :: M_pg(3,3,size(m%ADRotorDisk)) ! Transformation from global to "blade-rotor-plane" (n,t,r), with same x at hub coordinate system
+   real(R8Ki)                                      :: psi_hub                 ! Azimuth wrt hub
    
    INTEGER(IntKi)                                  :: j, k        ! loop counters
    
@@ -594,9 +599,19 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
    y%DiskAvg_Vx_Rel = m%Turbine%AD%m%rotors(1)%V_dot_x
    
+
+   ! Calculate the M_ph M_pg, transformations from polar grid to hub, and polar to global
+   do k=1,size(m%ADRotorDisk) ! loop on blades
+      psi_hub = TwoPi*(real(k-1,R8Ki))/real(size(m%ADRotorDisk),R8Ki)
+      M_ph(1,1:3) = (/ 1.0_R8Ki, 0.0_R8Ki    , 0.0_R8Ki     /)
+      M_ph(2,1:3) = (/ 0.0_R8Ki, cos(psi_hub), sin(psi_hub) /)
+      M_ph(3,1:3) = (/ 0.0_R8Ki,-sin(psi_hub), cos(psi_hub) /)
+      M_pg(1:3,1:3,k) = matmul(M_ph, m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(1:3,1:3,1) ) 
+   end do
+
    ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially      
    theta = 0.0_ReKi
-   do k=1,size(m%ADRotorDisk)
+   do k=1,size(m%ADRotorDisk) ! loop on blades
             
       m%TempDisp(k)%RefOrientation = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation      
       m%TempDisp(k)%Position       = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Position + m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp     
@@ -621,23 +636,43 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          
    if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
       y%AzimAvg_Ct = 0.0_ReKi
+      y%AzimAvg_Cq = 0.0_ReKi
    else
       y%AzimAvg_Ct(1) = 0.0_ReKi
+      y%AzimAvg_Cq(1) = 0.0_ReKi
       
       do j=2,p%nr
          
+         denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
+
+         ! --- Thrust coefficient
+         ! Ct(r)  = dT/dr / (1/2 rho pi r U_rel^2 ), with dT/dr = sum_iB dFn/dr
+         ! Ct(r)  = B dFn/dr / denom
          num = 0.0_ReKi
-         do k=1,size(m%ADRotorDisk)
+         do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
             num   =  num + dot_product( y%xHat_Disk, m%ADRotorDisk(k)%Force(:,j) )
          end do
-         
-         denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
-            
          y%AzimAvg_Ct(j) = num / denom
+
+         ! --- Torque coefficient 
+         ! Cq = dQ/dr / (1/2 rho pi r^2 U_rel^2)    dQ/dr =  sum_iB r dFt/dr
+         !    = dFt/dt / denom   (r simplifies)
+         num = 0.0_ReKi
+         do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
+            num= num + dot_product(M_pg(2,1:3,k), m%ADRotorDisk(k)%Force(:,j) ) ! Ft, hub tangential
+         end do
+         y%AzimAvg_Cq(j) = num / denom
       end do
          
    end if  
       
+   ! Variabels needed to orient wake planes in "skew" coordinate system
+   y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) * R2D ! AeroDyn_IO
+   y%psi_skew = 0.0_ReKi ! TODO TODO TODO, see Azimuth in function below
+   !call DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
+
+
+
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the inputs needed before calling an instance of FAST

@@ -2350,10 +2350,13 @@ SUBROUTINE Transfer_FAST_to_WD(farm)
    
    DO nt = 1,farm%p%NumTurbines   
       farm%WD(nt)%u%xhat_disk      = farm%FWrap(nt)%y%xHat_Disk       ! Orientation of rotor centerline, normal to disk
+      farm%WD(nt)%u%psi_skew       = farm%FWrap(nt)%y%psi_skew        ! Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined
+      farm%WD(nt)%u%chi_skew       = farm%FWrap(nt)%y%chi_skew        ! Inflow skew angle
       farm%WD(nt)%u%p_hub          = farm%FWrap(nt)%y%p_hub           ! Center position of hub, m
       farm%WD(nt)%u%D_rotor        = farm%FWrap(nt)%y%D_rotor         ! Rotor diameter, m
       farm%WD(nt)%u%Vx_rel_disk    = farm%FWrap(nt)%y%DiskAvg_Vx_Rel  ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
       farm%WD(nt)%u%Ct_azavg       = farm%FWrap(nt)%y%AzimAvg_Ct      ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
+      farm%WD(nt)%u%Cq_azavg       = farm%FWrap(nt)%y%AzimAvg_Cq      ! Azimuthally averaged torque force coefficient (normal to disk), distributed radially, -
       farm%WD(nt)%u%YawErr         = farm%FWrap(nt)%y%YawErr          ! Nacelle-yaw error at the wake planes, rad   
    END DO
    
@@ -2392,8 +2395,17 @@ SUBROUTINE Transfer_WD_to_AWAE(farm)
    DO nt = 1,farm%p%NumTurbines   
       farm%AWAE%u%xhat_plane(:,:,nt) = farm%WD(nt)%y%xhat_plane     ! Orientations of wake planes, normal to wake planes, for each turbine
       farm%AWAE%u%p_plane(:,:,nt)    = farm%WD(nt)%y%p_plane        ! Center positions of wake planes for each turbine
-      farm%AWAE%u%Vx_wake(:,:,nt)    = farm%WD(nt)%y%Vx_wake        ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vr_wake(:,:,nt)    = farm%WD(nt)%y%Vr_wake        ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+      !farm%AWAE%u%Vx_wake(:,:,nt)    = farm%WD(nt)%y%Vx_wake        ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
+      !farm%AWAE%u%Vr_wake(:,:,nt)    = farm%WD(nt)%y%Vr_wake        ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+      ! TEMPORARY HACK, pass "fake radial data"
+      farm%AWAE%u%Vx_wake(:,:,nt) = farm%WD(nt)%y%Vx_wake2(0:,0,:)
+      farm%AWAE%u%Vr_wake(:,:,nt) = farm%WD(nt)%y%Vy_wake2(0:,0,:)
+      !
+      farm%AWAE%u%Vx_wake2(:,:,:,nt)    = farm%WD(nt)%y%Vx_wake2       ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vy_wake2(:,:,:,nt)    = farm%WD(nt)%y%Vy_wake2       ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vz_wake2(:,:,:,nt)    = farm%WD(nt)%y%Vz_wake2       ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+
+
       farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine      
    END DO
    
