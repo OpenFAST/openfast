@@ -82,12 +82,13 @@ static int
 checkError(SimStruct *S){
 
     ssPrintf("\n");
-    if (ErrStat > ErrID_Fatal) {        // in case we've reached a trim solution
-        ssPrintf("%s\n", ErrMsg);
-        mdlTerminate(S);  // terminate after simulation completes (in case Simulink doesn't do so itself)
-    }
-    else if (ErrStat >= AbortErrLev) {
-        ssSetErrorStatus(S, ErrMsg);
+    if (ErrStat >= AbortErrLev) {
+        if (ErrStat > ErrID_Fatal) { // in case we've reached a trim solution
+            ssPrintf("%s\n", ErrMsg);
+        }
+        else {
+            ssSetErrorStatus(S, ErrMsg);
+        }
         mdlTerminate(S);  // terminate on error (in case Simulink doesn't do so itself)
         return 1;
     }
