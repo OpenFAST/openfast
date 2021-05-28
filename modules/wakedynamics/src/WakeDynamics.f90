@@ -401,7 +401,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    if (InitInp%TurbNum <= 1) call DispNVD( WD_Ver )       
       
-      print*,'405'
       ! Validate the initialization inputs
    call ValidateInitInputData( interval, InitInp, InitInp%InputFileData, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName ) 
@@ -439,16 +438,14 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    ! Finite difference grid coordinates r, y, z
    allocate( p%r(0:p%NumRadii-1),stat=errStat2)
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%r.', errStat, errMsg, RoutineName )
-   allocate(p%y(-p%NumRadii:p%NumRadii), stat=errStat2)
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%y.', errStat, errMsg, RoutineName )
-   allocate(p%z(-p%NumRadii:p%NumRadii), stat=errStat2)
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%z.', errStat, errMsg, RoutineName )
+   allocate(p%y(-p%NumRadii+1:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%y.', errStat, errMsg, RoutineName )
+   allocate(p%z(-p%NumRadii+1:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%z.', errStat, errMsg, RoutineName )
    if (errStat /= ErrID_None) return
       
    do i = 0,p%NumRadii-1
       p%r(i)       = p%dr*i     
    end do
-   do i = -p%NumRadii,p%NumRadii
+   do i = -p%NumRadii+1,p%NumRadii-1
       p%y(i)       = p%dr*i     
       p%z(i)       = p%dr*i     
    end do
@@ -571,12 +568,9 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate ( y%Vr_wake   (0:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vr_wake.', errStat, errMsg, RoutineName )  
 
-   allocate ( y%Vx_wake2   (-p%NumRadii:p%NumRadii,-p%NumRadii:p%NumRadii,0:p%NumPlanes-1), STAT=ErrStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vx_wake.', errStat, errMsg, RoutineName )  
-   allocate ( y%Vy_wake2   (-p%NumRadii:p%NumRadii,-p%NumRadii:p%NumRadii,0:p%NumPlanes-1), STAT=ErrStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vy_wake.', errStat, errMsg, RoutineName )  
-   allocate ( y%Vz_wake2   (-p%NumRadii:p%NumRadii,-p%NumRadii:p%NumRadii,0:p%NumPlanes-1), STAT=ErrStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vz_wake.', errStat, errMsg, RoutineName )  
+   allocate ( y%Vx_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vx_wake.', errStat, errMsg, RoutineName )  
+   allocate ( y%Vy_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vy_wake.', errStat, errMsg, RoutineName )  
+   allocate ( y%Vz_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vz_wake.', errStat, errMsg, RoutineName )  
 
    allocate ( y%D_wake    (0:p%NumPlanes-1), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%D_wake.', errStat, errMsg, RoutineName )  
@@ -594,7 +588,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    y%D_wake     = 0.0_Reki
    y%x_plane    = 0.0_Reki
 
-   print*,'598'
    call testAxi2Cart()
       
 end subroutine WD_Init
@@ -930,6 +923,8 @@ function filter_angles(t1, t2, alpha, alpha_bar) result (t_filt)
    real(ReKi), intent(in) :: alpha_bar !< 1-alpha
    real(ReKi) :: t_filt !< output
    real(ReKi) :: x,y
+   ! exp(i t1 alpha)* exp(i t2 alpha_bar ) = exp( i [ t1 alpha + (1-alpha) t2] )
+   ! Dig into mesh mapping, Ask bonnie
    ! alpha exp(i t1) + alpha_bar exp(i t2)
    x = alpha*cos(t1)+alpha_bar*cos(t2)
    y = alpha*sin(t1)+alpha_bar*sin(t2)

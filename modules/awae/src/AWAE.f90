@@ -123,7 +123,7 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
    errStat = 0
    errMsg  = ""
    maxPln =   min(n,p%NumPlanes-2)
-   rmax = p%r(p%NumRadii-1)
+   rmax = p%y(p%NumRadii-1) 
    do nt = 1,p%NumTurbines
       do np = 0, maxPln
          cosTerm = dot_product(u%xhat_plane(:,np+1,nt),u%xhat_plane(:,np,nt))
@@ -306,7 +306,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      r_tmp_plane = TwoNorm( r_vec_plane )
 
                         ! test if the point is within radial finite-difference grid
-                     if ( r_tmp_plane <= p%r(p%numRadii-1) ) then
+                     if ( r_tmp_plane <= p%r(p%numRadii-1) ) then ! TODO
 
                         n_wake = n_wake + 1
 
@@ -319,6 +319,8 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
 
                            ! given r_tmp_plane and Vx_wake at p%dr increments, find value of m%Vx_wake(@r_tmp_plane) using interpolation
+                        ! TODO 2D interp?
+                        ! Vx_wake2, Vy_wake2 Vz_wake2
                         tmp_Vx_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
                         tmp_Vr_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
 
@@ -401,7 +403,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                 Vsum_low  = 0.0_ReKi
                 iwsum = 0
-                n_r_polar = FLOOR((p%C_Meander*u%D_wake(np,nt))/(2.0_ReKi*p%dpol))
+                n_r_polar = FLOOR((p%C_Meander*u%D_wake(np,nt))/(2.0_ReKi*p%dpol)) ! TODO change me Dwake*sqrt(2)?
 
                 do nr = 0,n_r_polar
 
@@ -611,11 +613,11 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                            r_tmp_plane = TwoNorm( r_vec_plane )
 
                               ! test if the point is within radial finite-difference grid
-                           if ( r_tmp_plane <= p%r(p%numRadii-1) ) then
+                           if ( r_tmp_plane <= p%r(p%numRadii-1) ) then ! TODO
 
                               n_wake = n_wake + 1
 
-
+                              ! TODO?
                               if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) ) then
                                  m%rhat_plane(:,n_wake) = 0.0_ReKi
                               else
@@ -625,11 +627,13 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
 
                            ! given r_tmp_plane and Vx_wake at p%dr increments, find value of m%Vx_wake(@r_tmp_plane) using interpolation
+                           ! TODO 2D interp
                               m%Vx_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np+1,nt2), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np,nt2), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
                               m%Vr_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np+1,nt2), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np,nt2), ILo, p%NumRadii )!( XVal, XAry, YAry, ILo, AryLen )
 
                               m%xhat_plane(:,n_wake) = delta*u%xhat_plane(:,np+1,nt2) + deltad*u%xhat_plane(:,np,nt2)
                               m%xhat_plane(:,n_wake) = m%xhat_plane(:,n_wake) / TwoNorm(m%xhat_plane(:,n_wake))
+                              ! TODO add yhat_plane zhat_plane
                               xhatBar_plane = xhatBar_plane + abs(m%Vx_wake(n_wake))*m%xhat_plane(:,n_wake)
 
                            end if  ! if the point is within radial finite-difference grid
@@ -801,9 +805,17 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%r.', errStat, errMsg, RoutineName )
          return
       end if
+   allocate( p%y(-p%Numradii+1:p%NumRadii-1),stat=errStat2)
+      if (errStat2 /= 0) then
+         call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%y.', errStat, errMsg, RoutineName )
+         return
+      end if
 
    do i = 0,p%NumRadii-1
       p%r(i)       = InitInp%InputFileData%dr*i
+   end do
+   do i = -p%NumRadii+1,p%NumRadii-1
+      p%y(i)       = InitInp%InputFileData%dr*i
    end do
 
    allocate( p%WT_Position(3,p%NumTurbines),stat=errStat2)
@@ -1004,9 +1016,16 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vx_wake.', errStat, errMsg, RoutineName )
    allocate ( u%Vr_wake   (0:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vr_wake.', errStat, errMsg, RoutineName )
+   allocate ( u%Vx_wake2  (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vx_wake2.', errStat, errMsg, RoutineName )
+   allocate ( u%Vy_wake2  (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vy_wake2.', errStat, errMsg, RoutineName )
+   allocate ( u%Vz_wake2  (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vz_wake2.', errStat, errMsg, RoutineName )
    allocate ( u%D_wake    (0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%D_wake.', errStat, errMsg, RoutineName )
    if (errStat >= AbortErrLev) return
+
+   u%Vx_wake2=-9999.9_ReKi
+   u%Vy_wake2=-9999.9_ReKi
+   u%Vz_wake2=-9999.9_ReKi
 
 
 
