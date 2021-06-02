@@ -1090,14 +1090,14 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          print*,'Problem Vx',i
          print*,'y%Vx_wake2(0:,0,i)',y%Vx_wake2(0:,0,i)
          print*,'y%Vx_wake(:,i)',y%Vx_wake(:,i)
-         !STOP
+         STOP
       endif
       !y%Vy_wake2(0:,0,:)
       if (any(abs(y%Vy_wake2(0:,0,i)-y%Vr_wake(:,i))>1e-9)) then
          print*,'Problem Vr',i
          print*,'y%Vx_wake2(0:,0,i)',y%Vy_wake2(0:,0,i)
          print*,'y%Vx_wake(:,i)',y%Vr_wake(:,i)
-         !STOP
+         STOP
       endif
    enddo
 
