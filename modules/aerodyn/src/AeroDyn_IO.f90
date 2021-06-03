@@ -1878,7 +1878,7 @@ CONTAINS
       end if
    
       ! Integrate force/moments over blades by performing mesh transfer to blade root points:
-      do k=1,min(p%NumBlades,4)
+      do k=1,min(p%NumBlades,4) ! Temporary hack for at least one more blae outputs
          call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
          ! Transform force vector to blade root coordinate system
          tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
