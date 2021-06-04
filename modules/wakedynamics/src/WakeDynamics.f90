@@ -923,11 +923,14 @@ function filter_angles(t1, t2, alpha, alpha_bar) result (t_filt)
    real(ReKi) :: t_filt !< output
    real(ReKi) :: x,y
    ! exp(i t1 alpha)* exp(i t2 alpha_bar ) = exp( i [ t1 alpha + (1-alpha) t2] )
-   ! Dig into mesh mapping, Ask bonnie
    ! alpha exp(i t1) + alpha_bar exp(i t2)
    x = alpha*cos(t1)+alpha_bar*cos(t2)
    y = alpha*sin(t1)+alpha_bar*sin(t2)
    t_filt = atan2(y,x) 
+
+   ! TODO, Dig into mesh mapping, Ask bonnie to find the proper routine
+   !call Angles_ExtrapInterp(t1, t2, tin, Angle_out, tin_out)
+
 end function filter_angles
 
 !> Converts velocity vectors from an axisymmetric system in radial coordinates to a Cartesian system in Cartesian coordinates
@@ -1086,7 +1089,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 
    ! DEBUG check
    do i = 0, min(n+1,p%NumPlanes-1)
-      if( any(abs(y%Vx_wake2(0:,0,i)-y%Vx_wake(:,i))>1e-9)) then
+      if( any(abs(y%Vx_wake2(0:,0,i)-y%Vx_wake(:,i))>1e-20)) then
          print*,'Problem Vx',i
          print*,'y%Vx_wake2(0:,0,i)',y%Vx_wake2(0:,0,i)
          print*,'y%Vx_wake(:,i)',y%Vx_wake(:,i)
