@@ -200,7 +200,7 @@ jobs:
         with:
           name: test-results
           path: |
-            ${{runner.workspace}}/build/reg_tests/glue-codes/fastfarm
+            ${{runner.workspace}}/build/reg_tests/glue-codes/fast-farm
 
   unit-test:
     runs-on: ubuntu-20.04
