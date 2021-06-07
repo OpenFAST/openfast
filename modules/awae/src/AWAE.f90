@@ -365,11 +365,11 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         !                    + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np, nt))
                         if (abs(Vx_debug-tmp_Vx_wake(n_wake))>1e-2) then
                            !print*,'y,z,r',y_tmp_plane,z_tmp_plane,r_tmp_plane,sqrt(y_tmp_plane**2 + z_tmp_plane**2)
-                           print*,'Vx',Vx_debug, tmp_Vx_wake(n_wake)
+                           !print*,'Vx',Vx_debug, tmp_Vx_wake(n_wake)
                            !STOP
                         endif
                         if (abs(abs(tmp_Vr_wake(n_wake))-sqrt(tmp_Vz_wake(n_wake)**2 + tmp_Vy_wake(n_wake)**2))>1e-2) then
-                           print*,'Vr',abs(tmp_Vr_wake(n_wake)),   sqrt(tmp_Vz_wake(n_wake)**2 + tmp_Vy_wake(n_wake)**2)
+                           !print*,'Vr',abs(tmp_Vr_wake(n_wake)),   sqrt(tmp_Vz_wake(n_wake)**2 + tmp_Vy_wake(n_wake)**2)
                            !STOP
                         endif
 
@@ -401,9 +401,9 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
               tmp_Vy_wake(nw)  = tmp_Vr_wake(nw)
               tmp_Vz_wake(nw)  = 0.0_ReKi
               ! OLD
-              !Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vr_wake(nw)*tmp_rhat_plane(:,nw)
+              Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vr_wake(nw)*tmp_rhat_plane(:,nw)
               ! NEW
-              Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
+              !Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
               Vx_term     = dot_product( xhatBar_plane, Vr_term )
               Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
               Vr_wake_tmp = Vr_wake_tmp + Vr_term
@@ -721,11 +721,11 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                               !                  + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np, nt))
                               if (abs(m%Vx_wake(n_wake)-m%Vx_wake2(n_wake))>1e-2) then
                                  !print*,'y,z,r',y_tmp_plane,z_tmp_plane,r_tmp_plane,sqrt(y_tmp_plane**2 + z_tmp_plane**2)
-                                 print*,'Vx',m%Vx_wake(n_wake), m%Vx_wake2(n_wake)
+                                 !print*,'Vx',m%Vx_wake(n_wake), m%Vx_wake2(n_wake)
                                  !STOP
                               endif
                               if (abs(abs(m%Vr_wake(n_wake))-sqrt(m%Vz_wake2(n_wake)**2 + m%Vy_wake2(n_wake)**2))>1e-2) then
-                                 print*,'Vr',abs(m%Vr_wake(n_wake)),   sqrt(m%Vz_wake2(n_wake)**2 + m%Vy_wake2(n_wake)**2)
+                                 !print*,'Vr',abs(m%Vr_wake(n_wake)),   sqrt(m%Vz_wake2(n_wake)**2 + m%Vy_wake2(n_wake)**2)
                                  !STOP
                               endif
 
@@ -757,9 +757,9 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      m%Vy_wake2(nw)  = m%Vr_wake(nw)
                      m%Vz_wake2(nw)  = 0.0_ReKi
                      ! OLD
-                     !Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vr_wake(nw)*m%rhat_plane(:,nw)
+                     Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vr_wake(nw)*m%rhat_plane(:,nw)
                      ! NEW 
-                     Vr_term     = m%Vx_wake2(nw)*m%xhat_plane(:,nw) + m%Vy_wake2(nw)*m%yhat_plane(:,nw) + m%Vz_wake2(nw)*m%zhat_plane(:,nw)
+                     !Vr_term     = m%Vx_wake2(nw)*m%xhat_plane(:,nw) + m%Vy_wake2(nw)*m%yhat_plane(:,nw) + m%Vz_wake2(nw)*m%zhat_plane(:,nw)
                      Vx_term     = dot_product( xhatBar_plane, Vr_term )
                      Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
                      Vr_wake_tmp = Vr_wake_tmp + Vr_term
@@ -1211,6 +1211,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( m%rhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%rhat_plane.', errStat, errMsg, RoutineName )
    allocate ( m%Vx_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_wake.', errStat, errMsg, RoutineName )
    allocate ( m%Vr_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vr_wake.', errStat, errMsg, RoutineName )
+   allocate ( m%Vx_wake2   ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_wake2.', errStat, errMsg, RoutineName )
+   allocate ( m%Vy_wake2   ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vy_wake2.', errStat, errMsg, RoutineName )
+   allocate ( m%Vz_wake2   ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vz_wake2.', errStat, errMsg, RoutineName )
 
    allocate ( m%parallelFlag( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
@@ -1935,9 +1938,9 @@ END FUNCTION INTERP3D
 !> 2D interpolation of a scalar field field defined on a 2D-rectilinear grid, using lambda 1 kernel
 function interp2d(Point, v1, v2, mesh) result(PointVal)
    ! Argument declarations
-   real(ReKi), dimension(:,:),     intent(in)  :: mesh  !< Mesh values
    real(ReKi), dimension(2)  ,     intent(in)  :: Point !< Point where values are to be interpolated
    real(ReKi), dimension(:),       intent(in)  :: v1,v2 !< Array of values along 1st and 2nd dimension
+   real(ReKi), dimension(:,:),     intent(in)  :: mesh  !< Mesh values
    real(ReKi)                                  :: PointVal !< Output
    ! Variable declarations 
    real(ReKi)               :: ax1,ax2 !< 
