@@ -128,9 +128,11 @@ typedef   ^ MiscVarType    ReKi     rhat_s   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
-# TODO
 typedef   ^ MiscVarType    ReKi     Vx_wake      {:}       - - "" m/s
 typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
+typedef   ^ MiscVarType    ReKi     Vx_wake2     {:}       - - "" m/s
+typedef   ^ MiscVarType    ReKi     Vy_wake2     {:}       - - "" m/s
+typedef   ^ MiscVarType    ReKi     Vz_wake2     {:}       - - "" m/s
 #
 typedef	^	MiscVarType	   SiKi	   outVizXYPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
 typedef	^	MiscVarType	   SiKi	   outVizYZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
@@ -150,6 +152,7 @@ typedef   ^ ParameterType  IntKi            NumRadii           -  - -   "Number 
 typedef   ^ ParameterType  IntKi            NumPlanes          -  - -   "Number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
 typedef   ^ ParameterType  ReKi             r                 {:} - -   "Discretization of radial finite-difference grid"        m
 typedef   ^ ParameterType  ReKi             y                 {:} - -   "Horizontal discretization of the wake planes"        m
+typedef   ^ ParameterType  ReKi             z                 {:} - -   "Vertical discretization of the wake planes"        m
 typedef   ^ ^              IntKi            Mod_AmbWind        -  - -   "Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module}" -
 typedef   ^ ParameterType  IntKi            nX_low             -  - -   "Number of low-resolution spatial nodes in X direction" -
 typedef   ^ ParameterType  IntKi            nY_low             -  - -   "Number of low-resolution spatial nodes in Y direction" -
