@@ -401,9 +401,9 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
               tmp_Vy_wake(nw)  = tmp_Vr_wake(nw)
               tmp_Vz_wake(nw)  = 0.0_ReKi
               ! OLD
-              Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vr_wake(nw)*tmp_rhat_plane(:,nw)
+              !Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vr_wake(nw)*tmp_rhat_plane(:,nw)
               ! NEW
-              !Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
+              Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
               Vx_term     = dot_product( xhatBar_plane, Vr_term )
               Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
               Vr_wake_tmp = Vr_wake_tmp + Vr_term
@@ -757,9 +757,9 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      m%Vy_wake2(nw)  = m%Vr_wake(nw)
                      m%Vz_wake2(nw)  = 0.0_ReKi
                      ! OLD
-                     Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vr_wake(nw)*m%rhat_plane(:,nw)
+                     !Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vr_wake(nw)*m%rhat_plane(:,nw)
                      ! NEW 
-                     !Vr_term     = m%Vx_wake2(nw)*m%xhat_plane(:,nw) + m%Vy_wake2(nw)*m%yhat_plane(:,nw) + m%Vz_wake2(nw)*m%zhat_plane(:,nw)
+                     Vr_term     = m%Vx_wake2(nw)*m%xhat_plane(:,nw) + m%Vy_wake2(nw)*m%yhat_plane(:,nw) + m%Vz_wake2(nw)*m%zhat_plane(:,nw)
                      Vx_term     = dot_product( xhatBar_plane, Vr_term )
                      Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
                      Vr_wake_tmp = Vr_wake_tmp + Vr_term
