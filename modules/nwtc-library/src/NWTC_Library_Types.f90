@@ -65,8 +65,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumFiles 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FileLine 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FileIndx 
-    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: FileList 
-    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: Lines 
+    CHARACTER(MaxFileInfoLineLen) , DIMENSION(:), ALLOCATABLE  :: FileList 
+    CHARACTER(MaxFileInfoLineLen) , DIMENSION(:), ALLOCATABLE  :: Lines 
   END TYPE FileInfoType
 ! =======================
 ! =========  Quaternion  =======
