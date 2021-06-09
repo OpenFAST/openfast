@@ -171,8 +171,9 @@ real(ReKi) function jinc ( x )
 
 end function jinc
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine
-!!
+!> Loop over the entire grid of low resolution ambient wind data to compute:
+!!    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
+!! TODO explain algorithm
 subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi),                 intent(in   )  :: n           !< Current simulation time increment (zero-based)
    type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
@@ -186,12 +187,11 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi)      :: nx, ny, nz, nt, np, nw, nx_low, ny_low, nz_low, nr, npsi, wamb, iwsum !< loop counters
    integer(IntKi)      :: nXYZ_low, n_wake, n_r_polar, n_psi_polar       !< accumulating counters
    real(ReKi)          :: xhatBar_plane(3)       !<
+   real(ReKi)          :: xHat_plane(3), yHat_plane(3), zHat_plane(3)
    real(ReKi)          :: x_end_plane
    real(ReKi)          :: x_start_plane
    real(ReKi)          :: r_vec_plane(3)
-   ! TODO: remove "tmp" from the variable names
    real(ReKi)          :: xhatBar_plane_norm
-   real(ReKi)          :: r_tmp_plane
    real(ReKi)          :: y_tmp_plane
    real(ReKi)          :: z_tmp_plane
    real(ReKi)          :: Vx_wake_tmp
@@ -207,9 +207,9 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: tmp_x,tmp_y,tmp_z !, tm1, tm2
    real(ReKi)          :: xxplane(3), xyplane(3), yyplane(3), yxplane(3), psi_polar, r_polar, p_polar(3)
    real(ReKi)          :: yzplane_Y(3), xyplane_norm
-   real(ReKi)          :: xplane_sq, yplane_sq, xysq_Z(3), xzplane_X(3), yhat_plane(3), zhat_plane(3)
-   real(ReKi), ALLOCATABLE :: tmp_rhat_plane(:,:), tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:)
-   real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vr_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)
+   real(ReKi)          :: xplane_sq, yplane_sq, xysq_Z(3), xzplane_X(3)
+   real(ReKi), ALLOCATABLE :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:)
+   real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)
    real(ReKi)          :: Vx_debug
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln, tmpPln, maxN_wake
@@ -234,9 +234,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    allocate ( tmp_xhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
    allocate ( tmp_yhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_yhat_plane.', errStat, errMsg, RoutineName )
    allocate ( tmp_zhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_rhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_rhat_plane.', errStat, errMsg, RoutineName )
    allocate ( tmp_Vx_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vx_wake.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vr_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vr_wake.', errStat, errMsg, RoutineName )
    allocate ( tmp_Vy_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vy_wake.', errStat, errMsg, RoutineName )
    allocate ( tmp_Vz_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vz_wake.', errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
@@ -245,9 +243,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       ! Loop over the entire grid of low resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,Vx_debug,&
-   !$OMP&                    p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,y_tmp_plane,z_tmp_plane,xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp,&
+   !$OMP&                    p_tmp_plane,tmp_vec,r_vec_plane,y_tmp_plane,z_tmp_plane,xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp,&
    !$OMP&                    nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,&
-   !$OMP&                    tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, tmp_rhat_plane,tmp_Vx_wake,tmp_Vy_wake,tmp_Vz_wake,tmp_Vr_wake, i,np1,errStat2) & 
+   !$OMP&                    xHat_plane, yHat_plane, zHat_plane,&
+   !$OMP&                    tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, i,np1,errStat2) & 
    !$OMP&            SHARED(m,u,p,maxPln,errStat,errMsg) DEFAULT(NONE)
    !do nz_low=0, p%nZ_low-1
    !   do ny_low=0, p%yZ_low-1
@@ -262,7 +261,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                ! set the disturbed flow equal to the ambient flow for this time step
             m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
 
-            ! NOTE: Code below is mostly copy paste with HighResGridCalcOutput 
             !nXYZ_low = nXYZ_low + 1
             nXYZ_low = i + 1
             n_wake = 0
@@ -270,7 +268,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
             do nt = 1,p%NumTurbines
 
-               ! TODO TODO TODO: all this should be put into a common function between low-res and high-res
+               ! TODO TODO TODO: all this should be put into a common function between low-res and high-res (watch for nt, nt2)
                ! H Long: replace intrinsic dot_product with explicit do product can save as much as 10% of total calculation time!
                !x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
                tmp_x = u%xhat_plane(1,0,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,0,nt))
@@ -279,10 +277,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                x_end_plane = tmp_x + tmp_y + tmp_z
 
                do np = 0, maxPln
-                     ! Reset interpolation counter
-                  ILo = 0
+                  ! Reset interpolation counter
+                  ILo = 0 ! TODO, curently not used
                   np1 = np + 1
-                     ! Construct the endcaps of the current wake plane volume
+                  ! Construct the endcaps of the current wake plane volume
                   x_start_plane = x_end_plane
                   ! H Long: again, replace intrinsic dot_product
                   !x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
@@ -311,69 +309,42 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         p_tmp_plane = delta*m%pvec_ce(:,np,nt) + deltad*m%pvec_cs(:,np,nt) + ( delta*m%r_e(np,nt) + deltad*m%r_s(np,nt) )* tmp_vec / TwoNorm(tmp_vec)
                      end if
 
-                     r_vec_plane = p%Grid_Low(:,nXYZ_low) - p_tmp_plane ! TODO remove me
-                     r_tmp_plane = TwoNorm( r_vec_plane )
+                     ! Vector between current grid point and plane position
+                     r_vec_plane = p%Grid_Low(:,nXYZ_low) - p_tmp_plane
 
-                     ! test if the point is within radial finite-difference grid
-                     if ( r_tmp_plane <= p%r(p%numRadii-1) ) then ! TODO
+                     ! Interpolate x_hat, plane normal at grid point 
+                     xHat_plane(1:3) = delta*u%xhat_plane(:,np1,nt) + deltad*u%xhat_plane(:,np,nt)
+                     xHat_plane(1:3) = xHat_plane(:) / TwoNorm(xHat_plane(:))
+                     ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
+                     yHat_plane(1:3) = (/ -xHat_plane(2), xHat_plane(1), 0.0_ReKi  /)
+                     yHat_plane(1:3) = yHat_plane / TwoNorm(yHat_plane)
+                     ! Construct z_hat
+                     zHat_plane(1)   = -xHat_plane(1)*xHat_plane(3)
+                     zHat_plane(2)   = -xHat_plane(2)*xHat_plane(3)
+                     zHat_plane(3)   =  xHat_plane(1)*xHat_plane(1) + xHat_plane(2)*xHat_plane(2) 
+                     zHat_plane(1:3) =  zHat_plane / TwoNorm(zHat_plane)
+
+                     ! Point positions in plane, y = yhat . (p-p_plane), z = zhat . (p-p_plane) 
+                     y_tmp_plane =  yHat_plane(1)*r_vec_plane(1) + yHat_plane(2)*r_vec_plane(2) + yHat_plane(3)*r_vec_plane(3)
+                     z_tmp_plane =  zHat_plane(1)*r_vec_plane(1) + zHat_plane(2)*r_vec_plane(2) + zHat_plane(3)*r_vec_plane(3)
+
+                     ! test if the point is within finite-difference grid
+                     if ( (abs(y_tmp_plane) <= p%y(p%numRadii-1)).and.(abs(z_tmp_plane) <= p%z(p%numRadii-1)) ) then 
+                        ! Increment number of wakes contributing to current grid point
                         n_wake = n_wake + 1
-                        ! TODO remove me
-                        if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) ) then
-                           tmp_rhat_plane(:,n_wake) = 0.0_ReKi
-                        else
-                           tmp_rhat_plane(:,n_wake) = ( r_vec_plane  ) / r_tmp_plane
-                        end if
 
-                        ! Interpolate x_hat
-                        tmp_xhat_plane(:,n_wake) = delta*u%xhat_plane(:,np1,nt) + deltad*u%xhat_plane(:,np,nt)
-                        tmp_xhat_plane(:,n_wake) = tmp_xhat_plane(:,n_wake) / TwoNorm(tmp_xhat_plane(:,n_wake))
-                        ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
-                        tmp_yhat_plane(:,n_wake) = (/ -tmp_xhat_plane(2,n_wake), tmp_xhat_plane(1,n_wake), 0.0_ReKi  /)
-                        tmp_yhat_plane(:,n_wake) = tmp_yhat_plane(:,n_wake) / TwoNorm(tmp_yhat_plane(:,n_wake))
-                        ! Construct z_hat
-                        ! TODO Question for Jason:
-                        !  - this vector is orthogonal to x_hat, but not y_hat
-                        !  - norm of this vector
-                        tmp_zhat_plane(1,n_wake) = -tmp_xhat_plane(1,n_wake)*tmp_xhat_plane(3,n_wake)
-                        tmp_zhat_plane(2,n_wake) = -tmp_xhat_plane(2,n_wake)*tmp_xhat_plane(3,n_wake)
-                        tmp_zhat_plane(3,n_wake) =  tmp_xhat_plane(1,n_wake)*tmp_xhat_plane(1,n_wake) + tmp_xhat_plane(2,n_wake)*tmp_xhat_plane(2,n_wake) 
-                        !tmp_zhat_plane(:,n_wake) =  tmp_zhat_plane(:,n_wake) / TwoNorm((/ tmp_xhat_plane(1,n_wake), tmp_xhat_plane(2,n_wake), 0.0_ReKi  /))
-                        tmp_zhat_plane(:,n_wake) =  m%zhat_plane(:,n_wake) / TwoNorm(tmp_zhat_plane(:,n_wake))
+                        ! Store unit vectors for projection, TODO Compute Vr_term directly
+                        tmp_xhat_plane(:,n_wake) = xHat_plane
+                        tmp_yhat_plane(:,n_wake) = yHat_plane
+                        tmp_zhat_plane(:,n_wake) = zHat_plane
 
-                        ! Point positions in plane, y = yhat . (p-p_plane), z = zhat . (p-p_plane) 
-                        y_tmp_plane =  tmp_yhat_plane(1,n_wake)*r_vec_plane(1) + tmp_yhat_plane(2,n_wake)*r_vec_plane(2) + tmp_yhat_plane(3,n_wake)*r_vec_plane(3)
-                        z_tmp_plane =  tmp_zhat_plane(1,n_wake)*r_vec_plane(1) + tmp_zhat_plane(2,n_wake)*r_vec_plane(2) + tmp_zhat_plane(3,n_wake)*r_vec_plane(3)
-
-                        ! Given r_tmp_plane and Vx_wake at p%dr increments, find value of m%Vx_wake(@r_tmp_plane) using interpolation
-                        ! 1D interp from radial grid
-                        tmp_Vx_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-                        tmp_Vr_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-
-                        Vx_debug = tmp_Vx_wake(n_wake) 
-
-                        ! TODO 2D interp from cartesian grid
-                        tmp_Vx_wake(n_wake) = delta *interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vx_wake2(:,:,np1,nt)) &
-                                            + deltad*interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vx_wake2(:,:,np, nt))
-                        tmp_Vy_wake(n_wake) = delta *interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vy_wake2(:,:,np1,nt)) &
-                                            + deltad*interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vy_wake2(:,:,np, nt))
-                        tmp_Vz_wake(n_wake) = delta *interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np1,nt)) &
-                                            + deltad*interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np, nt))
-                        !tmp_Vx_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake2(:,:,np1,nt)) &
-                        !                    + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake2(:,:,np, nt))
-                        !tmp_Vy_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake2(:,:,np1,nt)) &
-                        !                    + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake2(:,:,np, nt))
-                        !tmp_Vz_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np1,nt)) &
-                        !                    + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np, nt))
-                        if (abs(Vx_debug-tmp_Vx_wake(n_wake))>1e-2) then
-                           !print*,'y,z,r',y_tmp_plane,z_tmp_plane,r_tmp_plane,sqrt(y_tmp_plane**2 + z_tmp_plane**2)
-                           !print*,'Vx',Vx_debug, tmp_Vx_wake(n_wake)
-                           !STOP
-                        endif
-                        if (abs(abs(tmp_Vr_wake(n_wake))-sqrt(tmp_Vz_wake(n_wake)**2 + tmp_Vy_wake(n_wake)**2))>1e-2) then
-                           !print*,'Vr',abs(tmp_Vr_wake(n_wake)),   sqrt(tmp_Vz_wake(n_wake)**2 + tmp_Vy_wake(n_wake)**2)
-                           !STOP
-                        endif
-
+                        ! Velocity at point (y,z) by 2d interpolation in plane, and interpolations between planes (delta)
+                        tmp_Vx_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake(:,:,np1,nt)) &
+                                            + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake(:,:,np, nt))
+                        tmp_Vy_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np1,nt)) &
+                                            + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np, nt))
+                        tmp_Vz_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np1,nt)) &
+                                            + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np, nt))
                         ! Average xhat over overlapping wakes
                         xhatBar_plane = xhatBar_plane + abs(tmp_Vx_wake(n_wake))*tmp_xhat_plane(:,n_wake)
 
@@ -391,29 +362,22 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
               xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
            end if
 
-
            ! Compute average contributions
            ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
            ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
            Vx_wake_tmp   = 0.0_ReKi
            Vr_wake_tmp   = 0.0_ReKi
            do nw = 1,n_wake
-              ! Temporary hack TODO TODO TODO
-              tmp_Vy_wake(nw)  = tmp_Vr_wake(nw)
-              tmp_Vz_wake(nw)  = 0.0_ReKi
-              ! OLD
-              !Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vr_wake(nw)*tmp_rhat_plane(:,nw)
-              ! NEW
               Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
               Vx_term     = dot_product( xhatBar_plane, Vr_term )
               Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
               Vr_wake_tmp = Vr_wake_tmp + Vr_term
            end do
-                  ! [I - XX']V = V - (V dot X)X
+           ! [I - XX']V = V - (V dot X)X
            Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
            m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
         end if  ! (n_wake > 0)
-   end do
+   end do ! i, loop NumGrid_low points
    !      end do ! do nx_low=0, p%nX_low-1
    !   end do    ! do ny_low=0, p%nY_low-1
    !end do       ! do nz_low=0, p%nZ_low-1
@@ -453,8 +417,8 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
              xysq_Z = (/0.0_ReKi, 0.0_ReKi, xplane_sq+yplane_sq/)
              xzplane_X = (/u%xhat_plane(1,np,nt)*u%xhat_plane(3,np,nt), 0.0_ReKi, 0.0_ReKi/)
              yzplane_Y = (/0.0_ReKi, u%xhat_plane(2,np,nt)*u%xhat_plane(3,np,nt), 0.0_ReKi/)
-             yhat_plane = (xyplane-yxplane)/xyplane_norm
-             zhat_plane = (xysq_Z-xzplane_X-yzplane_Y)/xyplane_norm
+             yHat_plane = (xyplane-yxplane)/xyplane_norm
+             zHat_plane = (xysq_Z-xzplane_X-yzplane_Y)/xyplane_norm
 
 
              ! Calculate y%Vx_wind_disk and y%TI_amb at the rotor disk
@@ -473,7 +437,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                    do npsi = 0,n_psi_polar
 
                       psi_polar = (TwoPi*REAL(npsi,ReKi))/(REAL(n_psi_polar+1,ReKi))
-                      p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*yhat_plane + r_polar*SIN(psi_polar)*zhat_plane
+                      p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*yHat_plane + r_polar*SIN(psi_polar)*zHat_plane
                       Vamb_lowpol_tmp = INTERP3D( p_polar, p%Grid_Low(:,1), p%dXYZ_Low, m%Vamb_low, within, p%nX_low, p%nY_low, p%nZ_low, Vbox=Vamb_low_tmp )
                       if ( within ) then
                          Vsum_low = Vsum_low + Vamb_lowpol_tmp
@@ -537,7 +501,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                 do npsi = 0,n_psi_polar
 
                    psi_polar = (TwoPi*REAL(npsi,ReKi))/(REAL(n_psi_polar+1,ReKi))
-                   p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*yhat_plane + r_polar*SIN(psi_polar)*zhat_plane
+                   p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*yHat_plane + r_polar*SIN(psi_polar)*zHat_plane
                    Vdist_lowpol_tmp = INTERP3D( p_polar, p%Grid_Low(:,1), p%dXYZ_Low, m%Vdist_low, within, p%nX_low, p%nY_low, p%nZ_low )
                    if ( within ) then
                       y%V_plane(:,np,nt) = y%V_plane(:,np,nt) + w*Vdist_lowpol_tmp
@@ -568,18 +532,17 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    if (allocated(tmp_xhat_plane)) deallocate(tmp_xhat_plane)
    if (allocated(tmp_yhat_plane)) deallocate(tmp_yhat_plane)
    if (allocated(tmp_zhat_plane)) deallocate(tmp_zhat_plane)
-   if (allocated(tmp_rhat_plane)) deallocate(tmp_rhat_plane)
    if (allocated(tmp_Vx_wake))    deallocate(tmp_Vx_wake)
    if (allocated(tmp_Vy_wake))    deallocate(tmp_Vy_wake)
    if (allocated(tmp_Vz_wake))    deallocate(tmp_Vz_wake)
-   if (allocated(tmp_Vr_wake))    deallocate(tmp_Vr_wake)
 
 end subroutine LowResGridCalcOutput
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine
-!!
+!> Loop over each point of the high resolution ambient wind to compute:
+!!    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
+!! TODO explain algorithm
 subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi),                 intent(in   )  :: n           !< Current high-res, simulation time increment (zero-based)
    type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
@@ -593,11 +556,11 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi)      :: nx, ny, nz, nt, nt2, np, nw, nx_high, ny_high, nz_high, n_hl !< loop counters
    integer(IntKi)      :: nXYZ_high, n_wake       !< accumulating counters
    real(ReKi)          :: xhatBar_plane(3)       !<
+   real(ReKi)          :: xHat_plane(3), yHat_plane(3), zHat_plane(3)
    real(ReKi)          :: xhatBar_plane_norm
    real(ReKi)          :: x_end_plane
    real(ReKi)          :: x_start_plane
    real(ReKi)          :: r_vec_plane(3)
-   real(ReKi)          :: r_tmp_plane
    real(ReKi)          :: y_tmp_plane
    real(ReKi)          :: z_tmp_plane
    real(ReKi)          :: Vx_wake_tmp
@@ -625,9 +588,11 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    end if
 
 
-      ! Loop over the entire grid of low resolution ambient wind data to compute:
+      ! Loop over the entire grid of high resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
-
+      ! NOTE: loop here is different from low res grid, doing: turbines > grid > turbines(nt/=nt2) > planes
+      ! instead of grid > turbines > planes
+      ! TODO explain 
 
    do nt = 1,p%NumTurbines
       nXYZ_high = 0
@@ -635,29 +600,30 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             ! set the disturbed flow equal to the ambient flow for this time step
       y%Vdist_high(nt)%data = m%Vamb_high(nt)%data
 
+      ! Loop over all points of the high resolution ambiend wind
       do nz_high=0, p%nZ_high-1
          do ny_high=0, p%nY_high-1
             do nx_high=0, p%nX_high-1
-               ! NOTE: Code below is mostly copy paste with LowResGridCalcOutput 
+
                nXYZ_high = nXYZ_high + 1
                n_wake = 0
                xhatBar_plane = 0.0_ReKi
 
                do nt2 = 1,p%NumTurbines
                   if (nt /= nt2) then
-                     ! TODO TODO TODO: all this should be put into a common function between low-res and high-res
 
+                     ! TODO TODO TODO: all this should be put into a common function between low-res and high-res (watch for nt, nt2)
                      x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,0,nt2)) )
 
                      do np = 0, maxPln !p%NumPlanes-2
+                        ! Reset interpolation counter
+                        ILo = 0 ! TODO, curently not used
                         np1 = np + 1
-                           ! Reset interpolation counter
-                        ILo = 0
-                           ! Construct the endcaps of the current wake plane volume
+                        ! Construct the endcaps of the current wake plane volume
                         x_start_plane = x_end_plane
                         x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,np+1,nt2)) )
 
-                           ! test if the point is within the endcaps of the wake volume
+                        ! test if the point is within the endcaps of the wake volume
                         if ( ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) .or. &
                              ( ( x_start_plane <= 0.0_ReKi ) .and. ( x_end_plane > 0.0_ReKi ) )        ) then
 
@@ -669,7 +635,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                            end if
                            deltad = (1.0_ReKi - delta)
 
-                           ! Interpolated plane position
+                           ! Interpolate x_hat, plane normal at grid point 
                            if ( m%parallelFlag(np,nt2) ) then
                               p_tmp_plane = delta*u%p_plane(:,np+1,nt2) + deltad*u%p_plane(:,np,nt2)
                            else
@@ -677,63 +643,42 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                               p_tmp_plane = delta*m%pvec_ce(:,np,nt2) + deltad*m%pvec_cs(:,np,nt2) + ( delta*m%r_e(np,nt2) + deltad*m%r_s(np,nt2) )* tmp_vec / TwoNorm(tmp_vec)
                            end if
 
+                           ! Vector between current grid and plane position
                            r_vec_plane = p%Grid_high(:,nXYZ_high,nt) - p_tmp_plane
-                           r_tmp_plane = TwoNorm( r_vec_plane )
 
-                              ! test if the point is within radial finite-difference grid
-                           if ( r_tmp_plane <= p%r(p%numRadii-1) ) then ! TODO
+                           ! Interpolate x_hat
+                           xHat_plane(1:3) = delta*u%xhat_plane(:,np1,nt2) + deltad*u%xhat_plane(:,np,nt2)
+                           xHat_plane(1:3) = xHat_plane(:) / TwoNorm(xHat_plane(:))
+                           ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
+                           yHat_plane(1:3) = (/ -xHat_plane(2), xHat_plane(1), 0.0_ReKi  /)
+                           yHat_plane(1:3) = yHat_plane / TwoNorm(yHat_plane)
+                           ! Construct z_hat
+                           zHat_plane(1)   = -xHat_plane(1)*xHat_plane(3)
+                           zHat_plane(2)   = -xHat_plane(2)*xHat_plane(3)
+                           zHat_plane(3)   =  xHat_plane(1)*xHat_plane(1) + xHat_plane(2)*xHat_plane(2) 
+                           zHat_plane(1:3) =  zHat_plane / TwoNorm(zHat_plane)
+
+                           ! Point positions in plane, y = yhat . (p-p_plane), z = zhat . (p-p_plane) 
+                           y_tmp_plane =  yHat_plane(1)*r_vec_plane(1) + yHat_plane(2)*r_vec_plane(2) + yHat_plane(3)*r_vec_plane(3)
+                           z_tmp_plane =  zHat_plane(1)*r_vec_plane(1) + zHat_plane(2)*r_vec_plane(2) + zHat_plane(3)*r_vec_plane(3)
+
+                           ! test if the point is within finite-difference grid
+                           if ( (abs(y_tmp_plane) <= p%y(p%numRadii-1)).and.(abs(z_tmp_plane) <= p%z(p%numRadii-1)) ) then 
+                              ! Increment number of wakes contributing to current grid point
                               n_wake = n_wake + 1
-                              ! TODO remove me
-                              if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) ) then
-                                 m%rhat_plane(:,n_wake) = 0.0_ReKi
-                              else
-                                 m%rhat_plane(:,n_wake) = ( r_vec_plane  ) / r_tmp_plane
-                              end if
 
-                              ! Interpolate x_hat
-                              m%xhat_plane(:,n_wake) = delta*u%xhat_plane(:,np1,nt2) + deltad*u%xhat_plane(:,np,nt2)
-                              m%xhat_plane(:,n_wake) = m%xhat_plane(:,n_wake) / TwoNorm(m%xhat_plane(:,n_wake))
-                              ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
-                              m%yhat_plane(:,n_wake) = (/ -m%xhat_plane(2,n_wake), m%xhat_plane(1,n_wake), 0.0_ReKi  /)
-                              m%yhat_plane(:,n_wake) = m%yhat_plane(:,n_wake) / TwoNorm(m%yhat_plane(:,n_wake))
-                              ! Construct z_hat
-                              m%zhat_plane(1,n_wake) = -m%xhat_plane(1,n_wake)*m%xhat_plane(3,n_wake)
-                              m%zhat_plane(2,n_wake) = -m%xhat_plane(2,n_wake)*m%xhat_plane(3,n_wake)
-                              m%zhat_plane(3,n_wake) =  m%xhat_plane(1,n_wake)*m%xhat_plane(1,n_wake) + m%xhat_plane(2,n_wake)*m%xhat_plane(2,n_wake) 
-                              !m%zhat_plane(:,n_wake) =  m%zhat_plane(:,n_wake) / TwoNorm((/ m%xhat_plane(1,n_wake), m%xhat_plane(2,n_wake), 0.0_ReKi  /))
-                              m%zhat_plane(:,n_wake) =  m%zhat_plane(:,n_wake) / TwoNorm(m%zhat_plane(:,n_wake))
+                              ! Store unit vectors for projection, TODO Compute Vr_term directly
+                              m%xhat_plane(:,n_wake) = xHat_plane
+                              m%yhat_plane(:,n_wake) = yHat_plane
+                              m%zhat_plane(:,n_wake) = zHat_plane
 
-                              ! Point positions in plane, y = yhat . (p-p_plane), z = zhat . (p-p_plane) 
-                              y_tmp_plane =  m%yhat_plane(1,n_wake)*r_vec_plane(1) + m%yhat_plane(2,n_wake)*r_vec_plane(2) + m%yhat_plane(3,n_wake)*r_vec_plane(3)
-                              z_tmp_plane =  m%zhat_plane(1,n_wake)*r_vec_plane(1) + m%zhat_plane(2,n_wake)*r_vec_plane(2) + m%zhat_plane(3,n_wake)*r_vec_plane(3)
-
-                              ! given r_tmp_plane and Vx_wake at p%dr increments, find value of m%Vx_wake(@r_tmp_plane) using interpolation
-                              ! 1D interp from radial grid
-                              m%Vx_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np1,nt2), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np,nt2), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-                              m%Vr_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np1,nt2), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np,nt2), ILo, p%NumRadii )!( XVal, XAry, YAry, ILo, AryLen )
-
-                              ! TODO 2D interp from cartesian grid
-                              m%Vx_wake2(n_wake) = delta *interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vx_wake2(:,:,np1,nt)) &
-                                                 + deltad*interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vx_wake2(:,:,np, nt))
-                              m%Vy_wake2(n_wake) = delta *interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vy_wake2(:,:,np1,nt)) &
-                                                 + deltad*interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vy_wake2(:,:,np, nt))
-                              m%Vz_wake2(n_wake) = delta *interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np1,nt)) &
-                                                 + deltad*interp2d((/r_tmp_plane, 0*z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np, nt))
-                              !m%Vx_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake2(:,:,np1,nt)) &
-                              !                  + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake2(:,:,np, nt))
-                              !m%Vy_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake2(:,:,np1,nt)) &
-                              !                  + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake2(:,:,np, nt))
-                              !m%Vz_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np1,nt)) &
-                              !                  + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake2(:,:,np, nt))
-                              if (abs(m%Vx_wake(n_wake)-m%Vx_wake2(n_wake))>1e-2) then
-                                 !print*,'y,z,r',y_tmp_plane,z_tmp_plane,r_tmp_plane,sqrt(y_tmp_plane**2 + z_tmp_plane**2)
-                                 !print*,'Vx',m%Vx_wake(n_wake), m%Vx_wake2(n_wake)
-                                 !STOP
-                              endif
-                              if (abs(abs(m%Vr_wake(n_wake))-sqrt(m%Vz_wake2(n_wake)**2 + m%Vy_wake2(n_wake)**2))>1e-2) then
-                                 !print*,'Vr',abs(m%Vr_wake(n_wake)),   sqrt(m%Vz_wake2(n_wake)**2 + m%Vy_wake2(n_wake)**2)
-                                 !STOP
-                              endif
+                              ! Velocity at point (y,z) by 2d interpolation in plane, and interpolations between planes (delta)
+                              m%Vx_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake(:,:,np1,nt2)) &
+                                                + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake(:,:,np, nt2))
+                              m%Vy_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np1,nt2)) &
+                                                + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np, nt2))
+                              m%Vz_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np1,nt2)) &
+                                                + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np, nt2))
 
                               ! Average xhat over overlapping wakes
                               xhatBar_plane = xhatBar_plane + abs(m%Vx_wake(n_wake))*m%xhat_plane(:,n_wake)
@@ -759,23 +704,16 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   Vx_wake_tmp   = 0.0_ReKi
                   Vr_wake_tmp   = 0.0_ReKi
                   do nw = 1,n_wake
-                     ! Temporary hack TODO TODO TODO
-                     m%Vy_wake2(nw)  = m%Vr_wake(nw)
-                     m%Vz_wake2(nw)  = 0.0_ReKi
-                     ! OLD
-                     !Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vr_wake(nw)*m%rhat_plane(:,nw)
-                     ! NEW 
-                     Vr_term     = m%Vx_wake2(nw)*m%xhat_plane(:,nw) + m%Vy_wake2(nw)*m%yhat_plane(:,nw) + m%Vz_wake2(nw)*m%zhat_plane(:,nw)
+                     Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vy_wake(nw)*m%yhat_plane(:,nw) + m%Vz_wake(nw)*m%zhat_plane(:,nw)
                      Vx_term     = dot_product( xhatBar_plane, Vr_term )
                      Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
                      Vr_wake_tmp = Vr_wake_tmp + Vr_term
                   end do
-                     ! [I - XX']V = V - (V dot X)X
+                  ! [I - XX']V = V - (V dot X)X
                   Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
                   do n_hl=0, n_high_low
                      y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
                   end do
-
                end if  ! (n_wake > 0)
 
             end do ! nx_high=0, p%nX_high-1
@@ -912,15 +850,11 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
 
    ! Plane grids
-   allocate( p%r(            0:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%r.', errStat, errMsg, RoutineName )
    allocate( p%y(-p%Numradii+1:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%y.', errStat, errMsg, RoutineName )
    allocate( p%z(-p%Numradii+1:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%z.', errStat, errMsg, RoutineName )
    if ( ErrStat >= AbortErrLev ) then
       return
    end if
-   do i = 0,p%NumRadii-1
-      p%r(i)       = InitInp%InputFileData%dr*i
-   end do
    do i = -p%NumRadii+1,p%NumRadii-1
       p%y(i)       = InitInp%InputFileData%dr*i
       p%z(i)       = InitInp%InputFileData%dr*i
@@ -1118,17 +1052,15 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    allocate ( u%xhat_plane(3,0:p%NumPlanes-1,1:p%NumTurbines)             , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%xhat_plane.', errStat, errMsg, RoutineName )
    allocate ( u%p_plane   (3,0:p%NumPlanes-1,1:p%NumTurbines)             , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%p_plane.', errStat, errMsg, RoutineName )
-   allocate ( u%Vx_wake   (0:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vx_wake.', errStat, errMsg, RoutineName )
-   allocate ( u%Vr_wake   (0:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vr_wake.', errStat, errMsg, RoutineName )
-   allocate ( u%Vx_wake2  (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vx_wake2.', errStat, errMsg, RoutineName )
-   allocate ( u%Vy_wake2  (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vy_wake2.', errStat, errMsg, RoutineName )
-   allocate ( u%Vz_wake2  (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vz_wake2.', errStat, errMsg, RoutineName )
+   allocate ( u%Vx_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vx_wake.', errStat, errMsg, RoutineName )
+   allocate ( u%Vy_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vy_wake.', errStat, errMsg, RoutineName )
+   allocate ( u%Vz_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vz_wake.', errStat, errMsg, RoutineName )
    allocate ( u%D_wake    (0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%D_wake.', errStat, errMsg, RoutineName )
    if (errStat /= ErrID_None) return
 
-   u%Vx_wake2=0.0_ReKi
-   u%Vy_wake2=0.0_ReKi
-   u%Vz_wake2=0.0_ReKi
+   u%Vx_wake=0.0_ReKi
+   u%Vy_wake=0.0_ReKi
+   u%Vz_wake=0.0_ReKi
 
 
 
@@ -1212,12 +1144,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( m%xhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%xhat_plane.', errStat, errMsg, RoutineName )
    allocate ( m%yhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%yhat_plane.', errStat, errMsg, RoutineName )
    allocate ( m%zhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%zhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( m%rhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%rhat_plane.', errStat, errMsg, RoutineName )
    allocate ( m%Vx_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_wake.', errStat, errMsg, RoutineName )
-   allocate ( m%Vr_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vr_wake.', errStat, errMsg, RoutineName )
-   allocate ( m%Vx_wake2   ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_wake2.', errStat, errMsg, RoutineName )
-   allocate ( m%Vy_wake2   ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vy_wake2.', errStat, errMsg, RoutineName )
-   allocate ( m%Vz_wake2   ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vz_wake2.', errStat, errMsg, RoutineName )
+   allocate ( m%Vy_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vy_wake.', errStat, errMsg, RoutineName )
+   allocate ( m%Vz_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vz_wake.', errStat, errMsg, RoutineName )
 
    allocate ( m%parallelFlag( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
@@ -1771,7 +1700,7 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
 
    type(AWAE_InitOutputType)      :: initOut                         !< Input data for initialization routine
 
-   integer(IntKi)  :: nt, nr, np
+   integer(IntKi)  :: nt, ny, nz, np
    real(DbKi) :: t
 
    ! This example creates turbine 1 at the global coordinate [0,0,0]
@@ -1813,9 +1742,12 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
       ! Set up the inputs
    do nt = 1,p%NumTurbines
       do np = 0,p%NumPlanes-1
-         do nr = 0,p%NumRadii-1
-            u%Vx_wake(nr,np,nt) = -1.0_ReKi
-            u%Vr_wake(nr,np,nt) =  0.1_ReKi
+         do nz = -p%NumRadii+1,p%NumRadii-1
+            do ny = -p%NumRadii+1,p%NumRadii-1
+                  u%Vx_wake(ny,nz,np,nt) = -1.0_ReKi
+                  u%Vy_wake(ny,nz,np,nt) =  0.1_ReKi ! TODO initialize to radial
+                  u%Vz_wake(ny,nz,np,nt) =  0.1_ReKi
+            end do
          end do
       end do
    end do

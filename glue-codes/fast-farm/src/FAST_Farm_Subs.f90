@@ -294,8 +294,8 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       SC_InitOut%NumSC2CtrlGlob = 0
       SC_InitOut%NumSC2Ctrl = 0
       SC_InitOut%NumCtrl2SC = 0
-      allocate(farm%SC%y%fromscglob(0))
-      allocate(farm%SC%y%fromsc(0))
+      allocate(farm%SC%y%fromSCglob(0))
+      allocate(farm%SC%y%fromSC(0))
    end if
    
       !-------------------
@@ -1577,10 +1577,20 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
       FWrap_InitInp%NumSC2Ctrl    = SC_InitOutput%NumSC2Ctrl
       FWrap_InitInp%NumSC2CtrlGlob= SC_InitOutput%NumSC2CtrlGlob
       FWrap_InitInp%NumCtrl2SC    = SC_InitOutput%NumCtrl2SC
-      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob))
-      FWrap_InitInp%fromSCglob = SC_y%fromSCglob
+      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSCglob`', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      if (SC_InitOutput%NumSC2CtrlGlob>0) then
+         FWrap_InitInp%fromSCglob = SC_y%fromSCglob
+      endif
       
-      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl))
+      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSC`', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
       
       
       DO nt = 1,farm%p%NumTurbines
@@ -1667,7 +1677,8 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    farm%AWAE%u%xhat_plane = 0.0_ReKi     ! Orientations of wake planes, normal to wake planes, for each turbine
    farm%AWAE%u%p_plane    = 0.0_ReKi     ! Center positions of wake planes for each turbine
    farm%AWAE%u%Vx_wake    = 0.0_ReKi     ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-   farm%AWAE%u%Vr_wake    = 0.0_ReKi     ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+   farm%AWAE%u%Vy_wake    = 0.0_ReKi     ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+   farm%AWAE%u%Vz_wake    = 0.0_ReKi     ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
    farm%AWAE%u%D_wake     = 0.0_ReKi     ! Wake diameters at wake planes for each turbine      
    
       !--------------------
@@ -2395,17 +2406,9 @@ SUBROUTINE Transfer_WD_to_AWAE(farm)
    DO nt = 1,farm%p%NumTurbines   
       farm%AWAE%u%xhat_plane(:,:,nt) = farm%WD(nt)%y%xhat_plane     ! Orientations of wake planes, normal to wake planes, for each turbine
       farm%AWAE%u%p_plane(:,:,nt)    = farm%WD(nt)%y%p_plane        ! Center positions of wake planes for each turbine
-      !farm%AWAE%u%Vx_wake(:,:,nt)    = farm%WD(nt)%y%Vx_wake        ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-      !farm%AWAE%u%Vr_wake(:,:,nt)    = farm%WD(nt)%y%Vr_wake        ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
-      ! TEMPORARY HACK, pass "fake radial data"
-      farm%AWAE%u%Vx_wake(:,:,nt) = farm%WD(nt)%y%Vx_wake2(0:,0,:)
-      farm%AWAE%u%Vr_wake(:,:,nt) = farm%WD(nt)%y%Vy_wake2(0:,0,:)
-      !
-      farm%AWAE%u%Vx_wake2(:,:,:,nt)    = farm%WD(nt)%y%Vx_wake2       ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vy_wake2(:,:,:,nt)    = farm%WD(nt)%y%Vy_wake2       ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vz_wake2(:,:,:,nt)    = farm%WD(nt)%y%Vz_wake2       ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
-
-
+      farm%AWAE%u%Vx_wake(:,:,:,nt)  = farm%WD(nt)%y%Vx_wake2       ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vy_wake(:,:,:,nt)  = farm%WD(nt)%y%Vy_wake2       ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vz_wake(:,:,:,nt)  = farm%WD(nt)%y%Vz_wake2       ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
       farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine      
    END DO
    
