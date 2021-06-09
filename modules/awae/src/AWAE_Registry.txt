@@ -129,10 +129,8 @@ typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     Vx_wake      {:}       - - "" m/s
-typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
-typedef   ^ MiscVarType    ReKi     Vx_wake2     {:}       - - "" m/s
-typedef   ^ MiscVarType    ReKi     Vy_wake2     {:}       - - "" m/s
-typedef   ^ MiscVarType    ReKi     Vz_wake2     {:}       - - "" m/s
+typedef   ^ MiscVarType    ReKi     Vy_wake      {:}       - - "" m/s
+typedef   ^ MiscVarType    ReKi     Vz_wake      {:}       - - "" m/s
 #
 typedef	^	MiscVarType	   SiKi	   outVizXYPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
 typedef	^	MiscVarType	   SiKi	   outVizYZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
@@ -150,7 +148,6 @@ typedef   ^ ParameterType  CHARACTER(1024)  WindFilePath       -  - -   "Path na
 typedef   ^ ParameterType  IntKi            NumTurbines        -  - -   "Number of wind turbines in the farm [>=1]" -
 typedef   ^ ParameterType  IntKi            NumRadii           -  - -   "Number of radii in the radial finite-difference grid  [>=2]" -
 typedef   ^ ParameterType  IntKi            NumPlanes          -  - -   "Number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
-typedef   ^ ParameterType  ReKi             r                 {:} - -   "Discretization of radial finite-difference grid"        m
 typedef   ^ ParameterType  ReKi             y                 {:} - -   "Horizontal discretization of the wake planes"        m
 typedef   ^ ParameterType  ReKi             z                 {:} - -   "Vertical discretization of the wake planes"        m
 typedef   ^ ^              IntKi            Mod_AmbWind        -  - -   "Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module}" -
@@ -215,10 +212,8 @@ typedef   ^ OutputType     ReKi       Vx_wind_disk {:}                    -     
 # Define inputs that are contained on the mesh here:
 typedef   ^ InputType      ReKi       xhat_plane   {:}{:}{:}              -      -      "Orientations of wake planes, normal to wake planes, for each turbine"      -
 typedef   ^ InputType      ReKi       p_plane      {:}{:}{:}              -      -      "Center positions of wake planes for each turbine"      m
-typedef   ^ InputType      ReKi       Vx_wake      {:}{:}{:}              -      -      "Axial wake velocity deficit at wake planes, distributed radially, for each turbine"      m/s
-typedef   ^ InputType      ReKi       Vr_wake      {:}{:}{:}              -      -      "Radial wake velocity deficit at wake planes, distributed radially, for each turbine"      m/s
-typedef   ^ InputType      ReKi       Vx_wake2     {:}{:}{:}{:}           -      -      "Axial wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT)"      m/s
-typedef   ^ InputType      ReKi       Vy_wake2     {:}{:}{:}{:}           -      -      "Transverse horizonal wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT)"      m/s
-typedef   ^ InputType      ReKi       Vz_wake2     {:}{:}{:}{:}           -      -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT)"      m/s
+typedef   ^ InputType      ReKi       Vx_wake      {:}{:}{:}{:}           -      -      "Axial wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT)"      m/s
+typedef   ^ InputType      ReKi       Vy_wake      {:}{:}{:}{:}           -      -      "Transverse horizonal wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT)"      m/s
+typedef   ^ InputType      ReKi       Vz_wake      {:}{:}{:}{:}           -      -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT)"      m/s
 typedef   ^ InputType      ReKi       D_wake       {:}{:}                 -      -      "Wake diameters at wake planes for each turbine"     m
 

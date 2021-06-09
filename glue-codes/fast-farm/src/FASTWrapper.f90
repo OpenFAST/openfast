@@ -529,11 +529,13 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    REAL(ReKi)                                      :: num         ! numerator
    REAL(ReKi)                                      :: denom       ! denominator
    REAL(ReKi)                                      :: p0(3)       ! hub location (in FAST with 0,0,0 as turbine reference)
+   REAL(ReKi)                                      :: yHat_plane(3) ! horizontal unit vector normal to xhat
+   REAL(ReKi)                                      :: zHat_plane(3) ! nominally vertical
+   REAL(ReKi)                                      :: zHat_Disk(3) 
    REAL(R8Ki)                                      :: theta(3)    
    REAL(R8Ki)                                      :: orientation(3,3)    
-   real(R8Ki)                                      :: M_ph(3,3)                     ! Transformation from hub to "blade-rotor-plane": n,t,r (not the same as AeroDyn)
-   real(R8Ki)                                      :: M_pg(3,3,size(m%ADRotorDisk)) ! Transformation from global to "blade-rotor-plane" (n,t,r), with same x at hub coordinate system
-   real(R8Ki)                                      :: psi_hub                 ! Azimuth wrt hub
+   REAL(ReKi)                                      :: tmp_sz_z, tmp_sz_y
+   REAL(ReKi)                                      :: R_rotor    ! Rotor radius
    
    INTEGER(IntKi)                                  :: j, k        ! loop counters
    
@@ -598,16 +600,6 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    
    ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
    y%DiskAvg_Vx_Rel = m%Turbine%AD%m%rotors(1)%V_dot_x
-   
-
-   ! Calculate the M_ph M_pg, transformations from polar grid to hub, and polar to global
-   do k=1,size(m%ADRotorDisk) ! loop on blades
-      psi_hub = TwoPi*(real(k-1,R8Ki))/real(size(m%ADRotorDisk),R8Ki)
-      M_ph(1,1:3) = (/ 1.0_R8Ki, 0.0_R8Ki    , 0.0_R8Ki     /)
-      M_ph(2,1:3) = (/ 0.0_R8Ki, cos(psi_hub), sin(psi_hub) /)
-      M_ph(3,1:3) = (/ 0.0_R8Ki,-sin(psi_hub), cos(psi_hub) /)
-      M_pg(1:3,1:3,k) = matmul(M_ph, m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(1:3,1:3,1) ) 
-   end do
 
    ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially      
    theta = 0.0_ReKi
@@ -633,7 +625,14 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          call setErrStat(ErrStat2,ErrMsg2,ErrStat2,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
    end do
+    
+   ! Rotor radius
+   R_rotor = 0.0_ReKi 
+   do k=1,size(m%ADRotorDisk) ! loop on blades
+      R_rotor = max(R_rotor, TwoNorm(m%ADRotorDisk(k)%Position(:,p%nr) - p0) )
+   enddo
          
+   ! --- Ct and Cq on polar grid (goes beyond rotor radius)
    if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
       y%AzimAvg_Ct = 0.0_ReKi
       y%AzimAvg_Cq = 0.0_ReKi
@@ -645,32 +644,47 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          
          denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
 
-         ! --- Thrust coefficient
+         ! Thrust coefficient
          ! Ct(r)  = dT/dr / (1/2 rho pi r U_rel^2 ), with dT/dr = sum_iB dFn/dr
-         ! Ct(r)  = B dFn/dr / denom
          num = 0.0_ReKi
          do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
             num   =  num + dot_product( y%xHat_Disk, m%ADRotorDisk(k)%Force(:,j) )
          end do
          y%AzimAvg_Ct(j) = num / denom
 
-         ! --- Torque coefficient 
-         ! Cq = dQ/dr / (1/2 rho pi r^2 U_rel^2)    dQ/dr =  sum_iB r dFt/dr
-         !    = dFt/dt / denom   (r simplifies)
+         ! Torque coefficient 
+         ! Cq = dQ/dr / (1/2 rho pi r R U_rel^2)    dQ/dr =  sum_iB r dFt/dr
          num = 0.0_ReKi
          do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
-            num= num + dot_product(M_pg(2,1:3,k), m%ADRotorDisk(k)%Force(:,j) ) ! Ft, hub tangential
+            num = num + dot_product(y%xHat_Disk, m%ADRotorDisk(k)%Moment(:,j) ) 
          end do
-         y%AzimAvg_Cq(j) = num / denom
+         y%AzimAvg_Cq(j) = num / (denom * R_rotor)
       end do
          
    end if  
       
-   ! Variabels needed to orient wake planes in "skew" coordinate system
+   ! --- Variables needed to orient wake planes in "skew" coordinate system
+   ! chi_skew and psi_skew
    y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) * R2D ! AeroDyn_IO
-   y%psi_skew = 0.0_ReKi ! TODO TODO TODO, see Azimuth in function below
-   !call DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
 
+   ! TODO place me in an AeroDyn Function like Calc_Chi0
+   ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
+   yHat_plane(1:3) = (/ -y%xHat_Disk(2), y%xHat_Disk(1), 0.0_ReKi  /)
+   yHat_plane(1:3) = yHat_plane/TwoNorm(yHat_plane)
+   ! Construct z_hat
+   zHat_plane(1)   = -y%xHat_Disk(1)*y%xHat_Disk(3)
+   zHat_plane(2)   = -y%xHat_Disk(2)*y%xHat_Disk(3)
+   zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2) 
+   zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
+
+   zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
+   tmp_sz_y =       dot_product(zHat_Disk,yHat_plane)
+   tmp_sz_z = -1.0* dot_product(zHat_Disk,zHat_plane)
+   if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
+      y%psi_skew = 0.0_ReKi
+   else
+      y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
+   end if
 
 
 END SUBROUTINE FWrap_CalcOutput
