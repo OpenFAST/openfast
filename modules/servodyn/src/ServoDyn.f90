@@ -3890,16 +3890,28 @@ SUBROUTINE CableControl_CalcOutput( t, u, p, x, xd, z, OtherState, CableDeltaL, 
             endif
          ! User-defined cable control from Bladed-style DLL
          CASE ( ControlMode_DLL )
-            if (p%DLL_Ramp) then
-               factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
-               CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
-                                 factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
-               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) + &
-                                 factor * ( m%dll_data%CableDeltaLdot(1:p%NumCableControl) - m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) )
+            if (allocated(m%dll_data%PrevCableDeltaL)) then
+               if (p%DLL_Ramp) then
+                  factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+                  CableDeltaL(1:p%NumCableControl)    = m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) + &
+                                    factor * ( m%dll_data%CableDeltaL(   1:p%NumCableControl) - m%dll_data%PrevCableDeltaL(   1:p%NumCableControl) )
+               else
+                  CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
+               end if
             else
-               CableDeltaL(   1:p%NumCableControl) = m%dll_data%CableDeltaL(   1:p%NumCableControl)
-               CableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
-            end if
+               CableDeltaL    = 0.0_ReKi
+            endif
+            if (allocated(m%dll_data%PrevCableDeltaLdot)) then
+               if (p%DLL_Ramp) then
+                  factor = (t - m%LastTimeCalled) / m%dll_data%DLL_DT
+                  CableDeltaLdot(1:p%NumCableControl) = m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) + &
+                                    factor * ( m%dll_data%CableDeltaLdot(1:p%NumCableControl) - m%dll_data%PrevCableDeltaLdot(1:p%NumCableControl) )
+               else
+                  CableDeltaLdot(1:p%NumCableControl) = m%dll_data%CableDeltaLdot(1:p%NumCableControl)
+               endif
+            else
+               CableDeltaLdot = 0.0_ReKi
+            endif
       END SELECT
 
 END SUBROUTINE CableControl_CalcOutput

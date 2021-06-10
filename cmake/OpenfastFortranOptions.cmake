@@ -120,7 +120,7 @@ macro(set_fast_gfortran)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all,no-array-temps -pedantic -fbacktrace -finit-real=inf -finit-integer=9999." )
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all,no-array-temps -pedantic -fbacktrace -finit-real=zero -finit-integer=9999." )
   endif()
 
   if(CYGWIN)

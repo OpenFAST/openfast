@@ -445,6 +445,9 @@ p%WaterKin  = 0
 
       ! ---------------------- now go through again and process file contents --------------------
 
+      call Body_Setup( m%GroundBody, m%zeros6, p%rhoW, ErrStat2, ErrMsg2)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
 
       ! note: no longer worrying about "Echo" option
       
@@ -1453,8 +1456,8 @@ p%WaterKin  = 0
       ! ================================ initialize system ================================
 
 
-
       ! call ground body to update all the fixed things...
+      m%GroundBody%r6(4:6) = 0.0_DbKi
       CALL Body_SetDependentKin(m%GroundBody, 0.0_DbKi, m)
 
     ! m%GroundBody%OrMat = EulerConstruct( m%GroundBody%r6(4:6) ) ! make sure it's OrMat is set up  <<< need to check this approach
