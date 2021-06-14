@@ -1183,7 +1183,8 @@ subroutine ControlCableMapping(Init, uInit, p, InitOut, ErrStat, ErrMsg)
    do i = 1, nCC
        iElem    = p%CtrlElem2Channel(i,1)
        ! DeltaL 0 = - Le T0 / (EA + T0) = - Le eps0 / (1+eps0)
-       uInit%CableDeltaL(i) = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
+       !uInit%CableDeltaL(i) = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
+       uInit%CableDeltaL(i) = 0.0_ReKi
    enddo
 
 contains
