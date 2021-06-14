@@ -3001,6 +3001,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    integer :: iCC, iElem, iChannel !< Index on control cables, element, Channel
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    real(ReKi)                    :: CableTension ! Controllable Cable force
+   real(ReKi)                    :: DeltaL ! Change of length
    real(ReKi)                    :: rotations(3)
    real(ReKi)                    :: du(3), Moment(3), Force(3) 
    real(ReKi)                    :: u_TP(6)
@@ -3050,8 +3051,11 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
          iElem    = p%CtrlElem2Channel(iCC,1)
          iChannel = p%CtrlElem2Channel(iCC,2)
          IDOF = p%ElemsDOF(1:12, iElem)
+         ! DeltaL = DeltaL0 + DeltaL_control = - Le T0/(EA+T0) + DeltaL_control
+         DeltaL = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
+         DeltaL = DeltaL + u%CableDeltaL(iChannel) 
          ! T(t) = - EA * DeltaL(t) /(Le + Delta L(t)) ! NOTE DeltaL<0
-         CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length + u%CableDeltaL(iChannel))
+         CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * DeltaL / (p%ElemProps(iElem)%Length + DeltaL)
          if (RotateLoads) then ! in body coordinate
             ! We only rotate the loads, moments are rotated below
             m%Fext(IDOF(1:3))   = m%Fext(IDOF(1:3))   + matmul(Rg2b,m%FC_unit( IDOF(1:3) )   * (CableTension - p%ElemProps(iElem)%T0))
