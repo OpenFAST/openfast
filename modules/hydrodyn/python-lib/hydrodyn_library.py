@@ -96,6 +96,10 @@ class HydroDynLib(CDLL):
     #           here.
     error_msg_c_len = 1025
 
+    #   NOTE:   the length of the name used for any output file written by the
+    #           HD Fortran code is 1025.
+    default_str_c_len = 1025
+
     def __init__(self, library_path):
         super().__init__(library_path)
         self.library_path = library_path
@@ -149,9 +153,15 @@ class HydroDynLib(CDLL):
         self.numNodePts     = 1     # Single ptfm attachment point for floating rigid
         self.initNodeLocations = np.zeros((self.numNodePts,6))      # N x 6 array [x,y,z,Rx,Ry,Rz]
 
+        # OutRootName
+        #   If HD writes a file (echo, summary, or other), use this for the
+        #   root of the file name.
+        self.outRootName = "Output_HDlib_default"
+
     # _initialize_routines() ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
         self.HydroDyn_Init_c.argtypes = [
+            POINTER(c_char),                    # OutRootName 
             POINTER(c_char_p),                  # input file string
             POINTER(c_int),                     # input file string length
             POINTER(c_float),                   # gravity
@@ -199,7 +209,12 @@ class HydroDynLib(CDLL):
         
         self._numChannels_c = c_int(0)
 
-        #FIXME: for now we only allow for a single rigid motion platform.
+        # Rootname for HD output files (echo etc).
+        _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
+
+
+        # initNodeLocations
+        #   Verify that the shape of initNodeLocations is correct
         if self.initNodeLocations.shape[1] != 6:
             print("Expecting a Nx6 array of initial node locations (initNodeLocations) with second index for [x,y,z,Rx,Ry,Rz]")
             self.hydrodyn_end()
@@ -208,15 +223,16 @@ class HydroDynLib(CDLL):
             print("Expecting a Nx6 array of initial node locations (initNodeLocations) with first index for number of nodes.")
             self.hydrodyn_end()
             raise Exception("\nHydroDyn terminated prematurely.")
-        #       Placeholders exist for multiple input points for flexible
-        #       platforms, but are for now not enabled.
+        #FIXME: for now we only allow for a single rigid motion platform.  If
+        #       multiple nodes are allowed for substructure coupling or
+        #       flexible floating platforms, then remove this check and verify
+        #       the fortran side works as expected (theoretically should, but
+        #       it is untested).
         if self.numNodePts != 1:
             print(f"HydroDyn C interface does not currently support flexible structures ({self.numNodePts} input motion points were requested, but only 1 is currently supported).")
             self.hydrodyn_end()
             raise Exception("\nHydroDyn terminated prematurely.")
 
-        # initNodeLocations
-        #   Verify that the shape of initNodeLocations is correct
         #   Make a flat 1D array of position info:
         #       [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
         nodeInitLoc_flat = [pp for p in self.initNodeLocations for pp in p]
@@ -224,9 +240,10 @@ class HydroDynLib(CDLL):
         for i, p in enumerate(nodeInitLoc_flat):
             nodeInitLoc_flat_c[i] = c_float(p)
 
-        #FIXME: need to pass initial position and orientation info
+
         # call HydroDyn_Init_c
         self.HydroDyn_Init_c(
+            _outRootName_c,                         # IN: rootname for HD file writing
             c_char_p(input_string),                 # IN: input file string
             byref(c_int(input_string_length)),      # IN: input file string length
             byref(c_float(self.gravity)),           # IN: gravity

@@ -36,7 +36,8 @@ MODULE HydroDyn_C
    !     This must exactly match the value in the python-lib. If ErrMsgLen changes at
    !     some point in the nwtc-library, this should be updated, but the logic exists
    !     to correctly handle different lengths of the strings
-   integer(IntKi),   parameter            :: ErrMsgLen_C=1025
+   integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
+   integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
 
 
    !------------------------------------------------------------------------------------
@@ -151,13 +152,13 @@ end subroutine SetErr
 !===============================================================================================================
 !--------------------------------------------- HydroDyn Init----------------------------------------------------
 !===============================================================================================================
-SUBROUTINE HydroDyn_Init_c( InputFileString_C, InputFileStringLength_C,             &
-               Gravity_C, defWtrDens_C, defWtrDpth_C, defMSL2SWL_C,                 &
-               PtfmRefPtPositionX_C, PtfmRefPtPositionY_C,                          &
-               NumNodePts_C,  InitNodePositions_C,                                  &
-               !NumWaveElev_C, WaveElevXY_C                                          &    !Placeholder for later
-               InterpOrder_C, DT_C, TMax_C,                                         &
-               NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,           &
+SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLength_C, &
+               Gravity_C, defWtrDens_C, defWtrDpth_C, defMSL2SWL_C,                    &
+               PtfmRefPtPositionX_C, PtfmRefPtPositionY_C,                             &
+               NumNodePts_C,  InitNodePositions_C,                                     &
+               !NumWaveElev_C, WaveElevXY_C                                             &    !Placeholder for later
+               InterpOrder_C, DT_C, TMax_C,                                            &
+               NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,              &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_Init_c')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
@@ -165,6 +166,7 @@ SUBROUTINE HydroDyn_Init_c( InputFileString_C, InputFileStringLength_C,         
 !GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_Init_c
 #endif
 
+   character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
    type(c_ptr),               intent(in   )  :: InputFileString_C                      !< Input file as a single string with lines deliniated by C_NULL_CHAR
    integer(c_int),            intent(in   )  :: InputFileStringLength_C                !< lenght of the input file string
    real(c_float),             intent(in   )  :: Gravity_C                              !< Gravitational constant (set by calling code)
@@ -188,6 +190,7 @@ SUBROUTINE HydroDyn_Init_c( InputFileString_C, InputFileStringLength_C,         
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)                  !< Error message (C_NULL_CHAR terminated)
 
    ! Local Variables
+   character(IntfStrLen)                                          :: OutRootName       !< Root name to use for echo files and other
    character(kind=C_char, len=InputFileStringLength_C), pointer   :: InputFileString   !< Input file as a single string with NULL chracter separating lines
    real(ReKi), allocatable                                        :: InitNodePositions(:,:)  !< temp array.  Probably don't need this, but makes conversion from C clearer.
 
@@ -222,10 +225,8 @@ SUBROUTINE HydroDyn_Init_c( InputFileString_C, InputFileStringLength_C,         
    !     CU is the screen -- system dependent.
    !call Print_FileInfo_Struct( CU, InitInp%PassedFileData )
 
-
    ! Set other inputs for calling HydroDyn_Init
    InitInp%InputFile             = "passed_hd_file"         ! dummy
-   InitInp%OutRootName           = "HDpassed"               ! FIXME: pass in a name to use here (For summary files etc) 
    InitInp%UseInputFile          = .FALSE.                  ! this probably should be passed in
    InitInp%HasIce                = .FALSE.                  ! Always keep at false unless interfacing to ice modules
    ! Linearization
@@ -233,6 +234,12 @@ SUBROUTINE HydroDyn_Init_c( InputFileString_C, InputFileStringLength_C,         
    !     Note: we may want to linearize at T=0 for added mass effects, but that might be
    !        special case
    InitInp%Linearize             = .FALSE.
+
+   ! RootName -- for output of echo or other files
+   OutRootName = TRANSFER( OutRootName_C, OutRootName )
+   i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
+   if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
+   InitInp%OutRootName = trim(OutRootName)
 
    ! Values passed in
    InitInp%Gravity               = REAL(Gravity_C,    ReKi)
@@ -267,10 +274,9 @@ SUBROUTINE HydroDyn_Init_c( InputFileString_C, InputFileStringLength_C,         
    ! Wave eleveation output
    !     Wave elevations can be exported for a set of points (grid or any other layout).
    !     This feature is used only in the driver codes for exporting for visualization
-   !     and could be added to this inteface.  For now, skipping this feature.
+   !     and could be added to this inteface.
    ! Skipping this for now.  Maybe add later.
    !InitInp%WaveElevXY
-
 
 
    !-----------------------
@@ -305,24 +311,29 @@ SUBROUTINE HydroDyn_Init_c( InputFileString_C, InputFileStringLength_C,         
    call CheckDepth(ErrStat2,ErrMsg2);     if (Failed())  return
    call CheckNodes(ErrStat2,ErrMsg2);     if (Failed())  return
 
+
    !-------------------------------------------------------------
    ! Set the interface  meshes for motion inputs and loads output
    !-------------------------------------------------------------
    call SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2);    if (Failed())  return
 
 
-
    !-------------------------------------------------------------
    ! Setup other pieces of u(:)
    !-------------------------------------------------------------
-! copy u(1) to others
-! what from InitOutData should be returned
-! what error handling is necessary 
+   do i=2,InterpOrder+1
+      call HydroDyn_CopyInput (u(1),  u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+         if (Failed())  return
+   enddo
+
+!TODO
+!  Is there any other InitOutData should be returned
+!  Any additional warnings or error handling necessary 
 
 
-   !--------------------------------------------------
-   !  Set output channel informatoion for driver code.
-   !--------------------------------------------------
+   !-------------------------------------------------
+   !  Set output channel information for driver code
+   !-------------------------------------------------
 
    ! Number of channels
    NumChannels_C = size(InitOutData%WriteOutputHdr)
@@ -410,7 +421,6 @@ CONTAINS
       !     note: CU is is output unit (platform dependent).
       !call MeshPrintInfo( CU, HD_MotionMesh )
    
-
       !-------------------------------------------------------------
       ! Loads mesh
       !     This point mesh may contain more than one point. Mapping will be used to map
@@ -468,28 +478,52 @@ CONTAINS
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
-!TODO
-!  NumNodePts > y%WAMIT nodes
-!  or if no WAMIT, NumNodePts > y%Morison nodes
-!I'm not exactly sure on the logic yet.
+      if ( NumNodePts > 1 ) then
+         if ( u(1)%Morison%Mesh%Committed .and. u(1)%WAMITMesh%Committed ) then
+            if ( (u(1)%Morison%Mesh%Nnodes + u(1)%WAMITMesh%Nnodes) < NumNodePts ) then
+               ErrStat3 = ErrID_Fatal
+               ErrMsg3  = "More nodes passed into library than exist in HydroDyn model"
+            endif
+         elseif ( u(1)%Morison%Mesh%Committed ) then     ! No WAMIT
+            if ( u(1)%Morison%Mesh%Nnodes < NumNodePts ) then
+               ErrStat3 = ErrID_Fatal
+               ErrMsg3  = "More nodes passed into library than exist in HydroDyn model Morison mesh"
+            endif
+         elseif ( u(1)%WAMITMesh%Committed    ) then     ! No Morison 
+            if ( u(1)%WAMITMesh%Nnodes < NumNodePts ) then
+               ErrStat3 = ErrID_Fatal
+               ErrMsg3  = "More nodes passed into library than exist in HydroDyn model WAMIT mesh"
+            endif
+         endif
+      endif
    end subroutine CheckNodes
 
    !-------------------------------------------------------------
    !> Sanity check the Morison mesh
    !!    If the Morison mesh has points near the bottom of the waterdepth,
    !!    then we could have some very strange results with only a single mesh
-   !!    point for the HD_MotionMesh.
+   !!    point for the HD_MotionMesh.  All WAMIT mesh points should be near
+   !!    the surface, so no checking is necessary.
    subroutine CheckDepth(ErrStat3,ErrMsg3)
       integer(IntKi),         intent(  out)  :: ErrStat3    !< temporary error status
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
+      real(ReKi)                             :: tmpZpos     !< temporary z-position
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
-      if ( NumNodePts == 1 ) then
-!TODO:
-!check if committed
-!  loop over nodes and find lowest
-!  check if lowest is really deep (close to wtrdepth)
-!  give severe warning if is case
+      tmpZpos=-0.001_ReKi*abs(p%WtrDpth)                    ! Initial comparison value close to surface
+      if ( NumNodePts == 1 .and. u(1)%Morison%Mesh%Committed ) then
+         do i=1,u(1)%Morison%Mesh%Nnodes
+            ! Find lowest Morison node
+            if (u(1)%Morison%Mesh%Position(3,i) < tmpZpos) then
+               tmpZpos = u(1)%Morison%Mesh%Position(3,i)
+            endif
+         enddo
+         if (tmpZpos < -abs(p%WtrDpth)*0.9_ReKi) then       ! within 10% of the seafloor
+            ErrStat3 = ErrID_Severe
+            ErrMsg3  = "Inconsistent model"//NewLine//"   -- Single library input node for simulating rigid floating structure."//  &
+                        NewLine//"   -- Lowest Morison node is is in lowest 10% of water depth indicating fixed bottom structure from HydroDyn."// &
+                        NewLine//" ---- Results may not make physical sense ----"
+         endif
       endif
    end subroutine CheckDepth
 
