@@ -113,6 +113,7 @@ MODULE HydroDyn_C
    integer(IntKi)                         :: NumNodePts              ! Number of mesh points we are interfacing motions/loads to/from HD
    type(MeshType)                         :: HD_MotionMesh           ! mesh for motions of external nodes
    type(MeshType)                         :: HD_LoadMesh             ! mesh for loads  for external nodes 
+   type(MeshType)                         :: HD_LoadMesh_tmp         ! mesh for loads  for external nodes -- temporary
    !------------------------------
    !  Mesh mapping: motions
    !     The mapping of motions from the nodes passed in to the corresponding HD meshes 
@@ -126,6 +127,11 @@ MODULE HydroDyn_C
    type(MeshMapType)                      :: Map_HD_Mo_P_2_Load      ! Mesh mapping between HD output Morison    loads mesh and external nodes mesh
    !  Meshes -- helper stuff
    real(R8Ki)                             :: theta(3)                ! mesh creation helper data
+   !  Motions input (so we don't have to reallocate all the time
+   real(ReKi), allocatable                :: tmpNodePos(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpNodeVel(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpNodeAcc(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpNodeFrc(:,:)         ! temp array.  Probably don't need this, but makes conversion to   C clearer.
    !------------------------------------------------------------------------------------
  
 
@@ -176,7 +182,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    real(c_float),             intent(in   )  :: PtfmRefPtPositionX_C                   !< Initial position in wave field 
    real(c_float),             intent(in   )  :: PtfmRefPtPositionY_C                   !< Initial position in wave field 
    integer(c_int),            intent(in   )  :: NumNodePts_C                           !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: InitNodePositions_C( 6, NumNodePts_C ) !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]
+   real(c_float),             intent(in   )  :: InitNodePositions_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]
    !NOTE: not setting up the WaveElev at this point.  Leaving placeholder for future
    !integer(c_int),            intent(in   )  :: NumWaveElev_C                          !< Number of mesh points we are transfering motions to and output loads to
    !real(c_float),             intent(in   )  :: WaveElevXY_C                           !< A 2xNumWaveElev_C array [x,y]
@@ -192,7 +198,6 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    ! Local Variables
    character(IntfStrLen)                                          :: OutRootName       !< Root name to use for echo files and other
    character(kind=C_char, len=InputFileStringLength_C), pointer   :: InputFileString   !< Input file as a single string with NULL chracter separating lines
-   real(ReKi), allocatable                                        :: InitNodePositions(:,:)  !< temp array.  Probably don't need this, but makes conversion from C clearer.
 
    real(DbKi)                                                     :: TimeInterval      !< timestep for HD 
    integer(IntKi)                                                 :: ErrStat           !< aggregated error message
@@ -258,11 +263,12 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
       ErrMsg2  =  "At least one node point must be specified"
       if (Failed())  return
    endif
-   call AllocAry( InitNodePositions, 6, NumNodePts, "InitNodePositions", ErrStat2, ErrMsg2 )
-   if (Failed())  return
-   do i=1,NumNodePts
-      InitNodePositions(1:6,i)   = real(InitNodePositions_C(1:6,i),ReKi)
-   enddo
+   ! Allocate temporary arrays to simplify data conversions
+   call AllocAry( tmpNodePos, 6, NumNodePts, "tmpNodePos", ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpNodeVel, 6, NumNodePts, "tmpNodeVel", ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpNodeAcc, 6, NumNodePts, "tmpNodeAcc", ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpNodeFrc, 6, NumNodePts, "tmpNodeFrc", ErrStat2, ErrMsg2 );     if (Failed())  return
+   tmpNodePos(1:6,1:NumNodePts)   = reshape( real(InitNodePositions_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
    ! Platform reference position
    !     The HD model uses this for building the moddel.  This is only specified as an (X,Y)
@@ -353,7 +359,6 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    OutputChannelUnits_C(k) = C_NULL_CHAR
 
 
-   call Cleanup()
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 CONTAINS
@@ -361,14 +366,17 @@ CONTAINS
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
       if (Failed) then
-         call Cleanup()
+         call FailCleanup()
          call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
 
-   subroutine Cleanup()
-      if (allocated(InitNodePositions))   deallocate(InitNodePositions)
-   end subroutine Cleanup
+   subroutine FailCleanup()
+      if (allocated(tmpNodePos))    deallocate(tmpNodePos)
+      if (allocated(tmpNodeVel))    deallocate(tmpNodeVel)
+      if (allocated(tmpNodeAcc))    deallocate(tmpNodeAcc)
+      if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
+   end subroutine FailCleanup
 
    !> This subroutine sets the interface meshes to map to the input motions to the HD
    !! meshes for WAMIT and Morison.  This subroutine also sets the meshes for the
@@ -398,8 +406,8 @@ CONTAINS
 
       do iNode=1,NumNodePts
          ! initial position and orientation of node
-         InitPos  = InitNodePositions(1:3,iNode)
-         theta    = real(InitNodePositions(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
+         InitPos  = tmpNodePos(1:3,iNode)
+         theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
          Orient   = EulerConstruct( theta )
          call MeshPositionNode(  HD_MotionMesh            , &
                                  iNode                    , &
@@ -441,6 +449,27 @@ CONTAINS
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
       !call MeshPrintInfo( CU, HD_LoadMesh )
+
+      !-------------------------------------------------------------
+      ! Loads mesh
+      !     This point mesh may contain more than one point. Mapping will be used to map
+      !     the loads from output meshes for WAMIT and Morison.
+      ! Output mesh for loads at each WAMIT body
+      CALL MeshCopy( SrcMesh  = HD_LoadMesh        ,&
+                     DestMesh = HD_LoadMesh_tmp    ,&
+                     CtrlCode = MESH_COUSIN        ,&
+                     IOS      = COMPONENT_OUTPUT   ,&
+                     ErrStat  = ErrStat3           ,&
+                     ErrMess  = ErrMsg3            ,&
+                     Force    = .TRUE.             ,&
+                     Moment   = .TRUE.             )
+         if (ErrStat3 >= AbortErrLev) return
+      
+      HD_LoadMesh_tmp%RemapFlag  = .TRUE.
+ 
+      ! For checking the mesh, uncomment this.
+      !     note: CU is is output unit (platform dependent).
+      !call MeshPrintInfo( CU, HD_LoadMesh_tmp )
 
       !-------------------------------------------------------------
       ! Set the mapping meshes
@@ -534,41 +563,77 @@ END SUBROUTINE HydroDyn_Init_c
 !--------------------------------------------- HydroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE HydroDyn_CalcOutput_c(Time_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='HydroDyn_CalcOutput_c')
+SUBROUTINE HydroDyn_CalcOutput_c(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, NodeAcc_C, &
+               NodeFrc_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_CalcOutput_c')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_CalcOutput_c
 !GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_CalcOutput_c
 #endif
-   real(c_double),          intent(in   ) :: Time_C
-   real(c_float),           intent(  out) :: OutputChannelValues_C(p%NumOuts)
-   integer(c_int),          intent(  out) :: ErrStat_C
-   character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+   real(c_double),            intent(in   )  :: Time_C
+   integer(c_int),            intent(in   )  :: NumNodePts_C                 !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: NodePos_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
+   real(c_float),             intent(in   )  :: NodeVel_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
+   real(c_float),             intent(in   )  :: NodeAcc_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
+   real(c_float),             intent(  out)  :: NodeFrc_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
+   real(c_float),             intent(  out)  :: OutputChannelValues_C(p%NumOuts)
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local variables
-   real(DbKi)                             :: Time
-   integer(IntKi)                         :: ErrStat                          !< aggregated error status 
-   character(ErrMsgLen)                   :: ErrMsg                           !< aggregated error message
-   integer(IntKi)                         :: ErrStat2                         !< temporary error status  from a call
-   character(ErrMsgLen)                   :: ErrMsg2                          !< temporary error message from a call
-   character(*), parameter                :: RoutineName = 'HydroDyn_CalcOutput_c' !< for error handling
+   real(DbKi)                                :: Time
+   integer(IntKi)                            :: iNode
+   integer(IntKi)                            :: ErrStat                       !< aggregated error status 
+   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
+   character(*), parameter                   :: RoutineName = 'HydroDyn_CalcOutput_c' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
+   ! Sanity check -- number of node points cannot change
+   if ( NumNodePts /= int(NumNodePts_C, IntKi) ) then
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
+      if (Failed())  return
+   endif
+
    ! Convert the inputs from C to Fortrn
    Time = REAL(Time_C,DbKi)
 
-!FIXME: Reshape position, velocity, acceleration and set mesh accordingly.
+   ! Reshape position, velocity, acceleration
+   tmpNodePos(1:6,1:NumNodePts)   = reshape( real(NodePos_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
+   tmpNodeVel(1:6,1:NumNodePts)   = reshape( real(NodeVel_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
+   tmpNodeAcc(1:6,1:NumNodePts)   = reshape( real(NodeAcc_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
+
+   ! Transfer motions to input meshes
+   call Set_MotionMesh()                              ! update motion mesh with input motion arrays
+   call HD_SetInputMotion( u(1), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+      if (Failed())  return
+
+ 
    ! Call the main subroutine HydroDyn_CalcOutput to get the resulting forces and moments at time T 
    CALL HydroDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherStates, y, m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
+
+   ! Transfer resulting load meshes to intermediate mesh
+   call HD_TransferLoads( u(1), y, ErrStat2, ErrMsg2 )
+      if (Failed())  return
+
+
+   ! Set output force/moment array
+   call Set_OutputLoadArray( )
+   ! Reshape for return
+   NodeFrc_C(1:6*NumNodePts) = reshape( real(tmpNodeFrc(1:6,1:NumNodePts), c_float), (/6*NumNodePts/) )
+
    ! Get the output channel info out of y
    OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
+   ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 CONTAINS
@@ -658,6 +723,13 @@ SUBROUTINE HydroDyn_End_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='HydroDyn_End_c')
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
+   ! clear out any globably allocated helper arrays
+   if (allocated(tmpNodePos))    deallocate(tmpNodePos)
+   if (allocated(tmpNodeVel))    deallocate(tmpNodeVel)
+   if (allocated(tmpNodeAcc))    deallocate(tmpNodeAcc)
+   if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
+
+
    !  NOTE: HydroDyn_End only takes 1 instance of u, not the array.  So extra
    !        logic is required here (this isn't necessary in the fortran driver
    !        or in openfast, but may be when this code is called from C, Python,
@@ -706,5 +778,91 @@ CONTAINS
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end subroutine ClearMesh
 END SUBROUTINE HydroDyn_End_c
+
+
+!> This routine is operating on module level data, hence few inputs
+subroutine Set_MotionMesh()
+   integer(IntKi)                            :: iNode
+   real(R8Ki)                                :: theta(3)
+   real(R8Ki)                                :: Orient(3,3)
+   ! Set mesh corresponding to input motions
+   do iNode=1,NumNodePts
+      theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
+      Orient   = EulerConstruct( theta )
+      HD_MotionMesh%TranslationDisp(1:3,iNode) = tmpNodePos(1:3,iNode) - HD_MotionMesh%Position(1:3,iNode)  ! relative displacement only
+      HD_MotionMesh%Orientation(1:3,1:3,iNode) = Orient
+      HD_MotionMesh%TranslationVel( 1:3,iNode) = tmpNodeVel(1:3,iNode)
+      HD_MotionMesh%RotationVel(    1:3,iNode) = tmpNodeVel(4:6,iNode)
+      HD_MotionMesh%TranslationAcc( 1:3,iNode) = tmpNodeAcc(1:3,iNode)
+      HD_MotionMesh%RotationAcc(    1:3,iNode) = tmpNodeAcc(4:6,iNode)
+   enddo
+end subroutine Set_MotionMesh
+
+!> Map the motion of the intermediate input mesh over to the input meshes
+!! This routine is operating on module level data, hence few inputs
+subroutine HD_SetInputMotion( u_local, ErrStat3, ErrMsg3 )
+   type(HydroDyn_InputType),  intent(inout)  :: u_local           ! Only one input (probably at T)
+   integer(IntKi),            intent(  out)  :: ErrStat3
+   character(ErrMsgLen),      intent(  out)  :: ErrMsg3
+   !  Principle reference point
+   CALL Transfer_Point_to_Point( HD_MotionMesh, u_local%PRPMesh, Map_Motion_2_HD_PRP_P, ErrStat3, ErrMsg3 )
+      if (ErrStat3 >= AbortErrLev)  return
+   !  WAMIT mesh
+   if ( u_local%WAMITMesh%Committed ) then
+      call Transfer_Point_to_Point( HD_MotionMesh, u_local%WAMITMesh, Map_Motion_2_HD_WB_P, ErrStat3, ErrMsg3 )
+         if (ErrStat3 >= AbortErrLev)  return
+   endif
+   !  Morison mesh
+   if ( u_local%Morison%Mesh%Committed ) then
+      call Transfer_Point_to_Point( HD_MotionMesh, u_local%Morison%Mesh, Map_Motion_2_HD_Mo_P, ErrStat3, ErrMsg3 )
+         if (ErrStat3 >= AbortErrLev)  return
+   endif
+end subroutine HD_SetInputMotion
+
+
+!> Map the loads of the output meshes to the intermediate output mesh.  Since
+!! we are mapping two meshes over to a single one, we use an intermediate
+!! temporary mesh -- prevents accidental overwrite of WAMIT loads on HD_LoadMesh
+!! with the mapping of the Morison loads.
+!! This routine is operating on module level data, hence few inputs
+subroutine HD_TransferLoads( u_local, y_local, ErrStat3, ErrMsg3 )
+   type(HydroDyn_InputType),  intent(in   )  :: u_local           ! Only one input (probably at T)
+   type(HydroDyn_OutputType), intent(in   )  :: y_local     ! Only one input (probably at T)
+   integer(IntKi),            intent(  out)  :: ErrStat3
+   character(ErrMsgLen),      intent(  out)  :: ErrMsg3
+
+   HD_LoadMesh%Force    = 0.0_ReKi
+   HD_LoadMesh%Moment   = 0.0_ReKi
+
+   !  WAMIT mesh
+   if ( y_local%WAMITMesh%Committed ) then
+      HD_LoadMesh_tmp%Force    = 0.0_ReKi
+      HD_LoadMesh_tmp%Moment   = 0.0_ReKi
+      call Transfer_Point_to_Point( y_local%WAMITMesh, HD_LoadMesh_tmp, Map_HD_WB_P_2_Load, ErrStat3, ErrMsg3, u_local%WAMITMesh, HD_MotionMesh )
+         if (ErrStat3 >= AbortErrLev)  return
+      HD_LoadMesh%Force    = HD_LoadMesh%Force  + HD_LoadMesh_tmp%Force
+      HD_LoadMesh%Moment   = HD_LoadMesh%Moment + HD_LoadMesh_tmp%Moment
+   endif
+   !  Morison mesh
+   if ( y_local%Morison%Mesh%Committed ) then
+      HD_LoadMesh_tmp%Force    = 0.0_ReKi
+      HD_LoadMesh_tmp%Moment   = 0.0_ReKi
+      call Transfer_Point_to_Point( y_local%Morison%Mesh, HD_LoadMesh_tmp, Map_HD_Mo_P_2_Load, ErrStat3, ErrMsg3, u_local%Morison%Mesh, HD_MotionMesh )
+         if (ErrStat3 >= AbortErrLev)  return
+      HD_LoadMesh%Force    = HD_LoadMesh%Force  + HD_LoadMesh_tmp%Force
+      HD_LoadMesh%Moment   = HD_LoadMesh%Moment + HD_LoadMesh_tmp%Moment
+   endif
+end subroutine HD_TransferLoads
+
+!> Transfer the loads from the load mesh to the temporary array for output
+!! This routine is operating on module level data, hence few inputs
+subroutine Set_OutputLoadArray()
+   integer(IntKi)                            :: iNode
+   ! Set mesh corresponding to input motions
+   do iNode=1,NumNodePts
+      tmpNodeFrc(1:3,iNode)   = HD_LoadMesh%Force (1:3,iNode)
+      tmpNodeFrc(4:6,iNode)   = HD_LoadMesh%Moment(1:3,iNode)
+   enddo
+end subroutine Set_OutputLoadArray
 
 END MODULE HydroDyn_C

@@ -146,12 +146,12 @@ class HydroDynLib(CDLL):
 
         # Nodes
         #   The number of nodes must be constant throughout simulation.  The
-        #   initial position is given in the initNodeLocations array (resize as
+        #   initial position is given in the initNodePos array (resize as
         #   needed, should be Nx6).
         #   Rotations are given in radians assuming small angles.  See note at
         #   top of this file.
         self.numNodePts     = 1     # Single ptfm attachment point for floating rigid
-        self.initNodeLocations = np.zeros((self.numNodePts,6))      # N x 6 array [x,y,z,Rx,Ry,Rz]
+        self.initNodePos = np.zeros((self.numNodePts,6))      # N x 6 array [x,y,z,Rx,Ry,Rz]
 
         # OutRootName
         #   If HD writes a file (echo, summary, or other), use this for the
@@ -171,7 +171,7 @@ class HydroDynLib(CDLL):
             POINTER(c_float),                   # PtfmRefPt_X
             POINTER(c_float),                   # PtfmRefPt_Y
             POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
-            POINTER(c_float),                   # initNodeLocations -- initial node positions in flat array of 6*numNodePts
+            POINTER(c_float),                   # initNodePos -- initial node positions in flat array of 6*numNodePts
             POINTER(c_int),                     # InterpOrder
             POINTER(c_double),                  # dt
             POINTER(c_double),                  # tmax 
@@ -185,6 +185,11 @@ class HydroDynLib(CDLL):
 
         self.HydroDyn_CalcOutput_c.argtypes = [
             POINTER(c_double),                  # Time_C
+            POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
+            POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeVel -- node velocities     in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeAcc -- node accelerations  in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeFrc -- node forces/moments in flat array of 6*numNodePts
             POINTER(c_float),                   # Output Channel Values
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
@@ -212,15 +217,17 @@ class HydroDynLib(CDLL):
         # Rootname for HD output files (echo etc).
         _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
 
+        # store initial number of node points for error handling at calls
+        self._initNumNodePts = self.numNodePts
 
-        # initNodeLocations
-        #   Verify that the shape of initNodeLocations is correct
-        if self.initNodeLocations.shape[1] != 6:
-            print("Expecting a Nx6 array of initial node locations (initNodeLocations) with second index for [x,y,z,Rx,Ry,Rz]")
+        # initNodePos
+        #   Verify that the shape of initNodePos is correct
+        if self.initNodePos.shape[1] != 6:
+            print("Expecting a Nx6 array of initial node locations (initNodePos) with second index for [x,y,z,Rx,Ry,Rz]")
             self.hydrodyn_end()
             raise Exception("\nHydroDyn terminated prematurely.")
-        if self.initNodeLocations.shape[0] != self.numNodePts:
-            print("Expecting a Nx6 array of initial node locations (initNodeLocations) with first index for number of nodes.")
+        if self.initNodePos.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of initial node locations (initNodePos) with first index for node number.")
             self.hydrodyn_end()
             raise Exception("\nHydroDyn terminated prematurely.")
         #FIXME: for now we only allow for a single rigid motion platform.  If
@@ -235,7 +242,7 @@ class HydroDynLib(CDLL):
 
         #   Make a flat 1D array of position info:
         #       [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
-        nodeInitLoc_flat = [pp for p in self.initNodeLocations for pp in p]
+        nodeInitLoc_flat = [pp for p in self.initNodePos for pp in p]
         nodeInitLoc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
         for i, p in enumerate(nodeInitLoc_flat):
             nodeInitLoc_flat_c[i] = c_float(p)
@@ -253,7 +260,7 @@ class HydroDynLib(CDLL):
             byref(c_float(self.ptfmRefPt_x)),       # IN: Platform initial position (X)
             byref(c_float(self.ptfmRefPt_y)),       # IN: Platform initial position (Y)
             byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            nodeInitLoc_flat_c,                     # IN: initNodeLocations -- initial node positions in flat array of 6*numNodePts
+            nodeInitLoc_flat_c,                     # IN: initNodePos -- initial node positions in flat array of 6*numNodePts
             byref(c_int(self.InterpOrder)),         # IN: InterpOrder (1: linear, 2: quadratic)
             byref(c_double(self.dt)),               # IN: time step (dt)
             byref(c_double(self.tmax)),             # IN: tmax
@@ -271,39 +278,65 @@ class HydroDynLib(CDLL):
 
 
     # hydrodyn_calcOutput ------------------------------------------------------------------------------------------------------------
-    #def hydrodyn_calcOutput(self, time, positions, velocities, outputChannelValues):
-    def hydrodyn_calcOutput(self, time, outputChannelValues):
+    def hydrodyn_calcOutput(self, time, nodePos, nodeVel, nodeAcc, nodeFrcMom, outputChannelValues):
 
-        # Set up inputs
+        # Check input motion info
+        self.check_input_motions(nodePos,nodeVel,nodeAcc)
+
+        # set flat arrays for inputs of motion
+        #   Position -- [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
+        nodePos_flat = [pp for p in nodePos for pp in p]
+        nodePos_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodePos_flat):
+            nodePos_flat_c[i] = c_float(p)
+
+        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
+        nodeVel_flat = [pp for p in nodeVel for pp in p]
+        nodeVel_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeVel_flat):
+            nodeVel_flat_c[i] = c_float(p)
+
+        #   Acceleration -- [Ax1,Ay1,Az1,RAx1,RAy1,RAz1, Ax2,Ay2,Az2,RAx2,RAy2,RAz2 ...]
+        nodeAcc_flat = [pp for p in nodeAcc for pp in p]
+        nodeAcc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeAcc_flat):
+            nodeAcc_flat_c[i] = c_float(p)
+
+        # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
+        nodeFrc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
 
         # Set up output channels
         outputChannelValues_c = (c_float * self.numChannels)(0.0,)
 
         # Run HydroDyn_CalcOutput_c
         self.HydroDyn_CalcOutput_c(
-            byref(c_double(time)),                 # IN: time at which to calculate velocities
-            #positions_flat_c,                      # IN: positions - specified by user
-            #velocities_flat_c,                     # IN: velocities at desired positions
-            #velocities_flat_c,                     # IN: accelerations at desired positions
-            #forces_flat_c,                         # OUT: resulting forces/moments array
-            outputChannelValues_c,                 # OUT: output channel values as described in input file
-            byref(self.error_status_c),            # OUT: ErrStat_C
-            self.error_message_c                   # OUT: ErrMsg_C
+            byref(c_double(time)),                  # IN: time at which to calculate velocities
+            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            nodePos_flat_c,                         # IN: positions - specified by user
+            nodeVel_flat_c,                         # IN: velocities at desired positions
+            nodeAcc_flat_c,                         # IN: accelerations at desired positions
+            nodeFrc_flat_c,                         # OUT: resulting forces/moments array
+            outputChannelValues_c,                  # OUT: output channel values as described in input file
+            byref(self.error_status_c),             # OUT: ErrStat_C
+            self.error_message_c                    # OUT: ErrMsg_C
         )
 
         self.check_error()
 
+        ## Reshape Force/Moment into [N,6]
+        count = 0
+        for j in range(0,self.numNodePts):
+            nodeFrcMom[j,0] = nodeFrc_flat_c[count]
+            nodeFrcMom[j,1] = nodeFrc_flat_c[count+1]
+            nodeFrcMom[j,2] = nodeFrc_flat_c[count+2]
+            nodeFrcMom[j,3] = nodeFrc_flat_c[count+3]
+            nodeFrcMom[j,4] = nodeFrc_flat_c[count+4]
+            nodeFrcMom[j,5] = nodeFrc_flat_c[count+5]
+            count = count + 6
+        
         # Convert output channel values back into python
         for k in range(0,self.numChannels):
             outputChannelValues[k] = float(outputChannelValues_c[k])
-        
-        ## Reshape velocities into [N,3]
-        #count = 0
-        #for j in range(0,self.numWindPts):
-        #    velocities[j,0] = velocities_flat_c[count]
-        #    velocities[j,1] = velocities_flat_c[count+1]
-        #    velocities[j,2] = velocities_flat_c[count+2]
-        #    count = count + 3
 
     # hydrodyn_end ------------------------------------------------------------------------------------------------------------
     def hydrodyn_end(self):
@@ -327,6 +360,48 @@ class HydroDynLib(CDLL):
             print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
             self.hydrodyn_end()
             raise Exception("\nHydroDyn terminated prematurely.")
+
+
+    def check_input_motions(self,nodePos,nodeVel,nodeAcc):
+        # make sure number of nodes didn't change for some reason
+        if self._initNumNodePts != self.numNodePts:
+            print(f"At time {time}, the number of node points changed from initial value of {self._initNumNodePts}.  This is not permitted during the simulation.")
+            self.hydrodyn_end()
+            raise Exception("\nError in calling HydroDyn library.")
+
+        #   Verify that the shape of positions array is correct
+        if nodePos.shape[1] != 6:
+            print("Expecting a Nx6 array of node positions (nodePos) with second index for [x,y,z,Rx,Ry,Rz]")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+        if nodePos.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of node positions (nodePos) with first index for node number.")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+
+
+        #   Verify that the shape of velocities array is correct
+        if nodeVel.shape[1] != 6:
+            print("Expecting a Nx6 array of node velocities (nodeVel) with second index for [x,y,z,Rx,Ry,Rz]")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+        if nodeVel.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of node velocities (nodeVel) with first index for node number.")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+
+
+        #   Verify that the shape of accelerations array is correct
+        if nodeAcc.shape[1] != 6:
+            print("Expecting a Nx6 array of node accelerations (nodeAcc) with second index for [x,y,z,Rx,Ry,Rz]")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+        if nodeAcc.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of node accelerations (nodeAcc) with first index for node number.")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+
+
 
     @property
     def output_channel_names(self):
@@ -360,22 +435,83 @@ class DriverDbg():
     When coupled to another code, the force/moment array would be passed back
     to the calling code for use in the structural solver.
     """
-    def __init__(self,filename):
+    def __init__(self,filename,numNodePts):
         self.DbgFile=open(filename,'wt')        # open output file and write header info
+        self.numNodePts=numNodePts
         # write file header
         t_string=datetime.datetime.now()
         dt_string=datetime.date.today()
-#        self.DbgFile.write(f"## This file was generated by InflowWind_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
-#        self.DbgFile.write(f"## This file contains the wind velocity at the {numWindPts} points specified in the file ")
-#        self.DbgFile.write(f"{filename}\n")
-#        self.DbgFile.write("#\n")
-#        self.DbgFile.write("#        T                X                Y                Z                U                V                W\n")
-#        self.DbgFile.write("#       (s)              (m)              (m)              (m)             (m/s)            (m/s)            (m/s)\n")
+        self.DbgFile.write(f"## This file was generated by hydrodyn_c_lib on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
+        self.DbgFile.write(f"## This file contains the resulting forces/moments at each of {self.numNodePts} node(s) passed into the hydrodyn_c_lib\n")
+        self.DbgFile.write("#\n")
+        f_string = "{:^25s}"
+        self.DbgFile.write("#        T     ")
+        for i in range(1,self.numNodePts+1):
+            f_num = "N{0:04d}_".format(i)
+            self.DbgFile.write(f_string.format(f_num+"x"  ))
+            self.DbgFile.write(f_string.format(f_num+"y"  ))
+            self.DbgFile.write(f_string.format(f_num+"z"  ))
+            self.DbgFile.write(f_string.format(f_num+"Rx" ))
+            self.DbgFile.write(f_string.format(f_num+"Ry" ))
+            self.DbgFile.write(f_string.format(f_num+"Rz" ))
+            self.DbgFile.write(f_string.format(f_num+"Vx" ))
+            self.DbgFile.write(f_string.format(f_num+"Vy" ))
+            self.DbgFile.write(f_string.format(f_num+"Vz" ))
+            self.DbgFile.write(f_string.format(f_num+"RVx"))
+            self.DbgFile.write(f_string.format(f_num+"RVy"))
+            self.DbgFile.write(f_string.format(f_num+"RVz"))
+            self.DbgFile.write(f_string.format(f_num+"Ax" ))
+            self.DbgFile.write(f_string.format(f_num+"Ay" ))
+            self.DbgFile.write(f_string.format(f_num+"Az" ))
+            self.DbgFile.write(f_string.format(f_num+"RAx"))
+            self.DbgFile.write(f_string.format(f_num+"RAy"))
+            self.DbgFile.write(f_string.format(f_num+"RAz"))
+            self.DbgFile.write(f_string.format(f_num+"Fx" ))
+            self.DbgFile.write(f_string.format(f_num+"Fy" ))
+            self.DbgFile.write(f_string.format(f_num+"Fz" ))
+            self.DbgFile.write(f_string.format(f_num+"Mx" ))
+            self.DbgFile.write(f_string.format(f_num+"My" ))
+            self.DbgFile.write(f_string.format(f_num+"Mz" ))
+        self.DbgFile.write("\n")
+        self.DbgFile.write("#       (s)    ")
+        for i in range(1,self.numNodePts+1):
+            self.DbgFile.write(f_string.format("(m)"      ))
+            self.DbgFile.write(f_string.format("(m)"      ))
+            self.DbgFile.write(f_string.format("(m)"      ))
+            self.DbgFile.write(f_string.format("(rad)"    ))
+            self.DbgFile.write(f_string.format("(rad)"    ))
+            self.DbgFile.write(f_string.format("(rad)"    ))
+            self.DbgFile.write(f_string.format("(m/s)"    ))
+            self.DbgFile.write(f_string.format("(m/s)"    ))
+            self.DbgFile.write(f_string.format("(m/s)"    ))
+            self.DbgFile.write(f_string.format("(rad/s)"  ))
+            self.DbgFile.write(f_string.format("(rad/s)"  ))
+            self.DbgFile.write(f_string.format("(rad/s)"  ))
+            self.DbgFile.write(f_string.format("(m/s^2)"  ))
+            self.DbgFile.write(f_string.format("(m/s^2)"  ))
+            self.DbgFile.write(f_string.format("(m/s^2)"  ))
+            self.DbgFile.write(f_string.format("(rad/s^2)"))
+            self.DbgFile.write(f_string.format("(rad/s^2)"))
+            self.DbgFile.write(f_string.format("(rad/s^2)"))
+            self.DbgFile.write(f_string.format("(N)"      ))
+            self.DbgFile.write(f_string.format("(N)"      ))
+            self.DbgFile.write(f_string.format("(N)"      ))
+            self.DbgFile.write(f_string.format("(N-m)"    ))
+            self.DbgFile.write(f_string.format("(N-m)"    ))
+            self.DbgFile.write(f_string.format("(N-m)"    ))
+        self.DbgFile.write("\n")
         self.opened = True
 
-#    def write(self,t,positions,velocities):
-#        for p, v in zip(positions,velocities):
-#            self.DbgFile.write('  %14.7f   %14.7f   %14.7f   %14.7f   %14.7f   %14.7f   %14.7f\n' % (t,p[0],p[1],p[2],v[0],v[1],v[2]))
+    def write(self,t,nodePos,nodeVel,nodeAcc,nodeFrc):
+        t_string = "{:10.4f}"
+        f_string = "{:25.7f}"*6
+        self.DbgFile.write(t_string.format(t))
+        for i in range(0,self.numNodePts):
+            self.DbgFile.write(f_string.format(*nodePos[i,:]))
+            self.DbgFile.write(f_string.format(*nodeVel[i,:]))
+            self.DbgFile.write(f_string.format(*nodeAcc[i,:]))
+            self.DbgFile.write(f_string.format(*nodeFrc[i,:]))
+        self.DbgFile.write("\n")
 
     def end(self):
         if self.opened:
