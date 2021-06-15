@@ -86,7 +86,6 @@ typedef   ^      OtherStateType               LOGICAL     firstPass          -  
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^         MiscVarType   ReKi  dvdr    {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  dvtdr   {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_tot  {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_amb  {:}{:} - -   ""     
