@@ -677,14 +677,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    end if         
    
 
-   ! Update V_plane_filt to [n+1]:
-   
+   ! --- Update V_plane_filt to [n+1]:
    maxPln = min(n,p%NumPlanes-2)
    do i = 0,maxPln 
       xd%V_plane_filt(:,i       ) = xd%V_plane_filt(:,i)*p%filtParam + u%V_plane(:,i       )*p%oneMinusFiltParam
    end do
    xd%V_plane_filt   (:,maxPln+1) =                                    u%V_plane(:,maxPln+1)
-
    
    maxPln = min(n+2,p%NumPlanes-1)
 
@@ -718,8 +716,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       end do
    end do ! loop on planes i = maxPln+1, 1, -1
   
-      ! We are going to update Vx_Wake
-      ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1]
+   ! --- Update Vx and Vr
+   ! TODO Update this for Curled Wake
+   ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1] (loop in reversed)
    do i = maxPln, 1, -1  
     
          ! The following two quantities need to be for the time increments:
@@ -759,33 +758,10 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          
          m%a(j) = -real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1.0_ReKi-2.0_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi 
          m%b(j) = p%r(j) * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  ) / absdx + real(j,ReKi)*m%vt_tot(j,i-1)/p%dr
-         
         
       end do ! j = 1,p%NumRadii-1
    
-         ! Update these states to [n+1]
-
-      xd%x_plane     (i) = xd%x_plane    (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low ; don't use absdx here  
-      xd%YawErr_filt (i) = xd%YawErr_filt(i-1)
-      xd%xhat_plane(:,i) = xd%xhat_plane(:,i-1)
-      
-         ! The function state-related arguments must be at time [n+1], so we must update YawErr_filt and xhat_plane before computing the deflection
-      
-      dy_HWkDfl = GetYawCorrection(xd%YawErr_filt(i), xd%xhat_plane(:,i), dx, p, errStat2, errMsg2)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)   
-         if (errStat >= AbortErrLev) then
-            ! TEST: E3          
-            call Cleanup()
-            return
-         end if
-      xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + xd%xhat_plane(:,i-1)*dx + dy_HWkDfl &
-                              + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT_low
-         
-      xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
-      xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
-      xd%D_rotor_filt     (i) = xd%D_rotor_filt(i-1)
-
-         ! Update Vx_wake and Vr_wake to [n+1]
+      ! Update Vx_wake and Vr_wake to [n+1]
       if ( EqualRealNos( dx, 0.0_ReKi ) ) then
          xd%Vx_wake(:,i) = xd%Vx_wake(:,i-1)
          xd%Vr_wake(:,i) = xd%Vr_wake(:,i-1)
@@ -806,10 +782,37 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       end if
    end do ! i = 1,min(n+2,p%NumPlanes-1) 
  
+   ! --- Update plane positions and filtered states
+   do i = maxPln, 1, -1  
+      ! The following two quantities need to be for the time increments:
+      !           [n+1]             [n]
+      ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
+      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
 
+      ! Update these states to [n+1]
+      xd%x_plane     (i) = xd%x_plane    (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low ; don't use absdx here  
+      xd%YawErr_filt (i) = xd%YawErr_filt(i-1)
+      xd%xhat_plane(:,i) = xd%xhat_plane(:,i-1)
       
-      ! Update states at disk-plane to [n+1] 
+      ! The function state-related arguments must be at time [n+1], so we must update YawErr_filt and xhat_plane before computing the deflection
+      dy_HWkDfl = GetYawCorrection(xd%YawErr_filt(i), xd%xhat_plane(:,i), dx, p, errStat2, errMsg2)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)   
+         if (errStat >= AbortErrLev) then
+            ! TEST: E3          
+            call Cleanup()
+            return
+         end if
+      xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + xd%xhat_plane(:,i-1)*dx + dy_HWkDfl &
+                              + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT_low
+         
+      xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
+      xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
+      xd%D_rotor_filt     (i) = xd%D_rotor_filt(i-1)
+
+   end do ! loop on planes i = maxPln+1, 1, -1
       
+   ! --- Update states at disk-plane (0) to time [n+1] 
+   !xd%x_plane         (0) = 0.0_ReKi ! already initialized to zero
    xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0)*p%filtParam + u%xhat_disk(:)*p%oneMinusFiltParam  ! 2-step calculation for xhat_plane at disk
    norm2_xhat_plane        =  TwoNorm( xd%xhat_plane(:,0) ) 
    if ( EqualRealNos(norm2_xhat_plane, 0.0_ReKi) ) then
@@ -818,11 +821,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       call Cleanup()
       return
    end if
-   
    xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0) / norm2_xhat_plane
    
    xd%YawErr_filt      (0) =  xd%YawErr_filt(0)*p%filtParam + u%YawErr*p%oneMinusFiltParam
-   
    if ( EqualRealNos(abs(xd%YawErr_filt(0)), pi/2) .or. abs(xd%YawErr_filt(0)) > pi/2 ) then
       ! TEST: E4
       call SetErrStat(ErrID_FATAL, 'The time-filtered nacelle-yaw error has reached +/- pi/2.', errStat, errMsg, RoutineName) 
@@ -830,28 +831,28 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       return
    end if
    
-      ! The function state-related arguments must be at time [n+1], so we must update YawErr_filt and xhat_plane before computing the deflection
+   ! The function state-related arguments must be at time [n+1], so we must update YawErr_filt and xhat_plane before computing the deflection
    dx = 0.0_ReKi
    dy_HWkDfl = GetYawCorrection(xd%YawErr_filt(0), xd%xhat_plane(:,0), dx, p, errStat2, errMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, RoutineName)   
-      if (errStat /= ErrID_None) then
-         ! TEST: E3
-         call Cleanup()
-         return
-      end if
-      
-   ! NOTE: xd%x_plane(0) was already initialized to zero
-      
-   xd%p_plane        (:,0) =  xd%p_plane(:,0)*p%filtParam + ( u%p_hub(:) + dy_HWkDfl(:) )*p%oneMinusFiltParam
-   xd%Vx_wind_disk_filt(0) =  xd%Vx_wind_disk_filt(0)*p%filtParam + u%Vx_wind_disk*p%oneMinusFiltParam
-   xd%TI_amb_filt      (0) =  xd%TI_amb_filt(0)*p%filtParam + u%TI_amb*p%oneMinusFiltParam
-   xd%D_rotor_filt     (0) =  xd%D_rotor_filt(0)*p%filtParam + u%D_rotor*p%oneMinusFiltParam  
-   xd%Vx_rel_disk_filt     =  xd%Vx_rel_disk_filt*p%filtParam + u%Vx_rel_disk*p%oneMinusFiltParam 
+   call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, RoutineName)   
+   if (errStat /= ErrID_None) then
+      ! TEST: E3
+      call Cleanup()
+      return
+   end if
+
+   ! Disk plane states filtered based on inputs
+   xd%p_plane        (:,0) =  xd%p_plane(:,0)        *p%filtParam + ( u%p_hub(:) + dy_HWkDfl(:) )*p%oneMinusFiltParam
+   xd%Vx_wind_disk_filt(0) =  xd%Vx_wind_disk_filt(0)*p%filtParam + u%Vx_wind_disk               *p%oneMinusFiltParam
+   xd%TI_amb_filt      (0) =  xd%TI_amb_filt(0)      *p%filtParam + u%TI_amb                     *p%oneMinusFiltParam
+   xd%D_rotor_filt     (0) =  xd%D_rotor_filt(0)     *p%filtParam + u%D_rotor                    *p%oneMinusFiltParam  
+   xd%Vx_rel_disk_filt     =  xd%Vx_rel_disk_filt    *p%filtParam + u%Vx_rel_disk                *p%oneMinusFiltParam 
    
-   
-      !  filtered, azimuthally-averaged Ct values at each radial station
+   !  filtered, azimuthally-averaged Ct values at each radial station
    xd%Ct_azavg_filt (:) = xd%Ct_azavg_filt(:)*p%filtParam + u%Ct_azavg(:)*p%oneMinusFiltParam
    
+   ! --- Set velocity at disk plane
+   ! TODO TODO need to be updated for Curled wake
    call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), xd%D_rotor_filt(0), errStat, errMsg )
    
    !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
