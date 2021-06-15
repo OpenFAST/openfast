@@ -9,7 +9,7 @@ on:
       - 'vs-build/**'
 
   pull_request:
-    types: [opened, synchronize] #labeled, assigned]
+    types: [opened, synchronize, edited, reopened] #labeled, assigned]
     paths-ignore:
       - 'docs/**'
       - 'share/**'
