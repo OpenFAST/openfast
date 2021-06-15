@@ -688,10 +688,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    maxPln = min(n+2,p%NumPlanes-1)
 
-      ! create eddy viscosity info for most downstream plane
+   
+   ! --- Compute eddy viscosity terms
+   ! create eddy viscosity info for most downstream plane
    i = maxPln+1
    lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
-   
+
    Vx_wake_min = huge(ReKi)
    do j = 0,p%NumRadii-1
       Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
@@ -700,6 +702,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
    EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
    do j = 0,p%NumRadii-1      
+      ! TODO TODO TODO dvdr doesnt need to be stored.
+      ! TODO dvdr will need to be updated for Curled wake
       if ( j == 0 ) then
          m%dvdr(j) =   0.0_ReKi
       elseif (j <= p%NumRadii-2) then
@@ -712,22 +716,10 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
       m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
    end do   
-  
-      ! We are going to update Vx_Wake
-      ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1]
+   ! compute eddy-viscosity terms for all planes TODO TODO TODO merge with above?
    do i = maxPln, 1, -1  
-    
       lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
 
-         ! The following two quantities need to be for the time increments:
-         !           [n+1]             [n]
-         ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
-         ! This is equivalent to
-      
-      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
-      absdx = abs(dx)
-      if ( EqualRealNos( dx, 0.0_ReKi ) ) absdx = 1.0_ReKi  ! This is to avoid division by zero problems in the formation of m%b and m%d below, which are not used when dx=0; the value of unity is arbitrary
-      
       Vx_wake_min = huge(ReKi)
       do j = 0,p%NumRadii-1
          Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
@@ -748,6 +740,20 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
          m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
       end do
+   end do
+  
+      ! We are going to update Vx_Wake
+      ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1]
+   do i = maxPln, 1, -1  
+    
+         ! The following two quantities need to be for the time increments:
+         !           [n+1]             [n]
+         ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
+         ! This is equivalent to
+      
+      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
+      absdx = abs(dx)
+      if ( EqualRealNos( dx, 0.0_ReKi ) ) absdx = 1.0_ReKi  ! This is to avoid division by zero problems in the formation of m%b and m%d below, which are not used when dx=0; the value of unity is arbitrary
       
          ! All of the m%a,m%b,m%c,m%d vectors use states at time increment [n]
          ! These need to be inside another radial loop because m%dvtdr depends on the j+1 and j-1 indices of m%vt()
