@@ -690,34 +690,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 
    
    ! --- Compute eddy viscosity terms
-   ! create eddy viscosity info for most downstream plane
-   i = maxPln+1
-   lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
-
-   Vx_wake_min = huge(ReKi)
-   do j = 0,p%NumRadii-1
-      Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
-   end do
-        
-   EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
-   EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
-   do j = 0,p%NumRadii-1      
-      ! TODO TODO TODO dvdr doesnt need to be stored.
-      ! TODO dvdr will need to be updated for Curled wake
-      if ( j == 0 ) then
-         m%dvdr(j) =   0.0_ReKi
-      elseif (j <= p%NumRadii-2) then
-         m%dvdr(j) = ( xd%Vx_wake(j+1,i-1) - xd%Vx_wake(j-1,i-1) ) / (2_ReKi*p%dr)
-      else
-         m%dvdr(j) = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
-      end if
-       !     All of the following states are at [n] 
-      m%vt_amb(j,i-1) = EddyTermA
-      m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-      m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
-   end do   
-   ! compute eddy-viscosity terms for all planes TODO TODO TODO merge with above?
-   do i = maxPln, 1, -1  
+   ! compute eddy-viscosity terms for all planes, NOTE: starting from maxPln+1 here
+   do i = maxPln+1, 1, -1  
       lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
 
       Vx_wake_min = huge(ReKi)
@@ -728,6 +702,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
       EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
       do j = 0,p%NumRadii-1      
+         ! TODO TODO TODO dvdr doesnt need to be stored.
+         ! TODO dvdr will need to be updated for Curled wake
          if ( j == 0 ) then
           m%dvdr(j) =   0.0_ReKi
          elseif (j <= p%NumRadii-2) then
@@ -740,7 +716,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
          m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
       end do
-   end do
+   end do ! loop on planes i = maxPln+1, 1, -1
   
       ! We are going to update Vx_Wake
       ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1]
