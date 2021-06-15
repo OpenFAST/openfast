@@ -53,6 +53,11 @@ typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravity force" Nm/s^2
 typedef ^   InitInputType   IntKi   MHK     -   -   -   "MHK turbine type switch"   -
+typedef ^   InitInputType   ReKi    defFldDens  -   -   -   "Default fluid density from the driver; may be overwritten" kg/m^3
+typedef ^   InitInputType   ReKi    defKinVisc  -   -   -   "Default kinematic viscosity from the driver; may be overwritten" m^2/s
+typedef ^   InitInputType   ReKi    defSpdSound -   -   -   "Default speed of sound from the driver; may be overwritten" m/s
+typedef ^   InitInputType   ReKi    defPatm     -   -   -   "Default atmospheric pressure from the driver; may be overwritten" Pa
+typedef ^   InitInputType   ReKi    defPvap     -   -   -   "Default vapor pressure from the driver; may be overwritten" Pa
 typedef ^   InitInputType   ReKi    WtrDpth -  -   -    "Water depth" m
 typedef ^   InitInputType   ReKi    MSL2SWL -  -   -    "Offset between still-water level and mean sea level" m
 

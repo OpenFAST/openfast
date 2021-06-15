@@ -196,7 +196,7 @@ end subroutine AD_SetInitOut
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, defAirDens, defKinVisc, defSpdSound, defPatm, defPvap, InitOut, ErrStat, ErrMsg )
+subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    type(AD_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
@@ -215,11 +215,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, defAirD
                                                                 !!   Input is the suggested time from the glue code;
                                                                 !!   Output is the actual coupling interval that will be used
                                                                 !!   by the glue code.
-   real(ReKi),                   intent(in   ) :: defAirDens    !< Default air density from the driver; may be overwritten
-   real(ReKi),                   intent(in   ) :: defKinVisc    !< Default kinematic viscosity from the driver; may be overwritten
-   real(ReKi),                   intent(in   ) :: defSpdSound   !< Default speed of sound from the driver; may be overwritten
-   real(ReKi),                   intent(in   ) :: defPatm       !< Default atmospheric pressure from the driver; may be overwritten
-   real(ReKi),                   intent(in   ) :: defPvap       !< Default vapor pressure from the driver; may be overwritten
    type(AD_InitOutputType),      intent(  out) :: InitOut       !< Output for initialization routine
    integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
    character(*),                 intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
@@ -307,8 +302,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, defAirD
    ! call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
-   CALL ParsePrimaryFileInfo( PriPath, InitInp%InputFile, p%RootName, NumBlades, interval, defAirDens, defKinVisc, defSpdSound, defPatm, defPvap, &
-                              FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+   CALL ParsePrimaryFileInfo( PriPath, InitInp, InitInp%InputFile, p%RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
       if (Failed()) return;
 
       ! -----------------------------------------------------------------
