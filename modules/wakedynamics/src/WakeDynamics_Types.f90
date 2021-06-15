@@ -111,7 +111,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  WD_MiscVarType  =======
   TYPE, PUBLIC :: WD_MiscVarType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dvdr      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dvtdr      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vt_tot      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vt_amb      !<  [-]
@@ -2203,18 +2202,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcMiscData%dvdr)) THEN
-  i1_l = LBOUND(SrcMiscData%dvdr,1)
-  i1_u = UBOUND(SrcMiscData%dvdr,1)
-  IF (.NOT. ALLOCATED(DstMiscData%dvdr)) THEN 
-    ALLOCATE(DstMiscData%dvdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dvdr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%dvdr = SrcMiscData%dvdr
-ENDIF
 IF (ALLOCATED(SrcMiscData%dvtdr)) THEN
   i1_l = LBOUND(SrcMiscData%dvtdr,1)
   i1_u = UBOUND(SrcMiscData%dvtdr,1)
@@ -2352,9 +2339,6 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(MiscData%dvdr)) THEN
-  DEALLOCATE(MiscData%dvdr)
-ENDIF
 IF (ALLOCATED(MiscData%dvtdr)) THEN
   DEALLOCATE(MiscData%dvtdr)
 ENDIF
@@ -2422,11 +2406,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! dvdr allocated yes/no
-  IF ( ALLOCATED(InData%dvdr) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! dvdr upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%dvdr)  ! dvdr
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! dvtdr allocated yes/no
   IF ( ALLOCATED(InData%dvtdr) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! dvtdr upper/lower bounds for each dimension
@@ -2504,21 +2483,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%dvdr) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dvdr,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dvdr,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%dvdr,1), UBOUND(InData%dvdr,1)
-        ReKiBuf(Re_Xferred) = InData%dvdr(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( .NOT. ALLOCATED(InData%dvtdr) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2714,24 +2678,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dvdr not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%dvdr)) DEALLOCATE(OutData%dvdr)
-    ALLOCATE(OutData%dvdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dvdr.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%dvdr,1), UBOUND(OutData%dvdr,1)
-        OutData%dvdr(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dvtdr not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
