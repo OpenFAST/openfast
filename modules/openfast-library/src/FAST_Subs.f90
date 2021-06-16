@@ -929,17 +929,17 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       !@mhall: for now, passing some hardcoded wave kinematics grid info from HD to MD 
       
-         ALLOCATE ( Init%InData_MD%WaveVel  (HD%p%NStepWave, WaveGrid_n, 3) )
-         ALLOCATE ( Init%InData_MD%WaveAcc  (HD%p%NStepWave, WaveGrid_n, 3) )
-         ALLOCATE ( Init%InData_MD%WavePDyn (HD%p%NStepWave, WaveGrid_n) )
-         ALLOCATE ( Init%InData_MD%WaveElev (HD%p%NStepWave, WaveGrid_n) )
-         ALLOCATE ( Init%InData_MD%WaveTime (HD%p%NStepWave) )
+!         ALLOCATE ( Init%InData_MD%WaveVel  (HD%p%NStepWave, WaveGrid_n, 3) )
+!         ALLOCATE ( Init%InData_MD%WaveAcc  (HD%p%NStepWave, WaveGrid_n, 3) )
+!         ALLOCATE ( Init%InData_MD%WavePDyn (HD%p%NStepWave, WaveGrid_n) )
+!         ALLOCATE ( Init%InData_MD%WaveElev (HD%p%NStepWave, WaveGrid_n) )
+!         ALLOCATE ( Init%InData_MD%WaveTime (HD%p%NStepWave) )
       
-      Init%InData_MD%WaveVel  = Init%OutData_HD%WaveVel 
-      Init%InData_MD%WaveAcc  = Init%OutData_HD%WaveAcc 
-      Init%InData_MD%WavePDyn = Init%OutData_HD%WaveDynP
-      Init%InData_MD%WaveElev = Init%OutData_HD%WaveElev
-      Init%InData_MD%WaveTime = Init%OutData_HD%WaveTime
+!      Init%InData_MD%WaveVel  = Init%OutData_HD%WaveVel 
+!      Init%InData_MD%WaveAcc  = Init%OutData_HD%WaveAcc 
+!      Init%InData_MD%WavePDyn = Init%OutData_HD%WaveDynP
+!      Init%InData_MD%WaveElev = Init%OutData_HD%WaveElev
+!      Init%InData_MD%WaveTime = Init%OutData_HD%WaveTime
       
      !CALL MOVE_ALLOC( Init%OutData_HD%WaveVel  , Init%InData_MD%WaveVel   )   
      !CALL MOVE_ALLOC( Init%OutData_HD%WaveAcc  , Init%InData_MD%WaveAcc   )   
