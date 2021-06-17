@@ -41,13 +41,13 @@ on `optimization reports <https://software.intel.com/content/www/us/en/develop/a
 
 For Linux and macOS, the OpenFAST CMake configuration has compiler
 flags for generating optimization reports available but commented
-in the `set_fast_intel_fortran_posix` macro in `openfast/cmake/OpenfastFortranOptions.cmake`.
-Primarily, the `qopt-report-phase` and `qopt-report` flags should
+in the ``set_fast_intel_fortran_posix`` macro in ``openfast/cmake/OpenfastFortranOptions.cmake``.
+Primarily, the ``qopt-report-phase`` and ``qopt-report`` flags should
 be used. See the optimization report options `documentation <https://software.intel.com/content/www/us/en/develop/documentation/fortran-compiler-developer-guide-and-reference/top/compiler-reference/compiler-options/compiler-option-details/optimization-report-options/qopt-report-qopt-report.html>`_
 for more information on additional flags and configurations.
 
 With compiler flags correctly configured, the copmiler will output
-files with the extension `.optrpt` alongside the intermediate compile
+files with the extension ``.optrpt`` alongside the intermediate compile
 artifacts like ``.o`` files. The compile process will state that
 additional files are being generated:
 
@@ -145,7 +145,7 @@ In order to make use of the single instruction, multiple data
 features of modern processors, array construction and access
 should happen in column-major order. That is, loops should loop
 over the left-most index quickest. Slicing should occur with
-the `:` also on the left-most index when possible.
+the ``:`` also on the left-most index when possible.
 
 With this in mind, data should be represented as structures of arrays
 rather than arrays of structures. Concretely, this means that data
@@ -279,13 +279,13 @@ The OpenFAST test cases were profiled with Intel® VTune™ Amplifier to
 identify performance hotspots. Being that the two test cases exercise
 difference portions of the OpenFAST software, different hotspots were
 identified. In all cases and environment settings, the majority of the
-CPU time was spent in `fast_solution` loop which is a high-level subroutine
+CPU time was spent in ``fast_solution`` loop which is a high-level subroutine
 that coordinates the solution calculation from each physics module.
 
 LAPACK
 ......
 In the offshore case, the LAPACK usage was identified as a performance load.
-Within the `fast_solution` loop, the calls to the LAPACK function `dgetrs`
+Within the ``fast_solution`` loop, the calls to the LAPACK function ``dgetrs``
 consume 3.3% of the total CPU time.
 
 .. figure:: images/offshore_lapack.png
@@ -296,7 +296,7 @@ BeamDyn
 .......
 While BeamDyn provides a high-fidelity blade-response calculation, it is a
 computationally expensive module. Initial profiling highlighted the
-`bd_elementmatrixga2` subroutine as a hotspot. However, initial
+``bd_elementmatrixga2`` subroutine as a hotspot. However, initial
 attempts to improve performance in BeamDyn revealed needs for algorithmic
 improvements and refinements to the module's data structures.
 
@@ -346,7 +346,7 @@ Intel® 17 MKL Multithreaded 722 s (3.1x)          ---
 Speedup - OpenMP at FAST_Solver
 ...............................
 A performance improvement was domenstrated by adding OpenMP directives to the
-`FAST_Solver` module. Although the solution scheme is not well balanced,
+``FAST_Solver`` module. Although the solution scheme is not well balanced,
 parallelizing mesh mapping and calculation routines resulted in the following
 speedup:
 
