@@ -925,7 +925,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_MD%g         = Init%OutData_ED%Gravity     ! This need to be according to g used in ElastoDyn 
       Init%InData_MD%rhoW      = Init%OutData_HD%WtrDens     ! This needs to be set according to seawater density in HydroDyn      
       Init%InData_MD%WtrDepth  = Init%OutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
-        
+
+      Init%InData_MD%Linearize = p_FAST%Linearize
+
       !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       !@mhall: for now, passing some hardcoded wave kinematics grid info from HD to MD 
       
@@ -957,6 +959,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL SetModuleSubstepTime(Module_MD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
+      allocate( y_FAST%Lin%Modules(MODULE_MD)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(MD).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(Init%OutData_MD%LinNames_y)) call move_alloc(Init%OutData_MD%LinNames_y,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%Names_y)
+         if (allocated(Init%OutData_MD%LinNames_x)) call move_alloc(Init%OutData_MD%LinNames_x,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%Names_x)
+         if (allocated(Init%OutData_MD%LinNames_u)) call move_alloc(Init%OutData_MD%LinNames_u,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%Names_u)
+         if (allocated(Init%OutData_MD%RotFrame_y)) call move_alloc(Init%OutData_MD%RotFrame_y,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%RotFrame_y)
+         if (allocated(Init%OutData_MD%RotFrame_x)) call move_alloc(Init%OutData_MD%RotFrame_x,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%RotFrame_x)
+         if (allocated(Init%OutData_MD%RotFrame_u)) call move_alloc(Init%OutData_MD%RotFrame_u,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%RotFrame_u)
+         if (allocated(Init%OutData_MD%IsLoad_u  )) call move_alloc(Init%OutData_MD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%IsLoad_u  )
+         if (allocated(Init%OutData_MD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%NumOutputs = size(Init%OutData_MD%WriteOutputHdr)
+         if (allocated(Init%OutData_MD%DerivOrder_x)) call move_alloc(Init%OutData_MD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%DerivOrder_x)
+      end if
+               
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN

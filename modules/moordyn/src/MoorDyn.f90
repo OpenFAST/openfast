@@ -2679,7 +2679,7 @@ p%WaterKin  = 0
             IF ( u%DeltaL(m%LineList(L)%CtrlChan) > m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
                 ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment longer than the limit of twice its original length.'
-                print *, u%DeltaL(m%LineList(L)%CtrlChan), " is an increase of more than ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
+                call WrScr(trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is an increase of more than "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N)))
                 IF (wordy > 0) print *, u%DeltaL
                 IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
@@ -2687,7 +2687,7 @@ p%WaterKin  = 0
             IF ( u%DeltaL(m%LineList(L)%CtrlChan) < -0.5 * m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
              ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment shorter than the limit of half its original length.'
-                print *, u%DeltaL(m%LineList(L)%CtrlChan), " is a reduction of more than half of ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
+                call WrScr(trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is a reduction of more than half of "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N)))
                 IF (wordy > 0) print *, u%DeltaL
                 IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
@@ -6676,12 +6676,14 @@ SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       call PackMotionMesh(u%CoupledKinematics, u_op, idx, FieldMask=FieldMask)
       
       ! now do the active tensioning commands if there are any
-      do i=1,p%nCtrlChans
-         u_op(idx) = u%DeltaL(i)
-         idx = idx + 1
-         u_op(idx) = u%DeltaLdot(i)
-         idx = idx + 1
-      end do      
+      if (allocated(u%DeltaL)) then
+         do i=1,size(u%DeltaL)
+            u_op(idx) = u%DeltaL(i)
+            idx = idx + 1
+            u_op(idx) = u%DeltaLdot(i)
+            idx = idx + 1
+         end do
+      endif
    END IF
    ! outputs
    IF ( PRESENT( y_op ) ) THEN
@@ -7578,9 +7580,13 @@ contains
    SUBROUTINE Init_Jacobian_u()
       REAL(R8Ki)     :: perturb
       INTEGER(IntKi) :: i, j, idx, nu, i_meshField
+      character(10)  :: LinStr      ! for noting which line a DeltaL control is attached to
+      logical        :: LinCtrl     ! Is the current DeltaL channel associated with a line?
       ! Number of inputs
+      i = 0
+      if (allocated(u%DeltaL))   i=size(u%DeltaL)
       nu = u%CoupledKinematics%nNodes * 18 &   ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each node <<<<<<<
-         + size(u%DeltaL)*2                    ! a deltaL and rate of change for each active tension control channel
+         + i*2                                 ! a deltaL and rate of change for each active tension control channel
       
       ! --- Info of linearized inputs (Names, RotFrame, IsLoad)
       call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
@@ -7599,6 +7605,7 @@ contains
       ! column 2 indicates the first index (x-y-z component) of the field
       ! column 3 is the node
       call allocAry( p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      p%Jac_u_indx = 0  ! initialize to zero
       idx = 1
       !Module/Mesh/Field: u%CoupledKinematics%TranslationDisp  = 1;
       !Module/Mesh/Field: u%CoupledKinematics%Orientation      = 2;
@@ -7617,19 +7624,33 @@ contains
          end do !i
       end do
       ! now do the active tensioning commands if there are any
-      do i=1,p%nCtrlChans
-         p%Jac_u_indx(idx,1) =  10              ! 10-11 mean active tension changes (10: deltaL; 11: deltaLdot)
-         p%Jac_u_indx(idx,2) =  0               ! not used
-         p%Jac_u_indx(idx,3) =  i               ! indicates channel number
-         InitOut%LinNames_u(idx) = 'CtrlChan '//trim(num2lstr(i))//' DeltaL, m'
-         idx = idx + 1
+      if (allocated(u%DeltaL)) then
+         do i=1,size(u%DeltaL)            ! Signals may be passed in without being requested for control
+            ! Figure out if this DeltaL control channel is associated with a line or multiple or none and label
+            LinCtrl = .FALSE.
+            LinStr = '(lines: '
+            do J=1,p%NLines
+               if (m%LineList(J)%CtrlChan == i) then
+                  LinCtrl = .TRUE.
+                  LinStr = LinStr//trim(num2lstr(i))//' '
+               endif
+            enddo
+            if (      LinCtrl)   LinStr = LinStr//' )'
+            if (.not. LinCtrl)   LinStr = '(lines: none)'
+
+            p%Jac_u_indx(idx,1) =  10              ! 10-11 mean active tension changes (10: deltaL; 11: deltaLdot)
+            p%Jac_u_indx(idx,2) =  0               ! not used
+            p%Jac_u_indx(idx,3) =  i               ! indicates DeltaL entry number 
+            InitOut%LinNames_u(idx) = 'CtrlChan DeltaL '//trim(num2lstr(i))//', m '//trim(LinStr)
+            idx = idx + 1
          
-         p%Jac_u_indx(idx,1) =  11
-         p%Jac_u_indx(idx,2) =  0
-         p%Jac_u_indx(idx,3) =  i               
-         InitOut%LinNames_u(idx) = 'CtrlChan '//trim(num2lstr(i))//' DeltaLdot, m/s'               
-         idx = idx + 1
-      end do
+            p%Jac_u_indx(idx,1) =  11
+            p%Jac_u_indx(idx,2) =  0
+            p%Jac_u_indx(idx,3) =  i               
+            InitOut%LinNames_u(idx) = 'CtrlChan DeltaLdot '//trim(num2lstr(i))//', m/s'//trim(LinStr)
+            idx = idx + 1
+         end do
+      endif
 
       ! --- Default perturbations, p%du:
       call allocAry( p%du, 11, 'p%du', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
