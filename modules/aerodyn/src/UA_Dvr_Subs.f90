@@ -48,6 +48,10 @@ module UA_Dvr_Subs
       integer(IntKi)                                   :: errStat2    ! Status of error message
       character(1024)                                  :: errMsg2     ! Error message if ErrStat /= ErrID_None
       character(*), parameter                          :: RoutineName = 'ReadDriverInputFile'
+
+      character(1024) :: PriPath                         ! the path to the primary input file
+      CALL GetPath( inputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
+
    
          ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
       UnEchoLocal = -1
@@ -187,6 +191,7 @@ module UA_Dvr_Subs
             call Cleanup()
             return
          end if
+      if (PathIsRelative(InitInp%OutRootName)) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
      
          ! InflowVel
    
@@ -253,6 +258,7 @@ module UA_Dvr_Subs
             call Cleanup()
             return
          end if
+      if (PathIsRelative(InitInp%Airfoil1)) InitInp%Airfoil1 = TRIM(PriPath)//TRIM(InitInp%Airfoil1)
    
         ! Chord      
        
