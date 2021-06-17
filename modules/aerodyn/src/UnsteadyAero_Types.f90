@@ -39,6 +39,8 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce = 3      ! [Minnema/Pierce variant (changes in Cc and Cm)] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM = 4      ! [continuous variant of HGM (Hansen) model] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV = 5      ! [continuous variant of HGM (Hansen) model with vortex modifications] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye = 6      ! Stieg Oye dynamic stall model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
 ! =========  UA_InitInputType  =======
   TYPE, PUBLIC :: UA_InitInputType
     REAL(DbKi)  :: dt      !< time step [s]

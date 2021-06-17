@@ -22,6 +22,8 @@ param     UnsteadyAero/UA       -                INTEGER           UA_Gonzalez  
 param     UnsteadyAero/UA       -                INTEGER           UA_MinnemaPierce -        3   -   "[Minnema/Pierce variant (changes in Cc and Cm)]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_HGM           -        4   -   "[continuous variant of HGM (Hansen) model]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_HGMV          -        5   -   "[continuous variant of HGM (Hansen) model with vortex modifications]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Oye           -        6   -   "Stieg Oye dynamic stall model" -
+param     UnsteadyAero/UA       -                INTEGER           UA_BV            -        7   -   "Boeing-Vertol dynamic stall model (e.g. used in CACTUS)" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:

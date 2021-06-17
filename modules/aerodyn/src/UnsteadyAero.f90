@@ -811,7 +811,7 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
    
    
       ! allocate all the state arrays
-   if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV) then
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
    
       allocate( x%element( p%nNodesPerBlade, p%numBlades ), stat=ErrStat2 )
       if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,"Cannot allocate x%x.",ErrStat,ErrMsg,RoutineName)
@@ -835,6 +835,10 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
          allocate( OtherState%BelowThreshold(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
             if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%BelowThreshold.", ErrStat, ErrMsg, RoutineName)
       end if
+   elseif (p%UAMod == UA_BV) then
+      print*,'>>> TODO BV alloc'
+      call AllocAry( xd%alpha_minus1,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry( xd%alpha_filt_minus1,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_filt_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
    else
       call AllocAry( xd%alpha_minus1,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -933,7 +937,7 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       end do
    end do   
    
-   if ( p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV) then
+   if ( p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
    
       OtherState%n   = -1  ! we haven't updated OtherState%xdot, yet
       
@@ -955,6 +959,11 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
          OtherState%vortexOn = .false.
          OtherState%BelowThreshold = .true.
       end if
+
+   elseif (p%UAMod == UA_BV) then
+      print*,'>>> TODO Reinit BV'
+      xd%alpha_minus1         = 0.0_ReKi
+      xd%alpha_filt_minus1    = 0.0_ReKi
       
    else
       OtherState%sigma1    = 1.0_ReKi
@@ -1078,10 +1087,13 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
 #ifdef UA_OUTS
 
       ! Allocate and set the InitOut data
-   if (p%UAMod == UA_HGM) then
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
       p%NumOuts = 20
    elseif(p%UAMod == UA_HGMV) then
       p%NumOuts = 21
+   elseif(p%UAMod == UA_BV) then
+      p%NumOuts = 10
+      print*,'>>> TODO UA_BV numouts'
    else
       p%NumOuts = 45
    end if
@@ -1119,7 +1131,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          InitOut%WriteOutputUnt(iOffset+ 6)  ='(-)'
          InitOut%WriteOutputUnt(iOffset+ 7)  ='(-)'
          
-         if (p%UAmod == UA_HGM .or. p%UAMod == UA_HGMV) then
+         if (p%UAmod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
             
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
@@ -1156,6 +1168,11 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
                InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'x5'
                InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
             end if
+
+         elseif(p%UAMod == UA_BV) then
+            InitOut%WriteOutputHdr(iOffset+ 8) = trim(chanPrefix)//'alpha_dot'
+
+            InitOut%WriteOutputUnt(iOffset+ 8) = '(deg/s)'
             
          else
 
@@ -1297,8 +1314,9 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_HGMV ) call SetErrStat( ErrID_Fatal, &
-      "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), or 5 (HGM with vortex).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
+   if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_BV ) call SetErrStat( ErrID_Fatal, &
+      "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex)&
+      &6 (Oye), 7 (Boing-Vertol)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       
    if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    
@@ -1329,7 +1347,7 @@ subroutine UA_ValidateAFI(UAMod, AFInfo, ErrStat, ErrMsg)
 
          if ( AFInfo%Table(j)%InclUAdata ) then
             ! parameters used only for UAMod/=UA_HGM)
-            if (UAMod /= UA_HGM) then
+            if (UAMod == UA_Baseline .or. UAMod == UA_Gonzalez .or. UAMod == UA_MinnemaPierce .or. UAMod == UA_HGMV) then
             
                if (UAMod /= UA_HGMV) then
                   if ( EqualRealNos(AFInfo%Table(j)%UA_BL%St_sh, 0.0_ReKi) ) then
@@ -1359,7 +1377,7 @@ subroutine UA_ValidateAFI(UAMod, AFInfo, ErrStat, ErrMsg)
                   if ( AFInfo%Table(j)%UA_BL%filtCutOff < 0.0_ReKi ) then
                      call SetErrStat(ErrID_Fatal, 'UA filtCutOff parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
                   end if
-               end if
+               end if ! not UA_HGMV
                
                if ( AFInfo%Table(j)%UA_BL%T_VL <= 0.0_ReKi ) then
                   call SetErrStat(ErrID_Fatal, 'UA T_VL parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
@@ -1377,15 +1395,19 @@ subroutine UA_ValidateAFI(UAMod, AFInfo, ErrStat, ErrMsg)
                if ( AFInfo%Table(j)%UA_BL%alpha0 > pi .or. AFInfo%Table(j)%UA_BL%alpha0 < -pi ) then
                   call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
                end if
-            end if
+            end if ! Not UA_HGM
 
-            if (UAMod == UA_HGM .or. UAMod == UA_HGMV) then
+            if (UAMod == UA_HGM .or. UAMod == UA_HGMV .or. UAMod == UA_OYE) then
                cl_fs = InterpStp( AFInfo%Table(j)%UA_BL%UACutout, AFInfo%Table(j)%alpha, AFInfo%Table(j)%Coefs(:,AFInfo%ColUAf), indx, AFInfo%Table(j)%NumAlf )
                if (.not. EqualRealNos( cl_fs, 0.0_ReKi ) ) then
                   call SetErrStat(ErrID_Severe, 'UA cutout parameter should be at a value where the separation function is 0 in "'//trim(AFInfo%FileName)//'".'// &
                                  " Separation function is "//trim(num2lstr(cl_fs)), ErrStat, ErrMsg, RoutineName )
                end if
             end if
+
+            if (UAMod == UA_BV) then
+               ! TODO
+            endif
             
                ! variables used in all UA models:
             if ( AFInfo%Table(j)%UA_BL%T_f0 <= 0.0_ReKi ) then
@@ -1396,7 +1418,7 @@ subroutine UA_ValidateAFI(UAMod, AFInfo, ErrStat, ErrMsg)
                call SetErrStat(ErrID_Fatal, 'UA T_p parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
             end if
             
-         end if
+         end if ! UAtable included
             
          if ( AFInfo%Table(j)%UA_BL%UACutout < 0.0_ReKi ) then
             call SetErrStat(ErrID_Fatal, 'UA UACutout parameter must not be negative in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
@@ -1411,7 +1433,7 @@ subroutine UA_ValidateAFI(UAMod, AFInfo, ErrStat, ErrMsg)
 
       if (ErrStat >= AbortErrLev) return
 
-      if (UAMod /= UA_HGM .and. UAMod /= UA_HGMV) then
+      if (UAMod == UA_Baseline .or. UAMod == UA_Gonzalez .or. UAMod == UA_MinnemaPierce) then
          ! check interpolated values:
       
          do j=2, AFInfo%NumTabs
@@ -1450,8 +1472,8 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
    end do
       
    
-   if (p%UAMod == UA_HGM) then
-         ! unsteady aerodynamics will be turned off
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
+      ! unsteady aerodynamics will be turned off if Cl,alpha = 0
       do j=1, AFInfo%NumTabs
          if ( EqualRealNos(AFInfo%Table(j)%UA_BL%C_lalpha, 0.0_ReKi) ) then
             ErrStat = ErrID_Fatal
@@ -1469,9 +1491,12 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
             return
          end if
       end do
+
+   elseif (p%UAMod == UA_HGMV) then
+      ! pass
       
-   elseif (p%UAMod /= UA_HGMV) then !also includes HGMV model
-         ! unsteady aerodynamics will be turned off
+   elseif (p%UAMod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
+         ! unsteady aerodynamics will be turned off is Cn,alpha =0
       do j=1, AFInfo%NumTabs
          if ( EqualRealNos(AFInfo%Table(j)%UA_BL%C_nalpha, 0.0_ReKi) ) then
             ErrStat = ErrID_Fatal
@@ -1490,6 +1515,9 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
          end if
       end do
       
+   elseif (p%UAMod == UA_BV) then
+      ! pass
+
    end if
 
 end subroutine UA_TurnOff_param
@@ -1819,7 +1847,6 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
    call UA_fixInputs(u_interp_raw, u_interp, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
-         
    if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV) then
    
                
@@ -1830,6 +1857,12 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
 
       call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      if (.not. p%ShedEffect) then
+         ! Safety
+         x%element(i,j)%x(1) = 0.0_R8Ki
+         x%element(i,j)%x(2) = 0.0_R8Ki
+      endif
 
       x%element(i,j)%x(4) = max( min( x%element(i,j)%x(4), 1.0_R8Ki ), 0.0_R8Ki )
       
@@ -1895,15 +1928,37 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
                      end if
                   end if
                
-               end if
+               end if ! Below/above threshold
                
             end if ! UA is fully on
             
-         end if ! p%UAMod == UA_HGMV
+         end if ! Vortex on/off
          
+      end if ! p%UAMod == UA_HGMV
+
+   elseif (p%UAMod == UA_OYE) then
+      ! 
+      ! initialize states to steady-state values:
+      if (OtherState%FirstPass(i,j)) then
+         call HGM_Steady( i, j, u_interp, p, x%element(i,j), AFInfo, ErrStat2, ErrMsg2 )
       end if
-      
-   else
+      call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      !x%element(i,j)%x(1) = 0.0_R8Ki
+      !x%element(i,j)%x(2) = 0.0_R8Ki
+      !x%element(i,j)%x(3) = 0.0_R8Ki
+
+      x%element(i,j)%x(4) = max( min( x%element(i,j)%x(4), 1.0_R8Ki ), 0.0_R8Ki )
+
+          ! let's make sure the states aren't getting out of control when we are supposed to be turning off UA anyway.
+      call UA_BlendSteadyStates( i, j, u_interp, p, AFInfo, x%element(i,j), m%FirstWarn_UA_off, m%weight(i,j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   elseif (p%UAMod == UA_BV) then
+      ! 
+      print*,'>>> TODO Update states BV', p%UAMod, UA_BV
+
+   elseif (p%UAMod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
       if (n<=0) return ! previous logic (before adding UA_HGM required n > 0 before UA_UpdateStates was called)
       
          ! Update discrete states:
@@ -1941,7 +1996,7 @@ subroutine UA_InitStates_AllNodes( u, p, x, OtherState, AFInfo, AFIndx )
       !...............................................................................................................................
       !  compute UA states at t=0 (with known inputs)
       !...............................................................................................................................
-      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV) then
+      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
       
          do j = 1,size(p%UA_off_forGood,2) ! blades
             do i = 1,size(p%UA_off_forGood,1) ! nodes
@@ -2011,15 +2066,23 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
 
 
    ! Steady states
-   x%x(1)     = BL_p%A1 * alpha_34
-   x%x(2)     = BL_p%A2 * alpha_34
+   if (p%UAMod==UA_OYE .or. (.not.p%ShedEffect)) then
+      x%x(1)     = 0.0_R8Ki
+      x%x(2)     = 0.0_R8Ki
+   else
+      x%x(1)     = BL_p%A1 * alpha_34
+      x%x(2)     = BL_p%A2 * alpha_34
+   endif
     
    alphaE   = alpha_34                                                    ! Eq. 12 (after substitute of x1 and x2 initializations)
    alphaF   = alphaE
    call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-   if (p%UAMod==UA_HGM) then
+   if (p%UAMod==UA_OYE) then
+      x%x(3)   = AFI_interp%Cl ! Not used
+
+   elseif (p%UAMod==UA_HGM) then
       x%x(3)   = BL_p%c_lalpha * (alphaE-BL_p%alpha0)
       
          ! calculate x%x(4) = fs_aF = f_st(alphaF):
@@ -2029,7 +2092,7 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
       !call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
       !x%x(4) = AFI_interp%f_st
       
-   else !if (p%UAMod==UA_HGMV) then
+   elseif (p%UAMod==UA_HGMV) then
       !call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
       x%x(3)   = AFI_interp%FullyAttached ! ~ (alpha-alphaLower)*c_Rate + c_alphaLower
       
@@ -2040,7 +2103,9 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
          ! calculate x%x(4) = fs_aF = f_st(alphaF):
       !call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
       !x%x(4) = AFI_interp%f_st
-      
+   else 
+      print*,'HGM_steady, should never happen'
+      STOP
    end if
    
    x%x(4) = AFI_interp%f_st
@@ -2118,7 +2183,11 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    if (p%UAMod == UA_HGM) then
       !note: BL_p%c_lalpha cannot be zero. UA is turned off at initialization if this occurs.
       alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
-   else
+
+   else if (p%UAMod == UA_OYE) then
+      alphaF = alpha_34
+
+   else if (p%UAMod == UA_HGMV) then
       if (x%x(3) < BL_p%c_alphaLowerWrap) then
          alphaF  = (x%x(3) - BL_p%c_alphaLowerWrap) / BL_p%c_RateWrap + BL_p%alphaLowerWrap
       elseif (x%x(3) < BL_p%c_alphaLower) then
@@ -2149,13 +2218,13 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    x4 = max( min( x%x(4), 1.0_R8Ki ), 0.0_R8Ki )
    
    call AddOrSub2Pi(real(x%x(1),ReKi), alpha_34) ! make sure we use the same alpha_34 for both x1 and x2 equations.
-if (p%ShedEffect) then
-   dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34
-   dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34
-else
-    dxdt%x(1) = 0.0_ReKi
-    dxdt%x(2) = 0.0_ReKi
-endif
+   if (p%ShedEffect) then
+       dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34
+       dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34
+   else
+       dxdt%x(1) = 0.0_ReKi
+       dxdt%x(2) = 0.0_ReKi
+   endif
    
    if (p%UAMod == UA_HGM) then
       call AddOrSub2Pi(BL_p%alpha0, alphaE)
@@ -2163,7 +2232,15 @@ endif
       dxdt%x(3) = -1.0_R8Ki / BL_p%T_p                                  * x%x(3) +         1.0_ReKi / BL_p%T_p  * Clp
       dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st
       dxdt%x(5) = 0.0_R8Ki
-   else !if (p%UAMod == UA_HGMV) then
+
+   elseif (p%UAMod == UA_OYE) then
+      dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st
+      dxdt%x(1) = 0.0_R8Ki
+      dxdt%x(2) = 0.0_R8Ki
+      dxdt%x(3) = 0.0_R8Ki
+      dxdt%x(5) = 0.0_R8Ki
+
+   elseif (p%UAMod == UA_HGMV) then
 
       call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_AlphaE, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2194,6 +2271,9 @@ endif
       end if
       
       dxdt%x(5) = cv_dot - x%x(5)/(BL_p%T_V0 * Tu)
+   else
+      print*,'>>> UA_CalcContStateDeriv, should never happen.'
+      STOP ! should never happen
    end if
    
 END SUBROUTINE UA_CalcContStateDeriv
@@ -2227,10 +2307,10 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
     
       if (present(alphaE)) then
          ! Variables derived from states
-         if (p%ShedEffect) then
-            alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
-         else
+         if (p%UAMod == UA_OYE .or. .not. p%ShedEffect) then
             alphaE  = alpha_34
+         else
+            alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
          endif
          call MPi2Pi(alphaE)
       end if
@@ -2628,15 +2708,21 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       KC%alpha_filt_cur    = u%alpha
       KC%ds                = 2.0_ReKi*u%U*p%dt/p%c(i, j)
       
-      alphaE   = u%alpha
+      alphaE   = u%alpha ! NOTE: no omega for UA<UA_HGM
       Tu       = 0.0
-      alpha_34 = u%alpha
+      alpha_34 = u%alpha ! NOTE: no omega for UA<UA_HGM
       cl_fs    = AFI_interp%FullySeparate
       cl_fa    = AFI_interp%FullyAttached
       fs_aE    = AFI_interp%f_st
 
       x_in%x = 0.0_R8Ki
-   elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV) then
+   elseif (p%UAMod == UA_BV) then
+      ! 
+      print*,'TODO calcoutput BV'
+      if (OtherState%FirstPass(i,j)) then
+      end if
+
+   elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
       x_in = x%element(i,j)
       
       if (OtherState%FirstPass(i,j)) then
@@ -2649,8 +2735,8 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          if (ErrStat >= AbortErrLev) return
       
       call Get_HGM_constants(i, j, p, u, x_in, BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
-   
-      call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
+
+      call AFI_ComputeAirfoilCoefs( alphaE,   u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
        ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
@@ -2660,8 +2746,22 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       cl_fs = AFI_interp%FullySeparate
       cl_fa = AFI_interp%FullyAttached
       fs_aE = AFI_interp%f_st
+
+      if (p%UAMod == UA_OYE) then
+         ! calculate fully attached value:
+         call AddOrSub2Pi(BL_p%alpha0, alphaE)
+         cl_fa = (alphaE - BL_p%alpha0) * BL_p%c_lalpha ! Cl fully attached
+         y%Cl = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs   ! TODO consider adding simple corrections + pi * Tu * u%omega
+         y%Cd = AFI_interp%Cd                           ! TODO consider adding simple corrections 
+         if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
+            y%Cm = 0.0_ReKi
+         else
+            y%Cm = AFI_interp%Cm                        ! TODO consider adding simple corrections + y%Cl * delta_c_mf_primeprime - piBy2 * Tu * u%omega  
+         endif
+         y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
+         y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
       
-      if (p%UAMod == UA_HGM) then
+      elseif (p%UAMod == UA_HGM) then
             ! calculate fully attached value:
          call AddOrSub2Pi(BL_p%alpha0, alphaE)
          cl_fa = (alphaE - BL_p%alpha0) * BL_p%c_lalpha
@@ -2878,7 +2978,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       y%WriteOutput(iOffset+ 6)    = y%Cd
       y%WriteOutput(iOffset+ 7)    = y%Cm
    
-      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV) then
+      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
          y%WriteOutput(iOffset+ 8)    = u%omega*R2D
          y%WriteOutput(iOffset+ 9)    = alphaE*R2D
          y%WriteOutput(iOffset+10)    = Tu
@@ -2897,8 +2997,12 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          if (p%UAMod == UA_HGMV) then
             y%WriteOutput(iOffset+21)    = x_in%x(5) !x%element(i,j)%x(5)
          end if
+
+      elseif(p%UAMod == UA_BV) then
+         print*,'>>> TODO UA_BV write outputs'
          
       else
+         ! Baseline, Gonzales, MinnemaPierce
          y%WriteOutput(iOffset+ 8)    = KC%Cn_alpha_q_circ               ! CNCP in ADv14
          y%WriteOutput(iOffset+ 9)    = KC%Cn_alpha_q_nc                 ! CNIQ in ADv14
          y%WriteOutput(iOffset+10)    = KC%Cn_pot
