@@ -216,11 +216,11 @@ BeamDyn Performance Profiling and Optimization (IPCC Year 1 and 2)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The general mechanisms identified for performance improvements in OpenFAST were:
 
-- Intel® compiler suite and Intel® Math Kernel Library (Intel® MKL)
-- Algorithmic improvements
-- Memory-access optimization enabling more efficient cache usage
-- Data type alignment allowing for SIMD vectorization
-- Multithreading with OpenMP
+* Intel® compiler suite and Intel® Math Kernel Library (Intel® MKL)
+* Algorithmic improvements
+* Memory-access optimization enabling more efficient cache usage
+* Data type alignment allowing for SIMD vectorization
+* Multithreading with OpenMP
 
 To establish a path forward with these options, OpenFAST was first
 profiled with Intel® VTune™ Amplifier to get a clear breakdown of
@@ -240,10 +240,10 @@ Download case files `here <https://github.com/OpenFAST/r-test/tree/dev/glue-code
 
 The physics modules used in this case are:
 
-- BeamDyn
-- InflowWind
-- AeroDyn 15
-- ServoDyn
+* BeamDyn
+* InflowWind
+* AeroDyn 15
+* ServoDyn
 
 This is a land based NREL 5-MW turbine simulation using BeamDyn as the
 structural module. It simulates 20 seconds with a time step size of 0.001
@@ -261,12 +261,12 @@ calculation.
 
 The physics modules used in this case are:
 
-- ElastoDyn
-- InflowWind
-- AeroDyn 15
-- ServoDyn
-- HydroDyn
-- SubDyn
+* ElastoDyn
+* InflowWind
+* AeroDyn 15
+* ServoDyn
+* HydroDyn
+* SubDyn
 
 It simulates 60 seconds with a time step size of 0.01 seconds and executes in
 `20m 27s <https://my.cdash.org/testDetails.php?test=40171219&build=1649048>`__
@@ -307,21 +307,21 @@ and the performance potential is better understood.
 
 Some keys outcomes from the first year of the IPCC project are as follows:
 
-- Use of Intel® compiler and MKL library provides dramatic speedup over GCC
+* Use of Intel® compiler and MKL library provides dramatic speedup over GCC
   and LAPACK
 
-  - Additional significant gains are possible through MKL threading for
+  * Additional significant gains are possible through MKL threading for
     offshore simulations
 
-- Offshore-wind-turbine simulations are poorly load balanced
+* Offshore-wind-turbine simulations are poorly load balanced
   across modules
 
-  - Land-based-turbine configuration better balanced
-  - OpenMP Tasks are employed to achieve better load-balancing
+  * Land-based-turbine configuration better balanced
+  * OpenMP Tasks are employed to achieve better load-balancing
 
-- OpenMP module-level parallelism provides significant, but limited speed
+* OpenMP module-level parallelism provides significant, but limited speed
   up due to imbalance across different module tasks
-- Core algorithms need significant modification to enable OpenMP and SIMD
+* Core algorithms need significant modification to enable OpenMP and SIMD
   benefits
 
 Tuning the Intel® tools to perform best on NREL's hardware and adding high level
