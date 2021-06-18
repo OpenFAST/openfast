@@ -403,7 +403,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    ! This filter is a Simple Infinite Impulse Response Filter
    ! See https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
    
-   dynamicFilterCutoffHz = max( 1.0_ReKi, u%U ) * BL_p%filtCutOff / PI / p%C(i,j)
+   dynamicFilterCutoffHz = max( 1.0_ReKi, u%U ) * BL_p%filtCutOff / PI / p%c(i,j)
    LowPassConst  =  exp(-2.0_ReKi*PI*p%dt*dynamicFilterCutoffHz) ! from Eqn 1.8 [7]
    
    KC%alpha_filt_cur = LowPassConst*alpha_filt_minus1 + (1.0_ReKi-LowPassConst)*u%alpha ! from eq 1.8 [1: typo in documentation, though]
@@ -836,9 +836,9 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
             if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%BelowThreshold.", ErrStat, ErrMsg, RoutineName)
       end if
    elseif (p%UAMod == UA_BV) then
-      print*,'>>> TODO BV alloc'
-      call AllocAry( xd%alpha_minus1,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry( xd%alpha_minus1     ,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1',      ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call AllocAry( xd%alpha_filt_minus1,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_filt_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry( xd%alpha_dot        ,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_dot',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
    else
       call AllocAry( xd%alpha_minus1,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -961,9 +961,10 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       end if
 
    elseif (p%UAMod == UA_BV) then
-      print*,'>>> TODO Reinit BV'
+
       xd%alpha_minus1         = 0.0_ReKi
       xd%alpha_filt_minus1    = 0.0_ReKi
+      xd%alpha_dot            = 0.0_ReKi
       
    else
       OtherState%sigma1    = 1.0_ReKi
@@ -1092,8 +1093,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    elseif(p%UAMod == UA_HGMV) then
       p%NumOuts = 21
    elseif(p%UAMod == UA_BV) then
-      p%NumOuts = 10
-      print*,'>>> TODO UA_BV numouts'
+      p%NumOuts = 13
    else
       p%NumOuts = 45
    end if
@@ -1170,9 +1170,19 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             end if
 
          elseif(p%UAMod == UA_BV) then
-            InitOut%WriteOutputHdr(iOffset+ 8) = trim(chanPrefix)//'alpha_dot'
+            InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
+            InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
+            InitOut%WriteOutputHdr(iOffset+10)  = trim(chanPrefix)//'Tu'
+            InitOut%WriteOutputHdr(iOffset+11)  = trim(chanPrefix)//'alpha_34'
+            InitOut%WriteOutputHdr(iOffset+12)  = trim(chanPrefix)//'alpha_dot'
+            InitOut%WriteOutputHdr(iOffset+13)  = trim(chanPrefix)//'delta_alpha'
 
-            InitOut%WriteOutputUnt(iOffset+ 8) = '(deg/s)'
+            InitOut%WriteOutputUnt(iOffset+ 8)  = '(deg/sec)'
+            InitOut%WriteOutputUnt(iOffset+ 9)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+10)  = '(s)'
+            InitOut%WriteOutputUnt(iOffset+11)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+12)  = '(deg/sec)'
+            InitOut%WriteOutputUnt(iOffset+13)  = '(deg)'
             
          else
 
@@ -1522,10 +1532,68 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
 
 end subroutine UA_TurnOff_param
 !============================================================================== 
-subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
-! Routine for updating discrete states and other states (note it breaks the framework)
-!..............................................................................
+!> Update discrete states for Boieng Vertol model
+subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
+   integer   ,                   intent(in   )  :: i           !< node index within a blade
+   integer   ,                   intent(in   )  :: j           !< blade index    
+   type(UA_InputType),           intent(in   )  :: u           !< Inputs at Time                       
+   type(UA_ParameterType),       intent(in   )  :: p           !< Parameters                                 
+   type(UA_DiscreteStateType),   intent(inout)  :: xd          !< In: Discrete states at Time; Out: Discrete states at Time + Interval
+   type(UA_OtherStateType),      intent(inout)  :: OtherState  !< Other states  
+   type(UA_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      !< The airfoil parameter data
+   integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   real(ReKi), parameter :: filtCutOff = 0.5_ReKi  ! CutOff used to filter angle of attack. Alternative, use BL_p (see KelvinChain)
+   logical,  parameter   :: filterAlpha =.False.   ! Parameter to filter the angle of attack before computing finite differences
+   real(ReKi)            :: alpha_34               ! angle of attack at 3/4 point 
+   real(ReKi)            :: alpha_minus1           ! 3/4 chord angle of attack at 
+   real(ReKi)            :: alpha_filt_cur         !
+   real(ReKi)            :: alpha_filt_minus1      !
+   real(ReKi)            :: Tu                     ! Time constant based on u=Vrel and chord
+   real(ReKi)            :: dynamicFilterCutoffHz  ! find frequency based on reduced frequency of k = BL_p%filtCutOff
+   real(ReKi)            :: LowPassConst
+   integer(IntKi)        :: ErrStat2
+   character(ErrMsgLen)  :: ErrMsg2
    
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   ! --- Filter angle of attack
+   ! Using angle of attack at AC or 3/4 point
+   alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+
+   ! Angle of attack at previous time
+   if (OtherState%FirstPass(i,j)) then
+      alpha_minus1      = alpha_34
+      alpha_filt_minus1 = alpha_34
+   else
+      alpha_minus1      = xd%alpha_minus1(i,j)
+      alpha_filt_minus1 = xd%alpha_filt_minus1(i,j)
+   end if
+   
+   if (filterAlpha) then
+      ! Using a simple Infinite Impulse Response Filter (same a K_alpha in UnsteadyAero manual)
+      dynamicFilterCutoffHz = max( 1.0_ReKi, u%U ) * filtCutOff / PI / p%c(i,j)
+      LowPassConst          = exp(-2.0_ReKi*PI*p%dt*dynamicFilterCutoffHz)
+      alpha_filt_cur        = LowPassConst*alpha_filt_minus1 + (1.0_ReKi-LowPassConst)*alpha_34 
+   else
+      alpha_filt_cur        = alpha_34 ! #noFilter 
+   endif
+
+   ! --- Update states to t+dt
+   xd%alpha_minus1(i,j)      = alpha_34
+   xd%alpha_filt_minus1(i,j) = alpha_filt_cur
+   xd%alpha_dot              = ( alpha_filt_cur - alpha_filt_minus1 ) / p%dt
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_UpdateDiscOtherState_BV')
+      Failed = ErrStat>=ErrID_Fatal
+   end function Failed
+end subroutine UA_UpdateDiscOtherState_BV
+!============================================================================== 
+!> Routine for updating discrete states and other states for Beddoes-Leishman types models (note it breaks the framework)
+subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
    integer   ,                   intent(in   )  :: i           ! node index within a blade
    integer   ,                   intent(in   )  :: j           ! blade index    
    type(UA_InputType),           intent(in   )  :: u           ! Inputs at Time                       
@@ -1937,26 +2005,20 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
       end if ! p%UAMod == UA_HGMV
 
    elseif (p%UAMod == UA_OYE) then
-      ! 
-      ! initialize states to steady-state values:
+
+      ! First time, initialize states to steady-state values:
       if (OtherState%FirstPass(i,j)) then
          call HGM_Steady( i, j, u_interp, p, x%element(i,j), AFInfo, ErrStat2, ErrMsg2 )
       end if
-      call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      !x%element(i,j)%x(1) = 0.0_R8Ki
-      !x%element(i,j)%x(2) = 0.0_R8Ki
-      !x%element(i,j)%x(3) = 0.0_R8Ki
-
+      ! Time integrate
+      call UA_ABM4(i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! Make sure the states aren't getting out of control
       x%element(i,j)%x(4) = max( min( x%element(i,j)%x(4), 1.0_R8Ki ), 0.0_R8Ki )
-
-          ! let's make sure the states aren't getting out of control when we are supposed to be turning off UA anyway.
-      call UA_BlendSteadyStates( i, j, u_interp, p, AFInfo, x%element(i,j), m%FirstWarn_UA_off, m%weight(i,j), ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call UA_BlendSteadyStates(i, j, u_interp, p, AFInfo, x%element(i,j), m%FirstWarn_UA_off, m%weight(i,j), ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    elseif (p%UAMod == UA_BV) then
-      ! 
-      print*,'>>> TODO Update states BV', p%UAMod, UA_BV
+      ! Integrate discrete states (alpha_dot, alpha_filt_minus1)
+      call UA_UpdateDiscOtherState_BV( i, j, u_interp, p, xd, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
 
    elseif (p%UAMod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
       if (n<=0) return ! previous logic (before adding UA_HGM required n > 0 before UA_UpdateStates was called)
@@ -2300,10 +2362,12 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
     Tu     = p%c(i,j) / (2.0_ReKi* max(u%u, UA_u_min))                            ! Eq. 23
     Tu     = min(Tu, 50.0_ReKi)   ! ensure the time constant doesn't exceed 50 s.
     Tu     = max(Tu,  0.001_ReKi) ! ensure the time constant doesn't get too small, either.
+    ! Tu = Get_Tu(u%u, p%c(i,j))
 
    if (present(alpha_34)) then
       vx_34 = u%v_ac(1) - u%omega * 0.5_ReKi*p%c(i,j)                        ! Eq. 1
       alpha_34 = atan2(vx_34, u%v_ac(2) )                                    ! page 5 definitions
+      !alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
     
       if (present(alphaE)) then
          ! Variables derived from states
@@ -2317,6 +2381,26 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
    end if
 
 END SUBROUTINE Get_HGM_constants
+
+!> Compute angle of attack at 3/4 chord point based on values at Aerodynamic center
+real(ReKi) function Get_Alpha34(v_ac, omega, d_ac_to_34)
+   real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center
+   real(ReKi), intent(in) :: omega      !< pitching rate of airfoil
+   real(ReKi), intent(in) :: d_ac_to_34 !< distance from aerodynamic center to 3/4 chord point
+   Get_Alpha34 = atan2(v_ac(1) - omega * d_ac_to_34, v_ac(2) )             
+end function Get_Alpha34
+
+!> Compute time constant based on relative velocity u_rel
+real(ReKi) function Get_Tu(u_rel, chord)
+   real(ReKi), intent(in) :: u_rel !< relative velocity of airfoil
+   real(ReKi), intent(in) :: chord !< airfoil chord
+   Get_Tu = chord / (2.0_ReKi* max(u_rel, UA_u_min)) 
+   Get_Tu = min(Get_Tu, 50.0_ReKi)  ! ensure the time constant doesn't exceed 50 s.
+   Get_Tu = max(Get_Tu, 0.001_ReKi) ! ensure the time constant doesn't get too small, either.
+end function Get_Tu
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
 !!
@@ -2654,6 +2738,9 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    real(ReKi)                                   :: delta_c_df_primeprime
    real(ReKi), parameter                        :: delta_c_mf_primeprime = 0.0_ReKi
    TYPE(UA_ElementContinuousStateType)          :: x_in        ! Continuous states at t
+   ! for BV
+   real(ReKi)                                   :: Delta_alpha
+   real(ReKi)                                   :: K1, Gamma
    
 
    type(AFI_OutputType)                         :: AFI_interp
@@ -2716,13 +2803,30 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       fs_aE    = AFI_interp%f_st
 
       x_in%x = 0.0_R8Ki
+
    elseif (p%UAMod == UA_BV) then
-      ! 
-      print*,'TODO calcoutput BV'
-      if (OtherState%FirstPass(i,j)) then
-      end if
+      ! --- CalcOutput_BV
+      K1    = 0.1 ! TODO TODO
+      Gamma = 2.5 ! TODO TODO
+      Tu          = Get_Tu(u%u, p%c(i,j))
+      alpha_34    = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+      Delta_alpha = - K1 * Gamma * sqrt( abs(xd%alpha_dot(i,j) * Tu) )
+      alphaE      = alpha_34 + Delta_alpha
+      ! Cl, Cd, Cm at effective angle of attack alphaE
+      call AFI_ComputeAirfoilCoefs(alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      y%Cl = AFI_interp%Cl
+      y%Cd = AFI_interp%Cd
+      if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
+         y%Cm = 0.0_ReKi
+      else
+         y%Cm = AFI_interp%Cm 
+      endif
+      ! TODO projection alpha or alpha34
+      y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
+      y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
 
    elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
+      ! --- CalcOutput State Space models
       x_in = x%element(i,j)
       
       if (OtherState%FirstPass(i,j)) then
@@ -2818,6 +2922,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
    else
+      ! --- CalcOutput Beddoes-Leishman type models
       
       M           = u%U / p%a_s
       
@@ -2964,7 +3069,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       call UA_BlendSteady(u, p, AFInfo, y, misc%FirstWarn_UA_off, misc%weight(i,j), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   end if
+   end if ! Switch on UAMod
    
 #ifdef UA_OUTS
    iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts
@@ -2999,7 +3104,12 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          end if
 
       elseif(p%UAMod == UA_BV) then
-         print*,'>>> TODO UA_BV write outputs'
+         y%WriteOutput(iOffset+ 8)    = u%omega*R2D
+         y%WriteOutput(iOffset+ 9)    = alphaE*R2D
+         y%WriteOutput(iOffset+10)    = Tu
+         y%WriteOutput(iOffset+11)    = alpha_34*R2D
+         y%WriteOutput(iOffset+12)    = xd%alpha_dot(i,j)*R2D
+         y%WriteOutput(iOffset+13)    = Delta_alpha*R2D
          
       else
          ! Baseline, Gonzales, MinnemaPierce

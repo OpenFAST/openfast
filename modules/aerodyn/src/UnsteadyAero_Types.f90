@@ -131,6 +131,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: UA_DiscreteStateType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_minus1      !< angle of attack, previous time step [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_filt_minus1      !< filtered angle of attack, previous time step [rad]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot      !< Rate of change of angle of attack (filtered) [rad/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: q_minus1      !< non-dimensional pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kalpha_f_minus1      !< filtered pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kq_f_minus1      !< filtered pitching acceleration, previous time step [-]
@@ -1789,6 +1790,20 @@ IF (ALLOCATED(SrcDiscStateData%alpha_filt_minus1)) THEN
   END IF
     DstDiscStateData%alpha_filt_minus1 = SrcDiscStateData%alpha_filt_minus1
 ENDIF
+IF (ALLOCATED(SrcDiscStateData%alpha_dot)) THEN
+  i1_l = LBOUND(SrcDiscStateData%alpha_dot,1)
+  i1_u = UBOUND(SrcDiscStateData%alpha_dot,1)
+  i2_l = LBOUND(SrcDiscStateData%alpha_dot,2)
+  i2_u = UBOUND(SrcDiscStateData%alpha_dot,2)
+  IF (.NOT. ALLOCATED(DstDiscStateData%alpha_dot)) THEN 
+    ALLOCATE(DstDiscStateData%alpha_dot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%alpha_dot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstDiscStateData%alpha_dot = SrcDiscStateData%alpha_dot
+ENDIF
 IF (ALLOCATED(SrcDiscStateData%q_minus1)) THEN
   i1_l = LBOUND(SrcDiscStateData%q_minus1,1)
   i1_u = UBOUND(SrcDiscStateData%q_minus1,1)
@@ -2226,6 +2241,9 @@ ENDIF
 IF (ALLOCATED(DiscStateData%alpha_filt_minus1)) THEN
   DEALLOCATE(DiscStateData%alpha_filt_minus1)
 ENDIF
+IF (ALLOCATED(DiscStateData%alpha_dot)) THEN
+  DEALLOCATE(DiscStateData%alpha_dot)
+ENDIF
 IF (ALLOCATED(DiscStateData%q_minus1)) THEN
   DEALLOCATE(DiscStateData%q_minus1)
 ENDIF
@@ -2362,6 +2380,11 @@ ENDIF
   IF ( ALLOCATED(InData%alpha_filt_minus1) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! alpha_filt_minus1 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%alpha_filt_minus1)  ! alpha_filt_minus1
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! alpha_dot allocated yes/no
+  IF ( ALLOCATED(InData%alpha_dot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! alpha_dot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%alpha_dot)  ! alpha_dot
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! q_minus1 allocated yes/no
   IF ( ALLOCATED(InData%q_minus1) ) THEN
@@ -2576,6 +2599,26 @@ ENDIF
       DO i2 = LBOUND(InData%alpha_filt_minus1,2), UBOUND(InData%alpha_filt_minus1,2)
         DO i1 = LBOUND(InData%alpha_filt_minus1,1), UBOUND(InData%alpha_filt_minus1,1)
           ReKiBuf(Re_Xferred) = InData%alpha_filt_minus1(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%alpha_dot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%alpha_dot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%alpha_dot,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%alpha_dot,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%alpha_dot,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%alpha_dot,2), UBOUND(InData%alpha_dot,2)
+        DO i1 = LBOUND(InData%alpha_dot,1), UBOUND(InData%alpha_dot,1)
+          ReKiBuf(Re_Xferred) = InData%alpha_dot(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -3252,6 +3295,29 @@ ENDIF
       DO i2 = LBOUND(OutData%alpha_filt_minus1,2), UBOUND(OutData%alpha_filt_minus1,2)
         DO i1 = LBOUND(OutData%alpha_filt_minus1,1), UBOUND(OutData%alpha_filt_minus1,1)
           OutData%alpha_filt_minus1(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! alpha_dot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%alpha_dot)) DEALLOCATE(OutData%alpha_dot)
+    ALLOCATE(OutData%alpha_dot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%alpha_dot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%alpha_dot,2), UBOUND(OutData%alpha_dot,2)
+        DO i1 = LBOUND(OutData%alpha_dot,1), UBOUND(OutData%alpha_dot,1)
+          OutData%alpha_dot(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
