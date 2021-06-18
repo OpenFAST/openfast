@@ -310,7 +310,7 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_Ctrl
 
    CALL DispNVD( BladedInterface_Ver )  ! Display the version of this interface
 
-   p%UseLegacyInterface    = InputFileData%UseLegacyInterface
+   p%UseLegacyInterface    = .TRUE. !InputFileData%UseLegacyInterface
 
    m%dll_data%Ptch_Cntrl   = InputFileData%Ptch_Cntrl
    m%dll_data%Gain_OM      = InputFileData%Gain_OM                   ! Optimal mode gain (Nm/(rad/s)^2)

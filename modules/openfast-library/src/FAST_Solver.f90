@@ -3048,10 +3048,10 @@ CONTAINS
       
          IF ( p_FAST%CompHydro == Module_HD ) THEN
             
-            ! initialize these SD loads inputs here in case HD is used  (note from initialiazation that these meshes don't exist if HD isn't used)       
+            ! initialize these SD loads inputs here in case HD is used  (note from initialiazation that these meshes don't exist if HD isn't used)
             MeshMapData%u_SD_LMesh%Force  = 0.0_ReKi
             MeshMapData%u_SD_LMesh%Moment = 0.0_ReKi
-      
+
             
       !..................
       ! Get HD inputs on Morison%Mesh and WAMITMesh
@@ -3322,6 +3322,7 @@ CONTAINS
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
       CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
+      INTEGER(IntKi)             :: nb_local
          
       IF ( calcJacobian ) THEN
          CALL ED_DestroyInput( u_ED_perturb, ErrStat3, ErrMsg3 )
@@ -3342,8 +3343,8 @@ CONTAINS
          CALL BD_DestroyInput( u_BD_perturb, ErrStat3, ErrMsg3 )
             IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
          if (allocated(y_BD_perturb)) then
-            do nb=1,size(y_BD_perturb) 
-               CALL BD_DestroyOutput(y_BD_perturb(nb), ErrStat3, ErrMsg3 )
+            do nb_local=1,size(y_BD_perturb) 
+               CALL BD_DestroyOutput(y_BD_perturb(nb_local), ErrStat3, ErrMsg3 )
                   IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
             end do
             deallocate(y_BD_perturb)
@@ -4922,12 +4923,12 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
                
             CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh' )                 
-                  
-            CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh_2' )                 
+
+            CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh_2' )
                               
          END IF
-               
+
       ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
          
          CALL MeshCopy ( ExtPtfm%Input(1)%PtfmMesh, MeshMapData%u_ExtPtfm_PtfmMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
