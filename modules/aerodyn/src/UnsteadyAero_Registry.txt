@@ -113,6 +113,7 @@ typedef   ^                            ContinuousStateType           UA_ElementC
 typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        "angle of attack, previous time step"      rad
 typedef   ^                            DiscreteStateType             ReKi                     alpha_filt_minus1               {:}{:}        -         -        "filtered angle of attack, previous time step"      rad
 typedef   ^                            DiscreteStateType             ReKi                     alpha_dot                       {:}{:}        -         -        "Rate of change of angle of attack (filtered)"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     alpha_dot_minus1                {:}{:}        -         -        "Rate of change of angle of attack (filtered)"       rad/s
 typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        "non-dimensional pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kalpha_f_minus1                 {:}{:}        -         -        "filtered pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kq_f_minus1                     {:}{:}        -         -        "filtered pitching acceleration, previous time step"        -
@@ -163,6 +164,8 @@ typedef   ^                            OtherStateType                ReKi       
 typedef   ^                            OtherStateType                LOGICAL                  PositivePressure                {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative)"   -
 typedef   ^                            OtherStateType                LOGICAL                  vortexOn                        {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift term is active"   -
 typedef   ^                            OtherStateType                LOGICAL                  BelowThreshold                  {:}{:}        -         -        "HGMV model: logical flag indicating if cn fell below threshold to form another vortex"   -
+typedef   ^                            OtherStateType                LOGICAL                  activeL                         {:}{:}        -         -        "BV model: logical flag indicating if the lift stall is active"   -
+typedef   ^                            OtherStateType                LOGICAL                  activeD                         {:}{:}        -         -        "BV model: logical flag indicating if the drag stall is active"   -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):

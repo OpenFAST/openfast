@@ -132,6 +132,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_minus1      !< angle of attack, previous time step [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_filt_minus1      !< filtered angle of attack, previous time step [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot      !< Rate of change of angle of attack (filtered) [rad/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot_minus1      !< Rate of change of angle of attack (filtered) [rad/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: q_minus1      !< non-dimensional pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kalpha_f_minus1      !< filtered pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kq_f_minus1      !< filtered pitching acceleration, previous time step [-]
@@ -183,6 +184,8 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: PositivePressure      !< HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative) [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: vortexOn      !< HGMV model: logical flag indicating if the vortex lift term is active [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: BelowThreshold      !< HGMV model: logical flag indicating if cn fell below threshold to form another vortex [-]
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: activeL      !< BV model: logical flag indicating if the lift stall is active [-]
+    LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: activeD      !< BV model: logical flag indicating if the drag stall is active [-]
   END TYPE UA_OtherStateType
 ! =======================
 ! =========  UA_MiscVarType  =======
@@ -1804,6 +1807,20 @@ IF (ALLOCATED(SrcDiscStateData%alpha_dot)) THEN
   END IF
     DstDiscStateData%alpha_dot = SrcDiscStateData%alpha_dot
 ENDIF
+IF (ALLOCATED(SrcDiscStateData%alpha_dot_minus1)) THEN
+  i1_l = LBOUND(SrcDiscStateData%alpha_dot_minus1,1)
+  i1_u = UBOUND(SrcDiscStateData%alpha_dot_minus1,1)
+  i2_l = LBOUND(SrcDiscStateData%alpha_dot_minus1,2)
+  i2_u = UBOUND(SrcDiscStateData%alpha_dot_minus1,2)
+  IF (.NOT. ALLOCATED(DstDiscStateData%alpha_dot_minus1)) THEN 
+    ALLOCATE(DstDiscStateData%alpha_dot_minus1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%alpha_dot_minus1.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstDiscStateData%alpha_dot_minus1 = SrcDiscStateData%alpha_dot_minus1
+ENDIF
 IF (ALLOCATED(SrcDiscStateData%q_minus1)) THEN
   i1_l = LBOUND(SrcDiscStateData%q_minus1,1)
   i1_u = UBOUND(SrcDiscStateData%q_minus1,1)
@@ -2244,6 +2261,9 @@ ENDIF
 IF (ALLOCATED(DiscStateData%alpha_dot)) THEN
   DEALLOCATE(DiscStateData%alpha_dot)
 ENDIF
+IF (ALLOCATED(DiscStateData%alpha_dot_minus1)) THEN
+  DEALLOCATE(DiscStateData%alpha_dot_minus1)
+ENDIF
 IF (ALLOCATED(DiscStateData%q_minus1)) THEN
   DEALLOCATE(DiscStateData%q_minus1)
 ENDIF
@@ -2385,6 +2405,11 @@ ENDIF
   IF ( ALLOCATED(InData%alpha_dot) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! alpha_dot upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%alpha_dot)  ! alpha_dot
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! alpha_dot_minus1 allocated yes/no
+  IF ( ALLOCATED(InData%alpha_dot_minus1) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! alpha_dot_minus1 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%alpha_dot_minus1)  ! alpha_dot_minus1
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! q_minus1 allocated yes/no
   IF ( ALLOCATED(InData%q_minus1) ) THEN
@@ -2619,6 +2644,26 @@ ENDIF
       DO i2 = LBOUND(InData%alpha_dot,2), UBOUND(InData%alpha_dot,2)
         DO i1 = LBOUND(InData%alpha_dot,1), UBOUND(InData%alpha_dot,1)
           ReKiBuf(Re_Xferred) = InData%alpha_dot(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%alpha_dot_minus1) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%alpha_dot_minus1,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%alpha_dot_minus1,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%alpha_dot_minus1,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%alpha_dot_minus1,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%alpha_dot_minus1,2), UBOUND(InData%alpha_dot_minus1,2)
+        DO i1 = LBOUND(InData%alpha_dot_minus1,1), UBOUND(InData%alpha_dot_minus1,1)
+          ReKiBuf(Re_Xferred) = InData%alpha_dot_minus1(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -3318,6 +3363,29 @@ ENDIF
       DO i2 = LBOUND(OutData%alpha_dot,2), UBOUND(OutData%alpha_dot,2)
         DO i1 = LBOUND(OutData%alpha_dot,1), UBOUND(OutData%alpha_dot,1)
           OutData%alpha_dot(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! alpha_dot_minus1 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%alpha_dot_minus1)) DEALLOCATE(OutData%alpha_dot_minus1)
+    ALLOCATE(OutData%alpha_dot_minus1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%alpha_dot_minus1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%alpha_dot_minus1,2), UBOUND(OutData%alpha_dot_minus1,2)
+        DO i1 = LBOUND(OutData%alpha_dot_minus1,1), UBOUND(OutData%alpha_dot_minus1,1)
+          OutData%alpha_dot_minus1(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -4314,6 +4382,34 @@ IF (ALLOCATED(SrcOtherStateData%BelowThreshold)) THEN
   END IF
     DstOtherStateData%BelowThreshold = SrcOtherStateData%BelowThreshold
 ENDIF
+IF (ALLOCATED(SrcOtherStateData%activeL)) THEN
+  i1_l = LBOUND(SrcOtherStateData%activeL,1)
+  i1_u = UBOUND(SrcOtherStateData%activeL,1)
+  i2_l = LBOUND(SrcOtherStateData%activeL,2)
+  i2_u = UBOUND(SrcOtherStateData%activeL,2)
+  IF (.NOT. ALLOCATED(DstOtherStateData%activeL)) THEN 
+    ALLOCATE(DstOtherStateData%activeL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%activeL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOtherStateData%activeL = SrcOtherStateData%activeL
+ENDIF
+IF (ALLOCATED(SrcOtherStateData%activeD)) THEN
+  i1_l = LBOUND(SrcOtherStateData%activeD,1)
+  i1_u = UBOUND(SrcOtherStateData%activeD,1)
+  i2_l = LBOUND(SrcOtherStateData%activeD,2)
+  i2_u = UBOUND(SrcOtherStateData%activeD,2)
+  IF (.NOT. ALLOCATED(DstOtherStateData%activeD)) THEN 
+    ALLOCATE(DstOtherStateData%activeD(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%activeD.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOtherStateData%activeD = SrcOtherStateData%activeD
+ENDIF
  END SUBROUTINE UA_CopyOtherState
 
  SUBROUTINE UA_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -4360,6 +4456,12 @@ IF (ALLOCATED(OtherStateData%vortexOn)) THEN
 ENDIF
 IF (ALLOCATED(OtherStateData%BelowThreshold)) THEN
   DEALLOCATE(OtherStateData%BelowThreshold)
+ENDIF
+IF (ALLOCATED(OtherStateData%activeL)) THEN
+  DEALLOCATE(OtherStateData%activeL)
+ENDIF
+IF (ALLOCATED(OtherStateData%activeD)) THEN
+  DEALLOCATE(OtherStateData%activeD)
 ENDIF
  END SUBROUTINE UA_DestroyOtherState
 
@@ -4472,6 +4574,16 @@ ENDIF
   IF ( ALLOCATED(InData%BelowThreshold) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! BelowThreshold upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%BelowThreshold)  ! BelowThreshold
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! activeL allocated yes/no
+  IF ( ALLOCATED(InData%activeL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! activeL upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%activeL)  ! activeL
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! activeD allocated yes/no
+  IF ( ALLOCATED(InData%activeD) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! activeD upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%activeD)  ! activeD
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -4746,6 +4858,46 @@ ENDIF
       DO i2 = LBOUND(InData%BelowThreshold,2), UBOUND(InData%BelowThreshold,2)
         DO i1 = LBOUND(InData%BelowThreshold,1), UBOUND(InData%BelowThreshold,1)
           IntKiBuf(Int_Xferred) = TRANSFER(InData%BelowThreshold(i1,i2), IntKiBuf(1))
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%activeL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%activeL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%activeL,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%activeL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%activeL,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%activeL,2), UBOUND(InData%activeL,2)
+        DO i1 = LBOUND(InData%activeL,1), UBOUND(InData%activeL,1)
+          IntKiBuf(Int_Xferred) = TRANSFER(InData%activeL(i1,i2), IntKiBuf(1))
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%activeD) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%activeD,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%activeD,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%activeD,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%activeD,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%activeD,2), UBOUND(InData%activeD,2)
+        DO i1 = LBOUND(InData%activeD,1), UBOUND(InData%activeD,1)
+          IntKiBuf(Int_Xferred) = TRANSFER(InData%activeD(i1,i2), IntKiBuf(1))
           Int_Xferred = Int_Xferred + 1
         END DO
       END DO
@@ -5073,6 +5225,52 @@ ENDIF
       DO i2 = LBOUND(OutData%BelowThreshold,2), UBOUND(OutData%BelowThreshold,2)
         DO i1 = LBOUND(OutData%BelowThreshold,1), UBOUND(OutData%BelowThreshold,1)
           OutData%BelowThreshold(i1,i2) = TRANSFER(IntKiBuf(Int_Xferred), OutData%BelowThreshold(i1,i2))
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! activeL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%activeL)) DEALLOCATE(OutData%activeL)
+    ALLOCATE(OutData%activeL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%activeL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%activeL,2), UBOUND(OutData%activeL,2)
+        DO i1 = LBOUND(OutData%activeL,1), UBOUND(OutData%activeL,1)
+          OutData%activeL(i1,i2) = TRANSFER(IntKiBuf(Int_Xferred), OutData%activeL(i1,i2))
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! activeD not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%activeD)) DEALLOCATE(OutData%activeD)
+    ALLOCATE(OutData%activeD(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%activeD.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%activeD,2), UBOUND(OutData%activeD,2)
+        DO i1 = LBOUND(OutData%activeD,1), UBOUND(OutData%activeD,1)
+          OutData%activeD(i1,i2) = TRANSFER(IntKiBuf(Int_Xferred), OutData%activeD(i1,i2))
           Int_Xferred = Int_Xferred + 1
         END DO
       END DO

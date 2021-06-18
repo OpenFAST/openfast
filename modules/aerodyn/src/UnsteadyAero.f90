@@ -41,8 +41,9 @@ private
    public :: UA_ReInit
    public :: UA_InitStates_AllNodes ! used for AD linearization initialization
 
-   real(ReKi),     parameter :: Gonzalez_factor = 0.2_ReKi   ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
-   real(ReKi),     parameter, public :: UA_u_min = 0.01_ReKi   ! m/s; used to provide a minimum value so UA equations don't blow up (this should be much lower than range where UA is turned off)
+   real(ReKi), parameter         :: Gonzalez_factor = 0.2_ReKi     ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
+   real(ReKi), parameter, public :: UA_u_min = 0.01_ReKi           ! m/s; used to provide a minimum value so UA equations don't blow up (this should be much lower than range where UA is turned off)
+   real(ReKi), parameter         :: K1pos=1.0_ReKi, K1neg=0.5_ReKi ! K1 coefficients for BV model
 
    contains
    
@@ -839,6 +840,9 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       call AllocAry( xd%alpha_minus1     ,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1',      ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call AllocAry( xd%alpha_filt_minus1,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_filt_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call AllocAry( xd%alpha_dot        ,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_dot',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry( xd%alpha_dot_minus1 ,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_dot_minus1',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      allocate     ( OtherState%activeL     (p%nNodesPerBlade,p%numBlades), stat=ErrStat2); if(ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%activeL.", ErrStat, ErrMsg, RoutineName)
+      allocate     ( OtherState%activeD     (p%nNodesPerBlade,p%numBlades), stat=ErrStat2); if(ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%activeD.", ErrStat, ErrMsg, RoutineName)
       
    else
       call AllocAry( xd%alpha_minus1,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -965,6 +969,9 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       xd%alpha_minus1         = 0.0_ReKi
       xd%alpha_filt_minus1    = 0.0_ReKi
       xd%alpha_dot            = 0.0_ReKi
+      xd%alpha_dot_minus1     = 0.0_ReKi
+      OtherState%activeL      = .False.
+      OtherState%activeD      = .False.
       
    else
       OtherState%sigma1    = 1.0_ReKi
@@ -1093,7 +1100,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    elseif(p%UAMod == UA_HGMV) then
       p%NumOuts = 21
    elseif(p%UAMod == UA_BV) then
-      p%NumOuts = 13
+      p%NumOuts = 24
    else
       p%NumOuts = 45
    end if
@@ -1172,17 +1179,39 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          elseif(p%UAMod == UA_BV) then
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
-            InitOut%WriteOutputHdr(iOffset+10)  = trim(chanPrefix)//'Tu'
-            InitOut%WriteOutputHdr(iOffset+11)  = trim(chanPrefix)//'alpha_34'
-            InitOut%WriteOutputHdr(iOffset+12)  = trim(chanPrefix)//'alpha_dot'
-            InitOut%WriteOutputHdr(iOffset+13)  = trim(chanPrefix)//'delta_alpha'
+            InitOut%WriteOutputHdr(iOffset+10)  = trim(chanPrefix)//'alphaED'
+            InitOut%WriteOutputHdr(iOffset+11)  = trim(chanPrefix)//'Tu'
+            InitOut%WriteOutputHdr(iOffset+12)  = trim(chanPrefix)//'alpha_34'
+            InitOut%WriteOutputHdr(iOffset+13)  = trim(chanPrefix)//'alphaDot'
+            InitOut%WriteOutputHdr(iOffset+14)  = trim(chanPrefix)//'adotnorm'
+            InitOut%WriteOutputHdr(iOffset+15)  = trim(chanPrefix)//'dalphaL'
+            InitOut%WriteOutputHdr(iOffset+16)  = trim(chanPrefix)//'dalphaD'
+            InitOut%WriteOutputHdr(iOffset+17)  = trim(chanPrefix)//'activeL'
+            InitOut%WriteOutputHdr(iOffset+18)  = trim(chanPrefix)//'activeD'
+            InitOut%WriteOutputHdr(iOffset+19)  = trim(chanPrefix)//'alphaLagD'
+            InitOut%WriteOutputHdr(iOffset+20)  = trim(chanPrefix)//'gammaL'
+            InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'gammaD'
+            InitOut%WriteOutputHdr(iOffset+22)  = trim(chanPrefix)//'transA'
+            InitOut%WriteOutputHdr(iOffset+23)  = trim(chanPrefix)//'delP'
+            InitOut%WriteOutputHdr(iOffset+24)  = trim(chanPrefix)//'delN'
 
             InitOut%WriteOutputUnt(iOffset+ 8)  = '(deg/sec)'
             InitOut%WriteOutputUnt(iOffset+ 9)  = '(deg)'
-            InitOut%WriteOutputUnt(iOffset+10)  = '(s)'
-            InitOut%WriteOutputUnt(iOffset+11)  = '(deg)'
-            InitOut%WriteOutputUnt(iOffset+12)  = '(deg/sec)'
-            InitOut%WriteOutputUnt(iOffset+13)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+10)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+11)  = '(s)'
+            InitOut%WriteOutputUnt(iOffset+12)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+13)  = '(deg/sec)'
+            InitOut%WriteOutputUnt(iOffset+14)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+15)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+16)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+17)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+18)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+19)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+20)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+22)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+23)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+24)  = '(-)'
             
          else
 
@@ -1277,8 +1306,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    if (p%NumOuts > 0) then
       CALL GetNewUnit( p%unOutFile, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) RETURN
-
-      CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.out', ErrStat2, ErrMsg2 )
+      CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.UA.out', ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
 
@@ -1544,17 +1572,23 @@ subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, Er
    type(AFI_ParameterType),      intent(in   )  :: AFInfo      !< The airfoil parameter data
    integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-   real(ReKi), parameter :: filtCutOff = 0.5_ReKi  ! CutOff used to filter angle of attack. Alternative, use BL_p (see KelvinChain)
-   logical,  parameter   :: filterAlpha =.False.   ! Parameter to filter the angle of attack before computing finite differences
-   real(ReKi)            :: alpha_34               ! angle of attack at 3/4 point 
-   real(ReKi)            :: alpha_minus1           ! 3/4 chord angle of attack at 
-   real(ReKi)            :: alpha_filt_cur         !
-   real(ReKi)            :: alpha_filt_minus1      !
-   real(ReKi)            :: Tu                     ! Time constant based on u=Vrel and chord
-   real(ReKi)            :: dynamicFilterCutoffHz  ! find frequency based on reduced frequency of k = BL_p%filtCutOff
-   real(ReKi)            :: LowPassConst
-   integer(IntKi)        :: ErrStat2
-   character(ErrMsgLen)  :: ErrMsg2
+   real(ReKi), parameter :: filtCutOff = 0.5_ReKi                        !< CutOff used to filter angle of attack. Alternative, use BL_p (see KelvinChain)
+   logical,  parameter   :: filterAlpha =.False.                         !< Parameter to filter the angle of attack before computing finite differences
+   real(ReKi)            :: alpha_34                                     !< angle of attack at 3/4 point
+   real(ReKi)            :: alpha_minus1                                 !< 3/4 chord angle of attack at
+   real(ReKi)            :: alpha_filt_cur                               !< 
+   real(ReKi)            :: alpha_filt_minus1                            !< 
+   real(ReKi)            :: Tu                                           !< Time constant based on u=Vrel and chord
+   real(ReKi)            :: dynamicFilterCutoffHz                        !< find frequency based on reduced frequency of k = BL_p%filtCutOff
+   real(ReKi)            :: LowPassConst                                 !< 
+   !
+   type(AFI_UA_BL_Type) :: BL_p       !< Unsteady airfoil parameters
+   real(ReKi)           :: adotnorm   !< alphadot * Tu
+   real(ReKi)           :: alphaLag_D !< lagged angle of attack for drag calculation
+   real(ReKi)           :: alphaE_L   !< effective angle of attack for lift and drag
+   real(ReKi)           :: alpha_dot  !< rate of change of angle of attack
+   integer(IntKi)       :: ErrStat2
+   character(ErrMsgLen) :: ErrMsg2
    
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1562,7 +1596,6 @@ subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, Er
    ! --- Filter angle of attack
    ! Using angle of attack at AC or 3/4 point
    alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
-
    ! Angle of attack at previous time
    if (OtherState%FirstPass(i,j)) then
       alpha_minus1      = alpha_34
@@ -1571,7 +1604,6 @@ subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, Er
       alpha_minus1      = xd%alpha_minus1(i,j)
       alpha_filt_minus1 = xd%alpha_filt_minus1(i,j)
    end if
-   
    if (filterAlpha) then
       ! Using a simple Infinite Impulse Response Filter (same a K_alpha in UnsteadyAero manual)
       dynamicFilterCutoffHz = max( 1.0_ReKi, u%U ) * filtCutOff / PI / p%c(i,j)
@@ -1582,15 +1614,246 @@ subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, Er
    endif
 
    ! --- Update states to t+dt
+   alpha_dot = ( alpha_filt_cur - alpha_filt_minus1 ) / p%dt
+   if (abs(alpha_dot*p%dt)>PI*0.8) then 
+      ! Sudden jump of alpha happens for vertical axes turbines, e.g. for lambda<=1, jumps from -90 to +90 or -180 to +180
+      ! In that case we keep the alpha_dot from previous time step and we don't filter
+      alpha_dot       = xd%alpha_dot(i,j) ! using previous alpha_dot
+      alpha_filt_cur  = alpha_34 ! #noFilter 
+   endif
    xd%alpha_minus1(i,j)      = alpha_34
    xd%alpha_filt_minus1(i,j) = alpha_filt_cur
-   xd%alpha_dot              = ( alpha_filt_cur - alpha_filt_minus1 ) / p%dt
+   xd%alpha_dot_minus1(i,j)  = xd%alpha_dot(i,j)
+   xd%alpha_dot              = alpha_dot
+
+   ! --- Compute Unsteady aero params for this airfoil (alpha0, alpha1, alpha2)
+   call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, BL_p, ErrMsg2, ErrStat2); if(Failed()) return
+
+   ! --- Compute effective angle of attack and lagged angle of attack (needed to update active states)
+   call BV_getAlphas(i, j, u, p, xd, BL_p, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+
+   ! --- Update dynamic stall activation states
+   call BV_UpdateActiveStates(adotnorm, alpha_34, alphaLag_D, alphaE_L, BL_p, OtherState%activeL(i,j), OtherState%activeD(i,j))
+
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_UpdateDiscOtherState_BV')
       Failed = ErrStat>=ErrID_Fatal
    end function Failed
 end subroutine UA_UpdateDiscOtherState_BV
+
+!==============================================================================   
+!> Calculate angle of attacks using Boeing-Vertol model
+!! Drag effective angle of attack needs extra computation
+subroutine BV_getAlphas(i, j, u, p, xd, BL_p, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+   integer,                    intent(in   ) :: i          !< node index within a blade
+   integer,                    intent(in   ) :: j          !< blade index
+   type(UA_InputType),         intent(in   ) :: u          !< Inputs at t
+   type(UA_ParameterType),     intent(in   ) :: p          !< Parameters
+   type(UA_DiscreteStateType), intent(in   ) :: xd         !< Discrete states at t 
+   type(AFI_UA_BL_Type),       intent(in   ) :: BL_p       !< 
+   real(ReKi),                 intent(out  ) :: alpha_34   !< alpha at 3/4 chord point
+   real(ReKi),                 intent(out  ) :: alphaE_L   !< effective angle of attack for lift
+   real(ReKi),                 intent(out  ) :: alphaLag_D !< Lagged angle of attack for drag
+   real(ReKi),                 intent(out  ) :: adotnorm   !< alphadot * Tu
+   real(ReKi)            :: gammaL, gammaD   !< gamma coefficients for lift and drag respectively
+   real(ReKi)            :: dalphaMax        !< Maximum change of angle of attack
+   real(ReKi)            :: tc               !< Thickness ratio of airfoil, TODO TODO TODO
+   real(ReKi)            :: dalphaL, dalphaD
+   real(ReKi)            :: isgn                                         !< sign of alphadot Norm
+   real(ReKi), parameter :: umach = 0.0_ReKi !< Mach number umach=Urel*Minf, Minf (freestrem Mach) for incompressible
+
+   ! Angle of attack at 3/4 chord point 
+   alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+
+   ! --- Intermediate variables, using CACTUS notations
+   adotnorm = xd%alpha_dot(i,j) * Get_Tu(u%u, p%c(i,j))
+
+   ! --- Limits
+   ! Limit reference dalpha to a maximum to keep sign of CL the same for
+   ! alpha and lagged alpha (considered a reasonable lag...). Note:
+   ! magnitude increasing and decreasing effect ratios are maintained.
+   dalphaMax = 2._ReKi * BV_TransA(BL_p) ! TODO TODO
+
+   ! --- Calculate gamma for lift and drag based rel thickness
+   tc      = 0.18_ReKi ! TODO TODO
+   call BV_getGammas(tc, umach, gammaL, gammaD)
+
+   ! --- Delta alpha
+   !dalpha = - K1 * Gamma * sqrt( abs(xd%alpha_dot(i,j) * Tu) ) ! Formula from paper
+   dalphaL = gammaL * sqrt(abs(adotnorm))
+   dalphaD = gammaD * sqrt(abs(adotnorm))
+   !print*,'dalpha         ', dalphaL,dalphaD
+   ! Plateau 
+   dalphaL = min(dalphaL, dalphaMax)
+   dalphaD = min(dalphaD, dalphaMax)
+   !print*,'dalpha         ', dalphaL,dalphaD
+   if ((adotnorm*(alpha_34-BL_p%alpha0)) < 0.0_ReKi) then
+       dalphaL = dalphaL*K1neg
+       dalphaD = dalphaD*K1neg
+   else
+       dalphaL = dalphaL*K1pos
+       dalphaD = dalphaD*K1pos
+   endif
+   !print*,'dalpha         ', dalphaL,dalphaD
+
+   ! --- Alpha dynamic
+   isgn       = sign(1.0,adotnorm)
+   alphaE_L   = alpha_34 - dalphaL*isgn
+   alphaLag_D = alpha_34 - dalphaD*isgn ! NOTE: not effective alpha yet for drag
+end subroutine BV_getAlphas
+!==============================================================================   
+!> Calculate gamma for lift and drag based rel thickness. See CACTUS BV_DynStall.f95
+subroutine BV_getGammas(tc, umach, gammaL, gammaD)
+   real(ReKi), intent(in)  :: tc     !< Relative thickness of airfoil
+   real(ReKi), intent(in)  :: umach  !< Mach number of Urel, = Urel*MinfMinf (freestrem Mach), 0 for incompressible
+   real(ReKi), intent(out) :: gammaL !< gamma coefficient
+   real(ReKi), intent(out) :: gammaD !< gamma coefficient
+   real(ReKi) :: smachL, hmachL , smachD, hmachD, diff
+   real(ReKi) :: gammaxL, gammaxD, dgammaL, dgammaD  ! intermediate variables for gamma
+   diff    = 0.06-tc ! tc: thickness to chord ratio
+   smachL  = 0.4+5.0*diff
+   hmachL  = 0.9+2.5*diff
+   smachD  = 0.2
+   hmachD  = 0.7+2.5*diff
+   gammaxL = 1.4-6.0*diff
+   gammaxD = 1.0-2.5*diff
+   dgammaL = gammaxL/(hmachL-smachL)
+   dgammaD = gammaxD/(hmachD-smachD)
+   gammaL  = gammaxL-(umach-smachL)*dgammaL  ! For lift
+   gammaD  = gammaxD-(umach-smachD)*dgammaD  ! For drag
+   if (umach < smachD) then
+      gammaD=gammaxD
+   end if
+end subroutine BV_getGammas
+!==============================================================================   
+!> Compute Transition region length
+!! Note from CACTUS: 
+!! Limit reference dalpha to a maximum to keep sign of CL the same for
+!! alpha and lagged alpha (considered a reasonable lag...)
+!! NOTE: magnitude increasing and decreasing effect ratios are maintained.
+real(ReKi) function BV_TransA(BL_p)
+   type(AFI_UA_BL_Type), intent(in) :: BL_p
+   real(ReKi), parameter :: Fac= .9_ReKi  !< Margin to ensure that dalphaRef is never large enough to make alrefL    =  = AOA0 (blows up linear expansion model)
+   real(ReKi) :: AOA0      !< angle of attack of zero lift
+   real(ReKi) :: alssP     !< Static Stall angle positive
+   real(ReKi) :: alssN     !< Static Stall angle negative
+   real(ReKi) :: dalphaMax !< Maximum change of angle of attack
+   AOA0     = BL_p%alpha0
+   alssP    = BL_p%alpha1
+   alssN    = BL_p%alpha2
+   dalphaMax = Fac*min(abs(alssP-AOA0),abs(alssN-AOA0))/max(K1pos,K1neg)
+   BV_TransA = .5_ReKi*dalphaMax ! transition region for fairing lagged AOA in pure lag model
+end function BV_TransA
+!==============================================================================   
+!> Calculate deltas to negative and postivive stall angle
+subroutine BV_delNP(adotnorm, alpha, alphaLag_D, BL_p, activeD, delN, delP)
+   real(ReKi),           intent(in)  :: adotnorm   !< alphadot * Tu
+   real(ReKi),           intent(in)  :: alpha      !< alpha (3/4)
+   real(ReKi),           intent(in)  :: alphaLag_D !< lagged alpha for drag
+   type(AFI_UA_BL_Type), intent(in)  :: BL_p       !< 
+   logical,              intent(in)  :: activeD    !< flag to activate drag
+   real(ReKi),           intent(out) :: delN   !< Difference between lagged alpha and negative stall
+   real(ReKi),           intent(out) :: delP   !< Difference between lagged alpha and positive stall
+   real(ReKi) :: AOA0      !< angle of attack of zero lift
+   real(ReKi) :: alssP     !< Static Stall angle positive
+   real(ReKi) :: alssN     !< Static Stall angle negative
+   ! Cactus notations
+   AOA0     = BL_p%alpha0
+   alssP    = BL_p%alpha1
+   alssN    = BL_p%alpha2
+   if ((adotnorm*(alpha-AOA0)) < 0.0) then
+       ! Only switch DS off using lagged alpha
+       if (activeD) then
+           delN = alssN      - alphaLag_D
+           delP = alphaLag_D - alssP
+       else
+           delN = 0.0_ReKi
+           delP = 0.0_ReKi
+       end if
+   else
+       ! switch DS on or off using alpha
+       delN = alssN - alpha
+       delP = alpha - alssP
+   end if
+end subroutine BV_delNP
+!==============================================================================   
+!> Calculate effective angle of attack for drag coefficient, based on lagged angle of attack
+real(ReKi) function BV_alphaE_D(adotnorm, alpha, alphaLag_D, BL_p, activeD)
+   real(ReKi),           intent(in) :: adotnorm   !< alphadot * Tu
+   real(ReKi),           intent(in) :: alpha      !< alpha (3/4)
+   real(ReKi),           intent(in) :: alphaLag_D !< lagged alpha for drag
+   type(AFI_UA_BL_Type), intent(in) :: BL_p       !< 
+   logical,              intent(in) :: activeD    !< flag to activate drag
+   real(ReKi) :: TransA !< Transition region for fairing lagged AOA in pure lag model
+   real(ReKi) :: delN   !< Difference between lagged alpha and negative stall
+   real(ReKi) :: delP   !< Difference between lagged alpha and positive stall
+
+   ! Calculate deltas to negative and postivive stall angle (delN, and delP)
+   call BV_delNP(adotnorm, alpha, alphaLag_D, BL_p, activeD, delN, delP)
+
+   ! --- Alpha dyn for drag and flag
+   TransA = BV_TransA(BL_p)
+   if (delN > TransA .OR. delP > TransA) then
+       BV_alphaE_D  = alphaLag_D
+   elseif (delN > 0 .AND. delN < TransA) then
+       ! Transition region (fairing effect...)
+       BV_alphaE_D  = alpha+(alphaLag_D-alpha)*delN/TransA
+   elseif (delP > 0 .AND. delP < TransA) then
+       ! Transition region (fairing effect...)
+       BV_alphaE_D  = alpha+(alphaLag_D-alpha)*delP/TransA
+   else
+       BV_alphaE_D = alpha ! 3/4
+   end if
+end function BV_alphaE_D
+!============================================================================== 
+!> Activate dynamic stall for lift or drag
+subroutine BV_UpdateActiveStates(adotnorm, alpha, alphaLag_D, alphaE_L, BL_p, activeL, activeD)
+   real(ReKi),           intent(in)    :: adotnorm   !< alphadot * Tu
+   real(ReKi),           intent(in)    :: alpha      !< alpha (3/4)
+   real(ReKi),           intent(in)    :: alphaLag_D !< lagged alpha for drag
+   real(ReKi),           intent(in)    :: alphaE_L   !< Effective angle of attack for lifr
+   type(AFI_UA_BL_Type), intent(in)    :: BL_p       !< 
+   logical,              intent(inout) :: activeL    !< flag to activate lift
+   logical,              intent(inout) :: activeD    !< flag to activate drag
+   real(ReKi) :: TransA     !< Transition region for fairing lagged AOA in pure lag model
+   real(ReKi) :: delN   !< Difference between lagged alpha and negative stall
+   real(ReKi) :: delP   !< Difference between lagged alpha and positive stall
+   real(ReKi) :: AOA0      !< angle of attack of zero lift
+   real(ReKi) :: alssP     !< Static Stall angle positive
+   real(ReKi) :: alssN     !< Static Stall angle negative
+   ! Cactus notations
+   AOA0     = BL_p%alpha0
+   alssP    = BL_p%alpha1
+   alssN    = BL_p%alpha2
+   
+   ! --- Activate lift dynamic stall
+   if ((adotnorm*(alpha-AOA0)) < 0.0) then
+       ! Only switch DS off using lagged alpha
+       if (activeL .and. (alphaE_L > alssN .AND. alphaE_L < alssP)) then
+           activeL=.false.
+       end if
+   else
+       ! switch DS on or off using alpha
+       activeL =  (alpha <= alssN .OR. alpha >= alssP)
+   end if
+
+   ! --- Activate drag dynamic stall
+   ! Calculate deltas to negative and postivive stall angle (delN, and delP)
+   call BV_delNP(adotnorm, alpha, alphaLag_D, BL_p, activeD, delN, delP)
+   TransA = BV_TransA(BL_p)
+   if (delN > TransA .OR. delP > TransA) then
+       activeD = .true.
+   elseif (delN > 0 .AND. delN < TransA) then
+       ! Transition region (fairing effect...)
+       activeD = .true.
+   elseif (delP > 0 .AND. delP < TransA) then
+       ! Transition region (fairing effect...)
+       activeD = .true.
+   else
+       activeD = .false.
+   end if
+end subroutine BV_UpdateActiveStates
 !============================================================================== 
 !> Routine for updating discrete states and other states for Beddoes-Leishman types models (note it breaks the framework)
 subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
@@ -2356,18 +2619,12 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
    real(ReKi)                                   :: vx_34
 
    
-    ! Variables derived from inputs
-    !u%u = U_ac = TwoNorm(u%v_ac)                                                 ! page 4 definitions
-    
-    Tu     = p%c(i,j) / (2.0_ReKi* max(u%u, UA_u_min))                            ! Eq. 23
-    Tu     = min(Tu, 50.0_ReKi)   ! ensure the time constant doesn't exceed 50 s.
-    Tu     = max(Tu,  0.001_ReKi) ! ensure the time constant doesn't get too small, either.
-    ! Tu = Get_Tu(u%u, p%c(i,j))
+   ! Variables derived from inputs
+   !u%u = U_ac = TwoNorm(u%v_ac)                                                 ! page 4 definitions
+   Tu = Get_Tu(u%u, p%c(i,j))
 
    if (present(alpha_34)) then
-      vx_34 = u%v_ac(1) - u%omega * 0.5_ReKi*p%c(i,j)                        ! Eq. 1
-      alpha_34 = atan2(vx_34, u%v_ac(2) )                                    ! page 5 definitions
-      !alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+      alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
     
       if (present(alphaE)) then
          ! Variables derived from states
@@ -2387,8 +2644,16 @@ real(ReKi) function Get_Alpha34(v_ac, omega, d_ac_to_34)
    real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center
    real(ReKi), intent(in) :: omega      !< pitching rate of airfoil
    real(ReKi), intent(in) :: d_ac_to_34 !< distance from aerodynamic center to 3/4 chord point
-   Get_Alpha34 = atan2(v_ac(1) - omega * d_ac_to_34, v_ac(2) )             
+   Get_Alpha34 = atan2(v_ac(1) + omega * d_ac_to_34, v_ac(2) )  ! Uaero - Uelast
 end function Get_Alpha34
+
+!> Compute angle of attack at 2/4 chord point based on values at Aerodynamic center
+real(ReKi) function Get_Alpha24(v_ac, omega, d_ac_to_24)
+   real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center
+   real(ReKi), intent(in) :: omega      !< pitching rate of airfoil
+   real(ReKi), intent(in) :: d_ac_to_24 !< distance from aerodynamic center to 2/4 chord point
+   Get_Alpha24 = atan2(v_ac(1) + omega * d_ac_to_24, v_ac(2) )  ! Uaero - Uelast
+end function Get_Alpha24
 
 !> Compute time constant based on relative velocity u_rel
 real(ReKi) function Get_Tu(u_rel, chord)
@@ -2739,9 +3004,16 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    real(ReKi), parameter                        :: delta_c_mf_primeprime = 0.0_ReKi
    TYPE(UA_ElementContinuousStateType)          :: x_in        ! Continuous states at t
    ! for BV
-   real(ReKi)                                   :: Delta_alpha
-   real(ReKi)                                   :: K1, Gamma
-   
+   real(ReKi)                                   :: alphaE_L, alphaE_D  ! effective angle of attack for lift and drag
+   real(ReKi)                                   :: alphaLag_D          ! lagged angle of attack for drag calculation
+   real(ReKi)                                   :: adotnorm
+#ifdef UA_OUTS
+   real(ReKi)                                   :: delN
+   real(ReKi)                                   :: delP
+   real(ReKi)                                   :: gammaL
+   real(ReKi)                                   :: gammaD
+   real(ReKi)                                   :: TransA
+#endif   
 
    type(AFI_OutputType)                         :: AFI_interp
    
@@ -2805,25 +3077,9 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       x_in%x = 0.0_R8Ki
 
    elseif (p%UAMod == UA_BV) then
-      ! --- CalcOutput_BV
-      K1    = 0.1 ! TODO TODO
-      Gamma = 2.5 ! TODO TODO
-      Tu          = Get_Tu(u%u, p%c(i,j))
-      alpha_34    = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
-      Delta_alpha = - K1 * Gamma * sqrt( abs(xd%alpha_dot(i,j) * Tu) )
-      alphaE      = alpha_34 + Delta_alpha
-      ! Cl, Cd, Cm at effective angle of attack alphaE
-      call AFI_ComputeAirfoilCoefs(alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      y%Cl = AFI_interp%Cl
-      y%Cd = AFI_interp%Cd
-      if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
-         y%Cm = 0.0_ReKi
-      else
-         y%Cm = AFI_interp%Cm 
-      endif
-      ! TODO projection alpha or alpha34
-      y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
-      y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+      ! --- CalcOutput Boeing-Vertol
+      call BV_CalcOutput()
+      if (ErrStat >= AbortErrLev) return
 
    elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
       ! --- CalcOutput State Space models
@@ -3105,11 +3361,22 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
 
       elseif(p%UAMod == UA_BV) then
          y%WriteOutput(iOffset+ 8)    = u%omega*R2D
-         y%WriteOutput(iOffset+ 9)    = alphaE*R2D
-         y%WriteOutput(iOffset+10)    = Tu
-         y%WriteOutput(iOffset+11)    = alpha_34*R2D
-         y%WriteOutput(iOffset+12)    = xd%alpha_dot(i,j)*R2D
-         y%WriteOutput(iOffset+13)    = Delta_alpha*R2D
+         y%WriteOutput(iOffset+ 9)    = alphaE_L*R2D
+         y%WriteOutput(iOffset+10)    = alphaE_D*R2D
+         y%WriteOutput(iOffset+11)    = Get_Tu(u%u, p%c(i,j))
+         y%WriteOutput(iOffset+12)    = alpha_34*R2D
+         y%WriteOutput(iOffset+13)    = xd%alpha_dot(i,j)*R2D*p%dt
+         y%WriteOutput(iOffset+14)    = adotnorm
+         y%WriteOutput(iOffset+15)    = (alpha_34-alphaE_L)*R2D
+         y%WriteOutput(iOffset+16)    = (alpha_34-alphaE_D)*R2D
+         y%WriteOutput(iOffset+17)    = transfer(OtherState%activeL(i,j), ReKi) ! logical to float
+         y%WriteOutput(iOffset+18)    = transfer(OtherState%activeD(i,j), ReKi)
+         y%WriteOutput(iOffset+19)    = alphaLag_D*R2D
+         y%WriteOutput(iOffset+20)    = gammaL
+         y%WriteOutput(iOffset+21)    = gammaD
+         y%WriteOutput(iOffset+22)    = TransA
+         y%WriteOutput(iOffset+23)    = delP
+         y%WriteOutput(iOffset+24)    = delN
          
       else
          ! Baseline, Gonzales, MinnemaPierce
@@ -3169,8 +3436,78 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       end if
    end if
 #endif
+
+contains 
+   !> Calc Outputs for Boieng-Vertol dynamic stall
+   !! See BV_DynStall.f95 of CACTUS, notations kept more or less consistent
+   subroutine BV_CalcOutput()
+      real(ReKi) :: alpha_50
+      real(ReKi) :: Cm25_stat
+      real(ReKi) :: Cl75_stat
+      real(ReKi) :: Cl50_stat
+
+      ! --- Compute Unsteady aero params (BL_p) for this airfoil (alpha0, alpha1, alpha2)
+      call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, BL_p, ErrMsg2, ErrStat2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
+      ! --- Compute effective angle of attack and lagged angle of attack (needed to update active states)
+      call BV_getAlphas(i, j, u, p, xd, BL_p, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+      alphaE_D = BV_alphaE_D(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j))
+
+#ifdef UA_OUTS
+      ! --- Recompute variables, for temporary output to file only
+      ! Calculate deltas to negative and postivive stall angle (delN, and delP)
+      call BV_delNP(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j), delN, delP)
+      call BV_getGammas(tc=0.18, umach=0.0_ReKi, gammaL=gammaL, gammaD=gammaD)
+      TransA = BV_TransA(BL_p)
+#endif 
+
+
+
+      ! --- Cl, _,  at effective angle of attack alphaE
+      if (OtherState%activeL(i,j)) then
+         ! Dynamic Cl (scaled)
+         call AFI_ComputeAirfoilCoefs(alphaE_L, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         y%Cl = AFI_interp%Cl/(alphaE_L-BL_P%alpha0) * (alpha_34-BL_p%alpha0)
+      else
+         ! Static Cl
+         call AFI_ComputeAirfoilCoefs(alpha_34, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         y%Cl = AFI_interp%Cl
+      endif
+
+      ! --- Cd at effective angle of attack alphaE (alphaE might be alpha34 if no drag model)
+      call AFI_ComputeAirfoilCoefs(alphaE_D, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      y%Cd = AFI_interp%Cd
+
+      ! --- Cm using pitch rate effects by analogy to pitching flat plate potential flow theory (SAND report)
+      ! As Done in CACTUS
+      ! Static coeffs at 1/4 chord
+      if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
+         Cm25_stat = 0.0_ReKi
+      else
+         ! Static coeffs at 1/4 chord (u%Alpha)
+         call AFI_ComputeAirfoilCoefs(u%Alpha, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         Cm25_stat = AFI_interp%Cm
+      endif
+      ! Static coeffs at 1/2 chord (alpha_50)
+      alpha_50 = Get_Alpha24(u%v_ac, u%omega, 0.25_ReKi*p%c(i,j))
+      call AFI_ComputeAirfoilCoefs(alpha_50, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Cl50_stat = AFI_interp%Cl
+      ! Static coeffs at 3/4 chord (alpha_34)
+      call AFI_ComputeAirfoilCoefs(alpha_34, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Cl75_stat = AFI_interp%Cl
+      y%Cm = Cm25_stat + cos(alpha_50) * (Cl75_stat - Cl50_stat)*0.25_ReKi
+
+      ! TODO projection using alpha 5 and back for added mass
+      y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
+      y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+
+   end subroutine BV_CalcOutput
    
 end subroutine UA_CalcOutput
+
+
+
 !==============================================================================   
 subroutine UA_WriteOutputToFile(t, p, y)
    real(DbKi),                   intent(in   )  :: t           ! current time (s)
