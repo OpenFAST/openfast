@@ -137,7 +137,9 @@ assoc_or_allocated( node_t  * r )
 int
 is_pointer( node_t * r )
 {
-
+   if (r->ndims > 0  &&  r->dims[0]->is_pointer) {
+        return(1);
+   }
    if ( sw_ccode && r->ndims > 0  && r->dims[0]->deferred ){
       if ( !strncmp( make_lower_temp(r-> name), "writeoutput", 11) ) { // this covers WriteOutput, WriteOutputHdr, and WriteOutputUnt
          return( 0 ); // we're going to use these in the glue code, so these will be a special case
