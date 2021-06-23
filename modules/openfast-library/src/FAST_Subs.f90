@@ -1653,7 +1653,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    IF ( p%TMax < 0.0_DbKi  )  THEN
       CALL SetErrStat( ErrID_Fatal, 'TMax must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    ELSE IF ( p%TMax < p%TStart )  THEN
-      CALL SetErrStat( ErrID_Fatal, 'TMax must not be less than TStart.', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'TStart ('//trim(num2lstr(p%TStart))//') should be greater than TMax ('//trim(num2lstr(p%TMax))//') in OpenFAST input file.', ErrStat, ErrMsg, RoutineName )
    END IF
 
    IF ( p%n_ChkptTime < p%n_TMax_m1 ) THEN
@@ -2706,6 +2706,7 @@ END DO
       END IF
 
       p%n_DT_Out = NINT( p%DT_Out / p%DT )
+
 
       ! TStart - Time to begin tabular output (s):
    CALL ReadVar( UnIn, InputFile, p%TStart, "TStart", "Time to begin tabular output (s)", ErrStat2, ErrMsg2, UnEc)

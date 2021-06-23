@@ -18,11 +18,16 @@ param	WakeDynamics/WD      -               INTEGER         WakeDiamMod_RotDiam  
 param	^                    -               INTEGER         WakeDiamMod_Velocity    - 2 -  "Wake diameter calculation model: velocity-based" -
 param	^                    -               INTEGER         WakeDiamMod_MassFlux    - 3 -  "Wake diameter calculation model: mass-flux based" -
 param	^                    -               INTEGER         WakeDiamMod_MtmFlux     - 4 -  "Wake diameter calculation model: momentum-flux based" -
+param	^                    -               INTEGER         Mod_Wake_Polar           - 1 -  "Wake model" -
+param	^                    -               INTEGER         Mod_Wake_Cartesian       - 2 -  "Wake model" -
+param	^                    -               INTEGER         Mod_Wake_Curl            - 3 -  "Wake model" -
 
 # ..... InputFile Data .......................................................................................................
 typedef  ^                 WD_InputFileType  ReKi            dr             - - -  "Radial increment of radial finite-difference grid [>0.0]" m
 typedef  ^                 WD_InputFileType  IntKi           NumRadii       - - -  "Number of radii in the radial finite-difference grid [>=2]" -
 typedef  ^                 WD_InputFileType  IntKi           NumPlanes      - - -  "Number of wake planes [>=2]" -
+typedef  ^                 WD_InputFileType  IntKi           Mod_Wake       - - -  "Switch between wake formulations 1=Polar, 2=Cartesian, 3=Curl" -
+typedef  ^                 WD_InputFileType  ReKi            k_VortexDecay  - - -  "Vortex decay constant for curl" - 
 typedef  ^                 WD_InputFileType  ReKi            f_c            - - -  "Cut-off frequency of the low-pass time-filter for the wake advection, deflection, and meandering model [>0.0]" Hz
 typedef  ^                 WD_InputFileType  ReKi            C_HWkDfl_O     - - -  "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor" m
 typedef  ^                 WD_InputFileType  ReKi            C_HWkDfl_OY    - - -  "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error" m/rad
@@ -70,6 +75,9 @@ typedef ^  DiscreteStateType   ReKi  p_plane           {:}{:} - -   "Center posi
 typedef ^  DiscreteStateType   ReKi  x_plane           {:}    - -   "Downwind distance from rotor to each wake plane"      m
 typedef ^  DiscreteStateType   ReKi  Vx_wake           {:}{:} - -   "Axial wake velocity deficit at wake planes, distributed radially"      m/s
 typedef ^  DiscreteStateType   ReKi  Vr_wake           {:}{:} - -   "Radial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef ^  DiscreteStateType   ReKi  Vx_wake2          {:}{:}{:} - -   "Axial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef ^  DiscreteStateType   ReKi  Vy_wake2          {:}{:}{:} - -   "Longitudinal wake velocity deficit at wake planes, distributed radially"      m/s
+typedef ^  DiscreteStateType   ReKi  Vz_wake2          {:}{:}{:} - -   "Vertical wake velocity deficit at wake planes, distributed radially"      m/s
 typedef ^  DiscreteStateType   ReKi  Vx_wind_disk_filt {:}    - -   "Time-filtered rotor-disk-averaged ambient wind speed of wake planes, normal to planes"      m/s
 typedef ^  DiscreteStateType   ReKi  TI_amb_filt       {:}    - -   "Time-filtered ambient turbulence intensity of wind at wake planes"      -
 typedef ^  DiscreteStateType   ReKi  D_rotor_filt      {:}    - -   "Time-filtered rotor diameter associated with each wake plane"     m
@@ -90,12 +98,22 @@ typedef   ^         MiscVarType   ReKi  dvtdr   {:}    - -   ""
 typedef   ^         MiscVarType   ReKi  vt_tot  {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_amb  {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_shr  {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  vt_tot2 {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  vt_amb2 {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  vt_shr2 {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dvx_dy  {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dvx_dz  {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  nu_dvx_dy  {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  nu_dvx_dz  {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dnuvx_dy   {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dnuvx_dz   {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  a       {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  b       {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  c       {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  d       {:}    - -   "" 
 typedef   ^         MiscVarType   ReKi  r_wake  {:}    - -   ""    
 typedef   ^         MiscVarType   ReKi  Vx_high {:}    - -   ""    
+typedef   ^         MiscVarType   ReKi  Vx_polar {:}    - -   "Vx as function of r for Carteisna implementation"    
  
 
 # ..... Parameters ................................................................................................................
@@ -109,6 +127,8 @@ typedef ^ ParameterType  ReKi             dr             -  - -   "Radial increm
 typedef ^ ParameterType  ReKi             r             {:} - -   "Discretization of radial finite-difference grid"        m
 typedef ^ ParameterType  ReKi             y             {:} - -   "Horizontal discretization of each wake plane (size ny=2nr-1)"        m
 typedef ^ ParameterType  ReKi             z             {:} - -   "Nomically-vertical discretization of each wake plane (size nz=2nr-1)"        m
+typedef ^ ParameterType  IntKi            Mod_Wake       - - -  "Switch between wake formulations 1=Polar, 2=Cartesian, 3=Curl" -
+typedef ^ ParameterType  ReKi             k_VortexDecay  - - -  "Vortex decay constant for curl" - 
 typedef ^ ParameterType  ReKi             filtParam      -  - -   "alpha, Low-pass time-filter parameter, with a value between 0 (minimum filtering) and 1 (maximum filtering) (exclusive)"      -
 typedef ^ ParameterType  ReKi             oneMinusFiltParam - - - "1.0 - filtParam" -
 typedef ^ ParameterType  ReKi             C_HWkDfl_O     -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor" m
