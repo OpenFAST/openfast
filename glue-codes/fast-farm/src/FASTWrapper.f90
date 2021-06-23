@@ -535,7 +535,6 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    REAL(R8Ki)                                      :: theta(3)    
    REAL(R8Ki)                                      :: orientation(3,3)    
    REAL(ReKi)                                      :: tmp_sz_z, tmp_sz_y
-   REAL(ReKi)                                      :: R_rotor    ! Rotor radius
    
    INTEGER(IntKi)                                  :: j, k        ! loop counters
    
@@ -625,12 +624,6 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          call setErrStat(ErrStat2,ErrMsg2,ErrStat2,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
    end do
-    
-   ! Rotor radius
-   R_rotor = 0.0_ReKi 
-   do k=1,size(m%ADRotorDisk) ! loop on blades
-      R_rotor = max(R_rotor, TwoNorm(m%ADRotorDisk(k)%Position(:,p%nr) - p0) )
-   enddo
          
    ! --- Ct and Cq on polar grid (goes beyond rotor radius)
    if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
@@ -658,14 +651,14 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
             num = num + dot_product(y%xHat_Disk, m%ADRotorDisk(k)%Moment(:,j) ) 
          end do
-         y%AzimAvg_Cq(j) = num / (denom * R_rotor)
+         y%AzimAvg_Cq(j) = 2.0_ReKi*num / (denom * y%D_rotor)
       end do
          
    end if  
       
    ! --- Variables needed to orient wake planes in "skew" coordinate system
    ! chi_skew and psi_skew
-   y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) * R2D ! AeroDyn_IO
+   y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) ! AeroDyn_IO
 
    ! TODO place me in an AeroDyn Function like Calc_Chi0
    ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
@@ -678,8 +671,8 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
 
    zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
-   tmp_sz_y =       dot_product(zHat_Disk,yHat_plane)
-   tmp_sz_z = -1.0* dot_product(zHat_Disk,zHat_plane)
+   tmp_sz_y =            dot_product(zHat_Disk,yHat_plane)
+   tmp_sz_z = -1.0_ReKi* dot_product(zHat_Disk,zHat_plane)
    if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
       y%psi_skew = 0.0_ReKi
    else

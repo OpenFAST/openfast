@@ -1370,7 +1370,6 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          y%Vz_wake2(:,:,i) = xd%Vz_wake2(:,:,i)
       enddo
 
-
       ! --- Temporary VTK output hack
       call vtk_misc_init(mvtk)
       call set_vtk_binary_format(.false.,mvtk) ! TODO binary fails
@@ -1504,8 +1503,9 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    
    xd%Vx_rel_disk_filt     = u%Vx_rel_disk    
    
-      ! Initialze Ct_azavg_filt and Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
-   xd%Ct_azavg_filt (:) = u%Ct_azavg(:) 
+      ! Initialze Ct_azavg_filt, Cq_azavg_filt, and Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
+   xd%Ct_azavg_filt (:) = u%Ct_azavg(:)
+   xd%Cq_azavg_filt (:) = u%Cq_azavg(:)
    
    call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), xd%D_rotor_filt(0), errStat, errMsg )
    xd%Vx_wake(:,1) = xd%Vx_wake(:,0)

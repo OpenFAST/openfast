@@ -210,8 +210,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: xplane_sq, yplane_sq, xysq_Z(3), xzplane_X(3)
    real(ReKi), ALLOCATABLE :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:)
    real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)
-   real(ReKi)          :: Vx_debug
-   integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln, tmpPln, maxN_wake
    integer(IntKi)      :: i,np1,errStat2
    character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'
@@ -242,7 +240,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
       ! Loop over the entire grid of low resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
-   !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,Vx_debug,&
+   !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, xhatBar_plane, x_end_plane,nt,np,x_start_plane,delta,deltad,&
    !$OMP&                    p_tmp_plane,tmp_vec,r_vec_plane,y_tmp_plane,z_tmp_plane,xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp,&
    !$OMP&                    nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,&
    !$OMP&                    xHat_plane, yHat_plane, zHat_plane,&
@@ -277,8 +275,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                x_end_plane = tmp_x + tmp_y + tmp_z
 
                do np = 0, maxPln
-                  ! Reset interpolation counter
-                  ILo = 0 ! TODO, curently not used
                   np1 = np + 1
                   ! Construct the endcaps of the current wake plane volume
                   x_start_plane = x_end_plane
@@ -333,7 +329,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         ! Increment number of wakes contributing to current grid point
                         n_wake = n_wake + 1
 
-                        ! Store unit vectors for projection, TODO Compute Vr_term directly
+                        ! Store unit vectors for projection
                         tmp_xhat_plane(:,n_wake) = xHat_plane
                         tmp_yhat_plane(:,n_wake) = yHat_plane
                         tmp_zhat_plane(:,n_wake) = zHat_plane
@@ -427,7 +423,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                 Vsum_low  = 0.0_ReKi
                 iwsum = 0
-                n_r_polar = FLOOR((p%C_Meander*u%D_wake(np,nt))/(2.0_ReKi*p%dpol)) ! TODO change me Dwake*sqrt(2)?
+                n_r_polar = FLOOR((p%C_Meander*u%D_wake(np,nt))/(2.0_ReKi*p%dpol))
 
                 do nr = 0,n_r_polar
 
@@ -571,7 +567,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: p_tmp_plane(3)
    real(ReKi)          :: tmp_vec(3)
    real(ReKi)          :: delta, deltad
-   integer(IntKi)      :: np1, ILo
+   integer(IntKi)      :: np1
    integer(IntKi)      :: maxPln
    integer(IntKi)      :: n_high_low
    character(*), parameter   :: RoutineName = 'HighResGridCalcOutput'
@@ -616,8 +612,6 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,0,nt2)) )
 
                      do np = 0, maxPln !p%NumPlanes-2
-                        ! Reset interpolation counter
-                        ILo = 0 ! TODO, curently not used
                         np1 = np + 1
                         ! Construct the endcaps of the current wake plane volume
                         x_start_plane = x_end_plane
@@ -667,7 +661,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                               ! Increment number of wakes contributing to current grid point
                               n_wake = n_wake + 1
 
-                              ! Store unit vectors for projection, TODO Compute Vr_term directly
+                              ! Store unit vectors for projection
                               m%xhat_plane(:,n_wake) = xHat_plane
                               m%yhat_plane(:,n_wake) = yHat_plane
                               m%zhat_plane(:,n_wake) = zHat_plane
