@@ -391,9 +391,10 @@ accuracy with computational expense. For each node, ``TwrElev``
 specifies the local elevation of the tower node above ground (or above
 MSL for offshore wind turbines or above the seabed for MHK turbines),
 ``TwrDiam`` specifies the local tower diameter, ``TwrCd`` specifies the
-local tower drag-force coefficient, and ``TwrTI`` specifiest the
+local tower drag-force coefficient, and ``TwrTI`` specifies the
 turbulence intensity used in the Eames tower shadow model
-(``TwrShadow`` = 2). ``TwrElev`` must be entered in monotonically
+(``TwrShadow`` = 2) as a fraction (rather than a percentage) of the
+wind fluctuation. ``TwrElev`` must be entered in monotonically
 increasing order—from the lowest (tower-base) to the highest 
 (tower-top) elevation. Values of ``TwrTI`` between 0.05 and 0.4 are
 recommended.  Values larger than 0.4 up to 1 will trigger a warning
