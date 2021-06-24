@@ -378,8 +378,8 @@ SUBROUTINE Init_Lin_IfW( p_FAST, y_FAST, u_AD )
                   
       IF (p_FAST%CompAero == MODULE_AD) THEN 
                            
-         DO K = 1,SIZE(u_AD%BladeMotion)
-            DO J = 1,u_AD%BladeMotion(k)%Nnodes
+         DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
+            DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
                Node = Node + 1 ! InflowWind node
                NodeDesc = ' (blade '//trim(num2lstr(k))//', node '//trim(num2lstr(j))//')'
                
@@ -403,7 +403,7 @@ SUBROUTINE Init_Lin_IfW( p_FAST, y_FAST, u_AD )
          END DO !K = 1,p%NumBl     
          
             ! tower:
-         DO J=1,u_AD%TowerMotion%nnodes
+         DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
             Node = Node + 1  
             NodeDesc = ' (Tower node '//trim(num2lstr(j))//')'
 
@@ -1828,16 +1828,16 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
          
             ! blades:
          AD_Start_Bl = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) &
-                     + u_AD%TowerMotion%NNodes * 9  & ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
-                     + u_AD%HubMotion%NNodes   * 9    ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_RotationVel) with 3 components
+                     + u_AD%rotors(1)%TowerMotion%NNodes * 9  & ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
+                     + u_AD%rotors(1)%HubMotion%NNodes   * 9    ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_RotationVel) with 3 components
    
-         do k = 1,size(u_AD%BladeRootMotion)         
-            AD_Start_Bl = AD_Start_Bl + u_AD%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
+         do k = 1,size(u_AD%rotors(1)%BladeRootMotion)         
+            AD_Start_Bl = AD_Start_Bl + u_AD%rotors(1)%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
          end do
          ! next is u_AD%BladeMotion(k):
                   
-         DO K = 1,SIZE(u_AD%BladeMotion)
-            DO J = 1,u_AD%BladeMotion(k)%Nnodes
+         DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
+            DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
                Node = Node + 1 ! InflowWind node
                do i=1,3 !XYZ components of this node
                   i2 = y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (Node-1)*3 + i - 1
@@ -1847,11 +1847,11 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
             END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
                      
                ! get starting AD index of BladeMotion for next blade
-            AD_Start_Bl = AD_Start_Bl + u_AD%BladeMotion(k)%Nnodes * 9  ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
+            AD_Start_Bl = AD_Start_Bl + u_AD%rotors(1)%BladeMotion(k)%Nnodes * 9  ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
          END DO !K = 1,p%NumBl     
          
             ! tower:
-         DO J=1,u_AD%TowerMotion%nnodes
+         DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
             Node = Node + 1   
             do i=1,3 !XYZ components of this node
                i2 = y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (Node-1)*3 + i - 1
@@ -1915,7 +1915,7 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
             ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(k)%NNodes*3 ! skip the forces on this blade
             AD_Start_Bl = Indx_u_AD_Blade_Start(u_AD, y_FAST, k) 
             
-            CALL Linearize_Line2_to_Point( y_AD%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
+            CALL Linearize_Line2_to_Point( y_AD%rotors(1)%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
                ! AD is source in the mapping, so we want M_{uSm}               
@@ -1932,11 +1932,11 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       
       ! ED inputs on tower from AD:
       
-      IF ( y_AD%TowerLoad%Committed ) THEN
+      IF ( y_AD%rotors(1)%TowerLoad%Committed ) THEN
          ED_Start_mt = Indx_u_ED_Tower_Start(u_ED, y_FAST) &
                        + u_ED%TowerPtLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
          
-         CALL Linearize_Line2_to_Point( y_AD%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%TowerMotion, y_ED%TowerLn2Mesh )
+         CALL Linearize_Line2_to_Point( y_AD%rotors(1)%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%rotors(1)%TowerMotion, y_ED%TowerLn2Mesh )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
             
             ! AD is source in the mapping, so we want M_{uSm}
@@ -2337,7 +2337,7 @@ SUBROUTINE Linear_BD_InputSolve_du( p_FAST, y_FAST, y_ED, y_AD, u_AD, BD, MeshMa
       if (p_FAST%BD_OutputSibling) then
             
          DO K = 1,p_FAST%nBeams ! Loop through all blades
-            CALL Linearize_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), BD%y(k)%BldMotion )
+            CALL Linearize_Line2_to_Line2( y_AD%rotors(1)%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), BD%y(k)%BldMotion )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          END DO
          
@@ -2349,7 +2349,7 @@ SUBROUTINE Linear_BD_InputSolve_du( p_FAST, y_FAST, y_ED, y_AD, u_AD, BD, MeshMa
             CALL Linearize_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-            CALL Linearize_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
+            CALL Linearize_Line2_to_Line2( y_AD%rotors(1)%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          END DO
          
@@ -2444,16 +2444,16 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
    !-------------------------------------------------------------------------------------------------
       
       ! tower
-   IF (u_AD%TowerMotion%Committed) THEN
+   IF (u_AD%rotors(1)%TowerMotion%Committed) THEN
 
-         CALL Linearize_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
+         CALL Linearize_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%TowerMotion' )     
 
       
       !AD is the destination here, so we need tv_ud
       if (allocated( MeshMapData%ED_L_2_AD_L_T%dM%tv_ud)) then
          AD_Start_td = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-         AD_Start_tv = AD_Start_td + u_AD%TowerMotion%NNodes * 6 ! 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         AD_Start_tv = AD_Start_td + u_AD%rotors(1)%TowerMotion%NNodes * 6 ! 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
 
          call SetBlockMatrix( dUdu, MeshMapData%ED_L_2_AD_L_T%dM%tv_ud, AD_Start_tv, AD_Start_td )
       end if
@@ -2465,15 +2465,15 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
       ! blades
    IF (p_FAST%CompElast == Module_ED ) THEN
       
-      DO k=1,size(u_AD%BladeMotion)
-         CALL Linearize_Line2_to_Line2( y_ED%BladeLn2Mesh(k), u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
+      DO k=1,size(u_AD%rotors(1)%BladeMotion)
+         CALL Linearize_Line2_to_Line2( y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )
       END DO
       
    ELSEIF (p_FAST%CompElast == Module_BD ) THEN
    
-      DO k=1,size(u_AD%BladeMotion)
-         CALL Linearize_Line2_to_Line2( BD%y(k)%BldMotion, u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
+      DO k=1,size(u_AD%rotors(1)%BladeMotion)
+         CALL Linearize_Line2_to_Line2( BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )
       END DO
          
@@ -2481,19 +2481,19 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
    
    
    
-   DO k=1,size(u_AD%BladeMotion)
+   DO k=1,size(u_AD%rotors(1)%BladeMotion)
       AD_Start_td = Indx_u_AD_Blade_Start(u_AD, y_FAST, k) ! index for u_AD%BladeMotion(k)%translationDisp field
 
          !AD is the destination here, so we need tv_ud
       if (allocated( MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud)) then
             ! index for u_AD%BladeMotion(k+1)%translationVel field
-         AD_Start_tv = AD_Start_td + u_AD%BladeMotion(k)%NNodes * 6 ! 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field
+         AD_Start_tv = AD_Start_td + u_AD%rotors(1)%BladeMotion(k)%NNodes * 6 ! 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field
 
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud, AD_Start_tv, AD_Start_td )
       end if
          
       if (allocated( MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud)) then
-         AD_Start_ta = AD_Start_td + u_AD%BladeMotion(k)%NNodes * 12 ! 4 fields (TranslationDisp, Orientation, TranslationVel, and RotationVel) with 3 components before translational velocity field
+         AD_Start_ta = AD_Start_td + u_AD%rotors(1)%BladeMotion(k)%NNodes * 12 ! 4 fields (TranslationDisp, Orientation, TranslationVel, and RotationVel) with 3 components before translational velocity field
          
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%ta_ud, AD_Start_ta, AD_Start_td )
       end if
@@ -2527,16 +2527,16 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy  )
       dUdy(y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + SrvD_Indx_Y_BlPitchCom(i) - 1, ED_Start_Yaw + i - 1) = -1.0_ReKi
    end do
       
-   !IF (u_SrvD%NTMD%Mesh%Committed) THEN
+   !IF (u_SrvD%NStC%Mesh%Committed) THEN
    !   
-   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NTMD%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
+   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStC%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
    !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    !         
    !END IF
    !
-   !IF (u_SrvD%TTMD%Mesh%Committed) THEN
+   !IF (u_SrvD%TSC%Mesh%Committed) THEN
    !   
-   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
+   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStC%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
    !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    !         
    !END IF
@@ -2590,13 +2590,13 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
          dUdy(ED_Start + i - 1, y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + i - 1) = -1.0_ReKi !SrvD_Indx_Y_BlPitchCom
       end do
       
-      !IF (y_SrvD%NTMD%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%NTMD%Mesh, u_ED%NacelleLoads, MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NTMD%Mesh, y_ED%NacelleMotion )
+      !IF (y_SrvD%NStC%Mesh%Committed) THEN      
+      !   CALL Linearize_Point_to_Point( y_SrvD%NStC%Mesh, u_ED%NacelleLoads, MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NStC%Mesh, y_ED%NacelleMotion )
       !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%NacelleLoads' )                  
       !END IF
       !
-      !IF (y_SrvD%TTMD%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%TTMD%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TTMD%Mesh, y_ED%TowerLn2Mesh )
+      !IF (y_SrvD%TStC%Mesh%Committed) THEN      
+      !   CALL Linearize_Point_to_Point( y_SrvD%TStC%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TStC%Mesh, y_ED%TowerLn2Mesh )
       !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerPtLoads' )                  
       !END IF
             
@@ -2608,7 +2608,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    IF ( p_FAST%CompAero == Module_AD ) THEN
 
       IF (p_FAST%CompElast == Module_ED) THEN 
-         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + y_AD%TowerLoad%NNodes * 6    ! start of y_AD%BladeLoad(1)%Force field [2 fields (force, moment) with 3 components]
+         AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + y_AD%rotors(1)%TowerLoad%NNodes * 6    ! start of y_AD%BladeLoad(1)%Force field [2 fields (force, moment) with 3 components]
          
          DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
             !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
@@ -2617,19 +2617,19 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
                
                ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
             ED_Start = Indx_u_ED_Blade_Start(u_ED, y_FAST, k) ! start of u_ED%BladePtLoads(k)%Force field
-            call Assemble_dUdy_Loads(y_AD%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ED_Start, AD_Out_Start, dUdy)
+            call Assemble_dUdy_Loads(y_AD%rotors(1)%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ED_Start, AD_Out_Start, dUdy)
 
                ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
             ED_Start = Indx_u_ED_Blade_Start(u_ED, y_FAST, k) + u_ED%BladePtLoads(k)%NNodes*3   ! start of u_ED%BladePtLoads(k)%Moment field (skip the ED forces)
             ED_Out_Start = Indx_y_ED_Blade_Start(y_ED, y_FAST, k) ! start of y_ED%BladeLn2Mesh(1)%TranslationDisp field
             call SetBlockMatrix( dUdy, MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD, ED_Start, ED_Out_Start )
 
-            AD_Out_Start = AD_Out_Start + y_AD%BladeLoad(k)%NNodes*6        ! start of y_AD%BladeLoad(k+1)%Force field [skip 2 fields to forces on next blade]
+            AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%BladeLoad(k)%NNodes*6        ! start of y_AD%BladeLoad(k+1)%Force field [skip 2 fields to forces on next blade]
          END DO
       END IF ! ED
       
       
-      IF ( y_AD%TowerLoad%Committed ) THEN
+      IF ( y_AD%rotors(1)%TowerLoad%Committed ) THEN
          !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
          !CALL Linearize_Line2_to_Point( y_AD%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%TowerMotion, y_ED%TowerLn2Mesh )
@@ -2637,7 +2637,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
             ! AD loads-to-ED loads transfer (dU^{ED}/dy^{AD}):
          ED_Start = Indx_u_ED_Tower_Start(u_ED, y_FAST) ! u_ED%TowerPtLoads%Force field
          AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) ! start of y_AD%Tower%Force
-         call Assemble_dUdy_Loads(y_AD%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ED_Start, AD_Out_Start, dUdy)
+         call Assemble_dUdy_Loads(y_AD%rotors(1)%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ED_Start, AD_Out_Start, dUdy)
 
             ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
          ED_Start = ED_Start + u_ED%TowerPtLoads%NNodes*3 ! start of u_ED%TowerPtLoads%Moment field  [skip the ED forces to get to the moments]
@@ -2792,7 +2792,7 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       !!!   CALL Linearize_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
       !!!end if
 
-      AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + y_AD%TowerLoad%NNodes * 6    ! start of y_AD%BladeLoad(1)%Force field [2 fields (force, moment) with 3 components]
+      AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + y_AD%rotors(1)%TowerLoad%NNodes * 6    ! start of y_AD%BladeLoad(1)%Force field [2 fields (force, moment) with 3 components]
       DO K = 1,p_FAST%nBeams ! Loop through all blades
 
          BD_Start = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_INPUT_COL) & ! start of BD%Input(1,k)%DistrLoad%Force field
@@ -2800,8 +2800,8 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
                   + BD%Input(1,k)%PointLoad%NNodes  * 6    ! force + moment fields for each node
             
             ! AD loads-to-BD loads transfer (dU^{BD}/dy^{AD}):
-         call Assemble_dUdy_Loads(y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), BD_Start, AD_Out_Start, dUdy)
-         AD_Out_Start = AD_Out_Start + y_AD%BladeLoad(k)%NNodes*6  ! start of y_AD%BladeLoad(k+1)%Force field [skip the moments to get to forces on next blade]
+         call Assemble_dUdy_Loads(y_AD%rotors(1)%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), BD_Start, AD_Out_Start, dUdy)
+         AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%BladeLoad(k)%NNodes*6  ! start of y_AD%BladeLoad(k+1)%Force field [skip the moments to get to forces on next blade]
          
          
             ! BD translation displacement-to-BD moment transfer (dU^{BD}/dy^{BD}):
@@ -2880,8 +2880,8 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
       
       AD_Start = Indx_u_AD_BladeInflow_Start(u_AD, y_FAST) ! start of u_AD%InflowOnBlade array
       
-      do k=1,size(u_AD%InflowOnBlade,3) ! blades
-         do j=1,size(u_AD%InflowOnBlade,2) ! nodes
+      do k=1,size(u_AD%rotors(1)%InflowOnBlade,3) ! blades
+         do j=1,size(u_AD%rotors(1)%InflowOnBlade,2) ! nodes
             do i=1,3 !velocity component
                dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
             end do
@@ -2890,8 +2890,8 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
          end do         
       end do
                   
-      if ( allocated(u_AD%InflowOnTower) ) then         
-         do j=1,size(u_AD%InflowOnTower,2) !nodes
+      if ( allocated(u_AD%rotors(1)%InflowOnTower) ) then         
+         do j=1,size(u_AD%rotors(1)%InflowOnTower,2) !nodes
             do i=1,3 !velocity component
                dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
             end do
@@ -2941,7 +2941,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMa
       !...................................
       ! tower
       !...................................
-   IF (u_AD%TowerMotion%Committed) THEN
+   IF (u_AD%rotors(1)%TowerMotion%Committed) THEN
             
       !!! ! This linearization was done in forming dUdu (see Linear_AD_InputSolve_du()), so we don't need to re-calculate these matrices 
       !!! ! while forming dUdy, too.
@@ -2950,14 +2950,14 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMa
       AD_Start = Indx_u_AD_Tower_Start(u_AD, y_FAST) ! start of u_AD%TowerMotion%TranslationDisp field
       
          ED_Out_Start = Indx_y_ED_Tower_Start(y_ED, y_FAST) ! start of y_ED%TowerLn2Mesh%TranslationDisp field
-         call Assemble_dUdy_Motions(y_ED%TowerLn2Mesh, u_AD%TowerMotion, MeshMapData%ED_L_2_AD_L_T, AD_Start, ED_Out_Start, dUdy, skipRotVel=.true.)
+         call Assemble_dUdy_Motions(y_ED%TowerLn2Mesh, u_AD%rotors(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, AD_Start, ED_Out_Start, dUdy, skipRotVel=.true.)
       
    END IF
       
       !...................................
       ! hub
       !...................................
-      CALL Linearize_Point_to_Point( y_ED%HubPtMotion, u_AD%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
+      CALL Linearize_Point_to_Point( y_ED%HubPtMotion, u_AD%rotors(1)%HubMotion, MeshMapData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%HubMotion' )
          if (errStat>=AbortErrLev) return
          
@@ -2970,11 +2970,11 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMa
       call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%fx_p, AD_Start, ED_Out_Start )
          
       ! *** AD orientation: from ED orientation
-      AD_Start = AD_Start + u_AD%HubMotion%NNodes * 3 ! move past the AD translation disp field to orientation field         
+      AD_Start = AD_Start + u_AD%rotors(1)%HubMotion%NNodes * 3 ! move past the AD translation disp field to orientation field         
       call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
       
       ! *** AD rotational velocity: from ED rotational velocity
-      AD_Start = AD_Start + u_AD%HubMotion%NNodes * 3 ! move past the AD orientation field to rotational velocity field          
+      AD_Start = AD_Start + u_AD%rotors(1)%HubMotion%NNodes * 3 ! move past the AD orientation field to rotational velocity field          
       ED_Out_Start = Indx_y_ED_Hub_Start(y_ED, y_FAST) + y_ED%HubPtMotion%NNodes * 6 ! ! start of y_ED%HubPtMotion%RotationVel field
       call SetBlockMatrix( dUdy, MeshMapData%ED_P_2_AD_P_H%dM%mi, AD_Start, ED_Out_Start )
          
@@ -2984,7 +2984,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMa
       ! blade root   
       !...................................
       DO k=1,size(y_ED%BladeRootMotion)
-         CALL Linearize_Point_to_Point( y_ED%BladeRootMotion(k), u_AD%BladeRootMotion(k), MeshMapData%ED_P_2_AD_P_R(k), ErrStat2, ErrMsg2 )
+         CALL Linearize_Point_to_Point( y_ED%BladeRootMotion(k), u_AD%rotors(1)%BladeRootMotion(k), MeshMapData%ED_P_2_AD_P_R(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeRootMotion('//trim(num2lstr(k))//')' )      
             if (errStat>=AbortErrLev) return
                
@@ -3011,7 +3011,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMa
          
          AD_Start = Indx_u_AD_Blade_Start(u_AD, y_FAST, k)     ! start of u_AD%BladeMotion(k)%TranslationDisp field
          ED_Out_Start = Indx_y_ED_Blade_Start(y_ED, y_FAST, k) ! start of y_ED%BladeLn2Mesh(k)%TranslationDisp field
-         CALL Assemble_dUdy_Motions(y_ED%BladeLn2Mesh(k), u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, ED_Out_Start, dUdy, skipRotAcc=.true.)
+         CALL Assemble_dUdy_Motions(y_ED%BladeLn2Mesh(k), u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, ED_Out_Start, dUdy, skipRotAcc=.true.)
          
       END DO
       
@@ -3024,7 +3024,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMa
          AD_Start     = Indx_u_AD_Blade_Start(u_AD, y_FAST, k)     ! start of u_AD%BladeMotion(k)%TranslationDisp field
          BD_Out_Start = y_FAST%Lin%Modules(Module_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)
          
-         CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, skipRotAcc=.true.)
+         CALL Assemble_dUdy_Motions(BD%y(k)%BldMotion, u_AD%rotors(1)%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), AD_Start, BD_Out_Start, dUdy, skipRotAcc=.true.)
       END DO
    
    END IF
@@ -4181,7 +4181,7 @@ FUNCTION Indx_u_AD_Hub_Start(u_AD, y_FAST) RESULT(AD_Start)
 
    INTEGER                                      :: AD_Start         !< starting index of this mesh in AeroDyn inputs
 
-   AD_Start = Indx_u_AD_Tower_Start(u_AD, y_FAST) + u_AD%TowerMotion%NNodes * 9  ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
+   AD_Start = Indx_u_AD_Tower_Start(u_AD, y_FAST) + u_AD%rotors(1)%TowerMotion%NNodes * 9  ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
 
 END FUNCTION Indx_u_AD_Hub_Start
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4194,10 +4194,10 @@ FUNCTION Indx_u_AD_BladeRoot_Start(u_AD, y_FAST, BladeNum) RESULT(AD_Start)
 
    INTEGER                                      :: AD_Start         !< starting index of this mesh in AeroDyn inputs
 
-   AD_Start = Indx_u_AD_Hub_Start(u_AD, y_FAST) + u_AD%HubMotion%NNodes * 9  ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_RotationVel) with 3 components
+   AD_Start = Indx_u_AD_Hub_Start(u_AD, y_FAST) + u_AD%rotors(1)%HubMotion%NNodes * 9  ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_RotationVel) with 3 components
    
-   do k = 1,min(BladeNum-1,size(u_AD%BladeRootMotion))
-      AD_Start = AD_Start + u_AD%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
+   do k = 1,min(BladeNum-1,size(u_AD%rotors(1)%BladeRootMotion))
+      AD_Start = AD_Start + u_AD%rotors(1)%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
    end do
 END FUNCTION Indx_u_AD_BladeRoot_Start
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4212,8 +4212,8 @@ FUNCTION Indx_u_AD_Blade_Start(u_AD, y_FAST, BladeNum) RESULT(AD_Start)
 
    AD_Start = Indx_u_AD_BladeRoot_Start(u_AD, y_FAST, MaxNBlades+1)
    
-   do k = 1,min(BladeNum-1,size(u_AD%BladeMotion))
-      AD_Start = AD_Start + u_AD%BladeMotion(k)%NNodes * 15 ! 5 fields (TranslationDisp, MASKID_Orientation, TranslationVel, RotationVel, TranslationAcc) with 3 components
+   do k = 1,min(BladeNum-1,size(u_AD%rotors(1)%BladeMotion))
+      AD_Start = AD_Start + u_AD%rotors(1)%BladeMotion(k)%NNodes * 15 ! 5 fields (TranslationDisp, MASKID_Orientation, TranslationVel, RotationVel, TranslationAcc) with 3 components
    end do
 END FUNCTION Indx_u_AD_Blade_Start
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4893,33 +4893,33 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
       
          indx = 1
             ! set linearization operating points:
-         if (AD%p%BEMT%DBEMT%lin_nx>0) then
-            do j=1,size(AD%x(STATE_CURR)%BEMT%DBEMT%element,2)
-               do i=1,size(AD%x(STATE_CURR)%BEMT%DBEMT%element,1)
-                  indx_last = indx + size(AD%x(STATE_CURR)%BEMT%DBEMT%element(i,j)%vind) - 1
-                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%BEMT%DBEMT%element(i,j)%vind, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
-                                                                                                    y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
+         if (AD%p%rotors(1)%BEMT%DBEMT%lin_nx>0) then
+            do j=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element,2)
+               do i=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element,1)
+                  indx_last = indx + size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element(i,j)%vind) - 1
+                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element(i,j)%vind, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+                                                                                                              y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
                   indx = indx_last + 1
                end do
             end do
    
-            do j=1,size(AD%x(STATE_CURR)%BEMT%DBEMT%element,2)
-               do i=1,size(AD%x(STATE_CURR)%BEMT%DBEMT%element,1)
-                  indx_last = indx + size(AD%x(STATE_CURR)%BEMT%DBEMT%element(i,j)%vind_dot) - 1
-                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%BEMT%DBEMT%element(i,j)%vind_dot, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
-                                                                                                        y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
+            do j=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element,2)
+               do i=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element,1)
+                  indx_last = indx + size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element(i,j)%vind_dot) - 1
+                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element(i,j)%vind_dot, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+                                                                                                                  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
                   indx = indx_last + 1
                end do
             end do
       
          end if
    
-         if (AD%p%BEMT%UA%lin_nx>0) then
-            do j=1,size(AD%x(STATE_CURR)%BEMT%UA%element,2)
-               do i=1,size(AD%x(STATE_CURR)%BEMT%UA%element,1)
-                  indx_last = indx + size(AD%x(STATE_CURR)%BEMT%UA%element(i,j)%x) - 1
-                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%BEMT%UA%element(i,j)%x,  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
-                                                                                               y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
+         if (AD%p%rotors(1)%BEMT%UA%lin_nx>0) then
+            do j=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element,2)
+               do i=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element,1)
+                  indx_last = indx + size(AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element(i,j)%x) - 1
+                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element(i,j)%x,  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+                                                                                                         y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
                   indx = indx_last + 1
                end do
             end do

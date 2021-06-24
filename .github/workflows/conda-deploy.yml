@@ -1,0 +1,49 @@
+
+name: 'Conda Deployment Pipeline'
+
+on:
+  push:
+    branches:
+      - 'dev'
+    paths-ignore:
+      - 'LICENSE'
+      - 'README.rst'
+      - 'docs/**'
+      - 'share/**'
+      - 'vs-build/**'
+
+jobs:
+  update-dev:
+    if: github.repository_owner == 'OpenFAST'
+    runs-on: ubuntu-20.04
+    steps:
+      # - name: Echo path
+      #   run: |
+      #     echo ${{runner.workspace}} # /home/runner/work/openfast
+      #     echo $GITHUB_WORKSPACE     # /home/runner/work/openfast/openfast
+      - name: Checkout OpenFAST/dev
+        uses: actions/checkout@main
+        with:
+          path: ${{runner.workspace}}/openfast
+          ref: dev
+
+      - name: Checkout openfast-feedstock
+        uses: actions/checkout@main
+        with: 
+          repository: conda-forge/openfast-feedstock
+          token: ${{ secrets.ACTIONS_TOKEN }}
+          path: ./openfast-feedstock
+          ref: dev
+
+      - name: Prep the meta.yaml
+        run: python ${{runner.workspace}}/openfast/.github/actions/utils/increment_conda_build.py
+        working-directory: ./openfast-feedstock/recipe
+
+      - name: Push Project B
+        run: |
+          cd ./openfast-feedstock
+          git add recipe/meta.yaml
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git commit -m "Increment build number for dev label"
+          git push

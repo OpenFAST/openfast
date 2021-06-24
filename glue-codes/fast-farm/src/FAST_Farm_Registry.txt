@@ -1,0 +1,133 @@
+###################################################################################################################################
+# Registry for FAST_Farm in the FAST Modularization Framework
+# This Registry file is used to create MODULE FAST_Farm_Types, which contains all of the user-defined types needed in fast_farm.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+#
+# Entries are of the form
+# keyword <ModuleName/ModName> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value from the previous line.
+# See NWTC Programmer's Handbook at https://nwtc.nrel.gov/FAST-Developers for further information on the format/contents of this file.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+usefrom FASTWrapper_Registry.txt
+usefrom WakeDynamics_Registry.txt
+usefrom AWAE_Registry.txt
+usefrom SuperController_Registry.txt
+
+param	FAST_Farm/Farm	-	INTEGER	NumFFModules	-	4	-	"The number of modules available in FAST.Farm"	-
+param	^	-	INTEGER	ModuleFF_None	  -	0	-	"No module selected"	-
+param	^	-	INTEGER	ModuleFF_SC	  -	1	-	"Super Controller"	-
+param	^	-	INTEGER	ModuleFF_FWrap  -	2	-	"FAST Wrapper"	-
+param	^	-	INTEGER	ModuleFF_WD	  -	3	-	"Wake Dynamics"	-
+param	^	-	INTEGER	ModuleFF_AWAE	  -	4	-	"Ambient Wind and Array Effects"	-
+# ..... Parameters ................................................................................................................
+typedef  FAST_Farm/Farm  ParameterType         DbKi            DT_low          -    - - "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step" seconds
+typedef  ^               ParameterType         DbKi            DT_high         -    - - "High-resolution time step"  seconds
+typedef  ^               ParameterType         DbKi            TMax            -    - - "Total run time" seconds
+typedef  ^               ParameterType         IntKi           n_high_low      -    - - "Number of high-resolution time steps per low-resolution time step"      -
+typedef  ^               ParameterType         IntKi           NumTurbines     -    - - "Number of turbines in the simulation" -
+typedef  ^               ParameterType         CHARACTER(1024) WindFilePath    -    - - "Path name of wind data files from ABLSolver precursor" -
+typedef  ^               ParameterType         CHARACTER(1024) SC_FileName    -    - -  "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms" -
+typedef	^	             ParameterType	        LOGICAL	      UseSC 	       -	   - - "Use a super controller?"	-
+typedef  ^               ParameterType         ReKi            WT_Position   {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
+typedef  ^               ParameterType         CHARACTER(1024) WT_FASTInFile {:}    - - "Name of input file for each turbine" -
+typedef  ^               ParameterType         CHARACTER(1024) FTitle          -    - - "The description line from the primary FAST.Farm input file" -
+typedef  ^               ParameterType         CHARACTER(1024) OutFileRoot     -    - - "The root name derived from the primary FAST.Farm input file" -
+typedef  ^               ParameterType         INTEGER         n_ChkptTime     -    - - "Number of time steps between writing checkpoint files"	-
+typedef  ^               ParameterType         DbKi            TStart          -    - - "Time to begin tabular output" s
+typedef  ^               ParameterType         IntKi           n_TMax          -    - - "Number of the time step of TMax (the end time of the simulation)" -
+# parameters for data output to files:
+typedef	^	             ParameterType	        LOGICAL	      SumPrint	       -	   - - "Print summary data to file? (.sum)"	-
+typedef  ^               ParameterType         LOGICAL         WrBinOutFile    -    - - "Write a binary output file? (.outb)" -
+typedef  ^               ParameterType         LOGICAL         WrTxtOutFile    -    - - "Write a text (formatted) output file? (.out)" -
+typedef  ^               ParameterType         CHARACTER(1)    Delim           -    - - "Delimiter between columns of text output file (.out): space or tab" -
+typedef  ^               ParameterType         CHARACTER(20)   OutFmt          -    - - "Format used for text tabular output (except time); resulting field should be 10 characters" -
+typedef  ^               ParameterType         CHARACTER(20)   OutFmt_t        -    - - "Format used for time channel in text tabular output; resulting field should be 10 characters" -
+typedef  ^               ParameterType         IntKi           FmtWidth        -    - - "width of the time OutFmt specifier" -
+typedef  ^               ParameterType         IntKi           TChanLen        -    - - "width of the time channel" -
+typedef  ^               ParameterType         IntKi           NOutTurb        -    - - "Number of turbines for write output [1 to 9]"
+typedef  ^               ParameterType         IntKi           NOutRadii       -    - - "Number of radial nodes for wake output for an individual rotor [0 to 20]" -
+typedef  ^               ParameterType         IntKi           OutRadii       {:}   - - "List of radial nodes for wake output for an individual rotor [1 to NOutRadii]" -
+typedef  ^               ParameterType         IntKi           NOutDist        -    - - "Number of downstream distances for wake output for an individual rotor [0 to 9]" -
+typedef  ^               ParameterType         ReKi            OutDist        {:}   - - "List of downstream distances for wake output for an individual rotor [1 to NOutDist]" meters
+typedef  ^               ParameterType         IntKi           NWindVel        -    - - "Number of points for wind output [0 to 9]" -
+typedef  ^               ParameterType         ReKi            WindVelX       {:}   - - "List of coordinates in the X direction for wind output [1 to NWindVel]" meters
+typedef  ^               ParameterType         ReKi            WindVelY       {:}   - - "List of coordinates in the Y direction for wind output [1 to NWindVel]" meters
+typedef  ^               ParameterType         ReKi            WindVelZ       {:}   - - "List of coordinates in the Z direction for wind output [1 to NWindVel]" meters
+typedef	^	             ParameterType	        OutParmType   OutParam	      {:}	- - "Names and units (and other characteristics) of all requested output parameters"	-
+typedef  ^               ParameterType         IntKi           NumOuts         -    - - "Number of user-requested outputs" -
+typedef	^	             ParameterType	        IntKi	         NOutSteps	    -	   - - "Maximum number of output steps" -
+typedef	^	             ParameterType	        CHARACTER(1024) FileDescLines  {3}   - - "File Description lines" -
+typedef	^	             ParameterType	        ProgDesc	      Module_Ver	{NumModules}	-	-	"Version information from all modules"
+
+typedef  ^               ParameterType         IntKi           UnOu            -    - - "File unit for Fast.Farm output data" -
+typedef  ^               ParameterType         ReKi            dX_low          -    - - "The spacing of the low-resolution nodes in X direction" m
+typedef  ^               ParameterType         ReKi            dY_low          -    - - "The spacing of the low-resolution nodes in Y direction" m
+typedef  ^               ParameterType         ReKi            dZ_low          -    - - "The spacing of the low-resolution nodes in Z direction" m
+typedef  ^               ParameterType         IntKi           nX_low          -    - - "Number of low-resolution spatial nodes in X direction" -
+typedef  ^               ParameterType         IntKi           nY_low          -    - - "Number of low-resolution spatial nodes in Y direction" -
+typedef  ^               ParameterType         IntKi           nZ_low          -    - - "Number of low-resolution spatial nodes in Z direction" -
+typedef  ^               ParameterType         ReKi            X0_low          -    - - "X-component of the origin of the low-resolution spatial domain" m
+typedef  ^               ParameterType         ReKi            Y0_low          -    - - "Y-component of the origin of the low-resolution spatial domain" m
+typedef  ^               ParameterType         ReKi            Z0_low          -    - - "Z-component of the origin of the low-resolution spatial domain" m
+# ..... FAST MiscVar data .......................................................................................................
+typedef	^	             MiscVarType	        ReKi	         AllOuts	      {:}	- - "An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
+typedef	^              	^              	  DbKi	         TimeData	{:}	-	-	"Array to contain the time output data for the binary file (first output time and a time [fixed] increment)"
+typedef	^              	^              	  ReKi	         AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
+typedef	^	^	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"
+
+# ..... FASTWrapper data .......................................................................................................
+typedef    ^    FASTWrapper_Data  FWrap_ContinuousStateType x             -   -         -   "Continuous states"
+typedef    ^    ^                 FWrap_DiscreteStateType   xd            -   -         -   "Discrete states"
+typedef    ^    ^                 FWrap_ConstraintStateType z             -   -         -   "Constraint states"
+typedef    ^    ^                 FWrap_OtherStateType      OtherSt       -   -         -   "Other states"
+typedef    ^    ^                 FWrap_ParameterType       p             -   -         -   "Parameters"
+typedef    ^    ^                 FWrap_InputType           u             -   -         -   "System inputs"
+typedef    ^    ^                 FWrap_OutputType          y             -   -         -   "System outputs"
+typedef    ^    ^                 FWrap_MiscVarType         m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has FWrap_Init been called"
+
+# ..... WakeDynamics data .......................................................................................................
+typedef    ^    WakeDynamics_Data WD_ContinuousStateType    x             -   -         -   "Continuous states"
+typedef    ^    ^                 WD_DiscreteStateType      xd            -   -         -   "Discrete states"
+typedef    ^    ^                 WD_ConstraintStateType    z             -   -         -   "Constraint states"
+typedef    ^    ^                 WD_OtherStateType         OtherSt       -   -         -   "Other states"
+typedef    ^    ^                 WD_ParameterType          p             -   -         -   "Parameters"
+typedef    ^    ^                 WD_InputType              u             -   -         -   "System inputs"
+typedef    ^    ^                 WD_OutputType             y             -   -         -   "System outputs"
+typedef    ^    ^                 WD_MiscVarType            m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has WD_Init been called"
+
+# ..... AWAE data .......................................................................................................
+typedef    ^    AWAE_Data         AWAE_ContinuousStateType  x             -   -         -   "Continuous states"
+typedef    ^    ^                 AWAE_DiscreteStateType    xd            -   -         -   "Discrete states"
+typedef    ^    ^                 AWAE_ConstraintStateType  z             -   -         -   "Constraint states"
+typedef    ^    ^                 AWAE_OtherStateType       OtherSt       -   -         -   "Other states"
+typedef    ^    ^                 AWAE_ParameterType        p             -   -         -   "Parameters"
+typedef    ^    ^                 AWAE_InputType            u             -   -         -   "System inputs"
+typedef    ^    ^                 AWAE_OutputType           y             -   -         -   "System outputs"
+typedef    ^    ^                 AWAE_MiscVarType          m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has AWAE_Init been called"
+# ..... SC data .......................................................................................................
+typedef    ^    SC_Data           SC_ContinuousStateType    x             -   -         -   "Continuous states" -
+typedef    ^    ^                 SC_DiscreteStateType      xd            -   -         -   "Discrete states"
+typedef    ^    ^                 SC_ConstraintStateType    z             -   -         -   "Constraint states"
+typedef    ^    ^                 SC_OtherStateType         OtherState    -   -         -   "Other states"
+typedef    ^    ^                 SC_ParameterType          p             -   -         -   "Parameters"
+typedef    ^    ^                 SC_InputType              uInputs       -   -         -   "System inputs"
+typedef    ^    ^                 DbKi                      utimes       {1}  -         -   "Current time" s
+typedef    ^    ^                 SC_OutputType             y             -   -         -   "System outputs"
+typedef    ^    ^                 SC_MiscVarType            m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has SC_Init been called"
+# ..... All submodules' variables.................................................................................................
+typedef    ^   All_FastFarm_Data  Farm_ParameterType        p          -   -   -   "FAST.Farm parameter data" -
+typedef    ^   All_FastFarm_Data  Farm_MiscVarType          m          -   -   -   "FAST.Farm misc var data" -
+typedef    ^   All_FastFarm_Data  FASTWrapper_Data          FWrap     {:}  -   -   "FASTWrapper data (one instance per turbine)" -
+typedef    ^   All_FastFarm_Data  WakeDynamics_Data         WD        {:}  -   -   "WakeDynamics (WD) data" -
+typedef    ^   All_FastFarm_Data  AWAE_Data                 AWAE       -   -   -   "Ambient Wind & Array Effects (AWAE) data" -
+typedef    ^   All_FastFarm_Data  SC_Data                   SC         -   -   -   "Super Controller (SC) data" -
+# ..... FAST.Farm data ................................................................................................................
+#

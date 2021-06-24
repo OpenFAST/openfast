@@ -58,7 +58,7 @@ subroutine test_BD_ComputeIniNodalCrv()
     angle = 0.0_BDKi
 
     ! Baseline Wiener-Milenkovic parameters
-    param = 4*tan((-Pi_D/4)/4)
+    param = 4.*tan((-Pi_D/4.)/4.)
     baseline_wmparams = (/ param, real(0.0, BDKi), real(0.0, BDKi) /)
 
     call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
@@ -72,7 +72,7 @@ subroutine test_BD_ComputeIniNodalCrv()
     angle = 45.0_BDKi
 
     ! Baseline Wiener-Milenkovic parameters
-    param = 4*tan((Pi_D/4)/4)
+    param = 4.*tan((Pi_D/4.)/4.)
     baseline_wmparams = (/ real(0.0, BDKi), real(0.0, BDKi), param /)
 
     call BD_ComputeIniNodalCrv(n, angle, test_wmparams, ErrStat, ErrMsg)
