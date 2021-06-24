@@ -15,7 +15,9 @@ Value column input files
 ------------------------
 
 Only the first column in a *value column* based input file is read.  This is the
-historical format used by OpenFAST and it's predecessors. Everything after the
+historical format used by OpenFAST and it's predecessors (the keyword was often
+referenced in the source code and documentation, but OpenFAST did not process
+the keyword or description). Everything after the
 first value read is simply ignored by the code.  This allowed the user to keep
 old values while modifying things.  So for example, and input line like
 
@@ -28,6 +30,7 @@ would be read as `2` and the `20` and everything after it ignored.
 This format and associated parsing methodology is somewhat limited in informing
 the user of errors in parsing, and limited the ability to pass entire inpute
 files as text strings from another code (such as a Python driver code).
+
 
 .. _sec_format_key_value:
 
@@ -87,6 +90,9 @@ ServoDyn        Structural control submodule input file
 ServoDyn        Structural control sumbodule prescribed force input file
 SubDyn          SubDyn SSI matrix input files
 ============== ==========================================================
+
+Note that key + value format and value column input files can be identical
+if the value is stated before the key.
 
 Reasons for change
 ~~~~~~~~~~~~~~~~~~
