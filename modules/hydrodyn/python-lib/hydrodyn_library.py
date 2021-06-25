@@ -130,6 +130,7 @@ class HydroDynLib(CDLL):
 
         # Initial time related variables
         self.dt = 0.1                   # typical default for HD
+        self.t_start = 0.0              # initial time 
         self.tmax = 600.0               # typical default for HD waves FFT
         #FIXME: check tmax/total_time and note exactly what is different between them.
         self.total_time = 0.0           # may be longer than tmax
@@ -173,6 +174,7 @@ class HydroDynLib(CDLL):
             POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
             POINTER(c_float),                   # initNodePos -- initial node positions in flat array of 6*numNodePts
             POINTER(c_int),                     # InterpOrder
+            POINTER(c_double),                  # t_initial 
             POINTER(c_double),                  # dt
             POINTER(c_double),                  # tmax 
             POINTER(c_int),                     # number of channels
@@ -191,6 +193,19 @@ class HydroDynLib(CDLL):
             POINTER(c_float),                   # nodeAcc -- node accelerations  in flat array of 6*numNodePts
             POINTER(c_float),                   # nodeFrc -- node forces/moments in flat array of 6*numNodePts
             POINTER(c_float),                   # Output Channel Values
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.HydroDyn_CalcOutput_c.restype = c_int
+
+        self.HydroDyn_UpdateStates_c.argtypes = [
+            POINTER(c_double),                  # Time_C
+            POINTER(c_double),                  # TimeNext_C
+            POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
+            POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeVel -- node velocities     in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeAcc -- node accelerations  in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeFrc -- node forces/moments in flat array of 6*numNodePts
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
@@ -262,6 +277,7 @@ class HydroDynLib(CDLL):
             byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
             nodeInitLoc_flat_c,                     # IN: initNodePos -- initial node positions in flat array of 6*numNodePts
             byref(c_int(self.InterpOrder)),         # IN: InterpOrder (1: linear, 2: quadratic)
+            byref(c_double(self.t_start)),          # IN: time initial 
             byref(c_double(self.dt)),               # IN: time step (dt)
             byref(c_double(self.tmax)),             # IN: tmax
             byref(self._numChannels_c),             # OUT: number of channels
@@ -310,7 +326,7 @@ class HydroDynLib(CDLL):
 
         # Run HydroDyn_CalcOutput_c
         self.HydroDyn_CalcOutput_c(
-            byref(c_double(time)),                  # IN: time at which to calculate velocities
+            byref(c_double(time)),                  # IN: time at which to calculate output forces 
             byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
             nodePos_flat_c,                         # IN: positions - specified by user
             nodeVel_flat_c,                         # IN: velocities at desired positions
@@ -337,6 +353,49 @@ class HydroDynLib(CDLL):
         # Convert output channel values back into python
         for k in range(0,self.numChannels):
             outputChannelValues[k] = float(outputChannelValues_c[k])
+
+    # hydrodyn_updateStates ------------------------------------------------------------------------------------------------------------
+    def hydrodyn_updateStates(self, time, timeNext, nodePos, nodeVel, nodeAcc, nodeFrcMom):
+
+        # Check input motion info
+        self.check_input_motions(nodePos,nodeVel,nodeAcc)
+
+        # set flat arrays for inputs of motion
+        #   Position -- [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
+        nodePos_flat = [pp for p in nodePos for pp in p]
+        nodePos_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodePos_flat):
+            nodePos_flat_c[i] = c_float(p)
+
+        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
+        nodeVel_flat = [pp for p in nodeVel for pp in p]
+        nodeVel_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeVel_flat):
+            nodeVel_flat_c[i] = c_float(p)
+
+        #   Acceleration -- [Ax1,Ay1,Az1,RAx1,RAy1,RAz1, Ax2,Ay2,Az2,RAx2,RAy2,RAz2 ...]
+        nodeAcc_flat = [pp for p in nodeAcc for pp in p]
+        nodeAcc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeAcc_flat):
+            nodeAcc_flat_c[i] = c_float(p)
+
+        # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
+        nodeFrc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+
+        # Run HydroDyn_UpdateStates_c
+        self.HydroDyn_UpdateStates_c(
+            byref(c_double(time)),                  # IN: time at which to calculate output forces 
+            byref(c_double(timeNext)),              # IN: time T+dt we are stepping to 
+            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            nodePos_flat_c,                         # IN: positions - specified by user
+            nodeVel_flat_c,                         # IN: velocities at desired positions
+            nodeAcc_flat_c,                         # IN: accelerations at desired positions
+            nodeFrc_flat_c,                         # OUT: resulting forces/moments array
+            byref(self.error_status_c),             # OUT: ErrStat_C
+            self.error_message_c                    # OUT: ErrMsg_C
+        )
+
+        self.check_error()
 
     # hydrodyn_end ------------------------------------------------------------------------------------------------------------
     def hydrodyn_end(self):

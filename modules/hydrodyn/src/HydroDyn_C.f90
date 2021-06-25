@@ -58,17 +58,21 @@ MODULE HydroDyn_C
    integer(IntKi)                         :: InterpOrder
    !------------------------------
    !  Primary HD derived data types
-   type(HydroDyn_InputType),  allocatable :: u(:)              !< Inputs at T, T-dt, T-2*dt  (history kept for updating states) 
+   type(HydroDyn_InputType),  allocatable :: u(:)              !< Inputs at T, T-dt, T-2*dt (history kept for updating states)
    type(HydroDyn_InitInputType)           :: InitInp           !< Initialization data
    type(HydroDyn_InitOutputType)          :: InitOutData       !< Initial output data -- Names, units, and version info.
    type(HydroDyn_ParameterType)           :: p                 !< Parameters
-   type(HydroDyn_ContinuousStateType)     :: x                 !< continuous states at Time t
-   type(HydroDyn_DiscreteStateType)       :: xd                !< discrete states   at Time t
-   type(HydroDyn_ConstraintStateType)     :: z                 !< Constraint states at Time t
-   type(HydroDyn_OtherStateType)          :: OtherStates       !< Initial other/optimization states
+   type(HydroDyn_ContinuousStateType)     :: x(0:2)            !< continuous states at Time t and t+dt (predicted)
+   type(HydroDyn_DiscreteStateType)       :: xd(0:2)           !< discrete states   at Time t and t+dt (predicted)
+   type(HydroDyn_ConstraintStateType)     :: z(0:2)            !< Constraint states at Time t and t+dt (predicted)
+   type(HydroDyn_OtherStateType)          :: OtherStates(0:2)  !< Initial other/optimization states
    type(HydroDyn_OutputType)              :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
    type(HydroDyn_MiscVarType)             :: m                 !< Misc variables for optimization (not copied in glue code)
    !------------------------------
+   !  Time tracking
+   !     When we are performing a correction step, time information of previous
+   !     calls is needed to decide how to apply correction logic or cycle the inputs
+   !     and resave the previous timestep states.
    !  Correction steps
    !     OpenFAST has the ability to perform correction steps.  During a correction
    !     step, new input values are passed in but the timestep remains the same.
@@ -78,20 +82,19 @@ MODULE HydroDyn_C
    !     the glue code.  However, here we do not pass state information through the
    !     interface and therefore must store it here analogously to how it is handled
    !     in the OpenFAST glue code.
-   type(HydroDyn_ContinuousStateType)     :: x_prev            !< continuous states at Time t of previous call
-   type(HydroDyn_DiscreteStateType)       :: xd_prev           !< discrete states   at Time t of previous call
-   type(HydroDyn_ConstraintStateType)     :: z_prev            !< Constraint states at Time t of previous call
-   !------------------------------
-   !  Time tracking
-   !     When we are performing a correction step, time information of previous
-   !     calls is needed to decide how to apply correction logic or cycle the inputs
-   !     and resave the previous timestep states.
-   integer(IntKi)                         :: dT_Global         ! dT of the code calling this module 
-   integer(IntKi)                         :: T_Global          ! Time of this call 
-   integer(IntKi)                         :: T_Global_prev     ! time of the previous call
-   integer(IntKi)                         :: N_T_Global        ! count of which timestep we are on -- calculated internally based on the time passed into UpdateStates
-   integer(IntKi)                         :: N_T_Global_prev   ! timestep of the previous call
-   logical                                :: CorrectionStep    ! if we are repeating a timestep in UpdateStates,
+   real(DbKi)                             :: dT_Global         ! dT of the code calling this module 
+   integer(IntKi)                         :: N_Global          ! global timestep
+   real(DbKi)                             :: T_Initial         ! initial Time of simulation
+   real(DbKi),       allocatable          :: InputTimes(:)     ! input times corresponding to u(:) array
+   real(DbKi)                             :: InputTimePrev     ! input time of last UpdateStates call
+   ! Note that we are including the previous state info here (not done in OF this way)
+   integer(IntKi),   parameter            :: STATE_LAST = 0    ! Index for previous state (not needed in OF, but necessary here)
+   integer(IntKi),   parameter            :: STATE_CURR = 1    ! Index for current state
+   integer(IntKi),   parameter            :: STATE_PRED = 2    ! Index for predicted state
+   ! Note the indexing is different on inputs (no clue why, but thats how OF handles it)
+   integer(IntKi),   parameter            :: INPUT_LAST = 3    ! Index for previous  input at t-dt
+   integer(IntKi),   parameter            :: INPUT_CURR = 2    ! Index for current   input at t
+   integer(IntKi),   parameter            :: INPUT_PRED = 1    ! Index for predicted input at t+dt
    !------------------------------------------------------------------------------------
 
 
@@ -163,7 +166,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
                PtfmRefPtPositionX_C, PtfmRefPtPositionY_C,                             &
                NumNodePts_C,  InitNodePositions_C,                                     &
                !NumWaveElev_C, WaveElevXY_C                                             &    !Placeholder for later
-               InterpOrder_C, DT_C, TMax_C,                                            &
+               InterpOrder_C, T_initial_C, DT_C, TMax_C,                               &
                NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,              &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_Init_c')
    implicit none
@@ -186,6 +189,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    !NOTE: not setting up the WaveElev at this point.  Leaving placeholder for future
    !integer(c_int),            intent(in   )  :: NumWaveElev_C                          !< Number of mesh points we are transfering motions to and output loads to
    !real(c_float),             intent(in   )  :: WaveElevXY_C                           !< A 2xNumWaveElev_C array [x,y]
+   real(c_double),            intent(in   )  :: T_initial_C
    integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
    real(c_double),            intent(in   )  :: DT_C                                   !< Timestep used with HD for stepping forward from t to t+dt.  Must be constant.
    real(c_double),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation (used to set arrays for wave kinematics)
@@ -252,6 +256,9 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    InitInp%defWtrDpth            = REAL(defWtrDpth_C, ReKi)
    InitInp%defMSL2SWL            = REAL(defMSL2SWL_C, ReKi)
    TimeInterval                  = REAL(DT_C,         DbKi)
+   dT_Global                     = TimeInterval                ! Assume this DT is constant for all simulation
+   N_Global                      = 0_IntKi                     ! Assume we are on timestep 0 at start 
+   t_initial                     = REAL(T_Initial_C,  DbKi)
    InitInp%TMax                  = REAL(TMax_C,       DbKi)
 
    ! Number of bodies and initial positions
@@ -285,21 +292,22 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    !InitInp%WaveElevXY
 
 
-   !-----------------------
-   ! Allocate input array u
-   !-----------------------
+   !----------------------------------------------------
+   ! Allocate input array u and corresponding InputTimes
+   !----------------------------------------------------
    !     These inputs are used in the time stepping algorithm within HD_UpdateStates
    !     For quadratic interpolation (InterpOrder==2), 3 timesteps are used.  For
    !     linear (InterOrder==1), 2 timesteps (the HD code can handle either).
    !        u(1)  inputs at t
    !        u(2)  inputs at t -   dt
-   !        u(3)  inputs at t - 2*dt
+   !        u(3)  inputs at t - 2*dt      ! quadratic only
    allocate(u(InterpOrder+1), STAT=ErrStat2)
       if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate inuput"
          if (Failed())  return
       endif
+   call AllocAry( InputTimes, InterpOrder+1, "InputTimes", ErrStat2, ErrMsg2 );  if (Failed())  return
 
 
    ! Call the main subroutine HydroDyn_Init
@@ -307,7 +315,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    !
    !     NOTE: Pass u(1) only (this is empty and will be set inside Init).  We will copy
    !           this to u(2) and u(3) afterwards
-   call HydroDyn_Init( InitInp, u(1), p, x, xd, z, OtherStates, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
+   call HydroDyn_Init( InitInp, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
 
@@ -325,12 +333,37 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
 
 
    !-------------------------------------------------------------
-   ! Setup other pieces of u(:)
+   ! Setup other prior timesteps
+   !     We fill InputTimes with negative times, but the Input values are identical for each of those times; this allows
+   !     us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation
+   !     for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as
+   !     order = SIZE(Input)
    !-------------------------------------------------------------
    do i=2,InterpOrder+1
       call HydroDyn_CopyInput (u(1),  u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
          if (Failed())  return
    enddo
+   do i = 1, InterpOrder + 1
+      InputTimes(i) = t_initial - (i - 1) * dT_Global
+   enddo
+   InputTimePrev = InputTimes(1)       ! Set this as the last call time for UpdateStates
+
+
+   !-------------------------------------------------------------
+   ! Initial setup of other pieces of x,xd,z,OtherStates
+   !-------------------------------------------------------------
+   CALL HydroDyn_CopyContState  ( x(          STATE_CURR), x(          STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL HydroDyn_CopyDiscState  ( xd(         STATE_CURR), xd(         STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL HydroDyn_CopyConstrState( z(          STATE_CURR), z(          STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL HydroDyn_CopyOtherState ( OtherStates(STATE_CURR), OtherStates(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+
+   !-------------------------------------------------------------
+   ! Setup the previous timestep copies of states
+   !-------------------------------------------------------------
+   CALL HydroDyn_CopyContState  ( x(          STATE_CURR), x(          STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL HydroDyn_CopyDiscState  ( xd(         STATE_CURR), xd(         STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL HydroDyn_CopyConstrState( z(          STATE_CURR), z(          STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL HydroDyn_CopyOtherState ( OtherStates(STATE_CURR), OtherStates(STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
 
 !TODO
 !  Is there any other InitOutData should be returned
@@ -616,7 +649,7 @@ SUBROUTINE HydroDyn_CalcOutput_c(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, Nod
 
  
    ! Call the main subroutine HydroDyn_CalcOutput to get the resulting forces and moments at time T 
-   CALL HydroDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherStates, y, m, ErrStat2, ErrMsg2 )
+   CALL HydroDyn_CalcOutput( Time, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
 
@@ -645,47 +678,138 @@ CONTAINS
 END SUBROUTINE HydroDyn_CalcOutput_c
 
 !===============================================================================================================
-!--------------------------------------------- HydroDyn UpdateStates ---------------------------------------------
+!--------------------------------------------- HydroDyn UpdateStates -------------------------------------------
 !===============================================================================================================
-SUBROUTINE HydroDyn_UpdateStates_c(Time_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='HydroDyn_UpdateStates_c')
+!> This routine updates the states from Time_C to TimeNext_C.  It is assumed that the inputs are given for
+!! TimeNext_C, but will be checked against the previous timestep values.
+!! Since we don't really know if we are doing correction steps or not, we will track the previous state and
+!! reset to those if we are repeating a timestep (normally this would be handled by the OF glue code, but since
+!! the states are not passed across the interface, we must handle them here).
+SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C, NodeVel_C, NodeAcc_C,   &
+                                    ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_UpdateStates_c')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_UpdateStates_c
 !GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_UpdateStates_c
 #endif
-   real(c_double),          intent(in   ) :: Time_C
-   integer(c_int),          intent(  out) :: ErrStat_C
-   character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+   real(c_double),            intent(in   )  :: Time_C
+   real(c_double),            intent(in   )  :: TimeNext_C
+!FIXME: estimated inputs at t+dt, or inputs at t????
+   integer(c_int),            intent(in   )  :: NumNodePts_C                 !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: NodePos_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
+   real(c_float),             intent(in   )  :: NodeVel_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
+   real(c_float),             intent(in   )  :: NodeAcc_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local variables
-   real(DbKi)                 :: Time
-   integer                    :: ErrStat                          !< aggregated error status 
-   character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-   integer                    :: ErrStat2                         !< temporary error status  from a call
-   character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
-   character(*), parameter    :: RoutineName = 'HydroDyn_UpdateStates_c' !< for error handling
+   logical                                   :: CorrectionStep                ! if we are repeating a timestep in UpdateStates, don't update the inputs array
+   integer(IntKi)                            :: iNode
+   integer(IntKi)                            :: ErrStat                       !< aggregated error status 
+   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
+   character(*), parameter                   :: RoutineName = 'HydroDyn_UpdateStates_c' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+   CorrectionStep = .false.
 
-!FIXME: set time as array
-   ! Convert the inputs from C to Fortran
-   Time = REAL(Time_C,DbKi)
+   ! Sanity check -- number of node points cannot change
+   if ( NumNodePts /= int(NumNodePts_C, IntKi) ) then
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
+      if (Failed())  return
+   endif
 
-!FIXME: do I need to have a flag for stepping forward in time? What if we are doing a correction step????
-!Rotate values for inputs (do extrap interp if we are not passed new inputs here)
 
-!FIXME: Reshape position, velocity, acceleration and set mesh inputs
+   !-------------------------------------------------------
+   ! Check the time for current timestep and next timestep 
+   !-------------------------------------------------------
+   !     These inputs are used in the time stepping algorithm within HD_UpdateStates
+   !     For quadratic interpolation (InterpOrder==2), 3 timesteps are used.  For
+   !     linear (InterOrder==1), 2 timesteps (the HD code can handle either).
+   !        u(1)  inputs at t + dt        ! Next timestep
+   !        u(2)  inputs at t             ! This timestep
+   !        u(3)  inputs at t - dt        ! previous timestep (quadratic only)
 
-!FIXME:Set inputs array and extrap/interp necessary
+   !  Check if we are repeating an UpdateStates call (for example in a predictor/corrector loop)
+   if ( EqualRealNos( real(Time_C,DbKi), InputTimePrev ) ) then
+      CorrectionStep = .true.
+      N_Global = N_Global + 1_IntKi
+   else ! Setup time input times array
+      if (InterpOrder>1) then ! quadratic, so keep the old time
+         InputTimes(INPUT_LAST) = InputTimes(INPUT_CURR)    ! u(3)
+      endif
+      InputTimes(INPUT_CURR) = REAL(Time_C,DbKi)            ! u(2)
+      InputTimes(INPUT_PRED) = REAL(TimeNext_C,DbKi)        ! u(1)
+   endif
 
-!   ! Call the main subroutine HydroDyn_UpdateStates to get the velocities
-!   CALL HydroDyn_UpdateStates( Time, u, p, x, xd, z, OtherStates, y, m, ErrStat2, ErrMsg2 )
-!      if (Failed())  return
 
-!FIXME: what do we need to update after the call?
-!     states are handled internally.  If we are doing correction steps, we may need the old states
+   if (CorrectionStep) then
+      ! Step back to previous state because we are doing a correction step
+      !     -- repeating the T -> T+dt update with new inputs at T+dt
+      !     -- the STATE_CURR contains states at T+dt from the previous call, so revert those
+      CALL HydroDyn_CopyContState   (x(          STATE_LAST), x(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+      CALL HydroDyn_CopyDiscState   (xd(         STATE_LAST), xd(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+      CALL HydroDyn_CopyConstrState (z(          STATE_LAST), z(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+      CALL HydroDyn_CopyOtherState  (OtherStates(STATE_LAST), OtherStates(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   else
+      ! Cycle inputs back one timestep since we are moving forward in time.
+      if (InterpOrder>1) then ! quadratic, so keep the old time
+         call HydroDyn_CopyInput( u(INPUT_CURR), u(INPUT_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);     if (Failed())  return
+      endif
+      ! Move inputs from previous t+dt (now t) to t
+      call HydroDyn_CopyInput( u(INPUT_PRED), u(INPUT_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);           if (Failed())  return
+   endif
+
+   !-------------------------------------------------------
+   ! Set inputs for time T+dt -- u(1)
+   !-------------------------------------------------------
+   ! Reshape position, velocity, acceleration
+   tmpNodePos(1:6,1:NumNodePts)   = reshape( real(NodePos_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
+   tmpNodeVel(1:6,1:NumNodePts)   = reshape( real(NodeVel_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
+   tmpNodeAcc(1:6,1:NumNodePts)   = reshape( real(NodeAcc_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
+
+   ! Transfer motions to input meshes
+   call Set_MotionMesh()                                       ! update motion mesh with input motion arrays
+   call HD_SetInputMotion( u(INPUT_PRED), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+      if (Failed())  return
+ 
+
+   ! Set copy the current state over to the predicted state for sending to UpdateStates
+   !     -- The STATE_PREDicted will get updated in the call.
+   !     -- The UpdateStates routine expects this to contain states at T at the start of the call (history not passed in)
+   CALL HydroDyn_CopyContState   (x(          STATE_CURR), x(          STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyConstrState (z(          STATE_CURR), z(          STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyOtherState  (OtherStates(STATE_CURR), OtherStates(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+ 
+
+   ! Call the main subroutine HydroDyn_UpdateStates to get the velocities
+   CALL HydroDyn_UpdateStates( InputTimes(INPUT_PRED), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherStates(STATE_PRED), m, ErrStat2, ErrMsg2 )
+      if (Failed())  return
+
+
+   !-------------------------------------------------------
+   ! cycle the states
+   !-------------------------------------------------------
+   ! move current state at T to previous state at T-dt
+   !     -- STATE_LAST now contains info at time T
+   !     -- this allows repeating the T --> T+dt update
+   CALL HydroDyn_CopyContState   (x(          STATE_CURR), x(          STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyConstrState (z(          STATE_CURR), z(          STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyOtherState  (OtherStates(STATE_CURR), OtherStates(STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   ! Update the predicted state as the new current state
+   !     -- we have now advanced from T to T+dt.  This allows calling with CalcOuput to get the outputs at T+dt
+   CALL HydroDyn_CopyContState   (x(          STATE_PRED), x(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyDiscState   (xd(         STATE_PRED), xd(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyConstrState (z(          STATE_PRED), z(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL HydroDyn_CopyOtherState  (OtherStates(STATE_PRED), OtherStates(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+ 
+
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
@@ -730,28 +854,44 @@ SUBROUTINE HydroDyn_End_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='HydroDyn_End_c')
    if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
 
 
-   !  NOTE: HydroDyn_End only takes 1 instance of u, not the array.  So extra
-   !        logic is required here (this isn't necessary in the fortran driver
-   !        or in openfast, but may be when this code is called from C, Python,
-   !        or some other code using the c-bindings.
-   if (allocated(u)) then
-      do i=2,size(u)    ! leave first one for passing to HD_End for destruction
-         call HydroDyn_DestroyInput( u(i), ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      enddo
-   endif
-
    ! Call the main subroutine HydroDyn_End
    !     If u is not allocated, then we didn't get far at all in initialization,
    !     or HD_End_C got called before Init.  We don't want a segfault, so check
    !     for allocation.
    if (allocated(u)) then
-      call HydroDyn_End( u(1), p, x, xd, z, OtherStates, y, m, ErrStat2, ErrMsg2 )
+      call HydroDyn_End( u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    endif
 
-   ! if u is still allocated, deallocate it now
-   if (allocated(u))    deallocate(u)
+   !  NOTE: HydroDyn_End only takes 1 instance of u, not the array.  So extra
+   !        logic is required here (this isn't necessary in the fortran driver
+   !        or in openfast, but may be when this code is called from C, Python,
+   !        or some other code using the c-bindings.
+   if (allocated(u)) then
+      do i=2,size(u)
+         call HydroDyn_DestroyInput( u(i), ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      enddo
+      if (allocated(u))             deallocate(u)
+   endif
+
+   ! Destroy any other copies of states (rerun on (STATE_CURR) is ok)
+   call HydroDyn_DestroyContState(   x(          STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyDiscState(   xd(         STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyConstrState( z(          STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyOtherState(  OtherStates(STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyContState(   x(          STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyDiscState(   xd(         STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyConstrState( z(          STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyOtherState(  OtherStates(STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyContState(   x(          STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyDiscState(   xd(         STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyConstrState( z(          STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call HydroDyn_DestroyOtherState(  OtherStates(STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+
+   ! if deallocate other items now
+   if (allocated(InputTimes))    deallocate(InputTimes)
 
    ! Clear out mesh related data storage
    call ClearMesh()
