@@ -155,23 +155,27 @@ CONTAINS
       !                   Get all the inputs taken care of
       !---------------------------------------------------------------------------------------------
 
-
-      ! set environmental parameters from input data and error check
-      ! (should remove these values as options from MoorDyn input file for consistency?)
-
-      p%g        = InitInp%g
-      p%WtrDpth  = InitInp%WtrDepth
-      p%rhoW     = InitInp%rhoW
-
       p%RootName = TRIM(InitInp%RootName)//'.MD'  ! all files written from this module will have this root name
 
-!FIXME: Set some of the options -- the way parsing is written, they don't have to exist in the input file, but get used anyhow.
-! Setting these to some value for the moment -- trying to figure out why I get NaN's with the -Wuninitialized -finit-real=inf -finit-integer=9999 flags set.
-p%dtM0      = DTcoupling      ! default to the coupling
-!p%WtrDpth   = InitInp%WtrDpth      ! This will be passed in later.  Right now use the default of -9999 in the registry
-p%kBot      = 0
-p%cBot      = 0
-p%WaterKin  = 0
+      ! set default values for the simulation settings
+      ! these defaults are based on the glue code
+      p%dtM0                 = DTcoupling      ! default to the coupling interval (but will likely need to be smaller)
+      p%g                    = InitInp%g
+      p%rhoW                 = InitInp%rhoW
+      p%WtrDpth              = InitInp%WtrDepth
+      ! set the following to some defaults
+      p%kBot                 = 3.0E6
+      p%cBot                 = 3.0E5
+      InputFileDat%dtIC      = 2.0_DbKi
+      InputFileDat%TMaxIC    = 60.0_DbKi
+      InputFileDat%CdScaleIC = 4.0_ReKi
+      InputFileDat%threshIC  = 0.01_ReKi
+      p%WaterKin             = 0_IntKi
+      !p%dtOut                = 0.0_DbKi
+
+
+
+
 
       ! Check for farm-level inputs (indicating that this MoorDyn isntance is being run from FAST.Farm)
       !intead of below, check first dimension of PtfmInit
@@ -1223,9 +1227,8 @@ p%WaterKin  = 0
                   CALL Conv2UC(OptString)
 
                   ! check all possible options types and see if OptString is one of them, in which case set the variable.
-!FIXME: if some of these are not found in the input file they won't get set
                   if ( OptString == 'DTM') THEN
-                     read (OptValue,*) p%dtM0   ! InitInp%DTmooring
+                     read (OptValue,*) p%dtM0 
                   else if ( OptString == 'G') then
                      read (OptValue,*) p%g
                   else if ( OptString == 'RHOW') then
@@ -1246,6 +1249,8 @@ p%WaterKin  = 0
                      read (OptValue,*) InputFileDat%threshIC
                   else if ( OptString == 'WATERKIN')  then
                      read (OptValue,*) p%WaterKin
+                 !else if ( OptString == 'DTOUT')  then
+                 !   read (OptValue,*) p%dtOut
                   else
                      CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
                   end if
@@ -2199,6 +2204,7 @@ p%WaterKin  = 0
             NextLine="---"       ! Set as a separator so we can escape some of the while loops
          else
             NextLine=trim(FileInfo_In%Lines(i))
+            !TODO: add comment character recognition here? (discard any characters past a #)
          endif
       end function NextLine
 
@@ -2584,16 +2590,20 @@ p%WaterKin  = 0
       REAL(DbKi)                                         :: rd_in(3) ! temporary for passing kinematics
       REAL(DbKi)                                         :: a_in(3)  ! temporary for passing kinematics
 
+      INTEGER(IntKi)                                     :: ErrStat2 ! Error status of the operation
+      CHARACTER(ErrMsgLen)                               :: ErrMsg2  ! Error message if ErrStat2 /= ErrID_None
+      character(*), parameter                            :: RoutineName = 'MD_CalcContStateDeriv'
+      
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg = ""
 
-!      ! allocations of dxdt (as in SubDyn.  "INTENT(OUT) automatically deallocates the arrays on entry, we have to allocate them here"  is this right/efficient?)
-!      ALLOCATE ( dxdt%states(size(x%states)), STAT = ErrStat )
-!      IF ( ErrStat /= ErrID_None ) THEN
-!          ErrMsg  = ' Error allocating dxdt%states array.'
-!          RETURN
-!      END IF
+      ! allocate dxdt if not already allocated (e.g. if called for linearization)
+      IF (.NOT. ALLOCATED(dxdt%states) ) THEN
+         CALL AllocAry( dxdt%states,  SIZE(x%states),  'dxdt%states',  ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      END IF
 
       ! clear connection force and mass values <M<<<<<<<<<<<<<<<<<<<<<<<
       DO L = 1, p%NConnects
@@ -6477,7 +6487,6 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(MD_ContinuousStateType) :: x_perturb
    REAL(R8Ki)                   :: delta        ! delta change in input or state
    INTEGER(IntKi)               :: i, k
-   INTEGER(IntKi)               :: idx
    INTEGER(IntKi)               :: ErrStat2
    CHARACTER(ErrMsgLen)         :: ErrMsg2
    CHARACTER(*), PARAMETER      :: RoutineName = 'MD_JacobianPContState'
@@ -6509,7 +6518,7 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          ! compute y at x_op - delta x
          call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get central difference:
-         call MD_Compute_dY( p, y_p, y_m, delta, dYdx(:,idx) )
+         call MD_Compute_dY( p, y_p, y_m, delta, dYdx(:,i) )
       end do
       if(Failed()) return
    END IF
@@ -6532,7 +6541,7 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
          if(Failed()) return
          ! get central difference:
-         call MD_Compute_dX( p, x_p, x_m, delta, dXdx(:,idx) )
+         call MD_Compute_dX( p, x_p, x_m, delta, dXdx(:,i) )
       end do
    END IF
    IF ( PRESENT( dXddx ) ) THEN
@@ -6726,7 +6735,7 @@ SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    call CleanUp()
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_GetOP') 
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed

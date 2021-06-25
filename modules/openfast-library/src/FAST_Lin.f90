@@ -1105,10 +1105,18 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
                                    MD%OtherSt(STATE_CURR), MD%y, MD%m, ErrStat2, ErrMsg2, y_FAST%Lin%Modules(Module_MD)%Instance(1)%D )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
+      call MD_JacobianPContState( t_global, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), MD%OtherSt(STATE_CURR), &
+                                     MD%y, MD%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_MD)%Instance(1)%C, &
+                                                                    dXdx=y_FAST%Lin%Modules(Module_MD)%Instance(1)%A )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
       ! get the operating point
       call MD_GetOP( t_global, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), &
                              MD%OtherSt(STATE_CURR), MD%y, MD%m, ErrStat2, ErrMsg2,  &
-                       y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_u, y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_y )
+                              u_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_u, &
+                              y_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_y, &
+                              x_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_x, &
+                             dx_op=y_FAST%Lin%Modules(Module_MD)%Instance(1)%op_dx )                       
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >=AbortErrLev) then
          call cleanup()
@@ -1128,10 +1136,12 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
          
          if (p_FAST%LinOutJac) then
             ! Jacobians
-            !dYdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', &
-                                         UseRow=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_y, &
-                                         UseCol=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_u )         
+            ! dXdx, dXdu, dYdx, dYdu:
+            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx' )
+            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_u )
+            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_y )
+            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_y, &
+                                                                                                          UseCol=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_u )         
          end if 
       
              ! finish writing the file
@@ -4904,6 +4914,7 @@ SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, OpFM, HD, SD, ExtPtf
 
       CALL MAP_CopyInput (MAPp%Input(1), y_FAST%op%u_MAP(i), CtrlCode, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
    ELSEIF (p_FAST%CompMooring == Module_MD) THEN
       CALL MD_CopyContState   (MD%x( STATE_CURR), y_FAST%op%x_MD(i), CtrlCode, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4916,6 +4927,7 @@ SUBROUTINE SaveOP(i, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, OpFM, HD, SD, ExtPtf
                
       CALL MD_CopyInput (MD%Input(1), y_FAST%op%u_MD(i), CtrlCode, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
    ELSEIF (p_FAST%CompMooring == Module_FEAM) THEN
       CALL FEAM_CopyContState   (FEAM%x( STATE_CURR), y_FAST%op%x_FEAM(i), CtrlCode, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
