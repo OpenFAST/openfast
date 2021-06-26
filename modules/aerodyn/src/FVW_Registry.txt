@@ -150,10 +150,10 @@ typedef     ^                   ^               UA_MiscVarType                  
 typedef     ^                   ^               UA_OutputType                    y_UA          -  -  -  "outputs from UnsteadyAero"        -
 typedef     ^                   ^               UA_ParameterType                 p_UA          -  -  -  "parameters for UnsteadyAero"        -
 # for calculating outputs at blade nodes
-#typedef     ^                   ^               ReKi                             Vind_LL      ::  -  -  "Induced velocity on lifting line control points" m/s
-#typedef     ^                   ^               ReKi                             Vtot_LL      ::  -  -  "Total velocity on lifting line control points" m/s
-#typedef     ^                   ^               ReKi                             Vstr_LL      ::  -  -  "Structural velocity on LL CP" m/s
-#typedef     ^                   ^               ReKi                             Vwnd_LL      ::  -  -  "Wind on lifting line control points" m/s 
+typedef     ^                   ^               ReKi                             Vind_LL      ::    -  -  "Induced velocity on lifting line nodes" m/s
+#typedef     ^                   ^               ReKi                             Vtot_LL      ::    -  -  "Total velocity on lifting line nodes" m/s
+#typedef     ^                   ^               ReKi                             Vstr_LL      ::    -  -  "Structural velocity on LL nodes" m/s
+#typedef     ^                   ^               ReKi                             Vwnd_LL      ::    -  -  "Wind on lifting line nodes" m/s 
 typedef     ^                   ^               ReKi                             BN_AxInd      :    -  -  "Axial induction [size (NumBlNds,numBlades)]" -
 typedef     ^                   ^               ReKi                             BN_TanInd     :    -  -  "Tangential induction [size (NumBlNds,numBlades)]" -
 typedef     ^                   ^               ReKi                             BN_Vrel       :    -  -  "Relative velocity [size (NumBlNds,numBlades)]" m/s

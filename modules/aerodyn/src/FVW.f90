@@ -222,6 +222,10 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       call AllocAry( m%W(iW)%Vwnd_CP , 3   ,  p%W(iW)%nSpan, 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_CP= -999999_ReKi;
       ! Variables at panels points
       call AllocAry( m%W(iW)%r_LL    , 3   ,  p%W(iW)%nSpan+1  , 2        , 'Lifting Line Panels', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%r_LL= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vind_LL , 3   ,  p%W(iW)%nSpan+1,              'Vind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vind_LL= -999999_ReKi;
+      !call AllocAry( m%W(iW)%Vtot_LL , 3   ,  p%W(iW)%nSpan+1,              'Vtot on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vtot_LL= -999999_ReKi;
+      !call AllocAry( m%W(iW)%Vstr_LL , 3   ,  p%W(iW)%nSpan+1,              'Vstr on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vstr_LL= -999999_ReKi;
+      !call AllocAry( m%W(iW)%Vwnd_LL , 3   ,  p%W(iW)%nSpan+1,              'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_LL= -999999_ReKi;
       call AllocAry( m%W(iW)%Vwnd_NW , 3   ,  p%W(iW)%nSpan+1  ,p%nNWMax+1, 'Wind on NW ', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_NW= -999_ReKi;
       call AllocAry( m%W(iW)%Vwnd_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1, 'Wind on FW ', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_FW= -999_ReKi;
       call AllocAry( m%W(iW)%Vind_NW , 3   ,  p%W(iW)%nSpan+1  ,p%nNWMax+1, 'Vind on NW ', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vind_NW= -999_ReKi;
@@ -1372,9 +1376,8 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
 !       ! TODO ANDY: replace with direct call to inflow wind at m%W(iW)%CP_LL location
 !       CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
 ! 
-!       ! Control points location and structrual velocity
-   call Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2);
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+!       ! Control points location and structural velocity
+   call Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ! 
 !    ! if we are on a correction step, CalcOutput may be called again with different inputs
 !    ! Compute m%W(iW)%Gamma_LL
@@ -1382,32 +1385,25 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
    !---
 
    ! Induction on the lifting line control point
-   ! Input: m%W%CP_LL, Output:m%W%Vind_CP
-   do iW=1,p%nWings
-      m%W(iW)%Vind_CP=-9999.0_ReKi
-   enddo
-   call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); 
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   ! Input: m%W%CP_LL or m%W%r_LL,   Output:m%W%Vind_CP and potentially m%W%Vind_LL
+   call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ! Induction on the mesh points (AeroDyn nodes): y%W(iW)%Vind
    if (p%InductionAtCP) then
       ! We use the induction at the CP (Vind_LL) to interpextrap at the node
       do iW=1,p%nWings
-         y%W(iW)%Vind(1:3,:) = 0.0_ReKi
          ! --- Linear interpolation for interior points and extrapolations at boundaries
          call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(1,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(1,:))
          call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(2,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(2,:))
          call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(3,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(3,:))
       enddo
    else
-      print*,'>>>> TODO'
-      STOP
-      ! The induction was computed at the nodes 
-      do iW=1,p%nWings
-     !    y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
-     !    y%W(iW)%Vind(2,:) = m%W(iW)%Vind_LL(2,:)
-     !    y%W(iW)%Vind(3,:) = m%W(iW)%Vind_LL(3,:)
-      enddo
+     ! The induction was computed at the LL nodes, we transfer it directly
+     do iW=1,p%nWings
+         y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
+         y%W(iW)%Vind(2,:) = m%W(iW)%Vind_LL(2,:)
+         y%W(iW)%Vind(3,:) = m%W(iW)%Vind_LL(3,:)
+     enddo
    endif
 end subroutine CalcOutputForAD
 !----------------------------------------------------------------------------------------------------------------------------------

@@ -221,13 +221,16 @@ contains
          call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(3,:,1), p%W(iW)%s_CP_LL(:), m%W(iW)%CP_LL(3,:))
       enddo
 
-      ! --- Structural velocity on LL
+      ! --- Structural velocity on LL CP and Nodes
       ! TODO: difference meshes in/LL
       do iW = 1,p%nWings
          call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(1,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_CP(1,:))
          call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(2,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_CP(2,:))
          call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(3,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_CP(3,:))
       enddo
+      !do iW = 1,p%nWings
+      !   m%W(iW)%Vstr_LL(1:3,:)= Meshes(iW)%TranslationVel(1:3,:)
+      !enddo
    end subroutine Wings_Panelling
 
    !----------------------------------------------------------------------------------------------------------------------------------

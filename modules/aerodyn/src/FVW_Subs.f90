@@ -608,6 +608,13 @@ subroutine DistributeRequestedWind_LL(V_wind, p, m)
       iP_end   = iP_start-1 + p%W(iW)%nSpan
       m%W(iW)%Vwnd_CP(1:3,1:p%W(iW)%nSpan) = V_wind(1:3,iP_start:iP_end)
    enddo
+
+   ! TODO TODO LL NODES
+   !print*,'TODO transfer of Wind at LL'
+   !do iW=1,p%nWings
+   !   m%W(iW)%Vwnd_LL(1:3,1:p%W(iW)%nSpan) = m%W(iW)%Vwnd_LL(1:3,1:p%W(iW)%nSpan)
+   !   m%W(iW)%Vwnd_LL(1:3,p%W(iW)%nSpan+1) = m%W(iW)%Vwnd_LL(1:3,p%W(iW)%nSpan) ! Last point copy...
+   !enddo
 end subroutine DistributeRequestedWind_LL
 
 !> Distribute wind onto NW and FW
@@ -1238,6 +1245,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    do iW=1,p%nWings
       m%W(iW)%Vind_CP = -9999._ReKi !< Safety
+      m%W(iW)%Vind_LL = -9999._ReKi !< Safety
    enddo
    bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
@@ -1249,15 +1257,22 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
       nCPs=0
       do iW=1,p%nWings
          m%W(iW)%Vind_CP = 0.0_ReKi !< Safety
+         m%W(iW)%Vind_LL = 0.0_ReKi !< Safety
       enddo
       if (DEV_VERSION) then
          print'(A,I0,A,I0,A,I0,A)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs, ' -> No induction'
       endif
    else
       nCPs=0
-      do iW=1,p%nWings
-         nCPs = nCPs + p%W(iW)%nSpan
-      enddo
+      if (p%InductionAtCP) then
+         do iW=1,p%nWings
+            nCPs = nCPs + p%W(iW)%nSpan
+         enddo
+      else
+         do iW=1,p%nWings
+            nCPs = nCPs + p%W(iW)%nSpan+1
+         enddo
+      endif
       allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc 
       allocate(Uind(1:3,1:nCPs)) !       The size is reasonably small, and m%Uind then stay filled with "rollup velocities" (for export)
       Uind=0.0_ReKi !< important due to side effects of ui_seg
@@ -1276,9 +1291,15 @@ contains
    !> Pack all the control points
    subroutine PackLiftingLinePoints()
       iHeadP=1
-      do iW=1,p%nWings
-         CALL LatticeToPoints2D(m%W(iW)%CP_LL(1:3,:), CPs, iHeadP)
-      enddo
+      if (p%InductionAtCP) then
+         do iW=1,p%nWings
+            call LatticeToPoints2D(m%W(iW)%CP_LL(1:3,:), CPs, iHeadP)
+         enddo
+      else
+         do iW=1,p%nWings
+            call LatticeToPoints2D(m%W(iW)%r_LL(1:3,:,1), CPs, iHeadP)
+         enddo
+      endif
       if (DEV_VERSION) then
          if ((iHeadP-1)/=size(CPs,2)) then
             print*,'PackLLPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
@@ -1290,10 +1311,23 @@ contains
 
    !> Distribute the induced velocity to the proper location 
    subroutine UnPackLiftingLineVelocities()
+      integer :: iSpan
       iHeadP=1
-      do iW=1,p%nWings
-         CALL VecToLattice2D(Uind, m%W(iW)%Vind_CP(1:3,:), iHeadP)
-      enddo
+      if (p%InductionAtCP) then
+         do iW=1,p%nWings
+            call VecToLattice2D(Uind, m%W(iW)%Vind_CP(1:3,:), iHeadP)
+         enddo
+      else
+         do iW=1,p%nWings
+            call VecToLattice2D(Uind, m%W(iW)%Vind_LL(1:3,:), iHeadP)
+         enddo
+         ! Transfer mean at CP
+         do iW=1,p%nWings
+            do iSpan=1,p%W(iW)%nSpan
+               m%W(iW)%Vind_CP(1:3,iSpan)= (m%W(iW)%Vind_LL(1:3,iSpan)+m%W(iW)%Vind_LL(1:3,iSpan+1))*0.5_ReKi
+            enddo
+         enddo
+      endif
       if (DEV_VERSION) then
          if ((iHeadP-1)/=size(Uind,2)) then
             print*,'UnPackLiftingLineVelocities: Number of points wrongly estimated',size(Uind,2), iHeadP-1

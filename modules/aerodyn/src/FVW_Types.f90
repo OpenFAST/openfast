@@ -183,6 +183,7 @@ IMPLICIT NONE
     TYPE(UA_MiscVarType)  :: m_UA      !< misc vars for UnsteadyAero [-]
     TYPE(UA_OutputType)  :: y_UA      !< outputs from UnsteadyAero [-]
     TYPE(UA_ParameterType)  :: p_UA      !< parameters for UnsteadyAero [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vind_LL      !< Induced velocity on lifting line nodes [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_AxInd      !< Axial induction [size (NumBlNds,numBlades)] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_TanInd      !< Tangential induction [size (NumBlNds,numBlades)] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Vrel      !< Relative velocity [size (NumBlNds,numBlades)] [m/s]
@@ -3975,6 +3976,20 @@ ENDIF
       CALL UA_CopyParam( SrcWng_MiscVarTypeData%p_UA, DstWng_MiscVarTypeData%p_UA, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcWng_MiscVarTypeData%Vind_LL)) THEN
+  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vind_LL,1)
+  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vind_LL,1)
+  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vind_LL,2)
+  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vind_LL,2)
+  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vind_LL)) THEN 
+    ALLOCATE(DstWng_MiscVarTypeData%Vind_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vind_LL.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstWng_MiscVarTypeData%Vind_LL = SrcWng_MiscVarTypeData%Vind_LL
+ENDIF
 IF (ALLOCATED(SrcWng_MiscVarTypeData%BN_AxInd)) THEN
   i1_l = LBOUND(SrcWng_MiscVarTypeData%BN_AxInd,1)
   i1_u = UBOUND(SrcWng_MiscVarTypeData%BN_AxInd,1)
@@ -4242,6 +4257,9 @@ ENDIF
   CALL UA_DestroyMisc( Wng_MiscVarTypeData%m_UA, ErrStat, ErrMsg )
   CALL UA_DestroyOutput( Wng_MiscVarTypeData%y_UA, ErrStat, ErrMsg )
   CALL UA_DestroyParam( Wng_MiscVarTypeData%p_UA, ErrStat, ErrMsg )
+IF (ALLOCATED(Wng_MiscVarTypeData%Vind_LL)) THEN
+  DEALLOCATE(Wng_MiscVarTypeData%Vind_LL)
+ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%BN_AxInd)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%BN_AxInd)
 ENDIF
@@ -4508,6 +4526,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Vind_LL allocated yes/no
+  IF ( ALLOCATED(InData%Vind_LL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Vind_LL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vind_LL)  ! Vind_LL
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! BN_AxInd allocated yes/no
   IF ( ALLOCATED(InData%BN_AxInd) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BN_AxInd upper/lower bounds for each dimension
@@ -5164,6 +5187,26 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%Vind_LL) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vind_LL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vind_LL,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vind_LL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vind_LL,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%Vind_LL,2), UBOUND(InData%Vind_LL,2)
+        DO i1 = LBOUND(InData%Vind_LL,1), UBOUND(InData%Vind_LL,1)
+          ReKiBuf(Re_Xferred) = InData%Vind_LL(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%BN_AxInd) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -6093,6 +6136,29 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vind_LL not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vind_LL)) DEALLOCATE(OutData%Vind_LL)
+    ALLOCATE(OutData%Vind_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vind_LL.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%Vind_LL,2), UBOUND(OutData%Vind_LL,2)
+        DO i1 = LBOUND(OutData%Vind_LL,1), UBOUND(OutData%Vind_LL,1)
+          OutData%Vind_LL(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BN_AxInd not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
