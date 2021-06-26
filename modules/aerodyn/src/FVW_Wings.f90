@@ -193,14 +193,24 @@ contains
          end do
       enddo
       ! --- Lifting Line/ Bound Circulation panel
-      ! For now: goes from 1/4 chord to TE
-      ! More panelling options may be considered in the future
-      do iW = 1,p%nWings
-         do iSpan = 1,p%W(iW)%nSpan+1
-            m%W(iW)%r_LL(1:3,iSpan,1)= m%W(iW)%TE(1:3,iSpan)*0.25_ReKi+m%W(iW)%LE(1:3,iSpan)*0.75_ReKi  ! 1/4 chord
-            m%W(iW)%r_LL(1:3,iSpan,2)= m%W(iW)%TE(1:3,iSpan)                                         ! TE
+      if (p%WakeAtTE) then
+         ! For now: goes from 1/4 chord to TE
+         ! More panelling options may be considered in the future
+         do iW = 1,p%nWings
+            do iSpan = 1,p%W(iW)%nSpan+1
+               m%W(iW)%r_LL(1:3,iSpan,1)= m%W(iW)%TE(1:3,iSpan)*0.25_ReKi+m%W(iW)%LE(1:3,iSpan)*0.75_ReKi  ! 1/4 chord
+               m%W(iW)%r_LL(1:3,iSpan,2)= m%W(iW)%TE(1:3,iSpan)                                         ! TE
+            enddo
          enddo
-      enddo
+      else
+         ! In this formulation we collapse the "TE" and "LL"
+         do iW = 1,p%nWings
+            do iSpan = 1,p%W(iW)%nSpan+1
+               m%W(iW)%r_LL(1:3,iSpan,1)= m%W(iW)%TE(1:3,iSpan)*0.25_ReKi+m%W(iW)%LE(1:3,iSpan)*0.75_ReKi  ! 1/4 chord
+               m%W(iW)%r_LL(1:3,iSpan,2)= m%W(iW)%r_LL(1:3,iSpan,1)
+            enddo
+         enddo
+      endif
 
       ! --- Position of control points CP_LL
       ! For now: placed exactly on the LL panel
@@ -366,7 +376,7 @@ contains
 
       ! Set m%W(iW)%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
       ! Input: m%W%CP_LL, output: m%W%Vind_LL
-      call LiftingLineInducedVelocities(p, x, iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
+      call LiftingLineInducedVelocities(p, x, p%iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
 
       kCP=0
       do iW=1,p%nWings
@@ -403,7 +413,7 @@ contains
              do iSpan=1,p%W(iW)%nSpan
                 kCP=kCP+1
                 Gamm=GammaLastIter(kCP) 
-                do iDepth=1,iNWStart ! Two first panels
+                do iDepth=1,p%iNWStart ! Two first panels
                    ! --- Defining a ring
                    P1=x%W(iW)%r_NW(1:3,iSpan  ,iDepth  )
                    P2=x%W(iW)%r_NW(1:3,iSpan+1,iDepth  )

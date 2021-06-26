@@ -18,7 +18,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    character(*),                 intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
    character(1024)      :: PriPath                         ! the path to the primary input file
-   character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line 
+   character(1024)      :: sDummy, sLine, Key, Val         ! string to temporarially hold value of read line 
    integer(IntKi)       :: UnIn, i
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
@@ -101,6 +101,28 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
          if (Check(m%GridOutputs(i)%nz<1, 'Grid output nz needs to be >=1')) return
       enddo
    endif
+
+   ! --- Advanced Options
+   ! NOTE: no error handling since this is for debug
+   p%InductionAtCP = .true.
+   p%WakeAtTE      = .true.
+   CALL ReadCom(UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); 
+   CALL ReadCom(UnIn,FileName,                  '--- Advanced options header'        ,ErrStat2,ErrMsg2);
+   if(ErrStat2==ErrID_None) then
+      call WrScr(' - Reading advanced options for OLAF:')
+      do while(ErrStat2==ErrID_None)
+         read(UnIn, '(A)',iostat=ErrStat2) sDummy
+         call Conv2UC(sDummy)  ! to uppercase
+         if (index(sDummy, 'INDUCTIONATCP')>1) then
+            read(sDummy, '(L1)') p%InductionAtCP
+            print*,'   >>> InductionAtCP',p%InductionAtCP
+         elseif (index(sDummy, 'WAKEATTE')>1) then
+            read(sDummy, '(L1)') p%WakeAtTE
+            print*,'   >>> WakeAtTE',p%WakeAtTE
+         endif
+      enddo
+   endif
+
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
@@ -386,8 +408,8 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-         allocate(Arr3D(3, size(m%dxdt%W(iW)%r_NW,2) , m%nNW+1)); Arr3D=0.0_ReKi ! Convection velocity
-         allocate(Arr2D(size(z%W(iW)%Gamma_LL), 1) )            ; Arr2D=0.0_ReKi
+         allocate(Arr3D(3, size(m%dxdt%W(iW)%r_NW,2) ,2)); Arr3D=0.0_ReKi ! Convection velocity
+         allocate(Arr2D(size(z%W(iW)%Gamma_LL), 1) )     ; Arr2D=0.0_ReKi ! Gamma
          Arr2D(:,1)=z%W(iW)%Gamma_LL(:)
          call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,1:2), Arr2D(:,1:1), Arr3D, bladeFrame=bladeFrame)
          deallocate(Arr3D)

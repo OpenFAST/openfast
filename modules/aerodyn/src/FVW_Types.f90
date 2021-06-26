@@ -88,6 +88,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nWings      !< Number of Wings [-]
     TYPE(Wng_ParameterType) , DIMENSION(:), ALLOCATABLE  :: W      !< Wings parameters [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Bld2Wings      !< Index mapping from blades to wings [-]
+    INTEGER(IntKi)  :: iNWStart      !< Index where NW start in r_NW. (iNWStart=2, the first panel contains the lifting line panel, otherwise, start at 1) [-]
     INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels, per wing [-]
     INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels, per wing [-]
     INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free, per wing [-]
@@ -123,6 +124,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: VTK_OutFileRoot      !< Rootdirectory for writing VTK files [-]
     CHARACTER(1024)  :: VTK_OutFileBase      !< Basename for writing VTK files [-]
     INTEGER(IntKi)  :: nGridOut      !< Number of VTK grid to output [-]
+    LOGICAL  :: InductionAtCP      !< Compute induced velocities at nodes or CP [-]
+    LOGICAL  :: WakeAtTE      !< Start the wake at the trailing edge, or at the LL [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  Wng_ContinuousStateType  =======
@@ -1674,6 +1677,7 @@ IF (ALLOCATED(SrcParamData%Bld2Wings)) THEN
   END IF
     DstParamData%Bld2Wings = SrcParamData%Bld2Wings
 ENDIF
+    DstParamData%iNWStart = SrcParamData%iNWStart
     DstParamData%nNWMax = SrcParamData%nNWMax
     DstParamData%nFWMax = SrcParamData%nFWMax
     DstParamData%nFWFree = SrcParamData%nFWFree
@@ -1709,6 +1713,8 @@ ENDIF
     DstParamData%VTK_OutFileRoot = SrcParamData%VTK_OutFileRoot
     DstParamData%VTK_OutFileBase = SrcParamData%VTK_OutFileBase
     DstParamData%nGridOut = SrcParamData%nGridOut
+    DstParamData%InductionAtCP = SrcParamData%InductionAtCP
+    DstParamData%WakeAtTE = SrcParamData%WakeAtTE
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1797,6 +1803,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! Bld2Wings upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%Bld2Wings)  ! Bld2Wings
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! iNWStart
       Int_BufSz  = Int_BufSz  + 1  ! nNWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWFree
@@ -1832,6 +1839,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%VTK_OutFileRoot)  ! VTK_OutFileRoot
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%VTK_OutFileBase)  ! VTK_OutFileBase
       Int_BufSz  = Int_BufSz  + 1  ! nGridOut
+      Int_BufSz  = Int_BufSz  + 1  ! InductionAtCP
+      Int_BufSz  = Int_BufSz  + 1  ! WakeAtTE
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1924,6 +1933,8 @@ ENDIF
         END DO
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%iNWStart
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nNWMax
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nFWMax
@@ -1999,6 +2010,10 @@ ENDIF
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     IntKiBuf(Int_Xferred) = InData%nGridOut
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%InductionAtCP, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%WakeAtTE, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_PackParam
 
@@ -2113,6 +2128,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%iNWStart = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%nNWMax = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nFWMax = IntKiBuf(Int_Xferred)
@@ -2188,6 +2205,10 @@ ENDIF
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     OutData%nGridOut = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%InductionAtCP = TRANSFER(IntKiBuf(Int_Xferred), OutData%InductionAtCP)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WakeAtTE = TRANSFER(IntKiBuf(Int_Xferred), OutData%WakeAtTE)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 

@@ -109,6 +109,11 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    p%nFWFree = max(InputFileData%nFWPanelsFree,0)
    p%DTfvw   = InputFileData%DTfvw
    p%DTvtk   = InputFileData%DTvtk
+   if (p%WakeAtTE) then
+      p%iNWStart=2
+   else
+      p%iNWStart=1
+   endif
 
    ! Initialize Misc Vars (may depend on input file)
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -184,7 +189,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    m%FirstCall = .True.
-   m%nNW       = iNWStart-1    ! Number of active nearwake panels
+   m%nNW       = p%iNWStart-1  ! Number of active nearwake panels
    m%nFW       = 0             ! Number of active farwake  panels
    m%iStep     = 0             ! Current step number
    m%VTKStep   = -1            ! Counter of VTK outputs
@@ -932,7 +937,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    endif
    ! First NW point does not convect (bound to LL)
    do iW=1,p%nWings
-      dxdt%W(iW)%r_NW(1:3, :, 1:iNWStart-1)=0.0_ReKi
+      dxdt%W(iW)%r_NW(1:3, :, 1:p%iNWStart-1)=0.0_ReKi
    enddo
    ! First FW point always convects (even if bound to NW)
    ! This is done for overcycling
@@ -958,8 +963,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       visc_fact = 2.0_ReKi * CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
       ! --- Method 1, use d(rc^2)/dt = 4 k 
       do iW=1,p%nWings
-         dxdt%W(iW)%Eps_NW(1:3, :, iNWStart:) = visc_fact/x%W(iW)%Eps_NW(1:3, :, iNWStart:)
-         dxdt%W(iW)%Eps_FW(1:3, :,         :) = visc_fact/x%W(iW)%Eps_FW(1:3, :, :)
+         dxdt%W(iW)%Eps_NW(1:3, :,p%iNWStart:) = visc_fact/x%W(iW)%Eps_NW(1:3, :, p%iNWStart:)
+         dxdt%W(iW)%Eps_FW(1:3, :,          :) = visc_fact/x%W(iW)%Eps_FW(1:3, :, :)
          ! --- Method 2, use rc(tau) = 2k/sqrt(r_c^2(tau=0) + 4 k tau)
          !dxdt%W(iW)%Eps_NW(1:3, :, :, :) = (visc_fact)/sqrt(x%W(iW)%Eps_NW(1:3, :, :, :)**2 + 2*visc_fact*p%DTaero)
          !dxdt%W(iW)%Eps_FW(1:3, :, :, :) = (visc_fact)/sqrt(x%W(iW)%Eps_FW(1:3, :, :, :)**2 + 4*visc_fact*p%DTaero)
@@ -969,7 +974,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ErrMsg ='Regularization method not implemented'
    endif
    do iW=1,p%nWings
-      dxdt%W(iW)%Eps_NW(1:3,:,1:iNWStart) = 0.0_ReKi ! Important! LL and First NW panel epsilon does not change
+      dxdt%W(iW)%Eps_NW(1:3,:,1:p%iNWStart) = 0.0_ReKi ! Important! LL and First NW panel epsilon does not change
    enddo
 
 contains

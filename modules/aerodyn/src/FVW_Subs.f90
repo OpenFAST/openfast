@@ -49,7 +49,6 @@ module FVW_SUBS
    real(ReKi), parameter :: CoreSpreadAlpha = 1.25643 
 
    ! Implementation 
-   integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in W(iW)%r_NW)
    integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
    logical       , parameter :: DEV_VERSION=.False.
 contains
@@ -216,24 +215,34 @@ subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! First panel of NW is the last lifting line panel
-   do iW = 1,p%nWings
-      do iSpan = 1,p%W(iW)%nSpan+1
-         x%W(iW)%r_NW(1:3, iSpan, iNWStart-1) = m%W(iW)%r_LL(1:3, iSpan, 1)  ! iAge=1
-         x%W(iW)%r_NW(1:3, iSpan, iNWStart  ) = m%W(iW)%r_LL(1:3, iSpan, 2)  ! iAge=2
+   if (p%WakeAtTE) then
+      ! First panel of NW is the last lifting line panel
+      do iW = 1,p%nWings
+         do iSpan = 1,p%W(iW)%nSpan+1
+            x%W(iW)%r_NW(1:3, iSpan, p%iNWStart-1) = m%W(iW)%r_LL(1:3, iSpan, 1)  ! iAge=1 (LL)
+            x%W(iW)%r_NW(1:3, iSpan, p%iNWStart  ) = m%W(iW)%r_LL(1:3, iSpan, 2)  ! iAge=2 (TE)
+         enddo
       enddo
-   enddo
-   ! First panel of NW is the last lifting line panel
-   do iW = 1,p%nWings
-      do iSpan = 1,p%W(iW)%nSpan
-         x%W(iW)%Gamma_NW(iSpan, iNWStart-1) = z%W(iW)%Gamma_LL(iSpan)  ! iAge=1
-      enddo
-   enddo
-   ! Circulations are the same on both side of the TE 
-   if (p%nNWMax>iNWStart-1) then
+      ! First panel of NW is the last lifting line panel
       do iW = 1,p%nWings
          do iSpan = 1,p%W(iW)%nSpan
-            x%W(iW)%Gamma_NW(iSpan, iNWStart  ) = z%W(iW)%Gamma_LL(iSpan)  ! iAge=2
+            x%W(iW)%Gamma_NW(iSpan, p%iNWStart-1) = z%W(iW)%Gamma_LL(iSpan)  ! iAge=1
+         enddo
+      enddo
+   else
+      ! First panel of NW is the last lifting line panel
+      do iW = 1,p%nWings
+         do iSpan = 1,p%W(iW)%nSpan+1
+            x%W(iW)%r_NW(1:3, iSpan, p%iNWStart  ) = m%W(iW)%r_LL(1:3, iSpan, 1)  ! iAge=1 (LL)
+         enddo
+      enddo
+   endif
+
+   ! Circulations are the same on both side of the TE 
+   if (p%nNWMax>p%iNWStart-1) then
+      do iW = 1,p%nWings
+         do iSpan = 1,p%W(iW)%nSpan
+            x%W(iW)%Gamma_NW(iSpan, p%iNWStart  ) = z%W(iW)%Gamma_LL(iSpan)  ! iAge=2
          enddo
       enddo
    endif
@@ -248,9 +257,9 @@ subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
          print*,'Scaling'
          do iW = 1,p%nWings
             do iSpan = 1,p%W(iW)%nSpan
-               Gamma_Prev =  x%W(iW)%Gamma_NW(iSpan, iNWStart+1) ! Previous circulation
-               Gamma_New  =  x%W(iW)%Gamma_NW(iSpan, iNWStart  )
-               x%W(iW)%Gamma_NW(iSpan, iNWStart  )  = Gamma_New*ShedScale + (1.0_ReKi-ShedScale) * Gamma_Prev
+               Gamma_Prev =  x%W(iW)%Gamma_NW(iSpan, p%iNWStart+1) ! Previous circulation
+               Gamma_New  =  x%W(iW)%Gamma_NW(iSpan, p%iNWStart  )
+               x%W(iW)%Gamma_NW(iSpan, p%iNWStart  )  = Gamma_New*ShedScale + (1.0_ReKi-ShedScale) * Gamma_Prev
             enddo
          enddo
       endif
@@ -360,22 +369,22 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    endif
    ! --- Propagate near wake
    do iW=1,p%nWings
-      do iAge=p%nNWMax+1,iNWStart+1,-1
+      do iAge=p%nNWMax+1,p%iNWStart+1,-1
          do iSpan=1,p%W(iW)%nSpan+1
             x%W(iW)%r_NW(1:3,iSpan,iAge) = x%W(iW)%r_NW(1:3,iSpan,iAge-1)
          enddo
       enddo
-      x%W(iW)%r_NW(1:3,:,1:iNWStart) = -999.9_ReKi ! Nullified
+      x%W(iW)%r_NW(1:3,:,1:p%iNWStart) = -999.9_ReKi ! Nullified
    enddo
    if (p%nNWMax>1) then
       do iW=1,p%nWings
-         do iAge=p%nNWMax,iNWStart+1,-1
+         do iAge=p%nNWMax,p%iNWStart+1,-1
             do iSpan=1,p%W(iW)%nSpan
                x%W(iW)%Gamma_NW(iSpan,iAge) = x%W(iW)%Gamma_NW(iSpan,iAge-1)
                x%W(iW)%Eps_NW(:,iSpan,iAge) = x%W(iW)%Eps_NW(:,iSpan,iAge-1)
             enddo
          enddo
-         x%W(iW)%Gamma_NW(:,1:iNWStart) = -999.9_ReKi ! Nullified
+         x%W(iW)%Gamma_NW(:,1:p%iNWStart) = -999.9_ReKi ! Nullified
       enddo
    endif
 
@@ -390,12 +399,12 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
       !m%dxdt_FW(1:3,1:FWnSpan+1,1) = -999999_ReKi ! Important not nullified. The best would be to map the last NW convection velocity for this first row.
    enddo
    do iW=1,p%nWings
-      do iAge=p%nNWMax+1,iNWStart+1,-1 
+      do iAge=p%nNWMax+1,p%iNWStart+1,-1 
          do iSpan=1,p%W(iW)%nSpan+1
             m%dxdt%W(iW)%r_NW(1:3,iSpan,iAge) = m%dxdt%W(iW)%r_NW(1:3,iSpan,iAge-1)
          enddo
       enddo
-      m%dxdt%W(iW)%r_NW(1:3,:,1:iNWStart) = 0.0_ReKi ! Nullified, wing do no convect, handled by LL,NW mapping
+      m%dxdt%W(iW)%r_NW(1:3,:,1:p%iNWStart) = 0.0_ReKi ! Nullified, wing do no convect, handled by LL,NW mapping
    enddo
 
    if (.false.) print*,m%nNW,z%W(iW)%Gamma_LL(1) ! Just to avoid unused var warning
@@ -411,7 +420,7 @@ subroutine print_x_NW_FW(p, m, x, label)
    integer(IntKi) :: iAge, iW
    character(len=1):: flag
    print*,'------------------------------------------------------------------'
-   print'(A,I0,A,I0)',' NW .....................iNWStart:',iNWStart,' nNW:',m%nNW
+   print'(A,I0,A,I0)',' NW .....................iNWStart:',p%iNWStart,' nNW:',m%nNW
    iW=1
    do iAge=1,p%nNWMax+1
       flag='X'
