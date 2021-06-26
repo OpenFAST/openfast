@@ -124,7 +124,7 @@ contains
    !!  - Orth    : Unit Orthogonal vector on LL CP" -
    !!  - Vstr_LL : Structural velocity on LL CP" m/s
    subroutine Wings_Panelling(Meshes, p, m, ErrStat, ErrMsg )
-      type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
+      type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh at aerodynamic center
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
@@ -224,9 +224,9 @@ contains
       ! --- Structural velocity on LL
       ! TODO: difference meshes in/LL
       do iW = 1,p%nWings
-         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(1,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(1,:))
-         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(2,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(2,:))
-         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(3,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(3,:))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(1,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_CP(1,:))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(2,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_CP(2,:))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(3,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_CP(3,:))
       enddo
    end subroutine Wings_Panelling
 
@@ -278,8 +278,8 @@ contains
       if (p%CirculationMethod==idCircPrescribed) then 
          do iW = 1, p%nWings !Loop over lifting lines
             z%W(iW)%Gamma_LL(1:p%W(iW)%nSpan) = p%W(iW)%PrescribedCirculation(1:p%W(iW)%nSpan)
-            m%W(iW)%Vind_LL=-9999._ReKi !< Safety 
-            m%W(iW)%Vtot_LL=-9999._ReKi !< Safety 
+            m%W(iW)%Vind_CP=-9999._ReKi !< Safety 
+            m%W(iW)%Vtot_CP=-9999._ReKi !< Safety 
          enddo
 
       else if (p%CirculationMethod==idCircPolarData) then 
@@ -350,7 +350,7 @@ contains
       if (m%FirstCall) then
          ! We find a guess by looking simply at the Wind and Elasticity velocity
          do iW=1,p%nWings
-            m%W(iW)%Vtot_ll = m%W(iW)%Vwnd_LL - m%W(iW)%Vstr_ll
+            m%W(iW)%Vtot_CP = m%W(iW)%Vwnd_CP - m%W(iW)%Vstr_CP
          enddo
          ! Input: Vtot_LL, output: GammaLastIter
          call CirculationFromPolarData(GammaLastIter, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
@@ -374,15 +374,15 @@ contains
       call AllocAry(Vvar,  3, nCP_tot, 'Vvar',  ErrStat2, ErrMsg2);  if(Failed()) return;
       call AllocAry(Vcst,  3, nCP_tot, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
 
-      ! Set m%W(iW)%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
-      ! Input: m%W%CP_LL, output: m%W%Vind_LL
+      ! Set m%W(iW)%Vind_CP Induced velocity from Known wake only (after iNWStart+1)
+      ! Input: m%W%CP_LL, output: m%W%Vind_CP
       call LiftingLineInducedVelocities(p, x, p%iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
 
       kCP=0
       do iW=1,p%nWings
         do iSpan=1,p%W(iW)%nSpan
            kCP=kCP+1
-           Vcst(1:3,kCP) = m%W(iW)%Vind_LL(1:3,iSpan) + m%W(iW)%Vwnd_LL(1:3,iSpan) - m%W(iW)%Vstr_ll(1:3,iSpan)
+           Vcst(1:3,kCP) = m%W(iW)%Vind_CP(1:3,iSpan) + m%W(iW)%Vwnd_CP(1:3,iSpan) - m%W(iW)%Vstr_CP(1:3,iSpan)
          enddo
       enddo
 
@@ -392,10 +392,10 @@ contains
             if (any(x%W(iW)%r_NW(1,:,1:m%nNW+1)<-999)) then
                ErrMsg='Wings_ComputeCirculationPolarData: Problem in input NW points'; ErrStat=ErrID_Fatal; return
             endif
-            if (any(m%W(iW)%Vind_LL(1:3,:)<-99)) then
+            if (any(m%W(iW)%Vind_CP(1:3,:)<-99)) then
                ErrMsg='Wings_ComputeCirculationPolarData: Problem in induced velocity on LL points'; ErrStat=ErrID_Fatal; return
             endif
-            if (any(m%W(iW)%Vwnd_LL(1:3,:)<-99)) then
+            if (any(m%W(iW)%Vwnd_CP(1:3,:)<-99)) then
                ErrMsg='Wings_ComputeCirculationPolarData: Problem in wind velocity on LL points'; ErrStat=ErrID_Fatal; return
             endif
          enddo
@@ -436,7 +436,7 @@ contains
           do iW=1,p%nWings
              do iSpan=1,p%W(iW)%nSpan
                 kCP=kCP+1
-                m%W(iW)%Vtot_LL(:,iSpan) = Vcst(:,kCP) + Vvar(:,kCP)
+                m%W(iW)%Vtot_CP(:,iSpan) = Vcst(:,kCP) + Vvar(:,kCP)
              enddo
           enddo
           ! --- Computing circulation based on Vtot_LL
@@ -479,17 +479,17 @@ contains
       !call Output_Gamma(m%CP_ll(1:3,:), Gamma_LL(:), iW, m%iStep, iLabel, iIter)
       !call print_mean_3d( m%Vwnd_LL(:,:,:), 'Mean wind    vel. LL (cst)')
       !call print_mean_3d( m%Vstr_LL(:,:,:), 'Mean struct  vel. LL (cst)')
-      !call print_mean_3d( m%W(iW)%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
+      !call print_mean_3d( m%W(iW)%Vind_CP(:,:,:), 'Mean induced vel. LL (cst)')
       !call print_mean_3d( Vvar(:,:,:)     , 'Mean induced vel. LL (var)')
-      !call print_mean_3d( Vvar+m%W(iW)%Vind_LL(:,:,:), 'Mean induced vel. LL (tot)')
+      !call print_mean_3d( Vvar+m%W(iW)%Vind_CP(:,:,:), 'Mean induced vel. LL (tot)')
       !call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
-      !print*,'m%W(iW)%Vind_LL',m%Vind_LL(1,:,:)
+      !print*,'m%W(iW)%Vind_CP',m%Vind_CP(1,:,:)
       !print*,'m%Vwnd_LL',m%Vwnd_LL(1,:,:)
       !print*,'m%Vcst_LL',Vcst(1,:,:)
       !print*,'Gamm: ',Gamma_LL(1, 1), Gamma_LL(p%W(iW)%nSpan,1)
       do iW=1,size(p%W)
-         m%W(iW)%Vind_LL=-9999._ReKi !< Safety (the induction above was not the true one)
-         m%W(iW)%Vtot_LL=-9999._ReKi !< Safety 
+         m%W(iW)%Vind_CP=-9999._ReKi !< Safety (the induction above was not the true one)
+         m%W(iW)%Vtot_CP=-9999._ReKi !< Safety 
       enddo
       call CleanUp()
    contains
@@ -540,7 +540,7 @@ contains
             ! Aliases to shorten notations
             N    = m%W(iW)%Norm(1:3, icp) 
             Tc   = m%W(iW)%Tang(1:3, icp)
-            Vrel = m%W(iW)%Vtot_LL(1:3,icp)
+            Vrel = m%W(iW)%Vtot_CP(1:3,icp)
             ! "Orth": cross sectional plane of the lifting line 
             Vrel_orth(1:3)  = dot_product(Vrel,N)*N + dot_product(Vrel,Tc)*Tc
             Vrel_orth_norm  = TwoNorm(Vrel_orth(1:3))

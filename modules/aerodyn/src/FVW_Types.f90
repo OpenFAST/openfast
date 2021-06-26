@@ -166,10 +166,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: dl      !< Vector of elementary length along the LL [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Area      !< Area of each LL panel [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: diag_LL      !< Diagonal length of each LL panel [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vind_LL      !< Induced velocity on lifting line control points [m/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vtot_LL      !< Total velocity on lifting line control points [m/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vstr_LL      !< Structural velocity on LL CP [m/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vwnd_LL      !< Wind on lifting line control points [m/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vind_CP      !< Induced velocity on lifting line control points [m/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vtot_CP      !< Total velocity on lifting line control points [m/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vstr_CP      !< Structural velocity on LL CP [m/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vwnd_CP      !< Wind on lifting line control points [m/s]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vwnd_NW      !< Wind on near wake panels [m/s]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vwnd_FW      !< Wind on far  wake panels [m/s]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vind_NW      !< Induced velocity on near wake panels [m/s]
@@ -3788,61 +3788,61 @@ IF (ALLOCATED(SrcWng_MiscVarTypeData%diag_LL)) THEN
   END IF
     DstWng_MiscVarTypeData%diag_LL = SrcWng_MiscVarTypeData%diag_LL
 ENDIF
-IF (ALLOCATED(SrcWng_MiscVarTypeData%Vind_LL)) THEN
-  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vind_LL,1)
-  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vind_LL,1)
-  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vind_LL,2)
-  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vind_LL,2)
-  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vind_LL)) THEN 
-    ALLOCATE(DstWng_MiscVarTypeData%Vind_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcWng_MiscVarTypeData%Vind_CP)) THEN
+  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vind_CP,1)
+  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vind_CP,1)
+  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vind_CP,2)
+  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vind_CP,2)
+  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vind_CP)) THEN 
+    ALLOCATE(DstWng_MiscVarTypeData%Vind_CP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vind_LL.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vind_CP.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstWng_MiscVarTypeData%Vind_LL = SrcWng_MiscVarTypeData%Vind_LL
+    DstWng_MiscVarTypeData%Vind_CP = SrcWng_MiscVarTypeData%Vind_CP
 ENDIF
-IF (ALLOCATED(SrcWng_MiscVarTypeData%Vtot_LL)) THEN
-  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vtot_LL,1)
-  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vtot_LL,1)
-  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vtot_LL,2)
-  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vtot_LL,2)
-  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vtot_LL)) THEN 
-    ALLOCATE(DstWng_MiscVarTypeData%Vtot_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcWng_MiscVarTypeData%Vtot_CP)) THEN
+  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vtot_CP,1)
+  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vtot_CP,1)
+  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vtot_CP,2)
+  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vtot_CP,2)
+  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vtot_CP)) THEN 
+    ALLOCATE(DstWng_MiscVarTypeData%Vtot_CP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vtot_LL.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vtot_CP.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstWng_MiscVarTypeData%Vtot_LL = SrcWng_MiscVarTypeData%Vtot_LL
+    DstWng_MiscVarTypeData%Vtot_CP = SrcWng_MiscVarTypeData%Vtot_CP
 ENDIF
-IF (ALLOCATED(SrcWng_MiscVarTypeData%Vstr_LL)) THEN
-  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vstr_LL,1)
-  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vstr_LL,1)
-  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vstr_LL,2)
-  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vstr_LL,2)
-  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vstr_LL)) THEN 
-    ALLOCATE(DstWng_MiscVarTypeData%Vstr_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcWng_MiscVarTypeData%Vstr_CP)) THEN
+  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vstr_CP,1)
+  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vstr_CP,1)
+  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vstr_CP,2)
+  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vstr_CP,2)
+  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vstr_CP)) THEN 
+    ALLOCATE(DstWng_MiscVarTypeData%Vstr_CP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vstr_LL.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vstr_CP.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstWng_MiscVarTypeData%Vstr_LL = SrcWng_MiscVarTypeData%Vstr_LL
+    DstWng_MiscVarTypeData%Vstr_CP = SrcWng_MiscVarTypeData%Vstr_CP
 ENDIF
-IF (ALLOCATED(SrcWng_MiscVarTypeData%Vwnd_LL)) THEN
-  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vwnd_LL,1)
-  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vwnd_LL,1)
-  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vwnd_LL,2)
-  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vwnd_LL,2)
-  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vwnd_LL)) THEN 
-    ALLOCATE(DstWng_MiscVarTypeData%Vwnd_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcWng_MiscVarTypeData%Vwnd_CP)) THEN
+  i1_l = LBOUND(SrcWng_MiscVarTypeData%Vwnd_CP,1)
+  i1_u = UBOUND(SrcWng_MiscVarTypeData%Vwnd_CP,1)
+  i2_l = LBOUND(SrcWng_MiscVarTypeData%Vwnd_CP,2)
+  i2_u = UBOUND(SrcWng_MiscVarTypeData%Vwnd_CP,2)
+  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%Vwnd_CP)) THEN 
+    ALLOCATE(DstWng_MiscVarTypeData%Vwnd_CP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vwnd_LL.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%Vwnd_CP.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstWng_MiscVarTypeData%Vwnd_LL = SrcWng_MiscVarTypeData%Vwnd_LL
+    DstWng_MiscVarTypeData%Vwnd_CP = SrcWng_MiscVarTypeData%Vwnd_CP
 ENDIF
 IF (ALLOCATED(SrcWng_MiscVarTypeData%Vwnd_NW)) THEN
   i1_l = LBOUND(SrcWng_MiscVarTypeData%Vwnd_NW,1)
@@ -4198,17 +4198,17 @@ ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%diag_LL)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%diag_LL)
 ENDIF
-IF (ALLOCATED(Wng_MiscVarTypeData%Vind_LL)) THEN
-  DEALLOCATE(Wng_MiscVarTypeData%Vind_LL)
+IF (ALLOCATED(Wng_MiscVarTypeData%Vind_CP)) THEN
+  DEALLOCATE(Wng_MiscVarTypeData%Vind_CP)
 ENDIF
-IF (ALLOCATED(Wng_MiscVarTypeData%Vtot_LL)) THEN
-  DEALLOCATE(Wng_MiscVarTypeData%Vtot_LL)
+IF (ALLOCATED(Wng_MiscVarTypeData%Vtot_CP)) THEN
+  DEALLOCATE(Wng_MiscVarTypeData%Vtot_CP)
 ENDIF
-IF (ALLOCATED(Wng_MiscVarTypeData%Vstr_LL)) THEN
-  DEALLOCATE(Wng_MiscVarTypeData%Vstr_LL)
+IF (ALLOCATED(Wng_MiscVarTypeData%Vstr_CP)) THEN
+  DEALLOCATE(Wng_MiscVarTypeData%Vstr_CP)
 ENDIF
-IF (ALLOCATED(Wng_MiscVarTypeData%Vwnd_LL)) THEN
-  DEALLOCATE(Wng_MiscVarTypeData%Vwnd_LL)
+IF (ALLOCATED(Wng_MiscVarTypeData%Vwnd_CP)) THEN
+  DEALLOCATE(Wng_MiscVarTypeData%Vwnd_CP)
 ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%Vwnd_NW)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%Vwnd_NW)
@@ -4374,25 +4374,25 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! diag_LL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%diag_LL)  ! diag_LL
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vind_LL allocated yes/no
-  IF ( ALLOCATED(InData%Vind_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! Vind_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vind_LL)  ! Vind_LL
+  Int_BufSz   = Int_BufSz   + 1     ! Vind_CP allocated yes/no
+  IF ( ALLOCATED(InData%Vind_CP) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Vind_CP upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vind_CP)  ! Vind_CP
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vtot_LL allocated yes/no
-  IF ( ALLOCATED(InData%Vtot_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! Vtot_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vtot_LL)  ! Vtot_LL
+  Int_BufSz   = Int_BufSz   + 1     ! Vtot_CP allocated yes/no
+  IF ( ALLOCATED(InData%Vtot_CP) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Vtot_CP upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vtot_CP)  ! Vtot_CP
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vstr_LL allocated yes/no
-  IF ( ALLOCATED(InData%Vstr_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! Vstr_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vstr_LL)  ! Vstr_LL
+  Int_BufSz   = Int_BufSz   + 1     ! Vstr_CP allocated yes/no
+  IF ( ALLOCATED(InData%Vstr_CP) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Vstr_CP upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vstr_CP)  ! Vstr_CP
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vwnd_LL allocated yes/no
-  IF ( ALLOCATED(InData%Vwnd_LL) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! Vwnd_LL upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vwnd_LL)  ! Vwnd_LL
+  Int_BufSz   = Int_BufSz   + 1     ! Vwnd_CP allocated yes/no
+  IF ( ALLOCATED(InData%Vwnd_CP) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Vwnd_CP upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vwnd_CP)  ! Vwnd_CP
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Vwnd_NW allocated yes/no
   IF ( ALLOCATED(InData%Vwnd_NW) ) THEN
@@ -4805,82 +4805,82 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%Vind_LL) ) THEN
+  IF ( .NOT. ALLOCATED(InData%Vind_CP) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vind_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vind_LL,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vind_CP,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vind_CP,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vind_LL,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vind_LL,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vind_CP,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vind_CP,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%Vind_LL,2), UBOUND(InData%Vind_LL,2)
-        DO i1 = LBOUND(InData%Vind_LL,1), UBOUND(InData%Vind_LL,1)
-          ReKiBuf(Re_Xferred) = InData%Vind_LL(i1,i2)
+      DO i2 = LBOUND(InData%Vind_CP,2), UBOUND(InData%Vind_CP,2)
+        DO i1 = LBOUND(InData%Vind_CP,1), UBOUND(InData%Vind_CP,1)
+          ReKiBuf(Re_Xferred) = InData%Vind_CP(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%Vtot_LL) ) THEN
+  IF ( .NOT. ALLOCATED(InData%Vtot_CP) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vtot_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vtot_LL,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vtot_CP,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vtot_CP,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vtot_LL,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vtot_LL,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vtot_CP,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vtot_CP,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%Vtot_LL,2), UBOUND(InData%Vtot_LL,2)
-        DO i1 = LBOUND(InData%Vtot_LL,1), UBOUND(InData%Vtot_LL,1)
-          ReKiBuf(Re_Xferred) = InData%Vtot_LL(i1,i2)
+      DO i2 = LBOUND(InData%Vtot_CP,2), UBOUND(InData%Vtot_CP,2)
+        DO i1 = LBOUND(InData%Vtot_CP,1), UBOUND(InData%Vtot_CP,1)
+          ReKiBuf(Re_Xferred) = InData%Vtot_CP(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%Vstr_LL) ) THEN
+  IF ( .NOT. ALLOCATED(InData%Vstr_CP) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vstr_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vstr_LL,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vstr_CP,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vstr_CP,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vstr_LL,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vstr_LL,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vstr_CP,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vstr_CP,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%Vstr_LL,2), UBOUND(InData%Vstr_LL,2)
-        DO i1 = LBOUND(InData%Vstr_LL,1), UBOUND(InData%Vstr_LL,1)
-          ReKiBuf(Re_Xferred) = InData%Vstr_LL(i1,i2)
+      DO i2 = LBOUND(InData%Vstr_CP,2), UBOUND(InData%Vstr_CP,2)
+        DO i1 = LBOUND(InData%Vstr_CP,1), UBOUND(InData%Vstr_CP,1)
+          ReKiBuf(Re_Xferred) = InData%Vstr_CP(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%Vwnd_LL) ) THEN
+  IF ( .NOT. ALLOCATED(InData%Vwnd_CP) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vwnd_LL,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vwnd_LL,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vwnd_CP,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vwnd_CP,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vwnd_LL,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vwnd_LL,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vwnd_CP,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vwnd_CP,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%Vwnd_LL,2), UBOUND(InData%Vwnd_LL,2)
-        DO i1 = LBOUND(InData%Vwnd_LL,1), UBOUND(InData%Vwnd_LL,1)
-          ReKiBuf(Re_Xferred) = InData%Vwnd_LL(i1,i2)
+      DO i2 = LBOUND(InData%Vwnd_CP,2), UBOUND(InData%Vwnd_CP,2)
+        DO i1 = LBOUND(InData%Vwnd_CP,1), UBOUND(InData%Vwnd_CP,1)
+          ReKiBuf(Re_Xferred) = InData%Vwnd_CP(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -5650,7 +5650,7 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vind_LL not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vind_CP not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -5660,20 +5660,20 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vind_LL)) DEALLOCATE(OutData%Vind_LL)
-    ALLOCATE(OutData%Vind_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%Vind_CP)) DEALLOCATE(OutData%Vind_CP)
+    ALLOCATE(OutData%Vind_CP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vind_LL.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vind_CP.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%Vind_LL,2), UBOUND(OutData%Vind_LL,2)
-        DO i1 = LBOUND(OutData%Vind_LL,1), UBOUND(OutData%Vind_LL,1)
-          OutData%Vind_LL(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%Vind_CP,2), UBOUND(OutData%Vind_CP,2)
+        DO i1 = LBOUND(OutData%Vind_CP,1), UBOUND(OutData%Vind_CP,1)
+          OutData%Vind_CP(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vtot_LL not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vtot_CP not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -5683,20 +5683,20 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vtot_LL)) DEALLOCATE(OutData%Vtot_LL)
-    ALLOCATE(OutData%Vtot_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%Vtot_CP)) DEALLOCATE(OutData%Vtot_CP)
+    ALLOCATE(OutData%Vtot_CP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vtot_LL.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vtot_CP.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%Vtot_LL,2), UBOUND(OutData%Vtot_LL,2)
-        DO i1 = LBOUND(OutData%Vtot_LL,1), UBOUND(OutData%Vtot_LL,1)
-          OutData%Vtot_LL(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%Vtot_CP,2), UBOUND(OutData%Vtot_CP,2)
+        DO i1 = LBOUND(OutData%Vtot_CP,1), UBOUND(OutData%Vtot_CP,1)
+          OutData%Vtot_CP(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vstr_LL not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vstr_CP not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -5706,20 +5706,20 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vstr_LL)) DEALLOCATE(OutData%Vstr_LL)
-    ALLOCATE(OutData%Vstr_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%Vstr_CP)) DEALLOCATE(OutData%Vstr_CP)
+    ALLOCATE(OutData%Vstr_CP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vstr_LL.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vstr_CP.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%Vstr_LL,2), UBOUND(OutData%Vstr_LL,2)
-        DO i1 = LBOUND(OutData%Vstr_LL,1), UBOUND(OutData%Vstr_LL,1)
-          OutData%Vstr_LL(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%Vstr_CP,2), UBOUND(OutData%Vstr_CP,2)
+        DO i1 = LBOUND(OutData%Vstr_CP,1), UBOUND(OutData%Vstr_CP,1)
+          OutData%Vstr_CP(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vwnd_LL not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vwnd_CP not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -5729,15 +5729,15 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vwnd_LL)) DEALLOCATE(OutData%Vwnd_LL)
-    ALLOCATE(OutData%Vwnd_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%Vwnd_CP)) DEALLOCATE(OutData%Vwnd_CP)
+    ALLOCATE(OutData%Vwnd_CP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vwnd_LL.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vwnd_CP.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%Vwnd_LL,2), UBOUND(OutData%Vwnd_LL,2)
-        DO i1 = LBOUND(OutData%Vwnd_LL,1), UBOUND(OutData%Vwnd_LL,1)
-          OutData%Vwnd_LL(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%Vwnd_CP,2), UBOUND(OutData%Vwnd_CP,2)
+        DO i1 = LBOUND(OutData%Vwnd_CP,1), UBOUND(OutData%Vwnd_CP,1)
+          OutData%Vwnd_CP(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO

@@ -130,10 +130,10 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Area         :   -  -  "Area of each LL panel" -
 typedef     ^                   ^               ReKi                             diag_LL      :   -  -  "Diagonal length of each LL panel" -
 #typedef     ^                   ^               Reki                             Gamma_LL     :   -  -  "Circulation on the wing lifting line (COPY of Constraint State)" -
-typedef     ^                   ^               ReKi                             Vind_LL      ::  -  -  "Induced velocity on lifting line control points" m/s
-typedef     ^                   ^               ReKi                             Vtot_LL      ::  -  -  "Total velocity on lifting line control points" m/s
-typedef     ^                   ^               ReKi                             Vstr_LL      ::  -  -  "Structural velocity on LL CP" m/s
-typedef     ^                   ^               ReKi                             Vwnd_LL      ::  -  -  "Wind on lifting line control points" m/s 
+typedef     ^                   ^               ReKi                             Vind_CP      ::  -  -  "Induced velocity on lifting line control points" m/s
+typedef     ^                   ^               ReKi                             Vtot_CP      ::  -  -  "Total velocity on lifting line control points" m/s
+typedef     ^                   ^               ReKi                             Vstr_CP      ::  -  -  "Structural velocity on LL CP" m/s
+typedef     ^                   ^               ReKi                             Vwnd_CP      ::  -  -  "Wind on lifting line control points" m/s 
 typedef     ^                   ^               ReKi                             Vwnd_NW      ::: -  -  "Wind on near wake panels" m/s 
 typedef     ^                   ^               ReKi                             Vwnd_FW      ::: -  -  "Wind on far  wake panels" m/s 
 typedef     ^                   ^               ReKi                             Vind_NW      ::: -  -  "Induced velocity on near wake panels" m/s 
@@ -150,6 +150,10 @@ typedef     ^                   ^               UA_MiscVarType                  
 typedef     ^                   ^               UA_OutputType                    y_UA          -  -  -  "outputs from UnsteadyAero"        -
 typedef     ^                   ^               UA_ParameterType                 p_UA          -  -  -  "parameters for UnsteadyAero"        -
 # for calculating outputs at blade nodes
+#typedef     ^                   ^               ReKi                             Vind_LL      ::  -  -  "Induced velocity on lifting line control points" m/s
+#typedef     ^                   ^               ReKi                             Vtot_LL      ::  -  -  "Total velocity on lifting line control points" m/s
+#typedef     ^                   ^               ReKi                             Vstr_LL      ::  -  -  "Structural velocity on LL CP" m/s
+#typedef     ^                   ^               ReKi                             Vwnd_LL      ::  -  -  "Wind on lifting line control points" m/s 
 typedef     ^                   ^               ReKi                             BN_AxInd      :    -  -  "Axial induction [size (NumBlNds,numBlades)]" -
 typedef     ^                   ^               ReKi                             BN_TanInd     :    -  -  "Tangential induction [size (NumBlNds,numBlades)]" -
 typedef     ^                   ^               ReKi                             BN_Vrel       :    -  -  "Relative velocity [size (NumBlNds,numBlades)]" m/s

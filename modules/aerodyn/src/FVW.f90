@@ -216,10 +216,10 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       call AllocAry( m%W(iW)%dl      , 3   ,  p%W(iW)%nSpan, 'Orthogonal vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%dl= -999999_ReKi;
       call AllocAry( m%W(iW)%Area    ,        p%W(iW)%nSpan, 'LL Panel area      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Area = -999999_ReKi;
       call AllocAry( m%W(iW)%diag_LL ,        p%W(iW)%nSpan, 'LL Panel diagonals ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%diag_LL = -999999_ReKi;
-      call AllocAry( m%W(iW)%Vind_LL , 3   ,  p%W(iW)%nSpan, 'Vind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vind_LL= -999999_ReKi;
-      call AllocAry( m%W(iW)%Vtot_LL , 3   ,  p%W(iW)%nSpan, 'Vtot on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vtot_LL= -999999_ReKi;
-      call AllocAry( m%W(iW)%Vstr_LL , 3   ,  p%W(iW)%nSpan, 'Vstr on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vstr_LL= -999999_ReKi;
-      call AllocAry( m%W(iW)%Vwnd_LL , 3   ,  p%W(iW)%nSpan, 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_LL= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vind_CP , 3   ,  p%W(iW)%nSpan, 'Vind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vind_CP= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vtot_CP , 3   ,  p%W(iW)%nSpan, 'Vtot on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vtot_CP= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vstr_CP , 3   ,  p%W(iW)%nSpan, 'Vstr on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vstr_CP= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vwnd_CP , 3   ,  p%W(iW)%nSpan, 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_CP= -999999_ReKi;
       ! Variables at panels points
       call AllocAry( m%W(iW)%r_LL    , 3   ,  p%W(iW)%nSpan+1  , 2        , 'Lifting Line Panels', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%r_LL= -999999_ReKi;
       call AllocAry( m%W(iW)%Vwnd_NW , 3   ,  p%W(iW)%nSpan+1  ,p%nNWMax+1, 'Wind on NW ', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_NW= -999_ReKi;
@@ -250,7 +250,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
 
       ! Wind set to 0. TODO check if -99999 works now
       !NOTE: We do not have the windspeed until after the FVW initialization (IfW is not initialized until after AD15)
-      m%W(iW)%Vwnd_LL(:,:)   = 0
+      m%W(iW)%Vwnd_CP(:,:)   = 0
       m%W(iW)%Vwnd_NW(:,:,:) = 0
       m%W(iW)%Vwnd_FW(:,:,:) = 0
    enddo
@@ -1382,21 +1382,33 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
    !---
 
    ! Induction on the lifting line control point
-   ! Input: m%W%CP_LL, Output:m%W%Vind_LL
+   ! Input: m%W%CP_LL, Output:m%W%Vind_CP
    do iW=1,p%nWings
-      m%W(iW)%Vind_LL=-9999.0_ReKi
+      m%W(iW)%Vind_CP=-9999.0_ReKi
    enddo
    call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   ! Induction on the mesh points (AeroDyn nodes)
-   do iW=1,p%nWings
-      y%W(iW)%Vind(1:3,:) = 0.0_ReKi
-      ! --- Linear interpolation for interior points and extrapolations at boundaries
-      call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_LL(1,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(1,:))
-      call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_LL(2,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(2,:))
-      call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_LL(3,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(3,:))
-   enddo
+   ! Induction on the mesh points (AeroDyn nodes): y%W(iW)%Vind
+   if (p%InductionAtCP) then
+      ! We use the induction at the CP (Vind_LL) to interpextrap at the node
+      do iW=1,p%nWings
+         y%W(iW)%Vind(1:3,:) = 0.0_ReKi
+         ! --- Linear interpolation for interior points and extrapolations at boundaries
+         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(1,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(1,:))
+         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(2,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(2,:))
+         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(3,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(3,:))
+      enddo
+   else
+      print*,'>>>> TODO'
+      STOP
+      ! The induction was computed at the nodes 
+      do iW=1,p%nWings
+     !    y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
+     !    y%W(iW)%Vind(2,:) = m%W(iW)%Vind_LL(2,:)
+     !    y%W(iW)%Vind(3,:) = m%W(iW)%Vind_LL(3,:)
+      enddo
+   endif
 end subroutine CalcOutputForAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
@@ -1477,7 +1489,7 @@ subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
       ! For plotting only
       call PackPanelsToSegments(p, x, 1, (p%ShearModel==idShearMirror), m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
       do iW=1,p%nWings
-         m%W(iW)%Vtot_LL = m%W(iW)%Vind_LL + m%W(iW)%Vwnd_LL - m%W(iW)%Vstr_LL
+         m%W(iW)%Vtot_CP = m%W(iW)%Vind_CP + m%W(iW)%Vwnd_CP - m%W(iW)%Vstr_CP
       enddo
       if ( force .or. (( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon ))  then
          m%VTKlastTime = t
@@ -1625,16 +1637,16 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    ! Set m%W(iW)%Vind_LL
 
    do iW = 1,p%nWings  
-      m%W(iW)%Vind_LL=-9999.0_ReKi
-      ! Input: m%W%CP_LL, Output:m%W%Vind_LL
+      m%W(iW)%Vind_CP=-9999.0_ReKi
+      ! Input: m%W%CP_LL, Output:m%W%Vind_CP
       call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'); if (ErrStat >= AbortErrLev) return
       allocate(Vind_node(3,1:p%W(iW)%nSpan+1))
 
       ! Induced velocity at Nodes (NOTE: we rely on storage done when computing Circulation)
       if (m%nNW>1) then
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_LL(1,:), p%W(iW)%s_LL(:), Vind_node(1,:))
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_LL(2,:), p%W(iW)%s_LL(:), Vind_node(2,:))
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_LL(3,:), p%W(iW)%s_LL(:), Vind_node(3,:))
+         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(1,:), p%W(iW)%s_LL(:), Vind_node(1,:))
+         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(2,:), p%W(iW)%s_LL(:), Vind_node(2,:))
+         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(3,:), p%W(iW)%s_LL(:), Vind_node(3,:))
       else
          Vind_node=0.0_ReKi
       endif

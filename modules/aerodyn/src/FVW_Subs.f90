@@ -606,7 +606,7 @@ subroutine DistributeRequestedWind_LL(V_wind, p, m)
    do iW=1,p%nWings
       iP_start = iP_end+1
       iP_end   = iP_start-1 + p%W(iW)%nSpan
-      m%W(iW)%Vwnd_LL(1:3,1:p%W(iW)%nSpan) = V_wind(1:3,iP_start:iP_end)
+      m%W(iW)%Vwnd_CP(1:3,1:p%W(iW)%nSpan) = V_wind(1:3,iP_start:iP_end)
    enddo
 end subroutine DistributeRequestedWind_LL
 
@@ -1219,14 +1219,14 @@ end subroutine WakeInducedVelocities
 
 !> Compute induced velocities from all vortex elements onto the lifting line control points
 !! In : x%W(iW)%r_NW, x%W(iW)%r_FW, x%W(iW)%Gamma_NW, x%W(iW)%Gamma_FW
-!! Out: m%W(iW)%Vind_LL
+!! Out: m%W(iW)%Vind_CP
 subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    !real(ReKi), dimension(:,:,:),    intent(in   ) :: CP_LL   !< Control points where velocity is to be evaluated
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
-   !real(ReKi), dimension(:,:,:),    intent(  out) :: Vind_LL !< Control points where velocity is to be evaluated
+   !real(ReKi), dimension(:,:,:),    intent(  out) :: Vind_CP !< Control points where velocity is to be evaluated
    ! Local variables
    integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
@@ -1237,7 +1237,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    do iW=1,p%nWings
-      m%W(iW)%Vind_LL = -9999._ReKi !< Safety
+      m%W(iW)%Vind_CP = -9999._ReKi !< Safety
    enddo
    bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
 
@@ -1248,7 +1248,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    if (nSegP==0) then
       nCPs=0
       do iW=1,p%nWings
-         m%W(iW)%Vind_LL = 0.0_ReKi !< Safety
+         m%W(iW)%Vind_CP = 0.0_ReKi !< Safety
       enddo
       if (DEV_VERSION) then
          print'(A,I0,A,I0,A,I0,A)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs, ' -> No induction'
@@ -1292,7 +1292,7 @@ contains
    subroutine UnPackLiftingLineVelocities()
       iHeadP=1
       do iW=1,p%nWings
-         CALL VecToLattice2D(Uind, m%W(iW)%Vind_LL(1:3,:), iHeadP)
+         CALL VecToLattice2D(Uind, m%W(iW)%Vind_CP(1:3,:), iHeadP)
       enddo
       if (DEV_VERSION) then
          if ((iHeadP-1)/=size(Uind,2)) then
