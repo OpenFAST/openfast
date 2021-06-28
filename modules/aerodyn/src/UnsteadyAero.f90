@@ -2149,8 +2149,13 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    x4 = max( min( x%x(4), 1.0_R8Ki ), 0.0_R8Ki )
    
    call AddOrSub2Pi(real(x%x(1),ReKi), alpha_34) ! make sure we use the same alpha_34 for both x1 and x2 equations.
-   dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34
-   dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34
+   if (p%ShedEffect) then
+      dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34
+      dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34
+   else
+      dxdt%x(1) = 0.0_ReKi
+      dxdt%x(2) = 0.0_ReKi
+   endif
    
    if (p%UAMod == UA_HGM) then
       call AddOrSub2Pi(BL_p%alpha0, alphaE)
@@ -2222,7 +2227,11 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
     
       if (present(alphaE)) then
          ! Variables derived from states
-         alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
+         if (p%ShedEffect) then
+            alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
+         else
+            alphaE  = alpha_34
+         endif
          call MPi2Pi(alphaE)
       end if
    end if
@@ -2660,6 +2669,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)                   ! Eq. 81
       
    ! bjj: do we need to check that u%alpha is between -pi and + pi?
+      ! y%Cl = AFI_interp%Cl < TODO consider using this in front of x4 for "true" Cl
          y%Cl = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs  + pi * Tu * u%omega                                        ! Eq. 78
 
          call AddOrSub2Pi(u%alpha, alphaE)

@@ -3,8 +3,8 @@ OpenFAST
 
 |actions| |nbsp| |rtfd|
 
-.. |actions| image:: https://github.com/openfast/openfast/workflows/OpenFAST%20Build%20and%20Test/badge.svg?branch=dev
-   :target: https://github.com/OpenFAST/openfast/actions?query=workflow%3A%22OpenFAST+Build+and+Test%22
+.. |actions| image:: https://github.com/openfast/openfast/actions/workflows/automated-dev-tests.yml/badge.svg?branch=dev
+   :target: https://github.com/OpenFAST/openfast/actions/workflows/automated-dev-tests.yml?query=workflow%3A%22Development+Pipeline%22
    :alt: Build Status
 .. |rtfd| image:: https://readthedocs.org/projects/openfast/badge/?version=dev
    :target: https://openfast.readthedocs.io/en/dev

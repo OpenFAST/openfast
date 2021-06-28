@@ -4,16 +4,16 @@ name: 'Development Pipeline'
 on:
   push:
     paths-ignore:
+      - 'LICENSE'
+      - 'README.rst'
       - 'docs/**'
       - 'share/**'
       - 'vs-build/**'
 
   pull_request:
-    types: [opened, synchronize] #labeled, assigned]
-    paths-ignore:
-      - 'docs/**'
-      - 'share/**'
-      - 'vs-build/**'
+    types: [opened, synchronize, edited, reopened] #labeled, assigned]
+    # Pull request event triggers are unrelated to paths
+    # paths-ignore:
 
 env:
   FORTRAN_COMPILER: gfortran-10

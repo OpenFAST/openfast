@@ -36,9 +36,10 @@ USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Baseline = 1      ! UAMod = 1 [Baseline model (Original)] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Gonzalez = 2      ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce = 3      ! [Minnema/Pierce variant (changes in Cc and Cm)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM = 4      ! [continuous variant of HGM (Hansen) model] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV = 5      ! [continuous variant of HGM (Hansen) model with vortex modifications] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce = 3      ! UAMod = 3 [Minnema/Pierce variant (changes in Cc and Cm)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM = 4      ! UAMod = 4 [continuous variant of HGM (Hansen) model] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV = 5      ! UAMod = 5 [continuous variant of HGM (Hansen) model with vortex modifications] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye = 6      ! UAMod = 6 [continuous Oye model] [-]
 ! =========  UA_InitInputType  =======
   TYPE, PUBLIC :: UA_InitInputType
     REAL(DbKi)  :: dt      !< time step [s]

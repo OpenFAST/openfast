@@ -19,9 +19,10 @@ usefrom   AirfoilInfo_Registry.txt
 
 param     UnsteadyAero/UA       -                INTEGER           UA_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
 param     UnsteadyAero/UA       -                INTEGER           UA_Gonzalez      -        2   -   "UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]" -
-param     UnsteadyAero/UA       -                INTEGER           UA_MinnemaPierce -        3   -   "[Minnema/Pierce variant (changes in Cc and Cm)]" -
-param     UnsteadyAero/UA       -                INTEGER           UA_HGM           -        4   -   "[continuous variant of HGM (Hansen) model]" -
-param     UnsteadyAero/UA       -                INTEGER           UA_HGMV          -        5   -   "[continuous variant of HGM (Hansen) model with vortex modifications]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_MinnemaPierce -        3   -   "UAMod = 3 [Minnema/Pierce variant (changes in Cc and Cm)]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_HGM           -        4   -   "UAMod = 4 [continuous variant of HGM (Hansen) model]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_HGMV          -        5   -   "UAMod = 5 [continuous variant of HGM (Hansen) model with vortex modifications]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Oye           -        6   -   "UAMod = 6 [continuous Oye model]" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
