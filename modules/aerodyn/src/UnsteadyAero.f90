@@ -2222,7 +2222,7 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
     Tu     = max(Tu,  0.001_ReKi) ! ensure the time constant doesn't get too small, either.
 
    if (present(alpha_34)) then
-      vx_34 = u%v_ac(1) - u%omega * 0.5_ReKi*p%c(i,j)                        ! Eq. 1
+      vx_34 = u%v_ac(1) + u%omega * 0.5_ReKi*p%c(i,j)                        ! Eq. 1 (24-Jun-2021 email from E. Branlard has fix on sign)
       alpha_34 = atan2(vx_34, u%v_ac(2) )                                    ! page 5 definitions
     
       if (present(alphaE)) then
