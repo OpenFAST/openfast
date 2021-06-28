@@ -3,12 +3,14 @@ name: 'Conda Deployment Pipeline'
 
 on:
   push:
+    branches:
+      - 'dev'
     paths-ignore:
+      - 'LICENSE'
+      - 'README.rst'
       - 'docs/**'
       - 'share/**'
       - 'vs-build/**'
-    branches:
-      - 'dev'
 
 jobs:
   update-dev:
