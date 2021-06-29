@@ -2724,95 +2724,199 @@ SUBROUTINE SrvD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrSt
 END SUBROUTINE SrvD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedLogMap )
+   REAL(DbKi),                         INTENT(IN   )  :: t          !< Time in seconds at operating point
+   TYPE(SrvD_InputType),               INTENT(IN   )  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(SrvD_ParameterType),           INTENT(IN   )  :: p          !< Parameters
+   TYPE(SrvD_ContinuousStateType),     INTENT(IN   )  :: x          !< Continuous states at operating point
+   TYPE(SrvD_DiscreteStateType),       INTENT(IN   )  :: xd         !< Discrete states at operating point
+   TYPE(SrvD_ConstraintStateType),     INTENT(IN   )  :: z          !< Constraint states at operating point
+   TYPE(SrvD_OtherStateType),          INTENT(IN   )  :: OtherState !< Other states at operating point
+   TYPE(SrvD_OutputType),              INTENT(IN   )  :: y          !< Output at operating point
+   TYPE(SrvD_MiscVarType),             INTENT(INOUT)  :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: u_op(:)    !< values of linearized inputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: y_op(:)    !< values of linearized outputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: x_op(:)    !< values of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: xd_op(:)   !< values of linearized discrete states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: z_op(:)    !< values of linearized constraint states
+   LOGICAL,                 OPTIONAL,  INTENT(IN   )  :: NeedLogMap !< whether a y_op values should contain log maps instead of full orientation matrices
 
-   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(SrvD_InputType),                 INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(SrvD_ParameterType),             INTENT(IN   )           :: p          !< Parameters
-   TYPE(SrvD_ContinuousStateType),       INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(SrvD_DiscreteStateType),         INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(SrvD_ConstraintStateType),       INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(SrvD_OtherStateType),            INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(SrvD_OutputType),                INTENT(IN   )           :: y          !< Output at operating point
-   TYPE(SrvD_MiscVarType),               INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
 
-
-   INTEGER(IntKi)                                 :: i
-   INTEGER(IntKi)                                 :: ErrStat2        ! Error status of the operation (occurs after initial error)
-   CHARACTER(ErrMsgLen)                           :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
-   CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_GetOP'
-
+   LOGICAL                                            :: ReturnLogMap
+   INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (occurs after initial error)
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+   CHARACTER(*), PARAMETER                            :: RoutineName = 'SrvD_GetOP'
 
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
    !..........................................
    IF ( PRESENT( u_op ) ) THEN
-
-      if (.not. allocated(u_op)) then
-         CALL AllocAry( u_op, 3, 'u_op', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) RETURN
+      if (present(NeedLogMap)) then
+         ReturnLogMap = NeedLogMap
+      else
+         ReturnLogMap = .false.
       end if
-
-
-      u_op(Indx_u_Yaw    ) = u%Yaw
-      u_op(Indx_u_YawRate) = u%YawRate
-      u_op(Indx_u_HSS_Spd) = u%HSS_Spd
-
+      call Get_u_op()
+      if (ErrStat >= AbortErrLev)   return
    END IF
-
    !..........................................
    IF ( PRESENT( y_op ) ) THEN
+      call Get_y_op()
+      if (ErrStat >= AbortErrLev)   return
+   END IF
+   !..........................................
+   IF ( PRESENT( x_op ) ) THEN
+      call Get_x_op()
+      if (ErrStat >= AbortErrLev)   return
+   END IF
+   !..........................................
+   IF ( PRESENT( dx_op ) ) THEN
+   END IF
+   !..........................................
+   IF ( PRESENT( xd_op ) ) THEN
+   END IF
+   !..........................................
+   IF ( PRESENT( z_op ) ) THEN
+   END IF
+CONTAINS
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+
+   !> Get the operating point inputs and pack
+   subroutine Get_u_op()
+      integer(IntKi)    :: nu,i,j,index_next
+
+      if (.not. allocated(u_op)) then
+            ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
+         nu = p%Jac_nu                 &
+            + p%NumBStC  * 6 * p%NumBl &  ! Jac_nu has 3 for Orientation, but we need 9 at each BStC instance on each blade
+            + p%NumNStC  * 6           &  ! Jac_nu has 3 for Orientation, but we need 9 at each NStC instance
+            + p%NumTStC  * 6           &  ! Jac_nu has 3 for Orientation, but we need 9 at each TStC instance
+            + p%NumSStC  * 6              ! Jac_nu has 3 for Orientation, but we need 9 at each SStC instance
+         CALL AllocAry( u_op, nu, 'u_op', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      end if
+
+      index_next=1
+      ! Fixed inputs
+      u_op(index_next) = u%Yaw;        index_next = index_next + 1
+      u_op(index_next) = u%YawRate;    index_next = index_next + 1
+      u_op(index_next) = u%HSS_Spd;    index_next = index_next + 1
+
+      ! StC related inputs
+      do j=1,p%NumBStC     ! Blade
+         do i=1,p%NumBl
+            call PackMotionMesh( u%BStCMotionMesh(i,j), u_op, index_next, UseLogMaps=ReturnLogMap )
+         enddo
+      enddo
+      do j=1,p%NumNStC     ! Nacelle
+         call PackMotionMesh( u%NStCMotionMesh(j), u_op, index_next, UseLogMaps=ReturnLogMap )
+      enddo
+      do j=1,p%NumTStC     ! Tower
+         call PackMotionMesh( u%TStCMotionMesh(j), u_op, index_next, UseLogMaps=ReturnLogMap )
+      enddo
+      do j=1,p%NumSStC     ! Sub-structure
+         call PackMotionMesh( u%SStCMotionMesh(j), u_op, index_next, UseLogMaps=ReturnLogMap )
+      enddo
+   end subroutine Get_u_op 
+
+   !> Get the operating point outputs and pack 
+   subroutine Get_y_op()
+      integer(IntKi)    :: i,j,index_next
 
       if (.not. allocated(y_op)) then
-         CALL AllocAry( y_op, SrvD_Indx_Y_WrOutput+p%NumOuts, 'y_op', ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            IF (ErrStat >= AbortErrLev) RETURN
+         CALL AllocAry( y_op, p%Jac_ny, 'y_op', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
       end if
-      
-         
-      do i=1,size(SrvD_Indx_Y_BlPitchCom) ! Note: Potentially limit to NumBl
-         if (i<=p%NumBl) then
-            y_op(SrvD_Indx_Y_BlPitchCom(i)) = y%BlPitchCom(i)
-         else
-            y_op(SrvD_Indx_Y_BlPitchCom(i)) = 0.0_ReKI
-         endif
+
+      index_next=1
+      do i=1,size(y%BlPitchCom)
+         y_op(index_next) = y%BlPitchCom(i)
+         index_next = index_next + 1
       end do
-      y_op(SrvD_Indx_Y_YawMom)  = y%YawMom
-      y_op(SrvD_Indx_Y_GenTrq)  = y%GenTrq
-      y_op(SrvD_Indx_Y_ElecPwr) = y%ElecPwr
+ 
+      y_op(index_next) = y%YawMom;     index_next = index_next + 1
+      y_op(index_next) = y%GenTrq;     index_next = index_next + 1
+      y_op(index_next) = y%ElecPwr;    index_next = index_next + 1
+
+      ! StC related outputs
+      do j=1,p%NumBStC     ! Blade
+         do i=1,p%NumBl
+            call PackLoadMesh( y%BStCLoadMesh(i,j), y_op, index_next )
+         enddo
+      enddo
+      do j=1,p%NumNStC     ! Nacelle
+         call PackLoadMesh( y%NStCLoadMesh(j), y_op, index_next )
+      enddo
+      do j=1,p%NumTStC     ! Tower
+         call PackLoadMesh( y%TStCLoadMesh(j), y_op, index_next )
+      enddo
+      do j=1,p%NumSStC     ! Sub-structure
+         call PackLoadMesh( y%SStCLoadMesh(j), y_op, index_next )
+      enddo
+
+      ! y%outputs
       do i=1,p%NumOuts
-         y_op(i+SrvD_Indx_Y_WrOutput) = y%WriteOutput(i)
+         y_op(index_next) = y%WriteOutput(i)
+         index_next = index_next + 1
       end do
+   end subroutine Get_y_op
 
-   END IF
+   !> Get the operating point continuous states and pack 
+   subroutine Get_x_op()
+      integer(IntKi)    :: i,j,k,idx
 
-   IF ( PRESENT( x_op ) ) THEN
-
-   END IF
-
-   IF ( PRESENT( dx_op ) ) THEN
-
-   END IF
-
-   IF ( PRESENT( xd_op ) ) THEN
-
-   END IF
-
-   IF ( PRESENT( z_op ) ) THEN
-
-   END IF
+      if (.not. allocated(x_op)) then
+         CALL AllocAry( x_op, p%Jac_nx, 'x_op', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      end if
+      idx = 0
+      do j=1,p%NumBStC     ! Blade StC -- displacement and velocity state
+         do k=1,p%NumBl
+            x_op(idx+1) = x%BStC(j)%StC_x(1,k)    !  x     --> x%BStC(j)%StC_x(1,k)
+            x_op(idx+2) = x%BStC(j)%StC_x(3,k)    !  y     --> x%BStC(j)%StC_x(3,k)
+            x_op(idx+3) = x%BStC(j)%StC_x(5,k)    !  z     --> x%BStC(j)%StC_x(5,k)
+            x_op(idx+4) = x%BStC(j)%StC_x(2,k)    !  dx/dt --> x%BStC(j)%StC_x(2,k)
+            x_op(idx+5) = x%BStC(j)%StC_x(4,k)    !  dy/dt --> x%BStC(j)%StC_x(4,k)
+            x_op(idx+6) = x%BStC(j)%StC_x(6,k)    !  dz/dt --> x%BStC(j)%StC_x(6,k)
+            idx = idx + 6
+         enddo
+      enddo
+      do j=1,p%NumNStC     ! Nacelle StC -- displacement and velocity state
+         x_op(idx+1) = x%NStC(j)%StC_x(1,1)       !  x     --> x%NStC(j)%StC_x(1,1)
+         x_op(idx+2) = x%NStC(j)%StC_x(3,1)       !  y     --> x%NStC(j)%StC_x(3,1)
+         x_op(idx+3) = x%NStC(j)%StC_x(5,1)       !  z     --> x%NStC(j)%StC_x(5,1)
+         x_op(idx+4) = x%NStC(j)%StC_x(2,1)       !  dx/dt --> x%NStC(j)%StC_x(2,1)
+         x_op(idx+5) = x%NStC(j)%StC_x(4,1)       !  dy/dt --> x%NStC(j)%StC_x(4,1)
+         x_op(idx+6) = x%NStC(j)%StC_x(6,1)       !  dz/dt --> x%NStC(j)%StC_x(6,1)
+         idx = idx + 6
+      enddo
+      do j=1,p%NumTStC     ! Tower StC -- displacement and velocity state
+         x_op(idx+1) = x%TStC(j)%StC_x(1,1)       !  x     --> x%TStC(j)%StC_x(1,1)
+         x_op(idx+2) = x%TStC(j)%StC_x(3,1)       !  y     --> x%TStC(j)%StC_x(3,1)
+         x_op(idx+3) = x%TStC(j)%StC_x(5,1)       !  z     --> x%TStC(j)%StC_x(5,1)
+         x_op(idx+4) = x%TStC(j)%StC_x(2,1)       !  dx/dt --> x%TStC(j)%StC_x(2,1)
+         x_op(idx+5) = x%TStC(j)%StC_x(4,1)       !  dy/dt --> x%TStC(j)%StC_x(4,1)
+         x_op(idx+6) = x%TStC(j)%StC_x(6,1)       !  dz/dt --> x%TStC(j)%StC_x(6,1)
+         idx = idx + 6
+      enddo
+      do j=1,p%NumSStC     ! Substructure StC -- displacement and velocity state
+         x_op(idx+1) = x%SStC(j)%StC_x(1,1)       !  x     --> x%SStC(j)%StC_x(1,1)
+         x_op(idx+2) = x%SStC(j)%StC_x(3,1)       !  y     --> x%SStC(j)%StC_x(3,1)
+         x_op(idx+3) = x%SStC(j)%StC_x(5,1)       !  z     --> x%SStC(j)%StC_x(5,1)
+         x_op(idx+4) = x%SStC(j)%StC_x(2,1)       !  dx/dt --> x%SStC(j)%StC_x(2,1)
+         x_op(idx+5) = x%SStC(j)%StC_x(4,1)       !  dy/dt --> x%SStC(j)%StC_x(4,1)
+         x_op(idx+6) = x%SStC(j)%StC_x(6,1)       !  dz/dt --> x%SStC(j)%StC_x(6,1)
+         idx = idx + 6
+      enddo
+   end subroutine Get_x_op 
 
 END SUBROUTINE SrvD_GetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
