@@ -882,9 +882,10 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    ! --- Set velocity at disk plane
    if (p%Mod_Wake == Mod_Wake_Polar) then
-      call updateVelocityPolar()
+
       ! Compute wake deficit of first plane based on rotor loading, outputs: Vx_Wake, m
       call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), xd%D_rotor_filt(0), errStat, errMsg )
+
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
 
       ! --- Compute Vx
@@ -898,6 +899,11 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       ! --- Add V/W from vorticies 
       if (p%Mod_Wake == Mod_Wake_Curl) then
          !call VelocityCurl(nVortex, Gamma0  xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0)  )
+!~          call VelocityCurl(Gamma0, nVortex, R, psi_skew, y, z, Vy_curl, Vz_curl)
+
+         ! Make sure to use all filtered variables here *******************
+         call VelocityCurl(u % Vx_wind_disk, u % chi_skew * pi/180, 100, u%D_Rotor/2., xd%psi_skew_filt, p%y, p%z, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
+
       endif
       ! --- Add Swirl
       !call AddSwirl(  xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0)  )
@@ -981,35 +987,56 @@ contains
       real(ReKi)  :: xp !< x position of the plane
       real(ReKi)  :: divTau  
       divTau =0.0_ReKi
+
+      ! This is the formulation of curled wake algorithm (Martinez et al WES 2019)
       ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1] (loop in reversed)
       do i = maxPln, 1, -1  
 
          ! NOTE: we cannot use data at i here since positions of planes have not been updated yet
-         dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
+         dx = abs(dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low)
          !xp = xd%p_plane(1,i-1)/u%D_rotor ! Current plane downstream x position in D
          xp = (xd%x_plane(i-1) + abs(dx))/u%D_rotor 
          !print*,'Decay factor', exp(-p%k_VortexDecay * xp), 'at i=',i,'x/D=',xp
 
          ! Gradients for eddy viscosity term 
-         m%nu_dvx_dy(:,:) = m%vt_tot2(:,:,i-1) * m%dvx_dy(:,:,i-1)
-         m%nu_dvx_dz(:,:) = m%vt_tot2(:,:,i-1) * m%dvx_dz(:,:,i-1)
-         ! call gradient_y(m%nu_dvx_dy, dy, m%dnuvx_dy   )
-         ! call gradient_z(m%nu_dvx_dz, dz, m%dnuvx_dz   )
+         !m%nu_dvx_dy(:,:) = m%vt_tot2(:,:,i-1) * m%dvx_dy(:,:,i-1)
+         !m%nu_dvx_dz(:,:) = m%vt_tot2(:,:,i-1) * m%dvx_dz(:,:,i-1)
+         ! call gradient_y(m%nu_dvx_dy, dy, m%dnuvx_dy )
+         ! call gradient_z(m%nu_dvx_dz, dz, m%dnuvx_dz )
          !
-         do iz = -p%NumRadii+1, p%NumRadii-1
-            do iy = -p%NumRadii+1, p%NumRadii-1
+
+         ! Loop through all the points on the plane (y, z)
+         do iz = -p%NumRadii+2, p%NumRadii-2
+            do iy = -p%NumRadii+2, p%NumRadii-2
+
+               ! Compute the gradients
+               m%dvx_dy(iy,iz,i-1) = (xd%Vx_wake2(iy+1,iz,i-1) - xd%Vx_wake2(iy-1,iz,i-1)) / (2 * p%dr)
+               m%dvx_dz(iy,iz,i-1) = (xd%Vx_wake2(iy,iz+1,i-1) - xd%Vx_wake2(iy,iz-1,i-1)) / (2 * p%dr)
+
                ! Eddy viscosity term
-               divTau = m%dnuvx_dy(iy,iz) + m%dnuvx_dz(iy,iz)
+!~                divTau = 0! m%dnuvx_dy(iy,iz) + m%dnuvx_dz(iy,iz)
+               divTau = 0.1 * (xd%Vx_wake2(iy+1,iz,i-1) - 2. * xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wake2(iy-1,iz,i-1) &
+                              + xd%Vx_wake2(iy,iz+1,i-1) - 2. * xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wake2(iy,iz-1,i-1)) / (p%dr**2)
+               
                ! Update state of Vx
-               xd%Vx_wake2(iy,iz,i)  = xd%Vx_wake2(iy,iz,i-1) + dx/(xd%Vx_wake2(iy,iz,i-1)+xd%Vx_wind_disk_filt(i-1))&
-                                        *(xd%Vy_wake2(iy,iz,i-1) * m%dvx_dy(iy,iz,i-1) + xd%Vz_wake2(iy,iz,i-1) * m%dvx_dz(iy,iz,i-1) &
-                                     + divTau) 
-               ! Update sate (decay) of Vy and Vz
-               xd%Vy_wake2(iy,iz,i)  = xd%Vy_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp)
-               xd%Vz_wake2(iy,iz,i)  = xd%Vz_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp)
+               xd%Vx_wake2(iy,iz,i) = xd%Vx_wake2(iy,iz,i-1) -  &
+                                      dx / (xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wind_disk_filt(i-1)) * &
+                                        ( xd%Vy_wake2(iy,iz,i-1) * m%dvx_dy(iy,iz,i-1) + &
+                                          xd%Vz_wake2(iy,iz,i-1) * m%dvx_dz(iy,iz,i-1) &
+                                         - divTau) 
+
+               ! Update state (decay) of Vy and Vz
+               xd%Vy_wake2(iy,iz,i)  = xd%Vy_wake2(iy,iz,i-1) !* exp( - p%k_VortexDecay * xp)
+               xd%Vz_wake2(iy,iz,i)  = xd%Vz_wake2(iy,iz,i-1) !* exp( - p%k_VortexDecay * xp)
                !xd%Vx_wake2(iy,iz,i)  = xd%Vx_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp) ! HACK HACK HACK
+
             enddo ! iy
-         enddo ! iz
+         enddo ! iz     
+         
+!~          write(*,*) 'dx ', dx
+!~          write(*,*) 'xd%Vx_wind_disk_filt(i-1) ', xd%Vx_wind_disk_filt(i-1)
+         
+             
       enddo ! i, planes
 
    end subroutine updateVelocityCartesian
@@ -1020,12 +1047,95 @@ contains
    
 end subroutine WD_UpdateStates
 
-! subroutine VelocityCurl(Gamma0, nVortex, R, psi_skew, Vy_curl, Vz_curl)
-!     real(ReKi), parameter :: sigma_D = 0.2
-!     real(ReKi) :: sigma 
-! 
-!    !z0=zi * cos(psi_skew)
-! end subroutine
+! A subroutine to compute 2D gradient in y
+subroutine gradient_y(field, dy, gradient)
+ 
+    real(ReKi), intent(in), dimension(:,:)    :: field       ! The field to compute the gradient
+    real(ReKi), intent(in)                    :: dy          ! The finite difference
+    real(ReKi), intent(inout), dimension(:,:) :: gradient ! The field to compute the gradient
+    
+    
+    
+    
+end subroutine
+
+! The velocities from a lamboseen vortex
+subroutine lamb_oseen_2d(y, z, Gamma, sigma, v, w)
+   real(ReKi), intent(in) :: y     ! The spanwise coordinate [m]
+   real(ReKi), intent(in) :: z     ! The wallnormal coordinate [m]
+   real(ReKi), intent(in) :: sigma ! The width of the vortex [m]
+   real(ReKi), intent(in) :: Gamma ! The circulation strength [kg / (m s)]
+   real(ReKi), intent(inout) :: v  ! The spanwise velocity
+   real(ReKi), intent(inout) :: w  ! The wall-normal velocity
+   
+   ! Compute the velocities from the lamb-oseen vortex
+   v =  Gamma / (2. * pi) * z / (y**2 + z**2 + 1.e-5) * (1. - exp(-(y**2 + z**2)/(sigma**2) ))
+   w = -Gamma / (2. * pi) * y / (y**2 + z**2 + 1.e-5) * (1. - exp(-(y**2 + z**2)/(sigma**2) ))
+
+end subroutine
+
+! A subroutine to compute the spanwise velocities from curl
+subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Vy_curl, Vz_curl)
+ 
+    real(ReKi), intent(in) :: Vx                         ! The inflow velocity
+    real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle
+    integer(intKi), intent(in) :: nVortex                ! The number of vortices (-)
+    real(ReKi), intent(in) :: R                          ! The turbine radius (m)
+    real(ReKi), intent(in) :: psi_skew                   ! The angle of tilt + yaw (rad)
+    real(ReKi), dimension(:),   intent(in)    :: y       ! Spanwise Cartesian coordinate (m)
+    real(ReKi), dimension(:),   intent(in)    :: z       ! Wall-normal Cartesian coordinate (m)
+    real(ReKi), dimension(:,:), intent(inout) :: Vy_curl ! Curl velocity in the y direction (m/s)
+    real(ReKi), dimension(:,:), intent(inout) :: Vz_curl ! Curl velocity in the z direction (m/s)
+    real(ReKi), parameter :: sigma_D = 0.2               ! The width of Gaussian kernel for the vortices divided by diameter (-)
+    real(ReKi) Gamma0, dR, G, zp, y0, z0, v, w
+    integer(intKi) ir, iy, iz
+    
+    ! The separation between vortices
+    dR = 2 * R / nVortex
+        
+    ! Compute the Ct
+!~     Gamma0 = R * Vx * 0.7 * tan(yaw_angle) 
+    ! Add another cosine term to project the vortices
+    Gamma0 = R * Vx * 0.7 * sin(yaw_angle) * cos(yaw_angle) 
+
+!~ write(*,*) 'Vx, yaw_angle, nVortex, R, psi_skew '
+!~ write(*,*)  Vx, yaw_angle, nVortex, R, psi_skew
+!~ write(*,*) 'Gamma0 =', Gamma0
+
+    ! Set the velocities to zero before computing
+    Vy_curl(:, :) = 0.
+    Vz_curl(:, :) = 0.
+
+    ! Loop through all planes 
+    do iz = 1,size(z)
+      do iy = 1,size(y)
+         ! Loop through all the points
+         do ir = 2, nVortex-1
+
+           ! The vertical location of the vortices along a line in z
+           zp = -R + dR * ir
+
+           ! The center location of the vortex
+           ! This projection is used to change from only yaw to combination of
+           !   yaw and tilt
+           y0 = zp * sin(psi_skew)
+           z0 = zp * cos(psi_skew)
+           
+           ! Scale the circulation based on location 
+           G = Gamma0 * zp * dR / (R * sqrt(R**2 - zp**2))
+
+           call lamb_oseen_2d(y(iy) - y0, z(iz) - z0, G, sigma_D*2*R, v, w)
+
+           Vy_curl(iy, iz) = Vy_curl(iy, iz) + v
+           Vz_curl(iy, iz) = Vz_curl(iy, iz) + w
+
+!~ write(*,*) 'Curl v w', dR, y0, z0, v, w
+
+         enddo          
+      enddo
+    enddo
+    
+end subroutine
 
 subroutine WD_TEST_VelocityCurl()
    ! See WD_TEST_Axi2Cart for inspiration
@@ -1262,6 +1372,11 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          call MKDIR('vtk_ff_planes')
       endif
       do i = 0, min(n,p%NumPlanes-1) ! TODO changed to n
+      
+!~         if (mod(i, 10) .ne. 0) then
+!~         continue
+!~         endif
+      
          if (EqualRealNos(t,0.0_DbKi) ) then
             write(Filename,'(A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Init.vtk'
          else
