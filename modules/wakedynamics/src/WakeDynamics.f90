@@ -1440,7 +1440,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                dx(1) = 0.0
                dx(2) = p%dr
                dx(3) = p%dr
-               call vtk_dataset_structured_points((/0.0_ReKi,-dx*p%NumRadii,-dx*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+               call vtk_dataset_structured_points((/xd%p_plane(1,i),-dx*p%NumRadii,-dx*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
                call vtk_point_data_init(mvtk)
                call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
                call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
