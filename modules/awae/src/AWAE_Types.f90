@@ -236,9 +236,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AWAE_InputType
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: xhat_plane      !< Orientations of wake planes, normal to wake planes, for each turbine [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: p_plane      !< Center positions of wake planes for each turbine [m]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vx_wake      !< Axial wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT) [m/s]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vy_wake      !< Transverse horizonal wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT) [m/s]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vz_wake      !< Transverse nominally vertical wake velocity deficit at wake planes, distributed acrros the plane, for each turbine (ny,nz,np,nWT) [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vx_wake      !< Axial wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vy_wake      !< Transverse horizonal wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vz_wake      !< Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: D_wake      !< Wake diameters at wake planes for each turbine [m]
   END TYPE AWAE_InputType
 ! =======================
