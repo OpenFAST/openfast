@@ -1103,25 +1103,6 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       call Axisymmetric2Cartesian(y%Vx_wake(:,i), y%Vr_wake(:,i), p%r, p%y, p%z, y%Vx_wake2(:,:,i), y%Vy_wake2(:,:,i), y%Vz_wake2(:,:,i))
    enddo
 
-   ! DEBUG check
-   do i = 0, min(n+1,p%NumPlanes-1)
-      if( any(abs(y%Vx_wake2(0:,0,i)-y%Vx_wake(:,i))>1e-20)) then
-         print*,'Problem Vx',i
-         print*,'y%Vx_wake2(0:,0,i)',y%Vx_wake2(0:,0,i)
-         print*,'y%Vx_wake(:,i)',y%Vx_wake(:,i)
-         STOP
-      endif
-      !y%Vy_wake2(0:,0,:)
-      if (any(abs(y%Vy_wake2(0:,0,i)-y%Vr_wake(:,i))>1e-9)) then
-         print*,'Problem Vr',i
-         print*,'y%Vx_wake2(0:,0,i)',y%Vy_wake2(0:,0,i)
-         print*,'y%Vx_wake(:,i)',y%Vr_wake(:,i)
-         STOP
-      endif
-   enddo
-
-
-
    
 end subroutine WD_CalcOutput
 
@@ -1211,8 +1192,9 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    
    xd%Vx_rel_disk_filt     = u%Vx_rel_disk    
    
-      ! Initialze Ct_azavg_filt and Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
-   xd%Ct_azavg_filt (:) = u%Ct_azavg(:) 
+      ! Initialze Ct_azavg_filt, Cq_azavg_filt, and Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
+   xd%Ct_azavg_filt (:) = u%Ct_azavg(:)
+   xd%Cq_azavg_filt (:) = u%Cq_azavg(:)
    
    call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), xd%D_rotor_filt(0), errStat, errMsg )
    xd%Vx_wake(:,1) = xd%Vx_wake(:,0)
