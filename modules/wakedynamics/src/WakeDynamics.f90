@@ -778,9 +778,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          end do
       else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
          ! First compute gradients of dVx/dy and dVx/dz
-         ! call gradient_y(m%Vx_wake2(:,:,i-1), dy, m%dvx_dy(:,:,i-1))
-         ! call gradient_z(m%Vx_wake2(:,:,i-1), dz, m%dvy_dz(:,:,i-1))
-         print*,'TODO gradient y,z'
+         call gradient_y(xd%Vx_wake2(:,:,i-1), p%dr, m%dvx_dy(:,:,i-1))
+         call gradient_z(xd%Vx_wake2(:,:,i-1), p%dr, m%dvx_dz(:,:,i-1))
 
          ! Eddy viscosity
          do iz = -p%NumRadii+1, p%NumRadii-1
@@ -788,7 +787,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                dvdr = sqrt(m%dvx_dy(iy,iz,i-1)**2 + m%dvx_dz(iy,iz,i-1)**2)
                m%vt_amb2(iy,iz,i-1) = EddyTermA
                m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)*dvdr , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-               m%vt_tot2(iy,iz,i-1) = m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1)
+               m%vt_tot2(iy,iz,i-1) = max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), 1e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt)
             enddo
          enddo
       endif
@@ -901,7 +900,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 !~          call VelocityCurl(Gamma0, nVortex, R, psi_skew, y, z, Vy_curl, Vz_curl)
 
          ! Make sure to use all filtered variables here *******************
-         call VelocityCurl(u % Vx_wind_disk, u % chi_skew * pi/180, 100, u%D_Rotor/2., xd%psi_skew_filt, p%y, p%z, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
+         print*,'chi',xd%chi_skew_filt
+         call VelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, 100, xd%D_Rotor_filt(0)/2., xd%psi_skew_filt, p%y, p%z, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
 
       endif
       ! --- Add Swirl
@@ -994,27 +994,22 @@ contains
          dx = abs(dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low)
          !xp = xd%p_plane(1,i-1)/u%D_rotor ! Current plane downstream x position in D
          xp = (xd%x_plane(i-1) + abs(dx))/u%D_rotor 
-         !print*,'Decay factor', exp(-p%k_VortexDecay * xp), 'at i=',i,'x/D=',xp
 
          ! Gradients for eddy viscosity term 
-         !m%nu_dvx_dy(:,:) = m%vt_tot2(:,:,i-1) * m%dvx_dy(:,:,i-1)
-         !m%nu_dvx_dz(:,:) = m%vt_tot2(:,:,i-1) * m%dvx_dz(:,:,i-1)
-         ! call gradient_y(m%nu_dvx_dy, dy, m%dnuvx_dy )
-         ! call gradient_z(m%nu_dvx_dz, dz, m%dnuvx_dz )
-         !
+         ! NOTE: the gradient of Vx have been computed for the eddy viscosity already
+         m%nu_dvx_dy(:,:) = m%vt_tot2(:,:,i-1) * m%dvx_dy(:,:,i-1)
+         m%nu_dvx_dz(:,:) = m%vt_tot2(:,:,i-1) * m%dvx_dz(:,:,i-1)
+         call gradient_y(m%nu_dvx_dy, p%dr, m%dnuvx_dy )
+         call gradient_z(m%nu_dvx_dz, p%dr, m%dnuvx_dz )
 
          ! Loop through all the points on the plane (y, z)
          do iz = -p%NumRadii+2, p%NumRadii-2
             do iy = -p%NumRadii+2, p%NumRadii-2
 
-               ! Compute the gradients
-               m%dvx_dy(iy,iz,i-1) = (xd%Vx_wake2(iy+1,iz,i-1) - xd%Vx_wake2(iy-1,iz,i-1)) / (2 * p%dr)
-               m%dvx_dz(iy,iz,i-1) = (xd%Vx_wake2(iy,iz+1,i-1) - xd%Vx_wake2(iy,iz-1,i-1)) / (2 * p%dr)
-
                ! Eddy viscosity term
-!~                divTau = 0! m%dnuvx_dy(iy,iz) + m%dnuvx_dz(iy,iz)
-               divTau = 0.1 * (xd%Vx_wake2(iy+1,iz,i-1) - 2. * xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wake2(iy-1,iz,i-1) &
-                              + xd%Vx_wake2(iy,iz+1,i-1) - 2. * xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wake2(iy,iz-1,i-1)) / (p%dr**2)
+               divTau = m%dnuvx_dy(iy,iz) + m%dnuvx_dz(iy,iz)
+               !divTau = 0.1 * (xd%Vx_wake2(iy+1,iz,i-1) - 2. * xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wake2(iy-1,iz,i-1) &
+               !              + xd%Vx_wake2(iy,iz+1,i-1) - 2. * xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wake2(iy,iz-1,i-1)) / (p%dr**2)
                
                ! Update state of Vx
                xd%Vx_wake2(iy,iz,i) = xd%Vx_wake2(iy,iz,i-1) -  &
@@ -1024,21 +1019,14 @@ contains
                                          - divTau) 
 
                ! Update state (decay) of Vy and Vz
-               xd%Vy_wake2(iy,iz,i)  = xd%Vy_wake2(iy,iz,i-1) !* exp( - p%k_VortexDecay * xp)
-               xd%Vz_wake2(iy,iz,i)  = xd%Vz_wake2(iy,iz,i-1) !* exp( - p%k_VortexDecay * xp)
-               !xd%Vx_wake2(iy,iz,i)  = xd%Vx_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp) ! HACK HACK HACK
+               xd%Vy_wake2(iy,iz,i)  = xd%Vy_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp)
+               xd%Vz_wake2(iy,iz,i)  = xd%Vz_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp)
 
             enddo ! iy
          enddo ! iz     
-         
-!~          write(*,*) 'dx ', dx
-!~          write(*,*) 'xd%Vx_wind_disk_filt(i-1) ', xd%Vx_wind_disk_filt(i-1)
-         
-             
       enddo ! i, planes
 
    end subroutine updateVelocityCartesian
-
 
    subroutine Cleanup()
 
@@ -1048,15 +1036,34 @@ end subroutine WD_UpdateStates
 
 ! A subroutine to compute 2D gradient in y
 subroutine gradient_y(field, dy, gradient)
- 
     real(ReKi), intent(in), dimension(:,:)    :: field       ! The field to compute the gradient
     real(ReKi), intent(in)                    :: dy          ! The finite difference
     real(ReKi), intent(inout), dimension(:,:) :: gradient ! The field to compute the gradient
+    integer :: iy,iz
+    gradient=0.0_ReKi
+    do iz=2,size(field,2)-1
+       do iy=2,size(field,1)-1
+          gradient(iy,iz) = (field(iy+1,iz) - field(iy-1,iz)) / (2 * dy)
+       enddo
+    enddo
+end subroutine gradient_y
+
+! A subroutine to compute 2D gradient in z
+subroutine gradient_z(field, dz, gradient)
+    real(ReKi), intent(in), dimension(:,:)    :: field       ! The field to compute the gradient
+    real(ReKi), intent(in)                    :: dz          ! The finite difference
+    real(ReKi), intent(inout), dimension(:,:) :: gradient ! The field to compute the gradient
+    integer :: iy,iz
+    gradient=0.0_ReKi
+    do iz=2,size(field,2)-1
+       do iy=2,size(field,1)-1
+          gradient(iy,iz) = (field(iy,iz+1) - field(iy,iz-1)) / (2 * dz)
+       enddo
+    enddo
+end subroutine gradient_z
+
     
     
-    
-    
-end subroutine
 
 ! The velocities from a lamboseen vortex
 subroutine lamb_oseen_2d(y, z, Gamma, sigma, v, w)
@@ -1077,7 +1084,7 @@ end subroutine
 subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Vy_curl, Vz_curl)
  
     real(ReKi), intent(in) :: Vx                         ! The inflow velocity
-    real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle
+    real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle (rad)
     integer(intKi), intent(in) :: nVortex                ! The number of vortices (-)
     real(ReKi), intent(in) :: R                          ! The turbine radius (m)
     real(ReKi), intent(in) :: psi_skew                   ! The angle of tilt + yaw (rad)
@@ -1370,47 +1377,41 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       if ( OtherState%firstPass ) then
          call MKDIR('vtk_ff_planes')
       endif
-      do i = 0, min(n,p%NumPlanes-1) ! TODO changed to n
-      
-!~         if (mod(i, 10) .ne. 0) then
-!~         continue
-!~         endif
-      
-         if (EqualRealNos(t,0.0_DbKi) ) then
-            write(Filename,'(A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Init.vtk'
-         else
-            write(Filename,'(A,I4.4,A,I9.9,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Time_',int(t*10),'.vtk'
-         endif
-         !print*,trim(Filename)
-         if ( vtk_new_ascii_file(trim(filename),'vel',mvtk) ) then
-            dx(1) = 0.0
-            dx(2) = p%dr
-            dx(3) = p%dr
-            call vtk_dataset_structured_points((/xd%p_plane(1,i),xd%p_plane(2,i)-dx*p%NumRadii,xd%p_plane(3,i)-dx*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
-            call vtk_point_data_init(mvtk)
-            call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
-            call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
-            call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
-            call vtk_close_file(mvtk)
-         endif
+      if (mod(n,10)==0) then
+         do i = 0, min(n-1,p%NumPlanes-1), 5 ! TODO changed to n
+         
+            if (EqualRealNos(t,0.0_DbKi) ) then
+               write(Filename,'(A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Init.vtk'
+            else
+               write(Filename,'(A,I4.4,A,I9.9,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Time_',int(t*10),'.vtk'
+            endif
+            if ( vtk_new_ascii_file(trim(filename),'vel',mvtk) ) then
+               dx(1) = 0.0
+               dx(2) = p%dr
+               dx(3) = p%dr
+               call vtk_dataset_structured_points((/xd%p_plane(1,i),xd%p_plane(2,i)-dx*p%NumRadii, xd%p_plane(3,i)-dx*p%NumRadii /),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+               call vtk_point_data_init(mvtk)
+               call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
+               call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
+               call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+               call vtk_close_file(mvtk)
+            endif
 
-         ! --- Output Plane "per time"
-         write(Filename,'(A,I9.9,A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtTime_',int(t*100),'_Plane_',i,'.vtk'
-         !print*,trim(Filename)
-         if ( vtk_new_ascii_file(trim(filename),'vel',mvtk) ) then
-            dx(1) = 0.0
-            dx(2) = p%dr
-            dx(3) = p%dr
-            call vtk_dataset_structured_points((/0.0_ReKi,xd%p_plane(2,i)-dx*p%NumRadii,xd%p_plane(3,i)-dx*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
-            call vtk_point_data_init(mvtk)
-            call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
-            call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
-            call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
-            call vtk_close_file(mvtk)
-         endif
-
-
-      enddo
+            ! --- Output Plane "per time"
+            write(Filename,'(A,I9.9,A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtTime_',int(t*100),'_Plane_',i,'.vtk'
+            if ( vtk_new_ascii_file(trim(filename),'vel',mvtk) ) then
+               dx(1) = 0.0
+               dx(2) = p%dr
+               dx(3) = p%dr
+               call vtk_dataset_structured_points((/0.0_ReKi,-dx*p%NumRadii,-dx*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+               call vtk_point_data_init(mvtk)
+               call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
+               call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
+               call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+               call vtk_close_file(mvtk)
+            endif
+         enddo ! loop on planes
+      endif ! if time to ouput
 
    endif
    
