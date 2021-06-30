@@ -231,13 +231,13 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       write(UnSum, '(A)') SectionDivide
       write(UnSum, '(A)')              ' Structural controls'
    endif
+   call StC_Blade_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,m%y_BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
+      if (Failed())  return;
+
    call StC_Nacelle_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_NStC,p%NStC,x%NStC,xd%NStC,z%NStC,OtherState%NStC,m%y_NStC,m%NStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
    call StC_Tower_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_TStC,p%TStC,x%TStC,xd%TStC,z%TStC,OtherState%TStC,m%y_TStC,m%TStC,UnSum,ErrStat2,ErrMsg2)
-      if (Failed())  return;
-
-   call StC_Blade_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_BStC,p%BStC,x%BStC,xd%BStC,z%BStC,OtherState%BStC,m%y_BStC,m%BStC,UnSum,ErrStat2,ErrMsg2)
       if (Failed())  return;
 
    call StC_Substruc_Setup(InitInp,p,InputFileData,u,y,m%SrvD_MeshMap,m%u_SStC,p%SStC,x%SStC,xd%SStC,z%SStC,OtherState%SStC,m%y_SStC,m%SStC,UnSum,ErrStat2,ErrMsg2)
@@ -1320,6 +1320,11 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       
       ! StrucCtrl -- since all StC data is stored in SrvD types, we don't technically need to call StC_End directly
       !     -- Note: not entirely certian why only the first time in u is destroyed and not the others.  This is also true at the glue code level for whatever reason.
+      if (allocated(m%u_BStC)) then
+         do j=1,p%NumBStC       ! Blades
+            call StC_End( m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat, ErrMsg )
+         enddo
+      endif
       if (allocated(m%u_NStC)) then
          do j=1,p%NumNStC       ! Nacelle
             call StC_End( m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%y_NStC(j), m%NStC(j), ErrStat, ErrMsg )
@@ -1328,11 +1333,6 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       if (allocated(m%u_TStC)) then
          do j=1,p%NumTStC       ! Tower
             call StC_End( m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%y_TStC(j), m%TStC(j), ErrStat, ErrMsg )
-         enddo
-      endif
-      if (allocated(m%u_BStC)) then
-         do j=1,p%NumBStC       ! Blades
-            call StC_End( m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat, ErrMsg )
          enddo
       endif
       if (allocated(m%u_SStC)) then
@@ -1473,6 +1473,23 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       call StCControl_CalcOutput( t_next, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, StC_CmdForce, m, ErrStat2, ErrMsg2 )
          if (Failed()) return;
    endif
+
+   ! Blade StrucCtrl
+   do j=1,p%NumBStC
+      do k=1,p%NumBl       ! number of blades
+         ! update the StC inputs with SrvD u(:) values
+         do i=1,p%InterpOrder+1
+            CALL Transfer_Point_to_Point( Inputs(i)%BStCMotionMesh(k,j), m%u_BStC(i,j)%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
+               if (Failed()) return;
+         enddo
+      enddo
+      ! update commanded signals (if exist)
+      call SetStCInput_CtrlChans(m%u_BStC(:,j))
+      ! Now call updatestates
+      call StC_UpdateStates( t, n, m%u_BStC(:,j), InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+   enddo
+
    ! Nacelle StrucCtrl
    do j=1,p%NumNStC
       ! update the StC inputs with SrvD u(:) values.
@@ -1498,22 +1515,6 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
       call SetStCInput_CtrlChans(m%u_TStC(:,j))
       ! Now call updatestates
       call StC_UpdateStates( t, n, m%u_TStC(:,j), InputTimes, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-   enddo
-
-      ! Blade StrucCtrl
-   do j=1,p%NumBStC
-      do k=1,p%NumBl       ! number of blades
-         ! update the StC inputs with SrvD u(:) values
-         do i=1,p%InterpOrder+1
-            CALL Transfer_Point_to_Point( Inputs(i)%BStCMotionMesh(k,j), m%u_BStC(i,j)%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
-               if (Failed()) return;
-         enddo
-      enddo
-      ! update commanded signals (if exist)
-      call SetStCInput_CtrlChans(m%u_BStC(:,j))
-      ! Now call updatestates
-      call StC_UpdateStates( t, n, m%u_BStC(:,j), InputTimes, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
          if (Failed()) return;
    enddo
 
@@ -1762,6 +1763,23 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       call StCControl_CalcOutput( t, p, StC_CmdStiff, StC_CmdDamp, StC_CmdBrake, StC_CmdForce, m, ErrStat2, ErrMsg2 )
          if (Failed()) return;
    endif
+   do j=1,p%NumBStC       ! Blades
+      ! Set inputs
+      do k=1,p%NumBl
+         CALL Transfer_Point_to_Point( u%BStCMotionMesh(k,j), m%u_BStC(1,j)%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      enddo
+      ! Set StC control channels
+      call SetStCInput_CtrlChans(m%u_BStC(1,j))
+      ! call Calc
+      CALL StC_CalcOutput( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      ! Set BStC outputs
+      do k=1,p%NumBl
+         CALL Transfer_Point_to_Point( m%y_BStC(j)%Mesh(k), y%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) )
+         if (Failed()) return;
+      enddo
+   enddo
    do j=1,p%NumNStC       ! Nacelle
       ! Set inputs
       CALL Transfer_Point_to_Point( u%NStCMotionMesh(j), m%u_NStC(1,j)%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat2, ErrMsg2 )
@@ -1786,23 +1804,6 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       ! Set TStC outputs
       CALL Transfer_Point_to_Point( m%y_TStC(j)%Mesh(1), y%TStCLoadMesh(j), m%SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat2, ErrMsg2, u%TStCMotionMesh(j), u%TStCMotionMesh(j) )
          if (Failed()) return;
-   enddo
-   do j=1,p%NumBStC       ! Blades
-      ! Set inputs
-      do k=1,p%NumBl
-         CALL Transfer_Point_to_Point( u%BStCMotionMesh(k,j), m%u_BStC(1,j)%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-      enddo
-      ! Set StC control channels
-      call SetStCInput_CtrlChans(m%u_BStC(1,j))
-      ! call Calc
-      CALL StC_CalcOutput( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%y_BStC(j), m%BStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-      ! Set BStC outputs
-      do k=1,p%NumBl
-         CALL Transfer_Point_to_Point( m%y_BStC(j)%Mesh(k), y%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) )
-         if (Failed()) return;
-      enddo
    enddo
    do j=1,p%NumSStC    ! Platform
       ! Set inputs
@@ -1831,9 +1832,9 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
    call Set_SrvD_Outs( p, y, m, AllOuts )
 
+   if (p%NumBStC>0)     call Set_BStC_Outs(  p, x%BStC,  m%BStC,  m%y_BStC,  AllOuts )
    if (p%NumNStC>0)     call Set_NStC_Outs(  p, x%NStC,  m%NStC,  m%y_NStC,  AllOuts )
    if (p%NumTStC>0)     call Set_TStC_Outs(  p, x%TStC,  m%TStC,  m%y_TStC,  AllOuts )
-   if (p%NumBStC>0)     call Set_BStC_Outs(  p, x%BStC,  m%BStC,  m%y_BStC,  AllOuts )
    if (p%NumSStC>0)     call Set_SStC_Outs(  p, x%SStC,  m%SStC,  m%y_SStC,  AllOuts )
   
    DO I = 1,p%NumOuts  ! Loop through all selected output channels
@@ -1906,16 +1907,16 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
       dxdt%DummyContState = 0.0_ReKi
 
          ! StrucCtrl
+      do j=1,p%NumBStC       ! Blade
+         CALL StC_CalcContStateDeriv( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      enddo
       do j=1,p%NumNStC       ! Nacelle
          CALL StC_CalcContStateDeriv( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
       do j=1,p%NumTStC       ! Tower
          CALL StC_CalcContStateDeriv( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      enddo
-      do j=1,p%NumBStC       ! Blade
-         CALL StC_CalcContStateDeriv( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       enddo
       do j=1,p%NumSStC    ! Platform
@@ -1978,16 +1979,16 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       !end if
 
       ! Update discrete states for StrucCtrl       --- StC does not currently support this
+!  do j=1,p%NumBStC       ! Blade
+!     CALL StC_UpdateDiscState( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
 !  do j=1,p%NumNStC       ! Nacelle
 !     CALL StC_UpdateDiscState( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumTStC       ! tower
 !     CALL StC_UpdateDiscState( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), ErrStat, ErrMsg )
-!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!  enddo
-!  do j=1,p%NumBStC       ! Blade
-!     CALL StC_UpdateDiscState( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumSStC    ! Platform
@@ -2026,16 +2027,16 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
 
 
       ! Solve for the constraint states for StrucCtrl    --- StC does not currently support this
+!  do j=1,p%NumBStC       ! Blade
+!     CALL StC_CalcConstrStateResidual( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
+!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!  enddo
 !  do j=1,p%NumNStC       ! Nacelle
 !     CALL StC_CalcConstrStateResidual( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), z_residual%NStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumTStC       ! Tower
 !     CALL StC_CalcConstrStateResidual( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), z_residual%TStC(j), ErrStat, ErrMsg )
-!     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!  enddo
-!  do j=1,p%NumBStC       ! Blade
-!     CALL StC_CalcConstrStateResidual( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), z_residual%BStC(j), ErrStat, ErrMsg )
 !     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !  enddo
 !  do j=1,p%NumSStC    ! Platform
