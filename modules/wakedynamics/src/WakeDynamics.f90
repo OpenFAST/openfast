@@ -198,6 +198,21 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
       
 end function WakeDiam
 
+real(ReKi) function get_Ctavg(r, Ct, D_rotor) result(Ct_avg)
+   real(ReKi), intent(in   ) :: r(:)  ! radial positions
+   real(ReKi), intent(in   ) :: Ct(:) ! Thrust coefficient Ct(r)
+   real(ReKi), intent(in   ) :: D_rotor
+   real(ReKi) :: dr
+   integer :: j
+   ! Computing average Ct = \int r Ct dr / \int r dr = 2/R^2 \int r Ct dr using trapz
+   ! NOTE: r goes beyond the rotor (works since Ct=0 beyond that)
+   ! NOTE: the formula can be improved, assumes equispacing of r
+   Ct_avg = 0.0_ReKi
+   do j=2,size(r)
+      Ct_avg = Ct_avg + 0.5_ReKi * (r(j) * Ct(j) + r(j-1) * Ct(j-1)) * dr
+   enddo
+   Ct_avg = 8.0_ReKi*Ct_avg/(D_rotor*D_rotor)
+end function get_Ctavg
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine computes the near wake correction : Vx_wake  
@@ -226,6 +241,8 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
       Ct_avg = Ct_avg + 0.5_ReKi * (p%r(j) * Ct_azavg_filt(j) + p%r(j-1) * Ct_azavg_filt(j-1)) * p%dr
    enddo
    Ct_avg = 8.0_ReKi*Ct_avg/(D_rotor*D_rotor)
+
+   print*,'>>>Ct_avg',Ct_avg, get_Ctavg(p%r, Ct_azavg_filt, D_rotor)
 
    if (Ct_avg > 2.0_ReKi ) then
       ! THROW ERROR because we are in the prop-brake region
@@ -711,6 +728,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    real(ReKi)                                   :: dvdr
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz ! indices on y and z
+   real(ReKi) :: Ct_avg            ! Rotor-disk averaged Ct
    
    errStat = ErrID_None
    errMsg  = ""
@@ -891,18 +909,14 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), xd%D_rotor_filt(0), errStat, errMsg )
       ! Convert to Cartesian
       call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
-
-      !CT_avg = getCT_avg( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), xd%D_rotor_filt(0), errStat, errMsg )
+      Ct_avg =  get_Ctavg(p%r, xd%Ct_azavg_filt, xd%D_rotor_filt(0))
       ! --- Compute Vy
       ! --- Add V/W from vorticies 
       if (p%Mod_Wake == Mod_Wake_Curl) then
-         print*,'chi',xd%chi_skew_filt
-         call VelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, 100, xd%D_Rotor_filt(0)/2., xd%psi_skew_filt, p%y, p%z, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
-
+         call VelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, 100, xd%D_Rotor_filt(0)/2., xd%psi_skew_filt, p%y, p%z, Ct_avg, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
       endif
       ! --- Add Swirl
       !call AddSwirl(  xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0)  )
-      ! 
    endif
 
    !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
@@ -1077,7 +1091,7 @@ subroutine lamb_oseen_2d(y, z, Gamma, sigma, v, w)
 end subroutine
 
 ! A subroutine to compute the spanwise velocities from curl
-subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Vy_curl, Vz_curl)
+subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, Vy_curl, Vz_curl)
  
     real(ReKi), intent(in) :: Vx                         ! The inflow velocity
     real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle (rad)
@@ -1086,6 +1100,7 @@ subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Vy_curl, Vz_c
     real(ReKi), intent(in) :: psi_skew                   ! The angle of tilt + yaw (rad)
     real(ReKi), dimension(:),   intent(in)    :: y       ! Spanwise Cartesian coordinate (m)
     real(ReKi), dimension(:),   intent(in)    :: z       ! Wall-normal Cartesian coordinate (m)
+    real(ReKi),                 intent(in)    :: Ct_avg  ! Average thrust coefficient
     real(ReKi), dimension(:,:), intent(inout) :: Vy_curl ! Curl velocity in the y direction (m/s)
     real(ReKi), dimension(:,:), intent(inout) :: Vz_curl ! Curl velocity in the z direction (m/s)
     real(ReKi), parameter :: sigma_D = 0.2               ! The width of Gaussian kernel for the vortices divided by diameter (-)
@@ -1098,7 +1113,7 @@ subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Vy_curl, Vz_c
     ! Compute the Ct
 !~     Gamma0 = R * Vx * 0.7 * tan(yaw_angle) 
     ! Add another cosine term to project the vortices
-    Gamma0 = R * Vx * 0.7 * sin(yaw_angle) * cos(yaw_angle) 
+    Gamma0 = R * Vx * Ct_avg * sin(yaw_angle) * cos(yaw_angle) 
 
 !~ write(*,*) 'Vx, yaw_angle, nVortex, R, psi_skew '
 !~ write(*,*)  Vx, yaw_angle, nVortex, R, psi_skew
@@ -1159,6 +1174,35 @@ end subroutine
 
 
 !> Weighted average of two angles
+! function filter_angles2(psi_filt, chi_filt, psi, chi, alpha, alpha_bar) result (t_filt)
+!    real(ReKi), intent(in) :: t1 !< Angle 1
+!    real(ReKi), intent(in) :: t2 !< Angle 2
+!    real(ReKi), intent(in) :: alpha     !< filter weight
+!    real(ReKi), intent(in) :: alpha_bar !< 1-alpha
+!    real(ReKi) :: t_filt !< output
+!    real(ReKi) :: x,y
+!    real(R8Ki) :: lambda1(3)  
+!    real(R8Ki) :: lambda2(3)  
+!    real(R8Ki) :: lambda_interp(3)  
+!    real(DbKi) :: DCM1
+!    real(DbKi) :: DCM2
+!    ! Compute the DCMs of the skew-related inputs and filtered states:
+!    DCM(1) = EulerConstruct( (/ psi_filt, 0, chi_filt /) )
+!    DCM(2) = EulerConstruct( (/ psi, 0, chi /) )
+!    ! Compute the logarithmic map of the DCMs:
+!    CALL DCM_logMap( DCM1, lambda1 )
+!    CALL DCM_logMap( DCM2, lambda2 )
+!    !Make sure we don't cross a 2pi boundary:
+!    CALL DCM_SetLogMapForInterp( lambda )
+!    !Interpolate the logarithmic map:
+!    lambda_interp = lambda1*alpha + lambda2*alpha_bar
+!    !Convert back to DCM:
+!    DCM_interp = DCM_exp( lambda_interp )
+!    !Convert back to angles:
+!    !(/ Filtered^psi^Skew[n+1], 0, Filtered_chi_Skew[n+1] /) = EulerExtract( DCM_interp )
+! end function filter_angles2
+
+!> Weighted average of two angles
 function filter_angles(t1, t2, alpha, alpha_bar) result (t_filt)
    real(ReKi), intent(in) :: t1 !< Angle 1
    real(ReKi), intent(in) :: t2 !< Angle 2
@@ -1171,11 +1215,9 @@ function filter_angles(t1, t2, alpha, alpha_bar) result (t_filt)
    x = alpha*cos(t1)+alpha_bar*cos(t2)
    y = alpha*sin(t1)+alpha_bar*sin(t2)
    t_filt = atan2(y,x) 
-
-   ! TODO, Dig into mesh mapping, Ask bonnie to find the proper routine
-   !call Angles_ExtrapInterp(t1, t2, tin, Angle_out, tin_out)
-
 end function filter_angles
+
+
 
 !> Converts velocity vectors from an axisymmetric system in radial coordinates to a Cartesian system in Cartesian coordinates
 subroutine Axisymmetric2Cartesian(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
