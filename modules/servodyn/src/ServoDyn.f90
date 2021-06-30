@@ -49,17 +49,9 @@ MODULE ServoDyn
 #endif
 
 
-!FIXME: the following changes with linearization update
       ! indices into linearization arrays
-   INTEGER, PARAMETER :: Indx_u_Yaw     = 1
-   INTEGER, PARAMETER :: Indx_u_YawRate = 2
-   INTEGER, PARAMETER :: Indx_u_HSS_Spd = 3
 
-   INTEGER, PARAMETER, PUBLIC :: SrvD_Indx_Y_BlPitchCom(3)  = (/1,2,3/)
-   INTEGER, PARAMETER, PUBLIC :: SrvD_Indx_Y_YawMom  = 4
-   INTEGER, PARAMETER, PUBLIC :: SrvD_Indx_Y_GenTrq  = 5
-   INTEGER, PARAMETER, PUBLIC :: SrvD_Indx_Y_ElecPwr = 6
-   INTEGER, PARAMETER, PUBLIC :: SrvD_Indx_Y_WrOutput = 6 ! last non-writeoutput variable
+   INTEGER, PARAMETER, PUBLIC :: SrvD_Indx_Y_BlPitchCom(3)  = (/1,2,3/)       ! sometime remove this and calculate by p%NumBl (requires mods to FAST_Lin that I'm too lazy to deal with right now -- ADP)
 
 
       ! Parameters for type of control
@@ -651,13 +643,12 @@ contains
       ! determine how many outputs there are in the Jacobian
       p%Jac_ny = 0
 
-      ! outputs always passed 
+      ! outputs always passed
       p%Jac_ny = p%Jac_ny              &
             + size(y%BlPitchCom)       &  ! y%BlPitchCom(:)
             + 1                        &  ! y%YawMom
             + 1                        &  ! y%GenTrq
-            + 1                        &  ! y%ElecPwr
-            + p%NumOuts                   ! user requested outputs
+            + 1                           ! y%ElecPwr
 
       ! StC related outputs
       p%Jac_ny = p%Jac_ny              &
@@ -665,7 +656,11 @@ contains
             + p%NumNStC * 6            &  ! 3 Force, 3 Moment at each NStC instance
             + p%NumTStC * 6            &  ! 3 Force, 3 Moment at each TStC instance
             + p%NumSStC * 6               ! 3 Force, 3 Moment at each SStC instance
- 
+
+      ! User requested outputs
+      p%Jac_ny = p%Jac_ny              &
+            + p%NumOuts                   ! user requested outputs
+
       !--------------------------------
       ! linearization output names
       !--------------------------------
@@ -680,17 +675,19 @@ contains
          InitOut%RotFrame_y(index_next) = .true.
          index_next = index_next + 1
       end do
- 
+
       ! y%YawMom     -- not in rotating frame
       InitOut%LinNames_y(index_next)  = 'YawMom, Nm';    index_next = index_next + 1
- 
+
       ! y%GenPwr     -- not in rotating frame
       InitOut%LinNames_y(index_next)  = 'GenTrq, Nm';    index_next = index_next + 1
- 
+
       ! y%ElecPwr    -- not in rotating frame
       InitOut%LinNames_y(index_next) = 'ElecPwr, W';     index_next = index_next + 1
- 
+
+      !--------------------------------
       ! StC related outputs
+      !--------------------------------
       do j=1,p%NumBStC     ! Blade
          do i=1,p%NumBl
             call PackLoadMesh_Names( y%BStCLoadMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
@@ -705,8 +702,11 @@ contains
       do j=1,p%NumSStC     ! Sub-tructure
          call PackLoadMesh_Names( y%SStCLoadMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
       enddo
- 
-      ! y%OutParam   -- Some outputs are in rotating frame
+
+      !--------------------------------
+      ! y%OutParam   -- User requested outputs
+      !     Some outputs are in rotating frame
+      !--------------------------------
       do i=1,p%NumOuts
          InitOut%LinNames_y(index_next) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
          InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BlPitchC )  ! WriteOutput BlPitch commands
@@ -934,7 +934,7 @@ contains
          do i=1,size(InitOut%LinNames_y)
             Flag='F'
             if (InitOut%RotFrame_y(i)) Flag='T'
-            call WrScr('    '//Num2LStr(i)//Flag//'      '//InitOut%LinNames_y(i))
+            call WrFileNR(CU,'    '//Num2LStr(i)//Flag//'      '//InitOut%LinNames_y(i)//NewLine)
          enddo
       endif
       if (allocated(InitOut%LinNames_x)) then
@@ -942,13 +942,13 @@ contains
          do i=1,size(InitOut%LinNames_x)
             Flag='F'
             if (InitOut%RotFrame_x(i)) Flag='T'
-            call WrScr('    '//Num2LStr(i)//Flag//'      '//trim(Num2LStr(InitOut%DerivOrder_x(i)))//'     '//InitOut%LinNames_x(i))
+            call WrFileNR(CU,'    '//Num2LStr(i)//Flag//'      '//trim(Num2LStr(InitOut%DerivOrder_x(i)))//'     '//InitOut%LinNames_x(i)//NewLine)
          enddo
       endif
       if (allocated(InitOut%LinNames_u)) then
          call WrScr('Perturb Size u')
          do i=1,size(p%du)
-            call WrScr('          '//trim(Num2LStr(i))//'        '//trim(Num2LStr(p%du(i))))
+            call WrFileNR(CU,'          '//trim(Num2LStr(i))//'        '//trim(Num2LStr(p%du(i)))//NewLine)
          enddo
          call WrScr('LinNames_u')
          do i=1,size(InitOut%LinNames_u)
@@ -956,9 +956,9 @@ contains
             FlagLoad='F'
             if (InitOut%RotFrame_u(i)) Flag='T'
             if (InitOut%IsLoad_u(i)) FlagLoad='T'
-            call WrScr('    '//Num2LStr(i)//Flag//'      '//FlagLoad//'      ('//   &
+            call WrFileNR(CU,'    '//Num2LStr(i)//Flag//'      '//FlagLoad//'      ('//   &
                               trim(Num2LStr(p%Jac_u_indx(i,1)))//','//trim(Num2LStr(p%Jac_u_indx(i,2)))//','//trim(Num2LStr(p%Jac_u_indx(i,3)))//  &
-                           ')     '//InitOut%LinNames_u(i))
+                           ')     '//InitOut%LinNames_u(i)//NewLine)
          enddo
       endif
    end subroutine CheckInfo
@@ -2221,8 +2221,11 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
 
 
          ! Compute the first time derivatives of the continuous states here:
-
       dxdt%DummyContState = 0.0_ReKi
+      if (.not. allocated(dxdt%BStC) .and. p%NumBStC > 0_IntKi)      allocate(dxdt%BStC(p%NumBStC))
+      if (.not. allocated(dxdt%NStC) .and. p%NumNStC > 0_IntKi)      allocate(dxdt%NStC(p%NumNStC))
+      if (.not. allocated(dxdt%TStC) .and. p%NumTStC > 0_IntKi)      allocate(dxdt%TStC(p%NumTStC))
+      if (.not. allocated(dxdt%SStC) .and. p%NumSStC > 0_IntKi)      allocate(dxdt%SStC(p%NumSStC))
 
          ! StrucCtrl
       do j=1,p%NumBStC       ! Blade
@@ -2399,9 +2402,6 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                                                                                  !!   functions (Z) with respect to inputs (u) [intent in to avoid deallocation]
 
       ! local variables
-   REAL(R8Ki)                                                      :: AllOuts(3,1:MaxOutPts) ! All the the available output channels
-   REAL(R8Ki)                                                      :: GenTrq_du, ElecPwr_du  ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
-   INTEGER(IntKi)                                                  :: I                      ! Generic loop index
    INTEGER(IntKi)                                                  :: ErrStat2               ! Error status of the operation
    CHARACTER(ErrMsgLen)                                            :: ErrMsg2                ! Error message if ErrStat /= ErrID_None
    CHARACTER(*), PARAMETER                                         :: RoutineName = 'SrvD_JacobianPInput'
@@ -2415,6 +2415,47 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
 
    IF ( PRESENT( dYdu ) ) THEN
+      call Jac_dYdu()
+      if (ErrStat >= AbortErrLev)   return;
+   END IF
+
+   IF ( PRESENT( dXdu ) ) THEN
+      call Jac_dXdu()
+      if (ErrStat >= AbortErrLev)   return;
+   END IF
+
+   IF ( PRESENT( dXddu ) ) THEN
+      if (allocated(dXddu)) deallocate(dXddu)
+   END IF
+
+   IF ( PRESENT( dZdu ) ) THEN
+      if (allocated(dZdu)) deallocate(dZdu)
+   END IF
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+
+   !> Calculate the jacobian dYdu
+   subroutine Jac_dYdu()
+!FIXME:
+      real(R8Ki),allocatable  :: AllOuts(:,:)            ! All the the available output channels
+      real(R8Ki)              :: GenTrq_du, ElecPwr_du   ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
+      integer(IntKi)          :: I                       ! Generic loop index
+      integer,parameter       :: Indx_u_Yaw     = 1
+      integer,parameter       :: Indx_u_YawRate = 2
+      integer,parameter       :: Indx_u_HSS_Spd = 3
+      integer                 :: SrvD_Indx_Y_YawMom
+      integer                 :: SrvD_Indx_Y_GenTrq
+      integer                 :: SrvD_Indx_Y_ElecPwr
+      integer                 :: SrvD_Indx_Y_WrOutput
+
+      SrvD_Indx_Y_YawMom   = size(SrvD_Indx_Y_BlPitchCom) + 1     ! sometime change this to p%NumBl
+      SrvD_Indx_Y_GenTrq   = SrvD_Indx_Y_YawMom + 1
+      SrvD_Indx_Y_ElecPwr  = SrvD_Indx_Y_GenTrq + 1
+      SrvD_Indx_Y_WrOutput = p%Jac_ny - p%NumOuts                 ! Index to location before user requested outputs
 
       !> \f{equation}{ \frac{\partial Y}{\partial u} = \begin{bmatrix}
       !! \frac{\partial Y_{BlPitchCom_1}}{\partial u_{Yaw}}  & \frac{\partial Y_{BlPitchCom_1}}{\partial u_{YawRate}}  & \frac{\partial Y_{BlPitchCom_1}}{\partial u_{HSS\_Spd}} \\
@@ -2434,67 +2475,64 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       !! \frac{\partial Y_{WriteOutput_i}}{\partial u_{Yaw}} & \frac{\partial Y_{WriteOutput_i}}{\partial u_{YawRate}} & \frac{\partial Y_{WriteOutput_i}}{\partial u_{HSS\_Spd}} \end{bmatrix}
       !!\f}
 
-
       ! Note this is similiar to SrvD_CalcOutput
-
       if (.not. allocated(dYdu)) then
-         call allocAry(dYdu, SrvD_Indx_Y_WrOutput+p%NumOuts, 3, 'dYdu', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         call allocAry(dYdu, p%Jac_ny, p%Jac_nu, 'dYdu', ErrStat2, ErrMsg2)
+         if (Failed())  return
       end if
       dYdu = 0.0_R8Ki
-
 
       !   ! Torque control:
       !> Compute
       !> \f$ \frac{\partial Y_{GenTrq}}{\partial u_{HSS\_Spd}} \f$ and
       !> \f$ \frac{\partial Y_{ElecPwr}}{\partial u_{HSS\_Spd}} \f$ in servodyn::torque_jacobianpinput.
-      call Torque_JacobianPInput( t, u, p, x, xd, z, OtherState, m, GenTrq_du, ElecPwr_du, ErrStat, ErrMsg )      !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) RETURN
-         dYdu(SrvD_Indx_Y_GenTrq, Indx_u_HSS_Spd)  = GenTrq_du
-         dYdu(SrvD_Indx_Y_ElecPwr,Indx_u_HSS_Spd)  = ElecPwr_du
-
+      call Torque_JacobianPInput( t, u, p, x, xd, z, OtherState, m, GenTrq_du, ElecPwr_du, ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      dYdu(SrvD_Indx_Y_GenTrq, Indx_u_HSS_Spd)  = GenTrq_du
+      dYdu(SrvD_Indx_Y_ElecPwr,Indx_u_HSS_Spd)  = ElecPwr_du
 
          ! Pitch control:
       !> \f$ \frac{\partial Y_{BlPitchCom_k}}{\partial u} = 0 \f$
 
          ! Yaw control:
       !> \f$ \frac{\partial Y_{YawMom}}{\partial u_{Yaw}} = -p\%YawSpr \f$
-      dYdu(SrvD_Indx_Y_YawMom,Indx_u_Yaw) = -p%YawSpr ! from Yaw_CalcOutput
+      dYdu(SrvD_Indx_Y_YawMom,Indx_u_Yaw) = -p%YawSpr          ! from Yaw_CalcOutput
       !> \f$ \frac{\partial Y_{YawMom}}{\partial u_{YawRate}} = -p\%YawDamp \f$
-      dYdu(SrvD_Indx_Y_YawMom,Indx_u_YawRate) = -p%YawDamp   ! from Yaw_CalcOutput
+      dYdu(SrvD_Indx_Y_YawMom,Indx_u_YawRate) = -p%YawDamp     ! from Yaw_CalcOutput
 
-
-         !.........................................................................................................................
-         ! Calculate all of the available output channels (because they repeat for the derivative) here:
-         !.........................................................................................................................
+      !.........................................................................................................................
+      ! Calculate the output channels that will be affected by u%{Yaw,YawRate,HSS_Spd}
+      !.........................................................................................................................
+      call AllocAry(AllOuts,p%Jac_nu,MaxOutPts,'AllOuts dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
       AllOuts = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
+      AllOuts(1:3, GenTq)     =  0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,1:3)
+      AllOuts(1:3, GenPwr)    =  0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,1:3)
+      AllOuts(1:3, YawMomCom) = -0.001_R8Ki*dYdu(SrvD_Indx_Y_YawMom,1:3)
 
-      AllOuts(:, GenTq)     =  0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,:)
-      AllOuts(:, GenPwr)    =  0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,:)
-      AllOuts(:, YawMomCom) = -0.001_R8Ki*dYdu(SrvD_Indx_Y_YawMom,:)
+      !.........................................................................................................................
+      ! Perturb each StC instance individually and place in appropriate location in dYdu
+      !     Each StC is basically an isolated piece that doesn't interact with any other StC or with anything else in SrvD,
+      !     so we take advantage of that here for computational expediency.
+      !.........................................................................................................................
+
+
 
       !...............................................................................................................................
       ! Place the selected output channels into the WriteOutput(:) portion of the jacobian with the proper sign:
       !...............................................................................................................................
-
       DO I = 1,p%NumOuts  ! Loop through all selected output channels
          dYdu(I+SrvD_Indx_Y_WrOutput,:) = p%OutParam(I)%SignM * AllOuts( :, p%OutParam(I)%Indx )
       ENDDO             ! I - All selected output channels
 
-   END IF
+      ! deallocate once everything is copied in
+      if (allocated(AllOuts)) deallocate(AllOuts)
 
-   IF ( PRESENT( dXdu ) ) THEN
-      if (allocated(dXdu)) deallocate(dXdu)
-   END IF
+   end subroutine Jac_dYdu
 
-   IF ( PRESENT( dXddu ) ) THEN
-      if (allocated(dXddu)) deallocate(dXddu)
-   END IF
-
-   IF ( PRESENT( dZdu ) ) THEN
-      if (allocated(dZdu)) deallocate(dZdu)
-   END IF
-
+   !> Calculate the jacobian dXdu
+   subroutine Jac_dXdu()
+         !     The RK4 algorithm in the StC code does some local area linearization.  Can we leverage that for the StCs?
+   end subroutine Jac_dXdu
 
 END SUBROUTINE SrvD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2725,7 +2763,7 @@ SUBROUTINE SrvD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrSt
 END SUBROUTINE SrvD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedLogMap )
+SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
    REAL(DbKi),                         INTENT(IN   )  :: t          !< Time in seconds at operating point
    TYPE(SrvD_InputType),               INTENT(IN   )  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SrvD_ParameterType),           INTENT(IN   )  :: p          !< Parameters
@@ -2743,10 +2781,7 @@ SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_o
    REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: z_op(:)    !< values of linearized constraint states
-   LOGICAL,                 OPTIONAL,  INTENT(IN   )  :: NeedLogMap !< whether a y_op values should contain log maps instead of full orientation matrices
 
-
-   LOGICAL                                            :: ReturnLogMap
    INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (occurs after initial error)
    CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
    CHARACTER(*), PARAMETER                            :: RoutineName = 'SrvD_GetOP'
@@ -2757,11 +2792,6 @@ SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_o
 
    !..........................................
    IF ( PRESENT( u_op ) ) THEN
-      if (present(NeedLogMap)) then
-         ReturnLogMap = NeedLogMap
-      else
-         ReturnLogMap = .false.
-      end if
       call Get_u_op()
       if (ErrStat >= AbortErrLev)   return
    END IF
@@ -2777,6 +2807,8 @@ SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_o
    END IF
    !..........................................
    IF ( PRESENT( dx_op ) ) THEN
+      call Get_dx_op()
+      if (ErrStat >= AbortErrLev)   return
    END IF
    !..........................................
    IF ( PRESENT( xd_op ) ) THEN
@@ -2814,21 +2846,21 @@ CONTAINS
       ! StC related inputs
       do j=1,p%NumBStC     ! Blade
          do i=1,p%NumBl
-            call PackMotionMesh( u%BStCMotionMesh(i,j), u_op, index_next, UseLogMaps=ReturnLogMap )
+            call PackMotionMesh( u%BStCMotionMesh(i,j), u_op, index_next )
          enddo
       enddo
       do j=1,p%NumNStC     ! Nacelle
-         call PackMotionMesh( u%NStCMotionMesh(j), u_op, index_next, UseLogMaps=ReturnLogMap )
+         call PackMotionMesh( u%NStCMotionMesh(j), u_op, index_next )
       enddo
       do j=1,p%NumTStC     ! Tower
-         call PackMotionMesh( u%TStCMotionMesh(j), u_op, index_next, UseLogMaps=ReturnLogMap )
+         call PackMotionMesh( u%TStCMotionMesh(j), u_op, index_next )
       enddo
       do j=1,p%NumSStC     ! Sub-structure
-         call PackMotionMesh( u%SStCMotionMesh(j), u_op, index_next, UseLogMaps=ReturnLogMap )
+         call PackMotionMesh( u%SStCMotionMesh(j), u_op, index_next )
       enddo
-   end subroutine Get_u_op 
+   end subroutine Get_u_op
 
-   !> Get the operating point outputs and pack 
+   !> Get the operating point outputs and pack
    subroutine Get_y_op()
       integer(IntKi)    :: i,j,index_next
 
@@ -2917,7 +2949,66 @@ CONTAINS
          x_op(idx+6) = x%SStC(j)%StC_x(6,1)       !  dz/dt --> x%SStC(j)%StC_x(6,1)
          idx = idx + 6
       enddo
-   end subroutine Get_x_op 
+   end subroutine Get_x_op
+
+   !> Get the operating point continuous states derivatives and pack
+   !!    rather than copy the logic in CalcContStateDeriv for the StCs, we'll just
+   !!    call it directly
+   subroutine Get_dx_op()
+      integer(IntKi)                   :: i,j,k,idx
+      type(SrvD_ContinuousStateType)   :: dx          !< derivative of continuous states at operating point
+
+      if (.not. allocated(dx_op)) then
+         CALL AllocAry( dx_op, p%Jac_nx, 'dx_op', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      end if
+      call SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 )
+      if (Failed()) then
+         call SrvD_DestroyContState( dx, ErrStat2, ErrMsg2)
+         return
+      end if
+      idx = 0
+      do j=1,p%NumBStC     ! Blade StC -- displacement and velocity state
+         do k=1,p%NumBl
+            dx_op(idx+1) = dx%BStC(j)%StC_x(1,k)   !  x     --> dx%BStC(j)%StC_x(1,k)
+            dx_op(idx+2) = dx%BStC(j)%StC_x(3,k)   !  y     --> dx%BStC(j)%StC_x(3,k)
+            dx_op(idx+3) = dx%BStC(j)%StC_x(5,k)   !  z     --> dx%BStC(j)%StC_x(5,k)
+            dx_op(idx+4) = dx%BStC(j)%StC_x(2,k)   !  dx/dt --> dx%BStC(j)%StC_x(2,k)
+            dx_op(idx+5) = dx%BStC(j)%StC_x(4,k)   !  dy/dt --> dx%BStC(j)%StC_x(4,k)
+            dx_op(idx+6) = dx%BStC(j)%StC_x(6,k)   !  dz/dt --> dx%BStC(j)%StC_x(6,k)
+            idx = idx + 6
+         enddo
+      enddo
+      do j=1,p%NumNStC     ! Nacelle StC -- displacement and velocity state
+         dx_op(idx+1) = dx%NStC(j)%StC_x(1,1)      !  x     --> dx%NStC(j)%StC_x(1,1)
+         dx_op(idx+2) = dx%NStC(j)%StC_x(3,1)      !  y     --> dx%NStC(j)%StC_x(3,1)
+         dx_op(idx+3) = dx%NStC(j)%StC_x(5,1)      !  z     --> dx%NStC(j)%StC_x(5,1)
+         dx_op(idx+4) = dx%NStC(j)%StC_x(2,1)      !  dx/dt --> dx%NStC(j)%StC_x(2,1)
+         dx_op(idx+5) = dx%NStC(j)%StC_x(4,1)      !  dy/dt --> dx%NStC(j)%StC_x(4,1)
+         dx_op(idx+6) = dx%NStC(j)%StC_x(6,1)      !  dz/dt --> dx%NStC(j)%StC_x(6,1)
+         idx = idx + 6
+      enddo
+      do j=1,p%NumTStC     ! Tower StC -- displacement and velocity state
+         dx_op(idx+1) = dx%TStC(j)%StC_x(1,1)      !  x     --> dx%TStC(j)%StC_x(1,1)
+         dx_op(idx+2) = dx%TStC(j)%StC_x(3,1)      !  y     --> dx%TStC(j)%StC_x(3,1)
+         dx_op(idx+3) = dx%TStC(j)%StC_x(5,1)      !  z     --> dx%TStC(j)%StC_x(5,1)
+         dx_op(idx+4) = dx%TStC(j)%StC_x(2,1)      !  dx/dt --> dx%TStC(j)%StC_x(2,1)
+         dx_op(idx+5) = dx%TStC(j)%StC_x(4,1)      !  dy/dt --> dx%TStC(j)%StC_x(4,1)
+         dx_op(idx+6) = dx%TStC(j)%StC_x(6,1)      !  dz/dt --> dx%TStC(j)%StC_x(6,1)
+         idx = idx + 6
+      enddo
+      do j=1,p%NumSStC     ! Substructure StC -- displacement and velocity state
+         dx_op(idx+1) = dx%SStC(j)%StC_x(1,1)      !  x     --> dx%SStC(j)%StC_x(1,1)
+         dx_op(idx+2) = dx%SStC(j)%StC_x(3,1)      !  y     --> dx%SStC(j)%StC_x(3,1)
+         dx_op(idx+3) = dx%SStC(j)%StC_x(5,1)      !  z     --> dx%SStC(j)%StC_x(5,1)
+         dx_op(idx+4) = dx%SStC(j)%StC_x(2,1)      !  dx/dt --> dx%SStC(j)%StC_x(2,1)
+         dx_op(idx+5) = dx%SStC(j)%StC_x(4,1)      !  dy/dt --> dx%SStC(j)%StC_x(4,1)
+         dx_op(idx+6) = dx%SStC(j)%StC_x(6,1)      !  dz/dt --> dx%SStC(j)%StC_x(6,1)
+         idx = idx + 6
+      enddo
+      ! clean up
+      call SrvD_DestroyContState( dx, ErrStat2, ErrMsg2)
+   end subroutine Get_dx_op
 
 END SUBROUTINE SrvD_GetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2974,10 +3065,7 @@ SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
          call SetErrStat(ErrID_Fatal,"HSSBrMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
       if (InputFileData%YCMode /= ControlMode_NONE) &
          call SetErrStat(ErrID_Fatal,"YCMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
-      
-!      if ((InputFileData%NumNStC + InputFileData%NumTStC + InputFileData%NumBStC + InputFileData%NumSStC) > 0_IntKi) &
-!         call SetErrStat(ErrID_Fatal,"StrucCtrl module is not currently allowed in linearization. NumNStC, NumTStC, NumBStC, and NumSStC must all be ZERO.",ErrStat,ErrMsg,RoutineName)
-      
+
       if (InitInp%TrimCase /= TrimCase_none) then
          if (InitInp%TrimCase /= TrimCase_yaw .and. InitInp%TrimCase /= TrimCase_torque .and. InitInp%TrimCase /=  TrimCase_pitch) then
             call SetErrStat(ErrID_Fatal,"Invalid value entered for TrimCase.",ErrStat,ErrMsg,RoutineName)
