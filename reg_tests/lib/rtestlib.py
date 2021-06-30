@@ -51,6 +51,9 @@ def validateDirOrMkdir(path):
         os.makedirs(path)
 
 def validateExeOrExit(path):
+    # On windows, check if maybe user forgot the .exe
+    if os.path.isfile(path+'.exe'):
+        path=path+'.exe'
     validateFileOrExit(path)
     permissionsMask = oct(os.stat(path)[ST_MODE])[-1:]
     if not int(permissionsMask)%2 == 1:

@@ -36,6 +36,12 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
     set(PLOT_FLAG "-p")
   endif()
 
+  set(RUN_VERBOSE_FLAG "")
+  if(CTEST_RUN_VERBOSE_FLAG)
+     set(RUN_VERBOSE_FLAG "-v")
+  endif()
+
+
   add_test(
     ${TESTNAME} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
@@ -47,6 +53,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
        ${PLOT_FLAG}                     # empty or "-p"
+       ${RUN_VERBOSE_FLAG}              # empty or "-v"
   )
   # limit each test to 90 minutes: 5400s
   set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")

@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
@@ -141,7 +141,7 @@ if not os.path.isdir(testBuildDirectory):
 ### Run openfast on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName + ".fstf")
-    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
+    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable, verbose=verbose)
     if returnCode != 0:
         rtl.exitWithError("")
     
