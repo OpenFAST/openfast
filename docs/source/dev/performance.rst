@@ -423,35 +423,40 @@ areas:
 
 Linearization routine profiling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. TODO: Is there somewhere to link to WEIS?
-
-In an effort to understand performance characteristics of the linearization
-capability in OpenFAST, profiling was performed on the linearization-specific
-routines within the FAST Library. Because these routines require
+As a portion of the `ARPA-E WEIS <https://arpa-e.energy.gov/technologies/projects/wind-energy-integrated-servo-control-weis-toolset-enable-controls-co-design>`_
+project, the linearization capability within OpenFAST has been profiled
+in an effort to characterize the performance and current bottlenecks.
+This work specifically targetted the linearization routines within the
+FAST Library, primarily in `FAST_Lin.f90 <https://github.com/OpenFAST/openfast/blob/main/modules/openfast-library/src/FAST_Lin.f90>`_,
+as well as the routines constructing the Jacobian matrices within individual
+physics modules. Because these routines require
 constructing large matrices, this is a computationally intensive process
-with a high rate of memory access. A high-level flow of data in the
-linearization algorithm in the ``FAST_Linearize_OP`` subroutine is given below.
+with a high rate of memory access.
+
+A high-level flow of data in the linearization algorithm in the
+``FAST_Linearize_OP`` subroutine is given below.
 
 .. mermaid::
 
-  graph TD;
-    Construct-Module-Jacobian-->Calculate-Module-OP;
-    Calculate-Module-OP-->Construct-GlueCode-State-Matrices;
+  graph BT;
     Calculate-Module-OP-->Construct-GlueCode-Jacobians;
+    Calculate-Module-OP-->Construct-GlueCode-State-Matrices;
+    Construct-Module-Jacobian-->Calculate-Module-OP;
 
 Each enabled physics module constructs module-level matrices in their respective
 ``<Module>_Jacobian`` and ``<Module>_GetOP`` routines, and the collection of these
 are assembled into global matrices in ``Glue_Jacobians`` and ``Glue_StateMatrices``.
 In a top-down comparison of total CPU time in ``FAST_Linearize_OP``, we see that
 the construction of the glue-code state matrices is the most expensive step.
-The HydroDyn Jacobian computation is also expensive relative to other module
-Jacobian computations. 
-
-.. TODO: add details on the range of size of the matrices
+The HydroDyn Jacobian computation also stands out relative to other module
+Jacobian computations.
 
 .. figure:: images/TopDown_FAST_LinearizeOP.jpg
    :width: 100%
    :align: center
 
-Analyzing the ``Glue_StateMatrices`` routine reveals that the matrix multiplication
+The Jacobian and state matrices are sized based on the total number of inputs, outputs,
+and continuous states. Though the size varies, these matrices generally contain thousands
+of elements in each dimension. Care should be given to how this data is accessed
+and copying should be minimized.
 
