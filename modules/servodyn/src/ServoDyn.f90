@@ -2444,58 +2444,51 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
 END SUBROUTINE SrvD_CalcConstrStateResidual
 
 
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! ###### The following four routines are Jacobian routines for linearization capabilities #######
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the inputs (u). The partial derivative dY/du is returned.
+!! with respect to the inputs (u). The partial derivatives dY/du and dX/du are returned.
 SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
-!..................................................................................................................................
-
-   REAL(DbKi),                             INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(SrvD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required);
+   real(DbKi),                             intent(in   )           :: t          !< Time in seconds at operating point
+   type(SrvD_InputType),                   intent(inout)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   type(SrvD_ParameterType),               intent(in   )           :: p          !< Parameters
+   type(SrvD_ContinuousStateType),         intent(in   )           :: x          !< Continuous states at operating point
+   type(SrvD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
+   type(SrvD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
+   type(SrvD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
+   type(SrvD_OutputType),                  intent(in   )           :: y          !< Output (change to inout if a mesh copy is required);
                                                                                  !!   Output fields are not used by this routine, but type is
                                                                                  !!   available here so that mesh parameter information (i.e.,
                                                                                  !!   connectivity) does not have to be recalculated for dYdu.
-   TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions
+   type(SrvD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
+   integer(IntKi),                         intent(  out)           :: ErrStat    !< Error status of the operation
+   character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   real(R8Ki), allocatable, optional,      intent(inout)           :: dYdu(:,:)  !< Partial derivatives of output functions
                                                                                  !!   (Y) with respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state
+   real(R8Ki), allocatable, optional,      intent(inout)           :: dXdu(:,:)  !< Partial derivatives of continuous state
                                                                                  !!   functions (X) with respect to inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state
+   real(R8Ki), allocatable, optional,      intent(inout)           :: dXddu(:,:) !< Partial derivatives of discrete state
                                                                                  !!   functions (Xd) with respect to inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state
+   real(R8Ki), allocatable, optional,      intent(inout)           :: dZdu(:,:)  !< Partial derivatives of constraint state
                                                                                  !!   functions (Z) with respect to inputs (u) [intent in to avoid deallocation]
 
       ! local variables
-   INTEGER(IntKi)                                                  :: ErrStat2               ! Error status of the operation
-   CHARACTER(ErrMsgLen)                                            :: ErrMsg2                ! Error message if ErrStat /= ErrID_None
-   CHARACTER(*), PARAMETER                                         :: RoutineName = 'SrvD_JacobianPInput'
-
+   integer(IntKi)                                                  :: ErrStat2               ! Error status of the operation
+   character(ErrMsgLen)                                            :: ErrMsg2                ! Error message if ErrStat /= ErrID_None
+   character(*), parameter                                         :: RoutineName = 'SrvD_JacobianPInput'
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
       ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-
    IF ( PRESENT( dYdu ) ) THEN
-      call Jac_dYdu()
-      if (ErrStat >= AbortErrLev)   return;
+      call Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2, dYdu )
+      if (Failed())  return
    END IF
 
    IF ( PRESENT( dXdu ) ) THEN
       call Jac_dXdu()
-      if (ErrStat >= AbortErrLev)   return;
+      if (Failed())  return
    END IF
 
    IF ( PRESENT( dXddu ) ) THEN
@@ -2511,11 +2504,86 @@ contains
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
    end function Failed
+END SUBROUTINE SrvD_JacobianPInput
 
-   !> Calculate the jacobian dYdu
-   subroutine Jac_dYdu()
-!FIXME:
-      real(R8Ki),allocatable  :: AllOuts(:,:)            ! All the the available output channels
+!> Calculate the jacobian dYdu
+subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu )
+   real(DbKi),                             intent(in   )           :: t          !< Time in seconds at operating point
+   type(SrvD_InputType),                   intent(inout)           :: u          !< Inputs at operating point (out for copy only)
+   type(SrvD_ParameterType),               intent(in   )           :: p          !< Parameters
+   type(SrvD_ContinuousStateType),         intent(in   )           :: x          !< Continuous states at operating point
+   type(SrvD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
+   type(SrvD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
+   type(SrvD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
+   type(SrvD_OutputType),                  intent(in   )           :: y          !< Output
+   type(SrvD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
+   integer(IntKi),                         intent(  out)           :: ErrStat    !< Error status of the operation
+   character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   real(R8Ki), allocatable, optional,      intent(inout)           :: dYdu(:,:)  !< Partial derivatives of output functions
+
+   real(R8Ki),allocatable     :: AllOuts(:,:)            ! All the the available output channels
+   type(SrvD_InputType)       :: u_perturb               ! copy of inputs to perturb
+   integer(IntKi)             :: ErrStat2                ! Error status of the operation
+   character(ErrMsgLen)       :: ErrMsg2                 ! Error message if ErrStat /= ErrID_None
+   character(*), parameter    :: RoutineName = 'Jac_dYdu'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! Note this is similiar to SrvD_CalcOutput
+   if (.not. allocated(dYdu)) then
+      call allocAry(dYdu, p%Jac_ny, p%Jac_nu, 'dYdu', ErrStat2, ErrMsg2)
+      if (Failed())  return
+   end if
+   dYdu = 0.0_R8Ki
+
+   !-------------------------------------------------------------
+   ! Calculate first three rows for Yaw, YawRate, HSS_Spd inputs
+   !     This is an analytical calculation
+   !-------------------------------------------------------------
+   call dYdu_YawGen();  if (Failed())  return;
+
+   !-------------------------------------------------------------
+   ! Perturb each StC instance individually and place in appropriate location in dYdu
+   !     Each StC is basically an isolated piece that doesn't interact with any other StC or with anything else in SrvD,
+   !     so we take advantage of that here for computational expediency.
+   !-------------------------------------------------------------
+   ! make a copy of the inputs to perturb if an StC exists
+   if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
+      call SrvD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed())  return;
+   endif
+   ! Blade
+   if (p%NumBStC > 0) then
+! perturb_u + for u in range of p%Jac_Idx_BStC_u(1:2)
+!     transfer point to point for BStC
+!     calcOutput for u+
+! perturb_u - for u in range of p%Jac_Idx_BStC_u(1:2)
+!     transfer point to point for BStC
+!     calcOutput for u-
+! central diff and place into the dYdu
+! copy relevant from dYdu into AllOuts section
+   endif
+
+   call Cleanup()
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call Cleanup
+   end function Failed
+
+   subroutine Cleanup()
+      if (allocated(AllOuts)) deallocate(AllOuts)
+      if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
+         call SrvD_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )     ! Ignore any errors from this
+      endif
+   end subroutine Cleanup
+
+   !> Subroutine for the yaw and generator portions of the dYdu matrix (first three rows of dYdu)
+   !!    This is part of dYdu uses analytical results
+   subroutine dYdu_YawGen()
       real(R8Ki)              :: GenTrq_du, ElecPwr_du   ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
       integer(IntKi)          :: I                       ! Generic loop index
       integer,parameter       :: Indx_u_Yaw     = 1
@@ -2549,13 +2617,6 @@ contains
       !! \frac{\partial Y_{WriteOutput_i}}{\partial u_{Yaw}} & \frac{\partial Y_{WriteOutput_i}}{\partial u_{YawRate}} & \frac{\partial Y_{WriteOutput_i}}{\partial u_{HSS\_Spd}} \end{bmatrix}
       !!\f}
 
-      ! Note this is similiar to SrvD_CalcOutput
-      if (.not. allocated(dYdu)) then
-         call allocAry(dYdu, p%Jac_ny, p%Jac_nu, 'dYdu', ErrStat2, ErrMsg2)
-         if (Failed())  return
-      end if
-      dYdu = 0.0_R8Ki
-
       !   ! Torque control:
       !> Compute
       !> \f$ \frac{\partial Y_{GenTrq}}{\partial u_{HSS\_Spd}} \f$ and
@@ -2574,42 +2635,35 @@ contains
       !> \f$ \frac{\partial Y_{YawMom}}{\partial u_{YawRate}} = -p\%YawDamp \f$
       dYdu(SrvD_Indx_Y_YawMom,Indx_u_YawRate) = -p%YawDamp     ! from Yaw_CalcOutput
 
-      !.........................................................................................................................
+      !...............................................................................
       ! Calculate the output channels that will be affected by u%{Yaw,YawRate,HSS_Spd}
       !     These terms are analytically calculated
-      !.........................................................................................................................
+      !...............................................................................
+      if (allocated(AllOuts)) deallocate(AllOuts)
       call AllocAry(AllOuts,p%Jac_nu,MaxOutPts,'AllOuts dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
       AllOuts = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
       AllOuts(1:3, GenTq)     =  0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,1:3)
       AllOuts(1:3, GenPwr)    =  0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,1:3)
       AllOuts(1:3, YawMomCom) = -0.001_R8Ki*dYdu(SrvD_Indx_Y_YawMom,1:3)
 
-      !.........................................................................................................................
-      ! Perturb each StC instance individually and place in appropriate location in dYdu
-      !     Each StC is basically an isolated piece that doesn't interact with any other StC or with anything else in SrvD,
-      !     so we take advantage of that here for computational expediency.
-      !.........................................................................................................................
+      !...............................................................................
+      ! Place the selected output channels into the WriteOutput(:) portion of the
+      ! jacobian with the proper sign:
+      !...............................................................................
+      do I = 1,p%NumOuts  ! Loop through all selected output channels
+         dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts( 1:3, p%OutParam(I)%Indx )
+      enddo             ! I - All selected output channels
 
-
-
-      !...............................................................................................................................
-      ! Place the selected output channels into the WriteOutput(:) portion of the jacobian with the proper sign:
-      !...............................................................................................................................
-      DO I = 1,p%NumOuts  ! Loop through all selected output channels
-         dYdu(I+SrvD_Indx_Y_WrOutput,:) = p%OutParam(I)%SignM * AllOuts( :, p%OutParam(I)%Indx )
-      ENDDO             ! I - All selected output channels
-
-      ! deallocate once everything is copied in
+      ! deallocate once everything is copied over
       if (allocated(AllOuts)) deallocate(AllOuts)
+   end subroutine dYdu_YawGen
+end subroutine Jac_dYdu
 
-   end subroutine Jac_dYdu
+!> Calculate the jacobian dXdu
+subroutine Jac_dXdu()
+      !     The RK4 algorithm in the StC code does some local area linearization.  Can we leverage that for the StCs?
+end subroutine Jac_dXdu
 
-   !> Calculate the jacobian dXdu
-   subroutine Jac_dXdu()
-         !     The RK4 algorithm in the StC code does some local area linearization.  Can we leverage that for the StCs?
-   end subroutine Jac_dXdu
-
-END SUBROUTINE SrvD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
