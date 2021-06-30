@@ -451,7 +451,19 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_nu      !< number of inputs in jacobian matrix [-]
     INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: Jac_nx      !< half the number of continuous states in jacobian matrix [-]
+    INTEGER(IntKi)  :: Jac_nx      !< the number of continuous states in jacobian matrix [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_BStC_u      !< the start and end indices of blade        StC u jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_NStC_u      !< the start and end indices of nacelle      StC u jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_TStC_u      !< the start and end indices of tower        StC u jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_SStC_u      !< the start and end indices of substructure StC u jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_BStC_x      !< the start and end indices of blade        StC x jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_NStC_x      !< the start and end indices of nacelle      StC x jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_TStC_x      !< the start and end indices of tower        StC x jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_SStC_x      !< the start and end indices of substructure StC x jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_BStC_y      !< the start and end indices of blade        StC y jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_NStC_y      !< the start and end indices of nacelle      StC y jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_TStC_y      !< the start and end indices of tower        StC y jacobian [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: Jac_Idx_SStC_y      !< the start and end indices of substructure StC y jacobian [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -11847,6 +11859,18 @@ ENDIF
     DstParamData%Jac_nu = SrcParamData%Jac_nu
     DstParamData%Jac_ny = SrcParamData%Jac_ny
     DstParamData%Jac_nx = SrcParamData%Jac_nx
+    DstParamData%Jac_Idx_BStC_u = SrcParamData%Jac_Idx_BStC_u
+    DstParamData%Jac_Idx_NStC_u = SrcParamData%Jac_Idx_NStC_u
+    DstParamData%Jac_Idx_TStC_u = SrcParamData%Jac_Idx_TStC_u
+    DstParamData%Jac_Idx_SStC_u = SrcParamData%Jac_Idx_SStC_u
+    DstParamData%Jac_Idx_BStC_x = SrcParamData%Jac_Idx_BStC_x
+    DstParamData%Jac_Idx_NStC_x = SrcParamData%Jac_Idx_NStC_x
+    DstParamData%Jac_Idx_TStC_x = SrcParamData%Jac_Idx_TStC_x
+    DstParamData%Jac_Idx_SStC_x = SrcParamData%Jac_Idx_SStC_x
+    DstParamData%Jac_Idx_BStC_y = SrcParamData%Jac_Idx_BStC_y
+    DstParamData%Jac_Idx_NStC_y = SrcParamData%Jac_Idx_NStC_y
+    DstParamData%Jac_Idx_TStC_y = SrcParamData%Jac_Idx_TStC_y
+    DstParamData%Jac_Idx_SStC_y = SrcParamData%Jac_Idx_SStC_y
  END SUBROUTINE SrvD_CopyParam
 
  SUBROUTINE SrvD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -12221,6 +12245,18 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Jac_nu
       Int_BufSz  = Int_BufSz  + 1  ! Jac_ny
       Int_BufSz  = Int_BufSz  + 1  ! Jac_nx
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_BStC_u)  ! Jac_Idx_BStC_u
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_NStC_u)  ! Jac_Idx_NStC_u
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_TStC_u)  ! Jac_Idx_TStC_u
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_SStC_u)  ! Jac_Idx_SStC_u
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_BStC_x)  ! Jac_Idx_BStC_x
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_NStC_x)  ! Jac_Idx_NStC_x
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_TStC_x)  ! Jac_Idx_TStC_x
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_SStC_x)  ! Jac_Idx_SStC_x
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_BStC_y)  ! Jac_Idx_BStC_y
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_NStC_y)  ! Jac_Idx_NStC_y
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_TStC_y)  ! Jac_Idx_TStC_y
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_SStC_y)  ! Jac_Idx_SStC_y
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -12805,6 +12841,54 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%Jac_nx
     Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%Jac_Idx_BStC_u,1), UBOUND(InData%Jac_Idx_BStC_u,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_BStC_u(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_NStC_u,1), UBOUND(InData%Jac_Idx_NStC_u,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_NStC_u(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_TStC_u,1), UBOUND(InData%Jac_Idx_TStC_u,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_TStC_u(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_SStC_u,1), UBOUND(InData%Jac_Idx_SStC_u,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_SStC_u(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_BStC_x,1), UBOUND(InData%Jac_Idx_BStC_x,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_BStC_x(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_NStC_x,1), UBOUND(InData%Jac_Idx_NStC_x,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_NStC_x(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_TStC_x,1), UBOUND(InData%Jac_Idx_TStC_x,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_TStC_x(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_SStC_x,1), UBOUND(InData%Jac_Idx_SStC_x,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_SStC_x(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_BStC_y,1), UBOUND(InData%Jac_Idx_BStC_y,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_BStC_y(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_NStC_y,1), UBOUND(InData%Jac_Idx_NStC_y,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_NStC_y(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_TStC_y,1), UBOUND(InData%Jac_Idx_TStC_y,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_TStC_y(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Jac_Idx_SStC_y,1), UBOUND(InData%Jac_Idx_SStC_y,1)
+      IntKiBuf(Int_Xferred) = InData%Jac_Idx_SStC_y(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
  END SUBROUTINE SrvD_PackParam
 
  SUBROUTINE SrvD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -13506,6 +13590,78 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%Jac_nx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%Jac_Idx_BStC_u,1)
+    i1_u = UBOUND(OutData%Jac_Idx_BStC_u,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_BStC_u,1), UBOUND(OutData%Jac_Idx_BStC_u,1)
+      OutData%Jac_Idx_BStC_u(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_NStC_u,1)
+    i1_u = UBOUND(OutData%Jac_Idx_NStC_u,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_NStC_u,1), UBOUND(OutData%Jac_Idx_NStC_u,1)
+      OutData%Jac_Idx_NStC_u(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_TStC_u,1)
+    i1_u = UBOUND(OutData%Jac_Idx_TStC_u,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_TStC_u,1), UBOUND(OutData%Jac_Idx_TStC_u,1)
+      OutData%Jac_Idx_TStC_u(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_SStC_u,1)
+    i1_u = UBOUND(OutData%Jac_Idx_SStC_u,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_SStC_u,1), UBOUND(OutData%Jac_Idx_SStC_u,1)
+      OutData%Jac_Idx_SStC_u(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_BStC_x,1)
+    i1_u = UBOUND(OutData%Jac_Idx_BStC_x,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_BStC_x,1), UBOUND(OutData%Jac_Idx_BStC_x,1)
+      OutData%Jac_Idx_BStC_x(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_NStC_x,1)
+    i1_u = UBOUND(OutData%Jac_Idx_NStC_x,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_NStC_x,1), UBOUND(OutData%Jac_Idx_NStC_x,1)
+      OutData%Jac_Idx_NStC_x(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_TStC_x,1)
+    i1_u = UBOUND(OutData%Jac_Idx_TStC_x,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_TStC_x,1), UBOUND(OutData%Jac_Idx_TStC_x,1)
+      OutData%Jac_Idx_TStC_x(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_SStC_x,1)
+    i1_u = UBOUND(OutData%Jac_Idx_SStC_x,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_SStC_x,1), UBOUND(OutData%Jac_Idx_SStC_x,1)
+      OutData%Jac_Idx_SStC_x(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_BStC_y,1)
+    i1_u = UBOUND(OutData%Jac_Idx_BStC_y,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_BStC_y,1), UBOUND(OutData%Jac_Idx_BStC_y,1)
+      OutData%Jac_Idx_BStC_y(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_NStC_y,1)
+    i1_u = UBOUND(OutData%Jac_Idx_NStC_y,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_NStC_y,1), UBOUND(OutData%Jac_Idx_NStC_y,1)
+      OutData%Jac_Idx_NStC_y(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_TStC_y,1)
+    i1_u = UBOUND(OutData%Jac_Idx_TStC_y,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_TStC_y,1), UBOUND(OutData%Jac_Idx_TStC_y,1)
+      OutData%Jac_Idx_TStC_y(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Jac_Idx_SStC_y,1)
+    i1_u = UBOUND(OutData%Jac_Idx_SStC_y,1)
+    DO i1 = LBOUND(OutData%Jac_Idx_SStC_y,1), UBOUND(OutData%Jac_Idx_SStC_y,1)
+      OutData%Jac_Idx_SStC_y(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
  END SUBROUTINE SrvD_UnPackParam
 
  SUBROUTINE SrvD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

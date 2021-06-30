@@ -688,20 +688,40 @@ contains
       !--------------------------------
       ! StC related outputs
       !--------------------------------
-      do j=1,p%NumBStC     ! Blade
-         do i=1,p%NumBl
-            call PackLoadMesh_Names( y%BStCLoadMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+      ! Blade
+      if (p%NumBStC > 0) then
+         p%Jac_Idx_BStC_y(1) = index_next    ! Start index of BStC in y
+         do j=1,p%NumBStC
+            do i=1,p%NumBl
+               call PackLoadMesh_Names( y%BStCLoadMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+            enddo
          enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle
-         call PackLoadMesh_Names( y%NStCLoadMesh(j), 'Nacelle StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
-      enddo
-      do j=1,p%NumTStC     ! Tower
-         call PackLoadMesh_Names( y%TStCLoadMesh(j), 'Tower StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
-      enddo
-      do j=1,p%NumSStC     ! Sub-tructure
-         call PackLoadMesh_Names( y%SStCLoadMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
-      enddo
+         p%Jac_Idx_BStC_y(2) = index_next-1  ! End index of BStC in y
+      endif
+      ! Nacelle
+      if (p%NumNStC > 0) then
+         p%Jac_Idx_NStC_y(1) = index_next    ! Start index of NStC in y
+         do j=1,p%NumNStC
+            call PackLoadMesh_Names( y%NStCLoadMesh(j), 'Nacelle StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+         enddo
+         p%Jac_Idx_NStC_y(2) = index_next-1  ! End index of NStC in y
+      endif
+      ! Tower
+      if (p%NumTStC > 0) then
+         p%Jac_Idx_TStC_y(1) = index_next    ! Start index of TStC in y
+         do j=1,p%NumTStC
+            call PackLoadMesh_Names( y%TStCLoadMesh(j), 'Tower StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+         enddo
+         p%Jac_Idx_TStC_y(2) = index_next-1  ! End index of TStC in y
+      endif
+      ! Sub-tructure
+      if (p%NumSStC > 0) then
+         p%Jac_Idx_SStC_y(1) = index_next    ! Start index of SStC in y
+         do j=1,p%NumSStC
+            call PackLoadMesh_Names( y%SStCLoadMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+         enddo
+         p%Jac_Idx_SStC_y(2) = index_next-1  ! End index of SStC in y
+      endif
 
       !--------------------------------
       ! y%OutParam   -- User requested outputs
@@ -755,45 +775,65 @@ contains
       ! linearization state names
       !--------------------------------
       index_next = 0                      ! Index counter initialize
-      do j=1,p%NumBStC     ! Blade StC -- displacement state
-         do k=1,p%NumBl
-            InitOut%LinNames_x(index_next+1) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state X  m';         ! x      x%BStC(j)%x(1,k)
-            InitOut%LinNames_x(index_next+2) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Y  m';         ! y      x%BStC(j)%x(3,k)
-            InitOut%LinNames_x(index_next+3) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Z  m';         ! z      x%BStC(j)%x(5,k)
-            InitOut%LinNames_x(index_next+4) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s';   ! x-dot  x%BStC(j)%x(2,k)
-            InitOut%LinNames_x(index_next+5) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s';   ! y-dot  x%BStC(j)%x(4,k)
-            InitOut%LinNames_x(index_next+6) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s';   ! z-dot  x%BStC(j)%x(6,k)
-            InitOut%RotFrame_x(index_next+1:index_next+6) = .true.
+      ! Blade StC -- displacement state
+      if (p%NumBStC > 0) then
+         p%Jac_Idx_BStC_x(1) = index_next+1  ! Start index of BStC in x
+         do j=1,p%NumBStC
+            do k=1,p%NumBl
+               InitOut%LinNames_x(index_next+1) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state X  m';         ! x      x%BStC(j)%x(1,k)
+               InitOut%LinNames_x(index_next+2) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Y  m';         ! y      x%BStC(j)%x(3,k)
+               InitOut%LinNames_x(index_next+3) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Z  m';         ! z      x%BStC(j)%x(5,k)
+               InitOut%LinNames_x(index_next+4) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s';   ! x-dot  x%BStC(j)%x(2,k)
+               InitOut%LinNames_x(index_next+5) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s';   ! y-dot  x%BStC(j)%x(4,k)
+               InitOut%LinNames_x(index_next+6) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s';   ! z-dot  x%BStC(j)%x(6,k)
+               InitOut%RotFrame_x(index_next+1:index_next+6) = .true.
+               index_next = index_next + 6
+            enddo
+         enddo
+         p%Jac_Idx_BStC_x(2) = index_next    ! End index of BStC in x
+      endif
+      ! Nacelle StC -- displacement state
+      if (p%NumNStC > 0) then
+         p%Jac_Idx_NStC_x(1) = index_next+1  ! Start index of NStC in x
+         do j=1,p%NumNStC
+            InitOut%LinNames_x(index_next+1) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%NStC(j)%x(1,1)
+            InitOut%LinNames_x(index_next+2) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%NStC(j)%x(3,1)
+            InitOut%LinNames_x(index_next+3) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%NStC(j)%x(5,1)
+            InitOut%LinNames_x(index_next+4) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%NStC(j)%x(2,1)
+            InitOut%LinNames_x(index_next+5) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%NStC(j)%x(4,1)
+            InitOut%LinNames_x(index_next+6) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%NStC(j)%x(6,1)
             index_next = index_next + 6
          enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle StC -- displacement state
-         InitOut%LinNames_x(index_next+1) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%NStC(j)%x(1,1)
-         InitOut%LinNames_x(index_next+2) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%NStC(j)%x(3,1)
-         InitOut%LinNames_x(index_next+3) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%NStC(j)%x(5,1)
-         InitOut%LinNames_x(index_next+4) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%NStC(j)%x(2,1)
-         InitOut%LinNames_x(index_next+5) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%NStC(j)%x(4,1)
-         InitOut%LinNames_x(index_next+6) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%NStC(j)%x(6,1)
-         index_next = index_next + 6
-      enddo
-      do j=1,p%NumTStC     ! Tower StC -- displacement state
-         InitOut%LinNames_x(index_next+1) = 'Tower StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%TStC(j)%x(1,1)
-         InitOut%LinNames_x(index_next+2) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%TStC(j)%x(3,1)
-         InitOut%LinNames_x(index_next+3) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%TStC(j)%x(5,1)
-         InitOut%LinNames_x(index_next+4) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%TStC(j)%x(2,1)
-         InitOut%LinNames_x(index_next+5) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%TStC(j)%x(4,1)
-         InitOut%LinNames_x(index_next+6) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%TStC(j)%x(6,1)
-         index_next = index_next + 6
-      enddo
-      do j=1,p%NumSStC     ! Substructure StC -- displacement state
-         InitOut%LinNames_x(index_next+1) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%SStC(j)%x(1,1)
-         InitOut%LinNames_x(index_next+2) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%SStC(j)%x(3,1)
-         InitOut%LinNames_x(index_next+3) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%SStC(j)%x(5,1)
-         InitOut%LinNames_x(index_next+4) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%SStC(j)%x(2,1)
-         InitOut%LinNames_x(index_next+5) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%SStC(j)%x(4,1)
-         InitOut%LinNames_x(index_next+6) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%SStC(j)%x(6,1)
-         index_next = index_next + 6
-      enddo
+         p%Jac_Idx_NStC_x(2) = index_next    ! End index of NStC in x
+      endif
+      ! Tower StC -- displacement state
+      if (p%NumTStC > 0) then
+         p%Jac_Idx_TStC_x(1) = index_next+1  ! Start index of TStC in x
+         do j=1,p%NumTStC
+            InitOut%LinNames_x(index_next+1) = 'Tower StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%TStC(j)%x(1,1)
+            InitOut%LinNames_x(index_next+2) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%TStC(j)%x(3,1)
+            InitOut%LinNames_x(index_next+3) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%TStC(j)%x(5,1)
+            InitOut%LinNames_x(index_next+4) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%TStC(j)%x(2,1)
+            InitOut%LinNames_x(index_next+5) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%TStC(j)%x(4,1)
+            InitOut%LinNames_x(index_next+6) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%TStC(j)%x(6,1)
+            index_next = index_next + 6
+         enddo
+         p%Jac_Idx_TStC_x(2) = index_next    ! End index of TStC in x
+      endif
+      ! Substructure StC -- displacement state
+      if (p%NumSStC > 0) then
+         p%Jac_Idx_SStC_x(1) = index_next+1  ! Start index of SStC in x
+         do j=1,p%NumSStC
+            InitOut%LinNames_x(index_next+1) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%SStC(j)%x(1,1)
+            InitOut%LinNames_x(index_next+2) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%SStC(j)%x(3,1)
+            InitOut%LinNames_x(index_next+3) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%SStC(j)%x(5,1)
+            InitOut%LinNames_x(index_next+4) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%SStC(j)%x(2,1)
+            InitOut%LinNames_x(index_next+5) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%SStC(j)%x(4,1)
+            InitOut%LinNames_x(index_next+6) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%SStC(j)%x(6,1)
+            index_next = index_next + 6
+         enddo
+         p%Jac_Idx_SStC_x(2) = index_next    ! End index of SStC in x
+      endif
    end subroutine SrvD_Init_Jacobian_x
 
    !> This routine initializes the Jacobian parameters and initialization outputs for the linearized inputs 
@@ -847,21 +887,43 @@ contains
       ! u%HSS_Spd -- not in rotating frame
       InitOut%LinNames_u(index_next)  = 'HSS_Spd, rad/s';   index_next = index_next + 1
  
+      !--------------------------------
       ! StC related inputs
-      do j=1,p%NumBStC     ! Blade
-         do i=1,p%NumBl
-            call PackMotionMesh_Names( u%BStCMotionMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+      !--------------------------------
+      ! Blade
+      if (p%NumBStC > 0) then
+         p%Jac_Idx_BStC_u(1) = index_next    ! Start index of BStC in u
+         do j=1,p%NumBStC
+            do i=1,p%NumBl
+               call PackMotionMesh_Names( u%BStCMotionMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+            enddo
          enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle
-         call PackMotionMesh_Names( u%NStCMotionMesh(j), 'Nacelle StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
-      enddo
-      do j=1,p%NumTStC     ! Tower
-         call PackMotionMesh_Names( u%TStCMotionMesh(j), 'Tower StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
-      enddo
-      do j=1,p%NumSStC     ! Structure
-         call PackMotionMesh_Names( u%SStCMotionMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
-      enddo
+         p%Jac_Idx_BStC_u(2) = index_next-1  ! End index of BStC in u
+      endif
+      ! Nacelle
+      if (p%NumNStC > 0) then
+         p%Jac_Idx_NStC_u(1) = index_next    ! Start index of NStC in u
+         do j=1,p%NumNStC
+            call PackMotionMesh_Names( u%NStCMotionMesh(j), 'Nacelle StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+         enddo
+         p%Jac_Idx_NStC_u(2) = index_next-1  ! End index of NStC in u
+      endif
+      ! Tower
+      if (p%NumTStC > 0) then
+         p%Jac_Idx_TStC_u(1) = index_next    ! Start index of TStC in u
+         do j=1,p%NumTStC
+            call PackMotionMesh_Names( u%TStCMotionMesh(j), 'Tower StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+         enddo
+         p%Jac_Idx_TStC_u(2) = index_next-1  ! End index of TStC in u
+      endif
+      ! Sub-structure
+      if (p%NumSStC > 0) then
+         p%Jac_Idx_SStC_u(1) = index_next    ! Start index of SStC in u
+         do j=1,p%NumSStC
+            call PackMotionMesh_Names( u%SStCMotionMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+         enddo
+         p%Jac_Idx_SStC_u(2) = index_next-1  ! End index of SStC in u
+      endif
 
       !--------------------------------
       ! linearization perturbation size
@@ -931,6 +993,10 @@ contains
       ! print out some info
       if (allocated(InitOut%LinNames_y)) then
          call WrScr('LinNames_y')
+         call WrScr('      BStC range: '//trim(Num2LStr(p%Jac_Idx_BStC_y(1)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_y(2))))
+         call WrScr('      NStC range: '//trim(Num2LStr(p%Jac_Idx_NStC_y(1)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_y(2))))
+         call WrScr('      TStC range: '//trim(Num2LStr(p%Jac_Idx_TStC_y(1)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_y(2))))
+         call WrScr('      SStC range: '//trim(Num2LStr(p%Jac_Idx_SStC_y(1)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_y(2))))
          do i=1,size(InitOut%LinNames_y)
             Flag='F'
             if (InitOut%RotFrame_y(i)) Flag='T'
@@ -939,6 +1005,10 @@ contains
       endif
       if (allocated(InitOut%LinNames_x)) then
          call WrScr('LinNames_x')
+         call WrScr('      BStC range: '//trim(Num2LStr(p%Jac_Idx_BStC_x(1)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_x(2))))
+         call WrScr('      NStC range: '//trim(Num2LStr(p%Jac_Idx_NStC_x(1)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_x(2))))
+         call WrScr('      TStC range: '//trim(Num2LStr(p%Jac_Idx_TStC_x(1)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_x(2))))
+         call WrScr('      SStC range: '//trim(Num2LStr(p%Jac_Idx_SStC_x(1)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_x(2))))
          do i=1,size(InitOut%LinNames_x)
             Flag='F'
             if (InitOut%RotFrame_x(i)) Flag='T'
@@ -951,6 +1021,10 @@ contains
             call WrFileNR(CU,'          '//trim(Num2LStr(i))//'        '//trim(Num2LStr(p%du(i)))//NewLine)
          enddo
          call WrScr('LinNames_u')
+         call WrScr('      BStC range: '//trim(Num2LStr(p%Jac_Idx_BStC_u(1)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_u(2))))
+         call WrScr('      NStC range: '//trim(Num2LStr(p%Jac_Idx_NStC_u(1)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_u(2))))
+         call WrScr('      TStC range: '//trim(Num2LStr(p%Jac_Idx_TStC_u(1)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_u(2))))
+         call WrScr('      SStC range: '//trim(Num2LStr(p%Jac_Idx_SStC_u(1)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_u(2))))
          do i=1,size(InitOut%LinNames_u)
             Flag='F'
             FlagLoad='F'
@@ -2502,6 +2576,7 @@ contains
 
       !.........................................................................................................................
       ! Calculate the output channels that will be affected by u%{Yaw,YawRate,HSS_Spd}
+      !     These terms are analytically calculated
       !.........................................................................................................................
       call AllocAry(AllOuts,p%Jac_nu,MaxOutPts,'AllOuts dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
       AllOuts = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
