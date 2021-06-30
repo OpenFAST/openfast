@@ -249,7 +249,7 @@ An example of inputs for a sinusoidal surge motion is given below:
 
 The different inputs for the basic and advanced geometries are given below:
 
-- basic: The motion of a basic turbine consists of a constant nacelle yaw (`NacYaw`), rotor speed (`RotSpeed`), blade pitch (`BldPitch`). 
+- basic: The motion of a basic turbine consists of a constant nacelle yaw (`NacYaw`, positive rotation of the nacelle about the vertical tower axis, counterclockwise when looking downward), rotor speed (`RotSpeed`, positive clockwise looking downwind), and blade pitch (`BldPitch`, negative around :math:`z_b`). 
   Examples are given below:
 
 .. code::
@@ -304,7 +304,7 @@ Time-dependent analyses are selected using `AnalysisType=2`. They are restricted
 
 Combined-case analyses are used to run parametric studies in one single run.
 They are selected using `AnalysisType=3`, and are restricted to one turbine (`numTurbines=1`).
-The variables that can be changed for each simulation are: reference wind speed (`HWndSpeed`),  power law exponent (`PLExp`), rotor speed (`RotSpd`, positive clockwise looking downwind), collective pitch (`Pitch`, positive to feather, leading edge upwind), nacelle yaw (`Yaw`, positive rotation of the nacelle about the vertical tower axis, counterclockwise when looking downward), time step (`dT`), simulation time (`Tmax`), and sinusoidal motion parameters (degree of freedom, `DOF`, amplitude and frequency).
+The variables that can be changed for each simulation are: reference wind speed (`HWndSpeed`),  power law exponent (`PLExp`), rotor speed (`RotSpd`), collective pitch (`Pitch`), nacelle yaw (`Yaw`), time step (`dT`), simulation time (`Tmax`), and sinusoidal motion parameters (degree of freedom, `DOF`, amplitude and frequency).
 When `DOF=0`, the turbine base is fixed.
 
 
