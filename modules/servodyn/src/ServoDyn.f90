@@ -729,20 +729,20 @@ contains
       !--------------------------------
       do i=1,p%NumOuts
          InitOut%LinNames_y(index_next) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BlPitchC )  ! WriteOutput BlPitch commands
+         if (ANY( p%OutParam(i)%Indx == BlPitchC ))   InitOut%RotFrame_y(index_next) = .true.   ! WriteOutput BlPitch commands
          ! Blade StC local output channels
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_XQ  )  ! Blade StC X displacements
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_XQD )  ! Blade StC X displacement velocities
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_YQ  )  ! Blade StC Y displacements
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_YQD )  ! Blade StC Y displacement velocities
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_ZQ  )  ! Blade StC Z displacements
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_ZQD )  ! Blade StC Z displacement velocities
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Fxl )  ! Blade StC local forces and moments
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Fyl )  ! Blade StC local forces and moments
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Fzl )  ! Blade StC local forces and moments
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Mxl )  ! Blade StC local forces and moments
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Myl )  ! Blade StC local forces and moments
-         InitOut%RotFrame_y(index_next) = ANY( p%OutParam(i)%Indx == BStC_Mzl )  ! Blade StC local forces and moments
+         if (ANY( p%OutParam(i)%Indx == BStC_XQ  ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC X displacements
+         if (ANY( p%OutParam(i)%Indx == BStC_XQD ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC X displacement velocities
+         if (ANY( p%OutParam(i)%Indx == BStC_YQ  ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC Y displacements
+         if (ANY( p%OutParam(i)%Indx == BStC_YQD ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC Y displacement velocities
+         if (ANY( p%OutParam(i)%Indx == BStC_ZQ  ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC Z displacements
+         if (ANY( p%OutParam(i)%Indx == BStC_ZQD ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC Z displacement velocities
+         if (ANY( p%OutParam(i)%Indx == BStC_Fxl ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC local forces and moments
+         if (ANY( p%OutParam(i)%Indx == BStC_Fyl ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC local forces and moments
+         if (ANY( p%OutParam(i)%Indx == BStC_Fzl ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC local forces and moments
+         if (ANY( p%OutParam(i)%Indx == BStC_Mxl ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC local forces and moments
+         if (ANY( p%OutParam(i)%Indx == BStC_Myl ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC local forces and moments
+         if (ANY( p%OutParam(i)%Indx == BStC_Mzl ))   InitOut%RotFrame_y(index_next) = .true.   ! Blade StC local forces and moments
          index_next = index_next + 1
       end do
    end subroutine SrvD_Init_Jacobian_y
