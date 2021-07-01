@@ -2016,7 +2016,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          call SetDisturbedInflow(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), errStat, errMsg)
          do k=1,p%rotors(iR)%NumBlades
             iW=p%FVW%Bld2Wings(iR,k)
-            m%FVW_u(tIndx)%W(iW)%Vwnd_LLMP(1:3,:) = m%rotors(iR)%DisturbedInflow(1:3,:,k)
+            m%FVW_u(tIndx)%W(iW)%Vwnd_LL(1:3,:) = m%rotors(iR)%DisturbedInflow(1:3,:,k)
          enddo
       enddo
    enddo

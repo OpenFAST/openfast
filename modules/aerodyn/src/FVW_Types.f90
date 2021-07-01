@@ -234,7 +234,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Wng_InputType  =======
   TYPE, PUBLIC :: Wng_InputType
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vwnd_LLMP      !< Disturbed wind at LL mesh points (not CP), for UA only [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vwnd_LL      !< Disturbed wind at LL mesh points (not CP), for UA only [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: omega_z      !< rotation of no-sweep-pitch-twist coordinate system around z (for CDBEMT and CUA) [rad/s]
   END TYPE Wng_InputType
 ! =======================
@@ -7636,19 +7636,19 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcWng_InputTypeData%Vwnd_LLMP)) THEN
-  i1_l = LBOUND(SrcWng_InputTypeData%Vwnd_LLMP,1)
-  i1_u = UBOUND(SrcWng_InputTypeData%Vwnd_LLMP,1)
-  i2_l = LBOUND(SrcWng_InputTypeData%Vwnd_LLMP,2)
-  i2_u = UBOUND(SrcWng_InputTypeData%Vwnd_LLMP,2)
-  IF (.NOT. ALLOCATED(DstWng_InputTypeData%Vwnd_LLMP)) THEN 
-    ALLOCATE(DstWng_InputTypeData%Vwnd_LLMP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcWng_InputTypeData%Vwnd_LL)) THEN
+  i1_l = LBOUND(SrcWng_InputTypeData%Vwnd_LL,1)
+  i1_u = UBOUND(SrcWng_InputTypeData%Vwnd_LL,1)
+  i2_l = LBOUND(SrcWng_InputTypeData%Vwnd_LL,2)
+  i2_u = UBOUND(SrcWng_InputTypeData%Vwnd_LL,2)
+  IF (.NOT. ALLOCATED(DstWng_InputTypeData%Vwnd_LL)) THEN 
+    ALLOCATE(DstWng_InputTypeData%Vwnd_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_InputTypeData%Vwnd_LLMP.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_InputTypeData%Vwnd_LL.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstWng_InputTypeData%Vwnd_LLMP = SrcWng_InputTypeData%Vwnd_LLMP
+    DstWng_InputTypeData%Vwnd_LL = SrcWng_InputTypeData%Vwnd_LL
 ENDIF
 IF (ALLOCATED(SrcWng_InputTypeData%omega_z)) THEN
   i1_l = LBOUND(SrcWng_InputTypeData%omega_z,1)
@@ -7673,8 +7673,8 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(Wng_InputTypeData%Vwnd_LLMP)) THEN
-  DEALLOCATE(Wng_InputTypeData%Vwnd_LLMP)
+IF (ALLOCATED(Wng_InputTypeData%Vwnd_LL)) THEN
+  DEALLOCATE(Wng_InputTypeData%Vwnd_LL)
 ENDIF
 IF (ALLOCATED(Wng_InputTypeData%omega_z)) THEN
   DEALLOCATE(Wng_InputTypeData%omega_z)
@@ -7716,10 +7716,10 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! Vwnd_LLMP allocated yes/no
-  IF ( ALLOCATED(InData%Vwnd_LLMP) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! Vwnd_LLMP upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vwnd_LLMP)  ! Vwnd_LLMP
+  Int_BufSz   = Int_BufSz   + 1     ! Vwnd_LL allocated yes/no
+  IF ( ALLOCATED(InData%Vwnd_LL) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Vwnd_LL upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vwnd_LL)  ! Vwnd_LL
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! omega_z allocated yes/no
   IF ( ALLOCATED(InData%omega_z) ) THEN
@@ -7753,22 +7753,22 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%Vwnd_LLMP) ) THEN
+  IF ( .NOT. ALLOCATED(InData%Vwnd_LL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vwnd_LLMP,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vwnd_LLMP,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vwnd_LL,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vwnd_LL,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vwnd_LLMP,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vwnd_LLMP,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vwnd_LL,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vwnd_LL,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%Vwnd_LLMP,2), UBOUND(InData%Vwnd_LLMP,2)
-        DO i1 = LBOUND(InData%Vwnd_LLMP,1), UBOUND(InData%Vwnd_LLMP,1)
-          ReKiBuf(Re_Xferred) = InData%Vwnd_LLMP(i1,i2)
+      DO i2 = LBOUND(InData%Vwnd_LL,2), UBOUND(InData%Vwnd_LL,2)
+        DO i1 = LBOUND(InData%Vwnd_LL,1), UBOUND(InData%Vwnd_LL,1)
+          ReKiBuf(Re_Xferred) = InData%Vwnd_LL(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -7818,7 +7818,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vwnd_LLMP not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vwnd_LL not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -7828,15 +7828,15 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vwnd_LLMP)) DEALLOCATE(OutData%Vwnd_LLMP)
-    ALLOCATE(OutData%Vwnd_LLMP(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%Vwnd_LL)) DEALLOCATE(OutData%Vwnd_LL)
+    ALLOCATE(OutData%Vwnd_LL(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vwnd_LLMP.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vwnd_LL.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%Vwnd_LLMP,2), UBOUND(OutData%Vwnd_LLMP,2)
-        DO i1 = LBOUND(OutData%Vwnd_LLMP,1), UBOUND(OutData%Vwnd_LLMP,1)
-          OutData%Vwnd_LLMP(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%Vwnd_LL,2), UBOUND(OutData%Vwnd_LL,2)
+        DO i1 = LBOUND(OutData%Vwnd_LL,1), UBOUND(OutData%Vwnd_LL,1)
+          OutData%Vwnd_LL(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -10795,11 +10795,11 @@ IF (ALLOCATED(u_out%rotors) .AND. ALLOCATED(u1%rotors)) THEN
 END IF ! check if allocated
 IF (ALLOCATED(u_out%W) .AND. ALLOCATED(u1%W)) THEN
   DO i01 = LBOUND(u_out%W,1),UBOUND(u_out%W,1)
-IF (ALLOCATED(u_out%W(i01)%Vwnd_LLMP) .AND. ALLOCATED(u1%W(i01)%Vwnd_LLMP)) THEN
-  DO i2 = LBOUND(u_out%W(i01)%Vwnd_LLMP,2),UBOUND(u_out%W(i01)%Vwnd_LLMP,2)
-    DO i1 = LBOUND(u_out%W(i01)%Vwnd_LLMP,1),UBOUND(u_out%W(i01)%Vwnd_LLMP,1)
-      b = -(u1%W(i01)%Vwnd_LLMP(i1,i2) - u2%W(i01)%Vwnd_LLMP(i1,i2))
-      u_out%W(i01)%Vwnd_LLMP(i1,i2) = u1%W(i01)%Vwnd_LLMP(i1,i2) + b * ScaleFactor
+IF (ALLOCATED(u_out%W(i01)%Vwnd_LL) .AND. ALLOCATED(u1%W(i01)%Vwnd_LL)) THEN
+  DO i2 = LBOUND(u_out%W(i01)%Vwnd_LL,2),UBOUND(u_out%W(i01)%Vwnd_LL,2)
+    DO i1 = LBOUND(u_out%W(i01)%Vwnd_LL,1),UBOUND(u_out%W(i01)%Vwnd_LL,1)
+      b = -(u1%W(i01)%Vwnd_LL(i1,i2) - u2%W(i01)%Vwnd_LL(i1,i2))
+      u_out%W(i01)%Vwnd_LL(i1,i2) = u1%W(i01)%Vwnd_LL(i1,i2) + b * ScaleFactor
     END DO
   END DO
 END IF ! check if allocated
@@ -10906,12 +10906,12 @@ IF (ALLOCATED(u_out%rotors) .AND. ALLOCATED(u1%rotors)) THEN
 END IF ! check if allocated
 IF (ALLOCATED(u_out%W) .AND. ALLOCATED(u1%W)) THEN
   DO i01 = LBOUND(u_out%W,1),UBOUND(u_out%W,1)
-IF (ALLOCATED(u_out%W(i01)%Vwnd_LLMP) .AND. ALLOCATED(u1%W(i01)%Vwnd_LLMP)) THEN
-  DO i2 = LBOUND(u_out%W(i01)%Vwnd_LLMP,2),UBOUND(u_out%W(i01)%Vwnd_LLMP,2)
-    DO i1 = LBOUND(u_out%W(i01)%Vwnd_LLMP,1),UBOUND(u_out%W(i01)%Vwnd_LLMP,1)
-      b = (t(3)**2*(u1%W(i01)%Vwnd_LLMP(i1,i2) - u2%W(i01)%Vwnd_LLMP(i1,i2)) + t(2)**2*(-u1%W(i01)%Vwnd_LLMP(i1,i2) + u3%W(i01)%Vwnd_LLMP(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%W(i01)%Vwnd_LLMP(i1,i2) + t(3)*u2%W(i01)%Vwnd_LLMP(i1,i2) - t(2)*u3%W(i01)%Vwnd_LLMP(i1,i2) ) * scaleFactor
-      u_out%W(i01)%Vwnd_LLMP(i1,i2) = u1%W(i01)%Vwnd_LLMP(i1,i2) + b  + c * t_out
+IF (ALLOCATED(u_out%W(i01)%Vwnd_LL) .AND. ALLOCATED(u1%W(i01)%Vwnd_LL)) THEN
+  DO i2 = LBOUND(u_out%W(i01)%Vwnd_LL,2),UBOUND(u_out%W(i01)%Vwnd_LL,2)
+    DO i1 = LBOUND(u_out%W(i01)%Vwnd_LL,1),UBOUND(u_out%W(i01)%Vwnd_LL,1)
+      b = (t(3)**2*(u1%W(i01)%Vwnd_LL(i1,i2) - u2%W(i01)%Vwnd_LL(i1,i2)) + t(2)**2*(-u1%W(i01)%Vwnd_LL(i1,i2) + u3%W(i01)%Vwnd_LL(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*u1%W(i01)%Vwnd_LL(i1,i2) + t(3)*u2%W(i01)%Vwnd_LL(i1,i2) - t(2)*u3%W(i01)%Vwnd_LL(i1,i2) ) * scaleFactor
+      u_out%W(i01)%Vwnd_LL(i1,i2) = u1%W(i01)%Vwnd_LL(i1,i2) + b  + c * t_out
     END DO
   END DO
 END IF ! check if allocated

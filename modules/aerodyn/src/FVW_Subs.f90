@@ -1227,10 +1227,11 @@ end subroutine WakeInducedVelocities
 !> Compute induced velocities from all vortex elements onto the lifting line control points
 !! In : x%W(iW)%r_NW, x%W(iW)%r_FW, x%W(iW)%Gamma_NW, x%W(iW)%Gamma_FW
 !! Out: m%W(iW)%Vind_CP
-subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
+subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, ErrStat, ErrMsg)
    !real(ReKi), dimension(:,:,:),    intent(in   ) :: CP_LL   !< Control points where velocity is to be evaluated
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   logical,                         intent(in   ) :: InductionAtCP !< Compute induction at CP or on LL nodes
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    !real(ReKi), dimension(:,:,:),    intent(  out) :: Vind_CP !< Control points where velocity is to be evaluated
@@ -1264,7 +1265,7 @@ subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
       endif
    else
       nCPs=0
-      if (p%InductionAtCP) then
+      if (InductionAtCP) then
          do iW=1,p%nWings
             nCPs = nCPs + p%W(iW)%nSpan
          enddo
@@ -1291,7 +1292,7 @@ contains
    !> Pack all the control points
    subroutine PackLiftingLinePoints()
       iHeadP=1
-      if (p%InductionAtCP) then
+      if (InductionAtCP) then
          do iW=1,p%nWings
             call LatticeToPoints2D(m%W(iW)%CP_LL(1:3,:), CPs, iHeadP)
          enddo
@@ -1313,15 +1314,21 @@ contains
    subroutine UnPackLiftingLineVelocities()
       integer :: iSpan
       iHeadP=1
-      if (p%InductionAtCP) then
+      if (InductionAtCP) then
          do iW=1,p%nWings
             call VecToLattice2D(Uind, m%W(iW)%Vind_CP(1:3,:), iHeadP)
+         enddo
+         ! --- Transfer CP to LL (Linear interpolation for interior points and extrapolations at boundaries)
+         do iW=1,p%nWings
+            call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(1,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(1,:))
+            call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(2,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(2,:))
+            call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(3,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(3,:))
          enddo
       else
          do iW=1,p%nWings
             call VecToLattice2D(Uind, m%W(iW)%Vind_LL(1:3,:), iHeadP)
          enddo
-         ! Transfer mean at CP
+         ! --- Transfer LL to CP. TODO instead of mean should use weigthed average based on distance to nodes
          do iW=1,p%nWings
             do iSpan=1,p%W(iW)%nSpan
                m%W(iW)%Vind_CP(1:3,iSpan)= (m%W(iW)%Vind_LL(1:3,iSpan)+m%W(iW)%Vind_LL(1:3,iSpan+1))*0.5_ReKi

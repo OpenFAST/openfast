@@ -202,7 +202,7 @@ typedef     ^                   ^               GridOutType                     
 typedef  FVW/FVW           Rot_InputType        ReKi                             HubOrientation {3}{3} -  -  "Orientation of hub coordinate system (for output only)" -
 typedef     ^                   ^               ReKi                             HubPosition    {3}    -  -  "Origin of hub (for output only)" -
 # Wings 
-typedef  FVW/FVW           Wng_InputType        ReKi                             Vwnd_LLMP      {:}{:} -  - "Disturbed wind at LL mesh points (not CP), for UA only"  -
+typedef  FVW/FVW           Wng_InputType        ReKi                             Vwnd_LL      {:}{:} -  - "Disturbed wind at LL mesh points (not CP), for UA only"  -
 typedef     ^                   ^               ReKi                             omega_z         {:}  -  - "rotation of no-sweep-pitch-twist coordinate system around z (for CDBEMT and CUA)" "rad/s"
 
 # FVW_InputType

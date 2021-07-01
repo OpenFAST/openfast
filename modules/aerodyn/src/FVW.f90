@@ -398,9 +398,9 @@ subroutine FVW_Init_U_Y( p, u, y, m, ErrStat, ErrMsg )
    do iW=1,p%nWings
       call AllocAry( y%W(iW)%Vind ,    3, p%W(iW)%nSpan+1, 'Induced velocity vector', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
       call AllocAry( u%W(iW)%omega_z,     p%W(iW)%nSpan+1, 'Section torsion rate'   , ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
-      call AllocAry( u%W(iW)%Vwnd_LLMP,3, p%W(iW)%nSpan+1, 'Dist. wind at LL nodes',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      call AllocAry( u%W(iW)%Vwnd_LL,  3, p%W(iW)%nSpan+1, 'Dist. wind at LL nodes',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
       y%W(iW)%Vind    = -9999.9_ReKi  
-      u%W(iW)%Vwnd_LLMP = -9999.9_ReKi
+      u%W(iW)%Vwnd_LL = -9999.9_ReKi
       u%W(iW)%omega_z = -9999.9_ReKi
    enddo
    ! Rotors, contain hub info
@@ -594,7 +594,6 @@ end subroutine FVW_End
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
 subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
-!..................................................................................................................................
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    integer(IntKi),                  intent(in   )  :: n           !< Current simulation time step n = 0,1,...
    type(FVW_InputType),             intent(inout)  :: u(:)        !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
@@ -657,8 +656,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_LL_NW(p, m, z, x, 1.0_ReKi, ErrStat2, ErrMsg2); if(Failed()) return ! needed at t=0 if wing moved after init
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-
-   !  TODO convert quasi steady Gamma to unsteady gamma with UA states
 
    ! Compute UA inputs at t
    if (m%UA_Flag) then
@@ -1370,29 +1367,17 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
 !    ! if we are on a correction step, CalcOutput may be called again with different inputs
 !    ! Compute m%W(iW)%Gamma_LL
 !    CALL Wings_ComputeCirculation(t, m%W(iW)%Gamma_LL, z%W(iW)%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
-   !---
 
-   ! Induction on the lifting line control point
-   ! Input: m%W%CP_LL or m%W%r_LL,   Output:m%W%Vind_CP and potentially m%W%Vind_LL
-   call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-   ! Induction on the mesh points (AeroDyn nodes): y%W(iW)%Vind
-   if (p%InductionAtCP) then
-      ! We use the induction at the CP (Vind_LL) to interpextrap at the node
-      do iW=1,p%nWings
-         ! --- Linear interpolation for interior points and extrapolations at boundaries
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(1,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(1,:))
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(2,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(2,:))
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(3,:), p%W(iW)%s_LL(:), y%W(iW)%Vind(3,:))
-      enddo
-   else
-     ! The induction was computed at the LL nodes, we transfer it directly
-     do iW=1,p%nWings
-         y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
-         y%W(iW)%Vind(2,:) = m%W(iW)%Vind_LL(2,:)
-         y%W(iW)%Vind(3,:) = m%W(iW)%Vind_LL(3,:)
-     enddo
-   endif
+   !--- Induction on the lifting line control point
+   ! if     InductionAtCP : In: m%W%CP_LL,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+   ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
+   call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   ! Transfer to output
+   do iW=1,p%nWings
+       y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
+       y%W(iW)%Vind(2,:) = m%W(iW)%Vind_LL(2,:)
+       y%W(iW)%Vind(3,:) = m%W(iW)%Vind_LL(3,:)
+   enddo
 end subroutine CalcOutputForAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
@@ -1608,7 +1593,6 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local
-   real(ReKi), dimension(:,:), allocatable :: Vind_node
    type(UA_InputType), pointer     :: u_UA ! Alias to shorten notations
    integer(IntKi)                                    :: i,iW
    character(ErrMsgLen)                              :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
@@ -1617,46 +1601,32 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    ErrMsg   = ""
 
    ! --- Induction on the lifting line control points
-   ! NOTE: this is expensive since it's an output for FVW but here we have to use it for UA
-   ! Set m%W(iW)%Vind_LL
-
-   do iW = 1,p%nWings  
-      m%W(iW)%Vind_CP=-9999.0_ReKi
-      ! Input: m%W%CP_LL, Output:m%W%Vind_CP
-      call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'); if (ErrStat >= AbortErrLev) return
-      allocate(Vind_node(3,1:p%W(iW)%nSpan+1))
-
-      ! Induced velocity at Nodes (NOTE: we rely on storage done when computing Circulation)
-      if (m%nNW>1) then
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(1,:), p%W(iW)%s_LL(:), Vind_node(1,:))
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(2,:), p%W(iW)%s_LL(:), Vind_node(2,:))
-         call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(3,:), p%W(iW)%s_LL(:), Vind_node(3,:))
-      else
-         Vind_node=0.0_ReKi
+   ! if     InductionAtCP : In: m%W%CP_LL,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+   ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
+   call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Ca;lcultateInputsAndOtherStatesForUA'); if (ErrStat >= AbortErrLev) return
+   if (p%InductionAtCP) then
+      if (m%nNW<=1) then
+         do iW = 1,p%nWings  
+            m%W(iW)%Vind_LL(1,:)=0.0_ReKi
+         enddo
       endif
+   endif
+   ! --- UA inputs
+   do iW = 1,p%nWings  
       do i = 1,p%W(iW)%nSpan+1 
          ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node      
          u_UA => m%W(iW)%u_UA(i,InputIndex) ! Alias
          !! ....... compute inputs to UA ...........
-         ! NOTE: To be consistent with CalcOutput we take Vwind_ND that was set using m%DisturbedInflow from AeroDyn.. 
+         ! NOTE: To be consistent with CalcOutput we take Vwind_LL that was set using m%DisturbedInflow from AeroDyn.. 
          ! This is not clean, but done to be consistent, waiting for AeroDyn to handle UA
-         call AlphaVrel_Generic(u%WingsMesh(iW)%Orientation(1:3,1:3,i), u%WingsMesh(iW)%TranslationVel(1:3,i),  Vind_node(1:3,i), u%W(iW)%Vwnd_LLMP(1:3,i), &
+         call AlphaVrel_Generic(u%WingsMesh(iW)%Orientation(1:3,1:3,i), u%WingsMesh(iW)%TranslationVel(1:3,i),  m%W(iW)%Vind_LL(1:3,i), u%W(iW)%Vwnd_LL(1:3,i), &
                                  p%KinVisc, p%W(iW)%Chord(i), u_UA%U, u_UA%alpha, u_UA%Re)
          u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
          u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
          u_UA%omega    = u%W(iW)%omega_z(i)
          u_UA%UserProp = 0 ! u1%UserProp(i,j) ! TODO
       end do ! i nSpan
-      deallocate(Vind_node)
    end do ! iW nWings
-
-contains
-   function NodeText(i,j)
-      integer(IntKi), intent(in) :: i ! node number
-      integer(IntKi), intent(in) :: j ! blade number
-      character(25)              :: NodeText
-      NodeText = '(nd:'//trim(num2lstr(i))//' bld:'//trim(num2lstr(j))//')'
-   end function NodeText
 end subroutine CalculateInputsAndOtherStatesForUA
 
 

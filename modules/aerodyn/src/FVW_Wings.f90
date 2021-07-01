@@ -85,7 +85,6 @@ contains
          if (allocated(s_in)) deallocate(s_in)
          allocate(s_in(1:Meshes(iW)%nNodes))
          ! --- Computing spanwise coordinate of input mesh normalized from 0 to 1
-!Note: this info also exists in InitInp%zLocal 
          s_in(:) = -999
          s_in(1) = 0
          do iSpan = 2, Meshes(iW)%nNodes
@@ -377,9 +376,11 @@ contains
       call AllocAry(Vvar,  3, nCP_tot, 'Vvar',  ErrStat2, ErrMsg2);  if(Failed()) return;
       call AllocAry(Vcst,  3, nCP_tot, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
 
-      ! Set m%W(iW)%Vind_CP Induced velocity from Known wake only (after iNWStart+1)
-      ! Input: m%W%CP_LL, output: m%W%Vind_CP
-      call LiftingLineInducedVelocities(p, x, p%iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
+      !--- Induction on the lifting line control point or nodes
+      ! Set induced velocity from Known wake only (after iNWStart+1)
+      ! if     InductionAtCP : In: m%W%CP_LL,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+      ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
+      call LiftingLineInducedVelocities(p, x, p%InductionAtCP, p%iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
 
       kCP=0
       do iW=1,p%nWings
