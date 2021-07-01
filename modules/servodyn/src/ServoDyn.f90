@@ -859,8 +859,9 @@ contains
       ! --- Jac_u_indx:  matrix to store index to help us figure out what the ith value of the u vector really means
       !     column 1 indicates module's mesh and field perturbation index (index to p%du)
       !     column 2 indicates the first index (x-y-z component) of the field
-      !     column 3 is the node
-      call allocAry( p%Jac_u_indx, p%Jac_nu, 3,   'p%Jac_u_indx',   ErrStat2, ErrMsg2);   if (Failed())  return;
+      !     column 3 is the StC motion mesh (Instance index)
+      !     column 4 is the StC motion mesh (blade index BStC mesh, ignored on others)
+      call allocAry( p%Jac_u_indx, p%Jac_nu, 4,   'p%Jac_u_indx',   ErrStat2, ErrMsg2);   if (Failed())  return;
       ! perturbation sizes
       CALL AllocAry(p%du,               6,        'u perturbation', ErrStat2, ErrMsg2);   if (Failed())  return;
       p%du( 1) = du_t      ! u%*Mesh%TranslationDisp  = 1;
@@ -929,58 +930,60 @@ contains
       ! linearization perturbation size
       !--------------------------------
       index_next = 1
-      ! u%Yaw     -- not in rotating frame
-      p%Jac_u_indx(index_next,1:3) = (/ 2, 1, 1 /)    ! rotation, component and node are irrelevant
-      index_next = index_next + 1
-      ! u%YawRate -- not in rotating frame
-      p%Jac_u_indx(index_next,1:3) = (/ 4, 1, 1 /)    ! rotation vel, component and node are irrelevant
-      index_next = index_next + 1
-      ! u%HSS_Spd -- not in rotating frame
-      p%Jac_u_indx(index_next,1:3) = (/ 4, 1, 1 /)    ! rotation vel, component and node are irrelevant
-      index_next = index_next + 1
+      !! u%Yaw     -- not in rotating frame     NOTE: this is calculated exactly, so not necessary to track
+      !! u%YawRate -- not in rotating frame     NOTE: this is calculated exactly, so not necessary to track
+      !! u%HSS_Spd -- not in rotating frame     NOTE: this is calculated exactly, so not necessary to track
 
       ! Blade StC instances
+      index_next = p%Jac_Idx_BStC_u(1)
       do j=1,p%NumBStC
          do i=1,p%NumBl
             do i_meshField = 1,6
                do k=1,3
                   p%Jac_u_indx(index_next,1) =  i_meshField    ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
-                  p%Jac_u_indx(index_next,2) =  k              ! component (x,y,z) 
-                  p%Jac_u_indx(index_next,3) =  1              ! Node: all single point meshes on inputs 
+                  p%Jac_u_indx(index_next,2) =  k              ! component (x,y,z)
+                  p%Jac_u_indx(index_next,3) =  j              ! Instance
+                  p%Jac_u_indx(index_next,4) =  i              ! blade
                   index_next = index_next + 1
                enddo
             enddo
          enddo
       enddo
       ! Nacelle StC instances
+      index_next = p%Jac_Idx_NStC_u(1)
       do j=1,p%NumNStC
-         do i_meshField = 1,6
+         do i_meshField = 7,12
             do k=1,3
                p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
-               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z) 
-               p%Jac_u_indx(index_next,3) =  1                 ! Node: all single point meshes on inputs 
+               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z)
+               p%Jac_u_indx(index_next,3) =  j                 ! Instance
+               p%Jac_u_indx(index_next,4) =  1                 ! Ignored
                index_next = index_next + 1
             enddo
          enddo
       enddo
       ! Tower StC instances
+      index_next = p%Jac_Idx_TStC_u(1)
       do j=1,p%NumTStC
-         do i_meshField = 1,6
+         do i_meshField = 13,18
             do k=1,3
                p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
-               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z) 
-               p%Jac_u_indx(index_next,3) =  1                 ! Node: all single point meshes on inputs 
+               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z)
+               p%Jac_u_indx(index_next,3) =  j                 ! Instance
+               p%Jac_u_indx(index_next,4) =  1                 ! Ignored
                index_next = index_next + 1
             enddo
          enddo
       enddo
       ! Substructure StC instances
+      index_next = p%Jac_Idx_SStC_u(1)
       do j=1,p%NumSStC
-         do i_meshField = 1,6
+         do i_meshField = 19,24
             do k=1,3
                p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
-               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z) 
-               p%Jac_u_indx(index_next,3) =  1                 ! Node: all single point meshes on inputs 
+               p%Jac_u_indx(index_next,2) =  k                 ! component (x,y,z)
+               p%Jac_u_indx(index_next,3) =  j                 ! Instance
+               p%Jac_u_indx(index_next,4) =  1                 ! Ignored
                index_next = index_next + 1
             enddo
          enddo
@@ -2455,7 +2458,7 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
    type(SrvD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
    type(SrvD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
    type(SrvD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
-   type(SrvD_OutputType),                  intent(in   )           :: y          !< Output (change to inout if a mesh copy is required);
+   type(SrvD_OutputType),                  intent(inout)           :: y          !< Output (change to inout if a mesh copy is required);
                                                                                  !!   Output fields are not used by this routine, but type is
                                                                                  !!   available here so that mesh parameter information (i.e.,
                                                                                  !!   connectivity) does not have to be recalculated for dYdu.
@@ -2515,17 +2518,27 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    type(SrvD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
    type(SrvD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
    type(SrvD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
-   type(SrvD_OutputType),                  intent(in   )           :: y          !< Output
+   type(SrvD_OutputType),                  intent(inout)           :: y          !< Output (need to make copies)
    type(SrvD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
    integer(IntKi),                         intent(  out)           :: ErrStat    !< Error status of the operation
    character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    real(R8Ki), allocatable, optional,      intent(inout)           :: dYdu(:,:)  !< Partial derivatives of output functions
 
-   real(R8Ki),allocatable     :: AllOuts(:,:)            ! All the the available output channels
-   type(SrvD_InputType)       :: u_perturb               ! copy of inputs to perturb
-   integer(IntKi)             :: ErrStat2                ! Error status of the operation
-   character(ErrMsgLen)       :: ErrMsg2                 ! Error message if ErrStat /= ErrID_None
-   character(*), parameter    :: RoutineName = 'Jac_dYdu'
+   real(R8Ki),allocatable           :: AllOuts_p(:,:)          ! All the the available output channels - positive perturbation
+   real(R8Ki),allocatable           :: AllOuts_m(:,:)          ! All the the available output channels - negative perturbation
+   integer(IntKi)                   :: i,j,k,n                 ! Generic loop index
+   type(SrvD_InputType)             :: u_perturb               ! copy of inputs to perturb
+   type(StC_InputType)              :: u_StC                   ! copy of the StC inputs  for StC_CalcOutput call
+   type(StC_OutputType)             :: y_StC                   ! copy of the StC outputs for StC_CalcOutput call
+   type(SrvD_OutputType)            :: y_p                     ! outputs positive perturbed
+   type(SrvD_OutputType)            :: y_m                     ! outputs negative perturbed
+   type(SrvD_ContinuousStateType)   :: x_p                     ! states  positive perturbed
+   type(SrvD_ContinuousStateType)   :: x_m                     ! states  negative perturbed
+   real(R8Ki)                       :: delta                   ! delta change in input or state
+   integer(IntKi)                   :: nu                      ! number of channels
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+   character(*), parameter          :: RoutineName = 'Jac_dYdu'
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -2552,17 +2565,79 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    ! make a copy of the inputs to perturb if an StC exists
    if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
       call SrvD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed())  return;
+         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call SrvD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed())  return;
+      call SrvD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed())  return;
    endif
    ! Blade
    if (p%NumBStC > 0) then
-! perturb_u + for u in range of p%Jac_Idx_BStC_u(1:2)
-!     transfer point to point for BStC
-!     calcOutput for u+
-! perturb_u - for u in range of p%Jac_Idx_BStC_u(1:2)
-!     transfer point to point for BStC
-!     calcOutput for u-
-! central diff and place into the dYdu
-! copy relevant from dYdu into AllOuts section
+      nu = p%Jac_Idx_BStC_u(2)-p%Jac_Idx_BStC_u(1)+1  ! number of u channels for BStC
+      if (allocated(AllOuts_p)) deallocate(AllOuts_p)
+      call AllocAry(AllOuts_p,nu,MaxOutPts,'AllOuts dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
+      if (allocated(AllOuts_m)) deallocate(AllOuts_m)
+      call AllocAry(AllOuts_m,nu,MaxOutPts,'AllOuts dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
+      do n=p%Jac_Idx_BStC_u(1),p%Jac_Idx_BStC_u(2)       ! input range for BStC
+         call SrvD_CopyOutput( y, y_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
+         call SrvD_CopyOutput( y, y_m, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
+
+         ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+         ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+         k = p%Jac_u_indx(n,4)   ! this blade
+         j = p%Jac_u_indx(n,3)   ! this instance
+
+         !-------------------
+         ! get u_op + delta u
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_Perturb_u( p, n, 1, u_perturb, delta )
+         !  Transfer motion mesh to this particular instance
+         call StC_CopyInput( m%u_BStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
+         call Transfer_Point_to_Point( u%BStCMotionMesh(k,j), u_StC%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+         ! Set StC control channels
+         !call SetStCInput_CtrlChans(u_BStC)
+         ! call Calc
+         call StC_CopyOutput(m%y_BStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
+         CALL StC_CalcOutput( t, u_StC, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y_StC, m%BStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return;
+         CALL Transfer_Point_to_Point( y_StC%Mesh(k), y_p%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) )
+            if (Failed()) return;
+         ! collect relevant outputs
+         call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts_p(n-p%Jac_Idx_BStC_u(1)+1,:))
+         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
+
+         !-------------------
+         ! get u_op - delta u
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_Perturb_u( p, n, -1, u_perturb, delta )
+         !  Transfer motion mesh to this particular instance
+         call StC_CopyInput( m%u_BStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
+         call Transfer_Point_to_Point( u%BStCMotionMesh(k,j), u_StC%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+         ! Set StC control channels
+         !call SetStCInput_CtrlChans(u_StC)
+         ! call Calc
+         call StC_CopyOutput(m%y_BStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
+         CALL StC_CalcOutput( t, u_StC, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y_StC, m%BStC(j), ErrStat2, ErrMsg2 )
+            if (Failed()) return;
+         CALL Transfer_Point_to_Point( y_StC%Mesh(k), y_m%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) )
+            if (Failed()) return;
+         ! collect relevant outputs
+         call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts_m(n-p%Jac_Idx_BStC_u(1)+1,:))
+         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
+
+         !-------------------
+         ! Central difference
+!  central diff and place into the dYdu
+
+         !-------------------
+         ! Store results
+!  copy relevant from dYdu into AllOuts section
+!         do I = 1,p%NumOuts  ! Loop through all selected output channels
+!            dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts_p( 1:3, p%OutParam(I)%Indx )
+!         enddo             ! I - All selected output channels
+      enddo
    endif
 
    call Cleanup()
@@ -2575,17 +2650,20 @@ contains
    end function Failed
 
    subroutine Cleanup()
-      if (allocated(AllOuts)) deallocate(AllOuts)
-      if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
-         call SrvD_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )     ! Ignore any errors from this
-      endif
+      if (allocated(AllOuts_p))  deallocate(AllOuts_p)
+      if (allocated(AllOuts_m))  deallocate(AllOuts_m)
+      ! Ignore any errors from the destroy (these weren't created if no StCs)
+      call SrvD_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
+      call SrvD_DestroyOutput( y_p,       ErrStat2, ErrMsg2 )
+      call SrvD_DestroyOutput( y_m,       ErrStat2, ErrMsg2 )
+      call StC_DestroyInput(   u_StC,     ErrStat2, ErrMsg2 )
+      call StC_DestroyOutput(  y_StC,     ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 
    !> Subroutine for the yaw and generator portions of the dYdu matrix (first three rows of dYdu)
    !!    This is part of dYdu uses analytical results
    subroutine dYdu_YawGen()
       real(R8Ki)              :: GenTrq_du, ElecPwr_du   ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
-      integer(IntKi)          :: I                       ! Generic loop index
       integer,parameter       :: Indx_u_Yaw     = 1
       integer,parameter       :: Indx_u_YawRate = 2
       integer,parameter       :: Indx_u_HSS_Spd = 3
@@ -2639,24 +2717,102 @@ contains
       ! Calculate the output channels that will be affected by u%{Yaw,YawRate,HSS_Spd}
       !     These terms are analytically calculated
       !...............................................................................
-      if (allocated(AllOuts)) deallocate(AllOuts)
-      call AllocAry(AllOuts,p%Jac_nu,MaxOutPts,'AllOuts dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
-      AllOuts = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
-      AllOuts(1:3, GenTq)     =  0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,1:3)
-      AllOuts(1:3, GenPwr)    =  0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,1:3)
-      AllOuts(1:3, YawMomCom) = -0.001_R8Ki*dYdu(SrvD_Indx_Y_YawMom,1:3)
+      if (allocated(AllOuts_p)) deallocate(AllOuts_p)
+      call AllocAry(AllOuts_p,3,MaxOutPts,'AllOuts_p dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
+      AllOuts_p = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
+      AllOuts_p(1:3, GenTq)     =  0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,1:3)
+      AllOuts_p(1:3, GenPwr)    =  0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,1:3)
+      AllOuts_p(1:3, YawMomCom) = -0.001_R8Ki*dYdu(SrvD_Indx_Y_YawMom,1:3)
 
       !...............................................................................
       ! Place the selected output channels into the WriteOutput(:) portion of the
       ! jacobian with the proper sign:
       !...............................................................................
       do I = 1,p%NumOuts  ! Loop through all selected output channels
-         dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts( 1:3, p%OutParam(I)%Indx )
+         dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts_p( 1:3, p%OutParam(I)%Indx )
       enddo             ! I - All selected output channels
 
       ! deallocate once everything is copied over
-      if (allocated(AllOuts)) deallocate(AllOuts)
+      if (allocated(AllOuts_p)) deallocate(AllOuts_p)
    end subroutine dYdu_YawGen
+
+   !> This routine perturbs the single mesh point associated with the nth element of the u array
+   !! WARNING: this routine must exactly match Init_Jacobian::SrvD_Init_Jacobian_u
+   subroutine SrvD_Perturb_u( p, n, perturb_sign, u, du )
+      type(SrvD_ParameterType),           intent(in   ) :: p            !< parameters
+      integer(IntKi),                     intent(in   ) :: n            !< number of array element to use
+      integer(IntKi),                     intent(in   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+      type(SrvD_InputType),               intent(inout) :: u            !< perturbed SrvD inputs
+      real(R8Ki),                         intent(  out) :: du           !< amount that specific input was perturbed
+      ! local variables
+      integer :: fieldIndx
+      integer :: instance, blade    ! for StC mesh motions
+      fieldIndx = p%Jac_u_indx(n,2)
+      instance  = p%Jac_u_indx(n,3)
+      blade     = p%Jac_u_indx(n,4)
+      du = p%du(  p%Jac_u_indx(n,1) )
+      ! determine which mesh we're trying to perturb and perturb the input:
+      select case( p%Jac_u_indx(n,1) )
+         !-------------------------------
+         !  1:6  --> u%BStCMotionMesh(:,:)%
+         case ( 1) ! TranslationDisp = 1;
+            u%BStCMotionMesh(blade,instance)%TranslationDisp(fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
+         case ( 2) ! Orientation     = 2;
+            CALL PerturbOrientationMatrix( u%BStCMotionMesh(blade,instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
+         case ( 3) ! TranslationVel  = 3;
+            u%BStCMotionMesh(blade,instance)%TranslationVel( fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
+         case ( 4) ! RotationVel     = 4;
+            u%BStCMotionMesh(blade,instance)%RotationVel(    fieldIndx,1) = u%BStCMotionMesh(blade,instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
+         case ( 5) ! TranslationAcc  = 5;
+            u%BStCMotionMesh(blade,instance)%TranslationAcc( fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
+         case ( 6) ! RotationAcc     = 6;
+            u%BStCMotionMesh(blade,instance)%RotationAcc(    fieldIndx,1) = u%BStCMotionMesh(blade,instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
+         !-------------------------------
+         !  7:12 --> u%NStCMotionMesh(:)%
+         case ( 7) ! TranslationDisp = 1;
+            u%NStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
+         case ( 8) ! Orientation     = 2;
+            CALL PerturbOrientationMatrix( u%NStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
+         case ( 9) ! TranslationVel  = 3;
+            u%NStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
+         case (10) ! RotationVel     = 4;
+            u%NStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%NStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
+         case (11) ! TranslationAcc  = 5;
+            u%NStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
+         case (12) ! RotationAcc     = 6;
+            u%NStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%NStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
+         !-------------------------------
+         ! 13:18 --> u%TStCMotionMesh(:)%
+         case (13) ! TranslationDisp = 1;
+            u%TStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
+         case (14) ! Orientation     = 2;
+            CALL PerturbOrientationMatrix( u%TStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
+         case (15) ! TranslationVel  = 3;
+            u%TStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
+         case (16) ! RotationVel     = 4;
+            u%TStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%TStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
+         case (17) ! TranslationAcc  = 5;
+            u%TStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
+         case (18) ! RotationAcc     = 6;
+            u%TStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%TStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
+         !-------------------------------
+         ! 19:24 --> u%SStCMotionMesh(:)%
+         case (19) ! TranslationDisp = 1;
+            u%SStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
+         case (20) ! Orientation     = 2;
+            CALL PerturbOrientationMatrix( u%SStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
+         case (21) ! TranslationVel  = 3;
+            u%SStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
+         case (22) ! RotationVel     = 4;
+            u%SStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%SStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
+         case (23) ! TranslationAcc  = 5;
+            u%SStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
+         case (24) ! RotationAcc     = 6;
+            u%SStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%SStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
+      end select
+   end subroutine SrvD_Perturb_u
+
+
 end subroutine Jac_dYdu
 
 !> Calculate the jacobian dXdu
@@ -3003,7 +3159,7 @@ CONTAINS
          y_op(index_next) = y%BlPitchCom(i)
          index_next = index_next + 1
       end do
- 
+
       y_op(index_next) = y%YawMom;     index_next = index_next + 1
       y_op(index_next) = y%GenTrq;     index_next = index_next + 1
       y_op(index_next) = y%ElecPwr;    index_next = index_next + 1
@@ -3031,7 +3187,7 @@ CONTAINS
       end do
    end subroutine Get_y_op
 
-   !> Get the operating point continuous states and pack 
+   !> Get the operating point continuous states and pack
    subroutine Get_x_op()
       integer(IntKi)    :: i,j,k,idx
 
