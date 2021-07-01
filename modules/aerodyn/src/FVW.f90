@@ -195,7 +195,6 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%VTKStep   = -1            ! Counter of VTK outputs
    m%VTKlastTime = -HUGE(1.0_DbKi)
    m%OldWakeTime = -HUGE(1.0_DbKi)
-   m%tSpent    = 0
 
    allocate(m%W(p%nWings))
    allocate(m%dxdt%W(p%nWings))
@@ -615,7 +614,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: nP, nFWEff, iW
-   integer, dimension(8) :: time1, time2, time_diff
    real(ReKi) :: ShedScale !< Scaling factor for shed vorticity (for sub-cycling), 1 if no subcycling
    logical :: bReevaluation
    logical :: bOverCycling
@@ -643,9 +641,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       call RollBackPreviousTimeStep() ! Cancel wake emission done in previous call
       m%ComputeWakeInduced = .TRUE.
    endif
-   if (m%ComputeWakeInduced) then
-      call date_and_time(values=time1)
-   endif
 
    nP=0
    do iW=1,p%nWings
@@ -653,7 +648,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    enddo
    nFWEff = min(m%nFW, p%nFWFree)
    ! --- Display some status to screen
-   if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's Comp:',m%ComputeWakeInduced
+   if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP, 's Comp:',m%ComputeWakeInduced
 
    ! --- Evaluation at t
    ! Inputs at t
@@ -780,13 +775,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    if (m%FirstCall) then
       m%FirstCall=.False.
    endif
-   if (m%ComputeWakeInduced) then
-      ! Profiling of expensive time step
-      call date_and_time(values=time2)
-      time_diff=time2-time1
-      m%tSpent = time_diff(5)*3600+time_diff(6)*60 +time_diff(7)+0.001*time_diff(8)
-   endif
-
    call CleanUp()
 
    if (DEV_VERSION) then
