@@ -106,6 +106,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ! NOTE: no error handling since this is for debug
    p%InductionAtCP = .true.
    p%WakeAtTE      = .true.
+   p%DStallOnWake  = .false.
    CALL ReadCom(UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); 
    CALL ReadCom(UnIn,FileName,                  '--- Advanced options header'        ,ErrStat2,ErrMsg2);
    if(ErrStat2==ErrID_None) then
@@ -119,6 +120,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
          elseif (index(sDummy, 'WAKEATTE')>1) then
             read(sDummy, '(L1)') p%WakeAtTE
             print*,'   >>> WakeAtTE',p%WakeAtTE
+         elseif (index(sDummy, 'DSTALLONWAKE')>1) then
+            read(sDummy, '(L1)') p%DStallOnWake
+            print*,'   >>> DStallOnWake',p%DStallOnWake
+         else
+            print*,'   >>> Line ignored, starting with'//trim(sDummy)
          endif
       enddo
    endif

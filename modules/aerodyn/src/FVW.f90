@@ -753,9 +753,12 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    if (m%UA_Flag) then
       call CalculateInputsAndOtherStatesForUA(2, uInterp, p, x, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
       call UA_UpdateState_Wrapper(AFInfo, t, n, (/t,t+p%DTaero/), p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+      ! Compute unsteady Gamma based on UA Cl
+      if (p%DStallOnWake .and. p%CirculationMethod/=idCircPrescribed) then 
+         call UA_SetGammaDyn(t, uInterp, p, x, xd, OtherState, m, AFInfo, z, ErrStat, ErrMsg)
+      end if
    end if
 
-   ! TODO compute unsteady Gamma here based on UA Cl
 
    ! Updating circulation of near wake panel (and position but irrelevant)
    ! Changes: x only
@@ -1675,5 +1678,48 @@ contains
       NodeText = '(nd:'//trim(num2lstr(i))//' bld:'//trim(num2lstr(j))//')'
    end function NodeText
 end subroutine UA_UpdateState_Wrapper
+
+!> Set dynamic gamma based on dynamic stall states
+!! NOTE: We use Vind_LL computed in CalculateInputsAndOtherStatesForUA
+subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, ErrMsg)
+   use UnsteadyAero, only: UA_CalcOutput
+   real(DbKi),                    intent(in   ) :: t           !< Curent time
+   type(FVW_InputType),           intent(in   ) :: u          !< Inputs at Time t
+   type(FVW_ParameterType),       intent(in   ) :: p          !< AD parameters
+   type(FVW_ContinuousStateType), intent(in )   :: x          !< continuous states
+   type(FVW_DiscreteStateType),   intent(in   ) :: xd         !< Discrete states
+   type(FVW_OtherStateType),      intent(in   ) :: OtherState !< OtherState
+   type(FVW_MiscVarType),target,  intent(inout) :: m          !< Misc/optimization variables
+   type(AFI_ParameterType ),      intent(in   ) :: AFInfo(:)  !< The airfoil parameter data, temporary, for UA..
+   type(FVW_ConstraintStateType), intent(inout) :: z          !< Constraint states
+   integer(IntKi),                intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   real(ReKi)                  :: Cl_dyn, Cl_dyn_prev, Cl_dyn_avg
+   real(ReKi)                  :: Gamma_dyn, Gamma_dyn_prev, Gamma_dyn_avg
+   type(UA_InputType), pointer :: u_UA ! Alias to shorten notations
+   integer(IntKi), parameter   :: InputIndex=2      ! we will always use values at t+dt in this routine
+   integer(intKi)              :: iW, j ! loop counter on wings and nodes
+   integer(intKi)              :: ErrStat2
+   character(ErrMsgLen)        :: ErrMsg2
+
+   ErrStat = 0
+   ErrMsg = ""
+
+   do iW=1,p%nWings
+      j=1
+      u_UA => m%W(iW)%u_UA(j,InputIndex) ! Alias
+      call UA_CalcOutput(j, 1, t, u_UA, m%W(iW)%p_UA, x%UA(iW), xd%UA(iW), OtherState%UA(iW), AFInfo(p%W(iW)%AFindx(j,1)), m%W(iW)%y_UA, m%W(iW)%m_UA, errStat2, errMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_SetGammaDyn')
+      Gamma_dyn_prev = 0.5_ReKi * m%W(iW)%y_UA%Cl * u_UA%U * p%W(iW)%chord_LL(j)
+      do j = 2,p%W(iW)%nSpan+1
+         u_UA => m%W(iW)%u_UA(j,InputIndex) ! Alias
+         call UA_CalcOutput(j, 1, t, u_UA, m%W(iW)%p_UA, x%UA(iW), xd%UA(iW), OtherState%UA(iW), AFInfo(p%W(iW)%AFindx(j,1)), m%W(iW)%y_UA, m%W(iW)%m_UA, errStat2, errMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_SetGammaDyn')
+         Gamma_dyn      = 0.5_ReKi * m%W(iW)%y_UA%Cl * u_UA%U * p%W(iW)%chord_LL(j)
+         Gamma_dyn_avg  = (Gamma_dyn+Gamma_dyn_prev)*0.5_ReKi
+         Gamma_dyn_prev = Gamma_dyn
+         z%W(iW)%Gamma_LL(j-1) = Gamma_dyn_avg
+         !print*,z%W(iW)%Gamma_LL(j-1), Gamma_dyn, Gamma_dyn_avg
+      enddo
+   enddo ! iW, Loop on wings
+end subroutine UA_SetGammaDyn
 
 end module FVW

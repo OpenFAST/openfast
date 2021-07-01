@@ -99,6 +99,7 @@ typedef     ^                   ^               IntKi                           
 # Parameters advanced options
 typedef     ^                   ^               Logical                          InductionAtCP - - -  "Compute induced velocities at nodes or CP" 
 typedef     ^                   ^               Logical                          WakeAtTE      - - -  "Start the wake at the trailing edge, or at the LL" 
+typedef     ^                   ^               Logical                          DStallOnWake  - - -  "Dynamic stall has influence on wake" 
 
 #.......... ContinuousStateType ......
 typedef FVW/FVW            Wng_ContinuousStateType   ReKi                        Gamma_NW     ::  -  -  "Circulation of the near wake panels (    nSpan     x nNW  )" -
@@ -182,7 +183,6 @@ typedef     ^                   ^               DbKi                            
 typedef     ^                   ^               ReKi                             r_wind        ::   -  -  "List of points where wind is requested for next time step"  -
 typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
 typedef     ^                   ^               DbKi                             OldWakeTime   -   -   -  "Time the wake induction velocities were last calculated" s
-typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
 typedef     ^                   ^               FVW_ContinuousStateType          dxdt          -   -  -  "State time derivatie, stored for overcycling and convenience" - 
 typedef     ^                   ^               FVW_ContinuousStateType          x1            -  -  -   "States at t (for overcycling) "        -
 typedef     ^                   ^               FVW_ContinuousStateType          x2            -  -  -   "States at t+DTFVW (for overcycling)"        -

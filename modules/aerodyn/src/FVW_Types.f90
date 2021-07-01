@@ -126,6 +126,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nGridOut      !< Number of VTK grid to output [-]
     LOGICAL  :: InductionAtCP      !< Compute induced velocities at nodes or CP [-]
     LOGICAL  :: WakeAtTE      !< Start the wake at the trailing edge, or at the LL [-]
+    LOGICAL  :: DStallOnWake      !< Dynamic stall has influence on wake [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  Wng_ContinuousStateType  =======
@@ -213,7 +214,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_wind      !< List of points where wind is requested for next time step [-]
     LOGICAL  :: ComputeWakeInduced      !< Compute induced velocities on this timestep [-]
     REAL(DbKi)  :: OldWakeTime      !< Time the wake induction velocities were last calculated [s]
-    REAL(ReKi)  :: tSpent      !< Time spent in expensive Biot-Savart computation [s]
     TYPE(FVW_ContinuousStateType)  :: dxdt      !< State time derivatie, stored for overcycling and convenience [-]
     TYPE(FVW_ContinuousStateType)  :: x1      !< States at t (for overcycling)  [-]
     TYPE(FVW_ContinuousStateType)  :: x2      !< States at t+DTFVW (for overcycling) [-]
@@ -1716,6 +1716,7 @@ ENDIF
     DstParamData%nGridOut = SrcParamData%nGridOut
     DstParamData%InductionAtCP = SrcParamData%InductionAtCP
     DstParamData%WakeAtTE = SrcParamData%WakeAtTE
+    DstParamData%DStallOnWake = SrcParamData%DStallOnWake
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1842,6 +1843,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nGridOut
       Int_BufSz  = Int_BufSz  + 1  ! InductionAtCP
       Int_BufSz  = Int_BufSz  + 1  ! WakeAtTE
+      Int_BufSz  = Int_BufSz  + 1  ! DStallOnWake
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2015,6 +2017,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%InductionAtCP, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%WakeAtTE, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%DStallOnWake, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_PackParam
 
@@ -2210,6 +2214,8 @@ ENDIF
     OutData%InductionAtCP = TRANSFER(IntKiBuf(Int_Xferred), OutData%InductionAtCP)
     Int_Xferred = Int_Xferred + 1
     OutData%WakeAtTE = TRANSFER(IntKiBuf(Int_Xferred), OutData%WakeAtTE)
+    Int_Xferred = Int_Xferred + 1
+    OutData%DStallOnWake = TRANSFER(IntKiBuf(Int_Xferred), OutData%DStallOnWake)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
@@ -6490,7 +6496,6 @@ IF (ALLOCATED(SrcMiscData%r_wind)) THEN
 ENDIF
     DstMiscData%ComputeWakeInduced = SrcMiscData%ComputeWakeInduced
     DstMiscData%OldWakeTime = SrcMiscData%OldWakeTime
-    DstMiscData%tSpent = SrcMiscData%tSpent
       CALL FVW_CopyContState( SrcMiscData%dxdt, DstMiscData%dxdt, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -6660,7 +6665,6 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! ComputeWakeInduced
       Db_BufSz   = Db_BufSz   + 1  ! OldWakeTime
-      Re_BufSz   = Re_BufSz   + 1  ! tSpent
       Int_BufSz   = Int_BufSz + 3  ! dxdt: size of buffers for each call to pack subtype
       CALL FVW_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%dxdt, ErrStat2, ErrMsg2, .TRUE. ) ! dxdt 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -6869,8 +6873,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%OldWakeTime
     Db_Xferred = Db_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%tSpent
-    Re_Xferred = Re_Xferred + 1
       CALL FVW_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%dxdt, ErrStat2, ErrMsg2, OnlySize ) ! dxdt 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -7195,8 +7197,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%OldWakeTime = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%tSpent = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
