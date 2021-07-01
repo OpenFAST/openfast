@@ -2524,8 +2524,8 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    real(R8Ki), allocatable, optional,      intent(inout)           :: dYdu(:,:)  !< Partial derivatives of output functions
 
-   real(R8Ki),allocatable           :: AllOuts_p(:,:)          ! All the the available output channels - positive perturbation
-   real(R8Ki),allocatable           :: AllOuts_m(:,:)          ! All the the available output channels - negative perturbation
+   real(R8Ki)                       :: AllOuts_p(0:MaxOutPts)  ! All the the available output channels - positive perturbation
+   real(R8Ki)                       :: AllOuts_m(0:MaxOutPts)  ! All the the available output channels - negative perturbation
    integer(IntKi)                   :: i,j,k,n                 ! Generic loop index
    type(SrvD_InputType)             :: u_perturb               ! copy of inputs to perturb
    type(StC_InputType)              :: u_StC                   ! copy of the StC inputs  for StC_CalcOutput call
@@ -2534,8 +2534,8 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    type(SrvD_OutputType)            :: y_m                     ! outputs negative perturbed
    type(SrvD_ContinuousStateType)   :: x_p                     ! states  positive perturbed
    type(SrvD_ContinuousStateType)   :: x_m                     ! states  negative perturbed
-   real(R8Ki)                       :: delta                   ! delta change in input or state
-   integer(IntKi)                   :: nu                      ! number of channels
+   real(R8Ki)                       :: delta_p                 ! delta+ change in input or state
+   real(R8Ki)                       :: delta_m                 ! delta- change in input or state
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
    character(*), parameter          :: RoutineName = 'Jac_dYdu'
@@ -2549,7 +2549,7 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
       call allocAry(dYdu, p%Jac_ny, p%Jac_nu, 'dYdu', ErrStat2, ErrMsg2)
       if (Failed())  return
    end if
-   dYdu = 0.0_R8Ki
+   dYdu      = 0.0_R8Ki
 
    !-------------------------------------------------------------
    ! Calculate first three rows for Yaw, YawRate, HSS_Spd inputs
@@ -2571,11 +2571,6 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    endif
    ! Blade
    if (p%NumBStC > 0) then
-      nu = p%Jac_Idx_BStC_u(2)-p%Jac_Idx_BStC_u(1)+1  ! number of u channels for BStC
-      if (allocated(AllOuts_p)) deallocate(AllOuts_p)
-      call AllocAry(AllOuts_p,nu,MaxOutPts,'AllOuts dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
-      if (allocated(AllOuts_m)) deallocate(AllOuts_m)
-      call AllocAry(AllOuts_m,nu,MaxOutPts,'AllOuts dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
       do n=p%Jac_Idx_BStC_u(1),p%Jac_Idx_BStC_u(2)       ! input range for BStC
          call SrvD_CopyOutput( y, y_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
          call SrvD_CopyOutput( y, y_m, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
@@ -2588,7 +2583,7 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
          !-------------------
          ! get u_op + delta u
          call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, 1, u_perturb, delta )
+         call SrvD_Perturb_u( p, n, 1, u_perturb, delta_p )
          !  Transfer motion mesh to this particular instance
          call StC_CopyInput( m%u_BStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
          call Transfer_Point_to_Point( u%BStCMotionMesh(k,j), u_StC%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
@@ -2602,14 +2597,15 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
          CALL Transfer_Point_to_Point( y_StC%Mesh(k), y_p%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) )
             if (Failed()) return;
          ! collect relevant outputs
-         call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts_p(n-p%Jac_Idx_BStC_u(1)+1,:))
+         AllOuts_p = 0.0_R8Ki
+         call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts_p)
          call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
          call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
          !-------------------
          ! get u_op - delta u
          call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, -1, u_perturb, delta )
+         call SrvD_Perturb_u( p, n, -1, u_perturb, delta_m )
          !  Transfer motion mesh to this particular instance
          call StC_CopyInput( m%u_BStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
          call Transfer_Point_to_Point( u%BStCMotionMesh(k,j), u_StC%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
@@ -2623,20 +2619,26 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
          CALL Transfer_Point_to_Point( y_StC%Mesh(k), y_m%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) )
             if (Failed()) return;
          ! collect relevant outputs
-         call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts_m(n-p%Jac_Idx_BStC_u(1)+1,:))
+         AllOuts_m = 0.0_R8Ki
+         call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts_m)
          call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
          call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
          !-------------------
-         ! Central difference
-!  central diff and place into the dYdu
+         ! Store outputs
+         do I = 1,p%NumOuts  ! Loop through all selected output channels
+            y_p%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_p( p%OutParam(I)%Indx )
+            y_m%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_m( p%OutParam(I)%Indx )
+         enddo             ! I - All selected output channels
+!         do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
+!            y_p%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
+!            y_m%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
+!         enddo
 
          !-------------------
-         ! Store results
-!  copy relevant from dYdu into AllOuts section
-!         do I = 1,p%NumOuts  ! Loop through all selected output channels
-!            dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts_p( 1:3, p%OutParam(I)%Indx )
-!         enddo             ! I - All selected output channels
+         ! Central difference
+         call Compute_dY( p, y_p, y_m, delta_p, delta_m, dYdu(:,n) )
+
       enddo
    endif
 
@@ -2650,8 +2652,6 @@ contains
    end function Failed
 
    subroutine Cleanup()
-      if (allocated(AllOuts_p))  deallocate(AllOuts_p)
-      if (allocated(AllOuts_m))  deallocate(AllOuts_m)
       ! Ignore any errors from the destroy (these weren't created if no StCs)
       call SrvD_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
       call SrvD_DestroyOutput( y_p,       ErrStat2, ErrMsg2 )
@@ -2671,6 +2671,7 @@ contains
       integer                 :: SrvD_Indx_Y_GenTrq
       integer                 :: SrvD_Indx_Y_ElecPwr
       integer                 :: SrvD_Indx_Y_WrOutput
+      real(R8Ki)              :: AllOuts(3,MaxOutPts)
 
       SrvD_Indx_Y_YawMom   = size(SrvD_Indx_Y_BlPitchCom) + 1     ! sometime change this to p%NumBl
       SrvD_Indx_Y_GenTrq   = SrvD_Indx_Y_YawMom + 1
@@ -2717,23 +2718,19 @@ contains
       ! Calculate the output channels that will be affected by u%{Yaw,YawRate,HSS_Spd}
       !     These terms are analytically calculated
       !...............................................................................
-      if (allocated(AllOuts_p)) deallocate(AllOuts_p)
-      call AllocAry(AllOuts_p,3,MaxOutPts,'AllOuts_p dYdu',ErrStat2,ErrMsg2);    if (Failed()) return;
-      AllOuts_p = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
-      AllOuts_p(1:3, GenTq)     =  0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,1:3)
-      AllOuts_p(1:3, GenPwr)    =  0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,1:3)
-      AllOuts_p(1:3, YawMomCom) = -0.001_R8Ki*dYdu(SrvD_Indx_Y_YawMom,1:3)
+      AllOuts = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
+      AllOuts(1:3, GenTq)     =  0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,1:3)
+      AllOuts(1:3, GenPwr)    =  0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,1:3)
+      AllOuts(1:3, YawMomCom) = -0.001_R8Ki*dYdu(SrvD_Indx_Y_YawMom,1:3)
 
       !...............................................................................
       ! Place the selected output channels into the WriteOutput(:) portion of the
       ! jacobian with the proper sign:
       !...............................................................................
       do I = 1,p%NumOuts  ! Loop through all selected output channels
-         dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts_p( 1:3, p%OutParam(I)%Indx )
+         dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts( 1:3, p%OutParam(I)%Indx )
       enddo             ! I - All selected output channels
 
-      ! deallocate once everything is copied over
-      if (allocated(AllOuts_p)) deallocate(AllOuts_p)
    end subroutine dYdu_YawGen
 
    !> This routine perturbs the single mesh point associated with the nth element of the u array
@@ -2819,6 +2816,60 @@ end subroutine Jac_dYdu
 subroutine Jac_dXdu()
       !     The RK4 algorithm in the StC code does some local area linearization.  Can we leverage that for the StCs?
 end subroutine Jac_dXdu
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine servodyn::SrvD_Init_Jacobian_y is consistant with this routine!
+SUBROUTINE Compute_dY(p, y_p, y_m, delta_p, delta_m, dY)
+   type(SrvD_ParameterType),  intent(in   ) :: p            !< parameters
+   type(SrvD_OutputType),     intent(in   ) :: y_p          !< SrvD outputs at \f$ u + \Delta u \f$ or \f$ x + \Delta x \f$ (p=plus)
+   type(SrvD_OutputType),     intent(in   ) :: y_m          !< SrvD outputs at \f$ u - \Delta u \f$ or \f$ x - \Delta x \f$ (m=minus)
+   real(R8Ki),                intent(in   ) :: delta_p      !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
+   real(R8Ki),                intent(in   ) :: delta_m      !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
+   real(R8Ki),                intent(inout) :: dY(:)        !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+
+      ! local variables:
+   integer(IntKi)                           :: i,j,k        ! generic counters
+   integer(IntKi)                           :: indx_first   ! index indicating next value of dY to be filled 
+   integer(IntKi)                           :: SrvD_Indx_Y_WrOutput
+
+   ! StC related outputs
+   if (p%NumBStC > 0) then
+      indx_first = p%Jac_Idx_BStC_y(1)
+      do j=1,p%NumBStC
+         do i=1,p%NumBl
+            call PackLoadMesh_dY( y_p%BStCLoadMesh(i,j), y_m%BStCLoadMesh(i,j), dY, indx_first )
+         enddo
+      enddo
+   endif
+   if (p%NumNStC > 0) then
+      indx_first = p%Jac_Idx_NStC_y(1)
+      do j=1,p%NumNStC
+         call PackLoadMesh_dY( y_p%NStCLoadMesh(j), y_m%NStCLoadMesh(j), dY, indx_first )
+      enddo
+   endif
+   if (p%NumTStC > 0) then
+      indx_first = p%Jac_Idx_TStC_y(1)
+      do j=1,p%NumTStC
+         call PackLoadMesh_dY( y_p%TStCLoadMesh(j), y_m%TStCLoadMesh(j), dY, indx_first )
+      enddo
+   endif
+   if (p%NumSStC > 0) then
+      indx_first = p%Jac_Idx_SStC_y(1)
+      do j=1,p%NumSStC
+         call PackLoadMesh_dY( y_p%SStCLoadMesh(j), y_m%SStCLoadMesh(j), dY, indx_first )
+      enddo
+   endif
+
+   ! outputs
+   SrvD_Indx_Y_WrOutput = p%Jac_ny - p%NumOuts              ! Index to location before user requested outputs
+   do k=1,p%NumOuts
+      dY(SrvD_Indx_Y_WrOutput+k) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
+   end do
+
+   dY = dY / (delta_p + delta_m)
+
+END SUBROUTINE Compute_dY
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
