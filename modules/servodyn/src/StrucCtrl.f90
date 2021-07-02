@@ -566,6 +566,19 @@ SUBROUTINE StC_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      ! if prescribed forces, there are no states to advance, so return
+      if ( p%StC_DOF_MODE == DOFMode_Prescribed ) then
+         do i_pt=1,p%NumMeshPts
+            x%StC_x(1,i_pt) = 0
+            x%StC_x(2,i_pt) = 0
+            x%StC_x(3,i_pt) = 0
+            x%StC_x(4,i_pt) = 0
+            x%StC_x(5,i_pt) = 0
+            x%StC_x(6,i_pt) = 0
+         enddo
+         return
+      endif
+
       CALL StC_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
       CALL StC_CopyContState( x, k2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
@@ -1236,6 +1249,17 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             dxdt%StC_x(6,i_pt) = 0.0_ReKi ! Z is off
          enddo
 
+      ELSE IF ( p%StC_DOF_MODE == DOFMode_Prescribed ) THEN
+      ! if prescribed forces, there are no states to advance, so return
+         do i_pt=1,p%NumMeshPts
+            dxdt%StC_x(1,i_pt) = 0
+            dxdt%StC_x(2,i_pt) = 0
+            dxdt%StC_x(3,i_pt) = 0
+            dxdt%StC_x(4,i_pt) = 0
+            dxdt%StC_x(5,i_pt) = 0
+            dxdt%StC_x(6,i_pt) = 0
+         enddo
+         return
       END IF
 
       call CleanUp()
