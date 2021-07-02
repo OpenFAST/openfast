@@ -620,7 +620,9 @@ CONTAINS
 
       REAL(DbKi)                                      :: t2         ! copy of time passed to TimeStep
 
-
+      ErrStat = ErrID_None
+      ErrMsg = ""
+      
       nTime = size(u) ! the number of times of input data provided?
 
       t2 = t

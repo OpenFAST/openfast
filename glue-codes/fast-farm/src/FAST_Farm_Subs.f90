@@ -1868,10 +1868,12 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_MD_Increment'
 
-
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
    ! ----- extrapolate MD inputs -----
    t_next = t + farm%p%DT_mooring
-  
+
    ! Do a linear extrapolation to estimate MoorDyn inputs at time n_ss+1
    CALL MD_Input_ExtrapInterp(farm%MD%Input, farm%MD%InputTimes, farm%MD%u, t_next, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
@@ -1880,13 +1882,13 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
    farm%MD%InputTimes(2) = farm%MD%InputTimes(1)
-   
+
    ! update index 1 entries with the new extrapolated values
    CALL MD_CopyInput (farm%MD%u,  farm%MD%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
    farm%MD%InputTimes(1) = t_next  
-   
-  
+
+
    ! ----- map substructure kinematics to MoorDyn inputs -----      (from mapping called at start of CalcOutputs Solve INputs)
 
    do nt = 1,farm%p%NumTurbines
@@ -1901,7 +1903,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
       !end if 
    end do 
-   
+
    
    ! ----- update states and calculate outputs -----
    
@@ -1944,6 +1946,8 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Moment 
       end if
    end do
+   
+         
 end subroutine Farm_MD_Increment
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine performs the initial call to calculate outputs (at t=0).
@@ -2134,9 +2138,9 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   allocate ( ErrStatF ( farm%p%NumTurbines+1 ), STAT=errStat2 )
+   allocate ( ErrStatF ( farm%p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrStatF.', errStat, errMsg, RoutineName )
-   allocate ( ErrMsgF ( farm%p%NumTurbines+1 ), STAT=errStat2 )
+   allocate ( ErrMsgF ( farm%p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrMsgF.', errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
    
@@ -2202,7 +2206,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       !         tm3 = omp_get_wtime()  
       !#endif    
             call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                        farm%AWAE%OtherSt, farm%AWAE%m, errStatF(nt), errMsgF(nt) )       
+                        farm%AWAE%OtherSt, farm%AWAE%m, ErrStatAWAE, ErrMsgAWAE )       
 
       !#ifdef _OPENMP
       !         tm2 = omp_get_wtime() 
@@ -2244,14 +2248,13 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       
          ! call farm-level MoorDyn time step here (can't multithread this with FAST since it needs inputs from all FAST instances)
          call Farm_MD_Increment( t2, n_FMD, farm, ErrStatMD, ErrMsgMD)
-         call SetErrStat(ErrStatMD, ErrMsgMD, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! MD error status
-         
+         call SetErrStat(ErrStatMD, ErrMsgMD, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! MD error status <<<<<
       end do    ! n_ss substepping
    
       ! The second section, for updating AWAE states on a separate thread in parallel with the FAST/MoorDyn time stepping
       !$OMP SECTION
       call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                        farm%AWAE%OtherSt, farm%AWAE%m, errStatF(nt), errMsgF(nt) )       
+                        farm%AWAE%OtherSt, farm%AWAE%m, ErrStatAWAE, ErrMsgAWAE )       
      
       !$OMP END PARALLEL SECTIONS  
       
@@ -2259,6 +2262,12 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       CALL SetErrStat( ErrID_Fatal, 'MooringMod must be 0 or 3.', ErrStat, ErrMsg, RoutineName )
    end if
    
+   ! update error messages from FAST's and AWAE's time steps
+   DO nt = 1,farm%p%NumTurbines 
+      call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates') ! FAST error status
+   END DO
+   
+   call SetErrStat(ErrStatAWAE, ErrMsgAWAE, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! AWAE error status
    
    ! calculate outputs from FAST as needed by FAST.Farm
    do nt = 1,farm%p%NumTurbines
@@ -2266,12 +2275,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
          call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end do
 
-   ! update error messages for FAST and AWAE
-   DO nt = 1,farm%p%NumTurbines 
-      call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates') ! FAST error status
-   END DO
-   call SetErrStat(ErrStatAWAE, ErrMsgAWAE, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! AWAE error status
-
+   
    if (ErrStat >= AbortErrLev) return
 
    
