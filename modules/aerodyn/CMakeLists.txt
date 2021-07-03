@@ -100,7 +100,8 @@ set(AD_DRIVER_SOURCES
 )
 
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_driver ifwlib aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
+
 
 # UnsteadyAero driver
 set(UA_DRIVER_SOURCES
