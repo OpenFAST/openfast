@@ -209,6 +209,7 @@ real(ReKi) function get_Ctavg(r, Ct, D_rotor) result(Ct_avg)
    ! NOTE: the formula can be improved, assumes equispacing of r
    Ct_avg = 0.0_ReKi
    do j=2,size(r)
+      dr = r(j) - r(j-1)
       Ct_avg = Ct_avg + 0.5_ReKi * (r(j) * Ct(j) + r(j-1) * Ct(j-1)) * dr
    enddo
    Ct_avg = 8.0_ReKi*Ct_avg/(D_rotor*D_rotor)
@@ -236,13 +237,7 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
 
    ! Computing average Ct = \int r Ct dr / \int r dr = 2/R^2 \int r Ct dr using trapz
    ! NOTE: r goes beyond the rotor (works since Ct=0 beyond that)
-   Ct_avg = 0.0_ReKi
-   do j=1,p%NumRadii-1
-      Ct_avg = Ct_avg + 0.5_ReKi * (p%r(j) * Ct_azavg_filt(j) + p%r(j-1) * Ct_azavg_filt(j-1)) * p%dr
-   enddo
-   Ct_avg = 8.0_ReKi*Ct_avg/(D_rotor*D_rotor)
-
-   print*,'>>>Ct_avg',Ct_avg, get_Ctavg(p%r, Ct_azavg_filt, D_rotor)
+   Ct_avg = get_Ctavg(p%r, Ct_azavg_filt, D_rotor)
 
    if (Ct_avg > 2.0_ReKi ) then
       ! THROW ERROR because we are in the prop-brake region
@@ -439,6 +434,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%NumRadii      = InitInp%InputFileData%NumRadii    
    p%dr            = InitInp%InputFileData%dr  
    p%k_VortexDecay = InitInp%InputFileData%k_VortexDecay 
+   p%NumVortices   = InitInp%InputFileData%NumVortices 
+   p%sigma_D       = InitInp%InputFileData%sigma_D 
    p%C_HWkDfl_O    = InitInp%InputFileData%C_HWkDfl_O 
    p%C_HWkDfl_OY   = InitInp%InputFileData%C_HWkDfl_OY
    p%C_HWkDfl_x    = InitInp%InputFileData%C_HWkDfl_x 
@@ -914,7 +911,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       ! --- Compute Vy
       ! --- Add V/W from vorticies 
       if (p%Mod_Wake == Mod_Wake_Curl) then
-         call VelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, 100, xd%D_Rotor_filt(0)/2., xd%psi_skew_filt, p%y, p%z, Ct_avg, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
+         call VelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, p%NumVortices, xd%D_Rotor_filt(0)/2., &
+                           xd%psi_skew_filt, p%y, p%z, Ct_avg, p%sigma_D, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
+
       endif
       ! --- Add Swirl
       !call AddSwirl(  xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0)  )
@@ -1092,84 +1091,87 @@ subroutine lamb_oseen_2d(y, z, Gamma, sigma, v, w)
 end subroutine
 
 ! A subroutine to compute the spanwise velocities from curl
-subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, Vy_curl, Vz_curl)
+subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, sigma_d, Vy_curl, Vz_curl)
  
-    real(ReKi), intent(in) :: Vx                         ! The inflow velocity
-    real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle (rad)
-    integer(intKi), intent(in) :: nVortex                ! The number of vortices (-)
-    real(ReKi), intent(in) :: R                          ! The turbine radius (m)
-    real(ReKi), intent(in) :: psi_skew                   ! The angle of tilt + yaw (rad)
-    real(ReKi), dimension(:),   intent(in)    :: y       ! Spanwise Cartesian coordinate (m)
-    real(ReKi), dimension(:),   intent(in)    :: z       ! Wall-normal Cartesian coordinate (m)
-    real(ReKi),                 intent(in)    :: Ct_avg  ! Average thrust coefficient
-    real(ReKi), dimension(:,:), intent(inout) :: Vy_curl ! Curl velocity in the y direction (m/s)
-    real(ReKi), dimension(:,:), intent(inout) :: Vz_curl ! Curl velocity in the z direction (m/s)
-    real(ReKi), parameter :: sigma_D = 0.2               ! The width of Gaussian kernel for the vortices divided by diameter (-)
-    real(ReKi) Gamma0, dR, G, zp, y0, z0, v, w
-    integer(intKi) ir, iy, iz
-    
-    ! The separation between vortices
-    dR = 2 * R / nVortex
-        
-    ! Compute the Ct
-!~     Gamma0 = R * Vx * 0.7 * tan(yaw_angle) 
-    ! Add another cosine term to project the vortices
-    Gamma0 = R * Vx * Ct_avg * sin(yaw_angle) * cos(yaw_angle) 
+   real(ReKi), intent(in) :: Vx                         ! The inflow velocity
+   real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle (rad)
+   integer(intKi), intent(in) :: nVortex                ! The number of vortices (-)
+   real(ReKi), intent(in) :: R                          ! The turbine radius (m)
+   real(ReKi), intent(in) :: psi_skew                   ! The angle of tilt + yaw (rad)
+   real(ReKi), dimension(:),   intent(in)    :: y       ! Spanwise Cartesian coordinate (m)
+   real(ReKi), dimension(:),   intent(in)    :: z       ! Wall-normal Cartesian coordinate (m)
+   real(ReKi),                 intent(in)    :: Ct_avg  ! Average thrust coefficient
+   real(ReKi),                 intent(in)    :: sigma_d ! The width of Gaussian kernel for the vortices divided by diameter (-)
+   real(ReKi), dimension(:,:), intent(inout) :: Vy_curl ! Curl velocity in the y direction (m/s)
+   real(ReKi), dimension(:,:), intent(inout) :: Vz_curl ! Curl velocity in the z direction (m/s)
+   real(ReKi) Gamma0, dR, G, zp, y0, z0, v, w, sigma
+   integer(intKi) ir, iy, iz
+   
+   ! The width of the Guassian vortices
+   sigma = sigma_d * 2 * R
+   
+   ! The separation between vortices
+   dR = 2 * R / nVortex
+     
+   ! Compute the Ct
+   ! Add another cosine term to project the vortices
+   Gamma0 = -R * Vx * Ct_avg * sin(yaw_angle) * cos(yaw_angle) 
 
-!~ write(*,*) 'Vx, yaw_angle, nVortex, R, psi_skew '
-!~ write(*,*)  Vx, yaw_angle, nVortex, R, psi_skew
-!~ write(*,*) 'Gamma0 =', Gamma0
+   ! Set the velocities to zero before computing
+   Vy_curl(:, :) = 0.0_ReKi
+   Vz_curl(:, :) = 0.0_ReKi
 
-    ! Set the velocities to zero before computing
-    Vy_curl(:, :) = 0.
-    Vz_curl(:, :) = 0.
+   ! Loop through all the points
+   do ir = 2, nVortex-1
 
-    ! Loop through all planes 
-    do iz = 1,size(z)
-      do iy = 1,size(y)
-         ! Loop through all the points
-         do ir = 2, nVortex-1
+      ! The vertical location of the vortices along a line in z
+      zp = -R + dR * ir
+      
+      ! The center location of the vortex
+      ! This projection is used to change from only yaw to combination of
+      !   yaw and tilt
+      y0 = -zp * sin(psi_skew)
+      z0 =  zp * cos(psi_skew)
+      
+      ! Scale the circulation based on location 
+      G = Gamma0 * zp * dR / (R * sqrt(R**2 - zp**2))
 
-           ! The vertical location of the vortices along a line in z
-           zp = -R + dR * ir
-
-           ! The center location of the vortex
-           ! This projection is used to change from only yaw to combination of
-           !   yaw and tilt
-           y0 = zp * sin(psi_skew)
-           z0 = zp * cos(psi_skew)
-           
-           ! Scale the circulation based on location 
-           G = Gamma0 * zp * dR / (R * sqrt(R**2 - zp**2))
-
-           call lamb_oseen_2d(y(iy) - y0, z(iz) - z0, G, sigma_D*2*R, v, w)
-
-           Vy_curl(iy, iz) = Vy_curl(iy, iz) + v
-           Vz_curl(iy, iz) = Vz_curl(iy, iz) + w
-
-!~ write(*,*) 'Curl v w', dR, y0, z0, v, w
+      ! Loop through all planes 
+      do iz = 1,size(z)
+         do iy = 1,size(y)
+      
+            call lamb_oseen_2d(y(iy) - y0, z(iz) - z0, G, sigma, v, w)
+   
+            Vy_curl(iy, iz) = Vy_curl(iy, iz) + v
+            Vz_curl(iy, iz) = Vz_curl(iy, iz) + w
 
          enddo          
       enddo
-    enddo
-    
+   enddo
+
 end subroutine
 
+!> Test the curled wake velocity curl function
 subroutine WD_TEST_VelocityCurl()
-   ! See WD_TEST_Axi2Cart for inspiration
-   ! real(ReKi) :: Vy_curl(:,:)
-   ! real(ReKi) :: Vy_curl_ref(:,:)
-   ! allocate(Vy_curl(2,2))
-   ! allocate(Vy_curl_ref(2,2))
-   !Vy_curl_ref(1,1) =1.2
-   !Vy_curl_ref(1,2) =1.3
-   !Vy_curl_ref(2,2) =1.3
+  
+   real(ReKi) :: Vy_curl(2,2)
+   real(ReKi) :: Vy_curl_ref(2,2)
+   real(ReKi) :: Vz_curl(2,2)
+   real(ReKi) :: Vz_curl_ref(2,2)
+   real(ReKi) :: y(2)=(/ 0., 2./)
+   real(ReKi) :: z(2)=(/-1.,1./)
 
-   ! call VelocityCurl()
-   !for 
-   !if (Vy_curl_ref(0,0)==Vy_curl)
-   !
-   print*,'Test OK'
+   call VelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
+      y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl)
+
+   if (abs(Vy_curl(1,1)-0.2171091922)>1e-5) then
+      print*,'Test fail for vy'
+      STOP
+   endif
+   if (abs(Vz_curl(2,2)-4.45974602276e-2)>1e-5) then
+      print*,'Test fail for vz'
+      STOP
+   endif
 end subroutine
 
 

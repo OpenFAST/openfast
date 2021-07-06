@@ -822,6 +822,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii", "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%k_VortexDecay, "k_VortexDecay", "Vortex decay constant", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices, "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D, "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
       
       ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
@@ -1371,6 +1373,8 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (WD_InitInp%NumPlanes < 2) CALL SetErrStat(ErrID_Fatal,'NumPlanes (number of wake planes) must be at least 2.',ErrStat,ErrMsg,RoutineName)
 
    IF (WD_InitInp%k_VortexDecay < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'k_VortexDecay needs to be postive',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%NumVortices < 2) CALL SetErrStat(ErrID_Fatal,'NumVorticies needs to be greater than 1',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%sigma_D < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'sigma_D needs to be postive',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%f_c <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'f_c (cut-off [corner] frequency) must be more than 0 Hz.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_NearWake <= 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_NearWake parameter must be greater than 1.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%k_vAmb < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vAmb parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
