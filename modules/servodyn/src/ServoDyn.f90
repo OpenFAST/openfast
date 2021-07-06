@@ -2527,16 +2527,10 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    real(R8Ki), allocatable, optional,      intent(inout)           :: dYdu(:,:)  !< Partial derivatives of output functions
 
-   real(R8Ki)                       :: AllOuts_p(0:MaxOutPts)  ! All the the available output channels - positive perturbation
-   real(R8Ki)                       :: AllOuts_m(0:MaxOutPts)  ! All the the available output channels - negative perturbation
    integer(IntKi)                   :: i,j,k,n                 ! Generic loop index
    type(SrvD_InputType)             :: u_perturb               ! copy of inputs to perturb
-   type(StC_InputType)              :: u_StC                   ! copy of the StC inputs  for StC_CalcOutput call
-   type(StC_OutputType)             :: y_StC                   ! copy of the StC outputs for StC_CalcOutput call
    type(SrvD_OutputType)            :: y_p                     ! outputs positive perturbed
    type(SrvD_OutputType)            :: y_m                     ! outputs negative perturbed
-   type(SrvD_ContinuousStateType)   :: x_p                     ! states  positive perturbed
-   type(SrvD_ContinuousStateType)   :: x_m                     ! states  negative perturbed
    real(R8Ki)                       :: delta_p                 ! delta+ change in input or state
    real(R8Ki)                       :: delta_m                 ! delta- change in input or state
    integer(IntKi)                   :: ErrStat2
@@ -2556,7 +2550,8 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
 
    !-------------------------------------------------------------
    ! Calculate first three rows for Yaw, YawRate, HSS_Spd inputs
-   !     This is an analytical calculation
+   !     This is an analytical calculation.
+   !     First 3 columns in dY/du
    !-------------------------------------------------------------
    call dYdu_YawGen();  if (ErrStat > AbortErrLev)  return;
 
@@ -2567,79 +2562,25 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    !-------------------------------------------------------------
    ! make a copy of the inputs to perturb if an StC exists
    if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
-      call SrvD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed())  return;
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call SrvD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed())  return;
-      call SrvD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed())  return;
+      call SrvD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+      call SrvD_CopyOutput( y, y_p,      MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+      call SrvD_CopyOutput( y, y_m,      MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
    endif
    !-------------------
    ! Blade StC
    if (p%NumBStC > 0) then
       do n=p%Jac_Idx_BStC_u(1),p%Jac_Idx_BStC_u(2)       ! input range for BStC
-         call SrvD_CopyOutput( y, y_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
-         call SrvD_CopyOutput( y, y_m, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
 
-         ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
-         ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
-         k = p%Jac_u_indx(n,4)   ! this blade
-         j = p%Jac_u_indx(n,3)   ! this instance
+         ! perturb positive
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call SrvD_CopyOutput( y, y_p,      MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call Jac_BStC_dYdu( n, +1, u_perturb, delta_p, y_p, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-         !-------------------
-         ! get u_op + delta u
-         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, 1, u_perturb, delta_p )
-         !  Transfer motion mesh to this particular instance
-         call StC_CopyInput( m%u_BStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         call Transfer_Point_to_Point( u_perturb%BStCMotionMesh(k,j), u_StC%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-         ! Set StC control channels
-         !call SetStCInput_CtrlChans(u_BStC)
-         ! call Calc
-         call StC_CopyOutput(m%y_BStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         CALL StC_CalcOutput( t, u_StC, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y_StC, m%BStC(j), ErrStat2, ErrMsg2 )
-            if (Failed()) return;
-         CALL Transfer_Point_to_Point( y_StC%Mesh(k), y_p%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u_perturb%BStCMotionMesh(k,j), u_perturb%BStCMotionMesh(k,j) )
-            if (Failed()) return;
-         ! collect relevant outputs
-         AllOuts_p = 0.0_R8Ki
-         call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts_p)
-         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         ! perturb negative
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call SrvD_CopyOutput( y, y_m,      MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call Jac_BStC_dYdu( n, -1, u_perturb, delta_m, y_m, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-         !-------------------
-         ! get u_op - delta u
-         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, -1, u_perturb, delta_m )
-         !  Transfer motion mesh to this particular instance
-         call StC_CopyInput( m%u_BStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         call Transfer_Point_to_Point( u_perturb%BStCMotionMesh(k,j), u_StC%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-         ! Set StC control channels
-         !call SetStCInput_CtrlChans(u_StC)
-         ! call Calc
-         call StC_CopyOutput(m%y_BStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         CALL StC_CalcOutput( t, u_StC, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y_StC, m%BStC(j), ErrStat2, ErrMsg2 )
-            if (Failed()) return;
-         CALL Transfer_Point_to_Point( y_StC%Mesh(k), y_m%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat2, ErrMsg2, u_perturb%BStCMotionMesh(k,j), u_perturb%BStCMotionMesh(k,j) )
-            if (Failed()) return;
-         ! collect relevant outputs
-         AllOuts_m = 0.0_R8Ki
-         call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts_m)
-         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-
-         !-------------------
-         ! Store outputs
-         do I = 1,p%NumOuts  ! Loop through all selected output channels
-            y_p%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_p( p%OutParam(I)%Indx )
-            y_m%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_m( p%OutParam(I)%Indx )
-         enddo             ! I - All selected output channels
-!         do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
-!            y_p%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
-!            y_m%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
-!         enddo
-
-         !-------------------
          ! Central difference
          call Compute_dY( p, y_p, y_m, delta_p, delta_m, dYdu(:,n) )
       enddo
@@ -2648,69 +2589,17 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    ! Nacelle StC
    if (p%NumNStC > 0) then
       do n=p%Jac_Idx_NStC_u(1),p%Jac_Idx_NStC_u(2)       ! input range for NStC
-         call SrvD_CopyOutput( y, y_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
-         call SrvD_CopyOutput( y, y_m, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
 
-         ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
-         ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
-         j = p%Jac_u_indx(n,3)   ! this instance
+         ! perturb positive
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call SrvD_CopyOutput( y, y_p,      MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call Jac_NStC_dYdu( n, +1, u_perturb, delta_p, y_p, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-         !-------------------
-         ! get u_op + delta u
-         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, 1, u_perturb, delta_p )
-         !  Transfer motion mesh to this particular instance
-         call StC_CopyInput( m%u_NStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         call Transfer_Point_to_Point( u_perturb%NStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-         ! Set StC control channels
-         !call SetStCInput_CtrlChans(u_NStC)
-         ! call Calc
-         call StC_CopyOutput(m%y_NStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         CALL StC_CalcOutput( t, u_StC, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y_StC, m%NStC(j), ErrStat2, ErrMsg2 )
-            if (Failed()) return;
-         CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_p%NStCLoadMesh(j), m%SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat2, ErrMsg2, u_perturb%NStCMotionMesh(j), u_perturb%NStCMotionMesh(j) )
-            if (Failed()) return;
-         ! collect relevant outputs
-         AllOuts_p = 0.0_R8Ki
-         call Set_NStC_Outs_Instance(  j, x%NStC(j),  m%NStC(j),  y_StC,  AllOuts_p)
-         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         ! perturb negative
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call SrvD_CopyOutput( y, y_m,      MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call Jac_NStC_dYdu( n, -1, u_perturb, delta_m, y_m, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-         !-------------------
-         ! get u_op - delta u
-         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, -1, u_perturb, delta_m )
-         !  Transfer motion mesh to this particular instance
-         call StC_CopyInput( m%u_NStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         call Transfer_Point_to_Point( u_perturb%NStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-         ! Set StC control channels
-         !call SetStCInput_CtrlChans(u_StC)
-         ! call Calc
-         call StC_CopyOutput(m%y_NStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         CALL StC_CalcOutput( t, u_StC, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y_StC, m%NStC(j), ErrStat2, ErrMsg2 )
-            if (Failed()) return;
-         CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_m%NStCLoadMesh(j), m%SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat2, ErrMsg2, u_perturb%NStCMotionMesh(j), u_perturb%NStCMotionMesh(j) )
-            if (Failed()) return;
-         ! collect relevant outputs
-         AllOuts_m = 0.0_R8Ki
-         call Set_NStC_Outs_Instance(  j, x%NStC(j),  m%NStC(j),  y_StC,  AllOuts_m)
-         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-
-         !-------------------
-         ! Store outputs
-         do I = 1,p%NumOuts  ! Loop through all selected output channels
-            y_p%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_p( p%OutParam(I)%Indx )
-            y_m%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_m( p%OutParam(I)%Indx )
-         enddo             ! I - All selected output channels
-!         do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
-!            y_p%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
-!            y_m%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
-!         enddo
-
-         !-------------------
          ! Central difference
          call Compute_dY( p, y_p, y_m, delta_p, delta_m, dYdu(:,n) )
       enddo
@@ -2719,69 +2608,17 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    ! Tower StC
    if (p%NumTStC > 0) then
       do n=p%Jac_Idx_TStC_u(1),p%Jac_Idx_TStC_u(2)       ! input range for TStC
-         call SrvD_CopyOutput( y, y_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
-         call SrvD_CopyOutput( y, y_m, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
 
-         ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
-         ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
-         j = p%Jac_u_indx(n,3)   ! this instance
+         ! perturb positive
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call SrvD_CopyOutput( y, y_p,      MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call Jac_TStC_dYdu( n, +1, u_perturb, delta_p, y_p, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-         !-------------------
-         ! get u_op + delta u
-         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, 1, u_perturb, delta_p )
-         !  Transfer motion mesh to this particular instance
-         call StC_CopyInput( m%u_TStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         call Transfer_Point_to_Point( u_perturb%TStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-         ! Set StC control channels
-         !call SetStCInput_CtrlChans(u_TStC)
-         ! call Calc
-         call StC_CopyOutput(m%y_TStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         CALL StC_CalcOutput( t, u_StC, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y_StC, m%TStC(j), ErrStat2, ErrMsg2 )
-            if (Failed()) return;
-         CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_p%TStCLoadMesh(j), m%SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat2, ErrMsg2, u_perturb%TStCMotionMesh(j), u_perturb%TStCMotionMesh(j) )
-            if (Failed()) return;
-         ! collect relevant outputs
-         AllOuts_p = 0.0_R8Ki
-         call Set_TStC_Outs_Instance(  j, x%TStC(j),  m%TStC(j),  y_StC,  AllOuts_p)
-         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         ! perturb negative
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call SrvD_CopyOutput( y, y_m,      MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call Jac_TStC_dYdu( n, -1, u_perturb, delta_m, y_m, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-         !-------------------
-         ! get u_op - delta u
-         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, -1, u_perturb, delta_m )
-         !  Transfer motion mesh to this particular instance
-         call StC_CopyInput( m%u_TStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         call Transfer_Point_to_Point( u_perturb%TStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-         ! Set StC control channels
-         !call SetStCInput_CtrlChans(u_StC)
-         ! call Calc
-         call StC_CopyOutput(m%y_TStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         CALL StC_CalcOutput( t, u_StC, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y_StC, m%TStC(j), ErrStat2, ErrMsg2 )
-            if (Failed()) return;
-         CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_m%TStCLoadMesh(j), m%SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat2, ErrMsg2, u_perturb%TStCMotionMesh(j), u_perturb%TStCMotionMesh(j) )
-            if (Failed()) return;
-         ! collect relevant outputs
-         AllOuts_m = 0.0_R8Ki
-         call Set_TStC_Outs_Instance(  j, x%TStC(j),  m%TStC(j),  y_StC,  AllOuts_m)
-         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-
-         !-------------------
-         ! Store outputs
-         do I = 1,p%NumOuts  ! Loop through all selected output channels
-            y_p%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_p( p%OutParam(I)%Indx )
-            y_m%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_m( p%OutParam(I)%Indx )
-         enddo             ! I - All selected output channels
-!         do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
-!            y_p%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
-!            y_m%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
-!         enddo
-
-         !-------------------
          ! Central difference
          call Compute_dY( p, y_p, y_m, delta_p, delta_m, dYdu(:,n) )
       enddo
@@ -2790,69 +2627,17 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    ! Substructure StC
    if (p%NumSStC > 0) then
       do n=p%Jac_Idx_SStC_u(1),p%Jac_Idx_SStC_u(2)       ! input range for SStC
-         call SrvD_CopyOutput( y, y_p, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
-         call SrvD_CopyOutput( y, y_m, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed())  return;
 
-         ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
-         ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
-         j = p%Jac_u_indx(n,3)   ! this instance
+         ! perturb positive
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call SrvD_CopyOutput( y, y_p,      MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call Jac_SStC_dYdu( n, +1, u_perturb, delta_p, y_p, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-         !-------------------
-         ! get u_op + delta u
-         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, 1, u_perturb, delta_p )
-         !  Transfer motion mesh to this particular instance
-         call StC_CopyInput( m%u_SStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         call Transfer_Point_to_Point( u_perturb%SStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-         ! Set StC control channels
-         !call SetStCInput_CtrlChans(u_SStC)
-         ! call Calc
-         call StC_CopyOutput(m%y_SStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         CALL StC_CalcOutput( t, u_StC, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y_StC, m%SStC(j), ErrStat2, ErrMsg2 )
-            if (Failed()) return;
-         CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_p%SStCLoadMesh(j), m%SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat2, ErrMsg2, u_perturb%SStCMotionMesh(j), u_perturb%SStCMotionMesh(j) )
-            if (Failed()) return;
-         ! collect relevant outputs
-         AllOuts_p = 0.0_R8Ki
-         call Set_SStC_Outs_Instance(  j, x%SStC(j),  m%SStC(j),  y_StC,  AllOuts_p)
-         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         ! perturb negative
+         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call SrvD_CopyOutput( y, y_m,      MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+         call Jac_SStC_dYdu( n, -1, u_perturb, delta_m, y_m, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-         !-------------------
-         ! get u_op - delta u
-         call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
-         call SrvD_Perturb_u( p, n, -1, u_perturb, delta_m )
-         !  Transfer motion mesh to this particular instance
-         call StC_CopyInput( m%u_SStC(1,j), u_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         call Transfer_Point_to_Point( u_perturb%SStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat2, ErrMsg2 )
-         if (Failed()) return;
-         ! Set StC control channels
-         !call SetStCInput_CtrlChans(u_StC)
-         ! call Calc
-         call StC_CopyOutput(m%y_SStC(  j), y_StC, MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return;
-         CALL StC_CalcOutput( t, u_StC, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y_StC, m%SStC(j), ErrStat2, ErrMsg2 )
-            if (Failed()) return;
-         CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_m%SStCLoadMesh(j), m%SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat2, ErrMsg2, u_perturb%SStCMotionMesh(j), u_perturb%SStCMotionMesh(j) )
-            if (Failed()) return;
-         ! collect relevant outputs
-         AllOuts_m = 0.0_R8Ki
-         call Set_SStC_Outs_Instance(  j, x%SStC(j),  m%SStC(j),  y_StC,  AllOuts_m)
-         call StC_DestroyInput(  u_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-         call StC_DestroyOutput( y_StC, ErrStat2, ErrMsg2 );   if (Failed())  return;
-
-         !-------------------
-         ! Store outputs
-         do I = 1,p%NumOuts  ! Loop through all selected output channels
-            y_p%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_p( p%OutParam(I)%Indx )
-            y_m%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts_m( p%OutParam(I)%Indx )
-         enddo             ! I - All selected output channels
-!         do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
-!            y_p%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
-!            y_m%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
-!         enddo
-
-         !-------------------
          ! Central difference
          call Compute_dY( p, y_p, y_m, delta_p, delta_m, dYdu(:,n) )
       enddo
@@ -2871,8 +2656,6 @@ contains
       call SrvD_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
       call SrvD_DestroyOutput( y_p,       ErrStat2, ErrMsg2 )
       call SrvD_DestroyOutput( y_m,       ErrStat2, ErrMsg2 )
-      call StC_DestroyInput(   u_StC,     ErrStat2, ErrMsg2 )
-      call StC_DestroyOutput(  y_StC,     ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 
    !> Subroutine for the yaw and generator portions of the dYdu matrix (first three rows of dYdu)
@@ -2948,88 +2731,268 @@ contains
 
    end subroutine dYdu_YawGen
 
-   !> This routine perturbs the single mesh point associated with the nth element of the u array
-   !! WARNING: this routine must exactly match Init_Jacobian::SrvD_Init_Jacobian_u
-   subroutine SrvD_Perturb_u( p, n, perturb_sign, u, du )
-      type(SrvD_ParameterType),           intent(in   ) :: p            !< parameters
-      integer(IntKi),                     intent(in   ) :: n            !< number of array element to use
-      integer(IntKi),                     intent(in   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-      type(SrvD_InputType),               intent(inout) :: u            !< perturbed SrvD inputs
-      real(R8Ki),                         intent(  out) :: du           !< amount that specific input was perturbed
-      ! local variables
-      integer :: fieldIndx
-      integer :: instance, blade    ! for StC mesh motions
-      fieldIndx = p%Jac_u_indx(n,2)
-      instance  = p%Jac_u_indx(n,3)
-      blade     = p%Jac_u_indx(n,4)
-      du = p%du(  p%Jac_u_indx(n,1) )
-      ! determine which mesh we're trying to perturb and perturb the input:
-      select case( p%Jac_u_indx(n,1) )
-         !-------------------------------
-         !  1:6  --> u%BStCMotionMesh(:,:)%
-         case ( 1) ! TranslationDisp = 1;
-            u%BStCMotionMesh(blade,instance)%TranslationDisp(fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
-         case ( 2) ! Orientation     = 2;
-            CALL PerturbOrientationMatrix( u%BStCMotionMesh(blade,instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
-         case ( 3) ! TranslationVel  = 3;
-            u%BStCMotionMesh(blade,instance)%TranslationVel( fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
-         case ( 4) ! RotationVel     = 4;
-            u%BStCMotionMesh(blade,instance)%RotationVel(    fieldIndx,1) = u%BStCMotionMesh(blade,instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
-         case ( 5) ! TranslationAcc  = 5;
-            u%BStCMotionMesh(blade,instance)%TranslationAcc( fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
-         case ( 6) ! RotationAcc     = 6;
-            u%BStCMotionMesh(blade,instance)%RotationAcc(    fieldIndx,1) = u%BStCMotionMesh(blade,instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
-         !-------------------------------
-         !  7:12 --> u%NStCMotionMesh(:)%
-         case ( 7) ! TranslationDisp = 1;
-            u%NStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
-         case ( 8) ! Orientation     = 2;
-            CALL PerturbOrientationMatrix( u%NStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
-         case ( 9) ! TranslationVel  = 3;
-            u%NStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
-         case (10) ! RotationVel     = 4;
-            u%NStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%NStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
-         case (11) ! TranslationAcc  = 5;
-            u%NStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
-         case (12) ! RotationAcc     = 6;
-            u%NStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%NStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
-         !-------------------------------
-         ! 13:18 --> u%TStCMotionMesh(:)%
-         case (13) ! TranslationDisp = 1;
-            u%TStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
-         case (14) ! Orientation     = 2;
-            CALL PerturbOrientationMatrix( u%TStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
-         case (15) ! TranslationVel  = 3;
-            u%TStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
-         case (16) ! RotationVel     = 4;
-            u%TStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%TStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
-         case (17) ! TranslationAcc  = 5;
-            u%TStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
-         case (18) ! RotationAcc     = 6;
-            u%TStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%TStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
-         !-------------------------------
-         ! 19:24 --> u%SStCMotionMesh(:)%
-         case (19) ! TranslationDisp = 1;
-            u%SStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
-         case (20) ! Orientation     = 2;
-            CALL PerturbOrientationMatrix( u%SStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
-         case (21) ! TranslationVel  = 3;
-            u%SStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
-         case (22) ! RotationVel     = 4;
-            u%SStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%SStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
-         case (23) ! TranslationAcc  = 5;
-            u%SStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
-         case (24) ! RotationAcc     = 6;
-            u%SStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%SStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
-      end select
-   end subroutine SrvD_Perturb_u
+   !> Calculated dYdu for BStC instance
+   subroutine Jac_BStC_dYdu( n, sgn, u_perturb, delta, y_perturb, ErrStat3, ErrMsg3)
+      integer(IntKi),            intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),            intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_InputType),      intent(inout)  :: u_perturb            ! copy of inputs to perturb
+      real(R8Ki),                intent(  out)  :: delta                ! delta+/- change in input or state
+      type(SrvD_OutputType),     intent(inout)  :: y_perturb            ! outputs perturbed
+      integer(IntKi),            intent(  out)  :: ErrStat3
+      character(ErrMsgLen),      intent(  out)  :: ErrMsg3
+      integer(IntKi)                            :: i,j,k                ! Generic indices
+      type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
+      type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
+      real(R8Ki)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+      k = p%Jac_u_indx(n,4)   ! this blade
+      j = p%Jac_u_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_u( p, n, sgn, u_perturb, delta )
+      !  Transfer motion mesh to this particular instance
+      call StC_CopyInput( m%u_BStC(1,j), u_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      call Transfer_Point_to_Point( u_perturb%BStCMotionMesh(k,j), u_StC%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! Set StC control channels
+      !call SetStCInput_CtrlChans(u_BStC)
+      ! call Calc
+      call StC_CopyOutput(m%y_BStC(  j), y_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      CALL StC_CalcOutput( t, u_StC, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y_StC, m%BStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      CALL Transfer_Point_to_Point( y_StC%Mesh(k), y%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat3, ErrMsg3, u_perturb%BStCMotionMesh(k,j), u_perturb%BStCMotionMesh(k,j) ); if (ErrStat3 > AbortErrLev) return
+      ! collect relevant outputs
+      AllOuts = 0.0_R8Ki
+      call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts)
+      call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
+      call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
+      !-------------------
+      ! Store outputs
+      do I = 1,p%NumOuts  ! Loop through all selected output channels
+         y_perturb%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+      enddo
+!      do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
+!         y_perturb%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
+!      enddo
+   end subroutine Jac_BStC_dYdu
+
+   !> Calculated dYdu for NStC instance
+   subroutine Jac_NStC_dYdu( n, sgn, u_perturb, delta, y_perturb, ErrStat3, ErrMsg3)
+      integer(IntKi),            intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),            intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_InputType),      intent(inout)  :: u_perturb            ! copy of inputs to perturb
+      real(R8Ki),                intent(  out)  :: delta                ! delta+/- change in input or state
+      type(SrvD_OutputType),     intent(inout)  :: y_perturb            ! outputs perturbed
+      integer(IntKi),            intent(  out)  :: ErrStat3
+      character(ErrMsgLen),      intent(  out)  :: ErrMsg3
+      integer(IntKi)                            :: i,j,k                ! Generic indices
+      type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
+      type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
+      real(R8Ki)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+      j = p%Jac_u_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      call SrvD_Perturb_u( p, n, sgn, u_perturb, delta )
+      !  Transfer motion mesh to this particular instance
+      call StC_CopyInput( m%u_NStC(1,j), u_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      call Transfer_Point_to_Point( u_perturb%NStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! Set StC control channels
+      !call SetStCInput_CtrlChans(u_NStC)
+      ! call Calc
+      call StC_CopyOutput(m%y_NStC(  j), y_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3)
+      CALL StC_CalcOutput( t, u_StC, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y_StC, m%NStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%NStCLoadMesh(j), m%SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat3, ErrMsg3, u_perturb%NStCMotionMesh(j), u_perturb%NStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
+      ! collect relevant outputs
+      AllOuts = 0.0_R8Ki
+      call Set_NStC_Outs_Instance(  j, x%NStC(j),  m%NStC(j),  y_StC,  AllOuts)
+      call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
+      call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
+      !-------------------
+      ! Store outputs
+      do I = 1,p%NumOuts  ! Loop through all selected output channels
+         y_perturb%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+      enddo             ! I - All selected output channels
+!      do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
+!         y_perturb%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
+!      enddo
+   end subroutine Jac_NStC_dYdu
+
+   !> Calculated dYdu for TStC instance
+   subroutine Jac_TStC_dYdu( n, sgn, u_perturb, delta, y_perturb, ErrStat3, ErrMsg3)
+      integer(IntKi),            intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),            intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_InputType),      intent(inout)  :: u_perturb            ! copy of inputs to perturb
+      real(R8Ki),                intent(  out)  :: delta                ! delta+/- change in input or state
+      type(SrvD_OutputType),     intent(inout)  :: y_perturb            ! outputs perturbed
+      integer(IntKi),            intent(  out)  :: ErrStat3
+      character(ErrMsgLen),      intent(  out)  :: ErrMsg3
+      integer(IntKi)                            :: i,j,k                ! Generic indices
+      type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
+      type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
+      real(R8Ki)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+      j = p%Jac_u_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      call SrvD_Perturb_u( p, n, sgn, u_perturb, delta )
+      !  Transfer motion mesh to this particular instance
+      call StC_CopyInput( m%u_TStC(1,j), u_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      call Transfer_Point_to_Point( u_perturb%TStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! Set StC control channels
+      !call SetStCInput_CtrlChans(u_TStC)
+      ! call Calc
+      call StC_CopyOutput(m%y_TStC(  j), y_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      CALL StC_CalcOutput( t, u_StC, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y_StC, m%TStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%TStCLoadMesh(j), m%SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat3, ErrMsg3, u_perturb%TStCMotionMesh(j), u_perturb%TStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
+      ! collect relevant outputs
+      AllOuts = 0.0_R8Ki
+      call Set_TStC_Outs_Instance(  j, x%TStC(j),  m%TStC(j),  y_StC,  AllOuts)
+      call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
+      call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
+      !-------------------
+      ! Store outputs
+      do I = 1,p%NumOuts  ! Loop through all selected output channels
+         y_perturb%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+      enddo             ! I - All selected output channels
+!      do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
+!         y_perturb%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
+!      enddo
+   end subroutine Jac_TStC_dYdu
+
+   !> Calculated dYdu for SStC instance
+   subroutine Jac_SStC_dYdu( n, sgn, u_perturb, delta, y_perturb, ErrStat3, ErrMsg3)
+      integer(IntKi),            intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),            intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_InputType),      intent(inout)  :: u_perturb            ! copy of inputs to perturb
+      real(R8Ki),                intent(  out)  :: delta                ! delta+/- change in input or state
+      type(SrvD_OutputType),     intent(inout)  :: y_perturb            ! outputs perturbed
+      integer(IntKi),            intent(  out)  :: ErrStat3
+      character(ErrMsgLen),      intent(  out)  :: ErrMsg3
+      integer(IntKi)                            :: i,j,k                ! Generic indices
+      type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
+      type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
+      real(R8Ki)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+      j = p%Jac_u_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      call SrvD_Perturb_u( p, n, sgn, u_perturb, delta )
+      !  Transfer motion mesh to this particular instance
+      call StC_CopyInput( m%u_SStC(1,j), u_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      call Transfer_Point_to_Point( u_perturb%SStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! Set StC control channels
+      !call SetStCInput_CtrlChans(u_SStC)
+      ! call Calc
+      call StC_CopyOutput(m%y_SStC(  j), y_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      CALL StC_CalcOutput( t, u_StC, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y_StC, m%SStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%SStCLoadMesh(j), m%SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat3, ErrMsg3, u_perturb%SStCMotionMesh(j), u_perturb%SStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
+      ! collect relevant outputs
+      AllOuts = 0.0_R8Ki
+      call Set_SStC_Outs_Instance(  j, x%SStC(j),  m%SStC(j),  y_StC,  AllOuts)
+      call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
+      call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
+      !-------------------
+      ! Store outputs
+      do I = 1,p%NumOuts  ! Loop through all selected output channels
+         y_perturb%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+      enddo             ! I - All selected output channels
+!      do I = 1,p%NumOuts_DLL  ! Loop through all DLL logging channels
+!         y_perturb%WriteOutput(I+p%NumOuts) = m%dll_data%LogChannels( I )
+!      enddo
+   end subroutine Jac_SStC_dYdu
 
 end subroutine Jac_dYdu
+
+
 
 !> Calculate the jacobian dXdu
 subroutine Jac_dXdu()
       !     The RK4 algorithm in the StC code does some local area linearization.  Can we leverage that for the StCs?
 end subroutine Jac_dXdu
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the single mesh point associated with the nth element of the u array
+!! WARNING: this routine must exactly match Init_Jacobian::SrvD_Init_Jacobian_u
+subroutine SrvD_Perturb_u( p, n, perturb_sign, u, du )
+   type(SrvD_ParameterType),           intent(in   ) :: p            !< parameters
+   integer(IntKi),                     intent(in   ) :: n            !< number of array element to use
+   integer(IntKi),                     intent(in   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   type(SrvD_InputType),               intent(inout) :: u            !< perturbed SrvD inputs
+   real(R8Ki),                         intent(  out) :: du           !< amount that specific input was perturbed
+   ! local variables
+   integer :: fieldIndx
+   integer :: instance, blade    ! for StC mesh motions
+   fieldIndx = p%Jac_u_indx(n,2)
+   instance  = p%Jac_u_indx(n,3)
+   blade     = p%Jac_u_indx(n,4)
+   du = p%du(  p%Jac_u_indx(n,1) )
+   ! determine which mesh we're trying to perturb and perturb the input:
+   select case( p%Jac_u_indx(n,1) )
+      !-------------------------------
+      !  1:6  --> u%BStCMotionMesh(:,:)%
+      case ( 1) ! TranslationDisp = 1;
+         u%BStCMotionMesh(blade,instance)%TranslationDisp(fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
+      case ( 2) ! Orientation     = 2;
+         CALL PerturbOrientationMatrix( u%BStCMotionMesh(blade,instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
+      case ( 3) ! TranslationVel  = 3;
+         u%BStCMotionMesh(blade,instance)%TranslationVel( fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
+      case ( 4) ! RotationVel     = 4;
+         u%BStCMotionMesh(blade,instance)%RotationVel(    fieldIndx,1) = u%BStCMotionMesh(blade,instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
+      case ( 5) ! TranslationAcc  = 5;
+         u%BStCMotionMesh(blade,instance)%TranslationAcc( fieldIndx,1) = u%BStCMotionMesh(blade,instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
+      case ( 6) ! RotationAcc     = 6;
+         u%BStCMotionMesh(blade,instance)%RotationAcc(    fieldIndx,1) = u%BStCMotionMesh(blade,instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
+      !-------------------------------
+      !  7:12 --> u%NStCMotionMesh(:)%
+      case ( 7) ! TranslationDisp = 1;
+         u%NStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
+      case ( 8) ! Orientation     = 2;
+         CALL PerturbOrientationMatrix( u%NStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
+      case ( 9) ! TranslationVel  = 3;
+         u%NStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
+      case (10) ! RotationVel     = 4;
+         u%NStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%NStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
+      case (11) ! TranslationAcc  = 5;
+         u%NStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%NStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
+      case (12) ! RotationAcc     = 6;
+         u%NStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%NStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
+      !-------------------------------
+      ! 13:18 --> u%TStCMotionMesh(:)%
+      case (13) ! TranslationDisp = 1;
+         u%TStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
+      case (14) ! Orientation     = 2;
+         CALL PerturbOrientationMatrix( u%TStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
+      case (15) ! TranslationVel  = 3;
+         u%TStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
+      case (16) ! RotationVel     = 4;
+         u%TStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%TStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
+      case (17) ! TranslationAcc  = 5;
+         u%TStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
+      case (18) ! RotationAcc     = 6;
+         u%TStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%TStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
+      !-------------------------------
+      ! 19:24 --> u%SStCMotionMesh(:)%
+      case (19) ! TranslationDisp = 1;
+         u%SStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
+      case (20) ! Orientation     = 2;
+         CALL PerturbOrientationMatrix( u%SStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx )
+      case (21) ! TranslationVel  = 3;
+         u%SStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
+      case (22) ! RotationVel     = 4;
+         u%SStCMotionMesh(instance)%RotationVel(    fieldIndx,1) = u%SStCMotionMesh(instance)%RotationVel(    fieldIndx,1) + du * perturb_sign
+      case (23) ! TranslationAcc  = 5;
+         u%SStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationAcc( fieldIndx,1) + du * perturb_sign
+      case (24) ! RotationAcc     = 6;
+         u%SStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) = u%SStCMotionMesh(instance)%RotationAcc(    fieldIndx,1) + du * perturb_sign
+   end select
+end subroutine SrvD_Perturb_u
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine uses values of two output types to compute an array of differences.
