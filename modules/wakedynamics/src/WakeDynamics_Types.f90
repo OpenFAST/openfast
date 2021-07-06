@@ -38,8 +38,8 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MassFlux = 3      ! Wake diameter calculation model: mass-flux based [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeDiamMod_MtmFlux = 4      ! Wake diameter calculation model: momentum-flux based [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Polar = 1      ! Wake model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Cartesian = 2      ! Wake model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Curl = 3      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Curl = 2      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Cartesian = 3      ! Wake model [-]
 ! =========  WD_InputFileType  =======
   TYPE, PUBLIC :: WD_InputFileType
     REAL(ReKi)  :: dr      !< Radial increment of radial finite-difference grid [>0.0] [m]
@@ -47,6 +47,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumPlanes      !< Number of wake planes [>=2] [-]
     INTEGER(IntKi)  :: Mod_Wake      !< Switch between wake formulations 1=Polar, 2=Cartesian, 3=Curl [-]
     REAL(ReKi)  :: k_VortexDecay      !< Vortex decay constant for curl [-]
+    REAL(ReKi)  :: sigma_D      !< The width of the Gaussian vortices used for the curled wake model divided by diameter [-]
+    INTEGER(IntKi)  :: NumVortices      !< The number of vortices used for the curled wake model [-]
     REAL(ReKi)  :: f_c      !< Cut-off frequency of the low-pass time-filter for the wake advection, deflection, and meandering model [>0.0] [Hz]
     REAL(ReKi)  :: C_HWkDfl_O      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor [m]
     REAL(ReKi)  :: C_HWkDfl_OY      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error [m/rad]
@@ -150,8 +152,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: r      !< Discretization of radial finite-difference grid [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: y      !< Horizontal discretization of each wake plane (size ny=2nr-1) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: z      !< Nomically-vertical discretization of each wake plane (size nz=2nr-1) [m]
-    INTEGER(IntKi)  :: Mod_Wake      !< Switch between wake formulations 1=Polar, 2=Cartesian, 3=Curl [-]
+    INTEGER(IntKi)  :: Mod_Wake      !< Switch between wake formulations 1=Polar, 2=Curl, 3=Cartesian [-]
     REAL(ReKi)  :: k_VortexDecay      !< Vortex decay constant for curl [-]
+    REAL(ReKi)  :: sigma_D      !< The width of the Gaussian vortices used for the curled wake model divided by diameter [-]
+    INTEGER(IntKi)  :: NumVortices      !< The number of vortices used for the curled wake model [-]
     REAL(ReKi)  :: filtParam      !< alpha, Low-pass time-filter parameter, with a value between 0 (minimum filtering) and 1 (maximum filtering) (exclusive) [-]
     REAL(ReKi)  :: oneMinusFiltParam      !< 1.0 - filtParam [-]
     REAL(ReKi)  :: C_HWkDfl_O      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor [m]
@@ -225,6 +229,8 @@ CONTAINS
     DstInputFileTypeData%NumPlanes = SrcInputFileTypeData%NumPlanes
     DstInputFileTypeData%Mod_Wake = SrcInputFileTypeData%Mod_Wake
     DstInputFileTypeData%k_VortexDecay = SrcInputFileTypeData%k_VortexDecay
+    DstInputFileTypeData%sigma_D = SrcInputFileTypeData%sigma_D
+    DstInputFileTypeData%NumVortices = SrcInputFileTypeData%NumVortices
     DstInputFileTypeData%f_c = SrcInputFileTypeData%f_c
     DstInputFileTypeData%C_HWkDfl_O = SrcInputFileTypeData%C_HWkDfl_O
     DstInputFileTypeData%C_HWkDfl_OY = SrcInputFileTypeData%C_HWkDfl_OY
@@ -296,6 +302,8 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! NumPlanes
       Int_BufSz  = Int_BufSz  + 1  ! Mod_Wake
       Re_BufSz   = Re_BufSz   + 1  ! k_VortexDecay
+      Re_BufSz   = Re_BufSz   + 1  ! sigma_D
+      Int_BufSz  = Int_BufSz  + 1  ! NumVortices
       Re_BufSz   = Re_BufSz   + 1  ! f_c
       Re_BufSz   = Re_BufSz   + 1  ! C_HWkDfl_O
       Re_BufSz   = Re_BufSz   + 1  ! C_HWkDfl_OY
@@ -351,6 +359,10 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%k_VortexDecay
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%sigma_D
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumVortices
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%f_c
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_HWkDfl_O
@@ -428,6 +440,10 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     OutData%k_VortexDecay = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%sigma_D = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%NumVortices = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%f_c = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%C_HWkDfl_O = ReKiBuf(Re_Xferred)
@@ -3897,6 +3913,8 @@ IF (ALLOCATED(SrcParamData%z)) THEN
 ENDIF
     DstParamData%Mod_Wake = SrcParamData%Mod_Wake
     DstParamData%k_VortexDecay = SrcParamData%k_VortexDecay
+    DstParamData%sigma_D = SrcParamData%sigma_D
+    DstParamData%NumVortices = SrcParamData%NumVortices
     DstParamData%filtParam = SrcParamData%filtParam
     DstParamData%oneMinusFiltParam = SrcParamData%oneMinusFiltParam
     DstParamData%C_HWkDfl_O = SrcParamData%C_HWkDfl_O
@@ -3994,6 +4012,8 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Mod_Wake
       Re_BufSz   = Re_BufSz   + 1  ! k_VortexDecay
+      Re_BufSz   = Re_BufSz   + 1  ! sigma_D
+      Int_BufSz  = Int_BufSz  + 1  ! NumVortices
       Re_BufSz   = Re_BufSz   + 1  ! filtParam
       Re_BufSz   = Re_BufSz   + 1  ! oneMinusFiltParam
       Re_BufSz   = Re_BufSz   + 1  ! C_HWkDfl_O
@@ -4097,6 +4117,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%k_VortexDecay
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%sigma_D
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumVortices
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%filtParam
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%oneMinusFiltParam
@@ -4230,6 +4254,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%k_VortexDecay = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%sigma_D = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%NumVortices = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%filtParam = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%oneMinusFiltParam = ReKiBuf(Re_Xferred)
