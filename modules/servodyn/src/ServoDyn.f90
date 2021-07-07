@@ -2475,33 +2475,33 @@ END SUBROUTINE SrvD_CalcConstrStateResidual
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du and dX/du are returned.
 SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
-   real(DbKi),                             intent(in   )           :: t          !< Time in seconds at operating point
-   type(SrvD_InputType),                   intent(inout)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   type(SrvD_ParameterType),               intent(in   )           :: p          !< Parameters
-   type(SrvD_ContinuousStateType),         intent(in   )           :: x          !< Continuous states at operating point
-   type(SrvD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
-   type(SrvD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
-   type(SrvD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
-   type(SrvD_OutputType),                  intent(inout)           :: y          !< Output (change to inout if a mesh copy is required);
-                                                                                 !!   Output fields are not used by this routine, but type is
-                                                                                 !!   available here so that mesh parameter information (i.e.,
-                                                                                 !!   connectivity) does not have to be recalculated for dYdu.
-   type(SrvD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
-   integer(IntKi),                         intent(  out)           :: ErrStat    !< Error status of the operation
-   character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   real(R8Ki), allocatable, optional,      intent(inout)           :: dYdu(:,:)  !< Partial derivatives of output functions
-                                                                                 !!   (Y) with respect to the inputs (u) [intent in to avoid deallocation]
-   real(R8Ki), allocatable, optional,      intent(inout)           :: dXdu(:,:)  !< Partial derivatives of continuous state
-                                                                                 !!   functions (X) with respect to inputs (u) [intent in to avoid deallocation]
-   real(R8Ki), allocatable, optional,      intent(inout)           :: dXddu(:,:) !< Partial derivatives of discrete state
-                                                                                 !!   functions (Xd) with respect to inputs (u) [intent in to avoid deallocation]
-   real(R8Ki), allocatable, optional,      intent(inout)           :: dZdu(:,:)  !< Partial derivatives of constraint state
-                                                                                 !!   functions (Z) with respect to inputs (u) [intent in to avoid deallocation]
+   real(DbKi),                         intent(in   )  :: t          !< Time in seconds at operating point
+   type(SrvD_InputType),               intent(inout)  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   type(SrvD_ParameterType),           intent(in   )  :: p          !< Parameters
+   type(SrvD_ContinuousStateType),     intent(in   )  :: x          !< Continuous states at operating point
+   type(SrvD_DiscreteStateType),       intent(in   )  :: xd         !< Discrete states at operating point
+   type(SrvD_ConstraintStateType),     intent(in   )  :: z          !< Constraint states at operating point
+   type(SrvD_OtherStateType),          intent(in   )  :: OtherState !< Other states at operating point
+   type(SrvD_OutputType),              intent(inout)  :: y          !< Output (change to inout if a mesh copy is required);
+                                                                    !!   Output fields are not used by this routine, but type is
+                                                                    !!   available here so that mesh parameter information (i.e.,
+                                                                    !!   connectivity) does not have to be recalculated for dYdu.
+   type(SrvD_MiscVarType),             intent(inout)  :: m          !< Misc/optimization variables
+   integer(IntKi),                     intent(  out)  :: ErrStat    !< Error status of the operation
+   character(*),                       intent(  out)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   real(R8Ki), allocatable, optional,  intent(inout)  :: dYdu(:,:)  !< Partial derivatives of output functions
+                                                                    !!   (Y) with respect to the inputs (u) [intent in to avoid deallocation]
+   real(R8Ki), allocatable, optional,  intent(inout)  :: dXdu(:,:)  !< Partial derivatives of continuous state
+                                                                    !!   functions (X) with respect to inputs (u) [intent in to avoid deallocation]
+   real(R8Ki), allocatable, optional,  intent(inout)  :: dXddu(:,:) !< Partial derivatives of discrete state
+                                                                    !!   functions (Xd) with respect to inputs (u) [intent in to avoid deallocation]
+   real(R8Ki), allocatable, optional,  intent(inout)  :: dZdu(:,:)  !< Partial derivatives of constraint state
+                                                                    !!   functions (Z) with respect to inputs (u) [intent in to avoid deallocation]
 
       ! local variables
-   integer(IntKi)                                                  :: ErrStat2               ! Error status of the operation
-   character(ErrMsgLen)                                            :: ErrMsg2                ! Error message if ErrStat /= ErrID_None
-   character(*), parameter                                         :: RoutineName = 'SrvD_JacobianPInput'
+   integer(IntKi)                                     :: ErrStat2               ! Error status of the operation
+   character(ErrMsgLen)                               :: ErrMsg2                ! Error message if ErrStat /= ErrID_None
+   character(*), parameter                            :: RoutineName = 'SrvD_JacobianPInput'
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -2535,25 +2535,25 @@ END SUBROUTINE SrvD_JacobianPInput
 
 !> Calculate the jacobian dYdu
 subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu )
-   real(DbKi),                             intent(in   )           :: t          !< Time in seconds at operating point
-   type(SrvD_InputType),                   intent(inout)           :: u          !< Inputs at operating point (out for copy only)
-   type(SrvD_ParameterType),               intent(in   )           :: p          !< Parameters
-   type(SrvD_ContinuousStateType),         intent(in   )           :: x          !< Continuous states at operating point
-   type(SrvD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
-   type(SrvD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
-   type(SrvD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
-   type(SrvD_OutputType),                  intent(inout)           :: y          !< Output (need to make copies)
-   type(SrvD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
-   integer(IntKi),                         intent(  out)           :: ErrStat    !< Error status of the operation
-   character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   real(R8Ki), allocatable, optional,      intent(inout)           :: dYdu(:,:)  !< Partial derivatives of output functions
+   real(DbKi),                      intent(in   )  :: t           !< Time in seconds at operating point
+   type(SrvD_InputType),            intent(inout)  :: u           !< Inputs at operating point (out for copy only)
+   type(SrvD_ParameterType),        intent(in   )  :: p           !< Parameters
+   type(SrvD_ContinuousStateType),  intent(in   )  :: x           !< Continuous states at operating point
+   type(SrvD_DiscreteStateType),    intent(in   )  :: xd          !< Discrete states at operating point
+   type(SrvD_ConstraintStateType),  intent(in   )  :: z           !< Constraint states at operating point
+   type(SrvD_OtherStateType),       intent(in   )  :: OtherState  !< Other states at operating point
+   type(SrvD_OutputType),           intent(inout)  :: y           !< Output (need to make copies)
+   type(SrvD_MiscVarType),          intent(inout)  :: m           !< Misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   real(R8Ki), allocatable,         intent(inout)  :: dYdu(:,:)   !< Partial derivatives of output functions
 
-   integer(IntKi)                   :: i,j,k,n                 ! Generic loop index
-   type(SrvD_InputType)             :: u_perturb               ! copy of inputs to perturb
-   type(SrvD_OutputType)            :: y_p                     ! outputs positive perturbed
-   type(SrvD_OutputType)            :: y_m                     ! outputs negative perturbed
-   real(R8Ki)                       :: delta_p                 ! delta+ change in input or state
-   real(R8Ki)                       :: delta_m                 ! delta- change in input or state
+   integer(IntKi)                   :: n           ! Generic loop index
+   type(SrvD_InputType)             :: u_perturb   ! copy of inputs to perturb
+   type(SrvD_OutputType)            :: y_p         ! outputs positive perturbed
+   type(SrvD_OutputType)            :: y_m         ! outputs negative perturbed
+   real(R8Ki)                       :: delta_p     ! delta+ change in input or state
+   real(R8Ki)                       :: delta_m     ! delta- change in input or state
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
    character(*), parameter          :: RoutineName = 'Jac_dYdu'
@@ -2686,6 +2686,7 @@ contains
    !> Subroutine for the yaw and generator portions of the dYdu matrix (first three rows of dYdu)
    !!    This is part of dYdu uses analytical results
    subroutine dYdu_YawGen()
+      integer(IntKi)          :: i                       ! Generic indices
       real(R8Ki)              :: GenTrq_du, ElecPwr_du   ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
       integer,parameter       :: Indx_u_Yaw     = 1
       integer,parameter       :: Indx_u_YawRate = 2
@@ -2935,24 +2936,24 @@ end subroutine Jac_dYdu
 !> Calculate the jacobian dXdu
 !! The only states exist with the StC instances 
 subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
-   real(DbKi),                             intent(in   )           :: t          !< Time in seconds at operating point
-   type(SrvD_InputType),                   intent(inout)           :: u          !< Inputs at operating point (out for copy only)
-   type(SrvD_ParameterType),               intent(in   )           :: p          !< Parameters
-   type(SrvD_ContinuousStateType),         intent(in   )           :: x          !< Continuous states at operating point
-   type(SrvD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
-   type(SrvD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
-   type(SrvD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
-   type(SrvD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
-   integer(IntKi),                         intent(  out)           :: ErrStat    !< Error status of the operation
-   character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   real(R8Ki), allocatable, optional,      intent(inout)           :: dXdu(:,:)  !< Partial derivatives of output functions
+   real(DbKi),                      intent(in   )  :: t           !< Time in seconds at operating point
+   type(SrvD_InputType),            intent(inout)  :: u           !< Inputs at operating point (out for copy only)
+   type(SrvD_ParameterType),        intent(in   )  :: p           !< Parameters
+   type(SrvD_ContinuousStateType),  intent(in   )  :: x           !< Continuous states at operating point
+   type(SrvD_DiscreteStateType),    intent(in   )  :: xd          !< Discrete states at operating point
+   type(SrvD_ConstraintStateType),  intent(in   )  :: z           !< Constraint states at operating point
+   type(SrvD_OtherStateType),       intent(in   )  :: OtherState  !< Other states at operating point
+   type(SrvD_MiscVarType),          intent(inout)  :: m           !< Misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   real(R8Ki), allocatable,         intent(inout)  :: dXdu(:,:)   !< Partial derivatives of output functions
 
-   integer(IntKi)                   :: i,j,k,n                 ! Generic loop index
-   type(SrvD_InputType)             :: u_perturb               ! copy of inputs to perturb
-   type(SrvD_ContinuousStateType)   :: dx_p                    ! states  positive perturbed
-   type(SrvD_ContinuousStateType)   :: dx_m                    ! states  negative perturbed
-   real(R8Ki)                       :: delta_p                 ! delta+ change in input or state
-   real(R8Ki)                       :: delta_m                 ! delta- change in input or state
+   integer(IntKi)                   :: n           ! Generic loop index
+   type(SrvD_InputType)             :: u_perturb   ! copy of inputs to perturb
+   type(SrvD_ContinuousStateType)   :: dx_p        ! states  positive perturbed
+   type(SrvD_ContinuousStateType)   :: dx_m        ! states  negative perturbed
+   real(R8Ki)                       :: delta_p     ! delta+ change in input or state
+   real(R8Ki)                       :: delta_m     ! delta- change in input or state
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
    character(*), parameter          :: RoutineName = 'Jac_dXdu'
@@ -2988,6 +2989,7 @@ subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
       call SrvD_CopyContState( x, dx_p,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
       call SrvD_CopyContState( x, dx_m,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
    endif
+   !-------------------
    ! Blade StC
    if (p%NumBStC > 0) then
       do n=p%Jac_Idx_BStC_u(1),p%Jac_Idx_BStC_u(2)       ! input range for BStC
@@ -3079,7 +3081,7 @@ contains
       call SrvD_DestroyContState( dx_m,   ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 
-   !> Calculated dYdu for BStC instance
+   !> Calculated dXdu for BStC instance
    subroutine Jac_BStC_dXdu( n, sgn, u_perturb, delta, x_perturb, ErrStat3, ErrMsg3)
       integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
       integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
@@ -3106,7 +3108,7 @@ contains
       call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
    end subroutine Jac_BStC_dXdu
 
-   !> Calculated dYdu for NStC instance
+   !> Calculated dXdu for NStC instance
    subroutine Jac_NStC_dXdu( n, sgn, u_perturb, delta, x_perturb, ErrStat3, ErrMsg3)
       integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
       integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
@@ -3132,7 +3134,7 @@ contains
       call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
    end subroutine Jac_NStC_dXdu
 
-   !> Calculated dYdu for TStC instance
+   !> Calculated dXdu for TStC instance
    subroutine Jac_TStC_dXdu( n, sgn, u_perturb, delta, x_perturb, ErrStat3, ErrMsg3)
       integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
       integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
@@ -3158,7 +3160,7 @@ contains
       call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
    end subroutine Jac_TStC_dXdu
 
-   !> Calculated dYdu for SStC instance
+   !> Calculated dXdu for SStC instance
    subroutine Jac_SStC_dXdu( n, sgn, u_perturb, delta, x_perturb, ErrStat3, ErrMsg3)
       integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
       integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
@@ -3546,12 +3548,12 @@ subroutine Jac_dYdx( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx 
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    real(R8Ki), allocatable,         intent(inout)  :: dYdx(:,:)   !< Partial derivatives of output functions
 
-   integer(IntKi)                   :: n                          ! Generic loop index -- index to x for perturb
-   type(SrvD_OutputType)            :: y_p                        ! outputs positive perturbed
-   type(SrvD_OutputType)            :: y_m                        ! outputs negative perturbed
-   type(SrvD_ContinuousStateType)   :: x_temp                     ! copy of inputs to perturb
-   real(R8Ki)                       :: delta_p                    ! delta+ change in input or state
-   real(R8Ki)                       :: delta_m                    ! delta- change in input or state
+   integer(IntKi)                   :: n           ! Generic loop index -- index to x for perturb
+   type(SrvD_OutputType)            :: y_p         ! outputs positive perturbed
+   type(SrvD_OutputType)            :: y_m         ! outputs negative perturbed
+   type(SrvD_ContinuousStateType)   :: x_temp      ! copy of inputs to perturb
+   real(R8Ki)                       :: delta_p     ! delta+ change in input or state
+   real(R8Ki)                       :: delta_m     ! delta- change in input or state
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
    character(*), parameter          :: RoutineName = 'Jac_dYdx'
@@ -3675,7 +3677,7 @@ contains
       call SrvD_DestroyOutput(    y_m,    ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 
-   !> Calculated dYdu for BStC instance
+   !> Calculated dYdx for BStC instance
    subroutine Jac_BStC_dYdx( n, sgn, x_perturb, delta, y_perturb, ErrStat3, ErrMsg3)
       integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
       integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
@@ -3712,7 +3714,7 @@ contains
 !      enddo
    end subroutine Jac_BStC_dYdx
 
-   !> Calculated dYdu for NStC instance
+   !> Calculated dYdx for NStC instance
    subroutine Jac_NStC_dYdx( n, sgn, x_perturb, delta, y_perturb, ErrStat3, ErrMsg3)
       integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
       integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
@@ -3748,7 +3750,7 @@ contains
 !      enddo
    end subroutine Jac_NStC_dYdx
 
-   !> Calculated dYdu for TStC instance
+   !> Calculated dYdx for TStC instance
    subroutine Jac_TStC_dYdx( n, sgn, x_perturb, delta, y_perturb, ErrStat3, ErrMsg3)
       integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
       integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
@@ -3784,7 +3786,7 @@ contains
 !      enddo
    end subroutine Jac_TStC_dYdx
 
-   !> Calculated dYdu for SStC instance
+   !> Calculated dYdx for SStC instance
    subroutine Jac_SStC_dYdx( n, sgn, x_perturb, delta, y_perturb, ErrStat3, ErrMsg3)
       integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
       integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
