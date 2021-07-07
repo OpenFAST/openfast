@@ -447,6 +447,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: StCMeasNumPerChan      !< Number of cable StC channel to average on each control channel sent to DLL [-]
     LOGICAL  :: UseSC      !< Supercontroller on/off flag [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_x_indx      !< matrix to help fill/pack the x vector in computing the jacobian [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_nu      !< number of inputs in jacobian matrix [-]
@@ -11832,6 +11833,20 @@ IF (ALLOCATED(SrcParamData%Jac_u_indx)) THEN
   END IF
     DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
 ENDIF
+IF (ALLOCATED(SrcParamData%Jac_x_indx)) THEN
+  i1_l = LBOUND(SrcParamData%Jac_x_indx,1)
+  i1_u = UBOUND(SrcParamData%Jac_x_indx,1)
+  i2_l = LBOUND(SrcParamData%Jac_x_indx,2)
+  i2_u = UBOUND(SrcParamData%Jac_x_indx,2)
+  IF (.NOT. ALLOCATED(DstParamData%Jac_x_indx)) THEN 
+    ALLOCATE(DstParamData%Jac_x_indx(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_x_indx.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%Jac_x_indx = SrcParamData%Jac_x_indx
+ENDIF
 IF (ALLOCATED(SrcParamData%du)) THEN
   i1_l = LBOUND(SrcParamData%du,1)
   i1_u = UBOUND(SrcParamData%du,1)
@@ -11933,6 +11948,9 @@ IF (ALLOCATED(ParamData%StCMeasNumPerChan)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%Jac_u_indx)) THEN
   DEALLOCATE(ParamData%Jac_u_indx)
+ENDIF
+IF (ALLOCATED(ParamData%Jac_x_indx)) THEN
+  DEALLOCATE(ParamData%Jac_x_indx)
 ENDIF
 IF (ALLOCATED(ParamData%du)) THEN
   DEALLOCATE(ParamData%du)
@@ -12231,6 +12249,11 @@ ENDIF
   IF ( ALLOCATED(InData%Jac_u_indx) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Jac_u_indx upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_u_indx)  ! Jac_u_indx
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Jac_x_indx allocated yes/no
+  IF ( ALLOCATED(InData%Jac_x_indx) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Jac_x_indx upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_x_indx)  ! Jac_x_indx
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! du allocated yes/no
   IF ( ALLOCATED(InData%du) ) THEN
@@ -12801,6 +12824,26 @@ ENDIF
       DO i2 = LBOUND(InData%Jac_u_indx,2), UBOUND(InData%Jac_u_indx,2)
         DO i1 = LBOUND(InData%Jac_u_indx,1), UBOUND(InData%Jac_u_indx,1)
           IntKiBuf(Int_Xferred) = InData%Jac_u_indx(i1,i2)
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Jac_x_indx) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Jac_x_indx,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Jac_x_indx,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Jac_x_indx,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Jac_x_indx,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%Jac_x_indx,2), UBOUND(InData%Jac_x_indx,2)
+        DO i1 = LBOUND(InData%Jac_x_indx,1), UBOUND(InData%Jac_x_indx,1)
+          IntKiBuf(Int_Xferred) = InData%Jac_x_indx(i1,i2)
           Int_Xferred = Int_Xferred + 1
         END DO
       END DO
@@ -13544,6 +13587,29 @@ ENDIF
       DO i2 = LBOUND(OutData%Jac_u_indx,2), UBOUND(OutData%Jac_u_indx,2)
         DO i1 = LBOUND(OutData%Jac_u_indx,1), UBOUND(OutData%Jac_u_indx,1)
           OutData%Jac_u_indx(i1,i2) = IntKiBuf(Int_Xferred)
+          Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Jac_x_indx not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Jac_x_indx)) DEALLOCATE(OutData%Jac_x_indx)
+    ALLOCATE(OutData%Jac_x_indx(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Jac_x_indx.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%Jac_x_indx,2), UBOUND(OutData%Jac_x_indx,2)
+        DO i1 = LBOUND(OutData%Jac_x_indx,1), UBOUND(OutData%Jac_x_indx,1)
+          OutData%Jac_x_indx(i1,i2) = IntKiBuf(Int_Xferred)
           Int_Xferred = Int_Xferred + 1
         END DO
       END DO

@@ -440,6 +440,7 @@ typedef	^	ParameterType	IntKi	StCMeasNumPerChan	{:}	-	-	"Number of cable StC cha
 typedef ^       ParameterType   LOGICAL UseSC   -       -       -       "Supercontroller on/off flag" -
 # parameters for linearization
 typedef  ^  ParameterType  Integer  Jac_u_indx  {:}{:} - -  "matrix to help fill/pack the u vector in computing the jacobian"   -
+typedef  ^  ParameterType  Integer  Jac_x_indx  {:}{:} - -  "matrix to help fill/pack the x vector in computing the jacobian"   -
 typedef  ^  ParameterType  R8Ki     du          {:}    - -  "vector that determines size of perturbation for u (inputs)"
 typedef  ^  ParameterType  ReKi     dx          {:}    - -  "vector that determines size of perturbation for x (continuous states)"
 typedef  ^  ParameterType  Integer  Jac_nu      -      - -  "number of inputs in jacobian matrix"   -
