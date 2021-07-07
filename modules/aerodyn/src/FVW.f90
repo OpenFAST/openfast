@@ -208,7 +208,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       call AllocAry( m%W(iW)%alpha_LL,        p%W(iW)%nSpan  , 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%alpha_LL= -999999_ReKi;
       call AllocAry( m%W(iW)%Vreln_LL,        p%W(iW)%nSpan  , 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vreln_LL = -999999_ReKi;
       ! Variables at control points/elements
-      call AllocAry( m%W(iW)%CP_LL   , 3   ,  p%W(iW)%nSpan, 'Control points LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%CP_LL= -999999_ReKi;
+      call AllocAry( m%W(iW)%CP      , 3   ,  p%W(iW)%nSpan, 'Control points LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%CP= -999999_ReKi;
       call AllocAry( m%W(iW)%Tang    , 3   ,  p%W(iW)%nSpan, 'Tangential vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Tang= -999999_ReKi;
       call AllocAry( m%W(iW)%Norm    , 3   ,  p%W(iW)%nSpan, 'Normal     vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Norm= -999999_ReKi;
       call AllocAry( m%W(iW)%Orth    , 3   ,  p%W(iW)%nSpan, 'Orthogonal vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Orth= -999999_ReKi;
@@ -441,12 +441,12 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
       p%W(iW)%AFindx = InitInp%W(iW)%AFindx     ! Copying in case AD15 still needs these
       p%W(iW)%iRotor = InitInp%W(iW)%iRotor    
 
-      p%W(iW)%nSpan  = size(InitInp%W(iW)%Chord)-1
-      call move_alloc(InitInp%W(iW)%Chord, p%W(iW)%Chord)
-      call AllocAry(p%W(iW)%s_LL       , p%W(iW)%nSpan+1, 'Spanwise coord LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%s_LL= -999999_ReKi;
-      call AllocAry(p%W(iW)%s_CP_LL    , p%W(iW)%nSpan  , 'Spanwise coord CPll', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%s_CP_LL= -999999_ReKi;
-      call AllocAry(p%W(iW)%chord_LL   , p%W(iW)%nSpan+1, 'Chord on LL        ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%chord_LL= -999999_ReKi;
-      call AllocAry(p%W(iW)%chord_CP_LL, p%W(iW)%nSpan  , 'Chord on CP LL     ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%chord_CP_LL= -999999_ReKi;
+      p%W(iW)%nSpan  = size(InitInp%W(iW)%chord)-1
+      call move_alloc(InitInp%W(iW)%chord, p%W(iW)%chord_LL)
+      call AllocAry(p%W(iW)%s_LL    , p%W(iW)%nSpan+1, 'Spanwise coord LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%s_LL= -999999_ReKi;
+      call AllocAry(p%W(iW)%s_CP    , p%W(iW)%nSpan  , 'Spanwise coord CPll', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%s_CP= -999999_ReKi;
+      !call AllocAry(p%W(iW)%chord_LL   , p%W(iW)%nSpan+1, 'Chord on LL        ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%chord_LL= -999999_ReKi;
+      call AllocAry(p%W(iW)%chord_CP, p%W(iW)%nSpan  , 'Chord on CP LL     ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%chord_CP= -999999_ReKi;
    enddo
 
    ! --- Distributing wings to rotors
@@ -514,12 +514,12 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
       if (InputFileData%CirculationMethod==idCircPrescribed) then 
          call AllocAry(p%W(iW)%PrescribedCirculation,  p%W(iW)%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters');
          p%W(iW)%PrescribedCirculation = -999999_ReKi;
-         if (.not. allocated(p%W(iW)%s_CP_LL)) then
+         if (.not. allocated(p%W(iW)%s_CP)) then
             ErrMsg  = 'Spanwise coordinate not allocated.'
             ErrStat = ErrID_Fatal
             return
          endif
-         call ReadAndInterpGamma(trim(InputFileData%CirculationFile), p%W(iW)%s_CP_LL(1:p%W(iW)%nSpan), p%W(iW)%s_LL(p%W(iW)%nSpan+1), p%W(iW)%PrescribedCirculation, ErrStat2, ErrMsg2)
+         call ReadAndInterpGamma(trim(InputFileData%CirculationFile), p%W(iW)%s_CP(1:p%W(iW)%nSpan), p%W(iW)%s_LL(p%W(iW)%nSpan+1), p%W(iW)%PrescribedCirculation, ErrStat2, ErrMsg2)
          call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' ); 
       endif
    enddo
@@ -704,7 +704,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
          ! States x2
          call FVW_CopyContState(x, m%x2, 0, ErrStat2, ErrMsg2) ! Backup current state at t+DTfvw
          m%t2=t+p%DTfvw
-         !! Inputs at t+DTfvw (Wings Panelling updates CP_LL, and VstW(iW)%r_LL) 
+         !! Inputs at t+DTfvw (Wings Panelling updates CP, and VstW(iW)%r_LL) 
          !call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+p%DTfvw, ErrStat2, ErrMsg2); if(Failed()) return
          !call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
          !! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
@@ -731,7 +731,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       call FVW_ContStates_Interp(t+p%DTaero, (/m%x1, m%x2/), (/m%t1, m%t2/), p, m, x, ErrStat2, ErrMsg2); if(Failed()) return
    endif
 
-   ! Inputs at t+DTaero (Wings Panelling updates CP_LL, and VstW(iW)%r_LL) 
+   ! Inputs at t+DTaero (Wings Panelling updates CP, and VstW(iW)%r_LL) 
    call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+p%DTaero, ErrStat2, ErrMsg2); if(Failed()) return
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
@@ -1324,7 +1324,7 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    ErrMsg  = ""
 
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-   ! TODO ANDY: replace with direct call to inflow wind at m%W(iW)%CP_LL location
+   ! TODO ANDY: replace with direct call to inflow wind at m%W(iW)%CP location
    ! input: V_wind, output: m%W%Vwnd_LL
    CALL DistributeRequestedWind_LL(u%V_wind, p, m)
 
@@ -1361,7 +1361,7 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
    ErrMsg  = ""
 !       ! --- NOTE: this below might not be needed
 !       ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-!       ! TODO ANDY: replace with direct call to inflow wind at m%W(iW)%CP_LL location
+!       ! TODO ANDY: replace with direct call to inflow wind at m%W(iW)%CP location
 !       CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
 ! 
 !       ! Control points location and structural velocity
@@ -1372,7 +1372,7 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
 !    CALL Wings_ComputeCirculation(t, m%W(iW)%Gamma_LL, z%W(iW)%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
 
    !--- Induction on the lifting line control point
-   ! if     InductionAtCP : In: m%W%CP_LL,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+   ! if     InductionAtCP : In: m%W%CP,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
    ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
    call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    ! Transfer to output
@@ -1541,7 +1541,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
          ! ---Condensed version of "BEMT_Set_UA_InitData"
          allocate(Init_UA_Data%c(InitInp%numBladeNodes,1), STAT = errStat2)
          do i = 1,InitInp%numBladeNodes
-            Init_UA_Data%c(i,1)      = p%W(iW)%chord(i) ! NOTE: InitInp chord move-allocd to p
+            Init_UA_Data%c(i,1)      = p%W(iW)%chord_LL(i) ! NOTE: InitInp chord move-allocd to p
          end do
          Init_UA_Data%dt              = interval          
          Init_UA_Data%OutRootName     = InitInp%RootName
@@ -1604,7 +1604,7 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    ErrMsg   = ""
 
    ! --- Induction on the lifting line control points
-   ! if     InductionAtCP : In: m%W%CP_LL,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+   ! if     InductionAtCP : In: m%W%CP,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
    ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
    call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Ca;lcultateInputsAndOtherStatesForUA'); if (ErrStat >= AbortErrLev) return
    if (p%InductionAtCP) then
@@ -1623,7 +1623,7 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
          ! NOTE: To be consistent with CalcOutput we take Vwind_LL that was set using m%DisturbedInflow from AeroDyn.. 
          ! This is not clean, but done to be consistent, waiting for AeroDyn to handle UA
          call AlphaVrel_Generic(u%WingsMesh(iW)%Orientation(1:3,1:3,i), u%WingsMesh(iW)%TranslationVel(1:3,i),  m%W(iW)%Vind_LL(1:3,i), u%W(iW)%Vwnd_LL(1:3,i), &
-                                 p%KinVisc, p%W(iW)%Chord(i), u_UA%U, u_UA%alpha, u_UA%Re)
+                                 p%KinVisc, p%W(iW)%chord_LL(i), u_UA%U, u_UA%alpha, u_UA%Re)
          u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
          u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
          u_UA%omega    = u%W(iW)%omega_z(i)
@@ -1697,15 +1697,19 @@ subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, Err
    real(ReKi)                  :: Cl_dyn, Cl_dyn_prev, Cl_dyn_avg
    real(ReKi)                  :: Gamma_dyn, Gamma_dyn_prev, Gamma_dyn_avg
    type(UA_InputType), pointer :: u_UA ! Alias to shorten notations
-   integer(IntKi), parameter   :: InputIndex=2      ! we will always use values at t+dt in this routine
+   integer(IntKi), parameter   :: InputIndex=1      ! we will always use values at t+dt in this routine
    integer(intKi)              :: iW, j ! loop counter on wings and nodes
-   integer(intKi)              :: ErrStat2
-   character(ErrMsgLen)        :: ErrMsg2
+   integer(intKi)              :: errStat2
+   character(ErrMsgLen)        :: errMsg2
 
    ErrStat = 0
    ErrMsg = ""
+   print*,'------------------------------------------------------------------'
+   print*,'t ',t
 
    do iW=1,p%nWings
+      ! Gamma_LL is expressed at CP, so we average the dynamic gamma from both nodes
+      ! NOTE: this is inconsistent with the Wings solving which occurs at the CPs
       j=1
       u_UA => m%W(iW)%u_UA(j,InputIndex) ! Alias
       call UA_CalcOutput(j, 1, t, u_UA, m%W(iW)%p_UA, x%UA(iW), xd%UA(iW), OtherState%UA(iW), AFInfo(p%W(iW)%AFindx(j,1)), m%W(iW)%y_UA, m%W(iW)%m_UA, errStat2, errMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_SetGammaDyn')
@@ -1718,6 +1722,8 @@ subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, Err
          Gamma_dyn_prev = Gamma_dyn
          z%W(iW)%Gamma_LL(j-1) = Gamma_dyn_avg
          !print*,z%W(iW)%Gamma_LL(j-1), Gamma_dyn, Gamma_dyn_avg
+         !y%WriteOutput( OutIdx ) = 0.5_ReKi * p%BEMT%chord(IdxNode,IdxBlade) * m%BEMT_y%Vrel(IdxNode,IdxBlade) * m%BEMT_y%Cl(IdxNode,IdxBlade) ! "Gam" [m^2/s]
+         !y%WriteOutput( OutIdx ) = 0.5_ReKi * p_AD%FVW%W(iW)%Chord(IdxNode) * m_AD%FVW%W(iW)%BN_Vrel(IdxNode) * m_AD%FVW%W(iW)%BN_Cl(IdxNode) ! "Gam" [m^2/s]
       enddo
    enddo ! iW, Loop on wings
 end subroutine UA_SetGammaDyn

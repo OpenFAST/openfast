@@ -386,7 +386,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'BldPointCP.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
-         call vtk_dataset_polydata(m%W(iW)%CP_LL(1:3,1:p%W(iW)%nSpan),mvtk,bladeFrame)
+         call vtk_dataset_polydata(m%W(iW)%CP(1:3,1:p%W(iW)%nSpan),mvtk,bladeFrame)
          call vtk_point_data_init(mvtk)
          call vtk_point_data_scalar(z%W(iW)%Gamma_LL(    1:p%W(iW)%nSpan),'Gamma_LL',mvtk)
          call vtk_point_data_vector(m%W(iW)%Vind_CP (1:3,1:p%W(iW)%nSpan),'Vind_CP',mvtk)

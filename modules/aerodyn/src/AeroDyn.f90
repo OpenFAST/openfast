@@ -2161,7 +2161,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Vwnd = m%rotors(iR)%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow
             theta = m%FVW%W(iW)%PitchAndTwist(j) ! TODO
             call FVW_AeroOuts( m%rotors(iR)%WithoutSweepPitchTwist(1:3,1:3,j,k), u%rotors(iR)%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
-                        theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%rotors(iR)%KinVisc, p%FVW%W(iW)%Chord(j), &               ! inputs
+                        theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%rotors(iR)%KinVisc, p%FVW%W(iW)%chord_LL(j), &               ! inputs
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s(1:3), ErrStat2, ErrMsg2 )        ! outputs
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
 
@@ -2196,9 +2196,9 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Cy = Cl_dyn*sp - Cd_dyn*cp
 
             q = 0.5 * p%rotors(iR)%airDens * Vrel**2                ! dynamic pressure of the jth node in the kth blade
-            force(1) =  Cx * q * p%FVW%W(iW)%Chord(j)        ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
-            force(2) = -Cy * q * p%FVW%W(iW)%Chord(j)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-            moment(3)=  Cm_dyn * q * p%FVW%W(iW)%Chord(j)**2 ! M = pitching moment per unit length of the jth node in the kth blade
+            force(1) =  Cx * q * p%FVW%W(iW)%chord_LL(j)        ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
+            force(2) = -Cy * q * p%FVW%W(iW)%chord_LL(j)        ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
+            moment(3)=  Cm_dyn * q * p%FVW%W(iW)%chord_LL(j)**2 ! M = pitching moment per unit length of the jth node in the kth blade
 
                ! save these values for possible output later:
             m%rotors(iR)%X(j,k) = force(1)

@@ -534,7 +534,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    do iW=1,p%nWings
       iP_start = iP_end+1
       iP_end   = iP_start-1 + p%W(iW)%nSpan
-      r_wind(1:3,iP_start:iP_end) = m%W(iW)%CP_LL(1:3,1:p%W(iW)%nSpan)
+      r_wind(1:3,iP_start:iP_end) = m%W(iW)%CP(1:3,1:p%W(iW)%nSpan)
    enddo
    ! --- NW points
    do iW=1,p%nWings
@@ -920,9 +920,9 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
       else if (p%RegDeterMethod==idRegDeterChord) then
          ! Using chord to scale the reg param
          do iSpan=1,p%W(iW)%nSpan
-            x%W(iW)%Eps_NW(1:3, iSpan, 1) = p%WingRegParam * p%W(iW)%chord_CP_LL(iSpan)
+            x%W(iW)%Eps_NW(1:3, iSpan, 1) = p%WingRegParam * p%W(iW)%chord_CP(iSpan)
             if (p%nNWMax>1) then
-               x%W(iW)%Eps_NW(1:3, iSpan, 2) = p%WakeRegParam * p%W(iW)%chord_CP_LL(iSpan)
+               x%W(iW)%Eps_NW(1:3, iSpan, 2) = p%WakeRegParam * p%W(iW)%chord_CP(iSpan)
             endif
          enddo
 
@@ -1228,7 +1228,7 @@ end subroutine WakeInducedVelocities
 !! In : x%W(iW)%r_NW, x%W(iW)%r_FW, x%W(iW)%Gamma_NW, x%W(iW)%Gamma_FW
 !! Out: m%W(iW)%Vind_CP
 subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, ErrStat, ErrMsg)
-   !real(ReKi), dimension(:,:,:),    intent(in   ) :: CP_LL   !< Control points where velocity is to be evaluated
+   !real(ReKi), dimension(:,:,:),    intent(in   ) :: CP   !< Control points where velocity is to be evaluated
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    logical,                         intent(in   ) :: InductionAtCP !< Compute induction at CP or on LL nodes
@@ -1294,7 +1294,7 @@ contains
       iHeadP=1
       if (InductionAtCP) then
          do iW=1,p%nWings
-            call LatticeToPoints2D(m%W(iW)%CP_LL(1:3,:), CPs, iHeadP)
+            call LatticeToPoints2D(m%W(iW)%CP(1:3,:), CPs, iHeadP)
          enddo
       else
          do iW=1,p%nWings
@@ -1320,9 +1320,9 @@ contains
          enddo
          ! --- Transfer CP to LL (Linear interpolation for interior points and extrapolations at boundaries)
          do iW=1,p%nWings
-            call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(1,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(1,:))
-            call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(2,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(2,:))
-            call interpextrap_cp2node(p%W(iW)%s_CP_LL(:), m%W(iW)%Vind_CP(3,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(3,:))
+            call interpextrap_cp2node(p%W(iW)%s_CP(:), m%W(iW)%Vind_CP(1,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(1,:))
+            call interpextrap_cp2node(p%W(iW)%s_CP(:), m%W(iW)%Vind_CP(2,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(2,:))
+            call interpextrap_cp2node(p%W(iW)%s_CP(:), m%W(iW)%Vind_CP(3,:), p%W(iW)%s_LL(:), m%W(iW)%Vind_LL(3,:))
          enddo
       else
          do iW=1,p%nWings

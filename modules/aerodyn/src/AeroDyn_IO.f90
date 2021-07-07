@@ -1973,7 +1973,7 @@ CONTAINS
             m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
             m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
 
-            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%Chord(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
+            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%chord_LL(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
          end do ! nodes
       end do ! blades
 
