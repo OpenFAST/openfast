@@ -813,8 +813,10 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
                                    dYdu=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%D )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
-      call SrvD_JacobianPContState( t_global, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), SrvD%OtherSt(STATE_CURR), &
-                                     SrvD%y, SrvD%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%C )   !, dXdx=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%A )
+      call SrvD_JacobianPContState( t_global, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
+                                       SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, ErrStat2, ErrMsg2, &
+                                       dYdx=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%C, &
+                                       dXdx=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%A )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       ! get the operating point
@@ -844,7 +846,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
             ! Jacobians
          if (p_FAST%LinOutJac) then
             ! Jacobians
-!            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx')
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx')
             call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_u)
             call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_y)
             call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_y, &

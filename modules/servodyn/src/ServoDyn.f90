@@ -3514,8 +3514,8 @@ SUBROUTINE SrvD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    END IF
 
    IF ( PRESENT( dXdx ) ) THEN
-!      call Jac_dXdx( t, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2, dXdx )
-!      if (Failed())  return
+      call Jac_dXdx( t, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2, dXdx )
+      if (Failed())  return
    END IF
 
    IF ( PRESENT( dXddx ) ) THEN
@@ -3823,6 +3823,243 @@ contains
    end subroutine Jac_SStC_dYdx
 end subroutine Jac_dYdx
 
+!> Calculate the jacobian dXdx
+!! The only states exist with the StC instances
+subroutine Jac_dXdx(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdx)
+   real(DbKi),                      intent(in   )  :: t           !< Time in seconds at operating point
+   type(SrvD_InputType),            intent(in   )  :: u           !< Inputs at operating point
+   type(SrvD_ParameterType),        intent(in   )  :: p           !< Parameters
+   type(SrvD_ContinuousStateType),  intent(in   )  :: x           !< Continuous states at operating point
+   type(SrvD_DiscreteStateType),    intent(in   )  :: xd          !< Discrete states at operating point
+   type(SrvD_ConstraintStateType),  intent(in   )  :: z           !< Constraint states at operating point
+   type(SrvD_OtherStateType),       intent(in   )  :: OtherState  !< Other states at operating point
+   type(SrvD_MiscVarType),          intent(inout)  :: m           !< Misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   real(R8Ki), allocatable,         intent(inout)  :: dXdx(:,:)   !< Partial derivatives of output functions
+
+   integer(IntKi)                   :: n           ! Generic loop index
+   type(SrvD_ContinuousStateType)   :: dx_p        ! states  positive perturbed
+   type(SrvD_ContinuousStateType)   :: dx_m        ! states  negative perturbed
+   type(SrvD_ContinuousStateType)   :: x_temp      ! copy of states to perturb
+   real(R8Ki)                       :: delta_p     ! delta+ change in input or state
+   real(R8Ki)                       :: delta_m     ! delta- change in input or state
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+   character(*), parameter          :: RoutineName = 'Jac_dXdx'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! make a copy of the inputs to perturb if an StC exists
+   if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
+      if (.not. allocated(dXdx)) then
+         call allocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2)
+         if (Failed())  return
+      elseif ( (size(dXdx,1) /= p%Jac_nx) .or. (size(dXdx,2) /= p%Jac_nx) ) then
+         deallocate(dXdx)
+         call allocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2)
+         if (Failed())  return
+      endif
+      dXdx      = 0.0_R8Ki
+   else
+      if (allocated(dXdx))    deallocate(dXdx)
+      return
+   endif
+
+   !-------------------------------------------------------------
+   ! Perturb each StC instance individually and place in appropriate location in dYdx
+   !     Each StC is basically an isolated piece that doesn't interact with any other StC or with anything else in SrvD,
+   !     so we take advantage of that here for computational expediency.
+   !-------------------------------------------------------------
+   ! make a copy of the inputs to perturb if an StC exists
+   if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
+      call SrvD_CopyContState( x, x_temp, MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+      call SrvD_CopyContState( x, dx_p,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+      call SrvD_CopyContState( x, dx_m,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+   endif
+   !-------------------
+   ! Blade StC
+   if (p%NumBStC > 0) then
+      do n=p%Jac_Idx_BStC_x(1),p%Jac_Idx_BStC_x(2)       ! state range for BStC
+         ! perturb positive
+         call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call Jac_BStC_dXdx(  n, +1, x_temp, delta_p, dx_p,   ErrStat2, ErrMsg2 );  if (Failed())  return;
+
+         ! perturb negative
+         call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call SrvD_CopyContState( x, dx_m,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call Jac_BStC_dXdx(  n, -1, x_temp, delta_m, dx_m,   ErrStat2, ErrMsg2 );  if (Failed())  return;
+
+         ! Central difference
+         call Compute_dX( p, dx_p, dx_m, delta_p, delta_m, dXdx(:,n) )
+      enddo
+   endif
+   !-------------------
+   ! Nacelle StC
+   if (p%NumNStC > 0) then
+      do n=p%Jac_Idx_NStC_x(1),p%Jac_Idx_NStC_x(2)       ! state range for NStC
+         ! perturb positive
+         call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call Jac_NStC_dXdx(  n, +1, x_temp, delta_p, dx_p,   ErrStat2, ErrMsg2 );  if (Failed())  return;
+
+         ! perturb negative
+         call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call SrvD_CopyContState( x, dx_m,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call Jac_NStC_dXdx(  n, -1, x_temp, delta_m, dx_m,   ErrStat2, ErrMsg2 );  if (Failed())  return;
+
+         ! Central difference
+         call Compute_dX( p, dx_p, dx_m, delta_p, delta_m, dXdx(:,n) )
+      enddo
+   endif
+   !-------------------
+   ! Tower StC
+   if (p%NumTStC > 0) then
+      do n=p%Jac_Idx_TStC_x(1),p%Jac_Idx_TStC_x(2)       ! state range for TStC
+         ! perturb positive
+         call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call Jac_TStC_dXdx(  n, +1, x_temp, delta_p, dx_p,   ErrStat2, ErrMsg2 );  if (Failed())  return;
+
+         ! perturb negative
+         call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call SrvD_CopyContState( x, dx_m,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call Jac_TStC_dXdx(  n, -1, x_temp, delta_m, dx_m,   ErrStat2, ErrMsg2 );  if (Failed())  return;
+
+         ! Central difference
+         call Compute_dX( p, dx_p, dx_m, delta_p, delta_m, dXdx(:,n) )
+      enddo
+   endif
+   !-------------------
+   ! Substructure StC
+   if (p%NumSStC > 0) then
+      do n=p%Jac_Idx_SStC_x(1),p%Jac_Idx_SStC_x(2)       ! state range for SStC
+         ! perturb positive
+         call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call Jac_SStC_dXdx(  n, +1, x_temp, delta_p, dx_p,   ErrStat2, ErrMsg2 );  if (Failed())  return;
+
+         ! perturb negative
+         call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call SrvD_CopyContState( x, dx_m,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+         call Jac_SStC_dXdx(  n, -1, x_temp, delta_m, dx_m,   ErrStat2, ErrMsg2 );  if (Failed())  return;
+
+         ! Central difference
+         call Compute_dX( p, dx_p, dx_m, delta_p, delta_m, dXdx(:,n) )
+      enddo
+   endif
+   call Cleanup()
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call Cleanup
+   end function Failed
+
+   subroutine Cleanup()
+      ! Ignore any errors from the destroy (these weren't created if no StCs)
+      call SrvD_DestroyContState( x_temp, ErrStat2, ErrMsg2 )
+      call SrvD_DestroyContState( dx_p,   ErrStat2, ErrMsg2 )
+      call SrvD_DestroyContState( dx_m,   ErrStat2, ErrMsg2 )
+   end subroutine Cleanup
+
+   !> Calculated dYdx for BStC instance
+   subroutine Jac_BStC_dXdx( n, sgn, x_perturb, delta, x_perturb_out, ErrStat3, ErrMsg3)
+      integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb            ! copy of states before perturb
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb_out        ! copy of states after perturb
+      real(R8Ki),                      intent(  out)  :: delta                ! delta+/- change in input or state
+      integer(IntKi),                  intent(  out)  :: ErrStat3
+      character(ErrMsgLen),            intent(  out)  :: ErrMsg3
+      integer(IntKi)                                  :: j,k                  ! Generic indices
+      type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
+      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
+      k = p%Jac_x_indx(n,4)   ! this blade
+      j = p%Jac_x_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_x( p, n, sgn, x_perturb, delta )
+      ! calculate change in ContState
+      call StC_CalcContStateDeriv( t, m%u_BStC(1,j), p%BStC(j), x_perturb%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), x_perturb_out%BStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+   end subroutine Jac_BStC_dXdx
+
+   !> Calculated dYdx for NStC instance
+   subroutine Jac_NStC_dXdx( n, sgn, x_perturb, delta, x_perturb_out, ErrStat3, ErrMsg3)
+      integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb            ! copy of states before perturb
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb_out        ! copy of states after perturb
+      real(R8Ki),                      intent(  out)  :: delta                ! delta+/- change in input or state
+      integer(IntKi),                  intent(  out)  :: ErrStat3
+      character(ErrMsgLen),            intent(  out)  :: ErrMsg3
+      integer(IntKi)                                  :: j,k                  ! Generic indices
+      type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
+      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
+      k = p%Jac_x_indx(n,4)   ! this blade
+      j = p%Jac_x_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_x( p, n, sgn, x_perturb, delta )
+      ! calculate change in ContState
+      call StC_CalcContStateDeriv( t, m%u_NStC(1,j), p%NStC(j), x_perturb%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), x_perturb_out%NStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+   end subroutine Jac_NStC_dXdx
+
+   !> Calculated dYdx for TStC instance
+   subroutine Jac_TStC_dXdx( n, sgn, x_perturb, delta, x_perturb_out, ErrStat3, ErrMsg3)
+      integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb            ! copy of states before perturb
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb_out        ! copy of states after perturb
+      real(R8Ki),                      intent(  out)  :: delta                ! delta+/- change in input or state
+      integer(IntKi),                  intent(  out)  :: ErrStat3
+      character(ErrMsgLen),            intent(  out)  :: ErrMsg3
+      integer(IntKi)                                  :: j,k                  ! Generic indices
+      type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
+      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
+      k = p%Jac_x_indx(n,4)   ! this blade
+      j = p%Jac_x_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_x( p, n, sgn, x_perturb, delta )
+      ! calculate change in ContState
+      call StC_CalcContStateDeriv( t, m%u_TStC(1,j), p%TStC(j), x_perturb%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), x_perturb_out%TStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+   end subroutine Jac_TStC_dXdx
+
+   !> Calculated dYdx for SStC instance
+   subroutine Jac_SStC_dXdx( n, sgn, x_perturb, delta, x_perturb_out, ErrStat3, ErrMsg3)
+      integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb            ! copy of states before perturb
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb_out        ! copy of states after perturb
+      real(R8Ki),                      intent(  out)  :: delta                ! delta+/- change in input or state
+      integer(IntKi),                  intent(  out)  :: ErrStat3
+      character(ErrMsgLen),            intent(  out)  :: ErrMsg3
+      integer(IntKi)                                  :: j,k                  ! Generic indices
+      type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
+      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
+      k = p%Jac_x_indx(n,4)   ! this blade
+      j = p%Jac_x_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_x( p, n, sgn, x_perturb, delta )
+      ! calculate change in ContState
+      call StC_CalcContStateDeriv( t, m%u_SStC(1,j), p%SStC(j), x_perturb%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), x_perturb_out%SStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+   end subroutine Jac_SStC_dXdx
+
+end subroutine Jac_dXdx
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
