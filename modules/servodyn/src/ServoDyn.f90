@@ -780,12 +780,12 @@ contains
          p%Jac_Idx_BStC_x(1) = index_next+1  ! Start index of BStC in x
          do j=1,p%NumBStC
             do k=1,p%NumBl
-               InitOut%LinNames_x(index_next+1) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state X  m';         ! x      x%BStC(j)%x(1,k)
-               InitOut%LinNames_x(index_next+2) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Y  m';         ! y      x%BStC(j)%x(3,k)
-               InitOut%LinNames_x(index_next+3) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Z  m';         ! z      x%BStC(j)%x(5,k)
-               InitOut%LinNames_x(index_next+4) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s';   ! x-dot  x%BStC(j)%x(2,k)
-               InitOut%LinNames_x(index_next+5) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s';   ! y-dot  x%BStC(j)%x(4,k)
-               InitOut%LinNames_x(index_next+6) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s';   ! z-dot  x%BStC(j)%x(6,k)
+               InitOut%LinNames_x(index_next+1) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state X  m';         ! x      x%BStC(j)%StC_x(1,k)
+               InitOut%LinNames_x(index_next+2) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Y  m';         ! y      x%BStC(j)%StC_x(3,k)
+               InitOut%LinNames_x(index_next+3) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state Z  m';         ! z      x%BStC(j)%StC_x(5,k)
+               InitOut%LinNames_x(index_next+4) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s';   ! x-dot  x%BStC(j)%StC_x(2,k)
+               InitOut%LinNames_x(index_next+5) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s';   ! y-dot  x%BStC(j)%StC_x(4,k)
+               InitOut%LinNames_x(index_next+6) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s';   ! z-dot  x%BStC(j)%StC_x(6,k)
                InitOut%RotFrame_x(index_next+1:index_next+6) = .true.
                index_next = index_next + 6
             enddo
@@ -796,12 +796,12 @@ contains
       if (p%NumNStC > 0) then
          p%Jac_Idx_NStC_x(1) = index_next+1  ! Start index of NStC in x
          do j=1,p%NumNStC
-            InitOut%LinNames_x(index_next+1) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%NStC(j)%x(1,1)
-            InitOut%LinNames_x(index_next+2) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%NStC(j)%x(3,1)
-            InitOut%LinNames_x(index_next+3) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%NStC(j)%x(5,1)
-            InitOut%LinNames_x(index_next+4) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%NStC(j)%x(2,1)
-            InitOut%LinNames_x(index_next+5) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%NStC(j)%x(4,1)
-            InitOut%LinNames_x(index_next+6) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%NStC(j)%x(6,1)
+            InitOut%LinNames_x(index_next+1) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%NStC(j)%StC_x(1,1)
+            InitOut%LinNames_x(index_next+2) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%NStC(j)%StC_x(3,1)
+            InitOut%LinNames_x(index_next+3) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%NStC(j)%StC_x(5,1)
+            InitOut%LinNames_x(index_next+4) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%NStC(j)%StC_x(2,1)
+            InitOut%LinNames_x(index_next+5) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%NStC(j)%StC_x(4,1)
+            InitOut%LinNames_x(index_next+6) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%NStC(j)%StC_x(6,1)
             index_next = index_next + 6
          enddo
          p%Jac_Idx_NStC_x(2) = index_next    ! End index of NStC in x
@@ -810,12 +810,12 @@ contains
       if (p%NumTStC > 0) then
          p%Jac_Idx_TStC_x(1) = index_next+1  ! Start index of TStC in x
          do j=1,p%NumTStC
-            InitOut%LinNames_x(index_next+1) = 'Tower StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%TStC(j)%x(1,1)
-            InitOut%LinNames_x(index_next+2) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%TStC(j)%x(3,1)
-            InitOut%LinNames_x(index_next+3) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%TStC(j)%x(5,1)
-            InitOut%LinNames_x(index_next+4) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%TStC(j)%x(2,1)
-            InitOut%LinNames_x(index_next+5) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%TStC(j)%x(4,1)
-            InitOut%LinNames_x(index_next+6) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%TStC(j)%x(6,1)
+            InitOut%LinNames_x(index_next+1) = 'Tower StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%TStC(j)%StC_x(1,1)
+            InitOut%LinNames_x(index_next+2) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%TStC(j)%StC_x(3,1)
+            InitOut%LinNames_x(index_next+3) = 'Tower StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%TStC(j)%StC_x(5,1)
+            InitOut%LinNames_x(index_next+4) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%TStC(j)%StC_x(2,1)
+            InitOut%LinNames_x(index_next+5) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%TStC(j)%StC_x(4,1)
+            InitOut%LinNames_x(index_next+6) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%TStC(j)%StC_x(6,1)
             index_next = index_next + 6
          enddo
          p%Jac_Idx_TStC_x(2) = index_next    ! End index of TStC in x
@@ -824,12 +824,12 @@ contains
       if (p%NumSStC > 0) then
          p%Jac_Idx_SStC_x(1) = index_next+1  ! Start index of SStC in x
          do j=1,p%NumSStC
-            InitOut%LinNames_x(index_next+1) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%SStC(j)%x(1,1)
-            InitOut%LinNames_x(index_next+2) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%SStC(j)%x(3,1)
-            InitOut%LinNames_x(index_next+3) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%SStC(j)%x(5,1)
-            InitOut%LinNames_x(index_next+4) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%SStC(j)%x(2,1)
-            InitOut%LinNames_x(index_next+5) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%SStC(j)%x(4,1)
-            InitOut%LinNames_x(index_next+6) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%SStC(j)%x(6,1)
+            InitOut%LinNames_x(index_next+1) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state X  m';       ! x      x%SStC(j)%StC_x(1,1)
+            InitOut%LinNames_x(index_next+2) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Y  m';       ! y      x%SStC(j)%StC_x(3,1)
+            InitOut%LinNames_x(index_next+3) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state Z  m';       ! z      x%SStC(j)%StC_x(5,1)
+            InitOut%LinNames_x(index_next+4) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dX/dt  m/s'; ! x-dot  x%SStC(j)%StC_x(2,1)
+            InitOut%LinNames_x(index_next+5) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%SStC(j)%StC_x(4,1)
+            InitOut%LinNames_x(index_next+6) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%SStC(j)%StC_x(6,1)
             index_next = index_next + 6
          enddo
          p%Jac_Idx_SStC_x(2) = index_next    ! End index of SStC in x
@@ -2299,6 +2299,7 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      call SrvD_CopyContState( x, dxdt,   MESH_NEWCOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
 
          ! Compute the first time derivatives of the continuous states here:
       dxdt%DummyContState = 0.0_ReKi
@@ -2309,23 +2310,24 @@ SUBROUTINE SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
 
          ! StrucCtrl
       do j=1,p%NumBStC       ! Blade
-         CALL StC_CalcContStateDeriv( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         CALL StC_CalcContStateDeriv( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), dxdt%BStC(j), ErrStat2, ErrMsg2 ); if (Failed())  return;
       enddo
       do j=1,p%NumNStC       ! Nacelle
-         CALL StC_CalcContStateDeriv( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         CALL StC_CalcContStateDeriv( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), dxdt%NStC(j), ErrStat2, ErrMsg2 ); if (Failed())  return;
       enddo
       do j=1,p%NumTStC       ! Tower
-         CALL StC_CalcContStateDeriv( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         CALL StC_CalcContStateDeriv( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), dxdt%TStC(j), ErrStat2, ErrMsg2 ); if (Failed())  return;
       enddo
       do j=1,p%NumSStC    ! Platform
-         CALL StC_CalcContStateDeriv( t, m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), dxdt%SStC(j), ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         CALL StC_CalcContStateDeriv( t, m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), dxdt%SStC(j), ErrStat2, ErrMsg2 ); if (Failed())  return;
       enddo
 
-      
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+
 END SUBROUTINE SrvD_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for updating discrete states.
@@ -2493,7 +2495,7 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
    END IF
 
    IF ( PRESENT( dXdu ) ) THEN
-      call Jac_dXdu()
+      call Jac_dXdu( t, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2, dXdu )
       if (Failed())  return
    END IF
 
@@ -2912,8 +2914,249 @@ end subroutine Jac_dYdu
 
 
 !> Calculate the jacobian dXdu
-subroutine Jac_dXdu()
-      !     The RK4 algorithm in the StC code does some local area linearization.  Can we leverage that for the StCs?
+!! The only states exist with the StC instances 
+subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
+   real(DbKi),                             intent(in   )           :: t          !< Time in seconds at operating point
+   type(SrvD_InputType),                   intent(inout)           :: u          !< Inputs at operating point (out for copy only)
+   type(SrvD_ParameterType),               intent(in   )           :: p          !< Parameters
+   type(SrvD_ContinuousStateType),         intent(in   )           :: x          !< Continuous states at operating point
+   type(SrvD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
+   type(SrvD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
+   type(SrvD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
+   type(SrvD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
+   integer(IntKi),                         intent(  out)           :: ErrStat    !< Error status of the operation
+   character(*),                           intent(  out)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   real(R8Ki), allocatable, optional,      intent(inout)           :: dXdu(:,:)  !< Partial derivatives of output functions
+
+   integer(IntKi)                   :: i,j,k,n                 ! Generic loop index
+   type(SrvD_InputType)             :: u_perturb               ! copy of inputs to perturb
+   type(SrvD_ContinuousStateType)   :: dx_p                    ! states  positive perturbed
+   type(SrvD_ContinuousStateType)   :: dx_m                    ! states  negative perturbed
+   real(R8Ki)                       :: delta_p                 ! delta+ change in input or state
+   real(R8Ki)                       :: delta_m                 ! delta- change in input or state
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+   character(*), parameter          :: RoutineName = 'Jac_dXdu'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! make a copy of the inputs to perturb if an StC exists
+   if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
+      call SrvD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+      call SrvD_CopyContState( x, dx_p,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+      call SrvD_CopyContState( x, dx_m,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+      if (.not. allocated(dXdu)) then
+         call allocAry(dXdu, p%Jac_nx, p%Jac_nu, 'dXdu', ErrStat2, ErrMsg2)
+         if (Failed())  return
+      end if
+      dXdu      = 0.0_R8Ki
+   else
+      if (allocated(dXdu))    deallocate(dXdu)
+      return
+   endif
+
+   !-------------------------------------------------------------
+   ! Perturb each StC instance individually and place in appropriate location in dXdu
+   !     Each StC is basically an isolated piece that doesn't interact with any other StC or with anything else in SrvD,
+   !     so we take advantage of that here for computational expediency.
+   !-------------------------------------------------------------
+   ! Blade StC
+   if (p%NumBStC > 0) then
+      do n=p%Jac_Idx_BStC_u(1),p%Jac_Idx_BStC_u(2)       ! input range for BStC
+
+         ! perturb positive
+         call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call Jac_BStC_dXdu( n, +1, u_perturb, delta_p, dx_p, ErrStat2, ErrMsg2 ); if (Failed())  return;
+
+         ! perturb negative
+         call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_CopyContState( x, dx_m,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call Jac_BStC_dXdu( n, -1, u_perturb, delta_m, dx_m, ErrStat2, ErrMsg2 ); if (Failed())  return;
+
+         ! Central difference
+         call Compute_dX( p, dx_p, dx_m, delta_p, delta_m, dXdu(:,n) )
+      enddo
+   endif
+   !-------------------
+   ! Nacelle StC
+   if (p%NumNStC > 0) then
+      do n=p%Jac_Idx_NStC_u(1),p%Jac_Idx_NStC_u(2)       ! input range for NStC
+
+         ! perturb positive
+         call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call Jac_NStC_dXdu( n, +1, u_perturb, delta_p, dx_p, ErrStat2, ErrMsg2 ); if (Failed())  return;
+
+         ! perturb negative
+         call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_CopyContState( x, dx_m,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call Jac_NStC_dXdu( n, -1, u_perturb, delta_m, dx_m, ErrStat2, ErrMsg2 ); if (Failed())  return;
+
+         ! Central difference
+         call Compute_dX( p, dx_p, dx_m, delta_p, delta_m, dXdu(:,n) )
+      enddo
+   endif
+   !-------------------
+   ! Tower StC
+   if (p%NumTStC > 0) then
+      do n=p%Jac_Idx_TStC_u(1),p%Jac_Idx_TStC_u(2)       ! input range for TStC
+
+         ! perturb positive
+         call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call Jac_TStC_dXdu( n, +1, u_perturb, delta_p, dx_p, ErrStat2, ErrMsg2 ); if (Failed())  return;
+
+         ! perturb negative
+         call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_CopyContState( x, dx_m,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call Jac_TStC_dXdu( n, -1, u_perturb, delta_m, dx_m, ErrStat2, ErrMsg2 ); if (Failed())  return;
+
+         ! Central difference
+         call Compute_dX( p, dx_p, dx_m, delta_p, delta_m, dXdu(:,n) )
+      enddo
+   endif
+   !-------------------
+   ! Substructure StC
+   if (p%NumSStC > 0) then
+      do n=p%Jac_Idx_SStC_u(1),p%Jac_Idx_SStC_u(2)       ! input range for SStC
+
+         ! perturb positive
+         call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call Jac_SStC_dXdu( n, +1, u_perturb, delta_p, dx_p, ErrStat2, ErrMsg2 ); if (Failed())  return;
+
+         ! perturb negative
+         call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call SrvD_CopyContState( x, dx_m,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
+         call Jac_SStC_dXdu( n, -1, u_perturb, delta_m, dx_m, ErrStat2, ErrMsg2 ); if (Failed())  return;
+
+         ! Central difference
+         call Compute_dX( p, dx_p, dx_m, delta_p, delta_m, dXdu(:,n) )
+      enddo
+   endif
+   call Cleanup()
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call Cleanup
+   end function Failed
+
+   subroutine Cleanup()
+      ! Ignore any errors from the destroy (these weren't created if no StCs)
+      call SrvD_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
+      call SrvD_DestroyContState( dx_p,   ErrStat2, ErrMsg2 )
+      call SrvD_DestroyContState( dx_m,   ErrStat2, ErrMsg2 )
+   end subroutine Cleanup
+
+   !> Calculated dYdu for BStC instance
+   subroutine Jac_BStC_dXdu( n, sgn, u_perturb, delta, x_perturb, ErrStat3, ErrMsg3)
+      integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_InputType),            intent(inout)  :: u_perturb            ! copy of inputs to perturb
+      real(R8Ki),                      intent(  out)  :: delta                ! delta+/- change in input or state
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb            ! outputs perturbed
+      integer(IntKi),                  intent(  out)  :: ErrStat3
+      character(ErrMsgLen),            intent(  out)  :: ErrMsg3
+      integer(IntKi)                                  :: j,k                  ! Generic indices
+      type(StC_InputType)                             :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+      k = p%Jac_u_indx(n,4)   ! this blade
+      j = p%Jac_u_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_u( p, n, sgn, u_perturb, delta )
+      !  Transfer motion mesh to this particular instance
+      call StC_CopyInput( m%u_BStC(1,j), u_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      call Transfer_Point_to_Point( u_perturb%BStCMotionMesh(k,j), u_StC%Mesh(k), m%SrvD_MeshMap%u_BStC_Mot2_BStC(k,j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! calculate change in ContState
+      call StC_CalcContStateDeriv( t, u_StC, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), m%BStC(j), x_perturb%BStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! cleanup
+      call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+   end subroutine Jac_BStC_dXdu
+
+   !> Calculated dYdu for NStC instance
+   subroutine Jac_NStC_dXdu( n, sgn, u_perturb, delta, x_perturb, ErrStat3, ErrMsg3)
+      integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_InputType),            intent(inout)  :: u_perturb            ! copy of inputs to perturb
+      real(R8Ki),                      intent(  out)  :: delta                ! delta+/- change in input or state
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb            ! outputs perturbed
+      integer(IntKi),                  intent(  out)  :: ErrStat3
+      character(ErrMsgLen),            intent(  out)  :: ErrMsg3
+      integer(IntKi)                                  :: j                    ! Generic indices
+      type(StC_InputType)                             :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+      j = p%Jac_u_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_u( p, n, sgn, u_perturb, delta )
+      !  Transfer motion mesh to this particular instance
+      call StC_CopyInput( m%u_NStC(1,j), u_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      call Transfer_Point_to_Point( u_perturb%NStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_NStC_Mot2_NStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! calculate change in ContState
+      call StC_CalcContStateDeriv( t, u_StC, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), m%NStC(j), x_perturb%NStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! cleanup
+      call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+   end subroutine Jac_NStC_dXdu
+
+   !> Calculated dYdu for TStC instance
+   subroutine Jac_TStC_dXdu( n, sgn, u_perturb, delta, x_perturb, ErrStat3, ErrMsg3)
+      integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_InputType),            intent(inout)  :: u_perturb            ! copy of inputs to perturb
+      real(R8Ki),                      intent(  out)  :: delta                ! delta+/- change in input or state
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb            ! outputs perturbed
+      integer(IntKi),                  intent(  out)  :: ErrStat3
+      character(ErrMsgLen),            intent(  out)  :: ErrMsg3
+      integer(IntKi)                                  :: j                    ! Generic indices
+      type(StC_InputType)                             :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+      j = p%Jac_u_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_u( p, n, sgn, u_perturb, delta )
+      !  Transfer motion mesh to this particular instance
+      call StC_CopyInput( m%u_TStC(1,j), u_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      call Transfer_Point_to_Point( u_perturb%TStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_TStC_Mot2_TStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! calculate change in ContState
+      call StC_CalcContStateDeriv( t, u_StC, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), m%TStC(j), x_perturb%TStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! cleanup
+      call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+   end subroutine Jac_TStC_dXdu
+
+   !> Calculated dYdu for SStC instance
+   subroutine Jac_SStC_dXdu( n, sgn, u_perturb, delta, x_perturb, ErrStat3, ErrMsg3)
+      integer(IntKi),                  intent(in   )  :: n                    ! which input to perturb
+      integer(IntKi),                  intent(in   )  :: sgn                  ! sign of perturbation
+      type(SrvD_InputType),            intent(inout)  :: u_perturb            ! copy of inputs to perturb
+      real(R8Ki),                      intent(  out)  :: delta                ! delta+/- change in input or state
+      type(SrvD_ContinuousStateType),  intent(inout)  :: x_perturb            ! outputs perturbed
+      integer(IntKi),                  intent(  out)  :: ErrStat3
+      character(ErrMsgLen),            intent(  out)  :: ErrMsg3
+      integer(IntKi)                                  :: j                    ! Generic indices
+      type(StC_InputType)                             :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
+      ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
+      ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
+      j = p%Jac_u_indx(n,3)   ! this instance
+      !-------------------
+      ! get u_op +/- delta u
+      call SrvD_Perturb_u( p, n, sgn, u_perturb, delta )
+      !  Transfer motion mesh to this particular instance
+      call StC_CopyInput( m%u_SStC(1,j), u_StC, MESH_NEWCOPY, ErrStat3, ErrMsg3); if (ErrStat3 > AbortErrLev) return
+      call Transfer_Point_to_Point( u_perturb%SStCMotionMesh(j), u_StC%Mesh(1), m%SrvD_MeshMap%u_SStC_Mot2_SStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! calculate change in ContState
+      call StC_CalcContStateDeriv( t, u_StC, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), m%SStC(j), x_perturb%SStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+      ! cleanup
+      call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
+   end subroutine Jac_SStC_dXdu
 end subroutine Jac_dXdu
 
 
@@ -3047,6 +3290,77 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta_p, delta_m, dY)
    dY = dY / (delta_p + delta_m)
 
 END SUBROUTINE Compute_dY
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine servodyn::SrvD_Init_Jacobian_x is consistant with this routine!
+subroutine Compute_dX( p, x_p, x_m, delta_p, delta_m, dX )
+   type(SrvD_ParameterType),        intent(in   ) :: p         !< parameters
+   type(SrvD_ContinuousStateType),  intent(in   ) :: x_p       !< SrvD continuous states at \f$ u + \Delta u \f$ or \f$ x + \Delta x \f$ (p=plus)
+   type(SrvD_ContinuousStateType),  intent(in   ) :: x_m       !< SrvD continuous states at \f$ u - \Delta u \f$ or \f$ x - \Delta x \f$ (m=minus)
+   real(R8Ki),                      intent(in   ) :: delta_p   !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
+   real(R8Ki),                      intent(in   ) :: delta_m   !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
+   real(R8Ki),                      intent(inout) :: dX(:)     !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
+
+      ! local variables:
+   integer(IntKi)                                 :: i,j,k     ! generic counters
+   integer(IntKi)                                 :: indx_prev ! index indicating index in dX before this one to be filled
+
+   ! StC related outputs
+   if (p%NumBStC > 0) then
+      indx_prev = p%Jac_Idx_BStC_x(1)-1
+      do j=1,p%NumBStC
+         do k=1,p%NumBl
+            dX(indx_prev+1) = x_p%BStC(j)%StC_x(1,k) - x_m%BStC(j)%StC_x(1,k)    ! x      x%BStC(j)%StC_x(1,k)
+            dX(indx_prev+2) = x_p%BStC(j)%StC_x(3,k) - x_m%BStC(j)%StC_x(3,k)    ! y      x%BStC(j)%StC_x(3,k)
+            dX(indx_prev+3) = x_p%BStC(j)%StC_x(5,k) - x_m%BStC(j)%StC_x(5,k)    ! z      x%BStC(j)%StC_x(5,k)
+            dX(indx_prev+4) = x_p%BStC(j)%StC_x(2,k) - x_m%BStC(j)%StC_x(2,k)    ! x-dot  x%BStC(j)%StC_x(2,k)
+            dX(indx_prev+5) = x_p%BStC(j)%StC_x(4,k) - x_m%BStC(j)%StC_x(4,k)    ! y-dot  x%BStC(j)%StC_x(4,k)
+            dX(indx_prev+6) = x_p%BStC(j)%StC_x(6,k) - x_m%BStC(j)%StC_x(6,k)    ! z-dot  x%BStC(j)%StC_x(6,k)
+            indx_prev = indx_prev + 6
+         enddo
+      enddo
+   endif
+   if (p%NumNStC > 0) then
+      indx_prev = p%Jac_Idx_NStC_x(1)-1
+      do j=1,p%NumNStC
+         dX(indx_prev+1) = x_p%NStC(j)%StC_x(1,1) - x_m%NStC(j)%StC_x(1,1)    ! x      x%NStC(j)%StC_x(1,1)
+         dX(indx_prev+2) = x_p%NStC(j)%StC_x(3,1) - x_m%NStC(j)%StC_x(3,1)    ! y      x%NStC(j)%StC_x(3,1)
+         dX(indx_prev+3) = x_p%NStC(j)%StC_x(5,1) - x_m%NStC(j)%StC_x(5,1)    ! z      x%NStC(j)%StC_x(5,1)
+         dX(indx_prev+4) = x_p%NStC(j)%StC_x(2,1) - x_m%NStC(j)%StC_x(2,1)    ! x-dot  x%NStC(j)%StC_x(2,1)
+         dX(indx_prev+5) = x_p%NStC(j)%StC_x(4,1) - x_m%NStC(j)%StC_x(4,1)    ! y-dot  x%NStC(j)%StC_x(4,1)
+         dX(indx_prev+6) = x_p%NStC(j)%StC_x(6,1) - x_m%NStC(j)%StC_x(6,1)    ! z-dot  x%NStC(j)%StC_x(6,1)
+         indx_prev = indx_prev + 6
+      enddo
+   endif
+   if (p%NumTStC > 0) then
+      indx_prev = p%Jac_Idx_TStC_x(1)-1
+      do j=1,p%NumTStC
+         dX(indx_prev+1) = x_p%TStC(j)%StC_x(1,1) - x_m%TStC(j)%StC_x(1,1)    ! x      x%TStC(j)%StC_x(1,1)
+         dX(indx_prev+2) = x_p%TStC(j)%StC_x(3,1) - x_m%TStC(j)%StC_x(3,1)    ! y      x%TStC(j)%StC_x(3,1)
+         dX(indx_prev+3) = x_p%TStC(j)%StC_x(5,1) - x_m%TStC(j)%StC_x(5,1)    ! z      x%TStC(j)%StC_x(5,1)
+         dX(indx_prev+4) = x_p%TStC(j)%StC_x(2,1) - x_m%TStC(j)%StC_x(2,1)    ! x-dot  x%TStC(j)%StC_x(2,1)
+         dX(indx_prev+5) = x_p%TStC(j)%StC_x(4,1) - x_m%TStC(j)%StC_x(4,1)    ! y-dot  x%TStC(j)%StC_x(4,1)
+         dX(indx_prev+6) = x_p%TStC(j)%StC_x(6,1) - x_m%TStC(j)%StC_x(6,1)    ! z-dot  x%TStC(j)%StC_x(6,1)
+         indx_prev = indx_prev + 6
+      enddo
+   endif
+   if (p%NumSStC > 0) then
+      indx_prev = p%Jac_Idx_SStC_x(1)-1
+      do j=1,p%NumSStC
+         dX(indx_prev+1) = x_p%SStC(j)%StC_x(1,1) - x_m%SStC(j)%StC_x(1,1)    ! x      x%SStC(j)%StC_x(1,1)
+         dX(indx_prev+2) = x_p%SStC(j)%StC_x(3,1) - x_m%SStC(j)%StC_x(3,1)    ! y      x%SStC(j)%StC_x(3,1)
+         dX(indx_prev+3) = x_p%SStC(j)%StC_x(5,1) - x_m%SStC(j)%StC_x(5,1)    ! z      x%SStC(j)%StC_x(5,1)
+         dX(indx_prev+4) = x_p%SStC(j)%StC_x(2,1) - x_m%SStC(j)%StC_x(2,1)    ! x-dot  x%SStC(j)%StC_x(2,1)
+         dX(indx_prev+5) = x_p%SStC(j)%StC_x(4,1) - x_m%SStC(j)%StC_x(4,1)    ! y-dot  x%SStC(j)%StC_x(4,1)
+         dX(indx_prev+6) = x_p%SStC(j)%StC_x(6,1) - x_m%SStC(j)%StC_x(6,1)    ! z-dot  x%SStC(j)%StC_x(6,1)
+         indx_prev = indx_prev + 6
+      enddo
+   endif
+
+   dX = dX / (delta_p + delta_m)
+
+end subroutine Compute_dX
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
