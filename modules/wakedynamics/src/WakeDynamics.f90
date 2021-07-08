@@ -44,7 +44,7 @@ module WakeDynamics
    public :: WD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 
    public :: WD_TEST_Axi2Cart
-   public :: WD_TEST_VelocityCurl
+   public :: WD_TEST_AddVelocityCurl
    contains  
 
 function  WD_Interp ( yVal, xArr, yArr )
@@ -217,13 +217,15 @@ end function get_Ctavg
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine computes the near wake correction : Vx_wake  
-subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D_rotor, errStat, errMsg )
+subroutine NearWakeCorrection( Ct_azavg_filt, Cq_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, Vt_wake, D_rotor, errStat, errMsg )
    real(ReKi),                   intent(in   ) :: Ct_azavg_filt(0:) !< Time-filtered azimuthally averaged thrust force coefficient (normal to disk), distributed radially
+   real(ReKi),                   intent(in   ) :: Cq_azavg_filt(0:) !< Time-filtered azimuthally averaged tangential force coefficient (normal to disk), distributed radially
    real(ReKi),                   intent(in   ) :: D_rotor           !< Rotor diameter
    real(ReKi),                   intent(in   ) :: Vx_rel_disk_filt  !< Time-filtered rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk
    type(WD_ParameterType),       intent(in   ) :: p                 !< Parameters
    type(WD_MiscVarType),         intent(inout) :: m                 !< Initial misc/optimization variables
    real(ReKi),                   intent(inout) :: Vx_wake(0:)       !< Axial wake velocity deficit at first plane
+   real(ReKi),                   intent(inout) :: Vt_wake(0:)       !< Tangential wake velocity deficit at first plane
    integer(IntKi),               intent(  out) :: errStat           !< Error status of the operation
    character(*),                 intent(  out) :: errMsg            !< Error message if errStat /= ErrID_None
    real(ReKi) :: alpha
@@ -253,7 +255,7 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
       ! high Ct region
       call Vx_high_Ct(Vx_wake, p%r, Ct_avg) ! Compute Vx_wake at p%r
       ! m%r_wake = p%r ! No distinction between r_wake and r, r_wake is just a temp variable anyway
-
+      Vt_wake = 0.0_ReKi
    else
       ! Blending Ct region between Ct_low and Ct_high
       call Vx_low_Ct (Vx_wake, p%r)         ! Evaluate Vx_wake (Ct_low)  at p%r
@@ -262,6 +264,7 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, D
       alpha = 1.0_ReKi - (Ct_avg - Ct_low) / (Ct_high-Ct_low) ! linear blending coefficient
       do j=0,p%NumRadii-1
          Vx_wake(j) = alpha*Vx_wake(j)+(1.0_ReKi-alpha)*m%Vx_high(j)  ! Blended CT velocity
+         Vt_wake(j) = alpha*Vt_wake(j)
       end do
    end if   
 
@@ -273,6 +276,7 @@ contains
       real(ReKi), dimension(0:), intent(in ) :: r_eval !< Radial position where velocity is to be evaluated
       integer(IntKi) :: ILo ! index for interpolation
       real(ReKi) :: a_interp
+      real(ReKi) :: Cq_interp
 
       ! compute r_wake and m%a using Ct_azavg_filt
       m%r_wake(0) = 0.0_ReKi
@@ -285,12 +289,17 @@ contains
       end do
       ! Use a and rw to determine Vx
       Vx(0) = -Vx_rel_disk_filt*p%C_Nearwake*m%a(0)
+      Vt_wake(0) = 0.0_ReKi
       ILo = 0
       do j=1,p%NumRadii-1
          ! given r_wake and m%a at p%dr increments, find value of m%a(r_wake) using interpolation 
          a_interp = InterpBin( r_eval(j), m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
+         Cq_interp = InterpBin( r_eval(j), m%r_wake, Cq_azavg_filt, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
          Vx(j) = -Vx_rel_disk_filt*p%C_NearWake*a_interp !! Low CT velocity
+         Vt_wake(j) = p%C_NearWake * Cq_interp * Vx_rel_disk_filt / (4._ReKi*(1._ReKi-a_interp))
+                  
       end do
+
    end subroutine Vx_low_Ct
 
    !> Compute the induced velocity distribution in the wake for high thrust region 
@@ -402,7 +411,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
       ! Initialize variables for this routine
 
-   call WD_TEST_VelocityCurl() ! Temporary hack
+   call WD_TEST_AddVelocityCurl() ! Temporary hack
 
    errStat = ErrID_None
    errMsg  = ""
@@ -429,7 +438,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       
       ! set the rest of the parameters
    p%DT_low        = interval         
-   p%Mod_Wake      = InitInp%InputFileData%Mod_Wake 
+   p%Mod_Wake      = InitInp%InputFileData%Mod_Wake
+   p%Swirl         = InitInp%InputFileData%Swirl  
    p%NumPlanes     = InitInp%InputFileData%NumPlanes   
    p%NumRadii      = InitInp%InputFileData%NumRadii    
    p%dr            = InitInp%InputFileData%dr  
@@ -592,6 +602,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%r_wake.', errStat, errMsg, RoutineName )  
    allocate (    m%Vx_high(0:p%NumRadii-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_high.', errStat, errMsg, RoutineName )  
+   allocate (    m%Vt_wake(0:p%NumRadii-1 ) , STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_high.', errStat, errMsg, RoutineName ) 
    allocate (    m%Vx_polar(0:p%NumRadii-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_polar.', errStat, errMsg, RoutineName )  
    if (errStat /= ErrID_None) return
@@ -895,28 +907,34 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    xd%Cq_azavg_filt (:) = xd%Cq_azavg_filt(:)*p%filtParam + u%Cq_azavg(:)*p%oneMinusFiltParam
    
    ! --- Set velocity at disk plane
+   
+   ! Initialize the spanwise velocities to zero.
+   ! Thses will be changed by AddSwirl and/or AddVelocityCurl
+   xd%Vy_wake2(:,:,0) = 0._ReKi 
+   xd%Vz_wake2(:,:,0) = 0._ReKi
+   
    if (p%Mod_Wake == Mod_Wake_Polar) then
 
       ! Compute wake deficit of first plane based on rotor loading, outputs: Vx_Wake, m
-      call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), xd%D_rotor_filt(0), errStat, errMsg )
+      call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
 
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
 
       ! --- Compute Vx
       ! Compute Vx(r)
-      call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), xd%D_rotor_filt(0), errStat, errMsg )
+      call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
       ! Convert to Cartesian
       call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
       Ct_avg =  get_Ctavg(p%r, xd%Ct_azavg_filt, xd%D_rotor_filt(0))
       ! --- Compute Vy
       ! --- Add V/W from vorticies 
       if (p%Mod_Wake == Mod_Wake_Curl) then
-         call VelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, p%NumVortices, xd%D_Rotor_filt(0)/2., &
+         call AddVelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, p%NumVortices, xd%D_Rotor_filt(0)/2., &
                            xd%psi_skew_filt, p%y, p%z, Ct_avg, p%sigma_D, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
 
       endif
       ! --- Add Swirl
-      !call AddSwirl(  xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0)  )
+      call AddSwirl(p%r, m%Vt_wake, p%y, p%z, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
    endif
 
    !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
@@ -1091,7 +1109,7 @@ subroutine lamb_oseen_2d(y, z, Gamma, sigma, v, w)
 end subroutine
 
 ! A subroutine to compute the spanwise velocities from curl
-subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, sigma_d, Vy_curl, Vz_curl)
+subroutine AddVelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, sigma_d, Vy_curl, Vz_curl)
  
    real(ReKi), intent(in) :: Vx                         ! The inflow velocity
    real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle (rad)
@@ -1116,10 +1134,6 @@ subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, sigma
    ! Compute the Ct
    ! Add another cosine term to project the vortices
    Gamma0 = -R * Vx * Ct_avg * sin(yaw_angle) * cos(yaw_angle) 
-
-   ! Set the velocities to zero before computing
-   Vy_curl(:, :) = 0.0_ReKi
-   Vz_curl(:, :) = 0.0_ReKi
 
    ! Loop through all the points
    do ir = 2, nVortex-1
@@ -1151,17 +1165,56 @@ subroutine VelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, sigma
 
 end subroutine
 
+
+!> This subroutine computes the near wake correction : Vx_wake  
+subroutine AddSwirl(r, Vt_wake, y, z, Vy_curl, Vz_curl)
+   real(ReKi),                   intent(in) :: r(:)       !< Tangential wake velocity deficit at first plane
+   real(ReKi),                   intent(in) :: Vt_wake(:)       !< Tangential wake velocity deficit at first plane
+   real(ReKi), dimension(:),   intent(in)      :: y                 !< Spanwise Cartesian coordinate (m)
+   real(ReKi), dimension(:),   intent(in)      :: z                 !< Wall-normal Cartesian coordinate (m)
+   real(ReKi), dimension(:,:), intent(inout)   :: Vy_curl           !< Curl velocity in the y direction (m/s)
+   real(ReKi), dimension(:,:), intent(inout)   :: Vz_curl           !< Curl velocity in the z direction (m/s)
+
+   real(ReKi) :: alpha
+   integer(IntKi) :: iz, iy, iLow, nr
+   real(ReKi) :: r_tmp, r_max
+   real(ReKi) :: Vt, S, C ! Sine and cosine
+   nr = size(r)
+   r_max = r(nr)
+   iLow=0
+   ! Loop through all plane points
+   do iz = 1,size(z)
+      do iy = 1,size(y)
+         ! Project into cartesian
+         r_tmp =  sqrt(y(iy)**2 + z(iz)**2) 
+         if (r_tmp<=r_max) then
+            if (EqualRealNos(r_tmp, 0.0_ReKi) ) then
+               S = 0.0_ReKi 
+               C = 0.0_ReKi
+            else
+               S=z(iz)/r_tmp
+               C=y(iy)/r_tmp
+            endif
+            Vt = InterpBin(r_tmp, r, Vt_wake, iLow, nr) !( XVal, XAry, YAry, ILo, AryLen )
+            Vy_curl(iy, iz) = Vy_curl(iy, iz) + Vt * S
+            Vz_curl(iy, iz) = Vz_curl(iy, iz) - Vt * C
+         endif
+      enddo
+   enddo
+   
+end subroutine AddSwirl
+
 !> Test the curled wake velocity curl function
-subroutine WD_TEST_VelocityCurl()
+subroutine WD_TEST_AddVelocityCurl()
   
-   real(ReKi) :: Vy_curl(2,2)
+   real(ReKi) :: Vy_curl(2,2)=0.0_ReKi
    real(ReKi) :: Vy_curl_ref(2,2)
-   real(ReKi) :: Vz_curl(2,2)
+   real(ReKi) :: Vz_curl(2,2)=0.0_ReKi
    real(ReKi) :: Vz_curl_ref(2,2)
    real(ReKi) :: y(2)=(/ 0., 2./)
    real(ReKi) :: z(2)=(/-1.,1./)
 
-   call VelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
+   call AddVelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
       y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl)
 
    if (abs(Vy_curl(1,1)-0.2171091922)>1e-5) then
@@ -1380,7 +1433,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       end do
      
          ! Initialze Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
-      call NearWakeCorrection( u%Ct_azavg, u%Vx_rel_disk, p, m, y%Vx_wake(:,0), u%D_rotor, errStat, errMsg )
+      call NearWakeCorrection( u%Ct_azavg, u%Cq_azavg, u%Vx_rel_disk, p, m, y%Vx_wake(:,0), m%Vt_wake, u%D_rotor, errStat, errMsg )
          if (errStat > AbortErrLev)  return
       y%Vx_wake(:,1) = y%Vx_wake(:,0) 
  
@@ -1547,7 +1600,7 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    xd%Ct_azavg_filt (:) = u%Ct_azavg(:)
    xd%Cq_azavg_filt (:) = u%Cq_azavg(:)
    
-   call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), xd%D_rotor_filt(0), errStat, errMsg )
+   call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
    xd%Vx_wake(:,1) = xd%Vx_wake(:,0)
       
 end subroutine InitStatesWithInputs

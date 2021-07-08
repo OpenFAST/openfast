@@ -46,6 +46,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumRadii      !< Number of radii in the radial finite-difference grid [>=2] [-]
     INTEGER(IntKi)  :: NumPlanes      !< Number of wake planes [>=2] [-]
     INTEGER(IntKi)  :: Mod_Wake      !< Switch between wake formulations 1=Polar, 2=Cartesian, 3=Curl [-]
+    LOGICAL  :: Swirl      !< Switch to add swirl [only used if Mod_Wake=2 or 2] [-]
     REAL(ReKi)  :: k_VortexDecay      !< Vortex decay constant for curl [-]
     REAL(ReKi)  :: sigma_D      !< The width of the Gaussian vortices used for the curled wake model divided by diameter [-]
     INTEGER(IntKi)  :: NumVortices      !< The number of vortices used for the curled wake model [-]
@@ -141,6 +142,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: r_wake      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_high      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_polar      !< Vx as function of r for Carteisna implementation [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vt_wake      !< Vx as function of r for Carteisna implementation [-]
   END TYPE WD_MiscVarType
 ! =======================
 ! =========  WD_ParameterType  =======
@@ -153,6 +155,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: y      !< Horizontal discretization of each wake plane (size ny=2nr-1) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: z      !< Nomically-vertical discretization of each wake plane (size nz=2nr-1) [m]
     INTEGER(IntKi)  :: Mod_Wake      !< Switch between wake formulations 1=Polar, 2=Curl, 3=Cartesian [-]
+    LOGICAL  :: Swirl      !< Switch to add swirl [only used if Mod_Wake=2 or 2] [-]
     REAL(ReKi)  :: k_VortexDecay      !< Vortex decay constant for curl [-]
     REAL(ReKi)  :: sigma_D      !< The width of the Gaussian vortices used for the curled wake model divided by diameter [-]
     INTEGER(IntKi)  :: NumVortices      !< The number of vortices used for the curled wake model [-]
@@ -228,6 +231,7 @@ CONTAINS
     DstInputFileTypeData%NumRadii = SrcInputFileTypeData%NumRadii
     DstInputFileTypeData%NumPlanes = SrcInputFileTypeData%NumPlanes
     DstInputFileTypeData%Mod_Wake = SrcInputFileTypeData%Mod_Wake
+    DstInputFileTypeData%Swirl = SrcInputFileTypeData%Swirl
     DstInputFileTypeData%k_VortexDecay = SrcInputFileTypeData%k_VortexDecay
     DstInputFileTypeData%sigma_D = SrcInputFileTypeData%sigma_D
     DstInputFileTypeData%NumVortices = SrcInputFileTypeData%NumVortices
@@ -301,6 +305,7 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! NumRadii
       Int_BufSz  = Int_BufSz  + 1  ! NumPlanes
       Int_BufSz  = Int_BufSz  + 1  ! Mod_Wake
+      Int_BufSz  = Int_BufSz  + 1  ! Swirl
       Re_BufSz   = Re_BufSz   + 1  ! k_VortexDecay
       Re_BufSz   = Re_BufSz   + 1  ! sigma_D
       Int_BufSz  = Int_BufSz  + 1  ! NumVortices
@@ -356,6 +361,8 @@ CONTAINS
     IntKiBuf(Int_Xferred) = InData%NumPlanes
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%Mod_Wake
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Swirl, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%k_VortexDecay
     Re_Xferred = Re_Xferred + 1
@@ -437,6 +444,8 @@ CONTAINS
     OutData%NumPlanes = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%Mod_Wake = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Swirl = TRANSFER(IntKiBuf(Int_Xferred), OutData%Swirl)
     Int_Xferred = Int_Xferred + 1
     OutData%k_VortexDecay = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -2758,6 +2767,18 @@ IF (ALLOCATED(SrcMiscData%Vx_polar)) THEN
   END IF
     DstMiscData%Vx_polar = SrcMiscData%Vx_polar
 ENDIF
+IF (ALLOCATED(SrcMiscData%Vt_wake)) THEN
+  i1_l = LBOUND(SrcMiscData%Vt_wake,1)
+  i1_u = UBOUND(SrcMiscData%Vt_wake,1)
+  IF (.NOT. ALLOCATED(DstMiscData%Vt_wake)) THEN 
+    ALLOCATE(DstMiscData%Vt_wake(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vt_wake.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%Vt_wake = SrcMiscData%Vt_wake
+ENDIF
  END SUBROUTINE WD_CopyMisc
 
  SUBROUTINE WD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -2828,6 +2849,9 @@ IF (ALLOCATED(MiscData%Vx_high)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%Vx_polar)) THEN
   DEALLOCATE(MiscData%Vx_polar)
+ENDIF
+IF (ALLOCATED(MiscData%Vt_wake)) THEN
+  DEALLOCATE(MiscData%Vt_wake)
 ENDIF
  END SUBROUTINE WD_DestroyMisc
 
@@ -2965,6 +2989,11 @@ ENDIF
   IF ( ALLOCATED(InData%Vx_polar) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! Vx_polar upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vx_polar)  ! Vx_polar
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Vt_wake allocated yes/no
+  IF ( ALLOCATED(InData%Vt_wake) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Vt_wake upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vt_wake)  ! Vt_wake
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -3375,6 +3404,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%Vx_polar,1), UBOUND(InData%Vx_polar,1)
         ReKiBuf(Re_Xferred) = InData%Vx_polar(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Vt_wake) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vt_wake,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vt_wake,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Vt_wake,1), UBOUND(InData%Vt_wake,1)
+        ReKiBuf(Re_Xferred) = InData%Vt_wake(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3854,6 +3898,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vt_wake not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vt_wake)) DEALLOCATE(OutData%Vt_wake)
+    ALLOCATE(OutData%Vt_wake(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vt_wake.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Vt_wake,1), UBOUND(OutData%Vt_wake,1)
+        OutData%Vt_wake(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE WD_UnPackMisc
 
  SUBROUTINE WD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -3912,6 +3974,7 @@ IF (ALLOCATED(SrcParamData%z)) THEN
     DstParamData%z = SrcParamData%z
 ENDIF
     DstParamData%Mod_Wake = SrcParamData%Mod_Wake
+    DstParamData%Swirl = SrcParamData%Swirl
     DstParamData%k_VortexDecay = SrcParamData%k_VortexDecay
     DstParamData%sigma_D = SrcParamData%sigma_D
     DstParamData%NumVortices = SrcParamData%NumVortices
@@ -4011,6 +4074,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%z)  ! z
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Mod_Wake
+      Int_BufSz  = Int_BufSz  + 1  ! Swirl
       Re_BufSz   = Re_BufSz   + 1  ! k_VortexDecay
       Re_BufSz   = Re_BufSz   + 1  ! sigma_D
       Int_BufSz  = Int_BufSz  + 1  ! NumVortices
@@ -4114,6 +4178,8 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%Mod_Wake
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Swirl, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%k_VortexDecay
     Re_Xferred = Re_Xferred + 1
@@ -4251,6 +4317,8 @@ ENDIF
       END DO
   END IF
     OutData%Mod_Wake = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Swirl = TRANSFER(IntKiBuf(Int_Xferred), OutData%Swirl)
     Int_Xferred = Int_Xferred + 1
     OutData%k_VortexDecay = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
