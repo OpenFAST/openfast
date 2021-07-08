@@ -817,6 +817,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       
       
    CALL ReadVar( UnIn, InputFile, WD_InitInp%Mod_Wake, "Mod_Wake", "Wake model", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl, "Swirl", "Swirl switch", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%dr      , "dr", "Radial increment of radial finite-difference grid (m) [>0.0]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii", "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
