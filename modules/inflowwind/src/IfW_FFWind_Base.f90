@@ -368,7 +368,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
 
    IF ( OnGrid ) THEN      ! The tower points don't use this
 
-      CALL GetInterpValues()
+      CALL GetInterpValues();       if (ErrStat >= AbortErrLev) return
       
       !-------------------------------------------------------------------------------------------------
       ! Interpolate on the grid

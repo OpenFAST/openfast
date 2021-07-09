@@ -52,7 +52,8 @@ MODULE StrucCtrl
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 4          !< prescribed force series
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control
-   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          !< active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveEXTERN    = 4          !< active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveDLL       = 5          !< active control
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_vel       = 1          !< 1: velocity-based ground hook control;
    INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_invVel    = 2          !< 2: Inverse velocity-based ground hook control
@@ -96,7 +97,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       INTEGER(IntKi)                                :: NumOuts
       TYPE(StC_InputFile)                           :: InputFileData ! Data stored in the module's input file
       INTEGER(IntKi)                                :: i_pt          ! Generic counter for mesh point
-      REAL(ReKi), allocatable, dimension(:,:)       :: PositionP
+      INTEGER(IntKi)                                :: i             ! Generic counter for mesh point
       REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
       REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
 
@@ -115,8 +116,6 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ErrMsg  = ''
       NumOuts = 0
       UnEcho  = -1   ! will be > 0 if echo file is opened
-
-   InitOut%dummyInitOut = 0.0_SiKi  ! initialize this so compiler doesn't warn about un-set intent(out) variables
 
      ! Initialize the NWTC Subroutine Library
    CALL NWTC_Init( EchoLibVer=.FALSE. )
@@ -141,10 +140,10 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ! For diagnostic purposes, the following can be used to display the contents
    ! of the FileInfo_In data structure.
-   !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+   ! call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
-   CALL StC_ParseInputFileInfo( PriPath, InitInp%InputFile, TRIM(InitInp%RootName), FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+   CALL StC_ParseInputFileInfo( PriPath, InitInp%InputFile, TRIM(InitInp%RootName), InitInp%NumMeshPts, FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
    if (Failed())  return;
 
       ! Using the InputFileData structure, check that it makes sense
@@ -189,7 +188,6 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    call Init_Misc( p, m, ErrStat2, ErrMsg2 )
    if (Failed())  return;
 
-
    ! Allocate continuous states (x)
    call AllocAry(x%StC_x, 6, p%NumMeshPts, 'x%StC_x',  ErrStat2,ErrMsg2)
    if (Failed())  return;
@@ -206,15 +204,15 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
    ! set positions and orientations for tuned mass dampers's
-   call AllocAry(PositionP,       3, p%NumMeshPts, 'PositionP',      ErrStat2,ErrMsg2);  if (Failed())  return;
-   call AllocAry(PositionGlobal,  3, p%NumMeshPts, 'PositionGlobal', ErrStat2,ErrMsg2);  if (Failed())  return;
-   call AllocAry(OrientationP, 3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(InitOut%RelPosition,  3, p%NumMeshPts, 'RelPosition',    ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(PositionGlobal,       3, p%NumMeshPts, 'PositionGlobal', ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(OrientationP,      3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2);  if (Failed())  return;
 
    ! Set the initial positions and orietantions for each point
    do i_pt = 1,p%NumMeshPts
-      PositionP(:,i_pt)      = (/ InputFileData%StC_P_X, InputFileData%StC_P_Y, InputFileData%StC_P_Z /)
-      OrientationP(:,:,i_pt) = InitInp%InitOrientation(:,:,i_pt)
-      PositionGlobal(:,i_pt) = InitInp%InitPosition(:,i_pt) + real( matmul(PositionP(:,i_pt),OrientationP(:,:,i_pt)), ReKi)
+      InitOut%RelPosition(:,i_pt)   = (/ InputFileData%StC_P_X, InputFileData%StC_P_Y, InputFileData%StC_P_Z /)
+      OrientationP(:,:,i_pt)        = InitInp%InitOrientation(:,:,i_pt)
+      PositionGlobal(:,i_pt)        = InitInp%InitPosition(:,i_pt) + real( matmul(InitOut%RelPosition(:,i_pt),OrientationP(:,:,i_pt)), ReKi)
    enddo
 
     ! Define system output initializations (set up mesh) here:
@@ -313,6 +311,49 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ! Set the interval value to tell ServoDyn we are using (we don't actually change this in StC)
    Interval = p%DT
 
+
+      ! Initialize the input and output arrays for control channels
+      !     NOTE: these will get resized later in ServoDyn!!!!
+   if (maxval(p%StC_CChan) > 0) then
+      call AllocAry( u%CmdStiff, 3, maxval(p%StC_CChan), 'u%CmdStiff', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( u%CmdDamp,  3, maxval(p%StC_CChan), 'u%CmdDamp',  ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( u%CmdBrake, 3, maxval(p%StC_CChan), 'u%CmdBrake', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( u%CmdForce, 3, maxval(p%StC_CChan), 'u%CmdForce', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( y%MeasDisp, 3, maxval(p%StC_CChan), 'y%MeasDisp', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      call AllocAry( y%MeasVel,  3, maxval(p%StC_CChan), 'y%MeasVel',  ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+      ! Initialize to zero (if we asked for channel 9, the first 8 channel entries are zero)
+      u%CmdStiff  =  0.0_ReKi
+      u%CmdDamp   =  0.0_ReKi
+      u%CmdBrake  =  0.0_ReKi
+      u%CmdForce  =  0.0_ReKi
+      y%MeasDisp  =  0.0_ReKi
+      y%MeasVel   =  0.0_ReKi
+      ! Check that dimensions of x are what we expect
+      if (size(p%StC_CChan) /= size(x%StC_x,2)) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Error in setup of StC_Chan array -- does not match expected dimensionality of x%StC_x"
+         if (Failed())  return;
+      endif
+      ! Set actual values for channels requested
+      do i=1,size(p%StC_CChan)
+         if (p%StC_CChan(i) > 0) then
+            u%CmdStiff(1:3,p%StC_CChan(i))  = (/ p%K_X, p%K_Y, p%K_Z /)
+            u%CmdDamp( 1:3,p%StC_CChan(i))  = (/ p%C_X, p%C_Y, p%C_Z /)
+            !u%CmdBrake and u%CmdForce--- leave these at zero for now (no input file method to set it)
+            !  The states are sized by (6,NumMeshPts).  NumMeshPts is then used to set
+            !  size of StC_CChan as well.  For safety, we will check it here.
+            y%MeasDisp(1:3,p%StC_CChan(i))  = (/ x%StC_x(1,i), x%StC_x(3,i), x%StC_x(5,i) /)
+            y%MeasVel( 1:3,p%StC_CChan(i))  = (/ x%StC_x(2,i), x%StC_x(4,i), x%StC_x(6,i) /)
+         endif
+      enddo
+   endif
+
    call cleanup()
 !................................
 CONTAINS
@@ -348,6 +389,14 @@ CONTAINS
       call AllocAry(m%F_table, 3, p%NumMeshPts, 'F_table', ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_table = 0.0_ReKi
       call AllocAry(m%F_k    , 3, p%NumMeshPts, 'F_k'    , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return;  m%F_k     = 0.0_ReKi
 
+      ! Set spring constants to value from input file
+      call AllocAry(m%K      , 3, p%NumMeshPts, 'K'      , ErrStat, ErrMsg);  if (ErrStat >= AbortErrLev) return
+      do i_pt=1,p%NumMeshPts
+         m%K(1,i_pt) = p%K_X
+         m%K(2,i_pt) = p%K_Y
+         m%K(3,i_pt) = p%K_Z
+      enddo
+
       ! indexing
       m%PrescribedInterpIdx = 0_IntKi ! index tracker for PrescribedForce option
 
@@ -361,7 +410,6 @@ CONTAINS
    !.........................................
    SUBROUTINE cleanup()
       if (UnEcho > 0)                  close(UnEcho)                    ! Close echo file
-      if (allocated(PositionP     ))   deallocate(PositionP     )
       if (allocated(PositionGlobal))   deallocate(PositionGlobal)
       if (allocated(OrientationP  ))   deallocate(OrientationP  )
       CALL StC_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)      ! Ignore warnings here.
@@ -746,9 +794,9 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             ! inertial contributions from mass of tuned mass dampers and acceleration of point
             ! forces and moments in local coordinates
-            m%F_P(1,i_pt) =  p%K_X * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_Y_P(1) - F_Z_P(1) + m%F_table(1,i_pt)
-            m%F_P(2,i_pt) =  p%K_Y * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_X_P(2) - F_Z_P(2) + m%F_table(2,i_pt)
-            m%F_P(3,i_pt) =  p%K_Z * x%StC_x(5,i_pt) + m%C_ctrl(3,i_pt) * x%StC_x(6,i_pt) + m%C_Brake(3,i_pt) * x%StC_x(6,i_pt) - m%F_stop(3,i_pt) - m%F_ext(3,i_pt) - m%F_fr(3,i_pt) - F_X_P(3) - F_Y_P(3) + m%F_table(3,i_pt)
+            m%F_P(1,i_pt) =  m%K(1,i_pt) * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_Y_P(1) - F_Z_P(1) + m%F_table(1,i_pt)
+            m%F_P(2,i_pt) =  m%K(2,i_pt) * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_X_P(2) - F_Z_P(2) + m%F_table(2,i_pt)
+            m%F_P(3,i_pt) =  m%K(3,i_pt) * x%StC_x(5,i_pt) + m%C_ctrl(3,i_pt) * x%StC_x(6,i_pt) + m%C_Brake(3,i_pt) * x%StC_x(6,i_pt) - m%F_stop(3,i_pt) - m%F_ext(3,i_pt) - m%F_fr(3,i_pt) - F_X_P(3) - F_Y_P(3) + m%F_table(3,i_pt)
 
             m%M_P(1,i_pt) =  - F_Y_P(3)  * x%StC_x(3,i_pt)  +  F_Z_P(2) * x%StC_x(5,i_pt)
             m%M_P(2,i_pt) =    F_X_P(3)  * x%StC_x(1,i_pt)  -  F_Z_P(1) * x%StC_x(5,i_pt)
@@ -775,8 +823,8 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
             ! inertial contributions from mass of tuned mass dampers and acceleration of point
             ! forces and moments in local coordinates
-            m%F_P(1,i_pt) =  p%K_X * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_XY_P(1) + m%F_table(1,i_pt)*(m%F_k(1,i_pt))
-            m%F_P(2,i_pt) =  p%K_Y * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_XY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
+            m%F_P(1,i_pt) =  m%K(1,i_pt) * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_XY_P(1) + m%F_table(1,i_pt)*(m%F_k(1,i_pt))
+            m%F_P(2,i_pt) =  m%K(2,i_pt) * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_XY_P(2) + m%F_table(2,i_pt)*(m%F_k(2,i_pt))
             m%F_P(3,i_pt) = - F_XY_P(3)
 
             m%M_P(1,i_pt) = - F_XY_P(3) * x%StC_x(3,i_pt)
@@ -911,6 +959,21 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          endif
       END IF
 
+      ! Set output values for the measured displacements for  
+      do i=1,size(p%StC_CChan)
+         if (p%StC_CChan(i) > 0) then
+            if (p%StC_DOF_MODE == DOFMode_Indept .or. p%StC_DOF_MODE == DOFMode_Omni) then
+               !  The states are sized by (6,NumMeshPts).  NumMeshPts is then used to set
+               !  size of StC_CChan as well.  For safety, we will check it here.
+               y%MeasDisp(1:3,p%StC_CChan(i))  = (/ x%StC_x(1,i), x%StC_x(3,i), x%StC_x(5,i) /)
+               y%MeasVel( 1:3,p%StC_CChan(i))  = (/ x%StC_x(2,i), x%StC_x(4,i), x%StC_x(6,i) /)
+            else
+               y%MeasDisp(1:3,p%StC_CChan(i))  = 0.0_ReKi
+               y%MeasVel( 1:3,p%StC_CChan(i))  = 0.0_ReKi
+            endif
+         endif
+      enddo
+
       call CleanUp()
 
 CONTAINS
@@ -941,7 +1004,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      REAL(ReKi), dimension(3)                        :: K          ! tuned mass damper stiffness
+      REAL(ReKi), dimension(3,p%NumMeshPts)           :: K          ! tuned mass damper stiffness
       Real(ReKi)                                      :: denom      ! denominator for omni-direction factors
       integer(IntKi)                                  :: i_pt       ! Generic counter for mesh point
 
@@ -963,14 +1026,14 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          CALL StC_CalcStopForce(x,p,m%F_stop)
       END IF
 
-      ! Compute stiffness
+      ! Compute stiffness -- Note that this value may be overwritten by controller
       IF (p%Use_F_TBL) THEN ! use stiffness table
          CALL SpringForceExtrapInterp(x,p,m%F_table,ErrStat2,ErrMsg2);  if (Failed()) return;
          K = 0.0_ReKi
       ELSE ! use preset values
-         K(1) = p%K_X
-         K(2) = p%K_Y
-         K(3) = p%K_Z
+         K(1,:) = p%K_X
+         K(2,:) = p%K_Y
+         K(3,:) = p%K_Z
       END IF
 
 
@@ -1068,11 +1131,25 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          m%C_ctrl(1,:) = p%C_X
          m%C_ctrl(2,:) = p%C_Y
          m%C_ctrl(3,:) = p%C_Z
-
          m%C_Brake = 0.0_ReKi
          m%F_fr    = 0.0_ReKi
       ELSE IF (p%StC_CMODE == CMODE_Semi) THEN ! ground hook control
          CALL StC_GroundHookDamp(dxdt,x,u,p,m%rdisp_P,m%rdot_P,m%C_ctrl,m%C_Brake,m%F_fr)
+      ELSE IF (p%StC_CMODE == CMODE_ActiveDLL) THEN   ! Active control from DLL
+         call StC_ActiveCtrl_StiffDamp(u,p,m%K,m%C_ctrl,m%C_Brake,m%F_ext)
+         m%F_fr    = 0.0_ReKi
+         if (.not. p%Use_F_TBL) then
+            K(1:3,:) = m%K(1:3,:)
+!FIXME: for the derivative, I don't know how this should be handled.
+!!!   Defaulting to how the stiffness table operates for now, but leaving
+!!!   this next code chunk in case it shuold be handed this way instead
+         !else
+         !   ! Make commanded stiffness a perturbation about the table value (to avoid double counting the table)
+         !   ! NOTE: This has not been verified and may have unintended consequences.
+         !   do i_pt=1,p%NumMeshPts
+         !      K(1:3,i_pt) = m%F_table(1:3,i_pt) - m%K(1:3,i_pt)
+         !   enddo
+         endif
       END IF
 
 
@@ -1081,7 +1158,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
          IF (p%StC_X_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_X) * x%StC_x(1,i_pt) &
+               dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_X) * x%StC_x(1,i_pt) &
                                    - ( m%C_ctrl( 1,i_pt)/p%M_X ) * x%StC_x(2,i_pt)                                   &
                                    - ( m%C_Brake(1,i_pt)/p%M_X ) * x%StC_x(2,i_pt)                                   &
                                    + m%Acc(1,i_pt) + m%F_fr(1,i_pt) / p%M_X
@@ -1093,7 +1170,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          END IF
          IF (p%StC_Y_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_Y) * x%StC_x(3,i_pt) &
+               dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_Y) * x%StC_x(3,i_pt) &
                                    - ( m%C_ctrl( 2,i_pt)/p%M_Y ) * x%StC_x(4,i_pt)                                   &
                                    - ( m%C_Brake(2,i_pt)/p%M_Y ) * x%StC_x(4,i_pt)                                   &
                                    + m%Acc(2,i_pt) + m%F_fr(2,i_pt) / p%M_Y
@@ -1105,7 +1182,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          END IF
          IF (p%StC_Z_DOF) THEN
             do i_pt=1,p%NumMeshPts
-               dxdt%StC_x(6,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3) / p%M_Z) * x%StC_x(5,i_pt) &
+               dxdt%StC_x(6,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(2,i_pt)**2 - K(3,i_pt) / p%M_Z) * x%StC_x(5,i_pt) &
                                    - ( m%C_ctrl( 3,i_pt)/p%M_Z ) * x%StC_x(6,i_pt)                                   &
                                    - ( m%C_Brake(3,i_pt)/p%M_Z ) * x%StC_x(6,i_pt)                                   &
                                    + m%Acc(3,i_pt) + m%F_fr(3,i_pt) / p%M_Z
@@ -1119,13 +1196,13 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN   ! Only includes X and Y
                ! Compute the first time derivatives of the continuous states of Omnidirectional tuned masse damper mode by sm 2015-0904
          do i_pt=1,p%NumMeshPts
-            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1) / p%M_XY) * x%StC_x(1,i_pt)   &
+            dxdt%StC_x(2,i_pt) =  ( m%omega_P(2,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(1,i_pt) / p%M_XY) * x%StC_x(1,i_pt)   &
                                 - ( m%C_ctrl( 1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
                                 - ( m%C_Brake(1,i_pt)/p%M_XY ) * x%StC_x(2,i_pt)                                     &
                                 +  m%Acc(1,i_pt) + 1/p%M_XY * ( m%F_fr(1,i_pt) )                                     &
                                 - ( m%omega_P(1,i_pt)*m%omega_P(2,i_pt) - m%alpha_P(3,i_pt) ) * x%StC_x(3,i_pt)      &
                                +2 * m%omega_P(3,i_pt) * x%StC_x(4,i_pt)
-            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2) / p%M_XY) * x%StC_x(3,i_pt)   &
+            dxdt%StC_x(4,i_pt) =  ( m%omega_P(1,i_pt)**2 + m%omega_P(3,i_pt)**2 - K(2,i_pt) / p%M_XY) * x%StC_x(3,i_pt)   &
                                 - ( m%C_ctrl( 2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
                                 - ( m%C_Brake(2,i_pt)/p%M_XY ) * x%StC_x(4,i_pt)                                     &
                                 +  m%Acc(2,i_pt) + 1/p%M_XY * ( m%F_fr(2,i_pt) )                                     &
@@ -1214,7 +1291,7 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,rdisp_P,rdot_P,C_ctrl,C_Brake,F_fr)
    REAL(ReKi), dimension(:,:),            INTENT(IN   )     :: rdisp_P     !< translational displacement in local coordinates
    REAL(ReKi), dimension(:,:),            INTENT(IN   )     :: rdot_P      !< translational velocity     in local coordinates
    REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_ctrl      !< extrapolated/interpolated stiffness values
-   REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_Brake     !< extrapolated/interpolated stiffness values
+   REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: C_Brake     !< extrapolated/interpolated braking   values
    REAL(ReKi), dimension(:,:),            INTENT(INOUT)     :: F_fr        !< Friction forces
    INTEGER(IntKi)                                           :: i_pt        !< generic counter for mesh points
 
@@ -1526,9 +1603,31 @@ SUBROUTINE StC_GroundHookDamp(dxdt,x,u,p,rdisp_P,rdot_P,C_ctrl,C_Brake,F_fr)
 
       END IF
    enddo
-
-
 END SUBROUTINE StC_GroundHookDamp
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE StC_ActiveCtrl_StiffDamp(u,p,K_ctrl,C_ctrl,C_Brake,F_ctrl)
+   TYPE(StC_InputType),                   INTENT(IN   )  :: u              !< Inputs at Time
+   TYPE(StC_ParameterType),               INTENT(IN   )  :: p              !< The module's parameter data
+   real(ReKi),                            intent(inout)  :: K_ctrl(:,:)    !< stiffness commanded by dll -- leave alone if no ctrl
+   real(ReKi),                            intent(inout)  :: C_ctrl(:,:)    !< damping   commanded by dll
+   real(ReKi),                            intent(inout)  :: C_Brake(:,:)   !< brake     commanded by dll
+   real(ReKi),                            intent(inout)  :: F_ctrl(:,:)    !< brake     commanded by dll
+   integer(IntKi)                                        :: i_pt           ! counter for mesh points
+   do i_pt=1,p%NumMeshPts
+      if (p%StC_CChan(i_pt) > 0) then     ! This index should have been checked at init, so won't check bounds here
+         K_ctrl( 1:3,i_pt) = u%CmdStiff(1:3,p%StC_CChan(i_pt))
+         C_ctrl( 1:3,i_pt) = u%CmdDamp( 1:3,p%StC_CChan(i_pt))
+         C_Brake(1:3,i_pt) = u%CmdBrake(1:3,p%StC_CChan(i_pt))
+         F_ctrl(1:3,i_pt)  = u%CmdForce(1:3,p%StC_CChan(i_pt))
+      else  ! Use parameters from file (as if no control) -- leave K value as that may be set by table prior
+         C_ctrl(1,:) = p%C_X
+         C_ctrl(2,:) = p%C_Y
+         C_ctrl(3,:) = p%C_Z
+         C_Brake     = 0.0_ReKi
+         F_ctrl      = 0.0_ReKi
+      endif
+   enddo
+END SUBROUTINE StC_ActiveCtrl_StiffDamp
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Extrapolate or interpolate stiffness value based on stiffness table.
 SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
@@ -1604,7 +1703,7 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 END SUBROUTINE SpringForceExtrapInterp
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Parse the inputfile info stored in FileInfo_In.
-SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, FileInfo_In, InputFileData, UnEcho, ErrStat, ErrMsg )
 
    implicit    none
 
@@ -1612,6 +1711,7 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, In
    character(*),                    intent(in   )  :: PriPath           !< primary path
    CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
    CHARACTER(*),                    intent(in   )  :: RootName          !< The rootname of the echo file, possibly opened in this routine
+   integer(IntKi),                  intent(in   )  :: NumMeshPts        !< The number of mesh points passed in
    type(StC_InputFile),             intent(inout)  :: InputFileData     !< All the data in the StrucCtrl input file
    type(FileInfoType),              intent(in   )  :: FileInfo_In       !< The derived type for holding the file information.
    integer(IntKi),                  intent(  out)  :: UnEcho            !< The local unit number for this module's echo file
@@ -1849,9 +1949,26 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, FileInfo_In, In
    if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
-      !  Control mode (switch) {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode}
+      !  Control mode (switch) {
+      !     0:none;
+      !     1: Semi-Active Control Mode;
+      !     4: Active Control Mode through Simulink (not available);
+      !     5: Active Control Mode through Bladed interface} (-)
    call ParseVar( FileInfo_In, Curline, 'StC_CMODE', InputFileData%StC_CMODE, ErrStat2, ErrMsg2 )
       If (Failed()) return;
+   ! Control channels -- there may be multiple if there are multiple StC mesh points (blade TMD case), but we also allow a single
+      ! StC_CChan     - Control channel group for stiffness and damping (StC_[XYZ]_K, StC_[XYZ]_C, and StC_[XYZ]_Brake) [used only when StC_CMODE=4 or StC_CMODE=5]
+   allocate( InputFileData%StC_CChan(NumMeshPts), STAT=ErrStat2 )    ! Blade TMD will possibly have independent TMD's for each instance
+      if (ErrStat2 /= ErrID_None) ErrMsg2="Error allocating InputFileData%StC_CChan(NumMeshPts)"
+      If (Failed()) return;
+   call ParseAry( FileInfo_In, CurLine, 'StC_CChan', InputFileData%StC_CChan, NumMeshPts, ErrStat2, ErrMsg2 )
+   if ( ErrStat2 /= ErrID_None) then      ! If we didn't read a full array, then try reading just one input
+      ! If there was an error, CurLine didn't advance, so no resetting of it needed
+      call ParseVar( FileInfo_In, CurLine, 'StC_CChan', InputFileData%StC_CChan(1), ErrStat2, ErrMsg2 )
+      InputFileData%StC_CChan(:) = InputFileData%StC_CChan(1)     ! Assign all the same, will check in validation
+   endif
+      If (Failed()) return;
+
       !  Semi-Active control mode {
       !     1: velocity-based ground hook control; 
       !     2: Inverse velocity-based ground hook control;
@@ -1972,6 +2089,7 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
    INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat        !< The error status code
    CHARACTER(ErrMsgLen),     INTENT(  OUT)   :: ErrMsg         !< The error message, if an error occurred
 
+   integer(IntKi)                            :: i              !< generic loop counter
    CHARACTER(*), PARAMETER                   :: RoutineName = 'StC_ValidatePrimaryData'
 
       ! Initialize variables
@@ -1984,13 +2102,38 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
          InputFileData%StC_DOF_MODE /= DOFMode_Omni         .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_TLCD         .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Prescribed) &
-      CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional), or 3 (TLCD), or 4 (prescribed force time-series).', ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), '// &
+               'or 2 (omni-directional), or 3 (TLCD), or 4 (prescribed force time-series).', ErrStat, ErrMsg, RoutineName )
 
       ! Check control modes
-   IF ( InputFileData%StC_CMODE /= ControlMode_None .and. InputFileData%StC_CMODE /= CMODE_Semi ) &
-      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none) or 1 (semi-active) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
-!   IF ( InputFileData%StC_CMODE /= ControlMode_None .and. InputFileData%StC_CMODE /= CMODE_Semi .and. InputFileData%StC_CMODE /= CMODE_Active) &
-!      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active), or 2 (active).', ErrStat, ErrMsg, RoutineName )
+   IF (  InputFileData%StC_CMODE /= ControlMode_None     .and. &
+         InputFileData%StC_CMODE /= CMODE_Semi           .and. &
+         InputFileData%StC_CMODE /= CMODE_ActiveDLL ) &
+         !InputFileData%StC_CMode /= CMODE_ActiveEXTERN   .and. &    ! Not an option at the moment --> 4 (active with Simulink control),
+      CALL SetErrStat( ErrID_Fatal, 'Control mode (StC_CMode) must be 0 (none), 1 (semi-active),'// &
+            ' or 5 (active with DLL control) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+
+      ! Check control channel
+   if ( InputFileData%StC_CMode == CMODE_ActiveDLL ) then
+      if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept .and.  InputFileData%StC_DOF_MODE /= DOFMode_Omni ) then
+         call SetErrStat( ErrID_Fatal, 'Control mode 4 (active with Simulink control), or 5 (active with DLL control) '// &
+               'can only be used with independent or omni DOF (StC_DOF_Mode=1 or 2) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+      endif
+      if (InitInp%NumMeshPts > 1) then
+         do i=2,InitInp%NumMeshPts  ! Warn if controlling multiple mesh points with single instance (blade TMD)
+            if ( InputFileData%StC_CChan(i) == InputFileData%StC_CChan(1) ) then
+               call SetErrStat( ErrID_Warn, 'Same control channel is used for multiple StC instances within input file '// &
+                        trim(InitInp%InputFile)//'.  This may not be desired in some cases such as blade TMD active controls.', &
+                        ErrStat, ErrMsg, RoutineName )
+            endif
+         enddo
+      endif
+      do i=1,InitInp%NumMeshPts     ! Check we are in range of number of control channel groups
+         if ( InputFileData%StC_CChan(i) < 0 .or. InputFileData%StC_CChan(i) > 10 ) then
+            call SetErrStat( ErrID_Fatal, 'Control channel (StC_CChan) must be between 0 (off) and 10 when StC_CMode=5.', ErrStat, ErrMsg, RoutineName )
+         endif
+      enddo
+   endif
 
    IF ( InputFileData%StC_SA_MODE /= SA_CMODE_GH_vel    .and. &
         InputFileData%StC_SA_MODE /= SA_CMODE_GH_invVel .and. &
@@ -2021,6 +2164,11 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       call SetErrStat(ErrID_Fatal,'StC_Y_M must be > 0 when StC_Y_DOF is enabled', ErrStat,ErrMsg,RoutineName)
    if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Y_DOF .and. (InputFileData%StC_Y_K <= 0.0_ReKi) )    & 
       call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when StC_Y_DOF is enabled', ErrStat,ErrMsg,RoutineName)
+
+   if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. (InputFileData%StC_Z_M <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'StC_Z_M must be > 0 when StC_Z_DOF is enabled', ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. (InputFileData%StC_Z_K <= 0.0_ReKi) )    & 
+      call SetErrStat(ErrID_Fatal,'StC_Z_K must be > 0 when StC_Z_DOF is enabled', ErrStat,ErrMsg,RoutineName)
 
    if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_XY_M <= 0.0_ReKi) )    & 
       call SetErrStat(ErrID_Fatal,'StC_XY_M must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
@@ -2151,6 +2299,14 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
       call AllocAry( p%StC_PrescribedForce, size(InputFileData%StC_PrescribedForce,1), size(InputFileData%StC_PrescribedForce,2),"Array of force data", ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName);  if (ErrStat >= ErrID_Fatal) return
       p%StC_PrescribedForce = InputFileData%StC_PrescribedForce
+   endif
+
+   ! StC Control channels
+   call AllocAry( p%StC_CChan, p%NumMeshPts, 'p%StC_CChan', ErrStat2, ErrMsg2 )
+   if (p%StC_CMODE == CMODE_ActiveDLL ) then
+      p%StC_CChan = InputFileData%StC_CChan
+   else
+      p%StC_CChan = 0   ! turn off regardless of input file request.
    endif
 
 END SUBROUTINE StC_SetParameters

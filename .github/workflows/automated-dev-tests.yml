@@ -4,16 +4,16 @@ name: 'Development Pipeline'
 on:
   push:
     paths-ignore:
+      - 'LICENSE'
+      - 'README.rst'
       - 'docs/**'
       - 'share/**'
       - 'vs-build/**'
 
   pull_request:
-    types: [opened, synchronize] #labeled, assigned]
-    paths-ignore:
-      - 'docs/**'
-      - 'share/**'
-      - 'vs-build/**'
+    types: [opened, synchronize, edited, reopened] #labeled, assigned]
+    # Pull request event triggers are unrelated to paths
+    # paths-ignore:
 
 env:
   FORTRAN_COMPILER: gfortran-10
@@ -148,6 +148,59 @@ jobs:
           name: regression-tests-debug
           path: |
             ${{runner.workspace}}/build/reg_tests/modules
+
+  fastfarm-regression-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DOPENMP:BOOL=ON \
+            -DBUILD_FASTFARM:BOOL=ON \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build FAST.Farm
+        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
+
+      - name: Run FAST.Farm tests
+        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+        run: |
+          ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: test-results
+          path: |
+            ${{runner.workspace}}/build/reg_tests/glue-codes/fastfarm
 
   unit-test:
     runs-on: ubuntu-20.04

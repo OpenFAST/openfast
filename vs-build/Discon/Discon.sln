@@ -9,6 +9,8 @@ Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "Discon_ITIBarge", "Discon_I
 EndProject
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "Discon_OC3Hywind", "Discon_OC3Hywind.vfproj", "{3BA7CEDE-8D58-4D18-8A59-A4114FB70B9C}"
 EndProject
+Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "Discon_SC", "Discon_SC.vfproj", "{183CC593-AD4C-4A15-81C1-78624551A5ED}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -41,6 +43,14 @@ Global
 		{3BA7CEDE-8D58-4D18-8A59-A4114FB70B9C}.Release|Win32.Build.0 = Release|Win32
 		{3BA7CEDE-8D58-4D18-8A59-A4114FB70B9C}.Release|x64.ActiveCfg = Release|x64
 		{3BA7CEDE-8D58-4D18-8A59-A4114FB70B9C}.Release|x64.Build.0 = Release|x64
+		{183CC593-AD4C-4A15-81C1-78624551A5ED}.Debug|Win32.ActiveCfg = Debug|Win32
+		{183CC593-AD4C-4A15-81C1-78624551A5ED}.Debug|Win32.Build.0 = Debug|Win32
+		{183CC593-AD4C-4A15-81C1-78624551A5ED}.Debug|x64.ActiveCfg = Debug|x64
+		{183CC593-AD4C-4A15-81C1-78624551A5ED}.Debug|x64.Build.0 = Debug|x64
+		{183CC593-AD4C-4A15-81C1-78624551A5ED}.Release|Win32.ActiveCfg = Release|Win32
+		{183CC593-AD4C-4A15-81C1-78624551A5ED}.Release|Win32.Build.0 = Release|Win32
+		{183CC593-AD4C-4A15-81C1-78624551A5ED}.Release|x64.ActiveCfg = Release|x64
+		{183CC593-AD4C-4A15-81C1-78624551A5ED}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

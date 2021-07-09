@@ -10,12 +10,43 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v2.5.0 to OpenFAST `dev`
+OpenFAST v3.0.0 to OpenFAST `dev`
 ---------------------------------
 
-Many changes were applied to SubDyn input file format. You may consult the following example:
-:download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
-and the online SubDyn documentation.
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST dev
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   AeroControlSec     ---------------------- AERODYNAMIC FLOW CONTROL --------------------------------
+ServoDyn                                      61   AfCmode            0             AfCmode      - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+ServoDyn                                      61   AfC_Mean           0             AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
+ServoDyn                                      61   AfC_Amp            0             AfC_Amp      - Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]
+ServoDyn                                      61   AfC_Phase          0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]
+ServoDyn                                      74   CablesSection      ---------------------- CABLE CONTROL -------------------------------------------
+ServoDyn                                      75   CCmode             0             CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Modified in OpenFAST dev
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      65   StCSection         ---------------------- STRUCTURAL CONTROL ---------------------------------------
+ServoDyn                                      66   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
+ServoDyn                                      67   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
+ServoDyn                                      68   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
+ServoDyn                                      69   NStCfiles          "unused"      NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
+ServoDyn                                      70   NumTStC            0             NumTStC      - Number of tower structural controllers (integer)
+ServoDyn                                      71   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
+ServoDyn                                      72   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
+ServoDyn                                      73   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+
+
+OpenFAST v2.6.0 to OpenFAST v3.0.0
+----------------------------------
 
 -  ServoDyn
 
@@ -26,7 +57,31 @@ and the online SubDyn documentation.
       module (StC) with updated capabilities and input file.
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
-OpenFAST v2.5.0 to OpenFAST dev 
+Added in OpenFAST v3.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
+ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
+ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
+ServoDyn                                      64   NStCfiles          "unused"      NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
+ServoDyn                                      65   NumTStC            0             NumTStC      - Number of tower structural controllers (integer)
+ServoDyn                                      66   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
+ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
+ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+
+
+OpenFAST v2.5.0 to OpenFAST v2.6.0
+----------------------------------
+
+Many changes were applied to SubDyn input file format. You may consult the following example:
+:download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
+and the online SubDyn documentation.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST v2.6.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
@@ -47,26 +102,10 @@ SubDyn                                        na   RigidSection        PropSetID
 SubDyn                                        na   RigidSection          (-)       (kg/m)
 HydroDyn                                      52   NBody              1   NBody          - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
 HydroDyn                                      53   NBodyMod           1   NBodyMod       - Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]
-ServoDyn                                      60   AeroControlSec     ---------------------- AERODYNAMIC FLOW CONTROL --------------------------------
-ServoDyn                                      61   AfCmode                   0   AfCmode      - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
-ServoDyn                                      61   AfC_Mean                  0   AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
-ServoDyn                                      61   AfC_Amp                   0   AfC_Amp      - Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]
-ServoDyn                                      61   AfC_Phase                 0   AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]
-ServoDyn                                      65   StCSection         ---------------------- STRUCTURAL CONTROL ---------------------------------------
-ServoDyn                                      66   NumBStC                   0   NumBStC      - Number of blade structural controllers (integer)
-ServoDyn                                      67   BStCfiles          "unused"   BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
-ServoDyn                                      68   NumNStC                   0   NumNStC      - Number of nacelle structural controllers (integer)
-ServoDyn                                      69   NStCfiles          "unused"   NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
-ServoDyn                                      70   NumTStC                   0   NumTStC      - Number of tower structural controllers (integer)
-ServoDyn                                      71   TStCfiles          "unused"   TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
-ServoDyn                                      72   NumSStC                   0   NumSStC      - Number of substructure structural controllers (integer)
-ServoDyn                                      73   SStCfiles          "unused"   SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
-ServoDyn                                      74   CablesSection      ---------------------- CABLE CONTROL -------------------------------------------
-ServoDyn                                      75   CCmode                    0   CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 ============================================= ====== =============== ======================================================================================================================================================================================================
-Modified in OpenFAST dev
+Modified in OpenFAST v2.6.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line    Flag Name        Example Value
 ============================================= ====== =============== ======================================================================================================================================================================================================
@@ -103,10 +142,8 @@ HydroDyn                                      na                        (-)     
 HydroDyn                                      na     OutList names    *see OutlistParameters.xlsx for new and revised output channel names*
 ============================================= ====== =============== ======================================================================================================================================================================================================
 
-
-
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Removed in OpenFAST dev
+Removed in OpenFAST v2.6.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
@@ -118,7 +155,6 @@ HydroDyn                                      72   PtfmRF            True       
 HydroDyn                                      73   PtfmPF            True             PtfmPF         - Platform pitch tilt rotation force (flag) or DEFAULT
 HydroDyn                                      74   PtfmYF            True             PtfmYF         - Platform yaw rotation force (flag) or DEFAULT
 ============================================= ==== =============== ========================================================================================================================================================================================================
-
 
 
 
@@ -144,7 +180,6 @@ IfW driver     9    WrVTK                false    WrVTK       - Convert all data
 InflowWind     7    VFlowAng                  0   VFlowAng    - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
 
-
 ============================ ====== ================================================ ====================================================================================
 Modified in OpenFAST v2.5.0
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -156,6 +191,7 @@ MoorDyn                        na    added CtrlChan column in LINE PROPERTIES ta
                                                                                         (-)       (-)       (m)       (-)       (-)       (-)       (-)      (-)
                                                                                         1         main     835.35      20        1         4         -        0
 ============================ ====== ================================================ ====================================================================================
+
 
 
 OpenFAST v2.3.0 to OpenFAST v2.4.0
@@ -200,7 +236,6 @@ InflowWind     49   XOffset                    0  XOffset      - Initial offset 
 
 
 
-
 OpenFAST v2.2.0 to OpenFAST v2.3.0
 ----------------------------------
 
@@ -223,10 +258,12 @@ AeroDyn                                       37   AFTabMod         1   AFTabMod
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 
+
 OpenFAST v2.1.0 to OpenFAST v2.2.0
 ----------------------------------
 
 No changes required.
+
 
 
 OpenFAST v2.0.0 to OpenFAST v2.1.0
@@ -239,6 +276,8 @@ OpenFAST v2.0.0 to OpenFAST v2.1.0
 ============== ==== ================== =====================================================================================================================================================================
 BeamDyn driver 21   GlbRotBladeT0      True   GlbRotBladeT0 - Reference orientation for BeamDyn calculations is aligned with initial blade root?
 ============== ==== ================== =====================================================================================================================================================================
+
+
 
 OpenFAST v1.0.0 to OpenFAST v2.0.0
 ----------------------------------

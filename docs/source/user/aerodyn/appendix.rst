@@ -45,7 +45,7 @@ The blade data input file contains the nodal discretization, geometry, twist, ch
 AeroDyn List of Output Channels
 -------------------------------
 
-This is a list of all possible output parameters for the AeroDyn module.  The names are grouped by meaning, but can be ordered in the OUTPUTS section of the AeroDyn input file as you see fit.  ``BαNβ``, refers to output node β of blade α, where α is a number in the range [1,3] and β is a number in the range [1,9], corresponding to entry β in the ``BlOutNd`` list.  ``TwNβ`` refers to output node β of the tower and is in the range [1,9], corresponding to entry β in the ``TwOutNd`` list.
+This is a list of all possible output parameters for the AeroDyn module.  The names are grouped by meaning, but can be ordered in the OUTPUTS section of the AeroDyn input file as you see fit.  :math:`B \alpha N \beta`, refers to output node :math:`\beta` of blade :math:`\alpha`, where :math:`\alpha` is a number in the range [1,3] and :math:`\beta` is a number in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{BlOutNd}` list.  :math:`\textit{TwN}\beta` refers to output node :math:`\beta` of the tower and is in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{TwOutNd}` list.
 
 The local tower coordinate system is shown in :numref:`ad_tower_geom` and the local blade coordinate system is shown in :numref:`ad_blade_local_cs` below.  Figure :numref:`ad_blade_local_cs` also shows the direction of the local angles and force components.
 
