@@ -688,39 +688,43 @@ contains
       !--------------------------------
       ! StC related outputs
       !--------------------------------
+      CALL AllocAry(p%Jac_Idx_BStC_y, 2, p%NumBl, p%NumBStC, 'Jac_Idx_BStC_y', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_BStC_y  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_NStC_y, 2,          p%NumNStC, 'Jac_Idx_NStC_y', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_NStC_y  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_TStC_y, 2,          p%NumTStC, 'Jac_Idx_TStC_y', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_TStC_y  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_SStC_y, 2,          p%NumSStC, 'Jac_Idx_SStC_y', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_SStC_y  = 0_IntKi
       ! Blade
       if (p%NumBStC > 0) then
-         p%Jac_Idx_BStC_y(1) = index_next    ! Start index of BStC in y
          do j=1,p%NumBStC
             do i=1,p%NumBl
+               p%Jac_Idx_BStC_y(1,i,j) = index_next      ! Start index of BStC in y
                call PackLoadMesh_Names( y%BStCLoadMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+               p%Jac_Idx_BStC_y(2,i,j) = index_next-1    ! End index of BStC in y
             enddo
          enddo
-         p%Jac_Idx_BStC_y(2) = index_next-1  ! End index of BStC in y
       endif
       ! Nacelle
       if (p%NumNStC > 0) then
-         p%Jac_Idx_NStC_y(1) = index_next    ! Start index of NStC in y
          do j=1,p%NumNStC
+            p%Jac_Idx_NStC_y(1,j) = index_next    ! Start index of NStC in y
             call PackLoadMesh_Names( y%NStCLoadMesh(j), 'Nacelle StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+            p%Jac_Idx_NStC_y(2,j) = index_next-1  ! End index of NStC in y
          enddo
-         p%Jac_Idx_NStC_y(2) = index_next-1  ! End index of NStC in y
       endif
       ! Tower
       if (p%NumTStC > 0) then
-         p%Jac_Idx_TStC_y(1) = index_next    ! Start index of TStC in y
          do j=1,p%NumTStC
+            p%Jac_Idx_TStC_y(1,j) = index_next    ! Start index of TStC in y
             call PackLoadMesh_Names( y%TStCLoadMesh(j), 'Tower StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+            p%Jac_Idx_TStC_y(2,j) = index_next-1  ! End index of TStC in y
          enddo
-         p%Jac_Idx_TStC_y(2) = index_next-1  ! End index of TStC in y
       endif
       ! Sub-tructure
       if (p%NumSStC > 0) then
-         p%Jac_Idx_SStC_y(1) = index_next    ! Start index of SStC in y
          do j=1,p%NumSStC
+            p%Jac_Idx_SStC_y(1,j) = index_next    ! Start index of SStC in y
             call PackLoadMesh_Names( y%SStCLoadMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_y, index_next )
+            p%Jac_Idx_SStC_y(2,j) = index_next-1  ! End index of SStC in y
          enddo
-         p%Jac_Idx_SStC_y(2) = index_next-1  ! End index of SStC in y
       endif
 
       !--------------------------------
@@ -780,12 +784,16 @@ contains
       !--------------------------------
       ! linearization state names
       !--------------------------------
+      CALL AllocAry(p%Jac_Idx_BStC_x, 2, p%NumBl, p%NumBStC, 'Jac_Idx_BStC_x', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_BStC_x  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_NStC_x, 2,          p%NumNStC, 'Jac_Idx_NStC_x', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_NStC_x  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_TStC_x, 2,          p%NumTStC, 'Jac_Idx_TStC_x', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_TStC_x  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_SStC_x, 2,          p%NumSStC, 'Jac_Idx_SStC_x', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_SStC_x  = 0_IntKi
       index_next = 0                      ! Index counter initialize
       ! Blade StC -- displacement state
       if (p%NumBStC > 0) then
-         p%Jac_Idx_BStC_x(1) = index_next+1  ! Start index of BStC in x
          do j=1,p%NumBStC
             do k=1,p%NumBl
+               p%Jac_Idx_BStC_x(1,k,j) = index_next+1    ! Start index of BStC in x
                p%Jac_x_indx(index_next+1:index_next+6,1) =  (/ 1, 2, 3, 4, 5, 6/)   ! StC type and field index
                p%Jac_x_indx(index_next+1:index_next+6,2) =  (/ 1, 2, 3, 1, 2, 3/)   ! component (x,y,z)
                p%Jac_x_indx(index_next+1:index_next+6,3) =  j                       ! Instance
@@ -798,14 +806,14 @@ contains
                InitOut%LinNames_x(index_next+6) = 'Blade '//trim(num2lstr(k))//' StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s';   ! z-dot  x%BStC(j)%StC_x(6,k)
                InitOut%RotFrame_x(index_next+1:index_next+6) = .true.
                index_next = index_next + 6
+               p%Jac_Idx_BStC_x(2,k,j) = index_next      ! End index of BStC in x
             enddo
          enddo
-         p%Jac_Idx_BStC_x(2) = index_next    ! End index of BStC in x
       endif
       ! Nacelle StC -- displacement state
       if (p%NumNStC > 0) then
-         p%Jac_Idx_NStC_x(1) = index_next+1  ! Start index of NStC in x
          do j=1,p%NumNStC
+            p%Jac_Idx_NStC_x(1,j) = index_next+1  ! Start index of NStC in x
             p%Jac_x_indx(index_next+1:index_next+6,1) =  (/ 7, 8, 9,10,11,12/)   ! StC type and field index
             p%Jac_x_indx(index_next+1:index_next+6,2) =  (/ 1, 2, 3, 1, 2, 3/)   ! component (x,y,z)
             p%Jac_x_indx(index_next+1:index_next+6,3) =  j                       ! Instance
@@ -816,13 +824,13 @@ contains
             InitOut%LinNames_x(index_next+5) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%NStC(j)%StC_x(4,1)
             InitOut%LinNames_x(index_next+6) = 'Nacelle StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%NStC(j)%StC_x(6,1)
             index_next = index_next + 6
+            p%Jac_Idx_NStC_x(2,j) = index_next    ! End index of NStC in x
          enddo
-         p%Jac_Idx_NStC_x(2) = index_next    ! End index of NStC in x
       endif
       ! Tower StC -- displacement state
       if (p%NumTStC > 0) then
-         p%Jac_Idx_TStC_x(1) = index_next+1  ! Start index of TStC in x
          do j=1,p%NumTStC
+            p%Jac_Idx_TStC_x(1,j) = index_next+1  ! Start index of TStC in x
             p%Jac_x_indx(index_next+1:index_next+6,1) =  (/13,14,15,16,17,18/)   ! StC type and field index
             p%Jac_x_indx(index_next+1:index_next+6,2) =  (/ 1, 2, 3, 1, 2, 3/)   ! component (x,y,z)
             p%Jac_x_indx(index_next+1:index_next+6,3) =  j                       ! Instance
@@ -833,13 +841,13 @@ contains
             InitOut%LinNames_x(index_next+5) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%TStC(j)%StC_x(4,1)
             InitOut%LinNames_x(index_next+6) = 'Tower StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%TStC(j)%StC_x(6,1)
             index_next = index_next + 6
+            p%Jac_Idx_TStC_x(2,j) = index_next    ! End index of TStC in x
          enddo
-         p%Jac_Idx_TStC_x(2) = index_next    ! End index of TStC in x
       endif
       ! Substructure StC -- displacement state
       if (p%NumSStC > 0) then
-         p%Jac_Idx_SStC_x(1) = index_next+1  ! Start index of SStC in x
          do j=1,p%NumSStC
+            p%Jac_Idx_SStC_x(1,j) = index_next+1  ! Start index of SStC in x
             p%Jac_x_indx(index_next+1:index_next+6,1) =  (/19,20,21,22,23,24/)   ! StC type and field index
             p%Jac_x_indx(index_next+1:index_next+6,2) =  (/ 1, 2, 3, 1, 2, 3/)   ! component (x,y,z)
             p%Jac_x_indx(index_next+1:index_next+6,3) =  j                       ! Instance
@@ -850,8 +858,8 @@ contains
             InitOut%LinNames_x(index_next+5) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dY/dt  m/s'; ! y-dot  x%SStC(j)%StC_x(4,1)
             InitOut%LinNames_x(index_next+6) = 'Substructure StC '//trim(num2lstr(j))//' local displacement state dZ/dt  m/s'; ! z-dot  x%SStC(j)%StC_x(6,1)
             index_next = index_next + 6
+            p%Jac_Idx_SStC_x(2,j) = index_next    ! End index of SStC in x
          enddo
-         p%Jac_Idx_SStC_x(2) = index_next    ! End index of SStC in x
       endif
    end subroutine SrvD_Init_Jacobian_x
 
@@ -913,39 +921,43 @@ contains
       !--------------------------------
       ! StC related inputs
       !--------------------------------
+      CALL AllocAry(p%Jac_Idx_BStC_u, 2, p%NumBl, p%NumBStC, 'Jac_Idx_BStC_u', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_BStC_u  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_NStC_u, 2,          p%NumNStC, 'Jac_Idx_NStC_u', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_NStC_u  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_TStC_u, 2,          p%NumTStC, 'Jac_Idx_TStC_u', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_TStC_u  = 0_IntKi
+      CALL AllocAry(p%Jac_Idx_SStC_u, 2,          p%NumSStC, 'Jac_Idx_SStC_u', ErrStat2, ErrMsg2); if (Failed()) return;   p%Jac_Idx_SStC_u  = 0_IntKi
       ! Blade
       if (p%NumBStC > 0) then
-         p%Jac_Idx_BStC_u(1) = index_next    ! Start index of BStC in u
          do j=1,p%NumBStC
             do i=1,p%NumBl
+               p%Jac_Idx_BStC_u(1,i,j) = index_next    ! Start index of BStC in u
                call PackMotionMesh_Names( u%BStCMotionMesh(i,j), 'Blade '//trim(num2lstr(i))//' StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+               p%Jac_Idx_BStC_u(2,i,j) = index_next-1  ! End index of BStC in u
             enddo
          enddo
-         p%Jac_Idx_BStC_u(2) = index_next-1  ! End index of BStC in u
       endif
       ! Nacelle
       if (p%NumNStC > 0) then
-         p%Jac_Idx_NStC_u(1) = index_next    ! Start index of NStC in u
          do j=1,p%NumNStC
+            p%Jac_Idx_NStC_u(1,j) = index_next    ! Start index of NStC in u
             call PackMotionMesh_Names( u%NStCMotionMesh(j), 'Nacelle StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+            p%Jac_Idx_NStC_u(2,j) = index_next-1  ! End index of NStC in u
          enddo
-         p%Jac_Idx_NStC_u(2) = index_next-1  ! End index of NStC in u
       endif
       ! Tower
       if (p%NumTStC > 0) then
-         p%Jac_Idx_TStC_u(1) = index_next    ! Start index of TStC in u
          do j=1,p%NumTStC
+            p%Jac_Idx_TStC_u(1,j) = index_next    ! Start index of TStC in u
             call PackMotionMesh_Names( u%TStCMotionMesh(j), 'Tower StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+            p%Jac_Idx_TStC_u(2,j) = index_next-1  ! End index of TStC in u
          enddo
-         p%Jac_Idx_TStC_u(2) = index_next-1  ! End index of TStC in u
       endif
       ! Sub-structure
       if (p%NumSStC > 0) then
-         p%Jac_Idx_SStC_u(1) = index_next    ! Start index of SStC in u
          do j=1,p%NumSStC
+            p%Jac_Idx_SStC_u(1,j) = index_next    ! Start index of SStC in u
             call PackMotionMesh_Names( u%SStCMotionMesh(j), 'Substructure StC '//trim(num2lstr(j)), InitOut%LinNames_u, index_next )
+            p%Jac_Idx_SStC_u(2,j) = index_next-1  ! End index of SStC in u
          enddo
-         p%Jac_Idx_SStC_u(2) = index_next-1  ! End index of SStC in u
       endif
 
       !--------------------------------
@@ -957,9 +969,9 @@ contains
       !! u%HSS_Spd -- not in rotating frame     NOTE: this is calculated exactly, so not necessary to track
 
       ! Blade StC instances
-      index_next = p%Jac_Idx_BStC_u(1)
       do j=1,p%NumBStC
          do i=1,p%NumBl
+            index_next = p%Jac_Idx_BStC_u(1,i,j)
             do i_meshField = 1,6
                do k=1,3
                   p%Jac_u_indx(index_next,1) =  i_meshField    ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
@@ -972,8 +984,8 @@ contains
          enddo
       enddo
       ! Nacelle StC instances
-      index_next = p%Jac_Idx_NStC_u(1)
       do j=1,p%NumNStC
+         index_next = p%Jac_Idx_NStC_u(1,j)
          do i_meshField = 7,12
             do k=1,3
                p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
@@ -985,8 +997,8 @@ contains
          enddo
       enddo
       ! Tower StC instances
-      index_next = p%Jac_Idx_TStC_u(1)
       do j=1,p%NumTStC
+         index_next = p%Jac_Idx_TStC_u(1,j)
          do i_meshField = 13,18
             do k=1,3
                p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
@@ -998,8 +1010,8 @@ contains
          enddo
       enddo
       ! Substructure StC instances
-      index_next = p%Jac_Idx_SStC_u(1)
       do j=1,p%NumSStC
+         index_next = p%Jac_Idx_SStC_u(1,j)
          do i_meshField = 19,24
             do k=1,3
                p%Jac_u_indx(index_next,1) =  i_meshField       ! (TransDisp,Orient,TransVel,RotVel,TransAcc,RotAcc)
@@ -1014,14 +1026,24 @@ contains
 
    subroutine CheckInfo()
       character(1)   :: Flag,FlagLoad
-      integer(IntKi) :: i
+      integer(IntKi) :: i,j,k
       ! print out some info
       if (allocated(InitOut%LinNames_y)) then
          call WrScr('LinNames_y')
-         call WrScr('      BStC range: '//trim(Num2LStr(p%Jac_Idx_BStC_y(1)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_y(2))))
-         call WrScr('      NStC range: '//trim(Num2LStr(p%Jac_Idx_NStC_y(1)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_y(2))))
-         call WrScr('      TStC range: '//trim(Num2LStr(p%Jac_Idx_TStC_y(1)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_y(2))))
-         call WrScr('      SStC range: '//trim(Num2LStr(p%Jac_Idx_SStC_y(1)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_y(2))))
+         do j=1,p%NumBStC
+            do k=1,p%NumBl
+               call WrScr('      BStC '//trim(Num2LStr(j))//' blade '//trim(Num2LStr(k))//' range: '//trim(Num2LStr(p%Jac_Idx_BStC_y(1,k,j)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_y(2,k,j))))
+            enddo
+         enddo
+         do j=1,p%NumNStC
+            call WrScr('      NStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_NStC_y(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_y(2,j))))
+         enddo
+         do j=1,p%NumTStC
+            call WrScr('      TStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_TStC_y(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_y(2,j))))
+         enddo
+         do j=1,p%NumSStC
+            call WrScr('      SStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_SStC_y(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_y(2,j))))
+         enddo
          do i=1,size(InitOut%LinNames_y)
             Flag='F'
             if (InitOut%RotFrame_y(i)) Flag='T'
@@ -1030,10 +1052,20 @@ contains
       endif
       if (allocated(InitOut%LinNames_x)) then
          call WrScr('LinNames_x')
-         call WrScr('      BStC range: '//trim(Num2LStr(p%Jac_Idx_BStC_x(1)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_x(2))))
-         call WrScr('      NStC range: '//trim(Num2LStr(p%Jac_Idx_NStC_x(1)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_x(2))))
-         call WrScr('      TStC range: '//trim(Num2LStr(p%Jac_Idx_TStC_x(1)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_x(2))))
-         call WrScr('      SStC range: '//trim(Num2LStr(p%Jac_Idx_SStC_x(1)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_x(2))))
+         do j=1,p%NumBStC
+            do k=1,p%NumBl
+               call WrScr('      BStC '//trim(Num2LStr(j))//' blade '//trim(Num2LStr(k))//' range: '//trim(Num2LStr(p%Jac_Idx_BStC_x(1,k,j)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_x(2,k,j))))
+            enddo
+         enddo
+         do j=1,p%NumNStC
+            call WrScr('      NStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_NStC_x(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_x(2,j))))
+         enddo
+         do j=1,p%NumTStC
+            call WrScr('      TStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_TStC_x(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_x(2,j))))
+         enddo
+         do j=1,p%NumSStC
+            call WrScr('      SStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_SStC_x(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_x(2,j))))
+         enddo
          do i=1,size(InitOut%LinNames_x)
             Flag='F'
             if (InitOut%RotFrame_x(i)) Flag='T'
@@ -1046,10 +1078,20 @@ contains
             call WrFileNR(CU,'          '//trim(Num2LStr(i))//'        '//trim(Num2LStr(p%du(i)))//NewLine)
          enddo
          call WrScr('LinNames_u')
-         call WrScr('      BStC range: '//trim(Num2LStr(p%Jac_Idx_BStC_u(1)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_u(2))))
-         call WrScr('      NStC range: '//trim(Num2LStr(p%Jac_Idx_NStC_u(1)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_u(2))))
-         call WrScr('      TStC range: '//trim(Num2LStr(p%Jac_Idx_TStC_u(1)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_u(2))))
-         call WrScr('      SStC range: '//trim(Num2LStr(p%Jac_Idx_SStC_u(1)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_u(2))))
+         do j=1,p%NumBStC
+            do k=1,p%NumBl
+               call WrScr('      BStC '//trim(Num2LStr(j))//' blade '//trim(Num2LStr(k))//' range: '//trim(Num2LStr(p%Jac_Idx_BStC_u(1,k,j)))//' '//trim(Num2LStr(p%Jac_Idx_BStC_u(2,k,j))))
+            enddo
+         enddo
+         do j=1,p%NumNStC
+            call WrScr('      NStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_NStC_u(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_NStC_u(2,j))))
+         enddo
+         do j=1,p%NumTStC
+            call WrScr('      TStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_TStC_u(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_TStC_u(2,j))))
+         enddo
+         do j=1,p%NumSStC
+            call WrScr('      SStC '//trim(Num2LStr(j))//' range: '//trim(Num2LStr(p%Jac_Idx_SStC_u(1,j)))//' '//trim(Num2LStr(p%Jac_Idx_SStC_u(2,j))))
+         enddo
          do i=1,size(InitOut%LinNames_u)
             Flag='F'
             FlagLoad='F'
@@ -2594,7 +2636,7 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    !-------------------
    ! Blade StC
    if (p%NumBStC > 0) then
-      do n=p%Jac_Idx_BStC_u(1),p%Jac_Idx_BStC_u(2)       ! input range for BStC
+      do n=p%Jac_Idx_BStC_u(1,1,1),p%Jac_Idx_BStC_u(2,p%NumBl,p%NumBStC)       ! input range for BStC
 
          ! perturb positive
          call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
@@ -2613,7 +2655,7 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    !-------------------
    ! Nacelle StC
    if (p%NumNStC > 0) then
-      do n=p%Jac_Idx_NStC_u(1),p%Jac_Idx_NStC_u(2)       ! input range for NStC
+      do n=p%Jac_Idx_NStC_u(1,1),p%Jac_Idx_NStC_u(2,p%NumNStC)       ! input range for NStC
 
          ! perturb positive
          call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
@@ -2632,7 +2674,7 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    !-------------------
    ! Tower StC
    if (p%NumTStC > 0) then
-      do n=p%Jac_Idx_TStC_u(1),p%Jac_Idx_TStC_u(2)       ! input range for TStC
+      do n=p%Jac_Idx_TStC_u(1,1),p%Jac_Idx_TStC_u(2,p%NumTStC)       ! input range for TStC
 
          ! perturb positive
          call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
@@ -2651,7 +2693,7 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    !-------------------
    ! Substructure StC
    if (p%NumSStC > 0) then
-      do n=p%Jac_Idx_SStC_u(1),p%Jac_Idx_SStC_u(2)       ! input range for SStC
+      do n=p%Jac_Idx_SStC_u(1,1),p%Jac_Idx_SStC_u(2,p%NumSStC)       ! input range for SStC
 
          ! perturb positive
          call SrvD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
@@ -2992,7 +3034,7 @@ subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
    !-------------------
    ! Blade StC
    if (p%NumBStC > 0) then
-      do n=p%Jac_Idx_BStC_u(1),p%Jac_Idx_BStC_u(2)       ! input range for BStC
+      do n=p%Jac_Idx_BStC_u(1,1,1),p%Jac_Idx_BStC_u(2,p%NumBl,p%NumBStC)       ! input range for BStC
 
          ! perturb positive
          call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
@@ -3011,7 +3053,7 @@ subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
    !-------------------
    ! Nacelle StC
    if (p%NumNStC > 0) then
-      do n=p%Jac_Idx_NStC_u(1),p%Jac_Idx_NStC_u(2)       ! input range for NStC
+      do n=p%Jac_Idx_NStC_u(1,1),p%Jac_Idx_NStC_u(2,p%NumNStC)       ! input range for NStC
 
          ! perturb positive
          call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
@@ -3030,7 +3072,7 @@ subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
    !-------------------
    ! Tower StC
    if (p%NumTStC > 0) then
-      do n=p%Jac_Idx_TStC_u(1),p%Jac_Idx_TStC_u(2)       ! input range for TStC
+      do n=p%Jac_Idx_TStC_u(1,1),p%Jac_Idx_TStC_u(2,p%NumTStC)       ! input range for TStC
 
          ! perturb positive
          call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
@@ -3049,7 +3091,7 @@ subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
    !-------------------
    ! Substructure StC
    if (p%NumSStC > 0) then
-      do n=p%Jac_Idx_SStC_u(1),p%Jac_Idx_SStC_u(2)       ! input range for SStC
+      do n=p%Jac_Idx_SStC_u(1,1),p%Jac_Idx_SStC_u(2,p%NumSStC)       ! input range for SStC
 
          ! perturb positive
          call SrvD_CopyInput( u, u_perturb,  MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); if (Failed())  return;
@@ -3360,28 +3402,28 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta_p, delta_m, dY)
 
    ! StC related outputs
    if (p%NumBStC > 0) then
-      indx_first = p%Jac_Idx_BStC_y(1)
       do j=1,p%NumBStC
          do i=1,p%NumBl
+            indx_first = p%Jac_Idx_BStC_y(1,i,j)
             call PackLoadMesh_dY( y_p%BStCLoadMesh(i,j), y_m%BStCLoadMesh(i,j), dY, indx_first )
          enddo
       enddo
    endif
    if (p%NumNStC > 0) then
-      indx_first = p%Jac_Idx_NStC_y(1)
       do j=1,p%NumNStC
+         indx_first = p%Jac_Idx_NStC_y(1,j)
          call PackLoadMesh_dY( y_p%NStCLoadMesh(j), y_m%NStCLoadMesh(j), dY, indx_first )
       enddo
    endif
    if (p%NumTStC > 0) then
-      indx_first = p%Jac_Idx_TStC_y(1)
       do j=1,p%NumTStC
+         indx_first = p%Jac_Idx_TStC_y(1,j)
          call PackLoadMesh_dY( y_p%TStCLoadMesh(j), y_m%TStCLoadMesh(j), dY, indx_first )
       enddo
    endif
    if (p%NumSStC > 0) then
-      indx_first = p%Jac_Idx_SStC_y(1)
       do j=1,p%NumSStC
+         indx_first = p%Jac_Idx_SStC_y(1,j)
          call PackLoadMesh_dY( y_p%SStCLoadMesh(j), y_m%SStCLoadMesh(j), dY, indx_first )
       enddo
    endif
@@ -3412,9 +3454,9 @@ subroutine Compute_dX( p, x_p, x_m, delta_p, delta_m, dX )
 
    ! StC related outputs
    if (p%NumBStC > 0) then
-      indx_prev = p%Jac_Idx_BStC_x(1)-1
       do j=1,p%NumBStC
          do k=1,p%NumBl
+            indx_prev = p%Jac_Idx_BStC_x(1,k,j)-1
             dX(indx_prev+1) = x_p%BStC(j)%StC_x(1,k) - x_m%BStC(j)%StC_x(1,k)    ! x      x%BStC(j)%StC_x(1,k)
             dX(indx_prev+2) = x_p%BStC(j)%StC_x(3,k) - x_m%BStC(j)%StC_x(3,k)    ! y      x%BStC(j)%StC_x(3,k)
             dX(indx_prev+3) = x_p%BStC(j)%StC_x(5,k) - x_m%BStC(j)%StC_x(5,k)    ! z      x%BStC(j)%StC_x(5,k)
@@ -3426,8 +3468,8 @@ subroutine Compute_dX( p, x_p, x_m, delta_p, delta_m, dX )
       enddo
    endif
    if (p%NumNStC > 0) then
-      indx_prev = p%Jac_Idx_NStC_x(1)-1
       do j=1,p%NumNStC
+         indx_prev = p%Jac_Idx_NStC_x(1,j)-1
          dX(indx_prev+1) = x_p%NStC(j)%StC_x(1,1) - x_m%NStC(j)%StC_x(1,1)    ! x      x%NStC(j)%StC_x(1,1)
          dX(indx_prev+2) = x_p%NStC(j)%StC_x(3,1) - x_m%NStC(j)%StC_x(3,1)    ! y      x%NStC(j)%StC_x(3,1)
          dX(indx_prev+3) = x_p%NStC(j)%StC_x(5,1) - x_m%NStC(j)%StC_x(5,1)    ! z      x%NStC(j)%StC_x(5,1)
@@ -3438,8 +3480,8 @@ subroutine Compute_dX( p, x_p, x_m, delta_p, delta_m, dX )
       enddo
    endif
    if (p%NumTStC > 0) then
-      indx_prev = p%Jac_Idx_TStC_x(1)-1
       do j=1,p%NumTStC
+         indx_prev = p%Jac_Idx_TStC_x(1,j)-1
          dX(indx_prev+1) = x_p%TStC(j)%StC_x(1,1) - x_m%TStC(j)%StC_x(1,1)    ! x      x%TStC(j)%StC_x(1,1)
          dX(indx_prev+2) = x_p%TStC(j)%StC_x(3,1) - x_m%TStC(j)%StC_x(3,1)    ! y      x%TStC(j)%StC_x(3,1)
          dX(indx_prev+3) = x_p%TStC(j)%StC_x(5,1) - x_m%TStC(j)%StC_x(5,1)    ! z      x%TStC(j)%StC_x(5,1)
@@ -3450,8 +3492,8 @@ subroutine Compute_dX( p, x_p, x_m, delta_p, delta_m, dX )
       enddo
    endif
    if (p%NumSStC > 0) then
-      indx_prev = p%Jac_Idx_SStC_x(1)-1
       do j=1,p%NumSStC
+         indx_prev = p%Jac_Idx_SStC_x(1,j)-1
          dX(indx_prev+1) = x_p%SStC(j)%StC_x(1,1) - x_m%SStC(j)%StC_x(1,1)    ! x      x%SStC(j)%StC_x(1,1)
          dX(indx_prev+2) = x_p%SStC(j)%StC_x(3,1) - x_m%SStC(j)%StC_x(3,1)    ! y      x%SStC(j)%StC_x(3,1)
          dX(indx_prev+3) = x_p%SStC(j)%StC_x(5,1) - x_m%SStC(j)%StC_x(5,1)    ! z      x%SStC(j)%StC_x(5,1)
@@ -3592,7 +3634,7 @@ subroutine Jac_dYdx( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx 
    !-------------------
    ! Blade StC
    if (p%NumBStC > 0) then
-      do n=p%Jac_Idx_BStC_x(1),p%Jac_Idx_BStC_x(2)       ! state range for BStC
+      do n=p%Jac_Idx_BStC_x(1,1,1),p%Jac_Idx_BStC_x(2,p%NumBl,p%NumBStC)       ! state range for BStC
          ! perturb positive
          call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
          call SrvD_CopyOutput(    y, y_p,    MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
@@ -3610,7 +3652,7 @@ subroutine Jac_dYdx( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx 
    !-------------------
    ! Nacelle StC
    if (p%NumNStC > 0) then
-      do n=p%Jac_Idx_NStC_x(1),p%Jac_Idx_NStC_x(2)       ! state range for NStC
+      do n=p%Jac_Idx_NStC_x(1,1),p%Jac_Idx_NStC_x(2,p%NumNStC)       ! state range for NStC
          ! perturb positive
          call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
          call SrvD_CopyOutput(    y, y_p,    MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
@@ -3628,7 +3670,7 @@ subroutine Jac_dYdx( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx 
    !-------------------
    ! Tower StC
    if (p%NumTStC > 0) then
-      do n=p%Jac_Idx_TStC_x(1),p%Jac_Idx_TStC_x(2)       ! state range for TStC
+      do n=p%Jac_Idx_TStC_x(1,1),p%Jac_Idx_TStC_x(2,p%NumTStC)       ! state range for TStC
          ! perturb positive
          call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
          call SrvD_CopyOutput(    y, y_p,    MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
@@ -3646,7 +3688,7 @@ subroutine Jac_dYdx( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx 
    !-------------------
    ! Substructure StC
    if (p%NumSStC > 0) then
-      do n=p%Jac_Idx_SStC_x(1),p%Jac_Idx_SStC_x(2)       ! state range for SStC
+      do n=p%Jac_Idx_SStC_x(1,1),p%Jac_Idx_SStC_x(2,p%NumSStC)       ! state range for SStC
          ! perturb positive
          call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
          call SrvD_CopyOutput(    y, y_p,    MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
@@ -3882,7 +3924,7 @@ subroutine Jac_dXdx(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdx)
    !-------------------
    ! Blade StC
    if (p%NumBStC > 0) then
-      do n=p%Jac_Idx_BStC_x(1),p%Jac_Idx_BStC_x(2)       ! state range for BStC
+      do n=p%Jac_Idx_BStC_x(1,1,1),p%Jac_Idx_BStC_x(2,p%NumBl,p%NumBStC)       ! state range for BStC
          ! perturb positive
          call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
          call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
@@ -3900,7 +3942,7 @@ subroutine Jac_dXdx(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdx)
    !-------------------
    ! Nacelle StC
    if (p%NumNStC > 0) then
-      do n=p%Jac_Idx_NStC_x(1),p%Jac_Idx_NStC_x(2)       ! state range for NStC
+      do n=p%Jac_Idx_NStC_x(1,1),p%Jac_Idx_NStC_x(2,p%NumNStC)       ! state range for NStC
          ! perturb positive
          call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
          call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
@@ -3918,7 +3960,7 @@ subroutine Jac_dXdx(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdx)
    !-------------------
    ! Tower StC
    if (p%NumTStC > 0) then
-      do n=p%Jac_Idx_TStC_x(1),p%Jac_Idx_TStC_x(2)       ! state range for TStC
+      do n=p%Jac_Idx_TStC_x(1,1),p%Jac_Idx_TStC_x(2,p%NumTStC)       ! state range for TStC
          ! perturb positive
          call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
          call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
@@ -3936,7 +3978,7 @@ subroutine Jac_dXdx(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdx)
    !-------------------
    ! Substructure StC
    if (p%NumSStC > 0) then
-      do n=p%Jac_Idx_SStC_x(1),p%Jac_Idx_SStC_x(2)       ! state range for SStC
+      do n=p%Jac_Idx_SStC_x(1,1),p%Jac_Idx_SStC_x(2,p%NumSStC)       ! state range for SStC
          ! perturb positive
          call SrvD_CopyContState( x, x_temp, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
          call SrvD_CopyContState( x, dx_p,   MESH_UPDATECOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;

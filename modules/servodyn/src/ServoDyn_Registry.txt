@@ -446,18 +446,18 @@ typedef  ^  ParameterType  ReKi     dx          {:}    - -  "vector that determi
 typedef  ^  ParameterType  Integer  Jac_nu      -      - -  "number of inputs in jacobian matrix"   -
 typedef  ^  ParameterType  Integer  Jac_ny      -      - -  "number of outputs in jacobian matrix"   -
 typedef  ^  ParameterType  Integer  Jac_nx      -      - -  "the number of continuous states in jacobian matrix" -
-typedef  ^  ParameterType  Integer  Jac_Idx_BStC_u {2} 0 -  "the start and end indices of blade        StC u jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_NStC_u {2} 0 -  "the start and end indices of nacelle      StC u jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_TStC_u {2} 0 -  "the start and end indices of tower        StC u jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_SStC_u {2} 0 -  "the start and end indices of substructure StC u jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_BStC_x {2} 0 -  "the start and end indices of blade        StC x jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_NStC_x {2} 0 -  "the start and end indices of nacelle      StC x jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_TStC_x {2} 0 -  "the start and end indices of tower        StC x jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_SStC_x {2} 0 -  "the start and end indices of substructure StC x jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_BStC_y {2} 0 -  "the start and end indices of blade        StC y jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_NStC_y {2} 0 -  "the start and end indices of nacelle      StC y jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_TStC_y {2} 0 -  "the start and end indices of tower        StC y jacobian"  -
-typedef  ^  ParameterType  Integer  Jac_Idx_SStC_y {2} 0 -  "the start and end indices of substructure StC y jacobian"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_BStC_u {:}{:}{:} - -  "the start and end indices of blade        StC u jacobian [ start/end, blade, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_NStC_u {:}{:}    - -  "the start and end indices of nacelle      StC u jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_TStC_u {:}{:}    - -  "the start and end indices of tower        StC u jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_SStC_u {:}{:}    - -  "the start and end indices of substructure StC u jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_BStC_x {:}{:}{:} - -  "the start and end indices of blade        StC x jacobian [ start/end, blade, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_NStC_x {:}{:}    - -  "the start and end indices of nacelle      StC x jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_TStC_x {:}{:}    - -  "the start and end indices of tower        StC x jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_SStC_x {:}{:}    - -  "the start and end indices of substructure StC x jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_BStC_y {:}{:}{:} - -  "the start and end indices of blade        StC y jacobian [ start/end, blade, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_NStC_y {:}{:}    - -  "the start and end indices of nacelle      StC y jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_TStC_y {:}{:}    - -  "the start and end indices of tower        StC y jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_SStC_y {:}{:}    - -  "the start and end indices of substructure StC y jacobian [ start/end, instance ]"  -
 
 
 
