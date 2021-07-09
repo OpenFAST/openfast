@@ -749,6 +749,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       z_guess%W(iW)%Gamma_LL = z%W(iW)%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
    enddo
    call FVW_CalcConstrStateResidual(t+p%DTaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
+   ! Updating circulation of near wake panel (need to be set for UA, Uind on LL) (and position but irrelevant)
+   ! Changes: x only
+   call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+   call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    ! Compute UA inputs at t+DTaero and integrate UA states between t and t+dtAero
    if (m%UA_Flag) then
       call CalculateInputsAndOtherStatesForUA(2, uInterp, p, x, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -756,15 +760,14 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       ! Compute unsteady Gamma based on UA Cl
       if (p%DStallOnWake .and. p%CirculationMethod/=idCircPrescribed) then 
          call UA_SetGammaDyn(t, uInterp, p, x, xd, OtherState, m, AFInfo, z, ErrStat, ErrMsg)
+         ! Updating circulation of near wake panel again (and position but irrelevant)
+         ! Changes: x only
+         call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+         call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
       end if
    end if
 
 
-   ! Updating circulation of near wake panel (and position but irrelevant)
-   ! Changes: x only
-   call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
-   call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-   !call print_x_NW_FW(p, m, x,'Map3')
 
    ! --- Fake handling of ground effect (ensure vorticies above ground)
    call FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
@@ -1606,7 +1609,7 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    ! --- Induction on the lifting line control points
    ! if     InductionAtCP : In: m%W%CP,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
    ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
-   call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Ca;lcultateInputsAndOtherStatesForUA'); if (ErrStat >= AbortErrLev) return
+   call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalculateInputsAndOtherStatesForUA'); if (ErrStat >= AbortErrLev) return
    if (p%InductionAtCP) then
       if (m%nNW<=1) then
          do iW = 1,p%nWings  
@@ -1697,15 +1700,13 @@ subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, Err
    real(ReKi)                  :: Cl_dyn, Cl_dyn_prev, Cl_dyn_avg
    real(ReKi)                  :: Gamma_dyn, Gamma_dyn_prev, Gamma_dyn_avg
    type(UA_InputType), pointer :: u_UA ! Alias to shorten notations
-   integer(IntKi), parameter   :: InputIndex=1      ! we will always use values at t+dt in this routine
+   integer(IntKi), parameter   :: InputIndex=2 ! we will always use values at t+dt in this routine
    integer(intKi)              :: iW, j ! loop counter on wings and nodes
    integer(intKi)              :: errStat2
    character(ErrMsgLen)        :: errMsg2
 
    ErrStat = 0
    ErrMsg = ""
-   print*,'------------------------------------------------------------------'
-   print*,'t ',t
 
    do iW=1,p%nWings
       ! Gamma_LL is expressed at CP, so we average the dynamic gamma from both nodes
@@ -1721,9 +1722,6 @@ subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, Err
          Gamma_dyn_avg  = (Gamma_dyn+Gamma_dyn_prev)*0.5_ReKi
          Gamma_dyn_prev = Gamma_dyn
          z%W(iW)%Gamma_LL(j-1) = Gamma_dyn_avg
-         !print*,z%W(iW)%Gamma_LL(j-1), Gamma_dyn, Gamma_dyn_avg
-         !y%WriteOutput( OutIdx ) = 0.5_ReKi * p%BEMT%chord(IdxNode,IdxBlade) * m%BEMT_y%Vrel(IdxNode,IdxBlade) * m%BEMT_y%Cl(IdxNode,IdxBlade) ! "Gam" [m^2/s]
-         !y%WriteOutput( OutIdx ) = 0.5_ReKi * p_AD%FVW%W(iW)%Chord(IdxNode) * m_AD%FVW%W(iW)%BN_Vrel(IdxNode) * m_AD%FVW%W(iW)%BN_Cl(IdxNode) ! "Gam" [m^2/s]
       enddo
    enddo ! iW, Loop on wings
 end subroutine UA_SetGammaDyn
