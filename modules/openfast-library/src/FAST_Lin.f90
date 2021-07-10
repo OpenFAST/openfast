@@ -1648,7 +1648,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       call Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, AD%Input(1), dUdu )
    end if ! we're using the InflowWind module
    
-      !............ 
+      !............
       ! \f$ \frac{\partial U_\Lambda^{SrvD}}{\partial u^{SrvD}} \end{bmatrix} = \f$ (dUdu block row 2=SrvD)
       !............
    if (p_FAST%CompServo == MODULE_SrvD) then
@@ -1658,15 +1658,15 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
    
       !............ 
       ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{SrvD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{BD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{AD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{HD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{SD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{MAP}} \end{bmatrix} = \f$ (dUdu block row 3=ED)
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{BD}}   \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{AD}}   \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{HD}}   \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{SD}}   \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{MAP}}  \end{bmatrix} = \f$ (dUdu block row 3=ED)
       !............   
    ! we need to do this for CompElast=ED and CompElast=BD
 
-   call Linear_ED_InputSolve_du( p_FAST, y_FAST, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, HD, SD, MAPp, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
+   call Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, HD, SD, MAPp, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
       !............
@@ -1888,10 +1888,11 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
 END SUBROUTINE Linear_IfW_InputSolve_du_AD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{ED}/du^{BD} and dU^{ED}/du^{AD} blocks (ED row) of dUdu. (i.e., how do changes in the AD and BD inputs affect the ED inputs?)
-SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, HD, SD, MAPp, MeshMapData, dUdu, ErrStat, ErrMsg )
+SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD, BD, HD, SD, MAPp, MeshMapData, dUdu, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST         !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST         !< Glue-code output parameters (for linearization)
+   type(ServoDyn_Data),            intent(in   )  :: SrvD           !< SrvD parameters
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED           !< ED Inputs at t
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED           !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD           !< AeroDyn outputs
@@ -1906,7 +1907,9 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg         !< Error message
    
       ! local variables
+   INTEGER(IntKi)                                 :: j              ! Loops through StC instances
    INTEGER(IntKi)                                 :: K              ! Loops through blades
+   INTEGER(IntKi)                                 :: SrvD_Start     ! starting index of dUdu (column) where SrvD StC load is
    INTEGER(IntKi)                                 :: BD_Start       ! starting index of dUdu (column) where BD root motion inputs are located
    INTEGER(IntKi)                                 :: AD_Start_Bl    ! starting index of dUdu (column) where AD blade motion inputs are located
    INTEGER(IntKi)                                 :: ED_Start_mt    ! starting index of dUdu (row) where ED blade/tower or hub moment inputs are located
@@ -1923,6 +1926,93 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       
    ErrStat = ErrID_None
    ErrMsg = ""
+
+   !..........
+   ! dU^{ED}/du^{SrvD}
+   !..........
+   if (p_FAST%CompServo == MODULE_SrvD) then
+      ED_Start_mt = y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
+      !--------------------
+      ! Blade (BD or ED)
+      if ( p_FAST%CompElast == Module_ED ) then
+         if ( allocated(SrvD%y%BStCLoadMesh) ) then
+            do j=1,size(SrvD%y%BStCLoadMesh,2)
+               do K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
+                  if (SrvD%y%BStCLoadMesh(K,j)%Committed) then
+                     CALL Linearize_Point_to_Point( SrvD%y%BStCLoadMesh(k,j), MeshMapData%u_ED_BladePtLoads(k), MeshMapData%BStC_P_2_ED_P_B(k,j), ErrStat2, ErrMsg2, SrvD%Input(1)%BStCMotionMesh(k,j), y_ED%BladeLn2Mesh(k) )
+                        call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+                     ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(k)%NNodes*3         ! 3 forces at each node (we're going to start at the moments since the M_us matrix is for moments...)
+                     SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_BStC_y(1,k,j)
+                     ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+                     if (allocated(MeshMapData%BStC_P_2_ED_P_B(k,j)%dM%m_us )) then
+                        call SetBlockMatrix( dUdu, MeshMapData%BStC_P_2_ED_P_B(k,j)%dM%m_us, ED_Start_mt, SrvD_Start )
+                     end if
+                     ! get starting index of next blade
+                     ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(k)%NNodes* 3
+                  endif
+               enddo
+            enddo
+         endif
+      endif
+      !--------------------
+      ! Nacelle (ED only)
+      if ( allocated(SrvD%y%NStCLoadMesh) ) then
+         do j = 1,size(SrvD%y%NStCLoadMesh)
+            if (SrvD%y%NStCLoadMesh(j)%Committed) then
+               call Transfer_Point_to_Point( SrvD%y%NStCLoadMesh(j), u_ED%NacelleLoads, MeshMapData%NStC_P_2_ED_P_N(j), ErrStat2, ErrMsg2, SrvD%Input(1)%NStCMotionMesh(j), y_ED%NacelleMotion )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+               ED_Start_mt = Indx_u_ED_Nacelle_Start(u_ED, y_FAST) &
+                             + u_ED%NacelleLoads%NNodes      * 3             ! 3 forces at the nacelle (so we start at the moments)
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_NStC_y(1,j)
+               ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+               if (allocated(MeshMapData%NStC_P_2_ED_P_N(j)%dM%m_us )) then
+                  call SetBlockMatrix( dUdu, MeshMapData%NStC_P_2_ED_P_N(j)%dM%m_us, ED_Start_mt, SrvD_Start )
+               end if
+            endif
+         enddo
+      endif
+      !--------------------
+      ! Tower (ED only)
+      if ( allocated(SrvD%y%TStCLoadMesh) ) then
+         do j = 1,size(SrvD%y%TStCLoadMesh)
+            if (SrvD%y%TStCLoadMesh(j)%Committed) then
+               call Linearize_Point_to_Point( SrvD%y%TStCLoadMesh(j), MeshMapData%u_ED_TowerPtLoads, MeshMapData%TStC_P_2_ED_P_T(j), ErrStat2, ErrMsg2, SrvD%Input(1)%TStCMotionMesh(j), y_ED%TowerLn2Mesh )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+               ED_Start_mt = Indx_u_ED_Tower_Start(u_ED, y_FAST) &
+                             + u_ED%TowerPtLoads%NNodes      * 3             ! 3 forces at the nacelle (so we start at the moments)
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_TStC_y(1,j)
+               ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+               if (allocated(MeshMapData%TStC_P_2_ED_P_T(j)%dM%m_us )) then
+                  call SetBlockMatrix( dUdu, MeshMapData%TStC_P_2_ED_P_T(j)%dM%m_us, ED_Start_mt, SrvD_Start )
+               endif
+            endif
+         enddo
+      endif
+      !--------------------
+      ! Substructure (SD or ED)
+      if (p_FAST%CompSub /= MODULE_SD) then
+         if ( allocated(SrvD%y%SStCLoadMesh) ) then
+            do j=1,size(SrvD%y%SStCLoadMesh)
+               if (SrvD%y%SStCLoadMesh(j)%Committed) then
+                  call Linearize_Point_to_Point( SrvD%y%SStCLoadMesh(j), MeshMapData%u_ED_PlatformPtMesh, MeshMapData%SStC_P_P_2_ED_P(j), ErrStat2, ErrMsg2, SrvD%Input(1)%SStCMotionMesh(j), y_ED%PlatformPtMesh )
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+                  ED_Start_mt = Indx_u_ED_Platform_Start(u_ED, y_FAST) &
+                                + u_ED%PlatformPtMesh%NNodes      * 3             ! 3 forces at the nacelle (so we start at the moments)
+                  SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_y(1,j)
+                  ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+                  if (allocated(MeshMapData%SStC_P_P_2_ED_P(j)%dM%m_us )) then
+                     call SetBlockMatrix( dUdu, MeshMapData%SStC_P_P_2_ED_P(j)%dM%m_us, ED_Start_mt, SrvD_Start )
+                  endif
+               endif
+            enddo
+         endif
+      endif
+   endif
+
 
    !..........
    ! dU^{ED}/du^{AD}
