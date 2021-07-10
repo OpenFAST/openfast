@@ -177,13 +177,6 @@ CONTAINS
 
 
       ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
-      p%nTurbines = InitInp%FarmSize         ! 0 indicates regular FAST module mode
-
-      if (p%nTurbines == 0) p%nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
-
-      allocate( p%NFairs(                p%nTurbines))  ! allocate the array that will hold the number of fairleads for each turbine
-      allocate( p%TurbineRefPos(      3, p%nTurbines))
-
       if (InitInp%FarmSize > 0) then
          CALL WrScr('   >>> MoorDyn is running in array mode <<< ')
 
@@ -191,41 +184,37 @@ CONTAINS
 
          !InitInp%FarmNCpldCons        
 
+         p%nTurbines = InitInp%FarmSize
+
          ! copy over turbine reference positions for later use
          p%TurbineRefPos = InitInp%TurbineRefPos
 
-      else    ! normal, FAST module mode
+      else    ! FarmSize==0 indicates normal, FAST module mode
+
+         p%nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
 
          m%PtfmInit = InitInp%PtfmInit(:,1)   ! save a copy of PtfmInit so it's available at the farm level
          p%TurbineRefPos = 0.0_DbKi           ! for now assuming this is zero for FAST use
 
       END IF
 
+      ! allocate some parameter arrays that are for each turbine (size 1 if regular OpenFAST use)
+      allocate( p%nCpldBodies(     p%nTurbines)) 
+      allocate( p%nCpldRods  (     p%nTurbines)) 
+      allocate( p%nCpldCons  (     p%nTurbines)) 
+      allocate( p%TurbineRefPos(3, p%nTurbines))
+      
+      ! initialize the arrays (to zero, except for passed in farm turbine reference positions)
+      p%nCpldBodies = 0
+      p%nCpldRods   = 0
+      p%nCpldCons   = 0
+      
+      if (InitInp%FarmSize > 0) then
+         p%TurbineRefPos = InitInp%TurbineRefPos  ! copy over turbine reference positions for later use
+      else    
+         p%TurbineRefPos = 0.0_DbKi               ! for now assuming this is zero for FAST use
+      end if
 
-      !FIXME:  the following probably needs changing >>>
-      do iTurb = 1, p%nTurbines
-         p%NFairs(iTurb) = 0   ! this is the number of fairleads (for each turbine if in farm mode)
-      end do
-      ! <<<<
-
-      ! Check for farm-level inputs (indicating that this MoorDyn isntance is being run from FAST.Farm)
-      !intead of below, check first dimension of PtfmInit
-      !p%nTurbines = SIZE(InitInp%FarmCoupledKinematics)  ! the number of turbines in the array (0 indicates a regular OpenFAST simulation with 1 turbine)
-      !
-      !IF (p%nTurbines > 0) then
-      !   WrScr('   >>> MoorDyn is running in array mode <<< ')
-      !   
-      !   ! copy over the meshes to be this instance's array of mesh inputs (a duplicate)
-      !   ! >>> initialize array u%FarmCoupledKinematics                 
-      !   ! >>> copy each mesh from InitInp%FarmCoupledKinematics into it
-      !       ! CALL MeshCopy ( SrcMesh  = InitInp%FarmCoupledKinematics, DestMesh = u%FarmCoupledKinematics, CtrlCode = MESH_SIBLING, IOS=COMPONENT_OUTPUT, Force=.TRUE.,  Moment=.TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
-      !   
-      !   !   OR instead of copying the meshes, could just make empty meshes, then populate with exactly the elements needed at the farm level
-      !   !InitInp%FarmNCpldBodies      
-      !   !InitInp%FarmNCpldRods        
-      !   !InitInp%FarmNCpldCons        
-      !   
-      !END IF
       
       !---------------------------------------------------------------------------------------------
       !            read input file and create cross-referenced mooring system objects
@@ -473,9 +462,13 @@ CONTAINS
       ALLOCATE(m%ConStateIs1(p%nConnects), m%ConStateIsN(p%nConnects), STAT=ErrStat2); if(AllocateFailed("ConStateIs1/N" )) return
       ALLOCATE(m%LineStateIs1(p%nLines)  , m%LineStateIsN(p%nLines)  , STAT=ErrStat2); if(AllocateFailed("LineStateIs1/N")) return
 
-      ALLOCATE(m%FreeBodyIs(   p%nBodies ), m%CpldBodyIs(p%nBodies ), STAT=ErrStat2); if(AllocateFailed("BodyIs")) return
-      ALLOCATE(m%FreeRodIs(    p%nRods   ), m%CpldRodIs( p%nRods   ), STAT=ErrStat2); if(AllocateFailed("RodIs")) return
-      ALLOCATE(m%FreeConIs(   p%nConnects), m%CpldConIs(p%nConnects),STAT=ErrStat2); if(AllocateFailed("ConnectIs")) return
+      ALLOCATE(m%FreeBodyIs(   p%nBodies ),  STAT=ErrStat2); if(AllocateFailed("FreeBodyIs")) return
+      ALLOCATE(m%FreeRodIs(    p%nRods   ),  STAT=ErrStat2); if(AllocateFailed("FreeRodIs")) return
+      ALLOCATE(m%FreeConIs(   p%nConnects),  STAT=ErrStat2); if(AllocateFailed("FreeConnectIs")) return
+
+      ALLOCATE(m%CpldBodyIs(p%nBodies , p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldBodyIs")) return
+      ALLOCATE(m%CpldRodIs( p%nRods   , p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldRodIs")) return
+      ALLOCATE(m%CpldConIs(p%nConnects, p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldConnectIs")) return
 
 
       ! ---------------------- now go through again and process file contents --------------------
@@ -625,10 +618,12 @@ CONTAINS
                      if ((let2 == "COUPLED") .or. (let2 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
                      
                      m%BodyList(l)%typeNum = -1
-                     p%nCpldBodies=p%nCpldBodies+1  ! add this rod to coupled list                          
-                     m%CpldBodyIs(p%nCpldBodies) = l
+                     p%nCpldBodies(1)=p%nCpldBodies(1)+1  ! add this rod to coupled list                          
+                     m%CpldBodyIs(p%nCpldBodies(1),1) = l
 
                      ! body initial position due to coupling will be adjusted later
+                     
+                  ! TODO: add option for body coupling to different turbines in FAST.Farm  <<<
                      
                   else if ((let2 == "FREE") .or. (LEN_TRIM(let2)== 0)) then    ! if a free body
                      m%BodyList(l)%typeNum = 0
@@ -755,23 +750,25 @@ CONTAINS
                   else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a rigidly coupled rod, add to list and add 
                      m%RodList(l)%typeNum = -2            
 
-                     p%nCpldRods=p%nCpldRods+1     ! add this rod to coupled list
+                     p%nCpldRods(1)=p%nCpldRods(1)+1     ! add this rod to coupled list
                      
-                     m%CpldRodIs(p%nCpldRods) = l
+                     m%CpldRodIs(p%nCpldRods(1),1) = l
                  
                   else if ((let1 == "VESSELPINNED") .or. (let1 == "VESPIN") .or. (let1 == "COUPLEDPINNED") .or. (let1 == "CPLDPIN")) then  ! if a pinned coupled rod, add to list and add 
                      m%RodList(l)%typeNum = -1
                      
-                     p%nCpldRods=p%nCpldRods+1  ! add
-                     p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
+                     p%nCpldRods(1)=p%nCpldRods(1)+1  ! add
+                     p%nFreeRods   =p%nFreeRods+1     ! add this pinned rod to the free list because it is half free
                      
                      m%RodStateIs1(p%nFreeRods) = Nx+1
                      m%RodStateIsN(p%nFreeRods) = Nx+6
                      Nx = Nx + 6                                               ! add 6 state variables for each pinned rod
                      
-                     m%CpldRodIs(p%nCpldRods) = l
+                     m%CpldRodIs(p%nCpldRods(1),1) = l
                      m%FreeRodIs(p%nFreeRods) = l
-                     
+                   
+                  ! TODO: add option for body coupling to different turbines in FAST.Farm <<<
+                   
                   else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
                      m%RodList(l)%typeNum = 0
                      
@@ -889,7 +886,7 @@ CONTAINS
                      RETURN
                   END IF
                   
-
+                  m%ConnectList(l)%r = tempArray(1:3)   ! set initial, or reference, node position (for coupled or child objects, this will be the local reference location about the parent)
 
                   !----------- process connection type -----------------
 
@@ -898,7 +895,7 @@ CONTAINS
                      if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then
                          m%ConnectList(l)%typeNum = 1
                      
-                     m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
+                     !m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
                      
                      CALL Body_AddConnect(m%GroundBody, l, tempArray(1:3))   ! add connection l to Ground body                     
 
@@ -922,23 +919,8 @@ CONTAINS
                   
                   else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a fairlead, add to list and add 
                      m%ConnectList(l)%typeNum = -1
-                     p%nCpldCons=p%nCpldCons+1  ! add this rod to coupled list                          
-                     m%CpldConIs(p%nCpldCons) = l
-                     
-                     p%NFairs(1) = p%NFairs(1) + 1  !FIXME: <<<<<   ! if a vessel connection, increment fairlead counter
-
-                     ! this is temporary for backwards compatibility >>>>> will need to update for more versatile coupling >>>>   <<<<<<< this looks pretty good. Make sure it's done only once - either here or near end of init. Same for Rods and bodies.
-                     ! NOTE: second index would be used for multi-turbine couplings in FAST.Farm
-                     CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
-                     !CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,1),InitInp%PtfmInit(5,1),InitInp%PtfmInit(6,1), OrMat, '', ErrStat2, ErrMsg2)
-
-                     ! set initial node position, including adjustments due to initial platform rotations and translations  <<< could convert to array math
-                     m%ConnectList(l)%r(1) = InitInp%PtfmInit(1) + OrMat(1,1)*tempArray(1) + OrMat(2,1)*tempArray(2) + OrMat(3,1)*tempArray(3)
-                     m%ConnectList(l)%r(2) = InitInp%PtfmInit(2) + OrMat(1,2)*tempArray(1) + OrMat(2,2)*tempArray(2) + OrMat(3,2)*tempArray(3)
-                     m%ConnectList(l)%r(3) = InitInp%PtfmInit(3) + OrMat(1,3)*tempArray(1) + OrMat(2,3)*tempArray(2) + OrMat(3,3)*tempArray(3)
-                     !m%ConnectList(l)%r(1) = InitInp%PtfmInit(1,1) + OrMat(1,1)*tempArray(1) + OrMat(2,1)*tempArray(2) + OrMat(3,1)*tempArray(3)
-                     !m%ConnectList(l)%r(2) = InitInp%PtfmInit(2,1) + OrMat(1,2)*tempArray(1) + OrMat(2,2)*tempArray(2) + OrMat(3,2)*tempArray(3)
-                     !m%ConnectList(l)%r(3) = InitInp%PtfmInit(3,1) + OrMat(1,3)*tempArray(1) + OrMat(2,3)*tempArray(2) + OrMat(3,3)*tempArray(3)
+                     p%nCpldCons(1)=p%nCpldCons(1)+1                       
+                     m%CpldConIs(p%nCpldCons(1),1) = l
                  
                   else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
                      m%ConnectList(l)%typeNum = 0
@@ -951,30 +933,22 @@ CONTAINS
                      
                      m%FreeConIs(p%nFreeCons) = l
                      
-                     m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
+                     !m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
                      
                   else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
-                     !FIXME: >>>>>
-                     if (p%nTurbines > 0) then
-                        K = scan(TempString , '1234567890' )             ! find index of first number in the string
-                        READ(TempString(K:), *) iTurb      ! READ(TRIM(TempString(K:)), *) iTurb        ! convert to int, representing turbine index               
-                        m%ConnectList(I)%TypeNum = -iTurb                ! typeNum < 0 indicates -turbine number
-                        p%NFairs(iTurb) = p%NFairs(iTurb) + 1            ! increment fairlead counter
-                        print *, ' added connection ', I, ' as fairlead for turbine ', iTurb
-                        
-                        !FIXME: <<<< need to set positions here including offset from turbine ref positions in x and y, p%TurbineRefPos(1-2,iTurb)
                   
-                        
-                     else
-                        call CheckError( ErrID_Fatal, 'Error: Turbine[n] Connect types can only be used with FAST.Farm.' )
+                     K = scan(TempString , '1234567890' )             ! find index of first number in the string
+                     READ(TempString(K:), *) iTurb                    ! convert to int, representing turbine index
+                     if (iTurb > p%nTurbines) then
+                        call CheckError( ErrID_Fatal, 'Error: Turbine[n] Connect types can only be used with FAST.Farm and must not exceed the number of turbines.' )
                         return
                      end if
-                     ! <<<<<<
-                     ! iTurbine = num1
-                     ! >>> nvm: this is where we could identify the element index in the corresponding mesh in u%FarmCoupledKinematics(iTurbine) for this coupled point
-                     !          nvm:   using info from InitInp%FarmNCpldBodies, InitInp%FarmNCpldRods, !InitInp%FarmNCpldCons  
-                     ! >>> nvm: Then store iTurbine and the element index IN THIS POINT OBJECT, for easy use with input and output meshes! <<<
-                     ! >>> Do all the initialization stuff as is done with normal coupled points. 
+                     
+                     m%ConnectList(I)%TypeNum = -iTurb                ! typeNum < 0 indicates -turbine number   <<<<  NOT USED, RIGHT??
+                     p%nCpldCons(iTurb) = p%nCpldCons(iTurb) + 1      ! increment counter for the appropriate turbine                   
+                     m%CpldConIs(p%nCpldCons(iTurb),iTurb) = l
+                     print *, ' added connection ', I, ' as fairlead for turbine ', iTurb
+                     
                   else 
                      CALL SetErrStat( ErrID_Severe,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
                      return
@@ -1507,7 +1481,7 @@ CONTAINS
 
 
       ! ================================ initialize system ================================
-
+      ! This will also set the initial positions of any dependent (child) objects
 
       ! call ground body to update all the fixed things...
       m%GroundBody%r6(4:6) = 0.0_DbKi
@@ -1523,25 +1497,6 @@ CONTAINS
    !         CALL Connect_SetKinematics(m%ConnectList(J), m%ConnectList(J)%r, (/0.0_DbKi,0.0_DbKi,0.0_DbKi/), 0.0_DbKi, m%LineList) 
    !      end if
    !   END DO 
-      
-      !FIXMI: >>>>
-      ! allocate fairleads list (size to the maximum number of fairleads on any given turbine - some entries may not be used)
-      ALLOCATE ( m%FairIdList(MAXVAL(p%NFairs),p%nTurbines), STAT = ErrStat ) 
-      
-      ! now go back through and record the fairlead Id numbers (this is all the "connecting" that's required)
-      p%NFairs = 0
-      p%NConns = 0  ! re-using this as a counter for connect number (should end back at same value)
-      DO I = 1,p%NConnects
-         IF (m%ConnectList(I)%TypeNum < 0) THEN
-           iTurb = -m%ConnectList(I)%TypeNum
-           p%NFairs(iTurb) = p%NFairs(iTurb) + 1
-           m%FairIdList(p%NFairs(iTurb), iTurb) = I             ! if a vessel connection, add ID to list of the appropriate turbine
-         ELSE IF (m%ConnectList(I)%TypeNum == 2) THEN
-           p%NConns = p%NConns + 1
-           m%ConnIdList(p%NConns) = I             ! if a connect connection, add ID to list
-         END IF
-      END DO
-      ! <<<<
       
       
       ! Initialize coupled objects based on passed kinematics
@@ -1572,13 +1527,12 @@ CONTAINS
         RETURN
       END IF
       
-   ! Go through each turbine and set up its mesh and initial fairlead positions
+   ! Go through each turbine and set up its mesh and initial positions of coupled objects
    DO iTurb = 1,p%nTurbines
 
-         ! Always have at least one node (it will be a dummy node if no fairleads are attached)
-         
-         K = p%NFairs(iTurb)  !p%nCpldBodies + p%nCpldRods + p%nCpldCons, &   !FIXME: the number for each turbine needs fixing
-         if (K == 0) K = 1
+         ! count number of coupling nodes needed for the mesh of this turbine
+         K = p%nCpldBodies(iTurb) + p%nCpldRods(iTurb) + p%nCpldCons(iTurb)
+         if (K == 0) K = 1         ! Always have at least one node (it will be a dummy node if no fairleads are attached)
 
          ! create input mesh for fairlead kinematics
          CALL MeshCreate(BlankMesh=u%CoupledKinematics(iTurb) , &
@@ -1592,21 +1546,19 @@ CONTAINS
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
-      
-            
       ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then connections
       ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation -- below or where the objects are first created <<<<
       
-      J = 0 ! this is the counter through the mesh points
+      J = 0 ! this is the counter through the mesh points for each turbine
       
-      DO l = 1,p%nCpldBodies
+      DO l = 1,p%nCpldBodies(iTurb)
       
          J = J + 1
       
-         rRef = m%BodyList(m%CpldBodyIs(l))%r6              ! for now set reference position as per input file <<< 
+         rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6              ! for now set reference position as per input file <<< 
          
-         CALL MeshPositionNode(u%CoupledKinematics, J, rRef(1:3), ErrStat2, ErrMsg2) ! defaults to identity orientation matrix
-         u%CoupledKinematics%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
+         CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2) ! defaults to identity orientation matrix
+         u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
 
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
@@ -1617,86 +1569,73 @@ CONTAINS
       !   u%CoupledKinematics%TranslationDisp(2, i) = InitInp%PtfmInit(2) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
       !   u%CoupledKinematics%TranslationDisp(3, i) = InitInp%PtfmInit(3) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
          
-         CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
-         CALL Body_InitializeUnfree( m%BodyList(m%CpldBodyIs(l)), m )
+         CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
+         CALL Body_InitializeUnfree( m%BodyList(m%CpldBodyIs(l,iTurb)), m )
 
       END DO 
       
-      DO l = 1,p%nCpldRods   ! keeping this one simple for now, positioning at whatever is specified in input file <<<<< should change to glue code!
+      DO l = 1,p%nCpldRods(iTurb)   ! keeping this one simple for now, positioning at whatever is specified in input file <<<<< should change to glue code!
 
          J = J + 1
          
-         rRef = m%RodList(m%CpldRodIs(l))%r6    ! for now set reference position as per input file <<< 
+         rRef = m%RodList(m%CpldRodIs(l,iTurb))%r6    ! for now set reference position as per input file <<< 
          
-         CALL MeshPositionNode(u%CoupledKinematics, J, rRef, ErrStat2, ErrMsg2)  ! defaults to identity orientation matrix
-         u%CoupledKinematics%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
-         CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)
+         CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef, ErrStat2, ErrMsg2)  ! defaults to identity orientation matrix
+         u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
+         CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
          
-         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), DBLE(rRef), m%zeros6, m%zeros6, 0.0_DbKi, m)
+         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), DBLE(rRef), m%zeros6, m%zeros6, 0.0_DbKi, m)
       END DO 
 
-      !DO l = 1,p%nCpldCons   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
-      DO l = 1,p%NFairs(iTurb)  !FIXME: <<<< and check all indices including J
+      DO l = 1,p%nCpldCons(iTurb)   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
          J = J + 1
          
-         rRef(1:3) = m%ConnectList(m%CpldConIs(l))%r         ! for now set reference position as per input file <<<
+         ! set reference position as per input file
+         rRef(1:3) = m%ConnectList(m%CpldConIs(l,iTurb))%r                           
+         CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef, ErrStat2, ErrMsg2)  
+                  
+         ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
+         CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), OrMat, '', ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+         u%CoupledKinematics(iTurb)%TranslationDisp(1,i) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+         u%CoupledKinematics(iTurb)%TranslationDisp(2,i) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+         u%CoupledKinematics(iTurb)%TranslationDisp(3,i) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+              
+         ! set absolute initial positions in MoorDyn
+         m%ConnectList(m%CpldConIs(l,iTurb))%r = u%CoupledKinematics%Position(:,iTurb) + u%CoupledKinematics%TranslationDisp(:,iTurb) + p%TurbineRefPos(:,iTurb)
          
-         !FIXME: >>>> these lines should be used?
-         rPos(1) = m%ConnectList(m%FairIdList(i, iTurb))%conX       ! reference position of each fairlead relative to each turbine's local reference position
-         rPos(2) = m%ConnectList(m%FairIdList(i, iTurb))%conY
-         rPos(3) = m%ConnectList(m%FairIdList(i, iTurb))%conZ
-         ! <<<<
-         
-         CALL MeshPositionNode(u%CoupledKinematics, J, rRef, ErrStat2, ErrMsg2)   ! defaults to identity orientation matrix
-         u%CoupledKinematics%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
-         
-            !FIXME: >>>>
-            ! set offset position of each node to according to initial platform position and rotation
-            CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), TransMat, '', ErrStat2, ErrMsg2)
-            CALL CheckError( ErrStat2, ErrMsg2 )
-            IF (ErrStat >= AbortErrLev) RETURN
-            
-            ! Apply initial platform rotations and translations (fixed Jun 19, 2015)
-            u%PtFairleadDisplacement(iTurb)%TranslationDisp(1,i) = InitInp%PtfmInit(1,iTurb) + Transmat(1,1)*rPos(1) + Transmat(2,1)*rPos(2) + TransMat(3,1)*rPos(3) - rPos(1)
-            u%PtFairleadDisplacement(iTurb)%TranslationDisp(2,i) = InitInp%PtfmInit(2,iTurb) + Transmat(1,2)*rPos(1) + Transmat(2,2)*rPos(2) + TransMat(3,2)*rPos(3) - rPos(2)
-            u%PtFairleadDisplacement(iTurb)%TranslationDisp(3,i) = InitInp%PtfmInit(3,iTurb) + Transmat(1,3)*rPos(1) + Transmat(2,3)*rPos(2) + TransMat(3,3)*rPos(3) - rPos(3)
-            
-            ! set velocity of each node to zero
-            u%PtFairleadDisplacement(iTurb)%TranslationVel(1,i) = 0.0_DbKi
-            u%PtFairleadDisplacement(iTurb)%TranslationVel(2,i) = 0.0_DbKi
-            u%PtFairleadDisplacement(iTurb)%TranslationVel(3,i) = 0.0_DbKi
             
             !print *, 'Fairlead ', i, ' z TranslationDisp at start is ', u%PtFairleadDisplacement(iTurb)%TranslationDisp(3,i)
             !print *, 'Fairlead ', i, ' z Position at start is ', u%PtFairleadDisplacement(iTurb)%Position(3,i)
             ! <<<<
 
-         CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)
+         CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
 
          ! lastly, do this to set the attached line endpoint positions:
          rRefDub = rRef(1:3)
-         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
+         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
       END DO 
 
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
-         !FIXME: >>>>
-         ! add a single dummy element for turbines that aren't coupled with, to keep I/O interp/extrap routines happy
-         if (p%NFairs(iTurb) == 0) then
-            rPos = 0.0_DbKi       ! position at PRP
-            CALL MeshPositionNode(u%PtFairleadDisplacement(iTurb), 1, rPos, ErrStat2, ErrMsg2)
-            CALL MeshConstructElement(u%PtFairleadDisplacement(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, 1)
+         ! if no coupled objects exist for this turbine, add a single dummy element to keep I/O interp/extrap routines happy
+         if (J == 0) then
+            rRef = 0.0_DbKi       ! position at PRP
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), 1, rRef, ErrStat2, ErrMsg2)
+            CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, 1)
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
          end if
-         !<<<<
 
       
       ! set velocities/accelerations of all mesh nodes to zero
-      u%CoupledKinematics%TranslationVel = 0.0_ReKi
-      u%CoupledKinematics%TranslationAcc = 0.0_ReKi
-      u%CoupledKinematics%RotationVel    = 0.0_ReKi
-      u%CoupledKinematics%RotationAcc    = 0.0_ReKi
+      u%CoupledKinematics(iTurb)%TranslationVel = 0.0_ReKi
+      u%CoupledKinematics(iTurb)%TranslationAcc = 0.0_ReKi
+      u%CoupledKinematics(iTurb)%RotationVel    = 0.0_ReKi
+      u%CoupledKinematics(iTurb)%RotationAcc    = 0.0_ReKi
 
          CALL MeshCommit ( u%CoupledKinematics(iTurb), ErrStat, ErrMsg )
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -1704,8 +1643,8 @@ CONTAINS
 
          ! copy the input fairlead kinematics mesh to make the output mesh for fairlead loads, PtFairleadLoad
          CALL MeshCopy ( SrcMesh  = u%CoupledKinematics(iTurb),   DestMesh = y%CoupledLoads(iTurb), &
-                         CtrlCode = MESH_SIBLING,               IOS      = COMPONENT_OUTPUT, &
-                         Force    = .TRUE.,                     ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
+                         CtrlCode = MESH_SIBLING,  IOS = COMPONENT_OUTPUT, &
+                         Force = .TRUE.,  Moment = .TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
 
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
@@ -2604,36 +2543,32 @@ CONTAINS
     !  END DO
       
       ! now that forces have been updated, write them to the output mesh
-      J = 0
-      DO l = 1,p%nCpldBodies
+      
+      do iTurb = 1,p%nTurbines
+      
+      J = 0    ! mesh index
+      DO l = 1,p%nCpldBodies(iTurb)
          J = J + 1
-         CALL Body_GetCoupledForce(m%BodyList(m%CpldBodyIs(l)), F6net, m, p)
-         y%CoupledLoads%Force( :,J) = F6net(1:3)
-         y%CoupledLoads%Moment(:,J) = F6net(4:6)
+         CALL Body_GetCoupledForce(m%BodyList(m%CpldBodyIs(l,iTurb)), F6net, m, p)
+         y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
+         y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
       END DO
             
-      DO l = 1,p%nCpldRods
+      DO l = 1,p%nCpldRods(iTurb)
          J = J + 1
-         CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l)), F6net, m, p)
-         y%CoupledLoads%Force( :,J) = F6net(1:3)
-         y%CoupledLoads%Moment(:,J) = F6net(4:6)
+         CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l,iTurb)), F6net, m, p)
+         y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
+         y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
       END DO
       
-      DO l = 1,p%nCpldCons
+      DO l = 1,p%nCpldCons(iTurb)
          J = J + 1
-         CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l)), F6net(1:3), m, p)
-         y%CoupledLoads%Force(:,J) = F6net(1:3)
+         CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l,iTurb)), F6net(1:3), m, p)
+         y%CoupledLoads(iTurb)%Force(:,J) = F6net(1:3)
       END DO
       
-      !FIXME: >>>>
-      do iTurb = 1,p%nTurbines
-         DO i = 1, p%NFairs(iTurb)
-            DO J=1,3
-               y%PtFairleadLoad(iTurb)%Force(J,I) = m%ConnectList(m%FairIdList(I,iTurb))%Ftot(J)
-            END DO
-      END DO
-      ! <<<<
-
+      end do
+      
    !  ! write all node positions to the node positons output array
    !  ! go through the nodes and fill in the data (this should maybe be turned into a global function)
    !  J=0
@@ -2775,50 +2710,55 @@ CONTAINS
       
       ! ---------------------------------- coupled things ---------------------------------
       ! Apply displacement and velocity terms here. Accelerations will be considered to calculate inertial loads at the end.      
+      ! Note: TurbineRefPos is to offset into farm's true global reference based on turbine X and Y reference positions (these should be 0 for regular FAST use)
+         
+      
+      DO iTurb = 1, p%nTurbines
       
       J = 0  ! J is the index of the coupling points in the input mesh CoupledKinematics
       ! any coupled bodies (type -1)
-      DO l = 1,p%nCpldBodies
+      DO l = 1,p%nCpldBodies(iTurb)
          J = J + 1
-         r6_in(1:3) = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
-         !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics%Orientation(:,:,J) ) )
-         r6_in(4:6) = EulerExtract( u%CoupledKinematics%Orientation(:,:,J) )   ! <<< changing back
-         v6_in(1:3) = u%CoupledKinematics%TranslationVel(:,J)
-         v6_in(4:6) = u%CoupledKinematics%RotationVel(:,J)
-         a6_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
-         a6_in(4:6) = u%CoupledKinematics%RotationAcc(:,J)
+         r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
+         !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics(iTurb)%Orientation(:,:,J) ) )
+         r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! <<< changing back
+         v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+         v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
+         a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+         a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
       
-         CALL Body_SetKinematics(m%BodyList(m%CpldBodyIs(l)), r6_in, v6_in, a6_in, t, m)
+         CALL Body_SetKinematics(m%BodyList(m%CpldBodyIs(l,iTurb)), r6_in, v6_in, a6_in, t, m)
       END DO
       
       ! any coupled rods (type -1 or -2)    note, rotations ignored if it's a pinned rod
-      DO l = 1,p%nCpldRods
+      DO l = 1,p%nCpldRods(iTurb)
          J = J + 1
 
-         r6_in(1:3) = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
-         r6_in(4:6) = MATMUL( u%CoupledKinematics%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
-         v6_in(1:3) = u%CoupledKinematics%TranslationVel(:,J)
-         v6_in(4:6) = u%CoupledKinematics%RotationVel(:,J)
-         a6_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
-         a6_in(4:6) = u%CoupledKinematics%RotationAcc(:,J)
+         r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
+         r6_in(4:6) = MATMUL( u%CoupledKinematics(iTurb)%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
+         v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+         v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
+         a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+         a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
       
-         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), r6_in, v6_in, a6_in, t, m)
+         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), r6_in, v6_in, a6_in, t, m)
  
       END DO
       
       ! any coupled points (type -1)
-      DO l = 1, p%nCpldCons
+      DO l = 1, p%nCpldCons(iTurb)
          J = J + 1
          
-         r_in  = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
-         rd_in = u%CoupledKinematics%TranslationVel(:,J)
-         a_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
-         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l)), r_in, rd_in, a_in, t, m)
+         r_in  = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+         rd_in = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+         a_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), r_in, rd_in, a_in, t, m)
          
          !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
          !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
          
       END DO
+      end do  ! iTurb
       
       
       ! >>>>> in theory I would repeat the above but for each turbine in the case of array use here <<<<<
@@ -2829,18 +2769,6 @@ CONTAINS
       !     nvm: using knowledge of p%meshIndex or something
       !   in theory might also support individual line tensioning control commands from turbines this way too, or maybe it's supercontroller level (not a short term problem though)
       
-      !FIXME: below is pasted in and needs to be removed or integrated! >>>>>
-      do iTurb = 1,p%nTurbines
-         DO I = 1,p%NFairs(iTurb)
-            DO J = 1,3
-               m%ConnectList(m%FairIdList(I,iTurb))%r(J)  = u%PtFairleadDisplacement(iTurb)%Position(J,I) + u%PtFairleadDisplacement(iTurb)%TranslationDisp(J,I)
-               m%ConnectList(m%FairIdList(I,iTurb))%rd(J) = u%PtFairleadDisplacement(iTurb)%TranslationVel(J,I)
-            END DO
-            ! offset into farm's true global reference based on turbine X and Y reference positions (these should be 0 for regular FAST use)
-            m%ConnectList(m%FairIdList(I,iTurb))%r(1) = m%ConnectList(m%FairIdList(I,iTurb))%r(1) + p%TurbineRefPos(1,iTurb)
-            m%ConnectList(m%FairIdList(I,iTurb))%r(2) = m%ConnectList(m%FairIdList(I,iTurb))%r(2) + p%TurbineRefPos(2,iTurb)
-      end do     
-      ! <<<<<
       
       ! apply line length changes from active tensioning if applicable
       DO L = 1, p%NLines
