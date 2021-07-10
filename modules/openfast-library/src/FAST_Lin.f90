@@ -2140,7 +2140,7 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       
          ! NOTE: Assumes at least one coupled MD object
       
-         CALL Linearize_Point_to_Point( MD%y%CoupledLoads, u_ED%PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, MD%Input(1)%CoupledKinematics, y_ED%PlatformPtMesh)
+         CALL Linearize_Point_to_Point( MD%y%CoupledLoads(1), u_ED%PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, MD%Input(1)%CoupledKinematics(1), y_ED%PlatformPtMesh)
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
             ! HD is source in the mapping, so we want M_{uSm}
@@ -2294,7 +2294,7 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
    
       ! NOTE: Assumes at least one coupled MD object
   
-      CALL Linearize_Point_to_Point( MD%y%CoupledLoads, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MD%Input(1)%CoupledKinematics, y_SD%Y2Mesh)
+      CALL Linearize_Point_to_Point( MD%y%CoupledLoads(1), u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MD%Input(1)%CoupledKinematics(1), y_SD%Y2Mesh)
          CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          ! SD is source in the mapping, so we want M_{uSm}
@@ -2409,12 +2409,12 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
    ! dU^{SD}/dy^{MD}
    !..........
    else if ( p_FAST%CompMooring == Module_MD ) then
-      if ( MD%y%CoupledLoads%Committed  ) then ! meshes for floating
+      if ( MD%y%CoupledLoads(1)%Committed  ) then ! meshes for floating
          !!! ! This linearization was done in forming dUdu (see Linear_SD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
          MD_Out_Start = y_FAST%Lin%Modules(Module_MD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
          SD_Start      = Indx_u_SD_LMesh_Start(u_SD, y_FAST) ! start of u_SD%LMesh%TranslationDisp field
-         call Assemble_dUdy_Loads(MD%y%CoupledLoads, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, SD_Start, MD_Out_Start, dUdy)
+         call Assemble_dUdy_Loads(MD%y%CoupledLoads(1), u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, SD_Start, MD_Out_Start, dUdy)
       
          ! SD translation displacement-to-SD moment transfer (dU^{SD}/dy^{SD}):
          SD_Start = Indx_u_SD_LMesh_Start(u_SD, y_FAST) + u_SD%LMesh%NNodes*3   ! start of u_ED%LMesh%Moment field (skip the SD forces)
@@ -2861,12 +2861,12 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       ! MoorDyn
       ! parts of dU^{ED}/dy^{MD} and dU^{ED}/dy^{ED}:
       else if ( p_FAST%CompMooring == Module_MD ) then
-         if ( MD%y%CoupledLoads%Committed  ) then ! meshes for floating
+         if ( MD%y%CoupledLoads(1)%Committed  ) then ! meshes for floating
             !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
             !!! ! while forming dUdy, too.
             MD_Out_Start = y_FAST%Lin%Modules(Module_MD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
             ED_Start      = Indx_u_ED_Platform_Start(u_ED, y_FAST) ! start of u_ED%PlatformPtMesh%TranslationDisp field
-            call Assemble_dUdy_Loads(MD%y%CoupledLoads, u_ED%PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ED_Start, MD_Out_Start, dUdy)
+            call Assemble_dUdy_Loads(MD%y%CoupledLoads(1), u_ED%PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ED_Start, MD_Out_Start, dUdy)
       
             ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
             ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
@@ -3534,7 +3534,7 @@ SUBROUTINE Linear_MD_InputSolve_dy( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-   IF (u_MD%CoupledKinematics%Committed) THEN 
+   IF (u_MD%CoupledKinematics(1)%Committed) THEN 
          !...................................
          ! FairLead Mesh
          !...................................
@@ -3544,14 +3544,14 @@ SUBROUTINE Linear_MD_InputSolve_dy( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
       if ( p_FAST%CompSub == Module_SD ) THEN
          ! dU^{MD}/dy^{SD}
          SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y2Mesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_SD%Y2Mesh, u_MD%CoupledKinematics, MeshMapData%SD_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(    y_SD%Y2Mesh, u_MD%CoupledKinematics, MeshMapData%SD_P_2_Mooring_P, MD_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+         call Linearize_Point_to_Point( y_SD%Y2Mesh, u_MD%CoupledKinematics(1), MeshMapData%SD_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+         call Assemble_dUdy_Motions(    y_SD%Y2Mesh, u_MD%CoupledKinematics(1), MeshMapData%SD_P_2_Mooring_P, MD_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.true.)
 
       else if ( p_FAST%CompSub == Module_None ) THEN
          ! dU^{MD}/dy^{ED}
          ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MD%CoupledKinematics, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MD%CoupledKinematics, MeshMapData%ED_P_2_Mooring_P, MD_Start, ED_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+         call Assemble_dUdy_Motions(    y_ED%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, MD_Start, ED_Out_Start, dUdy, OnlyTranslationDisp=.true.)
 
        end if  
       

@@ -2040,7 +2040,7 @@ CONTAINS
          CALL Transfer_Point_to_Point( y_ED2%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  
-         CALL Transfer_Point_to_Point( y_MD%CoupledLoads(1), MeshMapData%u_ED_PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, u_MD%CoupledKinematics, PlatformMotions ) !u_MD and y_ED contain the displacements needed for moment calculations
+         CALL Transfer_Point_to_Point( y_MD%CoupledLoads(1), MeshMapData%u_ED_PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, u_MD%CoupledKinematics(1), PlatformMotions ) !u_MD and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
@@ -4764,7 +4764,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !  ElastoDyn <-> MoorDyn
 !-------------------------          
             ! MoorDyn point mesh to/from ElastoDyn point mesh
-         CALL MeshMapCreate( MD%y%CoupledLoads,(1) PlatformLoads,  MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2 )
+         CALL MeshMapCreate( MD%y%CoupledLoads(1), PlatformLoads,  MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Mooring_P_2_Ptfm' )                  
          CALL MeshMapCreate( PlatformMotion, MD%Input(1)%CoupledKinematics(1),  MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Ptfm_2_Mooring_P' )                  
