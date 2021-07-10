@@ -1527,8 +1527,8 @@ CONTAINS
         RETURN
       END IF
       
-   ! Go through each turbine and set up its mesh and initial positions of coupled objects
-   DO iTurb = 1,p%nTurbines
+      ! Go through each turbine and set up its mesh and initial positions of coupled objects
+      DO iTurb = 1,p%nTurbines
 
          ! count number of coupling nodes needed for the mesh of this turbine
          K = p%nCpldBodies(iTurb) + p%nCpldRods(iTurb) + p%nCpldCons(iTurb)
@@ -1546,77 +1546,77 @@ CONTAINS
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       
-      ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then connections
-      ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation -- below or where the objects are first created <<<<
-      
-      J = 0 ! this is the counter through the mesh points for each turbine
-      
-      DO l = 1,p%nCpldBodies(iTurb)
-      
-         J = J + 1
-      
-         rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6              ! for now set reference position as per input file <<< 
+         ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then connections
+         ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation -- below or where the objects are first created <<<<
          
-         CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2) ! defaults to identity orientation matrix
-         u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
-
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-      !   ! Apply offsets due to initial platform rotations and translations (fixed Jun 19, 2015)
-      !   CALL SmllRotTrans('body rotation matrix', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
-      !   u%CoupledKinematics%TranslationDisp(1, i) = InitInp%PtfmInit(1) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
-      !   u%CoupledKinematics%TranslationDisp(2, i) = InitInp%PtfmInit(2) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
-      !   u%CoupledKinematics%TranslationDisp(3, i) = InitInp%PtfmInit(3) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+         J = 0 ! this is the counter through the mesh points for each turbine
          
-         CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
-         CALL Body_InitializeUnfree( m%BodyList(m%CpldBodyIs(l,iTurb)), m )
-
-      END DO 
-      
-      DO l = 1,p%nCpldRods(iTurb)   ! keeping this one simple for now, positioning at whatever is specified in input file <<<<< should change to glue code!
-
-         J = J + 1
+         DO l = 1,p%nCpldBodies(iTurb)
          
-         rRef = m%RodList(m%CpldRodIs(l,iTurb))%r6    ! for now set reference position as per input file <<< 
+            J = J + 1
          
-         CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef, ErrStat2, ErrMsg2)  ! defaults to identity orientation matrix
-         u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
-         CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
-         
-         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), DBLE(rRef), m%zeros6, m%zeros6, 0.0_DbKi, m)
-      END DO 
-
-      DO l = 1,p%nCpldCons(iTurb)   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
-         J = J + 1
-         
-         ! set reference position as per input file
-         rRef(1:3) = m%ConnectList(m%CpldConIs(l,iTurb))%r                           
-         CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef, ErrStat2, ErrMsg2)  
-                  
-         ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
-         CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), OrMat, '', ErrStat2, ErrMsg2)
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-         u%CoupledKinematics(iTurb)%TranslationDisp(1,i) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
-         u%CoupledKinematics(iTurb)%TranslationDisp(2,i) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
-         u%CoupledKinematics(iTurb)%TranslationDisp(3,i) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
-              
-         ! set absolute initial positions in MoorDyn
-         m%ConnectList(m%CpldConIs(l,iTurb))%r = u%CoupledKinematics%Position(:,iTurb) + u%CoupledKinematics%TranslationDisp(:,iTurb) + p%TurbineRefPos(:,iTurb)
-         
+            rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6              ! for now set reference position as per input file <<< 
             
-            !print *, 'Fairlead ', i, ' z TranslationDisp at start is ', u%PtFairleadDisplacement(iTurb)%TranslationDisp(3,i)
-            !print *, 'Fairlead ', i, ' z Position at start is ', u%PtFairleadDisplacement(iTurb)%Position(3,i)
-            ! <<<<
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2) ! defaults to identity orientation matrix
+            u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
 
-         CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
 
-         ! lastly, do this to set the attached line endpoint positions:
-         rRefDub = rRef(1:3)
-         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
-      END DO 
+         !   ! Apply offsets due to initial platform rotations and translations (fixed Jun 19, 2015)
+         !   CALL SmllRotTrans('body rotation matrix', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
+         !   u%CoupledKinematics%TranslationDisp(1, i) = InitInp%PtfmInit(1) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+         !   u%CoupledKinematics%TranslationDisp(2, i) = InitInp%PtfmInit(2) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+         !   u%CoupledKinematics%TranslationDisp(3, i) = InitInp%PtfmInit(3) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+            
+            CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
+            CALL Body_InitializeUnfree( m%BodyList(m%CpldBodyIs(l,iTurb)), m )
+
+         END DO 
+         
+         DO l = 1,p%nCpldRods(iTurb)   ! keeping this one simple for now, positioning at whatever is specified in input file <<<<< should change to glue code!
+
+            J = J + 1
+            
+            rRef = m%RodList(m%CpldRodIs(l,iTurb))%r6    ! for now set reference position as per input file <<< 
+            
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef, ErrStat2, ErrMsg2)  ! defaults to identity orientation matrix
+            u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
+            CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
+            
+            CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), DBLE(rRef), m%zeros6, m%zeros6, 0.0_DbKi, m)
+         END DO 
+
+         DO l = 1,p%nCpldCons(iTurb)   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
+            J = J + 1
+            
+            ! set reference position as per input file
+            rRef(1:3) = m%ConnectList(m%CpldConIs(l,iTurb))%r                           
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef, ErrStat2, ErrMsg2)  
+                     
+            ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
+            CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), OrMat, '', ErrStat2, ErrMsg2)
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+            u%CoupledKinematics(iTurb)%TranslationDisp(1,i) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+            u%CoupledKinematics(iTurb)%TranslationDisp(2,i) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,i) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+                 
+            ! set absolute initial positions in MoorDyn
+            m%ConnectList(m%CpldConIs(l,iTurb))%r = u%CoupledKinematics%Position(:,iTurb) + u%CoupledKinematics%TranslationDisp(:,iTurb) + p%TurbineRefPos(:,iTurb)
+            
+               
+               !print *, 'Fairlead ', i, ' z TranslationDisp at start is ', u%PtFairleadDisplacement(iTurb)%TranslationDisp(3,i)
+               !print *, 'Fairlead ', i, ' z Position at start is ', u%PtFairleadDisplacement(iTurb)%Position(3,i)
+               ! <<<<
+
+            CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
+
+            ! lastly, do this to set the attached line endpoint positions:
+            rRefDub = rRef(1:3)
+            CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
+         END DO 
 
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
@@ -1629,13 +1629,12 @@ CONTAINS
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
          end if
-
-      
-      ! set velocities/accelerations of all mesh nodes to zero
-      u%CoupledKinematics(iTurb)%TranslationVel = 0.0_ReKi
-      u%CoupledKinematics(iTurb)%TranslationAcc = 0.0_ReKi
-      u%CoupledKinematics(iTurb)%RotationVel    = 0.0_ReKi
-      u%CoupledKinematics(iTurb)%RotationAcc    = 0.0_ReKi
+         
+         ! set velocities/accelerations of all mesh nodes to zero
+         u%CoupledKinematics(iTurb)%TranslationVel = 0.0_ReKi
+         u%CoupledKinematics(iTurb)%TranslationAcc = 0.0_ReKi
+         u%CoupledKinematics(iTurb)%RotationVel    = 0.0_ReKi
+         u%CoupledKinematics(iTurb)%RotationAcc    = 0.0_ReKi
 
          CALL MeshCommit ( u%CoupledKinematics(iTurb), ErrStat, ErrMsg )
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -2546,27 +2545,27 @@ CONTAINS
       
       do iTurb = 1,p%nTurbines
       
-      J = 0    ! mesh index
-      DO l = 1,p%nCpldBodies(iTurb)
-         J = J + 1
-         CALL Body_GetCoupledForce(m%BodyList(m%CpldBodyIs(l,iTurb)), F6net, m, p)
-         y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
-         y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
-      END DO
-            
-      DO l = 1,p%nCpldRods(iTurb)
-         J = J + 1
-         CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l,iTurb)), F6net, m, p)
-         y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
-         y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
-      END DO
-      
-      DO l = 1,p%nCpldCons(iTurb)
-         J = J + 1
-         CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l,iTurb)), F6net(1:3), m, p)
-         y%CoupledLoads(iTurb)%Force(:,J) = F6net(1:3)
-      END DO
-      
+         J = 0    ! mesh index
+         DO l = 1,p%nCpldBodies(iTurb)
+            J = J + 1
+            CALL Body_GetCoupledForce(m%BodyList(m%CpldBodyIs(l,iTurb)), F6net, m, p)
+            y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
+            y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
+         END DO
+               
+         DO l = 1,p%nCpldRods(iTurb)
+            J = J + 1
+            CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l,iTurb)), F6net, m, p)
+            y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
+            y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
+         END DO
+         
+         DO l = 1,p%nCpldCons(iTurb)
+            J = J + 1
+            CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l,iTurb)), F6net(1:3), m, p)
+            y%CoupledLoads(iTurb)%Force(:,J) = F6net(1:3)
+         END DO
+         
       end do
       
    !  ! write all node positions to the node positons output array
@@ -2714,50 +2713,51 @@ CONTAINS
          
       
       DO iTurb = 1, p%nTurbines
-      
-      J = 0  ! J is the index of the coupling points in the input mesh CoupledKinematics
-      ! any coupled bodies (type -1)
-      DO l = 1,p%nCpldBodies(iTurb)
-         J = J + 1
-         r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
-         !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics(iTurb)%Orientation(:,:,J) ) )
-         r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! <<< changing back
-         v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
-         v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
-         a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
-         a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
-      
-         CALL Body_SetKinematics(m%BodyList(m%CpldBodyIs(l,iTurb)), r6_in, v6_in, a6_in, t, m)
-      END DO
-      
-      ! any coupled rods (type -1 or -2)    note, rotations ignored if it's a pinned rod
-      DO l = 1,p%nCpldRods(iTurb)
-         J = J + 1
+         
+         J = 0  ! J is the index of the coupling points in the input mesh CoupledKinematics
+         ! any coupled bodies (type -1)
+         DO l = 1,p%nCpldBodies(iTurb)
+            J = J + 1
+            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
+            !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics(iTurb)%Orientation(:,:,J) ) )
+            r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! <<< changing back
+            v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+            v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
+            a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+            a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
+         
+            CALL Body_SetKinematics(m%BodyList(m%CpldBodyIs(l,iTurb)), r6_in, v6_in, a6_in, t, m)
+         END DO
+         
+         ! any coupled rods (type -1 or -2)    note, rotations ignored if it's a pinned rod
+         DO l = 1,p%nCpldRods(iTurb)
+            J = J + 1
 
-         r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
-         r6_in(4:6) = MATMUL( u%CoupledKinematics(iTurb)%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
-         v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
-         v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
-         a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
-         a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
-      
-         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), r6_in, v6_in, a6_in, t, m)
- 
-      END DO
-      
-      ! any coupled points (type -1)
-      DO l = 1, p%nCpldCons(iTurb)
-         J = J + 1
+            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
+            r6_in(4:6) = MATMUL( u%CoupledKinematics(iTurb)%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
+            v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+            v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
+            a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+            a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
          
-         r_in  = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-         rd_in = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
-         a_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
-         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), r_in, rd_in, a_in, t, m)
+            CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), r6_in, v6_in, a6_in, t, m)
+    
+         END DO
          
-         !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
-         !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
+         ! any coupled points (type -1)
+         DO l = 1, p%nCpldCons(iTurb)
+            J = J + 1
+            
+            r_in  = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            rd_in = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+            a_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+            CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), r_in, rd_in, a_in, t, m)
+            
+            !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
+            !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
+            
+         END DO
          
-      END DO
       end do  ! iTurb
       
       
