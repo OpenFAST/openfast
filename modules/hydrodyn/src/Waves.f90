@@ -1686,6 +1686,35 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
       !--------------------------------------------------------------------------------
+      !> ## Phase shift the discrete Fourier transform of wave elevations at the WRP
+      !> This changes the phasing of all wave kinematics and loads to reflect the turbine's
+      !! location in the larger farm, in the case of FAST.Farm simulations, based on
+      !! specified PtfmLocationX and PtfmLocationY.
+      
+      IF (InitInp%WaveFieldMod == 2) THEN             ! case 2: adjust wave phases based on turbine offsets from farm origin
+      
+         CALL WrScr ( ' Adjusting incident wave kinematics for turbine offset from array origin.' )
+      
+         DO I = 0,InitOut%NStepWave2  
+
+            tmpComplex  = CMPLX(  InitOut%WaveElevC0(1,I),   InitOut%WaveElevC0(2,I))
+            
+            ! some redundant calculations with later, but insignificant
+            Omega      = I*InitOut%WaveDOmega
+            WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+            
+            ! apply the phase shift
+            tmpComplex = tmpComplex * EXP( -ImagNmbr*WaveNmbr*( InitInp%PtfmLocationX*CosWaveDir(I) + InitInp%PtfmLocationY*SinWaveDir(I) ))
+      
+            ! put shifted complex amplitudes back into the array for use in the remainder of this module and other modules (Waves2, WAMIT, WAMIT2)
+            InitOut%WaveElevC0 (1,I) = REAL( tmpComplex)
+            InitOut%WaveElevC0 (2,I) = AIMAG(tmpComplex)
+      
+         END DO
+      END IF
+
+
+      !--------------------------------------------------------------------------------
       !> ## Compute IFFTs
       !> Compute the discrete Fourier transform of the instantaneous elevation of
       !!   incident waves at each desired point on the still water level plane

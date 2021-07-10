@@ -23,14 +23,15 @@ typedef   ^           ^                ReKi               threshIC       -    0.
 typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -999.9 -   "gravity constant"   "[m/s^2]"
 typedef   ^           ^                ReKi               rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
 typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
-typedef   ^           ^                ReKi               PtfmInit      {:}  -      -   "initial position of platform(s) originally size 6"     -
-#typedef   ^           ^                ReKi               PtfmInit      {:}{:}  -      -   "initial position of platform(s) shape: 6, nTurbines"     -
+typedef   ^           ^                ReKi               PtfmInit      {:}{:} -    -   "initial position of platform(s) shape: 6, nTurbines"     -
+typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0"     -
+typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
 typedef   ^           ^                CHARACTER(1024)    RootName       -   -      -   "RootName for writing output files"              -
 typedef   ^           ^                LOGICAL            UsePrimaryInputFile    -   .TRUE.  -  "Read input file instead of passed data"   -
 typedef   ^           ^                FileInfoType       PassedPrimaryInputData -   -       -  "Primary input file as FileInfoType (set by driver/glue code) -- String array with metadata"   -
 typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
-#typedef   ^           ^                CHARACTER(ChanLen) OutList        {:}   ""   -   "string containing list of output channels requested in input file"
+typedef   ^           ^                CHARACTER(ChanLen) OutList        {:}   ""   -   "string containing list of output channels requested in input file"
 typedef   ^           ^                Logical            Linearize      -   .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
 
 #typedef   ^       ^                    DbKi         UGrid                  {:}{:}{:} -  -   "water velocities time series at each grid point"            -
@@ -49,8 +50,6 @@ typedef   ^       ^                    DbKi         WaveTime                    
 # nvm typedef   ^       ^                    IntKi        FarmNCpldBodies        {:}    -    -   ""             ""
 # nvm typedef   ^       ^                    IntKi        FarmNCpldRods          {:}    -    -   ""             ""
 # nvm typedef   ^       ^                    IntKi        FarmNCpldCons          {:}    -    -   "number of Fairlead Connections"             ""
-
-
 
 # ====================================== Internal data types ========================================================================
 # line properties from line dictionary input
@@ -383,12 +382,9 @@ typedef   ^       ^                    Integer      Jac_nx              -       
 
 
 # ============================== Inputs ============================================================================================================================================
-typedef   ^       InputType            MeshType     CoupledKinematics      -      -  -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
-#typedef   ^       InputType            MeshType     CoupledKinematics      {:}    -  -   "array of meshes for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"  <<<< will use this eventually!
+typedef   ^       InputType            MeshType     CoupledKinematics      {:}    -  -   "array of meshes for each coupling point (6 DOF info used for rods and bodies)"  "[m, m/s]"  <<<< will use this eventually!
 typedef   ^       ^                    ReKi         DeltaL                 {:}    -  -   "change in line length command for each channel"       "[m]"
 typedef   ^       ^                    ReKi         DeltaLdot              {:}    -  -   "rate of change of line length command for each channel"       "[m]"
-
-
 #typedef   ^       ^                    DbKi         U                      {:}{:} -  -   "water velocities at each node"            -
 #typedef   ^       ^                    DbKi         Ud                     {:}{:} -  -   "water accelerations at each node"            -
 #typedef   ^       ^                    DbKi         zeta                   {:}    -  -   "water surface elevations above each node"            -
@@ -396,7 +392,7 @@ typedef   ^       ^                    ReKi         DeltaLdot              {:}  
 
 
 ## ============================== Outputs ============================================================================================================================================
-typedef   ^       OutputType           MeshType     CoupledLoads          -    -    -   "point mesh for fairlead forces in X,Y,Z"         "[N]"
+typedef   ^       OutputType           MeshType     CoupledLoads          {:}   -    -   "array of point meshes for mooring reaction forces (and moments) at coupling points"         "[N]"
 typedef   ^       ^                    ReKi         WriteOutput            {:}   -    -   "output vector returned to glue code" ""
 # should CoupledLoads be an array?
 #typedef   ^       ^                    DbKi         rAll                   {:}{:} -    -   "Mesh of all point positions: bodies, rods, points, line internal nodes"   -

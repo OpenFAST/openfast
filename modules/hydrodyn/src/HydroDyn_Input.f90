@@ -4332,7 +4332,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
             CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
-
+         
          InitInp%Waves2%WaveKinxi  = InitInp%Waves%WaveKinxi
          InitInp%Waves2%WaveKinyi  = InitInp%Waves%WaveKinyi
          InitInp%Waves2%WaveKinzi  = InitInp%Waves%WaveKinzi

@@ -54,6 +54,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: TMax      !< Supplied by Driver:  The total simulation time [(sec)]
     LOGICAL  :: HasIce      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AddF0      !< Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m) [-]
@@ -277,6 +278,7 @@ IF (ALLOCATED(SrcInitInputData%WaveElevXY)) THEN
   END IF
     DstInitInputData%WaveElevXY = SrcInitInputData%WaveElevXY
 ENDIF
+    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
 IF (ALLOCATED(SrcInitInputData%AddF0)) THEN
@@ -621,6 +623,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! WaveElevXY upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElevXY)  ! WaveElevXY
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
   Int_BufSz   = Int_BufSz   + 1     ! AddF0 allocated yes/no
@@ -883,6 +886,8 @@ ENDIF
         END DO
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PtfmLocationX
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PtfmLocationY
@@ -1429,6 +1434,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%PtfmLocationX = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
