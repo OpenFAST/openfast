@@ -364,7 +364,7 @@ CONTAINS
 
       ! fairlead tension case (updated) <<<<<<<<<<<<<<<<<<<<<<<<<<< these are not currently working - need new way to find ObjID
       IF (let1 == 'FAIRTEN') THEN
-        p%OutParam(I)%OType = 1                                     ! connection object type
+        p%OutParam(I)%OType = 1                                     ! line object type
         p%OutParam(I)%QType = Ten                                   ! tension quantity type
         p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
         READ (num1,*) oID                                           ! this is the line number
@@ -373,7 +373,7 @@ CONTAINS
         
       ! achor tension case
       ELSE IF (let1 == 'ANCHTEN') THEN
-        p%OutParam(I)%OType = 1                                     ! connectoin object type
+        p%OutParam(I)%OType = 1                                     ! line object type
         p%OutParam(I)%QType = Ten                                   ! tension quantity type
         p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
         READ (num1,*) oID                                           ! this is the line number
@@ -390,7 +390,7 @@ CONTAINS
           p%OutParam(I)%OType = 1                ! Line object type
           ! for now we'll just assume the next character(s) are "n" to represent node number or "s" to represent segment number
           READ (num2,*) nID                      ! node or segment ID
-          p%OutParam%NodeID = nID
+          p%OutParam(I)%NodeID = nID
           qVal = let3                            ! quantity type string
         
         ! Connect case                            
@@ -402,11 +402,11 @@ CONTAINS
         ELSE IF (let1(1:1) == 'R') THEN    ! Look for R?xxx or Rod?xxx
           p%OutParam(I)%OType = 3                ! Rod object type
           IF (LEN_TRIM(let3)== 0) THEN           ! No third character cluster indicates this is a whole-rod channel
-            p%OutParam%NodeID = 0
+            p%OutParam(I)%NodeID = 0
             qVal = let2                          ! quantity type string
           ELSE
             READ (num2,*) nID                    ! rod node ID
-            p%OutParam%NodeID = nID
+            p%OutParam(I)%NodeID = nID
             qVal = let3                          ! quantity type string
           END IF
           
