@@ -306,11 +306,11 @@ typedef   ^       ^                    MD_Connect          ConnectList      {:} 
 typedef   ^       ^                    MD_Line             LineList         {:}  -  -   "array of line objects"   -
 typedef   ^       ^                    MD_Fail             FailList         {:}  -  -   "array of line objects"   -
 typedef   ^       ^                    IntKi               FreeConIs        {:}  -  -   "array of free connection indices in ConnectList vector"         ""
-typedef   ^       ^                    IntKi               CpldConIs        {:}  -  -   "array of coupled/fairlead connection indices in ConnectList vector"         ""
+typedef   ^       ^                    IntKi               CpldConIs        {:}{:} -  -   "array of coupled/fairlead connection indices in ConnectList vector"         ""
 typedef   ^       ^                    IntKi               FreeRodIs        {:}  -  -   "array of free rod indices in RodList vector"         ""
-typedef   ^       ^                    IntKi               CpldRodIs        {:}  -  -   "array of coupled/fairlead rod indices in RodList vector"         ""
+typedef   ^       ^                    IntKi               CpldRodIs        {:}{:}  -  -   "array of coupled/fairlead rod indices in RodList vector"         ""
 typedef   ^       ^                    IntKi               FreeBodyIs       {:}  -  -   "array of free body indices in BodyList vector"         ""
-typedef   ^       ^                    IntKi               CpldBodyIs       {:}  -  -   "array of coupled body indices in BodyList vector"         ""
+typedef   ^       ^                    IntKi               CpldBodyIs       {:}{:}  -  -   "array of coupled body indices in BodyList vector"         ""
 typedef   ^       ^                    IntKi               LineStateIs1     {:}  -  -   "starting index of each line's states in state vector"                 ""
 typedef   ^       ^                    IntKi               LineStateIsN     {:}  -  -   "ending index of each line's states in state vector"                 ""
 typedef   ^       ^                    IntKi               ConStateIs1      {:}  -  -   "starting index of each line's states in state vector"                 ""
@@ -359,6 +359,7 @@ typedef   ^       ^                    CHARACTER(1)        Delim          -     
 typedef   ^       ^                    IntKi               MDUnOut        -     -    -   "Unit number of main output file"
 typedef   ^       ^                    IntKi               WaterKin       -     -    -   "Flag for whether or how to consider water kinematics"
 typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0"
+typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
 
 typedef   ^       ^                    DbKi         ux                 {:}{:}{:}{:} -  -   "water velocities time series at each grid point"            -
 typedef   ^       ^                    DbKi         uy                 {:}{:}{:}{:} -  -   "water velocities time series at each grid point"            -

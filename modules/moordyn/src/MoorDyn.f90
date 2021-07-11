@@ -179,23 +179,10 @@ CONTAINS
       ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
       if (InitInp%FarmSize > 0) then
          CALL WrScr('   >>> MoorDyn is running in array mode <<< ')
-
          ! could make sure the size of this is right: SIZE(InitInp%FarmCoupledKinematics)  
-
-         !InitInp%FarmNCpldCons        
-
          p%nTurbines = InitInp%FarmSize
-
-         ! copy over turbine reference positions for later use
-         p%TurbineRefPos = InitInp%TurbineRefPos
-
       else    ! FarmSize==0 indicates normal, FAST module mode
-
          p%nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
-
-         m%PtfmInit = InitInp%PtfmInit(:,1)   ! save a copy of PtfmInit so it's available at the farm level
-         p%TurbineRefPos = 0.0_DbKi           ! for now assuming this is zero for FAST use
-
       END IF
 
       ! allocate some parameter arrays that are for each turbine (size 1 if regular OpenFAST use)
@@ -1501,22 +1488,9 @@ CONTAINS
       
       ! Initialize coupled objects based on passed kinematics
       ! (set up initial condition of each coupled object based on values specified by glue code) 
-      ! Also create i/o meshes 
+      ! Also create i/o meshes       
       
-      ! <<<<<<<< look here when changing to shared mooring compatibility
-
-      ! create input mesh for all coupled objects (as mesh node points)
-      CALL MeshCreate(BlankMesh=u%CoupledKinematics, IOS= COMPONENT_INPUT, &
-                    Nnodes = p%nCpldBodies + p%nCpldRods + p%nCpldCons, &
-                    TranslationDisp=.TRUE., TranslationVel=.TRUE., &
-                    Orientation=.TRUE., RotationVel=.TRUE., &
-                    TranslationAcc=.TRUE., RotationAcc= .TRUE., &
-                     ErrStat=ErrStat2, ErrMess=ErrMsg2)
-
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
-      
-            ALLOCATE ( u%CoupledKinematics(p%nTurbines), STAT = ErrStat )
+      ALLOCATE ( u%CoupledKinematics(p%nTurbines), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
         CALL CheckError(ErrID_Fatal, ' Error allocating CoupledKinematics input array.')
         RETURN
@@ -1536,8 +1510,7 @@ CONTAINS
 
          ! create input mesh for fairlead kinematics
          CALL MeshCreate(BlankMesh=u%CoupledKinematics(iTurb) , &
-                       IOS= COMPONENT_INPUT, &
-                       Nnodes = K
+                       IOS= COMPONENT_INPUT, Nnodes = K, &
                        TranslationDisp=.TRUE., TranslationVel=.TRUE., &
                        Orientation=.TRUE., RotationVel=.TRUE., &
                        TranslationAcc=.TRUE., RotationAcc= .TRUE., &
@@ -1604,7 +1577,7 @@ CONTAINS
             u%CoupledKinematics(iTurb)%TranslationDisp(3,i) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
                  
             ! set absolute initial positions in MoorDyn
-            m%ConnectList(m%CpldConIs(l,iTurb))%r = u%CoupledKinematics%Position(:,iTurb) + u%CoupledKinematics%TranslationDisp(:,iTurb) + p%TurbineRefPos(:,iTurb)
+            m%ConnectList(m%CpldConIs(l,iTurb))%r = u%CoupledKinematics(iTurb)%Position(:,iTurb) + u%CoupledKinematics(iTurb)%TranslationDisp(:,iTurb) + p%TurbineRefPos(:,iTurb)
             
                
                !print *, 'Fairlead ', i, ' z TranslationDisp at start is ', u%PtFairleadDisplacement(iTurb)%TranslationDisp(3,i)
@@ -2892,23 +2865,24 @@ CONTAINS
       ! get dynamics/forces (doRHS()) of coupled objects, which weren't addressed in above calls (this includes inertial loads)
       ! note: can do this in any order since there are no dependencies among coupled objects
       
-      
-      DO l = 1,p%nCpldCons
-      
- !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
- !               in other words are the below good enough or do I need to call _getCoupledFOrce??
-      
-         CALL Connect_DoRHS(m%ConnectList(m%CpldConIs(l)), m, p)
-      END DO
-      
-      DO l = 1,p%nCpldRods
-         CALL Rod_DoRHS(m%RodList(m%CpldRodIs(l)), m, p)
-         ! NOTE: this won't compute net loads on Rod. Need Rod_GetNetForceAndMass for that. Change? <<<<
-      END DO
-      
-      DO l = 1,p%nCpldBodies
-         CALL Body_DoRHS(m%BodyList(m%CpldBodyIs(l)), m, p)
-      END DO
+      DO iTurb = 1,p%nTurbines
+         DO l = 1,p%nCpldCons(iTurb)
+         
+    !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
+    !               in other words are the below good enough or do I need to call _getCoupledFOrce??
+         
+            CALL Connect_DoRHS(m%ConnectList(m%CpldConIs(l,iTurb)), m, p)
+         END DO
+         
+         DO l = 1,p%nCpldRods(iTurb)
+            CALL Rod_DoRHS(m%RodList(m%CpldRodIs(l,iTurb)), m, p)
+            ! NOTE: this won't compute net loads on Rod. Need Rod_GetNetForceAndMass for that. Change? <<<<
+         END DO
+         
+         DO l = 1,p%nCpldBodies(iTurb)
+            CALL Body_DoRHS(m%BodyList(m%CpldBodyIs(l,iTurb)), m, p)
+         END DO
+      end do
 
       ! call ground body to update all the fixed things
       CALL Body_DoRHS(m%GroundBody, m, p)
@@ -6758,7 +6732,7 @@ SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    ErrMsg  = ''
    ! inputs
    IF ( PRESENT( u_op ) ) THEN
-      nu = size(p%Jac_u_indx,1) + u%CoupledKinematics%NNodes * 6  ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+      nu = size(p%Jac_u_indx,1) + u%CoupledKinematics(1)%NNodes * 6  ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
       if (.not. allocated(u_op)) then
          call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2); if(Failed()) return
       end if
@@ -6771,7 +6745,7 @@ SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
       ! fill in the u_op values from the input mesh
-      call PackMotionMesh(u%CoupledKinematics, u_op, idx, FieldMask=FieldMask)
+      call PackMotionMesh(u%CoupledKinematics(1), u_op, idx, FieldMask=FieldMask)
       
       ! now do the active tensioning commands if there are any
       if (allocated(u%DeltaL)) then
@@ -6785,12 +6759,12 @@ SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    END IF
    ! outputs
    IF ( PRESENT( y_op ) ) THEN
-      ny = p%Jac_ny + y%CoupledLoads%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+      ny = p%Jac_ny + y%CoupledLoads(1)%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
       if (.not. allocated(y_op)) then
          call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
       end if
       idx = 1
-      call PackLoadMesh(y%CoupledLoads, y_op, idx)
+      call PackLoadMesh(y%CoupledLoads(1), y_op, idx)
       do i=1,p%NumOuts
          y_op(idx) = y%WriteOutput(i)
          idx = idx + 1
@@ -7570,14 +7544,14 @@ contains
       INTEGER(IntKi) :: index_next, i
       
       ! Number of outputs
-      p%Jac_ny = y%CoupledLoads%nNodes * 6     & ! 3 forces + 3 moments at each node (moments may be zero)
+      p%Jac_ny = y%CoupledLoads(1)%nNodes * 6     & ! 3 forces + 3 moments at each node (moments may be zero)
                + p%NumOuts                       ! WriteOutput values 
       ! Storage info for each output (names, rotframe)
       call AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
       call AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
       ! Names
       index_next = 1
-      call PackLoadMesh_Names(  y%CoupledLoads, 'LinNames_y', InitOut%LinNames_y, index_next)  ! <<< should a specific name be provided here?
+      call PackLoadMesh_Names(  y%CoupledLoads(1), 'LinNames_y', InitOut%LinNames_y, index_next)  ! <<< should a specific name be provided here?
       do i=1,p%NumOuts
          InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
       end do
@@ -7683,7 +7657,7 @@ contains
       ! Number of inputs
       i = 0
       if (allocated(u%DeltaL))   i=size(u%DeltaL)
-      nu = u%CoupledKinematics%nNodes * 18 &   ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each node <<<<<<<
+      nu = u%CoupledKinematics(1)%nNodes * 18 &   ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each node <<<<<<<
          + i*2                                 ! a deltaL and rate of change for each active tension control channel
       
       ! --- Info of linearized inputs (Names, RotFrame, IsLoad)
@@ -7695,7 +7669,7 @@ contains
       InitOut%RotFrame_u = .false. ! every input is on a mesh, which stores values in the global (not rotating) frame
       
       idx = 1
-      call PackMotionMesh_Names(u%CoupledKinematics, 'CoupledKinematics', InitOut%LinNames_u, idx) ! all 6 motion fields
+      call PackMotionMesh_Names(u%CoupledKinematics(1), 'CoupledKinematics', InitOut%LinNames_u, idx) ! all 6 motion fields
       
       ! --- Jac_u_indx:  matrix to store index to help us figure out what the ith value of the u vector really means
       ! (see perturb_u ... these MUST match )
@@ -7705,14 +7679,14 @@ contains
       call allocAry( p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
       p%Jac_u_indx = 0  ! initialize to zero
       idx = 1
-      !Module/Mesh/Field: u%CoupledKinematics%TranslationDisp  = 1;
-      !Module/Mesh/Field: u%CoupledKinematics%Orientation      = 2;
-      !Module/Mesh/Field: u%CoupledKinematics%TranslationVel   = 3;
-      !Module/Mesh/Field: u%CoupledKinematics%RotationVel      = 4;
-      !Module/Mesh/Field: u%CoupledKinematics%TranslationAcc   = 5;
-      !Module/Mesh/Field: u%CoupledKinematics%RotationAcc      = 6;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationDisp  = 1;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%Orientation      = 2;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationVel   = 3;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%RotationVel      = 4;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationAcc   = 5;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%RotationAcc      = 6;
       do i_meshField = 1,6
-         do i=1,u%CoupledKinematics%nNodes
+         do i=1,u%CoupledKinematics(1)%nNodes
             do j=1,3
                p%Jac_u_indx(idx,1) =  i_meshField     ! mesh field type (indicated by 1-6)
                p%Jac_u_indx(idx,2) =  j               ! x, y, or z
@@ -7753,12 +7727,12 @@ contains
       ! --- Default perturbations, p%du:
       call allocAry( p%du, 11, 'p%du', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
       perturb   = 2.0_R8Ki*D2R_D
-      p%du( 1) = perturb       ! u%CoupledKinematics%TranslationDisp  = 1;
-      p%du( 2) = perturb       ! u%CoupledKinematics%Orientation      = 2;
-      p%du( 3) = perturb       ! u%CoupledKinematics%TranslationVel   = 3;
-      p%du( 4) = perturb       ! u%CoupledKinematics%RotationVel      = 4;
-      p%du( 5) = perturb       ! u%CoupledKinematics%TranslationAcc   = 5;
-      p%du( 6) = perturb       ! u%CoupledKinematics%RotationAcc      = 6;
+      p%du( 1) = perturb       ! u%CoupledKinematics(1)%TranslationDisp  = 1;
+      p%du( 2) = perturb       ! u%CoupledKinematics(1)%Orientation      = 2;
+      p%du( 3) = perturb       ! u%CoupledKinematics(1)%TranslationVel   = 3;
+      p%du( 4) = perturb       ! u%CoupledKinematics(1)%RotationVel      = 4;
+      p%du( 5) = perturb       ! u%CoupledKinematics(1)%TranslationAcc   = 5;
+      p%du( 6) = perturb       ! u%CoupledKinematics(1)%RotationAcc      = 6;
       p%du(10) = 0.2_ReKi      ! deltaL [m]
       p%du(11) = 0.2_ReKi      ! deltaLdot [m/s] 
    END SUBROUTINE Init_Jacobian_u
@@ -7782,17 +7756,17 @@ SUBROUTINE MD_Perturb_u( p, n, perturb_sign, u, du )
    ! determine which mesh we're trying to perturb and perturb the input:
    SELECT CASE( p%Jac_u_indx(n,1) )
    CASE ( 1)
-      u%CoupledKinematics%TranslationDisp( fieldIndx,node) = u%CoupledKinematics%TranslationDisp( fieldIndx,node) + du * perturb_sign
+      u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) = u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2)
-      CALL PerturbOrientationMatrix( u%CoupledKinematics%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      CALL PerturbOrientationMatrix( u%CoupledKinematics(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx )
    CASE ( 3)
-      u%CoupledKinematics%TranslationVel( fieldIndx,node) = u%CoupledKinematics%TranslationVel( fieldIndx,node) + du * perturb_sign
+      u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) = u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4)
-      u%CoupledKinematics%RotationVel(fieldIndx,node) = u%CoupledKinematics%RotationVel(fieldIndx,node) + du * perturb_sign
+      u%CoupledKinematics(1)%RotationVel(fieldIndx,node) = u%CoupledKinematics(1)%RotationVel(fieldIndx,node) + du * perturb_sign
    CASE ( 5)
-      u%CoupledKinematics%TranslationAcc( fieldIndx,node) = u%CoupledKinematics%TranslationAcc( fieldIndx,node) + du * perturb_sign
+      u%CoupledKinematics(1)%TranslationAcc( fieldIndx,node) = u%CoupledKinematics(1)%TranslationAcc( fieldIndx,node) + du * perturb_sign
    CASE ( 6)
-      u%CoupledKinematics%RotationAcc(fieldIndx,node) = u%CoupledKinematics%RotationAcc(fieldIndx,node) + du * perturb_sign
+      u%CoupledKinematics(1)%RotationAcc(fieldIndx,node) = u%CoupledKinematics(1)%RotationAcc(fieldIndx,node) + du * perturb_sign
    CASE (10)
       u%deltaL(node) = u%deltaL(node) + du * perturb_sign
    CASE (11)
@@ -7812,7 +7786,7 @@ SUBROUTINE MD_Compute_dY(p, y_p, y_m, delta, dY)
    INTEGER(IntKi) :: i              ! loop over outputs
    INTEGER(IntKi) :: indx_first     ! index indicating next value of dY to be filled
    indx_first = 1
-   call PackLoadMesh_dY(  y_p%CoupledLoads, y_m%CoupledLoads, dY, indx_first)
+   call PackLoadMesh_dY(  y_p%CoupledLoads(1), y_m%CoupledLoads(1), dY, indx_first)
    !call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first) ! all 6 motion fields
    do i=1,p%NumOuts
       dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
