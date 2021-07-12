@@ -115,8 +115,7 @@ class FastLibAPI(CDLL):
             self.error_message
         )
         if self.fatal_error:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
+            raise RuntimeError(f"Error {self.error_status.value}: {self.error_message.value}")
 
         self.FAST_Sizes(
             byref(self.i_turb),
@@ -132,8 +131,7 @@ class FastLibAPI(CDLL):
             None    # Optional arguments must pass C-Null pointer; with ctypes, use None.
         )
         if self.fatal_error:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
+            raise RuntimeError(f"Error {self.error_status.value}: {self.error_message.value}")
 
         # Allocate the data for the outputs
         # NOTE: The ctypes array allocation (output_array) must be after the output_values
@@ -154,8 +152,7 @@ class FastLibAPI(CDLL):
         self.output_values[0] = self.output_array[:]
         if self.fatal_error:
             self.fast_deinit()
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
+            raise RuntimeError(f"Error {self.error_status.value}: {self.error_message.value}")
 
         for i in range( 1, self.total_time_steps ):
             self.FAST_Update(
@@ -171,8 +168,7 @@ class FastLibAPI(CDLL):
             self.output_values[i] = self.output_array[:]
             if self.fatal_error:
                 self.fast_deinit()
-                print(f"Error {self.error_status.value}: {self.error_message.value}")
-                return
+                raise RuntimeError(f"Error {self.error_status.value}: {self.error_message.value}")
             if self.end_early:
                 break
         
@@ -193,15 +189,20 @@ class FastLibAPI(CDLL):
                 self.error_message
             )
             if self.fatal_error:
-                print(f"Error {self.error_status.value}: {self.error_message.value}")
-                return
+                raise RuntimeError(f"Error {self.error_status.value}: {self.error_message.value}")
 
     def fast_run(self):
         self.fast_init()
-        if self.fatal_error: return
+        if self.fatal_error:
+            raise RuntimeError(f"Error {self.error_status.value}: {self.error_message.value}")
+
         self.fast_sim()
-        if self.fatal_error: return
+        if self.fatal_error:
+            raise RuntimeError(f"Error {self.error_status.value}: {self.error_message.value}")
+        
         self.fast_deinit()
+        if self.fatal_error:
+            raise RuntimeError(f"Error {self.error_status.value}: {self.error_message.value}")
 
     @property
     def total_time_steps(self):
