@@ -54,7 +54,7 @@ typedef   ^       ^                    DbKi         WaveTime                    
 # ====================================== Internal data types ========================================================================
 # line properties from line dictionary input
 typedef  ^            MD_LineProp      IntKi              IdNum          -       -  -   "integer identifier of this set of line properties"
-typedef  ^            ^                CHARACTER(10)      name           -       -  -   "name/identifier of this set of line properties"
+typedef  ^            ^                CHARACTER(20)      name           -       -  -   "name/identifier of this set of line properties"
 typedef  ^            ^                DbKi               d              -       -  -   "volume-equivalent diameter"  "[m]"
 typedef  ^            ^                DbKi               w              -       -  -   "per-length weight in air"  "[kg/m]"
 typedef  ^            ^                DbKi               EA             -       -  -   "axial stiffness"   "[N]"
@@ -325,6 +325,7 @@ typedef   ^       ^           MD_ContinuousStateType       xTemp             -  
 typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"
 typedef   ^       ^                    DbKi                zeros6           {6}  -  -   "array of zeros for convenience"
 typedef   ^       ^                    DbKi                MDWrOutput       {:}  -  -   "Data from time step to be written to a MoorDyn output file"
+typedef   ^           ^                ReKi               PtfmInit      {6} -    -   "initial position of platform for an individual (non-farm) MD instance"     -
 
 
 ## ============================== Parameters ============================================================================================================================================

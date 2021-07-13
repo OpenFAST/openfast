@@ -66,7 +66,7 @@ IMPLICIT NONE
 ! =========  MD_LineProp  =======
   TYPE, PUBLIC :: MD_LineProp
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this set of line properties [-]
-    CHARACTER(10)  :: name      !< name/identifier of this set of line properties [-]
+    CHARACTER(20)  :: name      !< name/identifier of this set of line properties [-]
     REAL(DbKi)  :: d      !< volume-equivalent diameter [[m]]
     REAL(DbKi)  :: w      !< per-length weight in air [[kg/m]]
     REAL(DbKi)  :: EA      !< axial stiffness [[N]]
@@ -353,6 +353,7 @@ IMPLICIT NONE
     TYPE(MD_ContinuousStateType)  :: xdTemp      !< contains temporary state derivative vector used in integration (put here so it's only allocated once) [-]
     REAL(DbKi) , DIMENSION(1:6)  :: zeros6      !< array of zeros for convenience [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: MDWrOutput      !< Data from time step to be written to a MoorDyn output file [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: PtfmInit      !< initial position of platform for an individual (non-farm) MD instance [-]
   END TYPE MD_MiscVarType
 ! =======================
 ! =========  MD_ParameterType  =======
@@ -8026,6 +8027,7 @@ IF (ALLOCATED(SrcMiscData%MDWrOutput)) THEN
   END IF
     DstMiscData%MDWrOutput = SrcMiscData%MDWrOutput
 ENDIF
+    DstMiscData%PtfmInit = SrcMiscData%PtfmInit
  END SUBROUTINE MD_CopyMisc
 
  SUBROUTINE MD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -8455,6 +8457,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! MDWrOutput upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%MDWrOutput)  ! MDWrOutput
   END IF
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PtfmInit)  ! PtfmInit
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -9101,6 +9104,10 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+    DO i1 = LBOUND(InData%PtfmInit,1), UBOUND(InData%PtfmInit,1)
+      ReKiBuf(Re_Xferred) = InData%PtfmInit(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE MD_PackMisc
 
  SUBROUTINE MD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -9938,6 +9945,12 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+    i1_l = LBOUND(OutData%PtfmInit,1)
+    i1_u = UBOUND(OutData%PtfmInit,1)
+    DO i1 = LBOUND(OutData%PtfmInit,1), UBOUND(OutData%PtfmInit,1)
+      OutData%PtfmInit(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE MD_UnPackMisc
 
  SUBROUTINE MD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )

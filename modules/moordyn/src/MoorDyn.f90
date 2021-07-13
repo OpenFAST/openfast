@@ -173,6 +173,9 @@ CONTAINS
       InputFileDat%threshIC  = 0.01_ReKi
       p%WaterKin             = 0_IntKi
       !p%dtOut                = 0.0_DbKi
+      
+      
+      m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
 
 
 
@@ -500,6 +503,8 @@ CONTAINS
                       RETURN
                    END IF
                    
+                   !TODO: add check if %name is maximum length, which might indicate the full name was too long <<<
+                   
                    ! process stiffness, damping, and bending coefficients (which might use lookup tables)
                    CALL getCoefficientOrCurve(tempString1, m%LineTypeList(l)%EA,        &
                                                            m%LineTypeList(l)%nEApoints, &
@@ -725,12 +730,12 @@ CONTAINS
                            end if
                         
                         else
-                           CALL SetErrStat( ErrID_Severe,  "Body ID out of bounds for Rod "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Rod "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
                            return
                         end if
                      
                   else
-                     CALL SetErrStat( ErrID_Severe,  "No number provided for Rod "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "No number provided for Rod "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
                          return
                   end if
                   
@@ -769,7 +774,7 @@ CONTAINS
                      
                   else 
                   
-                     CALL SetErrStat( ErrID_Severe,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )   
                      return
                   end if
 
@@ -780,7 +785,7 @@ CONTAINS
                        m%RodList(l)%PropsIdNum = J
                        EXIT
                        IF (J == p%nRodTypes) THEN   ! call an error if there is no match
-                           CALL SetErrStat( ErrID_Severe, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )
+                           CALL SetErrStat( ErrID_Fatal, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )
                        END IF
                      END IF
                   END DO
@@ -896,11 +901,11 @@ CONTAINS
                            CALL Body_AddConnect(m%BodyList(J), l, tempArray(1:3))   ! add connection l to Ground body
                            
                         else
-                           CALL SetErrStat( ErrID_Severe,  "Body ID out of bounds for Connection "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Connection "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
                            return
                         end if                     
                      else
-                        CALL SetErrStat( ErrID_Severe,  "No number provided for Connection "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Connection "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
                             return
                      end if
                   
@@ -924,20 +929,28 @@ CONTAINS
                      
                   else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
                   
-                     K = scan(TempString , '1234567890' )             ! find index of first number in the string
-                     READ(TempString(K:), *) iTurb                    ! convert to int, representing turbine index
-                     if (iTurb > p%nTurbines) then
-                        call CheckError( ErrID_Fatal, 'Error: Turbine[n] Connect types can only be used with FAST.Farm and must not exceed the number of turbines.' )
-                        return
+                     if (len_trim(num1) > 0) then                     
+                        READ(num1, *) J   ! convert to int, representing parent body index
+                        
+                        if ((J <= p%nTurbines) .and. (J > 0)) then
+                           
+                           m%ConnectList(l)%TypeNum = -1 ! -J                ! typeNum < 0 indicates -turbine number   <<<<  NOT USED, RIGHT??
+                           p%nCpldCons(J) = p%nCpldCons(J) + 1      ! increment counter for the appropriate turbine                   
+                           m%CpldConIs(p%nCpldCons(J),J) = l
+                           print *, ' added connection ', l, ' as fairlead for turbine ', J
+                           
+                           
+                        else
+                           CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Connection "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           return
+                        end if   
+                     else
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Connection "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
+                            return
                      end if
-                     
-                     m%ConnectList(I)%TypeNum = -iTurb                ! typeNum < 0 indicates -turbine number   <<<<  NOT USED, RIGHT??
-                     p%nCpldCons(iTurb) = p%nCpldCons(iTurb) + 1      ! increment counter for the appropriate turbine                   
-                     m%CpldConIs(p%nCpldCons(iTurb),iTurb) = l
-                     print *, ' added connection ', I, ' as fairlead for turbine ', iTurb
-                     
+                                          
                   else 
-                     CALL SetErrStat( ErrID_Severe,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
                      return
                   end if
                   
@@ -1003,7 +1016,7 @@ CONTAINS
                        m%LineList(l)%PropsIdNum = J
                        EXIT
                        IF (J == p%nLineTypes) THEN   ! call an error if there is no match
-                           CALL SetErrStat( ErrID_Severe, 'Unable to find matching line type name for Line '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                           CALL SetErrStat( ErrID_Fatal, 'Unable to find matching line type name for Line '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
                        END IF
                      END IF
                   END DO
@@ -1020,7 +1033,7 @@ CONTAINS
                   call DecomposeString(tempString2, let1, num1, let2, num2, let3)
                   
                   if (len_trim(num1)<1) then
-                     CALL SetErrStat( ErrID_Severe,  "Error: no number provided for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                     CALL SetErrStat( ErrID_Fatal,  "Error: no number provided for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                      return
                   end if 
 
@@ -1035,11 +1048,11 @@ CONTAINS
                         else if (let2 == "B") then 
                            CALL Rod_AddLine(m%RodList(J), l, 0, 1)   ! add line l (end A, denoted by 0) to rod J (end B, denoted by 1)
                         else
-                           CALL SetErrStat( ErrID_Severe,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end A attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end A attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
                             return
                         end if
                      else
-                        CALL SetErrStat( ErrID_Severe,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                   
@@ -1049,7 +1062,7 @@ CONTAINS
                      if ((J <= p%nConnects) .and. (J > 0)) then                  
                         CALL Connect_AddLine(m%ConnectList(J), l, 0)   ! add line l (end A, denoted by 0) to connection J
                      else
-                        CALL SetErrStat( ErrID_Severe,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                         
@@ -1061,7 +1074,7 @@ CONTAINS
                   call DecomposeString(tempString3, let1, num1, let2, num2, let3)
 
                   if (len_trim(num1)<1) then
-                     CALL SetErrStat( ErrID_Severe,  "Error: no number provided for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                     CALL SetErrStat( ErrID_Fatal,  "Error: no number provided for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                      return
                   end if 
 
@@ -1076,11 +1089,11 @@ CONTAINS
                         else if (let2 == "B") then 
                            CALL Rod_AddLine(m%RodList(J), l, 1, 1)   ! add line l (end B, denoted by 1) to rod J (end B, denoted by 1)
                         else
-                           CALL SetErrStat( ErrID_Severe,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end B attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end B attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
                             return
                         end if
                      else
-                        CALL SetErrStat( ErrID_Severe,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
 
@@ -1090,7 +1103,7 @@ CONTAINS
                      if ((J <= p%nConnects) .and. (J > 0)) then                  
                         CALL Connect_AddLine(m%ConnectList(J), l, 1)   ! add line l (end B, denoted by 1) to connection J
                      else
-                        CALL SetErrStat( ErrID_Severe,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                         
@@ -1572,9 +1585,9 @@ CONTAINS
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
 
-            u%CoupledKinematics(iTurb)%TranslationDisp(1,i) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
-            u%CoupledKinematics(iTurb)%TranslationDisp(2,i) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
-            u%CoupledKinematics(iTurb)%TranslationDisp(3,i) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+            u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+            u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
                  
             ! set absolute initial positions in MoorDyn
             m%ConnectList(m%CpldConIs(l,iTurb))%r = u%CoupledKinematics(iTurb)%Position(:,iTurb) + u%CoupledKinematics(iTurb)%TranslationDisp(:,iTurb) + p%TurbineRefPos(:,iTurb)

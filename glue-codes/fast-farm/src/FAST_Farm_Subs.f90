@@ -1765,7 +1765,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    ! These aren't currently handled at the FAST.Farm level, so just give the farm's MoorDyn default values, which can be overwridden by its input file
    MD_InitInp%g         =    9.81
    MD_InitInp%rhoW      = 1025.0
-   MD_InitInp%WtrDepth  =    0.0
+   MD_InitInp%WtrDepth  =    0.0   !TODO: eventually connect this to a global depth input variable <<<
 
 
    ! allocate MoorDyn inputs (assuming size 2 for linear interpolation/extrapolation... >
@@ -1815,26 +1815,26 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       !if (farm%MD%p%NFairs(nt) > 0 ) then   ! only set up a mesh map if MoorDyn has connections to this turbine
       
       ! loads
-      CALL MeshMapCreate( farm%MD%y%PtFairleadLoad(nt),  &
+      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
                           farm%FWrap(nt)%m%Turbine%ED%Input(1)%PlatformPtMesh, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
                           
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
      
       ! kinematics
       CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh,  &
-                          farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+                          farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
       
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )          
 
       
       ! SubDyn alternative:
-      !CALL MeshMapCreate( farm%MD%y%PtFairleadLoad(nt),  &
+      !CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
       !                    farm%FWrap(nt)%m%Turbine%SD%Input(1)%LMesh, farm%m%MD_2_FWrap, ErrStat2, ErrMsg2 )
       !                    
       !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
       !   
       !CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh,  &
-      !                    farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 )
+      !                    farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 )
       !                    
       !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )              
       !end if
@@ -1894,13 +1894,13 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    do nt = 1,farm%p%NumTurbines
       !if (farm%MD%p%NFairs(nt) > 0 ) then   
          
-         CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%Input(1)%PtFairleadDisplacement(nt), &
+         CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%Input(1)%CoupledKinematics(nt), &
                                        farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
        
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%CoupledKinematics' )
                              
          ! SubDyn alternative
-         !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
+         !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
       !end if 
    end do 
 
@@ -1921,12 +1921,12 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
    do nt = 1,farm%p%NumTurbines
    
-      if (farm%MD%p%NFairs(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine
+      if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
          
          ! mapping
-         CALL Transfer_Point_to_Point( farm%MD%y%PtFairleadLoad(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2,  &
+         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
-                                       farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
+                                       farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
       
          CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
          
@@ -1938,9 +1938,9 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
                                                                          + farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2%Moment            
       
          ! SubDyn alternative
-         !CALL Transfer_Point_to_Point( farm%MD%y%PtFairleadLoad(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
+         !CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
          !                              farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
-         !                              farm%MD%Input(1)%PtFairleadDisplacement(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
+         !                              farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
          !
          !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Force
          !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Moment 
