@@ -1611,7 +1611,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
    !!                  0 & 0 & 0 & 0                                               & \frac{\partial U_\Lambda^{AD}}{\partial u^{AD}} \\
    !!  \end{bmatrix} \f$
    !.....................................
-! LIN-TODO: Add doc strings for new modules: HD & MAP & SD
+! LIN-TODO: Add doc strings for new modules: SrvD & HD & MAP & SD
    
    if (.not. allocated(dUdu)) then
       call AllocAry(dUdu, y_FAST%Lin%Glue%SizeLin(LIN_INPUT_COL), y_FAST%Lin%Glue%SizeLin(LIN_INPUT_COL), 'dUdu', ErrStat2, ErrMsg2)
@@ -1708,7 +1708,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
        CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO')
    ENDIF 
    
-   ! LIN-TODO: Update the doc lines below to include HD, SD, and MAP
+   ! LIN-TODO: Update the doc lines below to include SrvD, HD, SD, and MAP
    !.....................................
    ! dUdy
    !> \f$ \frac{\partial U_\Lambda}{\partial y} =  
@@ -1742,7 +1742,8 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       ! \f$ \frac{\partial U_\Lambda^{SrvD}}{\partial y^{ED}} \end{bmatrix} = \f$ (dUdy block row 2=SrvD)
       !............
    if (p_FAST%CompServo == MODULE_SrvD) then   ! need to do this regardless of CompElast
-      call Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy )
+      call Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, SrvD%p, SrvD%Input(1), ED%y, BD, SD%y, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
    
 
@@ -2828,7 +2829,7 @@ SUBROUTINE Linear_SrvD_InputSolve_du( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
       if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
          do j=1,size(u_SrvD%SStCMotionMesh)
             if (u_SrvD%SStCMotionMesh(j)%Committed) then
-               CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%ED_P_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
+               CALL Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%ED_P_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
@@ -2850,7 +2851,7 @@ SUBROUTINE Linear_SrvD_InputSolve_du( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
       if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
          do j=1,size(u_SrvD%SStCMotionMesh)
             IF (u_SrvD%SStCMotionMesh(j)%Committed) then
-               CALL Transfer_Point_to_Point( SD%y%y2Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SD_P_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
+               CALL Linearize_Point_to_Point( SD%y%y2Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SD_P_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
@@ -2874,43 +2875,133 @@ END SUBROUTINE Linear_SrvD_InputSolve_du
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine forms the dU^{SrvD}/dy^{ED} block of dUdy. (i.e., how do changes in the ED outputs affect the SrvD inputs?)
-SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy  )
+!> This routine forms the dU^{SrvD}/dy^{ED}, dU^{SrvD}/dy^{BD}, dU^{SrvD}/dy^{SD} block of dUdy.
+!! (i.e., how do changes in the ED, SD, BD outputs affect the SrvD inputs?)
+!! NOTE: Linearze_Point_to_Point routines done in Linear_SrvD_InputSolve_du
+SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, y_SD, MeshMapData, dUdy, ErrStat, ErrMsg )
 !..................................................................................................................................
+   type(FAST_ParameterType),        intent(in   )  :: p_FAST           !< Glue-code simulation parameters
+   type(FAST_OutputFileType),       intent(in   )  :: y_FAST           !< Output variables for the glue code
+   type(SrvD_ParameterType),        intent(in   )  :: p_SrvD           !< SrvD parameters (holds indices for jacobian entries for each StC)
+   type(SrvD_InputType),            intent(inout)  :: u_SrvD           !< SrvD Inputs at t
+   type(ED_OutputType),             intent(in   )  :: y_ED             !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
+   type(BeamDyn_Data),              intent(in   )  :: BD               !< BeamDyn   data
+   type(SD_OutputType),             intent(in   )  :: y_SD             !< SubDyn    outputs (need translation displacement on meshes for loads mapping)
+                                    
+   type(FAST_ModuleMapType),        intent(inout)  :: MeshMapData      !< Data for mapping between modules
+   real(R8Ki),                      intent(inout)  :: dUdy(:,:)        !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
+   integer(IntKi),                  intent(  out)  :: ErrStat          !< Error status
+   character(*),                    intent(  out)  :: ErrMsg           !< Error message
+                                    
+   integer(IntKi)                                  :: i,j,k            ! loop counters
+   integer(intKi)                                  :: ED_Start_Yaw     !< starting index of dUdy (column) where ED Yaw/YawRate/HSS_Spd outputs are located (just before WriteOutput)
+   integer(IntKi)                                  :: SrvD_Start, ED_Out_Start, BD_Out_Start, SD_Out_Start
+   character(*), parameter                         :: RoutineName = 'Linear_SrvD_InputSolve_dy' 
+   
+      ! Initialize error status
+   ErrStat = ErrID_None
+   ErrMsg = ""
 
-   TYPE(FAST_ParameterType),       INTENT(IN)     :: p_FAST         !< Glue-code simulation parameters
-   TYPE(FAST_OutputFileType),      INTENT(IN)     :: y_FAST         !< Output variables for the glue code
-   REAL(R8Ki),                     INTENT(INOUT)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{SrvD}/dy^{ED} block
-   
-   integer(intKi)                                 :: ED_Start_Yaw   !< starting index of dUdy (column) where ED Yaw/YawRate/HSS_Spd outputs are located (just before WriteOutput)
-   integer(intKi)                                 :: thisModule
-   
-   
-   INTEGER(IntKi)                                   :: i            ! loop counter
-   
-   CHARACTER(*), PARAMETER                          :: RoutineName = 'Linear_SrvD_InputSolve_dy'
-   
-      thisModule = Module_ED
-   ED_Start_Yaw = Indx_y_Yaw_Start(y_FAST, ThisModule) ! start of ED where Yaw, YawRate, HSS_Spd occur (right before WriteOutputs)
-   
-   do i=1,size(SrvD_Indx_Y_BlPitchCom)
+   !--------------------
+   ! dU^{SrvD}/dy^{ED}
+   !--------------------
+   ED_Start_Yaw = Indx_y_Yaw_Start(y_FAST, Module_ED) ! start of ED where Yaw, YawRate, HSS_Spd occur (right before WriteOutputs)
+   do i=1,size(SrvD_Indx_Y_BlPitchCom)    ! first 3 columns
       dUdy(y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + SrvD_Indx_Y_BlPitchCom(i) - 1, ED_Start_Yaw + i - 1) = -1.0_ReKi
    end do
-      
-   !IF (u_SrvD%NStC%Mesh%Committed) THEN
-   !   
-   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStC%Mesh, MeshMapData%ED_P_2_NStC_P_N, ErrStat2, ErrMsg2 )
-   !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   !         
-   !END IF
-   !
-   !IF (u_SrvD%TSC%Mesh%Committed) THEN
-   !   
-   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStC%Mesh, MeshMapData%ED_L_2_TStC_P_T, ErrStat2, ErrMsg2 )
-   !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   !         
-   !END IF
-                                    
+
+   !----------------------------------------
+   ! Structural controls
+   !----------------------------------------
+   ! Blade
+   if ( p_FAST%CompElast == Module_ED ) then
+      !--------------------
+      ! dU^{SrvD}/dy^{ED}
+      !--------------------
+      if ( ALLOCATED(u_SrvD%BStCMotionMesh) ) then
+         do j=1,size(u_SrvD%BStCMotionMesh,2)
+            do K = 1,size(y_ED%BladeLn2Mesh)
+               if (u_SrvD%BStCMotionMesh(K,j)%Committed) then
+                  SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j))
+                  ED_Out_Start = Indx_y_ED_Blade_Start(y_ED, y_FAST, k)    ! start of %TranslationDisp field
+                  call Assemble_dUdy_Motions( y_ED%BladeLn2Mesh(K), u_SrvD%BStCMotionMesh(K,j), MeshMapData%ED_L_2_BStC_P_B(K,j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+               endif
+            enddo
+         enddo
+      endif
+   elseif ( p_FAST%CompElast == Module_BD ) then
+      !--------------------
+      ! dU^{SrvD}/dy^{BD}
+      !--------------------
+      if ( ALLOCATED(u_SrvD%BStCMotionMesh) ) then
+         do j=1,size(u_SrvD%BStCMotionMesh,2)
+            do K = 1,p_FAST%nBeams
+               if (u_SrvD%BStCMotionMesh(K,j)%Committed) then
+                  SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j))
+                  BD_Out_Start = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)    ! start of %TranslationDisp field
+                  call Assemble_dUdy_Motions( BD%y(k)%BldMotion, u_SrvD%BStCMotionMesh(K,j), MeshMapData%BD_L_2_BStC_P_B(K,j), SrvD_Start, BD_Out_Start, dUdy, .false.)
+               endif
+            enddo
+         enddo
+      endif
+   endif
+
+   !--------------------
+   ! Nacelle -- dU^{SrvD}/dy^{ED}
+   !--------------------
+   if ( ALLOCATED(u_SrvD%NStCMotionMesh) ) then
+      do j = 1,size(u_SrvD%NStCMotionMesh)
+         if (u_SrvD%NStCMotionMesh(j)%Committed) then
+            SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_NStC_u(1,j))
+            ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST)    ! start of %TranslationDisp field
+            call Assemble_dUdy_Motions( y_ED%NacelleMotion, u_SrvD%NStCMotionMesh(j), MeshMapData%ED_P_2_NStC_P_N(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+         endif
+      enddo
+   endif
+
+   !--------------------
+   ! Tower -- dU^{SrvD}/dy^{ED}
+   !--------------------
+   if ( ALLOCATED(u_SrvD%TStCMotionMesh) ) then
+      do j = 1,size(u_SrvD%TStCMotionMesh)
+         if (u_SrvD%TStCMotionMesh(j)%Committed) then
+            SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_TStC_u(1,j))
+            ED_Out_Start = Indx_y_ED_Tower_Start(y_ED, y_FAST)    ! start of %TranslationDisp field
+            call Assemble_dUdy_Motions( y_ED%TowerLn2Mesh, u_SrvD%TStCMotionMesh(j), MeshMapData%ED_L_2_TStC_P_T(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+         endif
+      enddo
+   endif
+
+   !--------------------
+   ! Substructure (SD or ED)
+   !--------------------
+   if (p_FAST%CompSub /= MODULE_SD) then
+      !--------------------
+      ! dU^{SrvD}/dy^{ED}
+      !--------------------
+      if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
+         do j=1,size(u_SrvD%SStCMotionMesh)
+            if (u_SrvD%SStCMotionMesh(j)%Committed) then
+               SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j))
+               ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of %TranslationDisp field
+               call Assemble_dUdy_Motions( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%ED_P_2_SStC_P_P(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+            endif
+         enddo
+      endif
+   else
+      !--------------------
+      ! dU^{SrvD}/dy^{SD}
+      !--------------------
+      if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
+         do j=1,size(u_SrvD%SStCMotionMesh)
+            if (u_SrvD%SStCMotionMesh(j)%Committed) then
+               SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j))
+               SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST)   ! start of %TranslationDisp field
+               call Assemble_dUdy_Motions( y_SD%y2Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SD_P_2_SStC_P_P(j), SrvD_Start, SD_Out_Start, dUdy, .false.)
+            endif
+         enddo
+      endif
+   endif
 END SUBROUTINE Linear_SrvD_InputSolve_dy
 
 
@@ -4003,7 +4094,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   !LIN-TODO: Update doc string comments below for HD, MAP, SD
+   !LIN-TODO: Update doc string comments below for SrvD, HD, MAP, SD
    
    !.....................................   
    ! allocate the glue-code state matrices; after this call they will contain the state matrices from the 
