@@ -1816,7 +1816,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       
       ! loads
       CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
-                          farm%FWrap(nt)%m%Turbine%ED%Input(1)%PlatformPtMesh, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
+                          farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
                           
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
      
@@ -1923,20 +1923,18 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    
       if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
          
+         ! copy the MD output mesh for this turbine into a copy mesh within the FAST instance
+         !CALL MeshCopy ( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_FarmMD_CoupledLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
+         !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MeshCopy CoupledLoads' )   
+         
+         
          ! mapping
-         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2,  &
+         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
                                        farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
-      
-         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
          
-         ! adding to ElastoDyn mesh that will be a future input (I'm assuming MeshMapData%u_ED_PlatformPtMesh makes its way into ElastoDyn inputs somehow)
-         farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Force  &
-                                                                         + farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2%Force
-                                                                         
-         farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh%Moment  &
-                                                                         + farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_2%Moment            
-      
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+                  
          ! SubDyn alternative
          !CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
          !                              farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &

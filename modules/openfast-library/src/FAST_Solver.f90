@@ -2024,6 +2024,7 @@ CONTAINS
    !..................
    ! Set mooring line inputs (which don't have acceleration fields)
    !..................
+   !TODO: MoorDyn input mesh now has acceleration fields, and they are used in some uncommon cases. Is this an issue? <<<
    
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
          
@@ -2058,7 +2059,14 @@ CONTAINS
          MeshMapData%u_ED_PlatformPtMesh%Moment = 0.0_ReKi
          
       END IF
-
+      
+      
+      ! add farm-level mooring loads if applicable  >>> note: not yet set up for SubDyn <<<
+      IF (p_FAST%FarmIntegration) THEN      
+         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_MDf%Force
+         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_MDf%Moment      
+      END IF
+      
 
       ! Map motions for ServodDyn Structural control (TMD) if used and forces from the TMD to the platform
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
@@ -3290,7 +3298,14 @@ CONTAINS
          MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
          MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment            
       END IF
-                                                   
+      
+      
+      ! add farm-level mooring loads if applicable
+      IF (p_FAST%FarmIntegration) THEN      
+         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_MDf%Force
+         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_MDf%Moment      
+      END IF      
+
 
          ! Map the forces from the platform mounted TMD (from ServoDyn) to the platform reference point
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD .and. allocated(y_SrvD%SStCLoadMesh)) THEN
@@ -4892,6 +4907,16 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 
       CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_3' )
+
+      ! for now, setting up this additional load mesh for farm-level MD loads if in FAST.Farm (TODO: add more checks/handling) <<<
+      if (p_FAST%FarmIntegration) then   
+         CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_MDf, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_MDf' )
+         
+         ! need to initialize to zero?
+         MeshMapData%u_ED_PlatformPtMesh_MDf%Force  = 0.0_ReKi
+         MeshMapData%u_ED_PlatformPtMesh_MDf%Moment = 0.0_ReKi
+      end if
 
              
       IF ( p_FAST%CompElast == Module_BD ) THEN

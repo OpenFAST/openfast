@@ -190,9 +190,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    END IF
 
    ! ... Open and read input files ...
-   ! also, set turbine reference position for graphics output
+   ! also, set applicable farm paramters and turbine reference position also for graphics output
    p_FAST%UseSC = .FALSE.
    if (PRESENT(ExternInitData)) then
+      p_FAST%FarmIntegration = ExternInitData%FarmIntegration  
       p_FAST%TurbinePos = ExternInitData%TurbinePos
       p_FAST%WaveFieldMod = ExternInitData%WaveFieldMod
       if( (ExternInitData%NumSC2CtrlGlob .gt. 0) .or. (ExternInitData%NumSC2Ctrl .gt. 0) .or. (ExternInitData%NumCtrl2SC .gt. 0)) then

@@ -162,6 +162,8 @@ IMPLICIT NONE
     LOGICAL  :: UseDWM      !< Use the DWM module in AeroDyn [-]
     LOGICAL  :: Linearize      !< Linearization analysis (flag) [-]
     INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
+    LOGICAL  :: FarmIntegration = .false.      !< whether this is called from FAST.Farm (or another program that doesn't want FAST to call all of the init stuff first) [-]
+    REAL(SiKi) , DIMENSION(1:3)  :: TurbinePos      !< Initial position of turbine base (origin used for graphics) [m]
     CHARACTER(1024)  :: EDFile      !< The name of the ElastoDyn input file [-]
     CHARACTER(1024) , DIMENSION(MaxNBlades)  :: BDBldFile      !< Name of files containing BeamDyn inputs for each blade [-]
     CHARACTER(1024)  :: InflowFile      !< Name of file containing inflow wind input parameters [-]
@@ -197,7 +199,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTK_tWidth      !< Width of number of files for leading zeros in file name format [-]
     REAL(DbKi)  :: VTK_fps      !< number of frames per second to output VTK data [-]
     TYPE(FAST_VTK_SurfaceType)  :: VTK_surface      !< Data for VTK surface visualization [-]
-    REAL(SiKi) , DIMENSION(1:3)  :: TurbinePos      !< Initial position of turbine base (origin used for graphics) [m]
     CHARACTER(4)  :: Tdesc      !< description of turbine ID (for FAST.Farm) screen printing [-]
     LOGICAL  :: CalcSteady      !< Calculate a steady-state periodic operating point before linearization [unused if Linearize=False] [-]
     INTEGER(IntKi)  :: TrimCase      !< Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [unused if Linearize=False; used only if CalcSteady=True] [-]
@@ -672,6 +673,7 @@ IMPLICIT NONE
     TYPE(MeshType)  :: u_ED_PlatformPtMesh      !< copy of ED input mesh [-]
     TYPE(MeshType)  :: u_ED_PlatformPtMesh_2      !< copy of ED input mesh (used only for temporary storage) [-]
     TYPE(MeshType)  :: u_ED_PlatformPtMesh_3      !< copy of ED input mesh (used only for temporary storage) [-]
+    TYPE(MeshType)  :: u_ED_PlatformPtMesh_MDf      !< copy of ED input mesh used to store loads from farm-level MD [-]
     TYPE(MeshType)  :: u_ED_TowerPtloads      !< copy of ED input mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_ED_BladePtLoads      !< copy of ED input mesh [-]
     TYPE(MeshType)  :: u_SD_TPMesh      !< copy of SD input mesh [-]
@@ -2136,6 +2138,8 @@ ENDIF
     DstParamData%UseDWM = SrcParamData%UseDWM
     DstParamData%Linearize = SrcParamData%Linearize
     DstParamData%WaveFieldMod = SrcParamData%WaveFieldMod
+    DstParamData%FarmIntegration = SrcParamData%FarmIntegration
+    DstParamData%TurbinePos = SrcParamData%TurbinePos
     DstParamData%EDFile = SrcParamData%EDFile
     DstParamData%BDBldFile = SrcParamData%BDBldFile
     DstParamData%InflowFile = SrcParamData%InflowFile
@@ -2173,7 +2177,6 @@ ENDIF
       CALL FAST_Copyvtk_surfacetype( SrcParamData%VTK_surface, DstParamData%VTK_surface, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-    DstParamData%TurbinePos = SrcParamData%TurbinePos
     DstParamData%Tdesc = SrcParamData%Tdesc
     DstParamData%CalcSteady = SrcParamData%CalcSteady
     DstParamData%TrimCase = SrcParamData%TrimCase
@@ -2270,6 +2273,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! UseDWM
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
+      Int_BufSz  = Int_BufSz  + 1  ! FarmIntegration
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TurbinePos)  ! TurbinePos
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%EDFile)  ! EDFile
       Int_BufSz  = Int_BufSz  + SIZE(InData%BDBldFile)*LEN(InData%BDBldFile)  ! BDBldFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InflowFile)  ! InflowFile
@@ -2322,7 +2327,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Re_BufSz   = Re_BufSz   + SIZE(InData%TurbinePos)  ! TurbinePos
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Tdesc)  ! Tdesc
       Int_BufSz  = Int_BufSz  + 1  ! CalcSteady
       Int_BufSz  = Int_BufSz  + 1  ! TrimCase
@@ -2444,6 +2448,12 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveFieldMod
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%FarmIntegration, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%TurbinePos,1), UBOUND(InData%TurbinePos,1)
+      ReKiBuf(Re_Xferred) = InData%TurbinePos(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     DO I = 1, LEN(InData%EDFile)
       IntKiBuf(Int_Xferred) = ICHAR(InData%EDFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -2572,10 +2582,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-    DO i1 = LBOUND(InData%TurbinePos,1), UBOUND(InData%TurbinePos,1)
-      ReKiBuf(Re_Xferred) = InData%TurbinePos(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
     DO I = 1, LEN(InData%Tdesc)
       IntKiBuf(Int_Xferred) = ICHAR(InData%Tdesc(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -2739,6 +2745,14 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%FarmIntegration = TRANSFER(IntKiBuf(Int_Xferred), OutData%FarmIntegration)
+    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%TurbinePos,1)
+    i1_u = UBOUND(OutData%TurbinePos,1)
+    DO i1 = LBOUND(OutData%TurbinePos,1), UBOUND(OutData%TurbinePos,1)
+      OutData%TurbinePos(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     DO I = 1, LEN(OutData%EDFile)
       OutData%EDFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
@@ -2881,12 +2895,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    i1_l = LBOUND(OutData%TurbinePos,1)
-    i1_u = UBOUND(OutData%TurbinePos,1)
-    DO i1 = LBOUND(OutData%TurbinePos,1), UBOUND(OutData%TurbinePos,1)
-      OutData%TurbinePos(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-      Re_Xferred = Re_Xferred + 1
-    END DO
     DO I = 1, LEN(OutData%Tdesc)
       OutData%Tdesc(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
@@ -36545,6 +36553,9 @@ ENDIF
       CALL MeshCopy( SrcModuleMapTypeData%u_ED_PlatformPtMesh_3, DstModuleMapTypeData%u_ED_PlatformPtMesh_3, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+      CALL MeshCopy( SrcModuleMapTypeData%u_ED_PlatformPtMesh_MDf, DstModuleMapTypeData%u_ED_PlatformPtMesh_MDf, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
       CALL MeshCopy( SrcModuleMapTypeData%u_ED_TowerPtloads, DstModuleMapTypeData%u_ED_TowerPtloads, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -36820,6 +36831,7 @@ ENDIF
   CALL MeshDestroy( ModuleMapTypeData%u_ED_PlatformPtMesh, ErrStat, ErrMsg )
   CALL MeshDestroy( ModuleMapTypeData%u_ED_PlatformPtMesh_2, ErrStat, ErrMsg )
   CALL MeshDestroy( ModuleMapTypeData%u_ED_PlatformPtMesh_3, ErrStat, ErrMsg )
+  CALL MeshDestroy( ModuleMapTypeData%u_ED_PlatformPtMesh_MDf, ErrStat, ErrMsg )
   CALL MeshDestroy( ModuleMapTypeData%u_ED_TowerPtloads, ErrStat, ErrMsg )
 IF (ALLOCATED(ModuleMapTypeData%u_ED_BladePtLoads)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%u_ED_BladePtLoads,1), UBOUND(ModuleMapTypeData%u_ED_BladePtLoads,1)
@@ -37854,6 +37866,23 @@ ENDIF
          DEALLOCATE(Db_Buf)
       END IF
       IF(ALLOCATED(Int_Buf)) THEN ! u_ED_PlatformPtMesh_3
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+      Int_BufSz   = Int_BufSz + 3  ! u_ED_PlatformPtMesh_MDf: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%u_ED_PlatformPtMesh_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! u_ED_PlatformPtMesh_MDf 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! u_ED_PlatformPtMesh_MDf
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! u_ED_PlatformPtMesh_MDf
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! u_ED_PlatformPtMesh_MDf
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -39811,6 +39840,34 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
       CALL MeshPack( InData%u_ED_PlatformPtMesh_3, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! u_ED_PlatformPtMesh_3 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      CALL MeshPack( InData%u_ED_PlatformPtMesh_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! u_ED_PlatformPtMesh_MDf 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -42646,6 +42703,46 @@ ENDIF
         Int_Xferred = Int_Xferred + Buf_size
       END IF
       CALL MeshUnpack( OutData%u_ED_PlatformPtMesh_3, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! u_ED_PlatformPtMesh_3 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%u_ED_PlatformPtMesh_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! u_ED_PlatformPtMesh_MDf 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
