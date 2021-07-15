@@ -214,6 +214,9 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          call cleanup()
          return
       end if
+      call AllocAry(m%yHat_blade, 3, size(m%ADRotorDisk), 'yHat_blade', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (errStat >= AbortErrLev) return
+      
       
       do k=1,nb
          
@@ -624,6 +627,12 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          call setErrStat(ErrStat2,ErrMsg2,ErrStat2,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
    end do
+   
+   ! --- Compute blade tangential unit vector
+   do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
+       ! y = xhat x zblade_gl
+       m%yHat_blade(1:3, k) = cross_product(m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation(3,:,1) , y%xHat_Disk ) 
+   end do
          
    ! --- Ct and Cq on polar grid (goes beyond rotor radius)
    if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
@@ -646,12 +655,12 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          y%AzimAvg_Ct(j) = num / denom
 
          ! Torque coefficient 
-         ! Cq = dQ/dr / (1/2 rho pi r R U_rel^2)    dQ/dr =  sum_iB r dFt/dr
+         ! Cq = dQ/dr / (1/2 rho pi r^2 U_rel^2)    dQ/dr =  sum_iB r dFt/dr
          num = 0.0_ReKi
          do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
-            num = num + dot_product(y%xHat_Disk, m%ADRotorDisk(k)%Moment(:,j) ) 
+            num = num - p%r(j)*dot_product(m%yHat_blade(:,k), m%ADRotorDisk(k)%Force(:,j)  ) + dot_product(y%xHat_Disk, m%ADRotorDisk(k)%Moment(:,j) ) 
          end do
-         y%AzimAvg_Cq(j) = 2.0_ReKi*num / (denom * y%D_rotor)
+         y%AzimAvg_Cq(j) = num / (denom * p%r(j) )
       end do
          
    end if  
@@ -678,8 +687,7 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    else
       y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
    end if
-
-
+   
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the inputs needed before calling an instance of FAST

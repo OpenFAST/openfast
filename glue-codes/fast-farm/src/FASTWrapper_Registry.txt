@@ -68,6 +68,7 @@ typedef    ^              MiscVarType          MeshType             TempDisp    
 typedef    ^              MiscVarType          MeshType             TempLoads   {:} -  -  "temp loads mesh (for AzimAvg_Ct)" -
 typedef    ^              MiscVarType          MeshType             ADRotorDisk {:} -  -  "Mesh that does not deflect with the blade (for AzimAvg_Ct)" -
 typedef    ^              MiscVarType          MeshMapType          AD_L2L      {:} -  -  "Map AD loads from deflected mesh to rotor-disk plane"
+typedef    ^              MiscVarType          ReKi                 yHat_blade  {:}{:} - - "Vector tangential to blade"
 
 
 # ..... Parameters ................................................................................................................
