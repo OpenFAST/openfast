@@ -734,7 +734,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    character(*), parameter                      :: RoutineName = 'WD_UpdateStates'
    real(ReKi)                                   :: dx, norm2_xhat_plane  
    real(ReKi)                                   :: dy_HWkDfl(3), EddyTermA, EddyTermB, lstar, Vx_wake_min
-   real(ReKi)                                   :: dvdr
+   real(ReKi)                                   :: dvdr, r_tmp, C, S
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz ! indices on y and z
    real(ReKi) :: Ct_avg            ! Rotor-disk averaged Ct
@@ -811,9 +811,20 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          ! Eddy viscosity
          do iz = -p%NumRadii+1, p%NumRadii-1
             do iy = -p%NumRadii+1, p%NumRadii-1
-               dvdr = sqrt(m%dvx_dy(iy,iz,i-1)**2 + m%dvx_dz(iy,iz,i-1)**2)
+
+               r_tmp =  sqrt(p%y(iy)**2 + p%z(iz)**2) 
+               if (EqualRealNos(r_tmp,0.0_ReKi) ) then
+                  S = 0.0_ReKi 
+                  C = 0.0_ReKi
+               else
+                  S=p%z(iz)/r_tmp
+                  C=p%y(iy)/r_tmp
+               endif
+            
+!~                dvdr = sqrt(m%dvx_dy(iy,iz,i-1)**2 + m%dvx_dz(iy,iz,i-1)**2)  !!!!! Check this derivative
+               dvdr = m%dvx_dy(iy,iz,i-1) * C  + m%dvx_dz(iy,iz,i-1) * S !!!!! Check this derivative
                m%vt_amb2(iy,iz,i-1) = EddyTermA
-               m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)*dvdr , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
+               m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)* abs(dvdr) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
                m%vt_tot2(iy,iz,i-1) = max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), 1e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt)
             enddo
          enddo
@@ -864,7 +875,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    ! --- Update states at disk-plane (0) to time [n+1] 
    ! --------------------------------------------------------------------------------
    !xd%x_plane         (0) = 0.0_ReKi ! already initialized to zero
-   xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0)*p%filtParam + u%xhat_disk(:)*p%oneMinusFiltParam  ! 2-step calculation for xhat_plane at disk
+   if (p%Mod_Wake /= Mod_Wake_Curl) then
+      xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0)*p%filtParam + u%xhat_disk(:)*p%oneMinusFiltParam  ! 2-step calculation for xhat_plane at disk
+   else
+      ! TODO align xhat_plane with the wind direction
+      xd%xhat_plane     (:,0) =  (/1.0, 0.0, 0.0/)
+   endif
    norm2_xhat_plane        =  TwoNorm( xd%xhat_plane(:,0) ) 
    if ( EqualRealNos(norm2_xhat_plane, 0.0_ReKi) ) then
       ! TEST: E1
@@ -874,8 +890,10 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    end if
    xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0) / norm2_xhat_plane
    
-   xd%psi_skew_filt        =  filter_angles(xd%psi_skew_filt, u%psi_skew, p%filtParam, p%oneMinusFiltParam)
-   xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
+   !xd%psi_skew_filt        =  filter_angles(xd%psi_skew_filt, u%psi_skew, p%filtParam, p%oneMinusFiltParam)
+   !xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
+   call filter_angles2(xd%psi_skew_filt, xd%chi_skew_filt, u%psi_skew, u%chi_skew, p%filtParam, p%oneMinusFiltParam)
+   
    xd%YawErr_filt      (0) =  xd%YawErr_filt(0)*p%filtParam + u%YawErr  *p%oneMinusFiltParam
    if ( EqualRealNos(abs(xd%YawErr_filt(0)), pi/2) .or. abs(xd%YawErr_filt(0)) > pi/2 ) then
       ! TEST: E4
@@ -924,6 +942,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
       ! Convert to Cartesian
       call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
+      !call Axisymmetric2CartesianVx(m%Vx_polar * sin(xd%chi_skew_filt), p%r, p%y, p%z, xd%Vy_wake2(:,:,0))
+      !xd%Vy_wake2(:,:,0) = xd%Vx_wake2(:,:,0) * sin(xd%chi_skew_filt)
       Ct_avg =  get_Ctavg(p%r, xd%Ct_azavg_filt, xd%D_rotor_filt(0))
       ! --- Compute Vy
       ! --- Add V/W from vorticies 
@@ -933,7 +953,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 
       endif
       ! --- Add Swirl
-      call AddSwirl(p%r, m%Vt_wake, p%y, p%z, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
+      if (p%Swirl) then
+         call AddSwirl(p%r, m%Vt_wake, p%y, p%z, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
+      endif
    endif
 
    !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
@@ -1041,7 +1063,7 @@ contains
                ! Update state of Vx
                xd%Vx_wake2(iy,iz,i) = xd%Vx_wake2(iy,iz,i-1) -  &
                                       dx / (xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wind_disk_filt(i-1)) * &
-                                        ( xd%Vy_wake2(iy,iz,i-1) * m%dvx_dy(iy,iz,i-1) + &
+                                         ((xd%Vy_wake2(iy,iz,i-1)) * m%dvx_dy(iy,iz,i-1) + &
                                           xd%Vz_wake2(iy,iz,i-1) * m%dvx_dz(iy,iz,i-1) &
                                          - divTau) 
 
@@ -1121,8 +1143,8 @@ subroutine AddVelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, si
    real(ReKi),                 intent(in)    :: sigma_d ! The width of Gaussian kernel for the vortices divided by diameter (-)
    real(ReKi), dimension(:,:), intent(inout) :: Vy_curl ! Curl velocity in the y direction (m/s)
    real(ReKi), dimension(:,:), intent(inout) :: Vz_curl ! Curl velocity in the z direction (m/s)
-   real(ReKi) Gamma0, dR, G, zp, y0, z0, v, w, sigma
-   integer(intKi) ir, iy, iz
+   real(ReKi) Gamma0, dR, G, zp, y0, z0, v, w, sigma, w_mean, v_mean
+   integer(intKi) ir, iy, iz, iIn
    
    ! The width of the Guassian vortices
    sigma = sigma_d * 2 * R
@@ -1150,17 +1172,33 @@ subroutine AddVelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, si
       G = Gamma0 * zp * dR / (R * sqrt(R**2 - zp**2))
 
       ! Loop through all planes 
+      w_mean = 0.0_ReKi
+      v_mean = 0.0_ReKi
+      iIn = 0 !  number of points inside rotor area
       do iz = 1,size(z)
          do iy = 1,size(y)
+           
       
             call lamb_oseen_2d(y(iy) - y0, z(iz) - z0, G, sigma, v, w)
-   
+            
+            if (sqrt(y(iy)**2 + z(iz)**2)<=R ) then
+               v_mean = v_mean + v
+               w_mean = w_mean + w
+               iIn = iIn +1
+            endif
+             
             Vy_curl(iy, iz) = Vy_curl(iy, iz) + v
             Vz_curl(iy, iz) = Vz_curl(iy, iz) + w
 
          enddo          
       enddo
    enddo
+   if (.false.) then
+      v_mean = v_mean / (iIn)
+      w_mean = w_mean / (iIn)
+      Vy_curl(:, :) = Vy_curl(:, :) - v_mean
+      Vz_curl(:, :) = Vz_curl(:, :) - w_mean
+   endif
 
 end subroutine
 
@@ -1218,44 +1256,64 @@ subroutine WD_TEST_AddVelocityCurl()
 
    if (abs(Vy_curl(1,1)-0.2171091922)>1e-5) then
       print*,'Test fail for vy'
-      STOP
+      !STOP
    endif
    if (abs(Vz_curl(2,2)-4.45974602276e-2)>1e-5) then
-      print*,'Test fail for vz'
-      STOP
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      !STOP
    endif
 end subroutine
 
 
 
 !> Weighted average of two angles
-! function filter_angles2(psi_filt, chi_filt, psi, chi, alpha, alpha_bar) result (t_filt)
-!    real(ReKi), intent(in) :: t1 !< Angle 1
-!    real(ReKi), intent(in) :: t2 !< Angle 2
-!    real(ReKi), intent(in) :: alpha     !< filter weight
-!    real(ReKi), intent(in) :: alpha_bar !< 1-alpha
-!    real(ReKi) :: t_filt !< output
-!    real(ReKi) :: x,y
-!    real(R8Ki) :: lambda1(3)  
-!    real(R8Ki) :: lambda2(3)  
-!    real(R8Ki) :: lambda_interp(3)  
-!    real(DbKi) :: DCM1
-!    real(DbKi) :: DCM2
-!    ! Compute the DCMs of the skew-related inputs and filtered states:
-!    DCM(1) = EulerConstruct( (/ psi_filt, 0, chi_filt /) )
-!    DCM(2) = EulerConstruct( (/ psi, 0, chi /) )
-!    ! Compute the logarithmic map of the DCMs:
-!    CALL DCM_logMap( DCM1, lambda1 )
-!    CALL DCM_logMap( DCM2, lambda2 )
-!    !Make sure we don't cross a 2pi boundary:
-!    CALL DCM_SetLogMapForInterp( lambda )
-!    !Interpolate the logarithmic map:
-!    lambda_interp = lambda1*alpha + lambda2*alpha_bar
-!    !Convert back to DCM:
-!    DCM_interp = DCM_exp( lambda_interp )
-!    !Convert back to angles:
-!    !(/ Filtered^psi^Skew[n+1], 0, Filtered_chi_Skew[n+1] /) = EulerExtract( DCM_interp )
-! end function filter_angles2
+subroutine filter_angles2(psi_filt, chi_filt, psi, chi, alpha, alpha_bar)
+   real(ReKi), intent(inout) :: psi_filt !< filtered azimuth, input at n, output at n+1
+   real(ReKi), intent(inout) :: chi_filt !< filtered skew angle
+   real(ReKi), intent(in) :: psi !< azimuth
+   real(ReKi), intent(in) :: chi !< skew angle
+   real(ReKi), intent(in) :: alpha     !< filter weight
+   real(ReKi), intent(in) :: alpha_bar !< 1-alpha
+   real(ReKi) :: t_filt !< output
+   real(ReKi) :: x,y
+   real(ReKi) :: lambda(3,2)  
+   real(ReKi) :: theta_out(3)  
+   real(ReKi) :: lambda_interp(3)  
+   real(ReKi) :: DCM1(3,3)
+   real(ReKi) :: DCM2(3,3)
+   real(ReKi) :: DCM_interp(3,3)
+   integer(intKi)                               :: errStat          ! temporary Error status
+   character(ErrMsgLen)                         :: errMsg           ! temporary Error message
+   errStat = ErrID_None
+   errMsg  = ""
+   
+   print*,'Input     ', psi_filt, chi_filt
+   ! Compute the DCMs of the skew-related inputs and filtered states:
+   DCM1 = EulerConstruct( (/ psi_filt, 0.0_ReKi, chi_filt /) )
+   DCM2 = EulerConstruct( (/ psi, 0.0_ReKi, chi /) )
+   ! Compute the logarithmic map of the DCMs:
+   CALL DCM_logMap( DCM1, lambda(:,1), errStat, errMsg)
+   CALL DCM_logMap( DCM2, lambda(:,2), errStat, errMsg)
+   !Make sure we don't cross a 2pi boundary:
+   CALL DCM_SetLogMapForInterp( lambda )
+   !Interpolate the logarithmic map:
+   lambda_interp = lambda(:,1)*alpha + lambda(:,2)*alpha_bar
+   !Convert back to DCM:
+   DCM_interp = DCM_exp( lambda_interp )
+   !Convert back to angles:
+   theta_out = EulerExtract( DCM_interp )
+   print*,'Output Old',filter_angles(psi_filt, psi, alpha, alpha_bar),filter_angles(chi_filt, chi, alpha, alpha_bar)
+   psi_filt = theta_out(1)
+   chi_filt = theta_out(3)
+   print*,'Output    ', psi_filt, chi_filt, theta_out(2)
+end subroutine filter_angles2
 
 !> Weighted average of two angles
 function filter_angles(t1, t2, alpha, alpha_bar) result (t_filt)
@@ -1424,8 +1482,12 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
             end if
       
          y%p_plane   (:,i) = u%p_hub(:) + y%x_plane(i)*u%xhat_disk(:) + correction
-         y%xhat_plane(:,i) = u%xhat_disk(:)
-                 
+         if (p%Mod_Wake /= Mod_Wake_Curl) then
+            y%xhat_plane(:,i) = u%xhat_disk(:)
+         else
+            ! TODO align xhat_plane with the wind direction
+            y%xhat_plane(:,i) =  (/1.0, 0.0, 0.0/)
+         endif                 
          
             ! NOTE: Since we are in firstPass=T, then xd%Vx_wake is already set to zero, so just pass that into WakeDiam
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), u%Vx_wind_disk, u%D_rotor, p%C_WakeDiam)
@@ -1472,22 +1534,22 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       if (mod(n,10)==0) then
          do i = 0, min(n-1,p%NumPlanes-1), 5 ! TODO changed to n
          
-            if (EqualRealNos(t,0.0_DbKi) ) then
-               write(Filename,'(A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Init.vtk'
-            else
-               write(Filename,'(A,I4.4,A,I9.9,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Time_',int(t*10),'.vtk'
-            endif
-            if ( vtk_new_ascii_file(trim(filename),'vel',mvtk) ) then
-               dx(1) = 0.0
-               dx(2) = p%dr
-               dx(3) = p%dr
-               call vtk_dataset_structured_points((/xd%p_plane(1,i),xd%p_plane(2,i)-dx*p%NumRadii, xd%p_plane(3,i)-dx*p%NumRadii /),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
-               call vtk_point_data_init(mvtk)
-               call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
-               call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
-               call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
-               call vtk_close_file(mvtk)
-            endif
+!~             if (EqualRealNos(t,0.0_DbKi) ) then
+!~                write(Filename,'(A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Init.vtk'
+!~             else
+!~                write(Filename,'(A,I4.4,A,I9.9,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Time_',int(t*10),'.vtk'
+!~             endif
+!~             if ( vtk_new_ascii_file(trim(filename),'vel',mvtk) ) then
+!~                dx(1) = 0.0
+!~                dx(2) = p%dr
+!~                dx(3) = p%dr
+!~                call vtk_dataset_structured_points((/xd%p_plane(1,i),xd%p_plane(2,i)-dx*p%NumRadii, xd%p_plane(3,i)-dx*p%NumRadii /),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+!~                call vtk_point_data_init(mvtk)
+!~                call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
+!~                call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
+!~                call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+!~                call vtk_close_file(mvtk)
+!~             endif
 
             ! --- Output Plane "per time"
             write(Filename,'(A,I9.9,A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtTime_',int(t*100),'_Plane_',i,'.vtk'
