@@ -204,41 +204,69 @@ CONTAINS
    subroutine ReadGridOut(sLine, GridOut)
       character(len=*),  intent(in)  :: sLine  !< full line
       type(GridOutType), intent(out) :: GridOut
-      character(255), allocatable :: StrArray(:) ! Array of strings extracted from line
+      character(255) :: StrArray(14) ! Array of strings extracted from line
       real(ReKi) :: DummyFloat
       ! Convert line to array of strings
-      CALL AllocAry(StrArray, 11, 'StrArray for grid out', ErrStat2, ErrMsg2); 
-      if (ErrStat2/=ErrID_None) return
       StrArray(:)='';
-      CALL ReadCAryFromStr(sLine, StrArray, 11, 'StrArray', 'StrArray', ErrStat2, ErrMsg2)! NOTE:No Error handling!
+      CALL ReadCAryFromStr(sLine, StrArray, 14, 'StrArray', 'StrArray', ErrStat2, ErrMsg2)! NOTE:No Error handling!
       ! Default to error
       ErrStat2=ErrID_Fatal
       ErrMsg2='Error reading OLAF grid outputs line: '//trim(sLine)
       ! Name
       GridOut%name =StrArray(1) 
+      ! Type
+      if (.not. is_int    (StrArray(2), GridOut%type  ) ) then
+         ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'GridType needs to be an integer.'
+         return
+      endif
+      ! tStart
+      call Conv2UC( StrArray(3) )
+      if ( index(StrArray(3), "DEFAULT" ) == 1 ) then
+         GridOut%tStart  = 0.0_ReKi
+      else
+         if (.not. is_numeric(StrArray(3), GridOut%tStart) ) then 
+            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'TStart needs to be numeric or "default".'
+            return
+         endif
+      endif
+      ! tEnd
+      call Conv2UC( StrArray(4) )
+      if ( index(StrArray(4), "DEFAULT" ) == 1 ) then
+         GridOut%tEnd  = 99999.0_ReKi ! TODO
+      else
+         if (.not. is_numeric(StrArray(4), GridOut%tEnd) ) then
+            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'TEnd needs to be numeric or "default".'
+            return
+         endif
+      endif
       ! Dtout
-      call Conv2UC( StrArray(2) )
-      if ( index(StrArray(2), "DEFAULT" ) == 1 ) then
+      call Conv2UC( StrArray(5) )
+      if ( index(StrArray(5), "DEFAULT" ) == 1 ) then
          GridOut%DTout  = p%DTfvw
-      else if ( index(StrArray(2), "ALL" ) == 1 ) then
+      else if ( index(StrArray(5), "ALL" ) == 1 ) then
          GridOut%DTout  = p%DTaero
       else
-         if (.not. is_numeric(StrArray(2), GridOut%DTout) ) return
+         if (.not. is_numeric(StrArray(5), GridOut%DTout) ) then
+            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'DTout needs to be numeric, "default" or "all".'
+            return
+         endif
       endif
       ! x,y,z
-      if (.not. is_numeric(StrArray( 3), GridOut%xStart) ) return
-      if (.not. is_numeric(StrArray( 4), GridOut%xEnd  ) ) return
-      if (.not. is_int    (StrArray( 5), GridOut%nx    ) ) return
-      if (.not. is_numeric(StrArray( 6), GridOut%yStart) ) return
-      if (.not. is_numeric(StrArray( 7), GridOut%yEnd  ) ) return
-      if (.not. is_int    (StrArray( 8), GridOut%ny    ) ) return
-      if (.not. is_numeric(StrArray( 9), GridOut%zStart) ) return
-      if (.not. is_numeric(StrArray(10), GridOut%zEnd  ) ) return
-      if (.not. is_int    (StrArray(11), GridOut%nz    ) ) return
+      ErrMsg2='Error reading OLAF "x" inputs for grid outputs line: '//trim(sLine)
+      if (.not. is_numeric(StrArray( 6), GridOut%xStart) ) return
+      if (.not. is_numeric(StrArray( 7), GridOut%xEnd  ) ) return
+      if (.not. is_int    (StrArray( 8), GridOut%nx    ) ) return
+      ErrMsg2='Error reading OLAF "y" inputs for grid outputs line: '//trim(sLine)
+      if (.not. is_numeric(StrArray( 9), GridOut%yStart) ) return
+      if (.not. is_numeric(StrArray(10), GridOut%yEnd  ) ) return
+      if (.not. is_int    (StrArray(11), GridOut%ny    ) ) return
+      ErrMsg2='Error reading OLAF "z" inputs for grid outputs line: '//trim(sLine)
+      if (.not. is_numeric(StrArray(12), GridOut%zStart) ) return
+      if (.not. is_numeric(StrArray(13), GridOut%zEnd  ) ) return
+      if (.not. is_int    (StrArray(14), GridOut%nz    ) ) return
       ! Success
       ErrStat2=ErrID_None
       ErrMsg2=''
-      if(allocated(StrArray)) deallocate(StrArray)
    end subroutine ReadGridOut
 
 END SUBROUTINE FVW_ReadInputFile
@@ -297,7 +325,8 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    logical              :: bMirror
    !integer(IntKi)       :: ErrStat2
    !character(ErrMsgLen) :: ErrMsg2
-   real(Reki), dimension(:,:,:), allocatable :: dxdt_0 !<
+   real(Reki), dimension(:,:,:), allocatable :: Arr3D !<
+   real(Reki), dimension(:,:), allocatable :: Arr2D !<
 
    type(FVW_VTK_Misc)   :: mvtk
 
@@ -331,7 +360,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
          call vtk_dataset_polydata(m%W(iW)%CP_LL(1:3,1:p%W(iW)%nSpan),mvtk,bladeFrame)
          call vtk_point_data_init(mvtk)
-         call vtk_point_data_scalar(m%W(iW)%Gamma_ll(    1:p%W(iW)%nSpan),'Gamma_ll',mvtk)
+         call vtk_point_data_scalar(z%W(iW)%Gamma_ll(    1:p%W(iW)%nSpan),'Gamma_ll',mvtk)
          call vtk_point_data_vector(m%W(iW)%Vind_ll (1:3,1:p%W(iW)%nSpan),'Vind_ll',mvtk)
          call vtk_point_data_vector(m%W(iW)%Vtot_ll (1:3,1:p%W(iW)%nSpan),'Vtot_ll',mvtk)
          call vtk_point_data_vector(m%W(iW)%Vstr_ll (1:3,1:p%W(iW)%nSpan),'Vstr_ll',mvtk)
@@ -357,10 +386,12 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-        ! TODO TODO
-        ! allocate(dxdt_0(3, size(m%dxdt%W(iW)%r_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
-        ! call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,1:2), m%W(iW)%Gamma_LL(:),dxdt_0, bladeFrame=bladeFrame)
-        ! deallocate(dxdt_0)
+         allocate(Arr3D(3, size(m%dxdt%W(iW)%r_NW,2) , m%nNW+1)); Arr3D=0.0_ReKi ! Convection velocity
+         allocate(Arr2D(size(z%W(iW)%Gamma_LL), 1) )            ; Arr2D=0.0_ReKi
+         Arr2D(:,1)=z%W(iW)%Gamma_LL(:)
+         call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,1:2), Arr2D(:,1:1), Arr3D, bladeFrame=bladeFrame)
+         deallocate(Arr3D)
+         deallocate(Arr2D)
       else
          call WrVTK_Lattice(FileName, mvtk, x%W(iW)%r_NW(1:3,:,1:m%nNW+1), x%W(iW)%Gamma_NW(:,1:m%nNW), m%dxdt%W(iW)%r_NW(:,:,1:m%nNW+1), bladeFrame=bladeFrame)
       endif
@@ -396,6 +427,7 @@ end subroutine WrVTK_FVW
 
 !> Export Grid velocity field to VTK
 subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, HubOrientation, HubPosition)
+   use FVW_VortexTools, only: curl_regular_grid
    use FVW_VTK ! for all the vtk_* functions
    type(FVW_ParameterType),        intent(in   ) :: p !< Parameters
    type(FVW_ContinuousStateType),  intent(in   ) :: x !< States
@@ -432,6 +464,12 @@ subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, Hub
       call vtk_dataset_structured_points((/g%xStart, g%yStart, g%zStart/),dx,(/g%nx,g%ny,g%nz/),mvtk)
       call vtk_point_data_init(mvtk)
       call vtk_point_data_vector(g%uGrid(1:3,:,:,:),'Velocity',mvtk) 
+      ! Compute vorticity on the fly
+      if (g%type==idGridVelVorticity) then
+         call curl_regular_grid(g%uGrid, g%omgrid, 1,1,1, g%nx,g%ny,g%nz, dx(1),dx(2),dx(3))
+         call vtk_point_data_vector(g%omGrid(1:3,:,:,:),'Vorticity',mvtk) 
+      endif
+      !
       call vtk_close_file(mvtk)
    endif
 

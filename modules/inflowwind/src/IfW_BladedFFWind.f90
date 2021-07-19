@@ -253,6 +253,13 @@ SUBROUTINE ReadFiles(InitInp, FF_InitInp, InitOut, ParamData, TI, ErrStat, ErrMs
          BinFileName = TRIM(PriPath)//TRIM(BinFileName)
       end if
       
+      IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+         IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
+            BinFileName = TRIM(BinFileName)//TRIM(PathSep)//'Low'
+         ELSE                                   ! FAST.Farm high-resolution domain(s)
+            BinFileName = TRIM(BinFileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
+         ENDIF
+      ENDIF
          
          ! default values for Bladed Format
       CWise = .false.

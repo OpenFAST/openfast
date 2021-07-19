@@ -17,9 +17,7 @@ nEveryCheckPoint(-1),
 tMax(0.0),
 dtFAST(0.0),
 scStatus(false),
-scLibFile(""),
-numScInputs(0),
-numScOutputs(0)
+scLibFile("")
 {
   //Nothing to do here
 }
@@ -74,8 +72,8 @@ void fast::OpenFAST::init() {
                     &ntStart,
                     &cDriver_Input_from_FAST[iTurb],
                     &cDriver_Output_to_FAST[iTurb],
-                    &cDriverSC_Input_from_FAST[iTurb],
-                    &cDriverSC_Output_to_FAST[iTurb],
+                    &sc.ip_from_FAST[iTurb],
+                    &sc.op_to_FAST[iTurb],
                     &ErrStat,
                     ErrMsg
                 );
@@ -90,12 +88,20 @@ void fast::OpenFAST::init() {
             if (nTurbinesProc > 0) velNodeDataFile = openVelocityDataFile(false);
 
             if(scStatus) {
-                sc->readRestartFile(nt_global);
+                std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+                //sc.readRestartFile(nt_global);
             }
 
             break ;
-
+     
         case fast::init:
+
+            sc.init(scio, nTurbinesProc);
+            if(scStatus) {
+                std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+                // sc.init_sc(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
+                // sc.calcOutputs_n(0.0);
+            }
 
             // this calls the Init() routines of each module
 
@@ -110,8 +116,11 @@ void fast::OpenFAST::init() {
                     &tMax,
                     currentFileName,
                     &TurbID[iTurb],
-                    &numScOutputs,
-                    &numScInputs,
+                    &scio.nSC2CtrlGlob, 
+                    &scio.nSC2Ctrl, 
+                    &scio.nCtrl2SC, 
+                    scio.from_SCglob.data(), 
+                    scio.from_SC[iTurb].data(),
                     &numForcePtsBlade[iTurb],
                     &numForcePtsTwr[iTurb],
                     TurbineBasePos[iTurb].data(),
@@ -121,8 +130,8 @@ void fast::OpenFAST::init() {
                     &numVelPtsBlade[iTurb],
                     &cDriver_Input_from_FAST[iTurb],
                     &cDriver_Output_to_FAST[iTurb],
-                    &cDriverSC_Input_from_FAST[iTurb],
-                    &cDriverSC_Output_to_FAST[iTurb],
+                    &sc.ip_from_FAST[iTurb],
+                    &sc.op_to_FAST[iTurb],
                     &ErrStat,
                     ErrMsg
                 );
@@ -153,6 +162,13 @@ void fast::OpenFAST::init() {
 
         case fast::restartDriverInitFAST:
 
+            sc.init(scio, nTurbinesProc);
+            if(scStatus) {
+                std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+                // sc.init_sc(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
+                // sc.calcOutputs_n(0.0);
+            }
+            
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 std::copy(
                     FASTInputFileName[iTurb].data(),
@@ -164,8 +180,11 @@ void fast::OpenFAST::init() {
                     &tMax,
                     currentFileName,
                     &TurbID[iTurb],
-                    &numScOutputs,
-                    &numScInputs,
+                    &scio.nSC2CtrlGlob, 
+                    &scio.nSC2Ctrl, 
+                    &scio.nCtrl2SC,
+                    scio.from_SCglob.data(), 
+                    scio.from_SC[iTurb].data(),
                     &numForcePtsBlade[iTurb],
                     &numForcePtsTwr[iTurb],
                     TurbineBasePos[iTurb].data(),
@@ -175,8 +194,8 @@ void fast::OpenFAST::init() {
                     &numVelPtsBlade[iTurb],
                     &cDriver_Input_from_FAST[iTurb],
                     &cDriver_Output_to_FAST[iTurb],
-                    &cDriverSC_Input_from_FAST[iTurb],
-                    &cDriverSC_Output_to_FAST[iTurb],
+                    &sc.ip_from_FAST[iTurb],
+                    &sc.op_to_FAST[iTurb],
                     &ErrStat,
                     ErrMsg
                 );
@@ -235,11 +254,8 @@ void fast::OpenFAST::solution0() {
         // }
 
         if(scStatus) {
-
-            sc->init(nTurbinesGlob, numScInputs, numScOutputs);
-
-            sc->calcOutputs(scOutputsGlob);
-            fillScOutputsLoc();
+            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+            // sc.fastSCInputOutput();
         }
 
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
@@ -250,7 +266,9 @@ void fast::OpenFAST::solution0() {
         timeZero = false;
 
         if (scStatus) {
-            fillScInputsGlob(); // Update inputs to super controller
+            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;            
+            //  sc.calcOutputs_n(0.0);
+            //  sc.fastSCInputOutput();
         }
     }
 }
@@ -260,11 +278,6 @@ void fast::OpenFAST::step() {
     /* ******************************
      set inputs from this code and call FAST:
     ********************************* */
-
-    if(scStatus) {
-        sc->calcOutputs(scOutputsGlob);
-        fillScOutputsLoc();
-    }
 
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 
@@ -318,11 +331,19 @@ void fast::OpenFAST::step() {
     }
 
     if(scStatus) {
-        sc->updateStates(scInputsGlob); // Go from 'n' to 'n+1' based on input at previous time step
-        fillScInputsGlob(); // Update inputs to super controller for 'n+1'
+        std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+        // sc.updateStates(nt_global * dtFAST); // Predict state at 'n+1' based on inputs
+        // sc.calcOutputs_np1( (nt_global + 1) * dtFAST);
+        // sc.fastSCInputOutput();
     }
 
+
     nt_global = nt_global + 1;
+    
+    if(scStatus) {
+        std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+        // sc.advanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
+    }
   
     if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
         // Use default FAST naming convention for checkpoint file
@@ -338,11 +359,13 @@ void fast::OpenFAST::step() {
             checkError(ErrStat, ErrMsg);
         }
         if(scStatus) {
-            if (fastMPIRank == 0) {
-                sc->writeRestartFile(nt_global);
-            }
+            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+            // if (fastMPIRank == 0) {
+            // sc.writeRestartFile(nt_global);
+            // }
         }
     }
+
 }
 
 void fast::OpenFAST::stepNoWrite() {
@@ -350,11 +373,6 @@ void fast::OpenFAST::stepNoWrite() {
     /* ******************************
         set inputs from this code and call FAST:
     ********************************* */
-
-    if(scStatus) {
-        sc->calcOutputs(scOutputsGlob);
-        fillScOutputsLoc();
-    }
 
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 
@@ -368,12 +386,20 @@ void fast::OpenFAST::stepNoWrite() {
 
     }
 
-    if(scStatus) {
-        sc->updateStates(scInputsGlob); // Go from 'n' to 'n+1' based on input at previous time step
-        fillScInputsGlob(); // Update inputs to super controller for 'n+1'
-    }
+   if(scStatus) {
+       std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+       // sc.updateStates( nt_global * dtFAST); // Predict state at 'n+1' based on inputs
+       // sc.calcOutputs_np1( (nt_global+1) * dtFAST);
+       // sc.fastSCInputOutput();
+   }
 
-    nt_global = nt_global + 1;
+   nt_global = nt_global + 1;
+   
+   if(scStatus) {
+       std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+       // sc.advanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
+   }
+  
 }
 
 void fast::OpenFAST::calc_nacelle_force(const float & u, const float & v, const float & w, const float & cd, const float & area, const float & rho, float & fx, float & fy, float & fz) {
@@ -451,10 +477,6 @@ void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, 
         cDriver_Output_to_FAST.w[j] = 0.0;
     }
 
-    // // call supercontroller
-    // for (int j = 0; j < cDriver_Output_to_FAST.SuperController_Len; j++){
-    //    cDriver_Output_to_FAST.SuperController[j] = (float) j; // set it somehow.... (would be set from the SuperController outputs)
-    // }
 }
 
 void fast::OpenFAST::getApproxHubPos(double* currentCoords, int iTurbGlob, int nSize) {
@@ -815,8 +837,10 @@ void fast::OpenFAST::allocateMemory() {
     cDriver_Input_from_FAST.resize(nTurbinesProc) ;
     cDriver_Output_to_FAST.resize(nTurbinesProc) ;
     
-    cDriverSC_Input_from_FAST.resize(nTurbinesProc) ;
-    cDriverSC_Output_to_FAST.resize(nTurbinesProc) ;
+    if(scStatus) {
+        std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+        // scio.from_SC.resize(nTurbinesProc);
+    }
 }
 
 void fast::OpenFAST::allocateTurbinesToProcsSimple() {
@@ -847,12 +871,8 @@ void fast::OpenFAST::end() {
     MPI_Group_free(&worldMPIGroup);
 
     if(scStatus) {
-        destroy_SuperController(sc);
-        if(scLibHandle != NULL) {
-            // close the library
-            std::cout << "Closing library...\n";
-            dlclose(scLibHandle);
-        }
+        std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+        // sc.end();
     }
 }
 
@@ -1006,87 +1026,14 @@ void fast::OpenFAST::applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType
 void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
 
     if(fi.scStatus) {
-
-        scStatus = fi.scStatus;
-        scLibFile = fi.scLibFile;
-
-        // open the library
-        scLibHandle = dlopen(scLibFile.c_str(), RTLD_LAZY);
-        if (!scLibHandle) {
-            std::cerr << "Cannot open library: " << dlerror() << '\n';
-        }
-
-        create_SuperController = (create_sc_t*) dlsym(scLibHandle, "create_sc");
-        // reset errors
-        dlerror();
-        const char *dlsym_error = dlerror();
-        if (dlsym_error) {
-            std::cerr << "Cannot load symbol 'create_sc': " << dlsym_error << '\n';
-            dlclose(scLibHandle);
-        }
-
-        destroy_SuperController = (destroy_sc_t*) dlsym(scLibHandle, "destroy_sc");
-        // reset errors
-        dlerror();
-        const char *dlsym_error_us = dlerror();
-        if (dlsym_error_us) {
-            std::cerr << "Cannot load symbol 'destroy_sc': " << dlsym_error_us << '\n';
-            dlclose(scLibHandle);
-        }
-
-        sc = create_SuperController() ;
-
-        numScInputs = fi.numScInputs;
-        numScOutputs = fi.numScOutputs;
-
-        if ( (numScInputs > 0) && (numScOutputs > 0)) {
-            scOutputsGlob.resize(nTurbinesGlob*numScOutputs) ;
-            scInputsGlob.resize(nTurbinesGlob*numScInputs) ;
-            for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-                for(int iInput=0; iInput < numScInputs; iInput++) {
-                    scInputsGlob[iTurb*numScInputs + iInput] = 0.0 ; // Initialize to zero
-                }
-                for(int iOutput=0; iOutput < numScOutputs; iOutput++) {
-                    scOutputsGlob[iTurb*numScOutputs + iOutput] = 0.0 ; // Initialize to zero
-                }
-            }
-        } else {
-            std::cerr <<  "Make sure numScInputs and numScOutputs are greater than zero" << std::endl;
-        }
-
+        std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+        // scStatus = fi.scStatus;
+        // sc.load(fi.nTurbinesGlob, fi.scLibFile, scio);
+       
     } else {
+        
         scStatus = false;
-        numScInputs = 0;
-        numScOutputs = 0;
     }
+    
 }
 
-void fast::OpenFAST::fillScInputsGlob() {
-
-    // Fills the global array containing inputs to the supercontroller from all turbines
-
-    for(int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-        for(int iInput=0; iInput < numScInputs; iInput++) {
-            scInputsGlob[iTurb*numScInputs + iInput] = 0.0; // Initialize to zero 
-        }
-    }
-
-    for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-        for(int iInput=0; iInput < numScInputs; iInput++) {
-            scInputsGlob[turbineMapProcToGlob[iTurb]*numScInputs + iInput] = cDriverSC_Input_from_FAST[iTurb].toSC[iInput] ;
-        }
-    }
-
-    if (MPI_COMM_NULL != fastMPIComm) {
-        MPI_Allreduce(MPI_IN_PLACE, scInputsGlob.data(), numScInputs*nTurbinesGlob, MPI_DOUBLE, MPI_SUM, fastMPIComm) ;
-    }
-}
-
-void fast::OpenFAST::fillScOutputsLoc() {
-    // Fills the local array containing outputs from the supercontroller to each turbine
-    for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-        for(int iOutput=0; iOutput < numScOutputs; iOutput++) {
-            cDriverSC_Output_to_FAST[iTurb].fromSC[iOutput] = scOutputsGlob[turbineMapProcToGlob[iTurb]*numScOutputs + iOutput] ;
-        }
-    }
-}

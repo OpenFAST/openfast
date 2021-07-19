@@ -202,6 +202,11 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, i
          ! Initialize some things
       ErrMsg = ''
       ErrStat = ErrID_None
+      ! NOTE: if no blade outputs, we return
+      if (p%BldNd_BladesOut<=0 .or. p%BldNd_NumOuts<=0) then
+         return
+      endif
+
 
          ! Precalculate the M_ph matrix -- no reason to recalculate for each output
       DO IdxBlade=1,p%NumBlades
@@ -364,7 +369,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, i
                DO IdxBlade=1,p%BldNd_BladesOut
                   iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Re(IdxNode)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Re(IdxNode) / 1.0E6
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -1204,9 +1209,11 @@ SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, p_AD, ErrStat, ErrMsg )
 
 
       ! Check if the requested blades exist
-   IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) .OR. (InputFileData%BldNd_BladesOut > p%NumBlades) ) THEN
-      CALL SetErrStat( ErrID_Warn, " Number of blades to output data at all blade nodes (BldNd_BladesOut) must be between 0 and "//TRIM(Num2LStr(p%NumBlades))//".", ErrStat, ErrMsg, RoutineName)
+   IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) ) then
       p%BldNd_BladesOut = 0_IntKi
+   ELSE IF ((InputFileData%BldNd_BladesOut > p%NumBlades) ) THEN
+      CALL SetErrStat( ErrID_Warn, " Number of blades to output data at all blade nodes (BldNd_BladesOut) must be less than "//TRIM(Num2LStr(p%NumBlades))//".", ErrStat, ErrMsg, RoutineName)
+      p%BldNd_BladesOut = p%NumBlades ! NOTE: we are forgiving and plateau to numBlades
    ELSE
       p%BldNd_BladesOut = InputFileData%BldNd_BladesOut
    ENDIF

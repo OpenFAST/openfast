@@ -204,7 +204,6 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       call AllocAry( m%W(iW)%alpha_LL,        p%W(iW)%nSpan  , 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%alpha_LL= -999999_ReKi;
       call AllocAry( m%W(iW)%Vreln_LL,        p%W(iW)%nSpan  , 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vreln_LL = -999999_ReKi;
       ! Variables at control points/elements
-      call AllocAry( m%W(iW)%Gamma_LL,        p%W(iW)%nSpan, 'Lifting line Circulation', ErrStat2, ErrMsg2);call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Gamma_LL = -999999_ReKi;
       call AllocAry( m%W(iW)%CP_LL   , 3   ,  p%W(iW)%nSpan, 'Control points LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%CP_LL= -999999_ReKi;
       call AllocAry( m%W(iW)%Tang    , 3   ,  p%W(iW)%nSpan, 'Tangential vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Tang= -999999_ReKi;
       call AllocAry( m%W(iW)%Norm    , 3   ,  p%W(iW)%nSpan, 'Normal     vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Norm= -999999_ReKi;
@@ -263,6 +262,10 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       nMax = nMax + m%GridOutputs(iGrid)%nx * m%GridOutputs(iGrid)%ny * m%GridOutputs(iGrid)%nz
       call AllocAry(m%GridOutputs(iGrid)%uGrid, 3, m%GridOutputs(iGrid)%nx,  m%GridOutputs(iGrid)%ny, m%GridOutputs(iGrid)%nz, 'uGrid', ErrStat2, ErrMsg2);
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      if (m%GridOutputs(iGrid)%type==idGridVelVorticity) then
+         call AllocAry(m%GridOutputs(iGrid)%omGrid, 3, m%GridOutputs(iGrid)%nx,  m%GridOutputs(iGrid)%ny, m%GridOutputs(iGrid)%nz, 'omGrid', ErrStat2, ErrMsg2);
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      endif
       m%GridOutputs(iGrid)%tLastOutput = -HUGE(1.0_DbKi)
    enddo
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
@@ -1451,11 +1454,17 @@ subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
    integer(IntKi),                  intent(  out)  :: ErrStat !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2
-   character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
+   logical                 :: bTimeToOutput
+   logical                 :: bWithinTime
+   integer(IntKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
+   character(*), parameter :: RoutineName = 'FVW_CalcOutput'
    integer(IntKi) :: iW, iGrid
    integer(IntKi) :: nSeg, nSegP
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! --- Write VTK of wake/blade filaments/panels
    if (p%WrVTK>0) then
       if (m%FirstCall .or. force) then
          call MKDIR(p%VTK_OutFileRoot)
@@ -1464,20 +1473,19 @@ subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
       call PackPanelsToSegments(p, x, 1, (p%ShearModel==idShearMirror), m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
       do iW=1,p%nWings
          m%W(iW)%Vtot_LL = m%W(iW)%Vind_LL + m%W(iW)%Vwnd_LL - m%W(iW)%Vstr_LL
-         !if (DEV_VERSION) then
-         !   call print_mean_3d(m%W(iW)%Vind_LL,'Mean induced vel. LL')
-         !   call print_mean_3d(m%W(iW)%Vtot_LL,'Mean relativevel. LL')
-         !endif
       enddo
       if ( force .or. (( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon ))  then
          m%VTKlastTime = t
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
             ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
-            print*,'TODO, rot outputs in hub frame for multiple rotors'
-            STOP
-            !call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
-            !         HubOrientation=real(u%rotors%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
+            if (size(u%rotors)>1) then
+               ErrMsg2='VTK outputs in hub coordinates not implemented for multiple rotors'
+               call SetErrStat(ErrID_Warn, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            endif
+            ! We ouput in first rotor frame
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
+                     HubOrientation=real(u%rotors(1)%HubOrientation,ReKi),HubPosition=real(u%rotors(1)%HubPosition,ReKi))
          endif
          if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
             ! Global coordinate system, ALL VTK will be exported in global
@@ -1494,9 +1502,12 @@ subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
       ! TODO ANDY: replace with direct call to inflow wind at Grid points
       CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
       do iGrid=1,p%nGridOut
-         if (force.or. (( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon) )  then
+         bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
+         bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon
+         if (force .or. (bWithinTime .and. bTimeToOutput) )  then
             ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
             call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2);
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             m%GridOutputs(iGrid)%tLastOutput = t
             call WrVTK_FVW_Grid(p, x, z, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', m%VTKStep, 9)
          endif

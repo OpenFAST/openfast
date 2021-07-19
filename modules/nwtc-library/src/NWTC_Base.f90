@@ -38,6 +38,7 @@ MODULE NWTC_Base
    INTEGER(IntKi), PARAMETER     :: ChanLen   = 20                                !< The maximum allowable length of channel names (i.e., width of output columns) in the FAST framework
    INTEGER(IntKi), PARAMETER     :: MinChanLen = 10                               !< The min allowable length of channel names (i.e., width of output columns), used because some modules (like Bladed DLL outputs) have excessively long names
    INTEGER(IntKi), PARAMETER     :: LinChanLen = 200                              !< The allowable length of row/column names in linearization files
+   INTEGER(IntKi), PARAMETER     :: MaxFileInfoLineLen = 1024                     !< The allowable length of an input line stored in FileInfoType%Lines
 
    INTEGER(IntKi), PARAMETER     :: NWTC_Verbose = 10                             !< The maximum level of verbosity
    INTEGER(IntKi), PARAMETER     :: NWTC_VerboseLevel = 5                         !< a number in [0, NWTC_Verbose]: 0 = no output; NWTC_Verbose=verbose; 
@@ -53,7 +54,7 @@ MODULE NWTC_Base
    INTEGER(IntKi)                :: AbortErrLev  = ErrID_Fatal                    !< ErrStat that indicates the error level when program should end; ErrID_Fatal by default. Note that this is not a PARAMETER
 
    
-   INTEGER(IntKi), PARAMETER     :: NWTC_MAX_DLL_PROC  = 3                        !< maximum number of procedures that can be dynamically loaded from a DLL (see DLL_Type nwtc_base::dll_type)
+   INTEGER(IntKi), PARAMETER     :: NWTC_MAX_DLL_PROC  = 5                        !< maximum number of procedures that can be dynamically loaded from a DLL (see DLL_Type nwtc_base::dll_type)
    
 
       !> Type definition for dynamically loaded libraries:

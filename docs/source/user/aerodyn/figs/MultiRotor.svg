@@ -609,9 +609,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.7"
-     inkscape:cx="637.66324"
-     inkscape:cy="536.16844"
+     inkscape:zoom="2.8"
+     inkscape:cx="515.97209"
+     inkscape:cy="643.74444"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="true"
@@ -639,7 +639,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -648,24 +648,25 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(53.016084,55.219811)">
-    <rect
-       style="opacity:1;fill:#3f3f99;fill-opacity:0.16279069;stroke:#000000;stroke-width:0.29420555;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:normal"
-       id="rect4714"
-       width="6.9882069"
-       height="89.202377"
-       x="191.63333"
-       y="84.729568"
-       ry="0"
-       transform="matrix(0.81131585,-0.58460806,0,1,0,0)" />
-    <rect
-       transform="matrix(0.81131585,-0.58460806,0,1,0,0)"
-       ry="0"
-       y="135.53203"
-       x="274.68896"
-       height="89.202377"
-       width="6.9882069"
-       id="rect8664"
-       style="opacity:1;fill:#3f3f99;fill-opacity:0.16279069;stroke:#000000;stroke-width:0.29420555;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:normal" />
+    <g
+       id="g5381"
+       transform="translate(14.363095,-2.4568452)">
+      <rect
+         style="opacity:1;fill:#3f3f99;fill-opacity:0.16279069;stroke:#000000;stroke-width:0.29420555;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:normal"
+         id="rect8664"
+         width="6.9882069"
+         height="89.202377"
+         x="175.68938"
+         y="77.089104"
+         ry="0"
+         transform="matrix(0.81131585,-0.58460806,0,1,0,0)" />
+      <path
+         style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 148.26293,-29.716225 c -2.36672,2.458689 -4.5748,5.283348 -5.72953,4.065042"
+         id="path9990"
+         inkscape:connector-curvature="0"
+         sodipodi:nodetypes="cc" />
+    </g>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker1426)"
        d="M 19.211459,50.505323 24.503125,32.645937"
@@ -887,37 +888,37 @@
     <path
        inkscape:connector-curvature="0"
        id="path5022"
-       d="M 158.12082,59.858879 V 40.015132"
+       d="m 159.45717,-29.917946 v 19.843747"
        style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker5030)"
        sodipodi:nodetypes="cc" />
     <path
        sodipodi:nodetypes="cc"
        style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker9664)"
-       d="M 157.67404,60.098141 H 135.84591"
+       d="M 159.01039,-29.70442 H 137.18226"
        id="path5024"
        inkscape:connector-curvature="0" />
     <path
        inkscape:connector-curvature="0"
        id="path5026"
-       d="m 158.12082,59.858879 -8.40623,6.495054"
+       d="m 229.48179,-30.478221 -8.40623,6.495054"
        style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker4720)"
        sodipodi:nodetypes="cc" />
     <path
        sodipodi:nodetypes="cc"
        style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker5400)"
-       d="M 228.52658,60.236859 V 40.393108"
+       d="m 229.32839,-30.074509 v 19.843751"
        id="path5392"
        inkscape:connector-curvature="0" />
     <path
        inkscape:connector-curvature="0"
        id="path5394"
-       d="m 228.70609,59.969589 h 21.82813"
+       d="m 229.24063,-29.832972 h 21.82813"
        style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker9994)"
        sodipodi:nodetypes="cc" />
     <path
        sodipodi:nodetypes="cc"
        style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker5936)"
-       d="m 228.52658,60.236859 6.26808,-4.997535"
+       d="m 159.30377,-29.565702 6.26808,-4.997535"
        id="path5396"
        inkscape:connector-curvature="0" />
     <rect
@@ -956,7 +957,7 @@
        inkscape:transform-center-x="-3.1191541"
        inkscape:transform-center-y="-6.2486625" />
     <flowRoot
-       transform="matrix(0.26458333,0,0,0.26458333,144.76544,-79.608021)"
+       transform="matrix(0.26458333,0,0,0.26458333,144.2309,-134.39827)"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
        id="flowRoot7606"
        xml:space="preserve"><flowRegion
@@ -972,7 +973,7 @@
        xml:space="preserve"
        id="flowRoot7616"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
-       transform="matrix(0.26458333,0,0,0.26458333,127.99183,-65.064282)"><flowRegion
+       transform="matrix(0.26458333,0,0,0.26458333,129.32818,-154.86684)"><flowRegion
          id="flowRegion7610"><rect
            id="rect7608"
            width="40.893013"
@@ -1046,25 +1047,25 @@
        sodipodi:open="true" />
     <path
        sodipodi:open="true"
-       d="m 159.01381,59.795255 a 0.79670519,0.79670519 0 0 1 -0.72358,0.863472 0.79670519,0.79670519 0 0 1 -0.86366,-0.723351 0.79670519,0.79670519 0 0 1 0.72312,-0.863849 0.79670519,0.79670519 0 0 1 0.86404,0.722899"
+       d="m 160.35016,-30.007305 a 0.79670519,0.79670519 0 0 1 -0.72358,0.863471 0.79670519,0.79670519 0 0 1 -0.86366,-0.72335 0.79670519,0.79670519 0 0 1 0.72312,-0.86385 0.79670519,0.79670519 0 0 1 0.86404,0.722899"
        sodipodi:end="6.1943495"
        sodipodi:start="6.1953952"
        sodipodi:ry="0.79670519"
        sodipodi:rx="0.79670519"
-       sodipodi:cy="59.865108"
-       sodipodi:cx="158.22017"
+       sodipodi:cy="-29.937452"
+       sodipodi:cx="159.55652"
        sodipodi:type="arc"
        id="path8605"
        style="display:inline;fill:#3d9956;fill-opacity:1;stroke:#000000;stroke-width:0.35277778;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:stroke fill markers" />
     <path
        sodipodi:open="true"
-       d="m 229.3425,60.062521 a 0.79670519,0.79670519 0 0 1 -0.72358,0.863472 0.79670519,0.79670519 0 0 1 -0.86366,-0.723351 0.79670519,0.79670519 0 0 1 0.72312,-0.86385 0.79670519,0.79670519 0 0 1 0.86404,0.722899"
+       d="m 229.87704,-29.74004 a 0.79670519,0.79670519 0 0 1 -0.72357,0.863472 0.79670519,0.79670519 0 0 1 -0.86367,-0.723351 0.79670519,0.79670519 0 0 1 0.72313,-0.86385 0.79670519,0.79670519 0 0 1 0.86404,0.722899"
        sodipodi:end="6.1943495"
        sodipodi:start="6.1953952"
        sodipodi:ry="0.79670519"
        sodipodi:rx="0.79670519"
-       sodipodi:cy="60.132374"
-       sodipodi:cx="228.54886"
+       sodipodi:cy="-29.670187"
+       sodipodi:cx="229.0834"
        sodipodi:type="arc"
        id="path8609"
        style="display:inline;fill:#3d9956;fill-opacity:1;stroke:#000000;stroke-width:0.35277778;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:stroke fill markers" />
@@ -1108,14 +1109,8 @@
        id="path8639"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 155.42185,-27.244771 c 2.43039,-2.39577 4.60116,-5.448028 5.72353,-4.199856"
-       id="path8666"
-       inkscape:connector-curvature="0"
-       sodipodi:nodetypes="cc" />
     <flowRoot
-       transform="matrix(0.26458333,0,0,0.26458333,241.58138,-57.046197)"
+       transform="matrix(0.26458333,0,0,0.26458333,242.11592,-146.84876)"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
        id="flowRoot9036"
        xml:space="preserve"><flowRegion
@@ -1205,17 +1200,11 @@
          style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker9384)"
          sodipodi:nodetypes="cc" />
     </g>
-    <path
-       sodipodi:nodetypes="cc"
-       inkscape:connector-curvature="0"
-       id="path9990"
-       d="m 228.58287,-29.149261 c -2.36672,2.458689 -4.5748,5.283348 -5.72953,4.065042"
-       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
     <flowRoot
        xml:space="preserve"
        id="flowRoot10244"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
-       transform="matrix(0.26458333,0,0,0.26458333,154.75974,-57.677479)"><flowRegion
+       transform="matrix(0.26458333,0,0,0.26458333,147.00893,-154.69632)"><flowRegion
          id="flowRegion10238"><rect
            id="rect10236"
            width="49.104218"
@@ -1225,7 +1214,7 @@
          id="flowPara10242">O<flowSpan
    style="font-size:64.99999762%;baseline-shift:sub"
    id="flowSpan10246">b1</flowSpan></flowPara></flowRoot>    <flowRoot
-       transform="matrix(0.26458333,0,0,0.26458333,223.74039,-55.409622)"
+       transform="matrix(0.26458333,0,0,0.26458333,224.27493,-145.21218)"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
        id="flowRoot10256"
        xml:space="preserve"><flowRegion
@@ -1383,7 +1372,7 @@
        id="path1612"
        inkscape:connector-curvature="0" />
     <flowRoot
-       transform="matrix(0.26458333,0,0,0.26458333,-56.934564,26.724266)"
+       transform="matrix(0.26458333,0,0,0.26458333,-67.424893,17.236199)"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
        id="flowRoot1620"
        xml:space="preserve"><flowRegion
@@ -1393,7 +1382,7 @@
            height="23.928555"
            width="176.07143"
            id="rect1614" /></flowRegion><flowPara
-         id="flowPara1618">Turbine frame</flowPara></flowRoot>    <flowRoot
+         id="flowPara1618">Turbine base frame</flowPara></flowRoot>    <flowRoot
        transform="matrix(0.26458333,0,0,0.26458333,-13.053246,43.3274)"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
        id="flowRoot1630"
@@ -1463,7 +1452,7 @@
            height="46.972092"
            width="271.73105"
            id="rect2500" /></flowRegion><flowPara
-         id="flowPara2504">Hub frame (defined wrt hub):</flowPara><flowPara
+         id="flowPara2504">Hub frame (defined wrt nac):</flowPara><flowPara
          style="text-align:start;text-anchor:start"
          id="flowPara2516">x<flowSpan
    style="font-size:64.99999762%;baseline-shift:sub"
@@ -1489,14 +1478,14 @@
        xml:space="preserve"
        id="flowRoot2540"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
-       transform="matrix(0.26458333,0,0,0.26458333,138.43947,31.267848)"><flowRegion
+       transform="matrix(0.26458333,0,0,0.26458333,131.25792,25.787193)"><flowRegion
          id="flowRegion2536"><rect
            id="rect2534"
            width="176.07143"
            height="23.928555"
            x="55"
            y="562.51971" /></flowRegion><flowPara
-         id="flowPara2538">Turbine frame</flowPara></flowRoot>    <flowRoot
+         id="flowPara2538">Turbine base frame</flowPara></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot2550"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
@@ -1800,7 +1789,7 @@
          id="tspan5271"
          x="52.421745"
          y="32.284454"
-         style="stroke-width:0.26458332"></tspan></text>
+         style="stroke-width:0.26458332" /></text>
     <path
        sodipodi:nodetypes="cc"
        style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker5319)"
@@ -1870,5 +1859,35 @@
            y="442.51968" /></flowRegion><flowPara
          id="flowPara6167">z<flowSpan
    id="flowSpan6165"
-   style="font-size:64.99999762%;baseline-shift:sub">n</flowSpan></flowPara></flowRoot>  </g>
+   style="font-size:64.99999762%;baseline-shift:sub">n</flowSpan></flowPara></flowRoot>    <flowRoot
+       xml:space="preserve"
+       id="flowRoot5143"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18.66666603px;line-height:1.25;font-family:'Cambria Math';-inkscape-font-specification:'Cambria Math';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
+       transform="matrix(0.26458333,0,0,0.26458333,-68.894875,34.942805)"><flowRegion
+         id="flowRegion5139"><rect
+           id="rect5137"
+           width="176.07143"
+           height="23.928555"
+           x="55"
+           y="562.51971" /></flowRegion><flowPara
+         id="flowPara5141">Turbine base origin</flowPara></flowRoot>    <g
+       id="g5901"
+       transform="translate(-8.8198944,2.9399648)">
+      <rect
+         style="opacity:1;fill:#3f3f99;fill-opacity:0.16279069;stroke:#000000;stroke-width:0.29420555;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:normal"
+         id="rect5375"
+         width="6.9882069"
+         height="89.202377"
+         x="289.3085"
+         y="138.8913"
+         ry="0"
+         transform="matrix(0.81131585,-0.58460806,0,1,0,0)" />
+      <path
+         style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 234.66726,-30.184736 c 2.43039,-2.39577 4.60116,-5.448028 5.72353,-4.199856"
+         id="path5377"
+         inkscape:connector-curvature="0"
+         sodipodi:nodetypes="cc" />
+    </g>
+  </g>
 </svg>

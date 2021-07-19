@@ -961,7 +961,7 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
 
    ! --- Packing control points
    nCPs = g%nx * g%ny * g%nz
-   allocate(CPs(3, nCPs))
+   allocate(CPs(3, nCPs), stat=ErrStat)
    iHeadP=1
    dx = (g%xEnd- g%xStart)/max(g%nx-1,1)
    dy = (g%yEnd- g%yStart)/max(g%ny-1,1)
@@ -979,7 +979,7 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    enddo ! Loop on z
 
    ! --- Packing Uind points
-   allocate(Uind(3, nCPs)); Uind=0.0_ReKi
+   allocate(Uind(3, nCPs), stat=ErrStat); Uind=0.0_ReKi
    iHeadP=1
    call FlattenValues(g%uGrid, Uind, iHeadP); ! NOTE: Uind contains uGrid now (Uwnd)
 
@@ -993,8 +993,8 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    iHeadP=1
    call DeflateValues(Uind, g%uGrid, iHeadP)
 
-   deallocate(CPs)
-   deallocate(Uind)
+   deallocate(CPs , stat=ErrStat)
+   deallocate(Uind, stat=ErrStat)
 
 end subroutine InducedVelocitiesAll_OnGrid
 

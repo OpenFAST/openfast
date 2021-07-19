@@ -17,6 +17,8 @@ typedef  IfW_BladedFFWind/IfW_BladedFFWind   InitInputType   CHARACTER(1024)    
 typedef  ^                                    ^              Logical                      TowerFileExist    -     -     -     "Tower file exists"                                            -
 typedef  ^                                    ^              IntKi                        SumFileUnit       -     -     -     "Unit number for the summary file (-1 for none).  Provided by IfW." -
 typedef  ^                                    ^              Logical                      NativeBladedFmt   -     -     -     "Whether this is native Bladed (needs wind profile and TI scaling) or not" -
+typedef  ^                                    ^              IntKi                        TurbineID         -     0     -     "Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)"                                     -
+typedef  ^                                    ^              LOGICAL                      FixedWindFileRootName - .FALSE. -   "Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)" -
 #typedef  ^                                   ^              IfW_FFWind_InitInputType     FF                -     -     -     "scaling data (provided for native Bladed format)" -
 
 

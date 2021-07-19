@@ -3496,7 +3496,7 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
    integer(intKi)                               :: iR, iB, iW, iW_incr  ! rotor index, blade index, wing index
    integer(IntKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
-   character(*), parameter                      :: RoutineName = 'Init_FVWmodule'
+   character(*), parameter                      :: RoutineName = 'Init_OLAF'
    ErrStat = ErrID_None
    ErrMsg  = ""
 
