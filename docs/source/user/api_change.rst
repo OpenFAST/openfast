@@ -18,7 +18,29 @@ No changes.
 
 OpenFAST v2.6.0 to OpenFAST v3.0.0
 ----------------------------------
-No changes.
+
+-  ServoDyn
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected
+   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+      module (StC) with updated capabilities and input file.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST v3.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
+ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
+ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
+ServoDyn                                      64   NStCfiles          "unused"      NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
+ServoDyn                                      65   NumTStC            0             NumTStC      - Number of tower structural controllers (integer)
+ServoDyn                                      66   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
+ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
+ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 
 
@@ -28,14 +50,6 @@ OpenFAST v2.5.0 to OpenFAST v2.6.0
 Many changes were applied to SubDyn input file format. You may consult the following example:
 :download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
 and the online SubDyn documentation.
-
--  ServoDyn
-
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
-      module (StC) with updated capabilities and input file.
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
 Added in OpenFAST v2.6.0
@@ -59,14 +73,6 @@ SubDyn                                        na   RigidSection        PropSetID
 SubDyn                                        na   RigidSection          (-)       (kg/m)
 HydroDyn                                      52   NBody              1   NBody          - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
 HydroDyn                                      53   NBodyMod           1   NBodyMod       - Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]
-ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
-ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
-ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
-ServoDyn                                      64   NStCfiles          "unused"      NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
-ServoDyn                                      65   NumTStC            0             NumTStC      - Number of tower structural controllers (integer)
-ServoDyn                                      66   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
-ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
-ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 ============================================= ====== =============== ======================================================================================================================================================================================================
@@ -158,6 +164,7 @@ MoorDyn                        na    added CtrlChan column in LINE PROPERTIES ta
 ============================ ====== ================================================ ====================================================================================
 
 
+
 OpenFAST v2.3.0 to OpenFAST v2.4.0
 ----------------------------------
 
@@ -197,7 +204,6 @@ InflowWind     49   XOffset                    0  XOffset      - Initial offset 
 ============== ==== ================== ======================================================================================================================================================= =========================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.
-
 
 
 
