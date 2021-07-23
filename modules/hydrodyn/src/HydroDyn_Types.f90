@@ -32,11 +32,7 @@
 MODULE HydroDyn_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE Current_Types
-USE Waves_Types
 USE Waves2_Types
-USE Conv_Radiation_Types
-USE SS_Radiation_Types
-USE SS_Excitation_Types
 USE WAMIT_Types
 USE WAMIT2_Types
 USE Morison_Types

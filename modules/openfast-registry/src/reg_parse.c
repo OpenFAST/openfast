@@ -148,7 +148,7 @@ gotit:
           fprintf(stderr,"opening %s %s\n",include_file_name,
                                            (checking_for_usefrom || usefrom_sw)?"in usefrom mode":"" ) ;
           parseline[0] = '\0' ;
-          pre_parse( dir , include_fp , outfile, ( checking_for_usefrom || usefrom_sw ) ) ;
+          pre_parse( dir , include_fp , outfile, ( checking_for_usefrom + usefrom_sw ) ) ;
           parseline[0] = '\0' ;
 //          fprintf(stderr,"closing %s %s\n",include_file_name,
 //                                           (checking_for_usefrom || usefrom_sw)?"in usefrom mode":"" ) ;
@@ -245,7 +245,7 @@ gotit:
        strcpy(tmp, parseline_save);
        x = strpbrk(tmp, " \t"); // find the first space or tab
        if (usefrom_sw && x) {
-          sprintf(parseline_save, "usefrom %s", x);
+          sprintf(parseline_save, "usefrom%i %s", usefrom_sw, x);
        }
     }
 
@@ -343,9 +343,10 @@ reg_parse( FILE * infile )
     defining_i1_field = 0 ;
 
 /* typedef, usefrom, and param entries */
+//         || !strcmp(tokens[TABLE], "usefrom")
     if (  !strcmp( tokens[ TABLE ] , "typedef" )
-       || !strcmp( tokens[ TABLE ] , "usefrom" )
-       || !strcmp( tokens[ TABLE ] , "param"   ) )
+        || !strncmp(tokens[TABLE], "usefrom", 7) 
+        || !strcmp( tokens[ TABLE ] , "param"   ) )
     {
       node_t * param_struct ;
       node_t * field_struct ;
@@ -374,9 +375,20 @@ reg_parse( FILE * infile )
         modname_struct->next            = NULL ;
         add_node_to_end( modname_struct , &ModNames ) ;
       }
-      if ( !strcmp( tokens[ TABLE ] , "usefrom" ) )
+      if (!strcmp(tokens[TABLE], "usefrom"))
       {
-        modname_struct->usefrom = 1 ;
+          modname_struct->usefrom = 1;
+      } else if(!strncmp(tokens[TABLE], "usefrom", 7))
+      {
+          tokens[TABLE] += 7;
+          if (!strcmp(tokens[TABLE], "1"))
+          {
+              modname_struct->usefrom = 1;
+          }
+          else
+          {
+              modname_struct->usefrom = 2;
+          }
       }
 
       if ( !strcmp( tokens[ TABLE ] , "param" ) ) {
