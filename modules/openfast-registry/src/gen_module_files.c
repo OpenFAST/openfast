@@ -2126,7 +2126,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
                 }
 
               }
-               if ( is_pointer(r) ) {
+               if (sw_ccode && is_pointer(r) ) {
                   fprintf(fp,"    %s ",c_types_binding(r->type->mapsto) ) ;
                } else {
                   fprintf(fp,"    %s ",r->type->mapsto ) ;
