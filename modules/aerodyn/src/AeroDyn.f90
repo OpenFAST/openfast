@@ -1637,26 +1637,42 @@ subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'SetInputs'
-   
-   
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
-      call TwrInfl( p, u, m, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   else
-      m%DisturbedInflow = u%InflowOnBlade
-   end if
+   ! Disturbed inflow on blade (if tower shadow present)
+   call SetDisturbedInflow(p, u, m, errStat, errMsg)
 
    if (p_AD%WakeMod /= WakeMod_FVW) then
          ! This needs to extract the inputs from the AD data types (mesh) and massage them for the BEMT module
       call SetInputsForBEMT(p, u, m, indx, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
-
-
 end subroutine SetInputs
+
+!> Disturbed inflow on the blade if tower shadow or tower influence are enabled
+subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
+   type(RotParameterType),       intent(in   )  :: p                      !< AD parameters
+   type(RotInputType),           intent(in   )  :: u                      !< AD Inputs at Time
+   type(RotMiscVarType),         intent(inout)  :: m                      !< Misc/optimization variables
+   integer(IntKi),               intent(  out)  :: errStat                !< Error status of the operation
+   character(*),                 intent(  out)  :: errMsg                 !< Error message if ErrStat /= ErrID_None
+   ! local variables             
+   integer(intKi)                               :: errStat2
+   character(ErrMsgLen)                         :: errMsg2
+   character(*), parameter                      :: RoutineName = 'SetDisturbedInflow'
+   errStat = ErrID_None
+   errMsg  = ""
+   if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
+      call TwrInfl( p, u, m, errStat2, errMsg2 ) ! NOTE: tower clearance is computed here..
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+   else
+      m%DisturbedInflow = u%InflowOnBlade
+   end if
+
+end subroutine SetDisturbedInflow
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%BEMT_u(indx).
 subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
@@ -1907,16 +1923,16 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: iR ! Loop on rotors
-   integer(intKi)                          :: k                      ! loop counter for blades
+   integer(intKi)                          :: j, k  ! loop counter for blades
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
 
    if( size(p%rotors)>1) then
-      print*,'TODO FVW with multiple rotors'
+      print*,'TODO FVW with multiple rotors (will be provided with PR#688)'
       STOP
    endif
 
    do tIndx=1,size(u)
-      do iR =1, 1 ! TODO TODO TODO
+      do iR =1, size(p%rotors)
          allocate(thetaBladeNds(p%rotors(iR)%NumBlNds, p%rotors(iR)%NumBlades))
          allocate(azimuth(p%rotors(iR)%NumBlades))
          ! Get disk average values and orientations
@@ -1925,10 +1941,11 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          call GeomWithoutSweepPitchTwist(p%rotors(iR),u(tIndx)%rotors(iR), m%rotors(iR), thetaBladeNds,ErrStat,ErrMsg)
          if (ErrStat >= AbortErrLev) return
 
-            ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
-            ! NOTE:  MeshCopy requires the source mesh to be INOUT intent
-            ! NOTE2: If we change the WingsMesh to not be identical to the BladeMotion mesh, add the mapping stuff here.
+         ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
+         ! NOTE:  MeshCopy requires the source mesh to be INOUT intent
+         ! NOTE2: If we change the WingsMesh to not be identical to the BladeMotion mesh, add the mapping stuff here.
          do k=1,p%rotors(iR)%NumBlades
+
             if ( u(tIndx)%rotors(iR)%BladeMotion(k)%nNodes /= m%FVW_u(tIndx)%WingsMesh(k)%nNodes ) then
                ErrStat = ErrID_Fatal
                ErrMsg  = RoutineName//": WingsMesh contains different number of nodes than the BladeMotion mesh"
@@ -1940,6 +1957,12 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
             m%FVW_u(tIndx)%WingsMesh(k)%TranslationVel    = u(tIndx)%rotors(iR)%BladeMotion(k)%TranslationVel
             m%FVW_u(tIndx)%HubPosition    = u(tIndx)%rotors(iR)%HubMotion%Position(:,1) + u(tIndx)%rotors(iR)%HubMotion%TranslationDisp(:,1)
             m%FVW_u(tIndx)%HubOrientation = u(tIndx)%rotors(iR)%HubMotion%Orientation(:,:,1)
+         
+            ! Inputs for dynamic stall (see SetInputsForBEMT)
+            do j=1,p%rotors(iR)%NumBlNds         
+               ! inputs for CUA, section pitch/torsion rate
+               m%FVW_u(tIndx)%omega_z(j,k) = dot_product( u(tIndx)%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+            end do !j=nodes
          enddo ! k blades
          if (allocated(thetaBladeNds)) deallocate(thetaBladeNds)
          if (allocated(azimuth))       deallocate(azimuth)
@@ -1949,7 +1972,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          ! Applying tower shadow to V_wind based on r_wind positions
          ! NOTE: m%DisturbedInflow also contains tower shadow and we need it for CalcOutput
          if (p%FVW%TwrShadowOnWake) then
-            do iR =1, 1 ! TODO TODO TODO
+            do iR =1, size(p%rotors)
                if (p%rotors(iR)%TwrPotent /= TwrPotent_none .or. p%rotors(iR)%TwrShadow /= TwrShadow_none) then
                   call TwrInflArray( p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat, ErrMsg )
                   if (ErrStat >= AbortErrLev) return
@@ -1957,11 +1980,12 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
             enddo
          end if
       endif
+      do iR =1, size(p%rotors)
+         ! Disturbed inflow for UA on Lifting line Mesh Points
+         call SetDisturbedInflow(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), errStat, errMsg)
+         m%FVW_u(tIndx)%Vwnd_LLMP = m%rotors(iR)%DisturbedInflow
+      enddo
    enddo
-   do iR =1, 1 ! TODO TODO TODO
-      m%FVW%Vwnd_ND = m%rotors(iR)%DisturbedInflow ! Nasty transfer for UA, but this is temporary, waiting for AeroDyn to handle UA
-   enddo
-
 
 end subroutine SetInputsForFVW
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2057,7 +2081,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
    type(AD_ContinuousStateType),intent(in ) :: x           !< continuous states
    type(AD_DiscreteStateType),intent(in   ) :: xd          !< Discrete states
    type(AD_OutputType),       intent(inout) :: y           !< AD outputs
-   type(AD_MiscVarType),      intent(inout) :: m           !< Misc/optimization variables
+   type(AD_MiscVarType),target,intent(inout) :: m           !< Misc/optimization variables
    integer(IntKi),            intent(  out) :: ErrStat     !< Error status of the operation
    character(*),              intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -2080,8 +2104,8 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
    real(ReKi)                             :: Cx, Cy
    real(ReKi)                             :: Cl_Static, Cd_Static, Cm_Static
    real(ReKi)                             :: Cl_dyn, Cd_dyn, Cm_dyn
-
-   type(UA_InputType)                     :: u_UA
+   type(UA_InputType), pointer            :: u_UA ! Alias to shorten notations
+   integer(IntKi), parameter              :: InputIndex=1      ! we will always use values at t in this routine
    integer(intKi)                         :: iR
    integer(intKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
@@ -2093,14 +2117,13 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
    force(3)    =  0.0_ReKi
    moment(1:2) =  0.0_ReKi
 
+
    if (size(p%rotors)>1) then
-      print *, 'FVW with multiple rotors TODO'
+      print *, 'FVW with multiple rotors TODO (will be provided with PR#688)'
       STOP
    endif
 
    do iR=1,size(p%rotors)
-         ! set all blade outputs for all nodes (needed in nodal outputs)
-         ! This loop is separated from below in case we want to move it later.
       do k=1,p%rotors(iR)%numBlades
          do j=1,p%rotors(iR)%NumBlNds
             ! --- Computing main aero variables from induction - setting local variables
@@ -2125,25 +2148,18 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Cm_dyn    = AFI_interp%Cm
             
             if (m%FVW%UA_Flag) then
-                     ! ....... compute inputs to UA ...........
-                  u_UA%alpha    =  alpha
-                  u_UA%U        = Vrel
-                  u_UA%Re       = Re
-                  u_UA%UserProp = 0.0_ReKi ! FIX ME
-
-                  ! FIX ME: this is copied 3 times!!!!
-                  u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
-                  u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
-                  u_UA%omega = dot_product( u%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
-
-                  call UA_CalcOutput(j, k, u_UA, m%FVW%p_UA, x%FVW%UA, xd%FVW%UA, OtherState%FVW%UA, p%AFI(p%FVW%AFindx(j,k)), m%FVW%y_UA, m%FVW%m_UA, errStat2, errMsg2 )
-                     call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
-                  Cl_dyn = m%FVW%y_UA%Cl
-                  Cd_dyn = m%FVW%y_UA%Cd
-                  Cm_dyn = m%FVW%y_UA%Cm
-                  
+               u_UA => m%FVW%u_UA(j,k,InputIndex) ! Alias
+               ! ....... compute inputs to UA ...........
+               u_UA%alpha   = alpha
+               u_UA%U       = Vrel
+               u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
+               u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
+               call UA_CalcOutput(j, k, u_UA, m%FVW%p_UA, x%FVW%UA, xd%FVW%UA, OtherState%FVW%UA, p%AFI(p%FVW%AFindx(j,k)), m%FVW%y_UA, m%FVW%m_UA, errStat2, errMsg2 )
+                  call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
+               Cl_dyn = m%FVW%y_UA%Cl
+               Cd_dyn = m%FVW%y_UA%Cd
+               Cm_dyn = m%FVW%y_UA%Cm
             end if
-
             cp = cos(phi)
             sp = sin(phi)
             Cx = Cl_dyn*cp + Cd_dyn*sp
@@ -2183,8 +2199,6 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
          end do !j=nodes
       end do !k=blades
    end do ! iR rotors
-
-   
 
    if ( m%FVW%UA_Flag ) then
       ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
@@ -2757,7 +2771,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, E
    character(*),                    intent(  out) :: errMsg         !< Error message if ErrStat /= ErrID_None
 
 
-      ! Local variables
+   ! Local variables
    real(DbKi)                                    :: Interval       ! Coupling interval in seconds: the rate that
                                                                    !   (1) FVW_UpdateStates() is called in loose coupling &
                                                                    !   (2) FVW_UpdateDiscState() is called in tight coupling.
@@ -3171,7 +3185,7 @@ SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
    call CheckTwrInfl( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); if (ErrStat >= AbortErrLev) return
 
    !$OMP PARALLEL default(shared)
-   !$OMP do private(i,Pos,r_TowerBlade,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,TwrDiam,found,denom,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
+   !$OMP do private(i,Pos,r_TowerBlade,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,TwrDiam,found,denom,exponential,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
    do i = 1, size(Positions,2)
       Pos=Positions(1:3,i)
          

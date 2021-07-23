@@ -42,6 +42,7 @@ module FVW_VortexTools
       type(T_Part)  :: Part            !< Storage for all particles
       integer       :: iStep =-1       !< Time step at which the tree was built
       logical       :: bGrown =.false. !< Is the tree build
+      real(ReKi)    :: DistanceDirect
       type(T_Node)  :: Root            !< Contains the chained-list of nodes
    end type T_Tree
 
@@ -50,6 +51,127 @@ module FVW_VortexTools
    end interface 
 
 contains
+
+   !> Returns the discrete trailed vorticity (\Delta Gamma) based on a "bound" circulation Gamma
+   !!    \Delta\Gamma_i  = \int_{r i-1}^{r i+1} d\Gamma/dr *dr  [m^2/s]
+   !! NOTE: this is not gamma = d\Gamma/dr  \approx \Delta\Gamma /\Delta r 
+   subroutine GammaTrailed(n, Gamma_b, Gamma_t)
+      integer(IntKi),             intent(in)    :: n       !< number of points along the span
+      real(Reki), dimension(n),   intent(in   ) :: Gamma_b !< Bound circulation
+      real(ReKi), dimension(n+1), intent(out)   :: Gamma_t !< Trailed circulation
+      integer(IntKi) :: i
+      Gamma_t(1)   =   Gamma_b(1)
+      Gamma_t(n+1) = - Gamma_b(n)
+      do i = 2, n
+         Gamma_t(i) = Gamma_b(i)-Gamma_b(i-1)
+      enddo
+   endsubroutine 
+
+   !> Curvilinear distance along a set of connected points.
+   subroutine CurvilinearDist(n, P, s)
+      integer(IntKi),             intent(in)    :: n !< number of points 
+      real(Reki), dimension(3,n), intent(in)    :: P !< Point cordinates
+      real(ReKi), dimension(n),   intent(out)   :: s !< Curvilinear coordinate
+      integer(IntKi) :: i
+      s(1) = 0
+      do i = 2, n
+         s(i) = s(i-1) + sqrt((P(1,i)-P(1,i-1))**2 + (P(2,i)-P(2,i-1))**2 + (P(3,i)-P(3,i-1))**2)
+      enddo
+   endsubroutine 
+
+   !> Place Tip and Root vorticity according to Gamma distribution
+   !! Attempts to preserve the first moment of vorticity in the 15% region of tip and root
+   !! Estimtes the regularization parameters based on the length of the tip region..
+   subroutine PlaceTipRoot(n, Gamma_b, xV, Eps, iRoot, iTip, Gamma_max, EpsTip, EpsRoot)
+      integer(IntKi),               intent(in)  :: n           !< number of vortex points
+      real(ReKi), dimension(n)    , intent(in)  :: Gamma_b     !< Wake panel circulation
+      real(Reki), dimension(3,n+1), intent(in)  :: xV          !< Vortex point nodal coordinates
+      real(Reki), dimension(3,n  ), intent(in)  :: Eps         !< Vortex panels epsilon
+      integer(IntKi),               intent(inout) :: iRoot, iTip !< Index of tip and root vortex, if <0, they are computed
+      real(ReKi),                   intent(out) :: Gamma_max
+      real(Reki),                   intent(out) :: EpsTip      !< Regularization of tip
+      real(Reki),                   intent(out) :: EpsRoot     !< Regularization of root
+      real(ReKi), dimension(n+1) :: Gamma_t
+      real(ReKi), dimension(n+1) :: s
+      real(ReKi) :: rRoot, rTip, lTip, lRoot
+      integer(IntKi) :: i10, i90, iTipPanel,iRootPanel
+
+      if (n>2) then
+         Gamma_max = maxval(Gamma_b,1)
+         call CurvilinearDist(n+1, xV, s)
+         if (iTip<0) then
+
+            ! Find position of tip and root
+            call GammaTrailed(n, Gamma_b, Gamma_t)
+
+            ! If circulation is constant then use first and last
+            if(sum(abs(Gamma_t(:)))/(n+1)<1e-6) then
+               iTip =n+1
+               iRoot=1
+            else
+               i10 = minloc(abs(s(:)-0.15*s(n+1)),1)
+               i90 = minloc(abs(s(:)-0.85*s(n+1)),1)
+
+               rTip  = sum(Gamma_t(i90:)  * (s(i90:)))/ sum(Gamma_t(i90:))
+               rRoot = sum(Gamma_t(1:i10) * s(1:i10)) / sum(Gamma_t(1:i10))
+               iTip  = minloc(abs(rTip - s), 1) ! NOTE:  not accurate since epsilon has one dimension less..
+               iRoot = minloc(abs(rRoot - s), 1)
+               iTip  = max(min(iTip,n+1), i90)
+               iRoot = min(max(iRoot,1) , i10)
+            endif
+         endif
+         rTip  = s(iTip)
+         rRoot = s(iRoot)
+         iTipPanel  = max(min(iTip,n), 1)
+         iRootPanel = min(max(iRoot,1),n)
+         ! Mean regularization at the tip and root
+         EpsTip  = sum(Eps(1,iTipPanel:))  /(n-iTipPanel+1)
+         EpsRoot = sum(Eps(1,1:iRootPanel))/(iRootPanel)
+         ! Scaling based on the "length" of the vortex, this will need further tuning
+         lTip  = (s(n+1)-rTip )/3.14 ! Approximate radius if the tip has done half a turn
+         lRoot = (rRoot       )/3.14
+         EpsTip  = 1.3*(lTip+EpsTip) ! Tuning factors
+         EpsRoot = 1.7*(lRoot+EpsRoot)
+      else
+         iTip =n+1
+         iRoot=1
+         EpsTip   = Eps(1,iTip-1)
+         EpsRoot  = Eps(1,iRoot)
+      endif
+   endsubroutine PlaceTipRoot
+
+
+   !> Flatten/ravel a 3D grid of vectors (each of size n)
+   subroutine FlattenValues(GridValues, FlatValues, iHeadP)
+      real(Reki), dimension(:,:,:,:),  intent(in   )  :: GridValues  !< Grid values n x nx x ny x nz
+      real(ReKi), dimension(:,:),      intent(  out)  :: FlatValues  !< Flat values n x (nx x ny x nz)
+      integer(IntKi),                  intent(inout)  :: iHeadP      !< Index indicating where to start in Values
+      integer(IntKi) :: i,j,k
+      do k = 1, size(GridValues,4)
+         do j = 1, size(GridValues,3)
+            do i = 1, size(GridValues,2)
+               FlatValues(:,iHeadP) = GridValues(:, i, j, k)
+               iHeadP=iHeadP+1
+            enddo
+         enddo
+      enddo
+   endsubroutine FlattenValues
+
+   !> Flatten a 3D grid of vectors (each of size n)
+   subroutine DeflateValues(FlatValues, GridValues, iHeadP)
+      real(ReKi), dimension(:,:),      intent(in   )  :: FlatValues  !< Flat values n x (nx x ny x nz)
+      real(Reki), dimension(:,:,:,:),  intent(  out)  :: GridValues  !< Grid values n x nx x ny x nz
+      integer(IntKi),                  intent(inout)  :: iHeadP      !< Index indicating where to start in Values
+      integer(IntKi) :: i,j,k
+      do k = 1, size(GridValues,4)
+         do j = 1, size(GridValues,3)
+            do i = 1, size(GridValues,2)
+               GridValues(:, i, j, k) = FlatValues(:,iHeadP) 
+               iHeadP=iHeadP+1
+            enddo
+         enddo
+      enddo
+   endsubroutine DeflateValues
 
    subroutine VecToLattice(PointVectors, iDepthStart, LatticeVectors, iHeadP)
       real(Reki), dimension(:,:),        intent(in   )  :: PointVectors   !< nVal x n
@@ -89,23 +211,26 @@ contains
 
    endsubroutine LatticeToPoints
 
-   subroutine LatticeToSegments(LatticePoints, LatticeGamma, iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity )
-      real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points 3 x nSpan x nDepth
-      real(Reki), dimension(:,:),      intent(in   )  :: LatticeGamma   !< GammaPanl  nSpan x nDepth
+   subroutine LatticeToSegments(LatticePoints, LatticeGamma, LatticeEpsilon, iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity, bHackEpsilon )
+      real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points  3 x nSpan x nDepth
+      real(Reki), dimension(:,:),      intent(in   )  :: LatticeGamma   !< GammaPanl   nSpan x nDepth
+      real(Reki), dimension(:,:,:),    intent(in   )  :: LatticeEpsilon !< EpsPanl 3 x nSpan x nDepth (one per dimension)
       integer(IntKi),                  intent(in   )  :: iDepthStart    !< Start index for depth dimension
       real(ReKi), dimension(:,:),      intent(inout)  :: SegPoints      !< 
       integer(IntKi), dimension(:,:),  intent(inout)  :: SegConnct      !< 
       real(ReKi),     dimension(:),    intent(inout)  :: SegGamma       !< 
+      real(ReKi),     dimension(:),    intent(inout)  :: SegEpsilon     !< 
       integer(IntKi),                  intent(inout)  :: iHeadP         !< Index indicating where to start in SegPoints
       integer(IntKi),                  intent(inout)  :: iHeadC         !< Index indicating where to start in SegConnct
       logical       ,                  intent(in   )  :: bShedVorticity !< Shed vorticity is included if true
       logical       ,                  intent(in   )  :: bShedLastVorticity !< Shed the last vorticity segment if true
+      logical       ,                  intent(in   )  :: bHackEpsilon   !< Unfortunate fix so that tip and root vortex have different epsilon for FW
       ! Local
       integer(IntKi) :: nSpan, nDepth
       integer(IntKi) :: iSpan, iDepth
       integer(IntKi) :: iHeadP0, iseg1, iseg2, iseg3 ,iseg4  !< Index indicating where to start in SegPoints
-      real(ReKi) :: Gamma12
-      real(ReKi) :: Gamma41
+      real(ReKi) :: Gamma12, Eps12
+      real(ReKi) :: Gamma41, Eps41
 
       nSpan = size(LatticePoints,2)
       nDepth= size(LatticePoints,3)
@@ -138,13 +263,21 @@ contains
             iseg4 = iHeadP0 + (iSpan-1) +(iDepth  -iDepthStart+1)*nSpan  ! Point 4
             if (iDepth==iDepthStart) then
                Gamma12 = LatticeGamma(iSpan,iDepth)
+               Eps12   = LatticeEpsilon(1,iSpan,iDepth) ! Using epsilon x for seg12&43. TODO might change in the future
             else
                Gamma12 = LatticeGamma(iSpan,iDepth)-LatticeGamma(iSpan,iDepth-1)
+               Eps12   = (LatticeEpsilon(1,iSpan,iDepth)+LatticeEpsilon(1,iSpan,iDepth-1))/2.0_ReKi
             endif
             if (iSpan==1) then
                Gamma41 = LatticeGamma(iSpan,iDepth)
+               if (bHackEpsilon) then
+                  Eps41   = LatticeEpsilon(2,iSpan,iDepth) ! Using epsilon y for seg41 hacked
+               else
+                  Eps41   = LatticeEpsilon(3,iSpan,iDepth) ! Using epsilon z for seg23&41. TODO might change in the future
+               endif
             else
                Gamma41 = LatticeGamma(iSpan,iDepth)-LatticeGamma(iSpan-1,iDepth)
+               Eps41   = (LatticeEpsilon(3,iSpan,iDepth)+LatticeEpsilon(3,iSpan-1,iDepth))/2.0_ReKi
             endif
             ! Segment 1-2
             if (bShedVorticity) then
@@ -152,7 +285,8 @@ contains
                SegConnct(2,iHeadC) = iseg2
                SegConnct(3,iHeadC) = iDepth
                SegConnct(4,iHeadC) = iSpan
-               SegGamma (iHeadC  ) = Gamma12
+               SegGamma  (iHeadC ) = Gamma12
+               SegEpsilon(iHeadC ) = Eps12
                iHeadC=iHeadC+1
             endif
             ! Segment 1-4
@@ -161,6 +295,7 @@ contains
             SegConnct(3,iHeadC) = iDepth
             SegConnct(4,iHeadC) = iSpan
             SegGamma (iHeadC  ) = -Gamma41
+            SegEpsilon(iHeadC ) = Eps41
             iHeadC=iHeadC+1
             ! Segment 4-3
             if (iDepth==nDepth-1) then
@@ -170,6 +305,7 @@ contains
                   SegConnct(3,iHeadC) = iDepth
                   SegConnct(4,iHeadC) = iSpan
                   SegGamma (iHeadC  ) = - LatticeGamma(iSpan,iDepth)
+                  SegEpsilon(iHeadC ) = LatticeEpsilon(1,iSpan,iDepth) ! Using epsilon x 
                   iHeadC=iHeadC+1
                endif
             endif
@@ -180,6 +316,7 @@ contains
                SegConnct(3,iHeadC) = iDepth
                SegConnct(4,iHeadC) = iSpan
                SegGamma (iHeadC  ) = LatticeGamma(iSpan,iDepth)
+               SegEpsilon(iHeadC ) = LatticeEpsilon(3,iSpan,iDepth) ! Using epsilon z
                iHeadC=iHeadC+1
             endif
          enddo
@@ -365,7 +502,7 @@ contains
          node%branches=>null()
          node%leaves=>null()
          node%nPart=Part%n
-         ! --- Calling grow function on subbrances
+         ! --- Calling grow function on subbranches
          call grow_tree_parallel(Tree%root, Tree%Part)
 !          call grow_tree_rec(Tree%root, Tree%Part)
       endif

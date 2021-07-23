@@ -2345,7 +2345,7 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
       
       CALL Create_FullOpt1_UVector(u, u_ED%PlatformPtMesh, u_SD%TPMesh, u_SD%LMesh,  &
                u_HD%Morison%Mesh, u_HD%WAMITMesh, u_ED%HubPtLoad, MeshMapData%u_BD_RootMotion, u_Orca%PtfmMesh, &
-               u_ExtPtfm%PtfmMesh, p_FAST )
+               u_ExtPtfm%PtfmMesh, u_SrvD%SStC, p_FAST )
                   
       K = 0
       
@@ -3012,12 +3012,13 @@ CONTAINS
       
       IF ( p_FAST%CompSub == Module_SD ) THEN
       
-         IF ( p_FAST%CompHydro == Module_HD ) THEN
-            
-            ! initialize these SD loads inputs here in case HD is used  (note from initialiazation that these meshes don't exist if HD isn't used)       
+         IF ( p_FAST%CompHydro == Module_HD .or. (p_FAST%CompServo == Module_SrvD .and. allocated(y_SrvD%SStC)) ) THEN
+            ! initialize these SD loads inputs here in case HD is used  (note from initialiazation that these meshes don't exist if HD isn't used)
             MeshMapData%u_SD_LMesh%Force  = 0.0_ReKi
             MeshMapData%u_SD_LMesh%Moment = 0.0_ReKi
-      
+         ENDIF
+
+         IF ( p_FAST%CompHydro == Module_HD ) THEN
             
       !..................
       ! Get HD inputs on Morison%Mesh and WAMITMesh
@@ -3281,7 +3282,7 @@ CONTAINS
       CALL Create_FullOpt1_UVector(U_Resid, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%u_SD_TPMesh, MeshMapData%u_SD_LMesh, &
                                    MeshMapData%u_HD_M_Mesh, MeshMapData%u_HD_W_Mesh, &
                                    MeshMapData%u_ED_HubPtLoad, MeshMapData%u_BD_RootMotion, MeshMapData%u_Orca_PtfmMesh, &
-                                   MeshMapData%u_ExtPtfm_PtfmMesh, p_FAST ) 
+                                   MeshMapData%u_ExtPtfm_PtfmMesh, u_SrvD%SStC, p_FAST ) 
          
       U_Resid = u_in - U_Resid
    
@@ -3292,6 +3293,7 @@ CONTAINS
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
       CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
+      INTEGER(IntKi)             :: nb_local
          
       IF ( calcJacobian ) THEN
          CALL ED_DestroyInput( u_ED_perturb, ErrStat3, ErrMsg3 )
@@ -3312,8 +3314,8 @@ CONTAINS
          CALL BD_DestroyInput( u_BD_perturb, ErrStat3, ErrMsg3 )
             IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
          if (allocated(y_BD_perturb)) then
-            do nb=1,size(y_BD_perturb) 
-               CALL BD_DestroyOutput(y_BD_perturb(nb), ErrStat3, ErrMsg3 )
+            do nb_local=1,size(y_BD_perturb) 
+               CALL BD_DestroyOutput(y_BD_perturb(nb_local), ErrStat3, ErrMsg3 )
                   IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
             end do
             deallocate(y_BD_perturb)
@@ -3339,7 +3341,7 @@ END SUBROUTINE FullOpt1_InputOutputSolve
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
 !! Do not change the order of this packing without changing subroutine Create_FullOpt1_UVector()!
 SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD_M_Mesh,  &
-                                   HD_WAMIT_Mesh, ED_HubPtLoad, u_BD, Orca_PtfmMesh, ExtPtfm_PtfmMesh, ErrStat, ErrMsg)
+                                   HD_WAMIT_Mesh, ED_HubPtLoad, u_BD, Orca_PtfmMesh, ExtPtfm_PtfmMesh, SrvD_u_SStC, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType)          , INTENT(INOUT) :: p_FAST                !< FAST parameters               
    TYPE(FAST_ModuleMapType)          , INTENT(INOUT) :: MeshMapData           !< data that maps meshes together
@@ -3354,6 +3356,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    TYPE(BD_InputType)                , INTENT(IN   ) :: u_BD(:)               !< inputs for each instance of the BeamDyn module (for the RootMotion meshes)
    TYPE(MeshType)                    , INTENT(IN   ) :: Orca_PtfmMesh         !< OrcaFlex interface PtfmMesh
    TYPE(MeshType)                    , INTENT(IN   ) :: ExtPtfm_PtfmMesh      !< ExtPtfm_MCKF interface PtfmMesh
+   TYPE(StC_InputType), ALLOCATABLE  , INTENT(IN   ) :: SrvD_u_SStC(:)        !< ServoDyn SStC inputs (this will be changed later to mesh)
    
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
@@ -3377,7 +3380,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    
                   
    p_FAST%SizeJac_Opt1(3) = SD_TPMesh%NNodes*6                    ! SD inputs: 6 accelerations per node (size of SD input from ED) 
-   IF ( p_FAST%CompHydro == Module_HD ) THEN   
+   IF ( p_FAST%CompHydro == Module_HD  .or.   (p_FAST%CompServo == Module_SrvD .and. ALLOCATED(SrvD_u_SStC)) ) THEN
       p_FAST%SizeJac_Opt1(3) = p_FAST%SizeJac_Opt1(3) &   
                                     + SD_LMesh%NNodes *6          ! SD inputs: 6 loads per node (size of SD input from HD)       
    END IF
@@ -3506,7 +3509,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
       end do !j      
    end do !i   
    
-   IF ( p_FAST%CompHydro == Module_HD ) THEN   ! this SD mesh linked only when HD is enabled
+   if ( p_FAST%CompHydro == Module_HD .or. (p_FAST%CompServo == Module_SrvD .and. ALLOCATED(SrvD_u_SStC)) ) then   ! this SD mesh linked only when HD is enabled, or SrvD SStC enabled
    
       ! SD_LMesh
       do i=1,SD_LMesh%NNodes
@@ -3654,7 +3657,7 @@ END SUBROUTINE Init_FullOpt1_Jacobian
 !> This routine basically packs the relevant parts of the modules' input meshes for use in this InputOutput solve.
 !! Do not change the order of this packing without changing subroutine Init_FullOpt1_Jacobian()!
 SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD_M_Mesh, HD_WAMIT_Mesh, &
-                                         ED_HubPtLoad,  BD_RootMotion, Orca_PtfmMesh, ExtPtfm_PtfmMesh, p_FAST )
+                                         ED_HubPtLoad,  BD_RootMotion, Orca_PtfmMesh, ExtPtfm_PtfmMesh, SrvD_u_SStC, p_FAST )
 !..................................................................................................................................
    
    REAL(ReKi)                        , INTENT(INOUT) :: u(:)                      !< output u vector
@@ -3669,6 +3672,7 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
    TYPE(MeshType)                    , INTENT(IN   ) :: BD_RootMotion(:)          !< BeamDyn RootMotion meshes
    TYPE(MeshType)                    , INTENT(IN   ) :: Orca_PtfmMesh             !< OrcaFlex interface PtfmMesh
    TYPE(MeshType)                    , INTENT(IN   ) :: ExtPtfm_PtfmMesh          !< ExtPtfm interface PtfmMesh
+   TYPE(StC_InputType), ALLOCATABLE  , INTENT(IN   ) :: SrvD_u_SStC(:)            !< ServoDyn SStC inputs (this will be changed later to mesh)
    
    TYPE(FAST_ParameterType)          , INTENT(IN   ) :: p_FAST                    !< FAST parameters
    
@@ -3720,7 +3724,7 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
       indx_first = indx_last + 1
    end do
          
-   if ( p_FAST%CompHydro == Module_HD ) then   ! this SD mesh linked only when HD is enabled
+   if ( p_FAST%CompHydro == Module_HD .or. (p_FAST%CompServo == Module_SrvD .and. ALLOCATED(SrvD_u_SStC)) ) then   ! this SD mesh linked only when HD is enabled, or SrvD SStC enabled
       ! SD inputs (SD_LMesh):        
       do i=1,SD_LMesh%NNodes
          indx_last  = indx_first + 2 
@@ -4834,7 +4838,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    IF ( p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .or. p_FAST%CompMooring == Module_Orca) THEN  !.OR. p_FAST%CompHydro == Module_HD ) THEN         
       CALL Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
                                     HD%Input(1)%Morison%Mesh, HD%Input(1)%WAMITMesh, &
-                                    ED%Input(1)%HubPtLoad, BD%Input(1,:), Orca%Input(1)%PtfmMesh, ExtPtfm%Input(1)%PtfmMesh, ErrStat2, ErrMsg2)
+                                    ED%Input(1)%HubPtLoad, BD%Input(1,:), Orca%Input(1)%PtfmMesh, ExtPtfm%Input(1)%PtfmMesh, SrvD%Input(1)%SStC, ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
    ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
          CALL AllocAry( MeshMapData%Jacobian_Opt1, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for Ptfm-HD coupling', ErrStat2, ErrMsg2 )
@@ -4899,16 +4903,16 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
          CALL MeshCopy ( SD%Input(1)%TPMesh, MeshMapData%u_SD_TPMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_TPMesh' )                 
                
-         IF ( p_FAST%CompHydro == Module_HD ) THEN
-               
+         IF ( p_FAST%CompHydro == Module_HD .or. ( p_FAST%CompServo == Module_SrvD .and. ALLOCATED(SrvD%Input(1)%SStC) )) THEN
             CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh' )                 
-                  
-            CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh_2' )                 
-                              
          END IF
-               
+
+         IF ( p_FAST%CompHydro == Module_HD .or. ( p_FAST%CompServo == Module_SrvD .and. ALLOCATED(SrvD%Input(1)%SStC) )) THEN
+            CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh_2' )
+         ENDIF
+
       ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
          
          CALL MeshCopy ( ExtPtfm%Input(1)%PtfmMesh, MeshMapData%u_ExtPtfm_PtfmMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
