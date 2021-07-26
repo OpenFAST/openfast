@@ -2737,7 +2737,7 @@ contains
       integer                 :: SrvD_Indx_Y_GenTrq
       integer                 :: SrvD_Indx_Y_ElecPwr
       integer                 :: SrvD_Indx_Y_WrOutput
-      real(R8Ki)              :: AllOuts(3,MaxOutPts)
+      real(R8Ki)              :: AllOuts(3,MaxOutPts)             ! Extra precision here since analytical
 
       SrvD_Indx_Y_YawMom   = size(SrvD_Indx_Y_BlPitchCom) + 1     ! sometime change this to p%NumBl
       SrvD_Indx_Y_GenTrq   = SrvD_Indx_Y_YawMom + 1
@@ -2810,7 +2810,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_u_indx(n,4)   ! this blade
@@ -2828,7 +2828,7 @@ contains
       CALL StC_CalcOutput( t, u_StC, p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y_StC, m%BStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
       CALL Transfer_Point_to_Point( y_StC%Mesh(k), y_perturb%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat3, ErrMsg3, u_perturb%BStCMotionMesh(k,j), u_perturb%BStCMotionMesh(k,j) ); if (ErrStat3 > AbortErrLev) return
       ! collect relevant outputs
-      AllOuts = 0.0_R8Ki
+      AllOuts = 0.0_ReKi
       call Set_BStC_Outs_Instance(  j, p%NumBl, x%BStC(j),  m%BStC(j),  y_StC,  AllOuts)
       call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
       call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
@@ -2854,7 +2854,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -2872,7 +2872,7 @@ contains
       CALL StC_CalcOutput( t, u_StC, p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y_StC, m%NStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
       CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%NStCLoadMesh(j), m%SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat3, ErrMsg3, u_perturb%NStCMotionMesh(j), u_perturb%NStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
       ! collect relevant outputs
-      AllOuts = 0.0_R8Ki
+      AllOuts = 0.0_ReKi
       call Set_NStC_Outs_Instance(  j, x%NStC(j),  m%NStC(j),  y_StC,  AllOuts)
       call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
       call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
@@ -2898,7 +2898,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -2916,7 +2916,7 @@ contains
       CALL StC_CalcOutput( t, u_StC, p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y_StC, m%TStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
       CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%TStCLoadMesh(j), m%SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat3, ErrMsg3, u_perturb%TStCMotionMesh(j), u_perturb%TStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
       ! collect relevant outputs
-      AllOuts = 0.0_R8Ki
+      AllOuts = 0.0_ReKi
       call Set_TStC_Outs_Instance(  j, x%TStC(j),  m%TStC(j),  y_StC,  AllOuts)
       call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
       call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
@@ -2942,7 +2942,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -2960,7 +2960,7 @@ contains
       CALL StC_CalcOutput( t, u_StC, p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y_StC, m%SStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
       CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%SStCLoadMesh(j), m%SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat3, ErrMsg3, u_perturb%SStCMotionMesh(j), u_perturb%SStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
       ! collect relevant outputs
-      AllOuts = 0.0_R8Ki
+      AllOuts = 0.0_ReKi
       call Set_SStC_Outs_Instance(  j, x%SStC(j),  m%SStC(j),  y_StC,  AllOuts)
       call StC_DestroyInput(  u_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
       call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
@@ -3431,7 +3431,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta_p, delta_m, dY)
    ! outputs
    SrvD_Indx_Y_WrOutput = p%Jac_ny - p%NumOuts              ! Index to location before user requested outputs
    do k=1,p%NumOuts
-      dY(SrvD_Indx_Y_WrOutput+k) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
+      dY(SrvD_Indx_Y_WrOutput+k) = real( y_p%WriteOutput(k) - y_m%WriteOutput(k), R8Ki )
    end do
 
    dY = dY / (delta_p + delta_m)
@@ -3730,7 +3730,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j,k                ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_x_indx(n,4)   ! this blade
@@ -3743,7 +3743,7 @@ contains
       CALL StC_CalcOutput( t, m%u_BStC(1,j), p%BStC(j), x%BStC(j), xd%BStC(j), z%BStC(j), OtherState%BStC(j), y_StC, m%BStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
       CALL Transfer_Point_to_Point( y_StC%Mesh(k), y_perturb%BStCLoadMesh(k,j), m%SrvD_MeshMap%BStC_Frc2_y_BStC(k,j), ErrStat3, ErrMsg3, u%BStCMotionMesh(k,j), u%BStCMotionMesh(k,j) ); if (ErrStat3 > AbortErrLev) return
       ! collect relevant outputs
-      AllOuts = 0.0_R8Ki
+      AllOuts = 0.0_ReKi
       call Set_BStC_Outs_Instance(j, p%NumBl, x_perturb%BStC(j),  m%BStC(j),  y_StC,  AllOuts)
       call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
       !-------------------
@@ -3767,7 +3767,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance
@@ -3779,7 +3779,7 @@ contains
       CALL StC_CalcOutput( t, m%u_NStC(1,j), p%NStC(j), x%NStC(j), xd%NStC(j), z%NStC(j), OtherState%NStC(j), y_StC, m%NStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
       CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%NStCLoadMesh(j), m%SrvD_MeshMap%NStC_Frc2_y_NStC(j), ErrStat3, ErrMsg3, u%NStCMotionMesh(j), u%NStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
       ! collect relevant outputs
-      AllOuts = 0.0_R8Ki
+      AllOuts = 0.0_ReKi
       call Set_NStC_Outs_Instance(j, x_perturb%NStC(j),  m%NStC(j),  y_StC,  AllOuts)
       call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
       !-------------------
@@ -3803,7 +3803,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance
@@ -3815,7 +3815,7 @@ contains
       CALL StC_CalcOutput( t, m%u_TStC(1,j), p%TStC(j), x%TStC(j), xd%TStC(j), z%TStC(j), OtherState%TStC(j), y_StC, m%TStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
       CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%TStCLoadMesh(j), m%SrvD_MeshMap%TStC_Frc2_y_TStC(j), ErrStat3, ErrMsg3, u%TStCMotionMesh(j), u%TStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
       ! collect relevant outputs
-      AllOuts = 0.0_R8Ki
+      AllOuts = 0.0_ReKi
       call Set_TStC_Outs_Instance(j, x_perturb%TStC(j),  m%TStC(j),  y_StC,  AllOuts)
       call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
       !-------------------
@@ -3839,7 +3839,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance
@@ -3851,7 +3851,7 @@ contains
       CALL StC_CalcOutput( t, m%u_SStC(1,j), p%SStC(j), x%SStC(j), xd%SStC(j), z%SStC(j), OtherState%SStC(j), y_StC, m%SStC(j), ErrStat3, ErrMsg3 ); if (ErrStat3 > AbortErrLev) return
       CALL Transfer_Point_to_Point( y_StC%Mesh(1), y_perturb%SStCLoadMesh(j), m%SrvD_MeshMap%SStC_Frc2_y_SStC(j), ErrStat3, ErrMsg3, u%SStCMotionMesh(j), u%SStCMotionMesh(j) ); if (ErrStat3 > AbortErrLev) return
       ! collect relevant outputs
-      AllOuts = 0.0_R8Ki
+      AllOuts = 0.0_ReKi
       call Set_SStC_Outs_Instance(j, x_perturb%SStC(j),  m%SStC(j),  y_StC,  AllOuts)
       call StC_DestroyOutput( y_StC, ErrStat3, ErrMsg3 );   if (ErrStat3 > AbortErrLev)   return
       !-------------------
@@ -4020,7 +4020,6 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: j,k                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_x_indx(n,4)   ! this blade
@@ -4043,7 +4042,6 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: j,k                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_x_indx(n,4)   ! this blade
@@ -4066,7 +4064,6 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: j,k                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_x_indx(n,4)   ! this blade
@@ -4089,7 +4086,6 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: j,k                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(R8Ki)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_x_indx(n,4)   ! this blade
