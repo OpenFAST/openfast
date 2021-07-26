@@ -10,7 +10,7 @@ InflowWind Users Guide and Theory Manual
    modifications to the software.
 
    The information here is incomplete. Please see the 
-   `InflowWind Manual <https://wind.nrel.gov/nwtc/docs/InflowWind_Manual.pdf>`__
+   :download:`InflowWind Manual <InflowWind_Manual.pdf>`
    until it has been converted to OpenFAST's documentation style.
 
    
