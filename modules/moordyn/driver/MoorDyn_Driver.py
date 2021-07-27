@@ -78,6 +78,9 @@ md_input_file_string_length = 38
 library_path = "/home/nmendoza/Projects/CCT2/OpenFAST/build_test/modules/moordyn/libmd_c_lib.so"
 md_lib = MoorDyn_Library.MoorDynLibAPI(library_path)
 
+#==============================================================================
+# Basic alogrithm for using MoorDyn library
+
 # Time inputs
 t_start             = 0                  # initial or start time
 md_lib.dt           = 0.1                # time interval that it's being called at
@@ -97,21 +100,37 @@ platform_init_pos   = np.array([0.1, 0.2, 0.3, 0.04, 0.05, 0.06]) # platform/hul
 #=============================================================================================================================
 
 # MD_INIT: Only need to call md_init once
-md_lib.md_init(md_input_file_string, md_input_file_string_length, g, rho_h2o, d_h2o, platform_init_pos)  
+try:
+    md_lib.md_init(md_input_file_string, md_input_file_string_length, g, rho_h2o, d_h2o, platform_init_pos)  
+except Exception as e:
+    print("{}".format(e))   # Exceptions handled in moordyn_library.py
+    exit(1)
 
 # Run these at each time step
 for i in range( 0, len(time)-1):
 
     # Call md_calcOutput
-    md_lib.md_calcOutput(time[i])
+    try: 
+        md_lib.md_calcOutput(time[i])
+    except Exception as e:
+        print("{}".format(e))   # Exceptions handled in moordyn_library.py
+        exit(1)
 
     # Call md_updateStates
-    md_lib.md_updateStates(time[i], i, time)
+    try: 
+        md_lib.md_updateStates(time[i], i, time)
+    except Exception as e:
+        print("{}".format(e))   # Exceptions handled in moordyn_library.py
+        exit(1)
 
     print(time[i],' completed')
 
 # MD_END: Only need to call md_end once when you're done
-md_lib.md_end()
+try:
+    md_lib.md_end()
+except Exception as e:
+    print("{}".format(e))   # Exceptions handled in moordyn_library.py
+    exit(1)
 
 print("We have successfully run MoorDyn!")
 exit()

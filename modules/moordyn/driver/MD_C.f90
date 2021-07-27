@@ -34,7 +34,7 @@ PUBLIC :: MD_END_C
 
 ! Global Variables
 TYPE(MD_InitInputType)                  :: InitInp     !< Input data for initialization routine
-TYPE(MD_InputType)                      :: u           !< An initial guess for the input; input mesh must be defined
+TYPE(MD_InputType), ALLOCATABLE         :: u(:)        !< An initial guess for the input; input mesh must be defined
 TYPE(MD_ParameterType)                  :: p           !< Parameters
 TYPE(MD_ContinuousStateType)            :: x           !< Initial continuous states
 TYPE(MD_DiscreteStateType)              :: xd          !< Initial discrete states
@@ -142,8 +142,14 @@ SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, R
     InitInp%WavePDyn         = 0.0_ReKi
     InitInp%WaveElev         = 0.0_ReKi
 
+    allocate(u(2), STAT=ErrStat)
+      if (ErrStat /= 0) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = "Could not allocate input"
+      endif
+
     ! Call the main subroutine MD_Init
-    CALL MD_Init(InitInp, u, p, x, xd, z, other, y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)
+    CALL MD_Init(InitInp, u(1), p, x, xd, z, other, y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)
     !FIXME: this may catch messages labelled as Info as fatal errors.  You probably don't want that.
     IF (ErrStat /= ErrID_None) THEN
         PRINT *, "MD_INIT_C: Main MD_Init subroutine failed!"
@@ -208,14 +214,21 @@ SUBROUTINE MD_UPDATESTATES_C(TIME_C, N_C, TIME_ARRAY_C, TIME_ARRAY_LEN_C, ErrSta
     ! Local Variables
     REAL(DbKi)                                                       :: t
     REAL(DbKi), DIMENSION(TIME_ARRAY_LEN_C)                          :: t_array
-    INTEGER(IntKi)                                                   :: ErrStat, n, len_time, J
+    INTEGER(IntKi)                                                   :: ErrStat, n, len_time, J, InterpOrder
     CHARACTER(ErrMsgLen)                                             :: ErrMsg
 
     ! Set up inputs to MD_UpdateStates
-    t = REAL(TIME_C, DbKi)
-    n = N_C
-    len_time = TIME_ARRAY_LEN_C
-    t_array = TIME_ARRAY_C
+    t           = REAL(TIME_C, DbKi)
+    n           = N_C
+    len_time    = TIME_ARRAY_LEN_C
+    t_array     = TIME_ARRAY_C
+    InterpOrder = 1
+
+    allocate(u(InterpOrder+1), STAT=ErrStat)
+      if (ErrStat /= 0) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = "Could not allocate input"
+      endif
 
     ! Call the main subroutine MD_UpdateStates
     CALL MD_UpdateStates( t, n, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
@@ -254,9 +267,14 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOU
 
     ! Set up inputs to MD_CalcOutput
     t = REAL(Time_C, DbKi)
+    allocate(u(2), STAT=ErrStat)
+      if (ErrStat /= 0) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = "Could not allocate input"
+      endif
 
     ! Call the main subroutine MD_CalcOutput
-    CALL MD_CalcOutput( t, u, p, x, xd, z, other, y, m, ErrStat, ErrMsg )
+    CALL MD_CalcOutput( t, u(1), p, x, xd, z, other, y, m, ErrStat, ErrMsg )
     IF (ErrStat /= ErrID_None) THEN
         PRINT *, "MD_CALCOUTPUT_C: Main MD_calcOutput subroutine failed!"
         PRINT *, ErrMsg
@@ -288,8 +306,15 @@ SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
     INTEGER(IntKi)                                     :: ErrStat
     CHARACTER(ErrMsgLen)                               :: ErrMsg
 
+    ! Set up inputs for MD_End
+    allocate(u(2), STAT=ErrStat)
+    if (ErrStat /= 0) then
+       ErrStat = ErrID_Fatal
+       ErrMsg  = "Could not allocate input"
+    endif
+
     ! Call the main subroutine MD_End
-    CALL MD_End(u, p, x, xd, z, other, y, m, ErrStat , ErrMsg)
+    CALL MD_End(u(1), p, x, xd, z, other, y, m, ErrStat , ErrMsg)
     IF (ErrStat .NE. 0) THEN
         PRINT *, "MD_END_C: MD_End failed!"
         PRINT *, ErrMsg
