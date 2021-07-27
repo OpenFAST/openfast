@@ -1,6 +1,7 @@
 #**********************************************************************************************************************************
 # LICENSING
-# Copyright (C) 2021 Nicole Mendoza
+# Copyright (C) 2021 National Renewable Energy Laboratory
+# Author: Nicole Mendoza
 #
 # This file is part of MoorDyn.
 #
@@ -95,14 +96,21 @@ platform_init_pos   = np.array([0.1, 0.2, 0.3, 0.04, 0.05, 0.06]) # platform/hul
 #-------------------------------------------------------- RUN MOORDYN --------------------------------------------------------
 #=============================================================================================================================
 
-# Only need to call md_init once
+# MD_INIT: Only need to call md_init once
 md_lib.md_init(md_input_file_string, md_input_file_string_length, g, rho_h2o, d_h2o, platform_init_pos)  
 
 # Run these at each time step
-# md_lib.md_updateStates
-# md_lib.md_calcOutput
+for i in range( 0, len(time)-1):
 
-# MD_END: Only need to call md_end once
+    # Call md_calcOutput
+    md_lib.md_calcOutput(time[i])
+
+    # Call md_updateStates
+    md_lib.md_updateStates(time[i], i, time)
+
+    print(time[i],' completed')
+
+# MD_END: Only need to call md_end once when you're done
 md_lib.md_end()
 
 print("We have successfully run MoorDyn!")

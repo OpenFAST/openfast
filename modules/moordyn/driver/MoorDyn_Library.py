@@ -1,6 +1,7 @@
 #**********************************************************************************************************************************
 # LICENSING
-# Copyright (C) 2021 Nicole Mendoza
+# Copyright (C) 2021 National Renewable Energy Laboratory
+# Author: Nicole Mendoza
 #
 # This file is part of MoorDyn.
 #
@@ -73,15 +74,22 @@ class MoorDynLibAPI(CDLL):
         ]
         self.MD_INIT_C.restype = c_int
 
-        self.MD_UPDATESTATES_C.argtypes = [
-
-        ]
-        self.MD_UPDATESTATES_C.restype = c_int
-
         self.MD_CALCOUTPUT_C.argtypes = [
-
+            POINTER(c_double),                    # IN: time
+            POINTER(c_int),                       # OUT: ErrStat_C
+            POINTER(c_char)                       # OUT: ErrMsg_C
         ]
         self.MD_CALCOUTPUT_C.restype = c_int
+        
+        self.MD_UPDATESTATES_C.argtypes = [
+            POINTER(c_double),                    # IN: time
+            POINTER(c_int),                       # OUT: global time step number
+            POINTER(c_double),                    # IN: time array
+            POINTER(c_int),                       # IN: time array length
+            POINTER(c_int),                       # OUT: ErrStat_C
+            POINTER(c_char)                       # OUT: ErrMsg_C
+        ]
+        self.MD_UPDATESTATES_C.restype = c_int
 
         self.MD_END_C.argtypes = [
             POINTER(c_int),                       # OUT: ErrStat_C
@@ -130,27 +138,13 @@ class MoorDynLibAPI(CDLL):
 
         print('MoorDyn_Library.py: Completed MD_INIT_C')
 
-    # md_updateStates ------------------------------------------------------------------------------------------------------------
-    def md_updateStates(self):
-
-        print('MoorDyn_Library.py: Running MD_UPDATESTATES_C .....')
-
-        self.MD_UPDATESTATES_C(
-            byref(self.error_status),              # OUT: ErrStat_C
-            self.error_message                     # OUT: ErrMsg_C
-        )
-        if self.error_status.value != 0:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
-
-        print('MoorDyn_Library.py: Completed MD_UPDATESTATES_C')
-
     # md_calcOutput ------------------------------------------------------------------------------------------------------------
-    def md_calcOutput(self):
+    def md_calcOutput(self,t):
 
         print('MoorDyn_Library.py: Running MD_CALCOUTPUT_C .....')
 
         self.MD_CALCOUTPUT_C(
+            byref(c_double(t)),                    # IN: time
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
@@ -159,6 +153,29 @@ class MoorDynLibAPI(CDLL):
             return
 
         print('MoorDyn_Library.py: Completed MD_CALCOUTPUT_C')
+
+    # md_updateStates ------------------------------------------------------------------------------------------------------------
+    def md_updateStates(self,t,n,time):
+
+        print('MoorDyn_Library.py: Running MD_UPDATESTATES_C .....')
+
+        time_c = (c_double * len(time))(0.0, )
+        for j, p in enumerate(time):
+            time_c[j] = c_double(p)
+
+        self.MD_UPDATESTATES_C(
+            byref(c_double(t)),                    # IN: current time
+            byref(c_int(n)),                       # IN: global time step number
+            time_c,                                # IN: time array
+            byref(c_int(len(time))),               # IN: time array length
+            byref(self.error_status),              # OUT: ErrStat_C
+            self.error_message                     # OUT: ErrMsg_C
+        )
+        if self.error_status.value != 0:
+            print(f"Error {self.error_status.value}: {self.error_message.value}")
+            return
+
+        print('MoorDyn_Library.py: Completed MD_UPDATESTATES_C')
 
     # md_end ------------------------------------------------------------------------------------------------------------
     def md_end(self):

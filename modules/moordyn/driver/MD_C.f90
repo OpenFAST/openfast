@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2021 Nicole Mendoza
+! Copyright (C) 2021 National Renewable Energy Laboratory
+! Author: Nicole Mendoza
 !
 ! This file is part of MoorDyn.
 !
@@ -66,7 +67,7 @@ SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, R
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelNames_C
     TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelUnits_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
-    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025) 
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025)
 
     ! Local Variables
     CHARACTER(InputStringLength), DIMENSION(InputFileStringLength_C) :: InputFileStrings
@@ -197,9 +198,41 @@ END SUBROUTINE MD_INIT_C
 !===============================================================================================================
 !---------------------------------------------- MD UPDATE STATES -----------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_UPDATESTATES_C() BIND (C, NAME='MD_UPDATESTATES_C')
+SUBROUTINE MD_UPDATESTATES_C(TIME_C, N_C, TIME_ARRAY_C, TIME_ARRAY_LEN_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_UPDATESTATES_C')
 
-! SUBROUTINE MD_UpdateStates( t, n, u, utimes, p, x, xd, z, other, m, ErrStat, ErrMsg)
+    INTEGER(C_INT)                                 , INTENT(IN   )   :: N_C, TIME_ARRAY_LEN_C
+    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: TIME_C, TIME_ARRAY_C(TIME_ARRAY_LEN_C)
+    INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C
+
+    ! Local Variables
+    REAL(DbKi)                                                       :: t
+    REAL(DbKi), DIMENSION(TIME_ARRAY_LEN_C)                          :: t_array
+    INTEGER(IntKi)                                                   :: ErrStat, n, len_time, J
+    CHARACTER(ErrMsgLen)                                             :: ErrMsg
+
+    ! Set up inputs to MD_UpdateStates
+    t = REAL(TIME_C, DbKi)
+    n = N_C
+    len_time = TIME_ARRAY_LEN_C
+    t_array = TIME_ARRAY_C
+
+    ! Call the main subroutine MD_UpdateStates
+    CALL MD_UpdateStates( t, n, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
+    IF (ErrStat /= ErrID_None) THEN
+        PRINT *, "MD_CALCOUTPUT_C: Main MD_calcOutput subroutine failed!"
+        PRINT *, ErrMsg
+    ELSE
+        PRINT*, "MD_CALCOUTPUT_C: Successfully called MD_calcOutput ....."
+    END IF
+
+    ! Convert the outputs of MD_calcOutput back to C
+    IF (ErrStat /= 0) THEN
+        ErrStat_C = ErrID_Fatal
+    ELSE
+        ErrStat_C = ErrID_None
+    END IF
+    ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
     PRINT*, "DONE WITH MD_UPDATESTATES_C!"
 
@@ -208,9 +241,36 @@ END SUBROUTINE MD_UPDATESTATES_C
 !===============================================================================================================
 !---------------------------------------------- MD CALC OUTPUT -------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_CALCOUTPUT_C() BIND (C, NAME='MD_CALCOUTPUT_C')
+SUBROUTINE MD_CALCOUTPUT_C(Time_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOUTPUT_C')
 
-! SUBROUTINE MD_CalcOutput( t, u, p, x, xd, z, other, y, m, ErrStat, ErrMsg )
+    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: Time_C
+    INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C
+
+    ! Local Variables
+    REAL(DbKi)                                                       :: t
+    INTEGER(IntKi)                                                   :: ErrStat
+    CHARACTER(ErrMsgLen)                                             :: ErrMsg
+
+    ! Set up inputs to MD_CalcOutput
+    t = REAL(Time_C, DbKi)
+
+    ! Call the main subroutine MD_CalcOutput
+    CALL MD_CalcOutput( t, u, p, x, xd, z, other, y, m, ErrStat, ErrMsg )
+    IF (ErrStat /= ErrID_None) THEN
+        PRINT *, "MD_CALCOUTPUT_C: Main MD_calcOutput subroutine failed!"
+        PRINT *, ErrMsg
+    ELSE
+        PRINT*, "MD_CALCOUTPUT_C: Successfully called MD_calcOutput ....."
+    END IF
+
+    ! Convert the outputs of MD_calcOutput back to C
+    IF (ErrStat /= 0) THEN
+        ErrStat_C = ErrID_Fatal
+    ELSE
+        ErrStat_C = ErrID_None
+    END IF
+    ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
     PRINT*, "DONE WITH MD_CALCOUTPUT_C!"
 
@@ -225,13 +285,13 @@ SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
     CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
 
     ! Local variables
-    INTEGER                                            :: ErrStat
+    INTEGER(IntKi)                                     :: ErrStat
     CHARACTER(ErrMsgLen)                               :: ErrMsg
 
     ! Call the main subroutine MD_End
     CALL MD_End(u, p, x, xd, z, other, y, m, ErrStat , ErrMsg)
     IF (ErrStat .NE. 0) THEN
-        PRINT *, "MD_END_C: MD_End failed"
+        PRINT *, "MD_END_C: MD_End failed!"
         PRINT *, ErrMsg
     ELSE
         PRINT*, "MD_END_C: Successfully called MD_END ....."
