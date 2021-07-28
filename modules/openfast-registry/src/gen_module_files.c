@@ -146,7 +146,14 @@ gen_copy_f2c(FILE         *fp, // *.f90 file we are writting to
                         fprintf(fp, "       ELSE\n");
                         fprintf(fp, "          %sData%%c_obj%%%s_Len = SIZE(%sData%%%s)\n", nonick, r->name, nonick, r->name);
                         fprintf(fp, "          IF (%sData%%c_obj%%%s_Len > 0) &\n", nonick, r->name);
-                        fprintf(fp, "             %sData%%c_obj%%%s = C_LOC( %sData%%%s( LBOUND(%sData%%%s,1) ) ) \n", nonick, r->name, nonick, r->name, nonick, r->name );
+                        
+                        fprintf(fp, "             %sData%%c_obj%%%s = C_LOC( %sData%%%s(", nonick, r->name, nonick, r->name);
+                        for (int d = 1; d <= r->ndims; d++) {
+                            fprintf(fp, " LBOUND(%sData%%%s,%d)", nonick, r->name, d);
+                            if (d < r->ndims) { fprintf(fp, ","); }
+                        }
+                        fprintf(fp, " ) )\n");
+
                         fprintf(fp, "       END IF\n");
                         fprintf(fp, "    END IF\n");
                     }
@@ -241,7 +248,14 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
              if ( sw_ccode && is_pointer(r) ) { // bjj: this needs to be updated if we've got multiple dimension arrays
   fprintf(fp,"    Dst%sData%%c_obj%%%s_Len = SIZE(Dst%sData%%%s)\n",nonick,r->name,nonick,r->name) ;
   fprintf(fp,"    IF (Dst%sData%%c_obj%%%s_Len > 0) &\n",nonick,r->name) ;
-  fprintf(fp,"      Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(i1_l) ) \n",nonick,r->name, nonick,r->name ) ;
+
+  fprintf(fp, "          Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(", nonick, r->name, nonick, r->name);
+  for (d = 1; d <= r->ndims; d++) {
+      fprintf(fp, " i%d_l", d);
+      if (d < r->ndims) { fprintf(fp, ","); }
+  }
+  fprintf(fp, " ) )\n");
+
              }
 
   fprintf(fp,"  END IF\n") ; // end dest allocated/associated
@@ -734,7 +748,14 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         if (sw_ccode && is_pointer(r)) { // bjj: this needs to be updated if we've got multiple dimension arrays
           fprintf(fp, "    OutData%%c_obj%%%s_Len = SIZE(OutData%%%s)\n", r->name, r->name);
           fprintf(fp, "    IF (OutData%%c_obj%%%s_Len > 0) &\n", r->name);
-          fprintf(fp, "       OutData%%c_obj%%%s = C_LOC( OutData%%%s(i1_l) ) \n", r->name, r->name);
+
+          fprintf(fp, "       OutData%%c_obj%%%s = C_LOC( OutData%%%s(", r->name,r->name);
+          for (d = 1; d <= r->ndims; d++) {
+              fprintf(fp, " i%d_l", d);
+              if (d < r->ndims) { fprintf(fp, ","); }
+          }
+          fprintf(fp, " ) )\n");
+
         }
         strcpy(mainIndent, "  ");
      }
@@ -2256,9 +2277,11 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
         gen_ExtrapInterp(fp, ModName, "UA_BL_Type", "UA_BL_Type", "ReKi");
     } else if (!sw_noextrap) {
         if (strcmp(make_lower_temp(ModName->name), "dbemt") == 0) { // make interpolation routines for element-level DBEMT module
-             
             gen_ExtrapInterp(fp, ModName, "ElementInputType", "ElementInputType", "DbKi");
         }
+//        else if (strcmp(make_lower_temp(ModName->name), "bemt") == 0) {
+//            gen_ExtrapInterp(fp, ModName, "SkewWake_InputType", "SkewWake_InputType", "DbKi");
+//        }
 
         gen_ExtrapInterp(fp, ModName, "Input", "InputType", "DbKi");
         gen_ExtrapInterp(fp, ModName, "Output", "OutputType", "DbKi");
