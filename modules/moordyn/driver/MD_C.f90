@@ -44,20 +44,20 @@ TYPE(MD_OutputType)                     :: y           !< Initial system outputs
 TYPE(MD_MiscVarType)                    :: m           !< Initial misc/optimization variables
 TYPE(MD_InitOutputType)                 :: InitOutData !< Output for initialization routine
 
-INTEGER, PARAMETER :: InputStringLength = 179          !< Fixed length for all lines of the string-based input file
+INTEGER(IntKi)                          :: N_Global    !< Global timestep
 
 CONTAINS
 
 !===============================================================================================================
 !---------------------------------------------- MD INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
+SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
 
     !TEMPORARY hack until Waves handling is finalized
     USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_y0, WaveGrid_dx, WaveGrid_dy, WaveGrid_nx, WaveGrid_ny, WaveGrid_nz
 
-    TYPE(C_PTR)                                    , INTENT(IN   )   :: MD_InputFileString_C
-    INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C
+    TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C        !< Input file as a single string with lines deliniated by C_NULL_CHAR
+    INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C  !< length of the input file string
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: G_C
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: RHO_C
@@ -70,10 +70,7 @@ SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, R
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025)
 
     ! Local Variables
-    CHARACTER(InputStringLength), DIMENSION(InputFileStringLength_C) :: InputFileStrings
-    CHARACTER(KIND=C_CHAR, LEN=1), DIMENSION(:), POINTER             :: character_pointer
-    CHARACTER, DIMENSION(InputStringLength)                          :: single_line_character_array
-    CHARACTER(InputStringLength)                                     :: single_line_chars
+    CHARACTER(KIND=C_char, LEN=InputFileStringLength_C), POINTER     :: InputFileString          !< Input file as a single string with NULL chracter separating lines
     CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelNames_C(:)
     CHARACTER(CHANLEN+1), ALLOCATABLE, TARGET                        :: tmp_OutputChannelUnits_C(:)
     REAL(DbKi)                                                       :: DTcoupling
@@ -89,23 +86,15 @@ SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, R
     ErrStat = ErrID_None
     ErrMsg  = ""
 
-    ! Convert the string-input from C-style character arrays (char**) to a Fortran-style array of characters.
-    ! TODO: Add error checking
-    CALL C_F_pointer(MD_InputFileString_C, character_pointer, [InputFileStringLength_C * InputStringLength])
-    DO i = 0, InputFileStringLength_C - 1
-       single_line_character_array = character_pointer(i * InputStringLength + 1 : i * InputStringLength + InputStringLength)
-       DO j = 1, InputStringLength
-          single_line_chars(j:j) = single_line_character_array(j)
-       END DO
-       InputFileStrings(i + 1) = single_line_chars
-    END DO
-    PRINT *, 'InputFileStrings = ', InputFileStrings
+    ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
+    CALL C_F_pointer(InputFileString_C, InputFileString)
 
     ! Store string-inputs as type FileInfoType
-    CALL InitFileInfo(InputFileStrings, InitInp%PassedPrimaryInputData, ErrStat, ErrMsg)           
-    IF (ErrStat .NE. 0) THEN 
-       PRINT *, "MD_INIT_C: Failed to convert main input file to FileInfoType"
+    CALL InitFileInfo(InputFileString, InitInp%PassedPrimaryInputData, ErrStat, ErrMsg)           
+    IF (ErrStat .GE. AbortErrLev) THEN 
+       PRINT *, "MD_INIT_C: Failed to convert main input file string to FileInfoType"
        PRINT *, ErrMsg
+       RETURN
     END IF
 
     ! Set other inputs for calling MD_Init
@@ -143,19 +132,19 @@ SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, R
     InitInp%WaveElev         = 0.0_ReKi
 
     allocate(u(2), STAT=ErrStat)
-      if (ErrStat /= 0) then
+      if (ErrStat .GE. AbortErrLev) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = "Could not allocate input"
+         ErrMsg  = "MD_INIT_C: Could not allocate input"
+         RETURN
       endif
 
     ! Call the main subroutine MD_Init
     CALL MD_Init(InitInp, u(1), p, x, xd, z, other, y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)
     !FIXME: this may catch messages labelled as Info as fatal errors.  You probably don't want that.
-    IF (ErrStat /= ErrID_None) THEN
+    IF (ErrStat .GE. AbortErrLev) THEN
         PRINT *, "MD_INIT_C: Main MD_Init subroutine failed!"
         PRINT *, ErrMsg
-    ELSE
-        PRINT*, "MD_INIT_C: Successfully called MD_Init ....."
+        RETURN
     END IF
 
     ! Convert the outputs of MD_Init from Fortran to C
@@ -173,8 +162,15 @@ SUBROUTINE MD_INIT_C(MD_InputFileString_C, InputFileStringLength_C, DT_C, G_C, R
 
     ! Clean up variables and set up for IFW_CALCOUTPUT_C
     CALL MD_DestroyInitInput( InitInp, ErrStat, ErrMsg )
-    IF (ErrStat /= 0) THEN
+    IF (ErrStat .GE. AbortErrLev) THEN
         PRINT *, ErrMsg
+        RETURN
+    END IF
+
+    CALL MD_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
+    IF (ErrStat .GE. AbortErrLev) THEN
+        PRINT *, ErrMsg
+        RETURN
     END IF
 
     IF (ErrStat /= 0) THEN
@@ -204,39 +200,36 @@ END SUBROUTINE MD_INIT_C
 !===============================================================================================================
 !---------------------------------------------- MD UPDATE STATES -----------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_UPDATESTATES_C(TIME_C, N_C, TIME_ARRAY_C, TIME_ARRAY_LEN_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_UPDATESTATES_C')
+SUBROUTINE MD_UPDATESTATES_C(TIME_C, TIME2_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_UPDATESTATES_C')
 
-    INTEGER(C_INT)                                 , INTENT(IN   )   :: N_C, TIME_ARRAY_LEN_C
-    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: TIME_C, TIME_ARRAY_C(TIME_ARRAY_LEN_C)
+    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: TIME_C, TIME2_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C
 
     ! Local Variables
-    REAL(DbKi)                                                       :: t
-    REAL(DbKi), DIMENSION(TIME_ARRAY_LEN_C)                          :: t_array
-    INTEGER(IntKi)                                                   :: ErrStat, n, len_time, J, InterpOrder
+    REAL(DbKi)                                                       :: t_array(2)
+    INTEGER(IntKi)                                                   :: ErrStat, J, InterpOrder
     CHARACTER(ErrMsgLen)                                             :: ErrMsg
 
     ! Set up inputs to MD_UpdateStates
-    t           = REAL(TIME_C, DbKi)
-    n           = N_C
-    len_time    = TIME_ARRAY_LEN_C
-    t_array     = TIME_ARRAY_C
-    InterpOrder = 1
+    t_array(1)  = REAL(TIME_C, DbKi)          ! t
+    t_array(2)  = REAL(TIME2_C, DbKi)         ! t + dt
+    N_Global    = 0_IntKi                     ! MOORDYN IS NOT CURRENTLY USING, BUT MAY CHANGE IN THE FUTURE
+    InterpOrder = 1                           ! InterpOrder must be 1 (linear) or 2 (quadratic)
 
     allocate(u(InterpOrder+1), STAT=ErrStat)
-      if (ErrStat /= 0) then
+    IF (ErrStat .GE. AbortErrLev) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = "Could not allocate input"
-      endif
+         ErrMsg  = "MD_UPDATESTATES_C: Could not allocate input"
+         RETURN
+    END IF
 
     ! Call the main subroutine MD_UpdateStates
-    CALL MD_UpdateStates( t, n, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
-    IF (ErrStat /= ErrID_None) THEN
-        PRINT *, "MD_CALCOUTPUT_C: Main MD_calcOutput subroutine failed!"
+    CALL MD_UpdateStates( t_array(1), N_Global, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
+    IF (ErrStat .GE. AbortErrLev) THEN
+        PRINT *, "MD_UPDATESTATES_C: Main MD_calcOutput subroutine failed!"
         PRINT *, ErrMsg
-    ELSE
-        PRINT*, "MD_CALCOUTPUT_C: Successfully called MD_calcOutput ....."
+        RETURN
     END IF
 
     ! Convert the outputs of MD_calcOutput back to C
@@ -268,18 +261,18 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOU
     ! Set up inputs to MD_CalcOutput
     t = REAL(Time_C, DbKi)
     allocate(u(2), STAT=ErrStat)
-      if (ErrStat /= 0) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = "Could not allocate input"
-      endif
+    if (ErrStat .GE. AbortErrLev) then
+        ErrStat = ErrID_Fatal
+        ErrMsg  = "MD_CALCOUTPUT_C: Could not allocate input"
+        RETURN
+    end if
 
     ! Call the main subroutine MD_CalcOutput
     CALL MD_CalcOutput( t, u(1), p, x, xd, z, other, y, m, ErrStat, ErrMsg )
-    IF (ErrStat /= ErrID_None) THEN
+    IF (ErrStat .GE. AbortErrLev) THEN
         PRINT *, "MD_CALCOUTPUT_C: Main MD_calcOutput subroutine failed!"
         PRINT *, ErrMsg
-    ELSE
-        PRINT*, "MD_CALCOUTPUT_C: Successfully called MD_calcOutput ....."
+        RETURN
     END IF
 
     ! Convert the outputs of MD_calcOutput back to C
@@ -308,18 +301,18 @@ SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
 
     ! Set up inputs for MD_End
     allocate(u(2), STAT=ErrStat)
-    if (ErrStat /= 0) then
+    if (ErrStat .GE. AbortErrLev) then
        ErrStat = ErrID_Fatal
-       ErrMsg  = "Could not allocate input"
-    endif
+       ErrMsg  = "MD_END_C: Could not allocate input"
+       RETURN
+    END IF
 
     ! Call the main subroutine MD_End
     CALL MD_End(u(1), p, x, xd, z, other, y, m, ErrStat , ErrMsg)
-    IF (ErrStat .NE. 0) THEN
+    IF (ErrStat .GE. AbortErrLev) THEN
         PRINT *, "MD_END_C: MD_End failed!"
         PRINT *, ErrMsg
-    ELSE
-        PRINT*, "MD_END_C: Successfully called MD_END ....."
+        RETURN
     END IF
 
     ! Convert the outputs of MD_End from Fortran to C

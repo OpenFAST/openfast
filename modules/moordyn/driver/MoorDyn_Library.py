@@ -75,17 +75,20 @@ class MoorDynLibAPI(CDLL):
         self.MD_INIT_C.restype = c_int
 
         self.MD_CALCOUTPUT_C.argtypes = [
-            POINTER(c_double),                    # IN: time
+            POINTER(c_double),                    # IN: time @ n
+            POINTER(c_float),                     # IN: Positions -- node positions    (1 x 6 array)  
+            POINTER(c_float),                     # IN: Velocities -- node velocities  (1 x 6 array)   
+            POINTER(c_float),                     # OUT: Forces -- node velocities      (3 forces and 3 moments)
             POINTER(c_int),                       # OUT: ErrStat_C
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
         self.MD_CALCOUTPUT_C.restype = c_int
         
         self.MD_UPDATESTATES_C.argtypes = [
-            POINTER(c_double),                    # IN: time
-            POINTER(c_int),                       # OUT: global time step number
-            POINTER(c_double),                    # IN: time array
-            POINTER(c_int),                       # IN: time array length
+            POINTER(c_double),                    # IN: time @ n
+            POINTER(c_double),                    # IN: time @ n+1
+            POINTER(c_float),                     # IN: Positions -- node positions    (1 x 6 array)
+            POINTER(c_float),                     # IN: Velocities -- node velocities  (1 x 6 array)
             POINTER(c_int),                       # OUT: ErrStat_C
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
@@ -98,14 +101,14 @@ class MoorDynLibAPI(CDLL):
         self.MD_END_C.restype = c_int
 
     # md_init ------------------------------------------------------------------------------------------------------------
-    def md_init(self, input_file_string, input_file_string_length, g, rho_water, depth_water, platform_init_pos):
+    def md_init(self, input_string_array, g, rho_water, depth_water, platform_init_pos):
 
         print('MoorDyn_Library.py: Running MD_INIT_C .....')
 
         # Convert the string into a c_char byte array
-        input_string_array = (c_char_p * len(input_file_string))()
-        for i, param in enumerate(input_file_string):
-            input_string_array[i] = param.encode('utf-8')
+        input_string = '\x00'.join(input_string_array)
+        input_string = input_string.encode('utf-8')
+        input_string_length = len(input_string)
 
         # Convert the positions array into c_float array
         init_positions_c = (c_float * 6)(0.0, )
@@ -115,8 +118,8 @@ class MoorDynLibAPI(CDLL):
         self._numChannels = c_int(0)
 
         self.MD_INIT_C(
-            input_string_array,                    # IN: input file string
-            byref(c_int(input_file_string_length)),# IN: input file string length
+            c_char_p(input_string),                # IN: input file string
+            byref(c_int(input_string_length)),     # IN: input file string length
             byref(c_double(self.dt)),              # IN: time step (dt)
             byref(c_double(g)),                    # IN: g
             byref(c_double(rho_water)),            # IN: rho_water
@@ -128,9 +131,8 @@ class MoorDynLibAPI(CDLL):
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.error_status.value != 0:
-            print(f"md_init Error {self.error_status.value}: {self.error_message.value}")
-            return
+        
+        self.check_error()
 
         # Initialize output channels
         self._channel_output_array = (c_double * self._numChannels.value)(0.0, )
@@ -139,41 +141,58 @@ class MoorDynLibAPI(CDLL):
         print('MoorDyn_Library.py: Completed MD_INIT_C')
 
     # md_calcOutput ------------------------------------------------------------------------------------------------------------
-    def md_calcOutput(self,t):
+    def md_calcOutput(self,t, positions, velocities, forces):
 
         print('MoorDyn_Library.py: Running MD_CALCOUTPUT_C .....')
 
+        positions_c = (c_float * 6)(0.0,)
+        for i, p in enumerate(positions):
+            positions_c[i] = c_float(p)
+
+        velocities_c = (c_float * 6)(0.0,)
+        for i, p in enumerate(velocities):
+            velocities_c[i] = c_float(p)
+
+        forces_c = (c_float * 6)(0.0,)
+        for i, p in enumerate(forces):
+            forces_c[i] = c_float(p)
+
         self.MD_CALCOUTPUT_C(
             byref(c_double(t)),                    # IN: time
+            byref(c_float(positions_c)),           # IN: positions
+            byref(c_float(velocities_c)),          # IN: velocities
+            byref(c_float(forces_c)),              # OUT: forces
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.error_status.value != 0:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
+        
+        self.check_error()
 
         print('MoorDyn_Library.py: Completed MD_CALCOUTPUT_C')
 
     # md_updateStates ------------------------------------------------------------------------------------------------------------
-    def md_updateStates(self,t,n,time):
+    def md_updateStates(self, t, t2, positions, velocities):
 
         print('MoorDyn_Library.py: Running MD_UPDATESTATES_C .....')
 
-        time_c = (c_double * len(time))(0.0, )
-        for j, p in enumerate(time):
-            time_c[j] = c_double(p)
+        positions_c = (c_float * 6)(0.0,)
+        for i, p in enumerate(positions):
+            positions_c[i] = c_float(p)
+
+        velocities_c = (c_float * 6)(0.0,)
+        for i, p in enumerate(velocities):
+            velocities_c[i] = c_float(p)
 
         self.MD_UPDATESTATES_C(
-            byref(c_double(t)),                    # IN: current time
-            byref(c_int(n)),                       # IN: global time step number
-            time_c,                                # IN: time array
-            byref(c_int(len(time))),               # IN: time array length
+            byref(c_double(t)),                    # IN: current time (@ n)
+            byref(c_double(t2)),                   # IN: next time step (@ n+1)
+            byref(c_float(positions_c)),           # IN: positions
+            byref(c_float(velocities_c)),          # IN: velocities
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.error_status.value != 0:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
+        
+        self.check_error()
 
         print('MoorDyn_Library.py: Completed MD_UPDATESTATES_C')
 
@@ -186,9 +205,8 @@ class MoorDynLibAPI(CDLL):
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
-        if self.error_status.value != 0:
-            print(f"Error {self.error_status.value}: {self.error_message.value}")
-            return
+        
+        self.check_error()
 
         print('MoorDyn_Library.py: Completed MD_END_C')
     
@@ -196,3 +214,13 @@ class MoorDynLibAPI(CDLL):
     @property
     def fatal_error(self):
         return self.error_status.value >= self.abort_error_level.value
+
+    def check_error(self):
+        if self.error_status_c.value == 0:
+            return
+        elif self.error_status_c.value < self.abort_error_level:
+            print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+        else:
+            print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+            self.md_end()
+            raise Exception("\nInflowWind terminated prematurely.")
