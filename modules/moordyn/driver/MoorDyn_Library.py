@@ -75,10 +75,11 @@ class MoorDynLibAPI(CDLL):
         self.MD_INIT_C.restype = c_int
 
         self.MD_CALCOUTPUT_C.argtypes = [
-            POINTER(c_double),                    # IN: time @ n
+            POINTER(c_double),                    # IN: Time @ n
             POINTER(c_float),                     # IN: Positions -- node positions    (1 x 6 array)  
             POINTER(c_float),                     # IN: Velocities -- node velocities  (1 x 6 array)   
             POINTER(c_float),                     # OUT: Forces -- node velocities      (3 forces and 3 moments)
+            POINTER(c_float),                     # OUT: Output Channel Values
             POINTER(c_int),                       # OUT: ErrStat_C
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
@@ -134,14 +135,10 @@ class MoorDynLibAPI(CDLL):
         
         self.check_error()
 
-        # Initialize output channels
-        self._channel_output_array = (c_double * self._numChannels.value)(0.0, )
-        self._channel_output_values = np.empty( (self.numTimeSteps, self._numChannels.value) )
-
         print('MoorDyn_Library.py: Completed MD_INIT_C')
 
     # md_calcOutput ------------------------------------------------------------------------------------------------------------
-    def md_calcOutput(self,t, positions, velocities, forces):
+    def md_calcOutput(self,t, positions, velocities, forces, output_channel_values):
 
         print('MoorDyn_Library.py: Running MD_CALCOUTPUT_C .....')
 
@@ -157,11 +154,16 @@ class MoorDynLibAPI(CDLL):
         for i, p in enumerate(forces):
             forces_c[i] = c_float(p)
 
+        outputs_c = (c_float * self._numChannels.value)(0.0,)
+        for i, p in enumerate(output_channel_values):
+            outputs_c[i] = c_float(p)
+
         self.MD_CALCOUTPUT_C(
             byref(c_double(t)),                    # IN: time
             byref(c_float(positions_c)),           # IN: positions
             byref(c_float(velocities_c)),          # IN: velocities
             byref(c_float(forces_c)),              # OUT: forces
+            byref(c_float(outputs_c)),             # OUT: output channel values
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
@@ -216,11 +218,11 @@ class MoorDynLibAPI(CDLL):
         return self.error_status.value >= self.abort_error_level.value
 
     def check_error(self):
-        if self.error_status_c.value == 0:
+        if self.error_status.value == 0:
             return
-        elif self.error_status_c.value < self.abort_error_level:
-            print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+        elif self.error_status.value < self.abort_error_level:
+            print(f"{self.error_levels[self.error_status.value]}: {self.error_message.value.decode('ascii')}")
         else:
-            print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
-            self.md_end()
-            raise Exception("\nInflowWind terminated prematurely.")
+            print(f"{self.error_levels[self.error_status.value]}: {self.error_message.value.decode('ascii')}")
+            #self.md_end()
+            raise Exception("\nMoorDyn terminated prematurely.")

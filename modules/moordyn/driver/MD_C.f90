@@ -64,8 +64,8 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DEPTH_C
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6)
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
-    TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelNames_C
-    TYPE(C_PTR)                                    , INTENT(  OUT)   :: OutputChannelUnits_C
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(100000)
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025)
 
@@ -76,7 +76,7 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     REAL(DbKi)                                                       :: DTcoupling
     INTEGER(IntKi)                                                   :: ErrStat, ErrStat2
     CHARACTER(ErrMsgLen)                                             :: ErrMsg, ErrMsg2
-    INTEGER                                                          :: I, J
+    INTEGER                                                          :: I, J, K
 
     ! NOTE: Wave info will be handled differently in the future.  So the following is a temporary hack until that is finalized
     ! Hard coded for 10 wave steps.  Doesn't actually matter since it will get zeroed
@@ -137,30 +137,41 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
          ErrMsg  = "MD_INIT_C: Could not allocate input"
          RETURN
       endif
-
+    
+    !-------------------------------------------------
     ! Call the main subroutine MD_Init
+    !-------------------------------------------------
     CALL MD_Init(InitInp, u(1), p, x, xd, z, other, y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)
-    !FIXME: this may catch messages labelled as Info as fatal errors.  You probably don't want that.
     IF (ErrStat .GE. AbortErrLev) THEN
         PRINT *, "MD_INIT_C: Main MD_Init subroutine failed!"
         PRINT *, ErrMsg
         RETURN
     END IF
 
-    ! Convert the outputs of MD_Init from Fortran to C
-    ALLOCATE(tmp_OutputChannelNames_C(size(InitOutData%writeOutputHdr)))
-    ALLOCATE(tmp_OutputChannelUnits_C(size(InitOutData%writeOutputUnt)))
-    NumChannels_C = size(InitOutData%writeOutputHdr)
-    PRINT *, 'MD_INIT_C: The number of output channels is ', NumChannels_C
+    !-------------------------------------------------
+    !  Set output channel information for driver code
+    !-------------------------------------------------
 
-    DO I = 1,NumChannels_C
-        tmp_OutputChannelNames_C(I) = TRANSFER(InitOutData%writeOutputHdr(I)//C_NULL_CHAR, tmp_OutputChannelNames_C(I))
-        tmp_OutputChannelUnits_C(I) = TRANSFER(InitOutData%writeOutputUnt(I)//C_NULL_CHAR, tmp_OutputChannelUnits_C(I))
+    ! Number of channels
+    NumChannels_C = size(InitOutData%WriteOutputHdr)
+
+    ! Transfer the output channel names and units to c_char arrays for returning
+    k=1
+    DO i=1,NumChannels_C
+        DO j=1,ChanLen    ! max length of channel name.  Same for units
+            OutputChannelNames_C(k)=InitOutData%WriteOutputHdr(i)(j:j)
+            OutputChannelUnits_C(k)=InitOutData%WriteOutputUnt(i)(j:j)
+            k=k+1
+        END DO
     END DO
-    OutputChannelNames_C = C_LOC(tmp_OutputChannelNames_C)
-    OutputChannelUnits_C = C_LOC(tmp_OutputChannelUnits_C)
 
+    ! null terminate the string
+    OutputChannelNames_C(k) = C_NULL_CHAR
+    OutputChannelUnits_C(k) = C_NULL_CHAR
+
+    !-------------------------------------------------
     ! Clean up variables and set up for IFW_CALCOUTPUT_C
+    !------------------------------------------------- 
     CALL MD_DestroyInitInput( InitInp, ErrStat, ErrMsg )
     IF (ErrStat .GE. AbortErrLev) THEN
         PRINT *, ErrMsg
@@ -200,9 +211,11 @@ END SUBROUTINE MD_INIT_C
 !===============================================================================================================
 !---------------------------------------------- MD UPDATE STATES -----------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_UPDATESTATES_C(TIME_C, TIME2_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_UPDATESTATES_C')
+SUBROUTINE MD_UPDATESTATES_C(TIME_C, TIME2_C, POSITIONS_C, VELOCITIES_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_UPDATESTATES_C')
 
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: TIME_C, TIME2_C
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: POSITIONS_C
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: VELOCITIES_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C
 
@@ -224,7 +237,9 @@ SUBROUTINE MD_UPDATESTATES_C(TIME_C, TIME2_C, ErrStat_C, ErrMsg_C) BIND (C, NAME
          RETURN
     END IF
 
+    !-------------------------------------------------
     ! Call the main subroutine MD_UpdateStates
+    !-------------------------------------------------
     CALL MD_UpdateStates( t_array(1), N_Global, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
     IF (ErrStat .GE. AbortErrLev) THEN
         PRINT *, "MD_UPDATESTATES_C: Main MD_calcOutput subroutine failed!"
@@ -232,7 +247,9 @@ SUBROUTINE MD_UPDATESTATES_C(TIME_C, TIME2_C, ErrStat_C, ErrMsg_C) BIND (C, NAME
         RETURN
     END IF
 
+    !-------------------------------------------------
     ! Convert the outputs of MD_calcOutput back to C
+    !-------------------------------------------------
     IF (ErrStat /= 0) THEN
         ErrStat_C = ErrID_Fatal
     ELSE
@@ -247,9 +264,13 @@ END SUBROUTINE MD_UPDATESTATES_C
 !===============================================================================================================
 !---------------------------------------------- MD CALC OUTPUT -------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_CALCOUTPUT_C(Time_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOUTPUT_C')
+SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, FORCES_C, OUTPUTS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOUTPUT_C')
 
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: Time_C
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: POSITIONS_C
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: VELOCITIES_C
+    REAL(C_FLOAT)                                  , INTENT(  OUT)   :: FORCES_C
+    REAL(C_FLOAT)                                  , INTENT(  OUT)   :: OUTPUTS_C(p%NumOuts)
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C
 
@@ -267,7 +288,9 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOU
         RETURN
     end if
 
+    !-------------------------------------------------
     ! Call the main subroutine MD_CalcOutput
+    !-------------------------------------------------
     CALL MD_CalcOutput( t, u(1), p, x, xd, z, other, y, m, ErrStat, ErrMsg )
     IF (ErrStat .GE. AbortErrLev) THEN
         PRINT *, "MD_CALCOUTPUT_C: Main MD_calcOutput subroutine failed!"
@@ -275,7 +298,11 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOU
         RETURN
     END IF
 
+    !-------------------------------------------------
     ! Convert the outputs of MD_calcOutput back to C
+    !-------------------------------------------------
+    OUTPUTS_C = REAL(y%WriteOutput, C_FLOAT)
+
     IF (ErrStat /= 0) THEN
         ErrStat_C = ErrID_Fatal
     ELSE

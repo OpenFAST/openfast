@@ -114,13 +114,23 @@ except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
     exit(1)
 
+# Set up the output channels listed in the MD input "file"
+output_channel_names = md_lib._channel_names.value
+output_channel_units = md_lib._channel_units.value
+print('output channel names are: ',output_channel_names)
+print('output channel units are: ',output_channel_units)
+
+output_channel_values = np.zeros(md_lib._numChannels.value)
+output_channel_array  = np.zeros( (md_lib.numTimeSteps,md_lib._numChannels.value+1) )
+
 # Call md_calcOutput - calculating outputs for initial time t=0 and initial position & velocity
 try: 
-    md_lib.md_calcOutput(time[0], platform_init_pos, platform_init_vel, forces)
+    md_lib.md_calcOutput(time[0], platform_init_pos, platform_init_vel, forces, output_channel_values)
 except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
     exit(1)
 print('Time',time[0],' completed')
+output_channel_array[0,:] = np.append(time[0],output_channel_values)
 
 # Run at each time step
 for i in range( 0, len(time)-1):
@@ -128,7 +138,7 @@ for i in range( 0, len(time)-1):
     # IF DOING PREDICTOR-CORRECTOR
     for correction in range(0, NumCorrections+1):
 
-        # Update position and velocity at each time step - handles one interface point, i.e. substructure is represented as a single point
+        # User must update position and velocity at each time step - handles one interface point, i.e. substructure is represented as a single point
         Positions = [0.1, 0.2, 0.3, 0.04, 0.05, 0.06]
         Velocities = [0.0, 0.0, 0.0, 0.00, 0.00, 0.00]
 
@@ -141,10 +151,12 @@ for i in range( 0, len(time)-1):
 
         # Call md_calcOutput
         try: 
-            md_lib.md_calcOutput(time[i+1], Positions, Velocities, forces)
+            md_lib.md_calcOutput(time[i+1], Positions, Velocities, forces, output_channel_values) # output channel values are overwritten for each time step
         except Exception as e:
             print("{}".format(e))   # Exceptions handled in moordyn_library.py
             exit(1)
+
+    output_channel_array[i+1,:] = np.append(time[i+1],output_channel_values)
 
     print('Time ',time[i+1],' completed')
 
