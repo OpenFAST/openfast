@@ -642,8 +642,6 @@ SUBROUTINE HydroDyn_CalcOutput_c(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, Nod
    tmpNodeVel(1:6,1:NumNodePts)   = reshape( real(NodeVel_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
    tmpNodeAcc(1:6,1:NumNodePts)   = reshape( real(NodeAcc_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
-write(20,*) Time,NodePos_C,NodeVel_C,NodeAcc_C
-write(21,*) Time,tmpNodePos,tmpNodeVel,tmpNodeAcc
 
    ! Transfer motions to input meshes
    call Set_MotionMesh( ErrStat2, ErrMsg2 )           ! update motion mesh with input motion arrays
