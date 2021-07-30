@@ -122,7 +122,7 @@ class HydroDynLib(CDLL):
         # Initial environmental conditions
         self.gravity     = 9.80665  # Gravity (m/s^2)
         self.defWtrDens  = 1025.0   # Water density (kg/m^3)
-        self.defWtrDpth  = 120.0    # Water depth (m)
+        self.defWtrDpth  = 200.0    # Water depth (m)
         self.defMSL2SWL  = 0.0      # Offset between still-water level and mean sea level (m) [positive upward]
 
         # Interpolation order (must be 1: linear, or 2: quadratic)
@@ -205,7 +205,6 @@ class HydroDynLib(CDLL):
             POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
             POINTER(c_float),                   # nodeVel -- node velocities     in flat array of 6*numNodePts
             POINTER(c_float),                   # nodeAcc -- node accelerations  in flat array of 6*numNodePts
-            POINTER(c_float),                   # nodeFrc -- node forces/moments in flat array of 6*numNodePts
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
@@ -390,7 +389,6 @@ class HydroDynLib(CDLL):
             nodePos_flat_c,                         # IN: positions - specified by user
             nodeVel_flat_c,                         # IN: velocities at desired positions
             nodeAcc_flat_c,                         # IN: accelerations at desired positions
-            nodeFrc_flat_c,                         # OUT: resulting forces/moments array
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
         )
@@ -414,9 +412,9 @@ class HydroDynLib(CDLL):
         if self.error_status_c.value == 0:
             return
         elif self.error_status_c.value < self.abort_error_level:
-            print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+            print(f"HydroDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
         else:
-            print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+            print(f"HydroDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
             self.hydrodyn_end()
             raise Exception("\nHydroDyn terminated prematurely.")
 
@@ -615,8 +613,8 @@ class WriteOutChans():
         f_string = "{:10.4f}"+"{:25.7f}"*(l-1)
         for i in range(0,chan_data.shape[0]):
             self.OutFile.write(f_string.format(*chan_data[i,:]) + '\n')
-            if i==0:
-                print(f"{chan_data[i,:]}")
+            #if i==0:
+            #    print(f"{chan_data[i,:]}")
 
     def end(self):
         if self.opened:
