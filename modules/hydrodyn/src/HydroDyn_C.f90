@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2021 National Renewable Energy Lab 
+! Copyright (C) 2021 National Renewable Energy Lab
 !
 ! This file is part of HydroDyn.
 !
@@ -82,7 +82,7 @@ MODULE HydroDyn_C
    !     the glue code.  However, here we do not pass state information through the
    !     interface and therefore must store it here analogously to how it is handled
    !     in the OpenFAST glue code.
-   real(DbKi)                             :: dT_Global         ! dT of the code calling this module 
+   real(DbKi)                             :: dT_Global         ! dT of the code calling this module
    integer(IntKi)                         :: N_Global          ! global timestep
    real(DbKi)                             :: T_Initial         ! initial Time of simulation
    real(DbKi),       allocatable          :: InputTimes(:)     ! input times corresponding to u(:) array
@@ -115,11 +115,11 @@ MODULE HydroDyn_C
    !        - N points  -- flexible structure (either floating or fixed bottom)
    integer(IntKi)                         :: NumNodePts              ! Number of mesh points we are interfacing motions/loads to/from HD
    type(MeshType)                         :: HD_MotionMesh           ! mesh for motions of external nodes
-   type(MeshType)                         :: HD_LoadMesh             ! mesh for loads  for external nodes 
+   type(MeshType)                         :: HD_LoadMesh             ! mesh for loads  for external nodes
    type(MeshType)                         :: HD_LoadMesh_tmp         ! mesh for loads  for external nodes -- temporary
    !------------------------------
    !  Mesh mapping: motions
-   !     The mapping of motions from the nodes passed in to the corresponding HD meshes 
+   !     The mapping of motions from the nodes passed in to the corresponding HD meshes
    type(MeshMapType)                      :: Map_Motion_2_HD_PRP_P   ! Mesh mapping between input motion mesh and PRP
    type(MeshMapType)                      :: Map_Motion_2_HD_WB_P    ! Mesh mapping between input motion mesh and WAMIT body(ies) mesh
    type(MeshMapType)                      :: Map_Motion_2_HD_Mo_P    ! Mesh mapping between input motion mesh and Morison mesh
@@ -136,7 +136,7 @@ MODULE HydroDyn_C
    real(ReKi), allocatable                :: tmpNodeAcc(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
    real(ReKi), allocatable                :: tmpNodeFrc(:,:)         ! temp array.  Probably don't need this, but makes conversion to   C clearer.
    !------------------------------------------------------------------------------------
- 
+
 
 CONTAINS
 
@@ -149,6 +149,7 @@ subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
    character(ErrMsgLen),   intent(in   )  :: ErrMsg                  !< aggregated error message (fortran type)
    integer(c_int),         intent(  out)  :: ErrStat_C
    character(kind=c_char), intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+   integer                                :: i
    ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
    if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
       ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
@@ -182,8 +183,8 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    real(c_float),             intent(in   )  :: defWtrDens_C                           !< Default value for water density (may be overridden by input file)
    real(c_float),             intent(in   )  :: defWtrDpth_C                           !< Default value for water density (may be overridden by input file)
    real(c_float),             intent(in   )  :: defMSL2SWL_C                           !< Default Offset between still-water level and mean sea level (m) [positive upward] (may be overridden by input file)
-   real(c_float),             intent(in   )  :: PtfmRefPtPositionX_C                   !< Initial position in wave field 
-   real(c_float),             intent(in   )  :: PtfmRefPtPositionY_C                   !< Initial position in wave field 
+   real(c_float),             intent(in   )  :: PtfmRefPtPositionX_C                   !< Initial position in wave field
+   real(c_float),             intent(in   )  :: PtfmRefPtPositionY_C                   !< Initial position in wave field
    integer(c_int),            intent(in   )  :: NumNodePts_C                           !< Number of mesh points we are transfering motions to and output loads to
    real(c_float),             intent(in   )  :: InitNodePositions_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]
    !NOTE: not setting up the WaveElev at this point.  Leaving placeholder for future
@@ -203,7 +204,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    character(IntfStrLen)                                          :: OutRootName       !< Root name to use for echo files and other
    character(kind=C_char, len=InputFileStringLength_C), pointer   :: InputFileString   !< Input file as a single string with NULL chracter separating lines
 
-   real(DbKi)                                                     :: TimeInterval      !< timestep for HD 
+   real(DbKi)                                                     :: TimeInterval      !< timestep for HD
    integer(IntKi)                                                 :: ErrStat           !< aggregated error message
    character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
@@ -223,7 +224,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
       if (Failed())  return
    endif
 
-   ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
+   ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string
    call C_F_pointer(InputFileString_C, InputFileString)
 
    ! Get the data to pass to HD_Init
@@ -257,7 +258,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    InitInp%defMSL2SWL            = REAL(defMSL2SWL_C, ReKi)
    TimeInterval                  = REAL(DT_C,         DbKi)
    dT_Global                     = TimeInterval                ! Assume this DT is constant for all simulation
-   N_Global                      = 0_IntKi                     ! Assume we are on timestep 0 at start 
+   N_Global                      = 0_IntKi                     ! Assume we are on timestep 0 at start
    t_initial                     = REAL(T_Initial_C,  DbKi)
    InitInp%TMax                  = REAL(TMax_C,       DbKi)
 
@@ -346,7 +347,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    do i = 1, InterpOrder + 1
       InputTimes(i) = t_initial - (i - 1) * dT_Global
    enddo
-   InputTimePrev = InputTimes(1)       ! Set this as the last call time for UpdateStates
+   InputTimePrev = InputTimes(1) - dT_Global    ! Initialize for UpdateStates
 
 
    !-------------------------------------------------------------
@@ -367,7 +368,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
 
 !TODO
 !  Is there any other InitOutData should be returned
-!  Any additional warnings or error handling necessary 
+!  Any additional warnings or error handling necessary
 
 
    !-------------------------------------------------
@@ -441,14 +442,14 @@ CONTAINS
          ! initial position and orientation of node
          InitPos  = tmpNodePos(1:3,iNode)
          theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-         Orient   = EulerConstruct( theta )
+         CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
          call MeshPositionNode(  HD_MotionMesh            , &
                                  iNode                    , &
                                  InitPos                  , &  ! position
                                  ErrStat3, ErrMsg3        , &
                                  Orient                     )  ! orientation
             if (ErrStat3 >= AbortErrLev) return
-       
+
          call MeshConstructElement ( HD_MotionMesh, ELEMENT_POINT, ErrStat3, ErrMsg3, iNode )
             if (ErrStat3 >= AbortErrLev) return
       enddo
@@ -461,7 +462,7 @@ CONTAINS
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
       !call MeshPrintInfo( CU, HD_MotionMesh )
-   
+
       !-------------------------------------------------------------
       ! Loads mesh
       !     This point mesh may contain more than one point. Mapping will be used to map
@@ -476,9 +477,9 @@ CONTAINS
                      Force    = .TRUE.             ,&
                      Moment   = .TRUE.             )
          if (ErrStat3 >= AbortErrLev) return
-      
+
       HD_LoadMesh%RemapFlag  = .TRUE.
- 
+
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
       !call MeshPrintInfo( CU, HD_LoadMesh )
@@ -497,9 +498,9 @@ CONTAINS
                      Force    = .TRUE.             ,&
                      Moment   = .TRUE.             )
          if (ErrStat3 >= AbortErrLev) return
-      
+
       HD_LoadMesh_tmp%RemapFlag  = .TRUE.
- 
+
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
       !call MeshPrintInfo( CU, HD_LoadMesh_tmp )
@@ -534,7 +535,7 @@ CONTAINS
    !> Sanity check the nodes
    !!    If more than one input node was passed in, but only a single HD node
    !!    exits (single Morison or single WAMIT), then give error that too many
-   !!    nodes passed. 
+   !!    nodes passed.
    subroutine CheckNodes(ErrStat3,ErrMsg3)
       integer(IntKi),         intent(  out)  :: ErrStat3    !< temporary error status
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
@@ -551,7 +552,7 @@ CONTAINS
                ErrStat3 = ErrID_Fatal
                ErrMsg3  = "More nodes passed into library than exist in HydroDyn model Morison mesh"
             endif
-         elseif ( u(1)%WAMITMesh%Committed    ) then     ! No Morison 
+         elseif ( u(1)%WAMITMesh%Committed    ) then     ! No Morison
             if ( u(1)%WAMITMesh%Nnodes < NumNodePts ) then
                ErrStat3 = ErrID_Fatal
                ErrMsg3  = "More nodes passed into library than exist in HydroDyn model WAMIT mesh"
@@ -616,7 +617,7 @@ SUBROUTINE HydroDyn_CalcOutput_c(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, Nod
    ! Local variables
    real(DbKi)                                :: Time
    integer(IntKi)                            :: iNode
-   integer(IntKi)                            :: ErrStat                       !< aggregated error status 
+   integer(IntKi)                            :: ErrStat                       !< aggregated error status
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
@@ -641,14 +642,17 @@ SUBROUTINE HydroDyn_CalcOutput_c(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, Nod
    tmpNodeVel(1:6,1:NumNodePts)   = reshape( real(NodeVel_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
    tmpNodeAcc(1:6,1:NumNodePts)   = reshape( real(NodeAcc_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
+write(20,*) Time,NodePos_C,NodeVel_C,NodeAcc_C
+write(21,*) Time,tmpNodePos,tmpNodeVel,tmpNodeAcc
 
    ! Transfer motions to input meshes
-   call Set_MotionMesh()                              ! update motion mesh with input motion arrays
+   call Set_MotionMesh( ErrStat2, ErrMsg2 )           ! update motion mesh with input motion arrays
+      if (Failed())  return
    call HD_SetInputMotion( u(1), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
       if (Failed())  return
 
- 
-   ! Call the main subroutine HydroDyn_CalcOutput to get the resulting forces and moments at time T 
+
+   ! Call the main subroutine HydroDyn_CalcOutput to get the resulting forces and moments at time T
    CALL HydroDyn_CalcOutput( Time, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
@@ -705,7 +709,7 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
    ! Local variables
    logical                                   :: CorrectionStep                ! if we are repeating a timestep in UpdateStates, don't update the inputs array
    integer(IntKi)                            :: iNode
-   integer(IntKi)                            :: ErrStat                       !< aggregated error status 
+   integer(IntKi)                            :: ErrStat                       !< aggregated error status
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
@@ -725,7 +729,7 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
 
 
    !-------------------------------------------------------
-   ! Check the time for current timestep and next timestep 
+   ! Check the time for current timestep and next timestep
    !-------------------------------------------------------
    !     These inputs are used in the time stepping algorithm within HD_UpdateStates
    !     For quadratic interpolation (InterpOrder==2), 3 timesteps are used.  For
@@ -733,17 +737,28 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
    !        u(1)  inputs at t + dt        ! Next timestep
    !        u(2)  inputs at t             ! This timestep
    !        u(3)  inputs at t - dt        ! previous timestep (quadratic only)
+   !
+   !  NOTE: Within HD, the Radiation calculations can be done at an integer multiple of the
+   !        timestep.  This is checked at each UpdateStates call.  However, if we compile
+   !        in double precision, the values of Time_C and TimeNext_C are in double precison,
+   !        but InputTimes is in DbKi (which is promoted quad precision when compiling in
+   !        double precision) and the check may fail.  So we are going to set the times we
+   !        we pass over to UpdateStates using the global timestep and the stored DbKi value
+   !        for the timestep rather than the lower precision (when compiled double) time
+   !        values passed in.  It is a bit of a clumsy workaround for this precision loss,
+   !        but should not affect any results.
 
    !  Check if we are repeating an UpdateStates call (for example in a predictor/corrector loop)
    if ( EqualRealNos( real(Time_C,DbKi), InputTimePrev ) ) then
       CorrectionStep = .true.
-      N_Global = N_Global + 1_IntKi
    else ! Setup time input times array
+      InputTimePrev          = real(Time_C,DbKi)            ! Store for check next time
       if (InterpOrder>1) then ! quadratic, so keep the old time
-         InputTimes(INPUT_LAST) = InputTimes(INPUT_CURR)    ! u(3)
+         InputTimes(INPUT_LAST) = ( N_Global - 1 ) * dT_Global    ! u(3) at T-dT
       endif
-      InputTimes(INPUT_CURR) = REAL(Time_C,DbKi)            ! u(2)
-      InputTimes(INPUT_PRED) = REAL(TimeNext_C,DbKi)        ! u(1)
+      InputTimes(INPUT_CURR) =   N_Global       * dT_Global       ! u(2) at T
+      InputTimes(INPUT_PRED) = ( N_Global + 1 ) * dT_Global       ! u(1) at T+dT
+      N_Global = N_Global + 1_IntKi                               ! increment counter to T+dT
    endif
 
 
@@ -758,7 +773,7 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
    else
       ! Cycle inputs back one timestep since we are moving forward in time.
       if (InterpOrder>1) then ! quadratic, so keep the old time
-         call HydroDyn_CopyInput( u(INPUT_CURR), u(INPUT_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);     if (Failed())  return
+         call HydroDyn_CopyInput( u(INPUT_CURR), u(INPUT_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);        if (Failed())  return
       endif
       ! Move inputs from previous t+dt (now t) to t
       call HydroDyn_CopyInput( u(INPUT_PRED), u(INPUT_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);           if (Failed())  return
@@ -773,10 +788,11 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
    tmpNodeAcc(1:6,1:NumNodePts)   = reshape( real(NodeAcc_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
    ! Transfer motions to input meshes
-   call Set_MotionMesh()                                       ! update motion mesh with input motion arrays
+   call Set_MotionMesh( ErrStat2, ErrMsg2 )                    ! update motion mesh with input motion arrays
+      if (Failed())  return
    call HD_SetInputMotion( u(INPUT_PRED), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
       if (Failed())  return
- 
+
 
    ! Set copy the current state over to the predicted state for sending to UpdateStates
    !     -- The STATE_PREDicted will get updated in the call.
@@ -785,7 +801,7 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
    CALL HydroDyn_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
    CALL HydroDyn_CopyConstrState (z(          STATE_CURR), z(          STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
    CALL HydroDyn_CopyOtherState  (OtherStates(STATE_CURR), OtherStates(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
- 
+
 
    ! Call the main subroutine HydroDyn_UpdateStates to get the velocities
    CALL HydroDyn_UpdateStates( InputTimes(INPUT_PRED), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherStates(STATE_PRED), m, ErrStat2, ErrMsg2 )
@@ -808,7 +824,7 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
    CALL HydroDyn_CopyDiscState   (xd(         STATE_PRED), xd(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
    CALL HydroDyn_CopyConstrState (z(          STATE_PRED), z(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
    CALL HydroDyn_CopyOtherState  (OtherStates(STATE_PRED), OtherStates(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
- 
+
 
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -837,7 +853,7 @@ SUBROUTINE HydroDyn_End_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='HydroDyn_End_c')
 
    ! Local variables
    integer(IntKi)             :: i                                !< generic loop counter
-   integer                    :: ErrStat                          !< aggregated error status 
+   integer                    :: ErrStat                          !< aggregated error status
    character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
    integer                    :: ErrStat2                         !< temporary error status  from a call
    character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
@@ -921,14 +937,16 @@ END SUBROUTINE HydroDyn_End_c
 
 
 !> This routine is operating on module level data, hence few inputs
-subroutine Set_MotionMesh()
+subroutine Set_MotionMesh(ErrStat3, ErrMsg3)
+   integer(IntKi),            intent(  out)  :: ErrStat3
+   character(ErrMsgLen),      intent(  out)  :: ErrMsg3
    integer(IntKi)                            :: iNode
    real(R8Ki)                                :: theta(3)
    real(R8Ki)                                :: Orient(3,3)
    ! Set mesh corresponding to input motions
    do iNode=1,NumNodePts
       theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-      Orient   = EulerConstruct( theta )
+      CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat3, ErrMsg3 )
       HD_MotionMesh%TranslationDisp(1:3,iNode) = tmpNodePos(1:3,iNode) - HD_MotionMesh%Position(1:3,iNode)  ! relative displacement only
       HD_MotionMesh%Orientation(1:3,1:3,iNode) = Orient
       HD_MotionMesh%TranslationVel( 1:3,iNode) = tmpNodeVel(1:3,iNode)
