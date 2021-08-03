@@ -423,6 +423,9 @@ CONTAINS
       CALL ParseVarWDefault ( FileInfo, CurLine, 'InterpOrd', p%InterpOrd, DefaultInterpOrd, ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+         ! RelThickness, default is 0.2 if user doesn't know it, only used for Boing-Vertol UA model = 7
+      CALL ParseVarWDefault ( FileInfo, CurLine, 'RelThickness', p%RelThickness, 0.2, ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
          ! NonDimArea is currently unused by AirfoilInfo or codes using AirfoilInfo.  GJH 9/13/2017
       CALL ParseVar ( FileInfo, CurLine, 'NonDimArea', p%NonDimArea, ErrStat2, ErrMsg2, UnEc )

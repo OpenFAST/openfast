@@ -1630,7 +1630,7 @@ subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, Er
    call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, BL_p, ErrMsg2, ErrStat2); if(Failed()) return
 
    ! --- Compute effective angle of attack and lagged angle of attack (needed to update active states)
-   call BV_getAlphas(i, j, u, p, xd, BL_p, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+   call BV_getAlphas(i, j, u, p, xd, BL_p, AFInfo%RelThickness, alpha_34, alphaE_L, alphaLag_D, adotnorm)
 
    ! --- Update dynamic stall activation states
    call BV_UpdateActiveStates(adotnorm, alpha_34, alphaLag_D, alphaE_L, BL_p, OtherState%activeL(i,j), OtherState%activeD(i,j))
@@ -1645,20 +1645,20 @@ end subroutine UA_UpdateDiscOtherState_BV
 !==============================================================================   
 !> Calculate angle of attacks using Boeing-Vertol model
 !! Drag effective angle of attack needs extra computation
-subroutine BV_getAlphas(i, j, u, p, xd, BL_p, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+subroutine BV_getAlphas(i, j, u, p, xd, BL_p, tc, alpha_34, alphaE_L, alphaLag_D, adotnorm)
    integer,                    intent(in   ) :: i          !< node index within a blade
    integer,                    intent(in   ) :: j          !< blade index
    type(UA_InputType),         intent(in   ) :: u          !< Inputs at t
    type(UA_ParameterType),     intent(in   ) :: p          !< Parameters
    type(UA_DiscreteStateType), intent(in   ) :: xd         !< Discrete states at t 
    type(AFI_UA_BL_Type),       intent(in   ) :: BL_p       !< 
+   real(ReKi),                 intent(in   ) :: tc         !< Thickness ratio of airfoil
    real(ReKi),                 intent(out  ) :: alpha_34   !< alpha at 3/4 chord point
    real(ReKi),                 intent(out  ) :: alphaE_L   !< effective angle of attack for lift
    real(ReKi),                 intent(out  ) :: alphaLag_D !< Lagged angle of attack for drag
    real(ReKi),                 intent(out  ) :: adotnorm   !< alphadot * Tu
    real(ReKi)            :: gammaL, gammaD   !< gamma coefficients for lift and drag respectively
    real(ReKi)            :: dalphaMax        !< Maximum change of angle of attack
-   real(ReKi)            :: tc               !< Thickness ratio of airfoil, TODO TODO TODO
    real(ReKi)            :: dalphaL, dalphaD
    real(ReKi)            :: isgn                                         !< sign of alphadot Norm
    real(ReKi), parameter :: umach = 0.0_ReKi !< Mach number umach=Urel*Minf, Minf (freestrem Mach) for incompressible
@@ -1676,8 +1676,7 @@ subroutine BV_getAlphas(i, j, u, p, xd, BL_p, alpha_34, alphaE_L, alphaLag_D, ad
    dalphaMax = 2._ReKi * BV_TransA(BL_p) ! TODO TODO
 
    ! --- Calculate gamma for lift and drag based rel thickness
-   tc      = 0.18_ReKi ! TODO TODO
-   call BV_getGammas(tc, umach, gammaL, gammaD)
+   call BV_getGammas(tc, umach, gammaL, gammaD) !NOTE: only function of tc 
 
    ! --- Delta alpha
    !dalpha = - K1 * Gamma * sqrt( abs(xd%alpha_dot(i,j) * Tu) ) ! Formula from paper
@@ -1687,7 +1686,7 @@ subroutine BV_getAlphas(i, j, u, p, xd, BL_p, alpha_34, alphaE_L, alphaLag_D, ad
    ! Plateau 
    dalphaL = min(dalphaL, dalphaMax)
    dalphaD = min(dalphaD, dalphaMax)
-   !print*,'dalpha         ', dalphaL,dalphaD
+   !print*,'dalpha         ', dalphaL,dalphaD, dalphaMax
    if ((adotnorm*(alpha_34-BL_p%alpha0)) < 0.0_ReKi) then
        dalphaL = dalphaL*K1neg
        dalphaD = dalphaD*K1neg
@@ -3451,14 +3450,14 @@ contains
       if (ErrStat >= AbortErrLev) return
 
       ! --- Compute effective angle of attack and lagged angle of attack (needed to update active states)
-      call BV_getAlphas(i, j, u, p, xd, BL_p, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+      call BV_getAlphas(i, j, u, p, xd, BL_p, AFInfo%RelThickness, alpha_34, alphaE_L, alphaLag_D, adotnorm)
       alphaE_D = BV_alphaE_D(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j))
 
 #ifdef UA_OUTS
       ! --- Recompute variables, for temporary output to file only
-      ! Calculate deltas to negative and postivive stall angle (delN, and delP)
+      ! Calculate deltas to negative and positive stall angle (delN, and delP)
       call BV_delNP(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j), delN, delP)
-      call BV_getGammas(tc=0.18, umach=0.0_ReKi, gammaL=gammaL, gammaD=gammaD)
+      call BV_getGammas(tc=AFInfo%RelThickness, umach=0.0_ReKi, gammaL=gammaL, gammaD=gammaD)
       TransA = BV_TransA(BL_p)
 #endif 
 
