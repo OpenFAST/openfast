@@ -160,10 +160,10 @@ class MoorDynLibAPI(CDLL):
 
         self.MD_CALCOUTPUT_C(
             byref(c_double(t)),                    # IN: time
-            byref(c_float(positions_c)),           # IN: positions
-            byref(c_float(velocities_c)),          # IN: velocities
-            byref(c_float(forces_c)),              # OUT: forces
-            byref(c_float(outputs_c)),             # OUT: output channel values
+            positions_c,                           # IN: positions
+            velocities_c,                          # IN: velocities
+            forces_c,                              # OUT: forces
+            outputs_c,                             # OUT: output channel values
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
@@ -188,8 +188,8 @@ class MoorDynLibAPI(CDLL):
         self.MD_UPDATESTATES_C(
             byref(c_double(t)),                    # IN: current time (@ n)
             byref(c_double(t2)),                   # IN: next time step (@ n+1)
-            byref(c_float(positions_c)),           # IN: positions
-            byref(c_float(velocities_c)),          # IN: velocities
+            positions_c,                           # IN: positions
+            velocities_c,                          # IN: velocities
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )

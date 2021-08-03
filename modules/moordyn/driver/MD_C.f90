@@ -44,6 +44,7 @@ TYPE(MD_OutputType)                     :: y                   !< Initial system
 TYPE(MD_MiscVarType)                    :: m                   !< Initial misc/optimization variables
 TYPE(MD_InitOutputType)                 :: InitOutData         !< Output for initialization routine
 
+! Time tracking
 INTEGER(IntKi)                          :: N_Global=0          !< Global timestep. MOORDYN IS NOT CURRENTLY USING, BUT MAY CHANGE IN THE FUTURE
 INTEGER(IntKi)                          :: InterpOrder=1       !< Interpolation order: must be 1 (linear) or 2 (quadratic)
 
@@ -127,7 +128,7 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
         InitInp%PtfmInit(I)  = REAL(PtfmInit_C(I),ReKi)
     END DO
 
-    ! Wave INformation - THIS IS A SHORT TERM HACK
+    ! Wave Information - THIS IS A SHORT TERM HACK
     ! Fake wave info -- completely still, with no dynamic pressure terms
     ! Set wave info to zeros -- assume 10 timesteps for now (doesn't really matter since it isn't getting used)
     CALL AllocAry ( InitInp%WaveVel  ,NStepWave, WaveGrid_n, 3, 'InitInp%WaveVel' , ErrStat, ErrMsg );    IF (Failed()) RETURN
@@ -214,7 +215,7 @@ CONTAINS
         ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
         ErrStat_C = ErrStat
     END IF
-END FUNCTION Failed
+    END FUNCTION Failed
 
 END SUBROUTINE MD_INIT_C
 
@@ -238,20 +239,22 @@ SUBROUTINE MD_UPDATESTATES_C(TIME_C, TIME2_C, POSITIONS_C, VELOCITIES_C, ErrStat
     t_array(1)  = REAL(TIME_C, DbKi)          ! t
     t_array(2)  = REAL(TIME2_C, DbKi)         ! t + dt
 
-    allocate(u(InterpOrder+1), STAT=ErrStat)
-    IF (ErrStat .GE. AbortErrLev) then
+    ALLOCATE(u(InterpOrder+1), STAT=ErrStat)
+    IF (ErrStat .GE. AbortErrLev) THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = "MD_UPDATESTATES_C: Could not allocate input"
          RETURN
     END IF
 
-    ! Reshape position and velocity
-    tmpPositions(1:6,1)    = reshape( real(POSITIONS_C(1,1:6),ReKi), (/6,1/) )
-    tmpVelocities(1:6,1)   = reshape( real(VELOCITIES_C(1,1:6),ReKi), (/6,1/) )
+    ! Reshape position and velocity (from a row vector to a column vector)
+    DO J = 1,6
+        tmpPositions(J,1)  = REAL(POSITIONS_C(1,J),ReKi)
+        tmpVelocities(J,1) = REAL(VELOCITIES_C(1,J),ReKi)
+    END DO
 
     ! Transfer motions to input meshes
    call Set_MotionMesh()                                       ! update motion mesh with input motion arrays
-   call HD_SetInputMotion( u(1), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+   call MD_SetInputMotion( u(1), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
       if (Failed())  return
 
     !-------------------------------------------------
@@ -297,15 +300,17 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, FORCES_C, OUTPUTS_
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: Time_C
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: POSITIONS_C(1,6)
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: VELOCITIES_C(1,6)
-    REAL(C_FLOAT)                                  , INTENT(  OUT)   :: FORCES_C
+    REAL(C_FLOAT)                                  , INTENT(  OUT)   :: FORCES_C(1,6)
     REAL(C_FLOAT)                                  , INTENT(  OUT)   :: OUTPUTS_C(p%NumOuts)
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C
 
     ! Local Variables
     REAL(DbKi)                                                       :: t
-    INTEGER(IntKi)                                                   :: ErrStat, ErrStat2
+    INTEGER(IntKi)                                                   :: ErrStat, ErrStat2, J
     CHARACTER(ErrMsgLen)                                             :: ErrMsg, ErrMsg2
+
+    PRINT*, 'inside MD_CALCOUTPUT_C'
 
     ! Set up inputs to MD_CalcOutput
     t = REAL(Time_C, DbKi)
@@ -316,9 +321,11 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, FORCES_C, OUTPUTS_
         RETURN
     end if
 
-    ! Reshape position, velocity, acceleration
-    tmpPositions(1:6,1)    = reshape( real(POSITIONS_C(1,1:6),ReKi), (/6,1/) )
-    tmpVelocities(1:6,1)   = reshape( real(VELOCITIES_C(1,1:6),ReKi), (/6,1/) )
+    ! Reshape position and velocity (from row vector to a column vector)
+    DO J = 1,6
+        tmpPositions(J,1)    = REAL(POSITIONS_C(1,J),ReKi)
+        tmpVelocities(J,1)   = REAL(VELOCITIES_C(1,J),ReKi)
+    END DO
 
     ! Transfer motions to input meshes
     CALL Set_MotionMesh()                            ! update motion mesh with input motion arrays
@@ -345,7 +352,9 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, FORCES_C, OUTPUTS_
     ! Set output force/moment array
     CALL Set_OutputLoadArray( )
     ! Reshape for return
-    FORCES_C(1:6) = reshape( real(tmpForces(1:6,1), c_float), (/6,1/) )
+    DO J = 1,6
+        FORCES_C(1,J) = REAL(tmpForces(J,1), c_float)
+    END DO
 
     OUTPUTS_C = REAL(y%WriteOutput, C_FLOAT)
 
