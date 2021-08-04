@@ -1059,6 +1059,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    character(*), parameter                      :: RoutineName = 'UA_Init'
    
 #ifdef UA_OUTS
+   CHARACTER(6)                                 :: TmpChar                          ! Temporary char array to hold the node digits (3 places only!!!!)
    integer(IntKi)                               :: i,j, iNode, iOffset
    character(64)                                :: chanPrefix
 #endif   
@@ -1120,10 +1121,12 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          
          iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts 
                   
-         chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))
+         !chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))
+         write (TmpChar,'(I3.3)') i          ! 3 digit number
+         chanPrefix = 'AB' // TRIM(Num2LStr(j)) // 'N' // TRIM(TmpChar) 
          
-         InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'ALPHA'
-         InitOut%WriteOutputHdr(iOffset+ 2)  = trim(chanPrefix)//'VREL'
+         InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'Alpha'
+         InitOut%WriteOutputHdr(iOffset+ 2)  = trim(chanPrefix)//'Vrel'
          InitOut%WriteOutputHdr(iOffset+ 3)  = trim(chanPrefix)//'Cn'
          InitOut%WriteOutputHdr(iOffset+ 4)  = trim(chanPrefix)//'Cc'
          InitOut%WriteOutputHdr(iOffset+ 5)  = trim(chanPrefix)//'Cl'
