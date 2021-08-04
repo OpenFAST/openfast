@@ -1377,13 +1377,19 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
    !--- Induction on the lifting line control point
    ! if     InductionAtCP : In: m%W%CP,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
    ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
-   call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ! Transfer to output
-   do iW=1,p%nWings
-       y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
-       y%W(iW)%Vind(2,:) = m%W(iW)%Vind_LL(2,:)
-       y%W(iW)%Vind(3,:) = m%W(iW)%Vind_LL(3,:)
-   enddo
+   if (p%Induction) then
+      call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! Transfer to output
+      do iW=1,p%nWings
+          y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
+          y%W(iW)%Vind(2,:) = m%W(iW)%Vind_LL(2,:)
+          y%W(iW)%Vind(3,:) = m%W(iW)%Vind_LL(3,:)
+      enddo
+   else
+      do iW=1,p%nWings
+          y%W(iW)%Vind(1:3,:) = 0.0_ReKi
+      enddo
+   endif
 end subroutine CalcOutputForAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
@@ -1547,7 +1553,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
             Init_UA_Data%c(i,1)      = p%W(iW)%chord_LL(i) ! NOTE: InitInp chord move-allocd to p
          end do
          Init_UA_Data%dt              = interval          
-         Init_UA_Data%OutRootName     = InitInp%RootName
+         Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'W'//num2lstr(iW)
          Init_UA_Data%numBlades       = 1
          Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes ! At AeroDyn ndoes, not CP
 
@@ -1605,15 +1611,22 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    integer(IntKi)                                    :: errStat2    ! temporary Error status of the operation
    ErrStat  = ErrID_None
    ErrMsg   = ""
+   !NOTE: UA happens at the LL nodes (different from the Control Points)
 
    ! --- Induction on the lifting line control points
-   ! if     InductionAtCP : In: m%W%CP,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+   ! if     InductionAtCP : In: m%W%CP,     Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
    ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
-   call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalculateInputsAndOtherStatesForUA'); if (ErrStat >= AbortErrLev) return
+   if (p%Induction) then
+      call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalculateInputsAndOtherStatesForUA'); if (ErrStat >= AbortErrLev) return
+   else
+      do iW = 1,p%nWings  
+         m%W(iW)%Vind_LL(1:3,:)=0.0_ReKi
+      enddo
+   endif
    if (p%InductionAtCP) then
       if (m%nNW<=1) then
          do iW = 1,p%nWings  
-            m%W(iW)%Vind_LL(1,:)=0.0_ReKi
+            m%W(iW)%Vind_LL(1:3,:)=0.0_ReKi
          enddo
       endif
    endif

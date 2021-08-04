@@ -126,6 +126,7 @@ IMPLICIT NONE
     LOGICAL  :: InductionAtCP      !< Compute induced velocities at nodes or CP [-]
     LOGICAL  :: WakeAtTE      !< Start the wake at the trailing edge, or at the LL [-]
     LOGICAL  :: DStallOnWake      !< Dynamic stall has influence on wake [-]
+    LOGICAL  :: Induction      !< Compute induction [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  Wng_ContinuousStateType  =======
@@ -1663,6 +1664,7 @@ ENDIF
     DstParamData%InductionAtCP = SrcParamData%InductionAtCP
     DstParamData%WakeAtTE = SrcParamData%WakeAtTE
     DstParamData%DStallOnWake = SrcParamData%DStallOnWake
+    DstParamData%Induction = SrcParamData%Induction
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1790,6 +1792,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! InductionAtCP
       Int_BufSz  = Int_BufSz  + 1  ! WakeAtTE
       Int_BufSz  = Int_BufSz  + 1  ! DStallOnWake
+      Int_BufSz  = Int_BufSz  + 1  ! Induction
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1965,6 +1968,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%WakeAtTE, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%DStallOnWake, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Induction, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_PackParam
 
@@ -2162,6 +2167,8 @@ ENDIF
     OutData%WakeAtTE = TRANSFER(IntKiBuf(Int_Xferred), OutData%WakeAtTE)
     Int_Xferred = Int_Xferred + 1
     OutData%DStallOnWake = TRANSFER(IntKiBuf(Int_Xferred), OutData%DStallOnWake)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Induction = TRANSFER(IntKiBuf(Int_Xferred), OutData%Induction)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 

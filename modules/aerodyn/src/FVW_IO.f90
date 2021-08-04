@@ -104,8 +104,10 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
 
    ! --- Advanced Options
    ! NOTE: no error handling since this is for debug
-   p%InductionAtCP = .true.
-   p%WakeAtTE      = .true.
+   ! Default options are typically "true"
+   p%InductionAtCP = .true.  ! Compute the induced velocities at Control Points, otherwise, at nodes
+   p%WakeAtTE      = .true.  ! The wake starts at the trailing edge, otherwise, directly at the lifting line
+   p%Induction     = .true.  ! Compute induced velocities, otherwise 0 induced velocities on the lifting line!
    p%DStallOnWake  = .false.
    CALL ReadCom(UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); 
    CALL ReadCom(UnIn,FileName,                  '--- Advanced options header'        ,ErrStat2,ErrMsg2);
@@ -119,10 +121,13 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
             print*,'   >>> InductionAtCP',p%InductionAtCP
          elseif (index(sDummy, 'WAKEATTE')>1) then
             read(sDummy, '(L1)') p%WakeAtTE
-            print*,'   >>> WakeAtTE',p%WakeAtTE
+            print*,'   >>> WakeAtTE     ',p%WakeAtTE
          elseif (index(sDummy, 'DSTALLONWAKE')>1) then
             read(sDummy, '(L1)') p%DStallOnWake
-            print*,'   >>> DStallOnWake',p%DStallOnWake
+            print*,'   >>> DStallOnWake ',p%DStallOnWake
+         elseif (index(sDummy, 'INDUCTION')>1) then
+            read(sDummy, '(L1)') p%Induction
+            print*,'   >>> Induction    ',p%Induction
          else
             print*,'   >>> Line ignored, starting with'//trim(sDummy)
          endif

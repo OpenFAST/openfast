@@ -99,6 +99,7 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               Logical                          InductionAtCP - - -  "Compute induced velocities at nodes or CP" 
 typedef     ^                   ^               Logical                          WakeAtTE      - - -  "Start the wake at the trailing edge, or at the LL" 
 typedef     ^                   ^               Logical                          DStallOnWake  - - -  "Dynamic stall has influence on wake" 
+typedef     ^                   ^               Logical                          Induction     - - -  "Compute induction" 
 
 #.......... ContinuousStateType ......
 typedef FVW/FVW            Wng_ContinuousStateType   ReKi                        Gamma_NW     ::  -  -  "Circulation of the near wake panels (    nSpan     x nNW  )" -
