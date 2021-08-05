@@ -889,6 +889,7 @@ contains
       !     column 3 is the StC motion mesh (Instance index)
       !     column 4 is the StC motion mesh (blade index BStC mesh, ignored on others)
       call allocAry( p%Jac_u_indx, p%Jac_nu, 4,   'p%Jac_u_indx',   ErrStat2, ErrMsg2);   if (Failed())  return;
+      p%Jac_u_indx = 0
       ! perturbation sizes
       CALL AllocAry(p%du,               24,        'u perturbation', ErrStat2, ErrMsg2);   if (Failed())  return;
       p%du( 1) = du_t            ! Blade u%*Mesh%TranslationDisp  = 1;
