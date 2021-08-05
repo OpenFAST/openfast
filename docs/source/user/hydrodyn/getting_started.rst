@@ -30,7 +30,7 @@ Running HydroDyn coupled to OpenFAST
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To run an OpenFAST simulation with the HydroDyn module enabled, the
-`CompHydro` flag must be switch on and the :ref:`hd-primary-input`
+`CompHydro` flag must be switched on and the :ref:`hd-primary-input`
 path supplied in the OpenFAST primary input file:
 
 .. code-block::

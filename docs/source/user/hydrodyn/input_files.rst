@@ -173,7 +173,7 @@ are:
   Pierson-Moskowitz frequency spectrum
 
 * 3: Irregular (stochastic) waves based on a white-noise frequency
-   spectrum
+  spectrum
 
 * 4: Irregular (stochastic) waves based on a user-defined frequency
   spectrum from routine *UserWaveSpctrm()*; see Appendix D for
@@ -442,14 +442,16 @@ near-surface, sub-surface, and depth-independent, as illustrated in
 along with the wave particle kinematics velocity.
 
 .. figure:: figs/current_sub_models.jpg
-   :align: center
-   :name: hd-fig:current_sub_model
+  :align: center
+  :name: hd-fig:current_sub_model
 
-   Standard Current Sub-Models
+  Standard Current Sub-Models
 
 The sub-surface current model follows a power law,
 
 .. math::
+  :label: SubsurfacePowerLaw
+
   U_{SS}(Z) = U_{0_{SS}} \left( \frac{Z+d}{d} \right)^{ \frac{1}{7} }
 
 where :math:`Z` is the local depth below the SWL (negative downward), :math:`d` is the
@@ -462,11 +464,15 @@ The near-surface current model follows a linear relationship down to a
 reference depth such that,
 
 .. math::
+  :label: NearsurfacePowerLaw
+
   U_{NS}(Z) = U_{0_{NS}} \left( \frac{Z+h_{ref}}{h_{ref}} \right), Z\in[-h_{ref},0]
 
 otherwise,
 
 .. math::
+  :label: NearsurfaceDeep
+
   U_{NS}(Z) = 0
 
 where :math:`h_{ref}` is the reference depth corresponding to **CurrNSRef** and must be
@@ -634,6 +640,8 @@ loads on the platform (in addition to other hydrodynamic terms
 calculated by HydroDyn), per the following equation.
 
 .. math::
+  :label: PtfmStiffDamp
+
   \overrightarrow{F}_{Add} = \overrightarrow{F}_{0} - [C] \overrightarrow{q} - [B] \dot{\overrightarrow{q}} - [B_{quad}] ABS \left(\dot{\overrightarrow{q}}\right) \dot{\overrightarrow{q}}
 
 where :math:`\overrightarrow{F}_{0}` corresponds to the **AddF0** 6x1 static load (preload) vector,
