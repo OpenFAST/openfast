@@ -279,10 +279,7 @@ directions.
 Please note that added-mass coefficients in HydroDyn influence both the
 added-mass loads and the scattering component of the fluid-inertia
 loads. For the coefficients associated with transverse loads distributed
-along members, note that
-
-.. TODO add image here
-
+along members, note that :math:`C_{P} + C_{A} = C_{M}`,
 the inertia coefficient. For the
 distributed loads along members, there are separate set of hydrodynamic
 coefficients both with and without marine growth (**MG**).
@@ -425,6 +422,11 @@ and/or ballasting), and the additional static force (**AddFX0**) should
 also be taken into consideration in this force balance, where
 appropriate.
 
+.. math::
+   :label: FloatingForceBalance
+
+   \rho g V_{0} - m_{Total} g - T_{Mooring} = 0
+
 Initial Conditions for Floating Systems
 ---------------------------------------
 Because the initial conditions used for dynamic simulations typically
@@ -462,52 +464,75 @@ applied within HydroDyn.)
 In its most general form, the 6x6 linear hydrostatic restoring matrix of
 a floating platform is given by the equation below.
 
-.. TODO add these equations!
+.. math::
+   :label: HydrostraticRestoringMatrix
 
-,
+   \text{AddCLin} =
+   \left[
+      \begin{array}{cccccc}
+         0 & 0 & 0 & 0 & 0 & 0 \\
+         0 & 0 & 0 & 0 & 0 & 0 \\
+         0 & 0 & \rho g A_{0} & \rho g \iint_{A_{0}} ydA & -\rho g \iint_{A_{0}} xdA & 0 \\
+         0 & 0 & \rho g \iint_{A_{0}} ydA & \rho g \iint_{A_{0}} y^2dA + \rho g V_{0} z_{b} - m_{mg}gz_{mg} - m_{f}gz_{f} & -\rho g \iint_{A_{0}} xydA & -\rho g V_{0} x_{b} + m_{mg}gx_{mg} + m_{f}gx_{f} \\
+         0 & 0 & -\rho g \iint_{A_{0}} xdA & -\rho g \iint_{A_{0}} xydA & \rho g \iint_{A_{0}} x^2dA + \rho g V_{0} z_{b} - m_{mg}gz_{mg} - m_{f}gz_{f} & -\rho g V_{0} y_{b} + m_{mg}gy_{mg} + m_{f}gy_{f} \\
+         0 & 0 & 0 & 0 & 0 & 0
+      \end{array}
+   \right]
 
 where:
 
-water density, kg/m\ :sup:`3`
+* :math:`\rho` is water density (kg/m\ :sup:`3`)
 
-gravity, m/s\ :sup:`2`
+* :math:`g` is gravity (m/s\ :sup:`2`)
 
-undisplaced waterplane area of platform, m\ :sup:`2`
+* :math:`A_{0}` is undisplaced waterplane area of platform (m\ :sup:`2`)
 
-undisplaced volume of platform, m\ :sup:`3`
+* :math:`V_{0}` is undisplaced volume of platform (m\ :sup:`3`)
 
-coordinates of the center of buoyancy of the undisplaced platform, m
+* :math:`(x_{b}, y_{b}, z_{b})` is coordinates of the center of buoyancy of the undisplaced platform (m)
 
-total mass of marine growth, kg
+* :math:`m_{mg}` is total mass of marine growth (kg)
 
-coordinates of the center of mass of the undisplaced marine growth mass,
-m
+* :math:`(x_{mg}, y_{mg}, z_{mg})` is coordinates of the center of mass of the undisplaced marine growth mass (m)
 
-total mass of ballasting/flooding, kg
+* :math:`m_{f}` is total mass of ballasting/flooding (kg)
 
-coordinates of the center of mass of the undisplaced filled fluid
-(flooding or ballasting) mass, m
+* :math:`(x_{f}, y_{f}, z_{f})` is coordinates of the center of mass of the undisplaced filled fluid (flooding or ballasting) mass (m)
 
 The equation above can be simplified when the floating platform has one
-or more planes of symmetry. That is, , , , , and if the plane of the
-platform is a symmetry plane. Likewise, , , , , and if the plane of the
-platform is a symmetry plane.
+or more planes of symmetry. That is,
+:math:`\iint_{A_{0}} ydA = 0`,
+:math:`\iint_{A_{0}} xydA = 0`,
+:math:`y_{b} = 0`,
+:math:`y_{mg} = 0`,
+:math:`y_{f} = 0`,
+and if the :math:`x-z` plane of the platform is a symmetry plane.
+Likewise,
+:math:`\iint_{A_{0}} xdA = 0`,
+:math:`\iint_{A_{0}} xydA = 0`,
+:math:`x_{b} = 0`,
+:math:`x_{mg} = 0`,
+:math:`x_{f} = 0`,
+and if the :math:`y-z` plane of the platform is a symmetry plane.
 
-The undisplaced coordinates of the center of buoyancy, , center of
-marine-growth mass, , and center of filled-fluid mass, , are in the
+The undisplaced coordinates of the center of buoyancy,
+:math:`(x_{b}, y_{b}, z_{b})`, center of
+marine-growth mass, :math:`(x_{mg}, y_{mg}, z_{mg})`, and center of
+filled-fluid mass, :math:`(x_{f}, y_{f}, z_{f})`, are in the
 global inertial-frame coordinate system. Most of these parameters can be
 derived from data found in the HydroDyn summary file. While the equation
 above makes use of several area integrals, the integrals can often be
 easily estimated by hand for platforms composed of one or more circular
 members piercing the waterplane (still-water free surface).
 
-The waterplane area of the undisplaced platform, , affects the
+The waterplane area of the undisplaced platform, :math:`A_{0}`, affects the
 hydrostatic load because the displaced volume of the fluid changes with
 changes in the platform displacement. Similarly, the location of the
 center of buoyancy of the platform affects the hydrostatic load because
 its vector position changes with platform displacement and because the
 cross product of the buoyancy force with the vector position produces
-hydrostatic moments about the WRP. , , and should be based on the
+hydrostatic moments about the WRP. :math:`A_{0}`, :math:`V_{0}`, and
+:math:`(x_{b}, y_{b}, z_{b})` should be based on the
 external volume of the platform, including marine-growth thickness. The
 marine-growth mass and filled-fluid mass also have a direct effect of
 the hydrostatic restoring because of the moments produced about the WRP.
