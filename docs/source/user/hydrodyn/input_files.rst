@@ -269,8 +269,11 @@ of the second-order difference-frequency potential-flow loads.
 
 **WaveSeed(1)** and **WavedSeed(2)** (unused when **WaveMod** = 0, 5, or
 6) combined determine the initial seed (starting point) for the internal
-pseudorandom number generator needed to derive the internal wave
-kinematics from the wave frequency and direction spectra. If you want to
+pseudorandom number generator (pRNG) needed to derive the internal wave
+kinematics from the wave frequency and direction spectra. If both are 
+numeric values, the Fortran intrinsic pRNG is used. If **WaveSeed(2)**
+is the string "RANLUX", an alternative pRNG included with the NWTC Library
+is used and the value of **WaveSeed(1)** is the seed. If you want to
 run different time-domain realizations for given boundary conditions (of
 significant wave height, and peak-spectral period, etc.), you should
 change one or both seeds between simulations. While the phase of each
@@ -435,33 +438,39 @@ not used in the potential-flow solution or when **WaveMod** = 6.
 
 HydroDyn’s standard current model includes three sub-models:
 near-surface, sub-surface, and depth-independent, as illustrated in
-Figure 1. All three currents are vector summed, along with the wave
-particle kinematics velocity.
+:numref:`hd-fig:current_sub_model`. All three currents are vector summed,
+along with the wave particle kinematics velocity.
 
 .. figure:: figs/current_sub_models.jpg
    :align: center
+   :name: hd-fig:current_sub_model
 
    Standard Current Sub-Models
 
 The sub-surface current model follows a power law,
 
-.. TODO Add this equation!
+.. math::
+  U_{SS}(Z) = U_{0_{SS}} \left( \frac{Z+d}{d} \right)^{ \frac{1}{7} }
 
-where *Z* is the local depth below the SWL (negative downward), is the
-water depth (equal to **WtrDpth** + **MSL2SWL**), and is the current
+where :math:`Z` is the local depth below the SWL (negative downward), :math:`d` is the
+water depth (equal to **WtrDpth** + **MSL2SWL**), and :math:`U_{0_{SS}}` is the current
 velocity at SWL, corresponding to **CurrSSV0**. The heading of the
-sub-surface current is defined using **CurrSSDir**, following the same
+sub-surface current is defined using **CurrSSDir** following the same
 convention as **WaveDir**.
 
 The near-surface current model follows a linear relationship down to a
 reference depth such that,
 
-.. TODO Add these equations!
+.. math::
+  U_{NS}(Z) = U_{0_{NS}} \left( \frac{Z+h_{ref}}{h_{ref}} \right), Z\in[-h_{ref},0]
 
-otherwise, ,
+otherwise,
 
-where is the reference depth corresponding to **CurrNSRef**, and must be
-positive valued. is the current velocity at SWL, corresponding to
+.. math::
+  U_{NS}(Z) = 0
+
+where :math:`h_{ref}` is the reference depth corresponding to **CurrNSRef** and must be
+positive valued. :math:`U_{0_{NS}}` is the current velocity at SWL, corresponding to
 **CurrNSV0**. The heading of the near-surface current is defined using
 **CurrNSDir**, following the same convention as **WaveDir**.
 
@@ -624,16 +633,15 @@ The vectors and matrices of this section are used to generate additional
 loads on the platform (in addition to other hydrodynamic terms
 calculated by HydroDyn), per the following equation.
 
-,
+.. math::
+  \overrightarrow{F}_{Add} = \overrightarrow{F}_{0} - [C] \overrightarrow{q} - [B] \dot{\overrightarrow{q}} - [B_{quad}] ABS \left(\dot{\overrightarrow{q}}\right) \dot{\overrightarrow{q}}
 
-.. TODO Add this equation
-
-where corresponds to the **AddF0** 6x1 static load (preload) vector,
-:math:`\left\lbrack C \right\rbrack` corresponds to the **AddCLin** 6x6
+where :math:`\overrightarrow{F}_{0}` corresponds to the **AddF0** 6x1 static load (preload) vector,
+:math:`[C]` corresponds to the **AddCLin** 6x6
 linear restoring (stiffness) matrix,
-:math:`\left\lbrack B \right\rbrack` corresponds to the **AddBLin** 6x6
-linear damping matrix, :math:`\lbrack B_{\text{quad}}\rbrack`
-corresponds to the **AddBQuad** 6x6 quadratic drag matrix, and
+:math:`[B]` corresponds to the **AddBLin** 6x6
+linear damping matrix, :math:`[B_{quad}]`
+corresponds to the **AddBQuad** 6x6 quadratic drag matrix, and :math:`\overrightarrow{q}`
 corresponds to the WRP 6x1 (six-DOF) displacement vector (three
 translations and three rotations), where the overdot refers to the first
 time-derivative.
