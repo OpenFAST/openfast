@@ -305,6 +305,7 @@ subroutine sc_end ( errStat, errMsg )  bind (C, NAME='sc_end')
 
    implicit                        none
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: sc_end
 !GCC$ ATTRIBUTES DLLEXPORT :: sc_end
 #endif
 
