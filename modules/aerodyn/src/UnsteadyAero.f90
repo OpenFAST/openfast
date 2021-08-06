@@ -1101,7 +1101,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    elseif(p%UAMod == UA_HGMV) then
       p%NumOuts = 21
    elseif(p%UAMod == UA_BV) then
-      p%NumOuts = 24
+      p%NumOuts = 26
    else
       p%NumOuts = 45
    end if
@@ -1197,13 +1197,15 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputHdr(iOffset+22)  = trim(chanPrefix)//'transA'
             InitOut%WriteOutputHdr(iOffset+23)  = trim(chanPrefix)//'delP'
             InitOut%WriteOutputHdr(iOffset+24)  = trim(chanPrefix)//'delN'
+            InitOut%WriteOutputHdr(iOffset+25)  = trim(chanPrefix)//'Vx'
+            InitOut%WriteOutputHdr(iOffset+26)  = trim(chanPrefix)//'Vy'
 
-            InitOut%WriteOutputUnt(iOffset+ 8)  = '(deg/sec)'
+            InitOut%WriteOutputUnt(iOffset+ 8)  = '(rad/s)'
             InitOut%WriteOutputUnt(iOffset+ 9)  = '(deg)'
             InitOut%WriteOutputUnt(iOffset+10)  = '(deg)'
             InitOut%WriteOutputUnt(iOffset+11)  = '(s)'
             InitOut%WriteOutputUnt(iOffset+12)  = '(deg)'
-            InitOut%WriteOutputUnt(iOffset+13)  = '(deg/sec)'
+            InitOut%WriteOutputUnt(iOffset+13)  = '(deg/s)'
             InitOut%WriteOutputUnt(iOffset+14)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+15)  = '(deg)'
             InitOut%WriteOutputUnt(iOffset+16)  = '(deg)'
@@ -1215,6 +1217,8 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputUnt(iOffset+22)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+23)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+24)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+25)  = '(m/s)'
+            InitOut%WriteOutputUnt(iOffset+26)  = '(m/s)'
             
          else
 
@@ -3362,7 +3366,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          end if
 
       elseif(p%UAMod == UA_BV) then
-         y%WriteOutput(iOffset+ 8)    = u%omega*R2D
+         y%WriteOutput(iOffset+ 8)    = u%omega 
          y%WriteOutput(iOffset+ 9)    = alphaE_L*R2D
          y%WriteOutput(iOffset+10)    = alphaE_D*R2D
          y%WriteOutput(iOffset+11)    = Get_Tu(u%u, p%c(i,j))
@@ -3379,6 +3383,8 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          y%WriteOutput(iOffset+22)    = TransA
          y%WriteOutput(iOffset+23)    = delP
          y%WriteOutput(iOffset+24)    = delN
+         y%WriteOutput(iOffset+25)    = u%v_ac(1)
+         y%WriteOutput(iOffset+26)    = u%v_ac(2)
          
       else
          ! Baseline, Gonzales, MinnemaPierce
@@ -3501,8 +3507,10 @@ contains
       y%Cm = Cm25_stat + cos(alpha_50) * (Cl75_stat - Cl50_stat)*0.25_ReKi
 
       ! TODO projection using alpha 5 and back for added mass
-      y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
-      y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+      !y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
+      !y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+      y%Cn = y%Cl*cos(alpha_50) + y%Cd*sin(alpha_50)
+      y%Cc = y%Cl*sin(alpha_50) - y%Cd*cos(alpha_50)
 
    end subroutine BV_CalcOutput
    
