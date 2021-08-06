@@ -1340,6 +1340,10 @@ subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
    integer(IntKi) :: iW, iGrid
    integer(IntKi) :: nSeg, nSegP
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
    if (p%WrVTK>0) then
       if (m%FirstCall .or. force) then
          call MKDIR(p%VTK_OutFileRoot)
