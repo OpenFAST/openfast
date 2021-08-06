@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
@@ -60,9 +60,11 @@ executable = args.executable[0]
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
-plotError = args.plot if args.plot is False else True
-noExec = args.noExec if args.noExec is False else True
-verbose = args.verbose if args.verbose is False else True
+
+
+plotError = args.plot
+noExec = args.noExec
+verbose = args.verbose
 
 # validate inputs
 rtl.validateExeOrExit(executable)
@@ -87,24 +89,39 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-# create the local output directory if it does not already exist
-# and initialize it with input files for all test cases
-if not os.path.isdir(testBuildDirectory):
-    os.makedirs(testBuildDirectory)
-    for file in glob.glob(os.path.join(inputsDirectory,"ad_*inp")):
-        filename = file.split(os.path.sep)[-1]
-        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
-    
+
+# Special case, copy the BAR Baseline files
+dst = os.path.join(buildDirectory, "BAR_Baseline")
+src = os.path.join(moduleDirectory, "BAR_Baseline")
+try:
+    rtl.copyTree(src, dst)
+except:
+    # This can fail if two processes are copying the file at the same time
+    print('>>> Copy failed')
+    import time
+    time.sleep(1)
+
+# create the local output directory and initialize it with input files 
+rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_driver.outb':'ad_driver_ref.outb'})
+       # , excludeExt=['.out','.outb'])
+
 ### Run aerodyn on the test case
 if not noExec:
-    caseInputFile = os.path.join(testBuildDirectory, "ad_driver.inp")
-    returnCode = openfastDrivers.runAerodynDriverCase(caseInputFile, executable)
+    caseInputFile = os.path.join(testBuildDirectory, "ad_driver.dvr")
+    returnCode = openfastDrivers.runAerodynDriverCase(caseInputFile, executable, verbose=verbose)
     if returnCode != 0:
         rtl.exitWithError("")
     
-### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, "ad_driver.out")
-baselineOutFile = os.path.join(targetOutputDirectory, "ad_driver.out")
+###Build the filesystem navigation variables for running the regression test
+# For multiple turbines, test turbine 2, for combined cases, test case 4 
+localOutFile      = os.path.join(testBuildDirectory, "ad_driver.outb")
+localOutFileWT2   = os.path.join(testBuildDirectory, "ad_driver.T2.outb")
+localOutFileCase4 = os.path.join(testBuildDirectory, "ad_driver.4.outb")
+if os.path.exists(localOutFileWT2) :
+    localOutFile=localOutFileWT2
+elif os.path.exists(localOutFileCase4) :
+    localOutFile=localOutFileCase4
+baselineOutFile = os.path.join(targetOutputDirectory, os.path.basename(localOutFile))
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 

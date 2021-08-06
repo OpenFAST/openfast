@@ -149,7 +149,7 @@ After extracting the contents, the OpenFAST executables
 can be tested by opening a command prompt, moving into the directory
 containing the executables, and running a simple test command:
 
-.. code-block::
+.. code-block:: bash
 
     cd C:\your\path\Desktop\openfast_binaries\
     openfast_x64.exe /h

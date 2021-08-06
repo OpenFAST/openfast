@@ -36,6 +36,12 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
     set(PLOT_FLAG "-p")
   endif()
 
+  set(RUN_VERBOSE_FLAG "")
+  if(CTEST_RUN_VERBOSE_FLAG)
+     set(RUN_VERBOSE_FLAG "-v")
+  endif()
+
+
   add_test(
     ${TESTNAME} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
@@ -47,6 +53,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
        ${PLOT_FLAG}                     # empty or "-p"
+       ${RUN_VERBOSE_FLAG}              # empty or "-v"
   )
   # limit each test to 90 minutes: 5400s
   set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
@@ -128,6 +135,15 @@ function(hd_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(hd_regression)
 
+# hydrodyn-Py
+function(hd_py_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeHydrodynPyRegressionCase.py")
+  set(HYDRODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
+  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(hd_py_regression)
+
 # subdyn
 function(sd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSubdynRegressionCase.py")
@@ -195,6 +211,16 @@ endif()
 
 # AeroDyn regression tests
 ad_regression("ad_timeseries_shutdown"      "aerodyn;bem")
+ad_regression("ad_EllipticalWingInf_OLAF"   "aerodyn;bem")
+ad_regression("ad_HelicalWakeInf_OLAF"      "aerodyn;bem")
+ad_regression("ad_Kite_OLAF"                "aerodyn;bem")
+ad_regression("ad_MultipleHAWT"             "aerodyn;bem")
+ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
+ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
+ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
+ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
+ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
+ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")
@@ -212,6 +238,9 @@ hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
+
+# HydroDyn-Py regression tests
+hd_py_regression("hd_py_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore")
 
 # SubDyn regression tests
 sd_regression("SD_Cable_5Joints"                              "subdyn;offshore")

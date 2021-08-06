@@ -3415,22 +3415,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          END IF
       END IF
 
-   !---------------------- ENVIRONMENTAL CONDITION ---------------------------------
-      CALL ReadCom( UnIn, InputFile, 'Section Header: Environmental Condition', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-      ! Gravity - Gravitational acceleration (m/s^2):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Gravity, "Gravity", "Gravitational acceleration (m/s^2)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
    !---------------------- DEGREES OF FREEDOM --------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Feature Flags', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5068,7 +5052,6 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
 
 
       ! Don't allow these parameters to be negative (i.e., they must be in the range (0,inf)):
-   IF ( InputFileData%Gravity < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Gravity must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%RotSpeed < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'RotSpeed must not be negative.',ErrStat,ErrMsg,RoutineName)
    
    IF ( InputFileData%TipRad < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TipRad must not be negative.',ErrStat,ErrMsg,RoutineName)

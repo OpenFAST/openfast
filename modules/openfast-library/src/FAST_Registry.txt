@@ -115,8 +115,19 @@ typedef	^	FAST_ParameterType	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (
 typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_HD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompMooring	-	-	-	"Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca}"	-
 typedef	^	FAST_ParameterType	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}"	-
+typedef	^	FAST_ParameterType	IntKi	MHK	        -	-	-	"MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}"	-
 typedef	^	FAST_ParameterType	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
 typedef	^	FAST_ParameterType	LOGICAL	Linearize	-	-	-	"Linearization analysis (flag)"	-
+# Environmental conditions:
+typedef ^   FAST_ParameterType  ReKi    Gravity	    -	-	-	"Gravitational acceleration" m/s^2
+typedef ^   FAST_ParameterType  ReKi    AirDens     -   -   -   "Air density" kg/m^3
+typedef ^   FAST_ParameterType  ReKi    WtrDens     -   -   -   "Water density" kg/m^3
+typedef ^   FAST_ParameterType  ReKi    KinVisc     -   -   -   "Kinematic viscosity of working fluid" m^2/s
+typedef ^   FAST_ParameterType  ReKi    SpdSound    -   -   -   "Speed of sound in working fluid" m/s
+typedef ^   FAST_ParameterType  ReKi    Patm        -   -   -   "Atmospheric pressure" Pa
+typedef ^   FAST_ParameterType  ReKi    Pvap        -   -   -   "Vapour pressure of working fluid" Pa
+typedef ^   FAST_ParameterType  ReKi    WtrDpth     -   -   -   "Water depth" m
+typedef ^   FAST_ParameterType  ReKi    MSL2SWL     -   -   -   "Offset between still-water level and mean sea level" m
 # Input file names:
 typedef	^	FAST_ParameterType	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn input file"	-
 typedef	^	FAST_ParameterType	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
@@ -136,7 +147,7 @@ typedef	^	FAST_ParameterType	INTEGER	n_SttsTime	-	-	-	"Number of time steps betw
 typedef	^	FAST_ParameterType	INTEGER	n_ChkptTime	-	-	-	"Number of time steps between writing checkpoint files"	-
 typedef	^	FAST_ParameterType	INTEGER	n_DT_Out	-	-	-	"Number of time steps between writing a line in the time-marching output files"	-
 typedef	^	FAST_ParameterType	INTEGER	n_VTKTime	-	-	-	"Number of time steps between writing VTK files"	-
-typedef	^	FAST_ParameterType	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, or Type_Offshore_Floating"	-
+typedef	^	FAST_ParameterType	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, Type_Offshore_Floating, Type_MHK_Fixed, or Type_MHK_Floating"	-
 typedef	^	FAST_ParameterType	LOGICAL	WrBinOutFile	-	-	-	"Write a binary output file? (.outb)"	-
 typedef	^	FAST_ParameterType	LOGICAL	WrTxtOutFile	-	-	-	"Write a text (formatted) output file? (.out)"	-
 typedef	^	FAST_ParameterType	IntKi	WrBinMod	-	-	-	"If writing binary, which file format is to be written [1, 2, or 3]"	-

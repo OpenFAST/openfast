@@ -12,20 +12,6 @@ are compatible with AeroDyn.
 Please refer to the theory of Section 7 for detailed information about
 the implementation approach we have followed in AeroDyn.
 
-Standalone AeroDyn Driver
--------------------------
-
-The standalone AeroDyn driver code is very useful for computing turbine
-aerodynamics independent of aero-elastic coupling. The standalone
-AeroDyn driver code essentially replaces the functionality previously
-available in the separate wind turbine rotor-performance tool WT\_Perf.
-For example, the standalone AeroDyn driver code can be used to compute
-the surfaces of power coefficient (C\ :sub:`P`), thrust coefficient
-(C\ :sub:`T`), and/or torque coefficient (C\ :sub:`Q`) as a function of
-tip-speed ratio (TSR) and blade-pitch angle for a given rotor. Moreover,
-the standalone AeroDyn driver code is more powerful than WT\_Perf in
-that the standalone AeroDyn driver can capture time-varying dynamics as
-a result of nacelle-yaw error, shaft tilt, and/or wind shear.
 
 Environmental Conditions
 ------------------------

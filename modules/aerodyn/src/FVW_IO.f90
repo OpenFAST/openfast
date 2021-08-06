@@ -87,6 +87,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,p%nGridOut      , 'nGridOut'           ,'',     0      ,ErrStat2,ErrMsg2);
    if (ErrStat2/=ErrID_None) then
       call WarnSyntax('Grid output missing')
+      p%nGridOut = 0 ! Important
    else
       allocate(m%GridOutputs(p%nGridOut), stat=ErrStat2);
       CALL ReadCom (UnIn,FileName,  'GridOutHeaders', ErrStat2,ErrMsg2); if(Failed()) return
@@ -291,12 +292,13 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    character(1024)                       :: FileName
    character(255)                        :: Label
    character(Twidth)                     :: Tstr          ! string for current VTK write-out step (padded with zeros)
-   character(1), dimension(3) :: I2ABC =(/'A','B','C'/)
+   character(1), dimension(26) :: I2ABC =(/'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'/)
    integer(IntKi)       :: nSeg, nSegP, nSegNW
    logical              :: bMirror
    !integer(IntKi)       :: ErrStat2
    !character(ErrMsgLen) :: ErrMsg2
-   real(Reki), dimension(:,:,:), allocatable :: dxdt_0 !<
+   real(Reki), dimension(:,:,:), allocatable :: Arr3D !<
+   real(Reki), dimension(:,:), allocatable :: Arr2D !<
 
    type(FVW_VTK_Misc)   :: mvtk
 
@@ -328,25 +330,26 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'BldPointCP.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
-         call vtk_dataset_polydata(m%CP_LL(1:3,1:p%nSpan,iW),mvtk,bladeFrame)
+         call vtk_dataset_polydata(m%W(iW)%CP_LL(1:3,1:p%W(iW)%nSpan),mvtk,bladeFrame)
          call vtk_point_data_init(mvtk)
-         call vtk_point_data_scalar(m%Gamma_ll(    1:p%nSpan,iW),'Gamma_ll',mvtk)
-         call vtk_point_data_vector(m%Vind_ll (1:3,1:p%nSpan,iW),'Vind_ll',mvtk)
-         call vtk_point_data_vector(m%Vtot_ll (1:3,1:p%nSpan,iW),'Vtot_ll',mvtk)
-         call vtk_point_data_vector(m%Vstr_ll (1:3,1:p%nSpan,iW),'Vstr_ll',mvtk)
-         call vtk_point_data_vector(m%Vwnd_ll (1:3,1:p%nSpan,iW),'Vwnd_ll',mvtk)
-         call vtk_point_data_vector(m%Tang    (1:3,1:p%nSpan,iW),'Tangent',mvtk)
-         call vtk_point_data_vector(m%Norm    (1:3,1:p%nSpan,iW),'Normal',mvtk)
-         call vtk_point_data_vector(m%Orth    (1:3,1:p%nSpan,iW),'Orth',mvtk)
+         call vtk_point_data_scalar(z%W(iW)%Gamma_ll(    1:p%W(iW)%nSpan),'Gamma_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vind_ll (1:3,1:p%W(iW)%nSpan),'Vind_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vtot_ll (1:3,1:p%W(iW)%nSpan),'Vtot_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vstr_ll (1:3,1:p%W(iW)%nSpan),'Vstr_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vwnd_ll (1:3,1:p%W(iW)%nSpan),'Vwnd_ll',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Tang    (1:3,1:p%W(iW)%nSpan),'Tangent',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Norm    (1:3,1:p%W(iW)%nSpan),'Normal',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Orth    (1:3,1:p%W(iW)%nSpan),'Orth',mvtk)
          call vtk_close_file(mvtk)
       endif
    enddo
    ! --- Lifting line panels
-   do iW=1,p%VTKBlades
-      write(Label,'(A,A)') 'LL.Bld', i2ABC(iW)
-      Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, mvtk, m%r_LL(1:3,:,:,iW), m%Gamma_LL(:,iW:iW), bladeFrame=bladeFrame)
-   enddo
+   ! TODO
+   ! do iW=1,p%VTKBlades
+   !    write(Label,'(A,A)') 'LL.Bld', i2ABC(iW)
+   !    Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
+   !    call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,:), m%W(iW)%Gamma_LL(:), bladeFrame=bladeFrame)
+   ! enddo
    ! --------------------------------------------------------------------------------}
    ! --- Near wake 
    ! --------------------------------------------------------------------------------{
@@ -355,11 +358,14 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-         allocate(dxdt_0(3, size(m%dxdt%r_NW,2) , m%nNW+1)); dxdt_0=0.0_ReKi
-         call WrVTK_Lattice(FileName, mvtk, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW),dxdt_0, bladeFrame=bladeFrame)
-         deallocate(dxdt_0)
+         allocate(Arr3D(3, size(m%dxdt%W(iW)%r_NW,2) , m%nNW+1)); Arr3D=0.0_ReKi ! Convection velocity
+         allocate(Arr2D(size(z%W(iW)%Gamma_LL), 1) )            ; Arr2D=0.0_ReKi
+         Arr2D(:,1)=z%W(iW)%Gamma_LL(:)
+         call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,1:2), Arr2D(:,1:1), Arr3D, bladeFrame=bladeFrame)
+         deallocate(Arr3D)
+         deallocate(Arr2D)
       else
-         call WrVTK_Lattice(FileName, mvtk, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), m%dxdt%r_NW(:,:,1:m%nNW+1,iW), bladeFrame=bladeFrame)
+         call WrVTK_Lattice(FileName, mvtk, x%W(iW)%r_NW(1:3,:,1:m%nNW+1), x%W(iW)%Gamma_NW(:,1:m%nNW), m%dxdt%W(iW)%r_NW(:,:,1:m%nNW+1), bladeFrame=bladeFrame)
       endif
    enddo
    ! --------------------------------------------------------------------------------}
@@ -369,7 +375,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, mvtk, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW),m%dxdt%r_FW(:,:,1:m%nFW+1,iW), bladeFrame=bladeFrame)
+      call WrVTK_Lattice(FileName, mvtk, x%W(iW)%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1), x%W(iW)%Gamma_FW(1:FWnSpan,1:m%nFW),m%dxdt%W(iW)%r_FW(:,:,1:m%nFW+1), bladeFrame=bladeFrame)
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
@@ -388,7 +394,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
    CALL WrVTK_Segments(Filename, mvtk, m%Sgmt%Points(:,1:nSegP), m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%Epsilon(1:nSeg), bladeFrame) 
 
-   if(.false.) print*,z%Gamma_LL(1,1) ! unused var for now
+   if(.false.) print*,z%W(1)%Gamma_LL(1) ! unused var for now
 end subroutine WrVTK_FVW
 
 !> Export Grid velocity field to VTK
@@ -432,7 +438,7 @@ subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, Hub
       call vtk_close_file(mvtk)
    endif
 
-   if(.false.) print*,z%Gamma_LL(1,1) ! unused var for now
+   if(.false.) print*,z%W(1)%Gamma_LL(1) ! unused var for now
 end subroutine WrVTK_FVW_Grid
 
 
@@ -516,11 +522,11 @@ subroutine LatticeToPanlConnectivity(LatticePoints, Connectivity, Points)
       k=k+1
    enddo; enddo
 
-!     do iWing=1,p%NumBlades
+!     do iW=1,p%NumBlades
 !         if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
 !             ! Buffer for points
 !             k=1; do iNW=1,nNW; do iSpan=1,nSpan
-!                 Buffer(1:3,k) = Misc%NWake%r_nearj(1:3,iSpan,iNW,iWing)
+!                 Buffer(1:3,k) = Misc%NWake%r_nearj(1:3,iSpan,iNW)
 !                 k=k+1
 !             enddo; enddo
 !             call vtk_dataset_polydata(Buffer,mvtk)
@@ -531,9 +537,9 @@ subroutine LatticeToPanlConnectivity(LatticePoints, Connectivity, Points)
 !                 if (iSpan<p%NumBlNds_start) then
 !                     Buffer1d(k)=0
 !                 else if (iSpan==p%NumBlNds_start) then
-!                     Buffer1d(k)=-Misc%NWake%Gamma_nearjm1(iNW,iSpan,iWing)
+!                     Buffer1d(k)=-Misc%NWake%W(iW)%Gamma_nearjm1(iNW,iSpan)
 !                 else
-!                     Buffer1d(k)=-Misc%NWake%Gamma_nearjm1(iNW,iSpan,iWing)+Buffer1d(k-1)
+!                     Buffer1d(k)=-Misc%NWake%W(iW)%Gamma_nearjm1(iNW,iSpan)+Buffer1d(k-1)
 !                 endif
 !                 k=k+1
 !             enddo; enddo
