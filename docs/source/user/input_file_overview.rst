@@ -1,8 +1,8 @@
 .. _input_file_overview:
 
 
-Overview of input file formats
-==============================
+Input file formats
+==================
 
 OpenFAST uses two primary input file formats: *value column* where the first
 value on the line is read, and *key+value* where a value and keyword pair are
