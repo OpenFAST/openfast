@@ -438,10 +438,10 @@ A high-level flow of data in the linearization algorithm in the
 
 .. mermaid::
 
-  graph BT;
-    Calculate-Module-OP-->Construct-GlueCode-Jacobians;
-    Calculate-Module-OP-->Construct-GlueCode-State-Matrices;
-    Construct-Module-Jacobian-->Calculate-Module-OP;
+  graph TD;
+    D[Construct Module Jacobian]-->A[Calculate Module OP];
+    A[Calculate Module OP]-->B[Construct Glue Code Jacobians];
+    A[Calculate Module OP]-->C[Construct Glue Code State Matrices];
 
 Each enabled physics module constructs module-level matrices in their respective
 ``<Module>_Jacobian`` and ``<Module>_GetOP`` routines, and the collection of these
@@ -455,8 +455,10 @@ Jacobian computations.
    :width: 100%
    :align: center
 
+
 The Jacobian and state matrices are sized based on the total number of inputs, outputs,
 and continuous states. Though the size varies, these matrices generally contain thousands
-of elements in each dimension. Care should be given to how this data is accessed
-and copying should be minimized.
+of elements in each dimension and are mostly zeroes. That is to say, the Jacobian
+and state matrices are large and sparse. To reduce the overhead of memory
+allocation and access, a sparse matrix representation is recommended.
 
