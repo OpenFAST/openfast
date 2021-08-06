@@ -9,6 +9,6 @@ Appendix A: OLAF Primary Input File
 .. container::
    :name: Tab:OLAFinputfile
 
-   .. literalinclude:: ExampleFiles/ExampleFile--OLAF.txt
+   .. literalinclude:: ExampleFiles/ExampleFile--OLAF.dat
       :linenos:
       :language: none
