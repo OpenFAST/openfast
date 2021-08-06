@@ -58,12 +58,14 @@ if readTheDocs and useDoxygen:
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx_rtd_theme',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
     'sphinx.ext.intersphinx',
     'sphinxcontrib.doxylink',
     'sphinxcontrib.bibtex',
+    'sphinxcontrib.mermaid',
 ]
 
 autodoc_default_flags = [
