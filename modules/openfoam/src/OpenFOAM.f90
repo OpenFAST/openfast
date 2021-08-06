@@ -429,8 +429,8 @@ SUBROUTINE SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM,
 
 
       ! Local variables:
-   REAL(ReKi)                                      :: dRforceNodes ! Uniform distance between two consecutive blade force nodes
-   REAL(ReKi)                                      :: dHforceNodes ! Uniform distance between two consecutive tower force nodes
+!   REAL(ReKi)                                      :: dRforceNodes ! Uniform distance between two consecutive blade force nodes
+!   REAL(ReKi)                                      :: dHforceNodes ! Uniform distance between two consecutive tower force nodes
 
    INTEGER(IntKi)                                  :: J           ! Loops through nodes / elements
    INTEGER(IntKi)                                  :: K           ! Loops through blades.
@@ -564,7 +564,7 @@ SUBROUTINE OpFM_CreateActForceMotionsMesh( p_FAST, y_ED, InitIn_OpFM, OpFM, ErrS
       ! local variables
    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE      :: tmpActForceMotionsMesh   !< temporary mesh for interpolating orientation to actuator force points [-]
    INTEGER(IntKi)                                  :: k          ! blade loop counter
-   INTEGER(IntKi)                                  :: i,j          ! node counter
+   INTEGER(IntKi)                                  :: j          ! node counter
 
    INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
@@ -738,7 +738,7 @@ SUBROUTINE OpFM_CreateTmpActForceMotionsMesh( p_FAST, y_ED, p_OpFM, InitIn_OpFM,
    REAL(ReKi), DIMENSION(:,:), ALLOCATABLE         :: forceNodePositions  ! new positions for the force actuator nodes
    INTEGER(IntKi)                                  :: NumBl      ! number of blades
    INTEGER(IntKi)                                  :: k          ! blade loop counter
-   INTEGER(IntKi)                                  :: i,j          ! node counter
+   INTEGER(IntKi)                                  :: j          ! node counter
 
    INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
@@ -872,7 +872,7 @@ SUBROUTINE CreateTmpStructModelMesh(p_FAST, y_ED, p_OpFM, tmpStructModelMesh, Er
   !Local variables
   INTEGER(IntKi)                                  :: nNodesStructModel ! Number of nodes (tower/blade) in the structural model mesh
 
-  INTEGER(IntKi)                                  :: i,j          ! node counter
+  INTEGER(IntKi)                                  :: j          ! node counter
   INTEGER(IntKi)                                  :: k            ! blade counter
   INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
   CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None

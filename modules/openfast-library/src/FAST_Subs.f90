@@ -5150,7 +5150,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
    TYPE(IceDyn_Data),        INTENT(IN   ) :: IceD                !< All the IceDyn data used in time-step loop
 
 
-   logical                                 :: outputFields        ! flag to determine if we want to output the HD mesh fields
+!   logical                                 :: outputFields        ! flag to determine if we want to output the HD mesh fields
    INTEGER(IntKi)                          :: NumBl, k
    INTEGER(IntKi)                          :: j                   ! counter for StC instance at location
 

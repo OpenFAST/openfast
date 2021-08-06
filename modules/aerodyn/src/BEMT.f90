@@ -94,7 +94,7 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
 ! This routine is called from BEMT_Init.
 ! The parameters are set here and not changed during the simulation.
 !..................................................................................................................................
-   type(BEMT_InitInputType),       intent(in   )  :: InitInp     ! Input data for initialization routine
+   type(BEMT_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine
    real(DbKi),                     intent(in   )  :: interval    ! time interval  
    type(UA_InitInputType),         intent(  out)  :: Init_UA_Data           ! Parameters
    integer(IntKi),                 intent(  out)  :: errStat     ! Error status of the operation
@@ -121,10 +121,11 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
       end do
    end do
    
-      ! TODO:: Fully implement these initialization inputs
+   call move_alloc(InitInp%UAOff_innerNode, Init_UA_Data%UAOff_innerNode)
+   call move_alloc(InitInp%UAOff_outerNode, Init_UA_Data%UAOff_outerNode)
    
    Init_UA_Data%dt              = interval          
-   Init_UA_Data%OutRootName     = ''
+   Init_UA_Data%OutRootName     = InitInp%RootName ! was 'Debug.UA'
                
    Init_UA_Data%numBlades       = InitInp%numBlades 
    Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
@@ -133,6 +134,7 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    Init_UA_Data%Flookup         = InitInp%Flookup
    Init_UA_Data%a_s             = InitInp%a_s ! m/s  
    Init_UA_Data%ShedEffect      = .true. ! This should be true when coupled to BEM
+   Init_UA_Data%WrSum           = InitInp%SumPrint
    
 end subroutine BEMT_Set_UA_InitData
 
@@ -1246,7 +1248,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
       do j = 1,p%numBlades ! Loop through all blades
          do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
 
-            call UA_CalcOutput(i, j, m%u_UA(i,j,InputIndex), p%UA, x%UA, xd%UA, OtherState%UA, AFInfo(p%AFindx(i,j)), m%y_UA, m%UA, errStat2, errMsg2 )
+            call UA_CalcOutput(i, j, t, m%u_UA(i,j,InputIndex), p%UA, x%UA, xd%UA, OtherState%UA, AFInfo(p%AFindx(i,j)), m%y_UA, m%UA, errStat2, errMsg2 )
                if (ErrStat2 /= ErrID_None) then
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
                   if (errStat >= AbortErrLev) return

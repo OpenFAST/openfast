@@ -12,7 +12,19 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 
 OpenFAST v3.0.0 to OpenFAST `dev`
 ---------------------------------
-No changes.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST dev
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+AeroDyn 15                                    40   UAStartRad          0.25    UAStartRad          - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+AeroDyn 15                                    41   UAEndRad            0.95    UAEndRad            - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+AirFoilTables                                 12\* alphaUpper          5.0   alphaUpper          ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
+AirFoilTables                                 13\* alphaLower         \-3.0   alphaLower         ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
+AirFoilTables                                 42\* UACutout_delta     "DEFAULT"  UACutout_delta  ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
+============================================= ==== =============== ========================================================================================================================================================================================================
+\*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
 
 
 
@@ -74,6 +86,7 @@ SubDyn                                        na   RigidSection          (-)    
 HydroDyn                                      52   NBody              1   NBody          - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
 HydroDyn                                      53   NBodyMod           1   NBodyMod       - Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]
 ============================================= ==== =============== ========================================================================================================================================================================================================
+
 
 ============================================= ====== =============== ======================================================================================================================================================================================================
 Modified in OpenFAST v2.6.0

@@ -2211,10 +2211,9 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg         !< Error message
    
       ! local variables
-   INTEGER(IntKi)                                 :: SD_Start, SD_Out_Start, HD_Start, HD_Out_Start, ED_Out_Start, MAP_Out_Start
-   INTEGER(IntKi)                                 :: MAP_Start
-   INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                                 :: SD_Start, SD_Out_Start, HD_Out_Start, ED_Out_Start, MAP_Out_Start
+!   INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
+!   CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
    
    CHARACTER(*), PARAMETER                        :: RoutineName = 'Linear_SD_InputSolve_du'
    
