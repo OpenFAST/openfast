@@ -759,6 +759,9 @@ CONTAINS
       CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
+      ! Ignore error messages from InFileInfo destruction
+      call NWTC_Library_DestroyFileInfoType( InFileInfo, TmpErrStat, TmpErrMsg )
+
          ! Close the summary file if we were writing one
       IF ( SumFileUnit > 0 ) THEN
          CALL InflowWind_CloseSumFile( SumFileUnit, TmpErrStat, TmpErrMsg )
