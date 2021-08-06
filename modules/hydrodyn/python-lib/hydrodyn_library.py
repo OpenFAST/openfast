@@ -115,6 +115,9 @@ class HydroDynLib(CDLL):
 
         # This is not sufficient for HD
         #FIXME: ChanLen may not always be 20 -- could be as much as 256
+        #       Possible fix is to pass this length over to Fortran side.
+        #       Also may want to convert this at some point to C_NULL_CHAR
+        #       delimeter instead of fixed width.  Future problem though.
         # Number of channel names may exceeed 5000
         self._channel_names_c = create_string_buffer(20 * 4000)
         self._channel_units_c = create_string_buffer(20 * 4000)

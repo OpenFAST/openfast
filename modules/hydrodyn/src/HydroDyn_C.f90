@@ -39,6 +39,13 @@ MODULE HydroDyn_C
    integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
    integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
 
+   !------------------------------------------------------------------------------------
+   !  Potential issues
+   !     -  if MaxHDOutputs is sufficiently large, we may overrun the buffer on the Python
+   !        side (OutputChannelNames_C,OutputChannelUnits_C).  Don't have a good method to
+   !        check this in code yet.  Might be best to pass the max length over to Init and
+   !        do some checks here.  May also want to convert this to C_NULL_CHAR delimiter
+   !        instead of fixed width.
 
    !------------------------------------------------------------------------------------
    !  Data storage
@@ -195,7 +202,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    real(c_double),            intent(in   )  :: DT_C                                   !< Timestep used with HD for stepping forward from t to t+dt.  Must be constant.
    real(c_double),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation (used to set arrays for wave kinematics)
    integer(c_int),            intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
-   character(kind=c_char),    intent(  out)  :: OutputChannelNames_C(ChanLen*MaxHDOutputs+1)
+   character(kind=c_char),    intent(  out)  :: OutputChannelNames_C(ChanLen*MaxHDOutputs+1)    !< NOTE: if MaxHDOutputs is sufficiently large, we may overrun the buffer on the Python side.
    character(kind=c_char),    intent(  out)  :: OutputChannelUnits_C(ChanLen*MaxHDOutputs+1)
    integer(c_int),            intent(  out)  :: ErrStat_C                              !< Error status
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)                  !< Error message (C_NULL_CHAR terminated)
@@ -379,6 +386,8 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    NumChannels_C = size(InitOutData%WriteOutputHdr)
 
    ! transfer the output channel names and units to c_char arrays for returning
+   !     Upgrade idea:  use C_NULL_CHAR as delimiters.  Requires rework of Python
+   !                    side of code.
    k=1
    do i=1,NumChannels_C
       do j=1,ChanLen    ! max length of channel name.  Same for units
@@ -696,7 +705,6 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
 #endif
    real(c_double),            intent(in   )  :: Time_C
    real(c_double),            intent(in   )  :: TimeNext_C
-!FIXME: estimated inputs at t+dt, or inputs at t????
    integer(c_int),            intent(in   )  :: NumNodePts_C                 !< Number of mesh points we are transfering motions to and output loads to
    real(c_float),             intent(in   )  :: NodePos_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
    real(c_float),             intent(in   )  :: NodeVel_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
