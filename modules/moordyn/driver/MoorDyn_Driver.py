@@ -24,6 +24,21 @@
 import numpy as np   
 import MoorDyn_Library
 
+# Library path
+try: 
+    library_path = "/home/nmendoza/Projects/CCT2/OpenFAST/build_test/modules/moordyn/libmd_c_lib.so"
+    md_lib = MoorDyn_Library.MoorDynLibAPI(library_path)
+except Exception as e:
+    print("{}".format(e))
+    print(f"MD: Cannot load MoorDyn library")
+    exit(1)
+
+# For debugging only
+verbose = True
+if verbose:
+    dbgFileName = 'MD.dbg'
+    dbg_outfile = md_lib.DriverDbg(dbgFileName)
+
 #=============================================================================================================================
 #-------------------------------------------------------- SET INPUTS ---------------------------------------------------------
 #=============================================================================================================================
@@ -78,10 +93,6 @@ for line in fh:
   md_input_string_array.append(line.rstrip())
 fh.close()
 
-# Library path
-library_path = "/home/nmendoza/Projects/CCT2/OpenFAST/build_test/modules/moordyn/libmd_c_lib.so"
-md_lib = MoorDyn_Library.MoorDynLibAPI(library_path)
-
 #==============================================================================
 # Basic alogrithm for using MoorDyn library
 
@@ -98,10 +109,14 @@ rho_h2o             = 1000               # water density (kg/m^3)
 d_h2o               = 50                 # water depth (m). usage: depth is positive
 platform_init_pos   = np.array([0.1, 0.2, 0.3, 0.04, 0.05, 0.06]) # platform/hull/substructure initial position [x, y, z, rot_x, rot_y, rot_z] in openFAST global coordinates [m, m, m, rad, rad, rad]
 platform_init_vel   = np.array([0.0, 0.0, 0.0, 0.00, 0.00, 0.00]) # platform/hull/substructure initial velocities
-forces              = np.array([0, 0, 0, 0, 0, 0])                # platform/hull/substructure forces (output)
+platform_init_acc   = np.array([0.0, 0.0, 0.0, 0.00, 0.00, 0.00]) # platform/hull/substructure initial accelerations
+forces              = np.array([0.0, 0.0, 0.0, 0.00, 0.00, 0.00]) # platform/hull/substructure forces (output)
+
+# Interpolation Order - 1: linear (uses two time steps) or 2: quadratic (uses three time steps)
+InterpOrder         = 1
 
 #   PREDICTOR-CORRECTOR: For checking if our library is correctly handling correction steps, set this to > 0
-NumCorrections=0 # SET TO 0 IF NOT DOING CORRECTION STEP
+NumCorrections      = 0 # SET TO 0 IF NOT DOING CORRECTION STEP
 
 #=============================================================================================================================
 #-------------------------------------------------------- RUN MOORDYN --------------------------------------------------------
@@ -109,9 +124,11 @@ NumCorrections=0 # SET TO 0 IF NOT DOING CORRECTION STEP
 
 # MD_INIT: Only need to call md_init once
 try:
-    md_lib.md_init(md_input_string_array, g, rho_h2o, d_h2o, platform_init_pos)  
+    md_lib.md_init(md_input_string_array, g, rho_h2o, d_h2o, platform_init_pos, InterpOrder)  
 except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
+    if verbose:
+        dbg_outfile.end()
     exit(1)
 
 # Set up the output channels listed in the MD input "file"
@@ -125,12 +142,17 @@ output_channel_array  = np.zeros( (md_lib.numTimeSteps,md_lib._numChannels.value
 
 # Call md_calcOutput - calculating outputs for initial time t=0 and initial position & velocity
 try: 
-    md_lib.md_calcOutput(time[0], platform_init_pos, platform_init_vel, forces, output_channel_values)
+    md_lib.md_calcOutput(time[0], platform_init_pos, platform_init_vel, platform_init_acc, forces, output_channel_values)
 except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
+    if verbose:
+        dbg_outfile.end()
     exit(1)
 print('Time',time[0],' completed')
 output_channel_array[0,:] = np.append(time[0],output_channel_values)
+# Write the debug output at t=t_initial
+if verbose:
+    dbg_outfile.write(time[0],platform_init_pos,platform_init_vel,platform_init_acc,forces)
 
 # Run at each time step
 for i in range( 0, len(time)-1):
@@ -139,22 +161,38 @@ for i in range( 0, len(time)-1):
     for correction in range(0, NumCorrections+1):
 
         # User must update position and velocity at each time step - handles one interface point, i.e. substructure is represented as a single point
-        Positions = [0.1, 0.2, 0.3, 0.04, 0.05, 0.06]
-        Velocities = [0.0, 0.0, 0.0, 0.00, 0.00, 0.00]
+        Positions     = [0.1, 0.2, 0.3, 0.04, 0.05, 0.06]
+        Velocities    = [0.0, 0.0, 0.0, 0.00, 0.00, 0.00]
+        Accelerations = [0.0, 0.0, 0.0, 0.00, 0.00, 0.00]
 
         # Call md_updateStates
-        try: 
-            md_lib.md_updateStates(time[i], time[i+1], Positions, Velocities)
-        except Exception as e:
-            print("{}".format(e))   # Exceptions handled in moordyn_library.py
-            exit(1)
+        if InterpOrder == 1:
+            try: 
+                md_lib.md_updateStates(0, time[i], time[i+1], Positions, Velocities, Accelerations)
+            except Exception as e:
+                print("{}".format(e))   # Exceptions handled in moordyn_library.py
+                exit(1)
+        elif InterpOrder == 2:
+            try: 
+                md_lib.md_updateStates(time[i], time[i+1], time[i+2], Positions, Velocities, Accelerations)
+            except Exception as e:
+                print("{}".format(e))   # Exceptions handled in moordyn_library.py
+                if verbose:
+                    dbg_outfile.end()
+                exit(1)
+        else:
+            print("MoorDyn_Driver.py: Invalid interpolation order")
 
         # Call md_calcOutput
         try: 
-            md_lib.md_calcOutput(time[i+1], Positions, Velocities, forces, output_channel_values) # output channel values are overwritten for each time step
+            md_lib.md_calcOutput(time[i+1], Positions, Velocities, Accelerations, forces, output_channel_values) # output channel values are overwritten for each time step
         except Exception as e:
             print("{}".format(e))   # Exceptions handled in moordyn_library.py
+            if verbose:
+                dbg_outfile.end()
             exit(1)
+        if verbose:
+            dbg_outfile.write(time[i+1],Positions,Velocities,Accelerations,forces)
 
     output_channel_array[i+1,:] = np.append(time[i+1],output_channel_values)
 
@@ -165,11 +203,14 @@ try:
     md_lib.md_end()
 except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
+    if verbose:
+        dbg_outfile.end()
     exit(1)
+
+# Finally, write the ouput channel values to a file
+OutFile=md_lib.WriteOutChans("MD_out.txt",output_channel_names,output_channel_units)
+OutFile.write(output_channel_array)
+OutFile.end()
 
 print("We have successfully run MoorDyn!")
 exit()
-
-# If MD fails, need to kill driver program
-# if md_lib.error_status != 0:
-#    return
