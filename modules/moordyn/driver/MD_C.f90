@@ -32,23 +32,35 @@ PUBLIC :: MD_UPDATESTATES_C
 PUBLIC :: MD_CALCOUTPUT_C
 PUBLIC :: MD_END_C
 
+!--------------------------------------------------------------------------------------------------------------------------------------------------------
 ! Global Variables
 TYPE(MD_InitInputType)                  :: InitInp             !< Input data for initialization routine
 TYPE(MD_InputType), ALLOCATABLE         :: u(:)                !< An initial guess for the input; input mesh must be defined
 TYPE(MD_ParameterType)                  :: p                   !< Parameters
-TYPE(MD_ContinuousStateType)            :: x                   !< Initial continuous states
-TYPE(MD_DiscreteStateType)              :: xd                  !< Initial discrete states
-TYPE(MD_ConstraintStateType)            :: z                   !< Initial guess of the constraint states
-TYPE(MD_OtherStateType)                 :: other               !< Initial other states
+TYPE(MD_ContinuousStateType)            :: x(0:2)              !< Initial continuous states
+TYPE(MD_DiscreteStateType)              :: xd(0:2)             !< Initial discrete states
+TYPE(MD_ConstraintStateType)            :: z(0:2)              !< Initial constraint states
+TYPE(MD_OtherStateType)                 :: other(0:2)          !< Initial other states
 TYPE(MD_OutputType)                     :: y                   !< Initial system outputs (outputs are not calculated; only the output mesh is initialized)
 TYPE(MD_MiscVarType)                    :: m                   !< Initial misc/optimization variables
 TYPE(MD_InitOutputType)                 :: InitOutData         !< Output for initialization routine
 
+!--------------------------------------------------------------------------------------------------------------------------------------------------------
 ! Time tracking
 INTEGER(IntKi)                          :: N_Global=0          !< Global timestep. MOORDYN IS NOT CURRENTLY USING, BUT MAY CHANGE IN THE FUTURE
-INTEGER(IntKi)                          :: InterpOrder=1       !< Interpolation order: must be 1 (linear) or 2 (quadratic)
+INTEGER(IntKi)                          :: InterpOrder         !< Interpolation order: must be 1 (linear) or 2 (quadratic)
+REAL(DbKi), ALLOCATABLE                 :: InputTimes(:)       !< InputTimes array
+REAL(DbKi)                              :: InputTimePrev       !< input time of last UpdateStates call
+! we are including the previous state info here (not done in OpenFAST this way)
+INTEGER(IntKi),   PARAMETER             :: STATE_LAST = 0      !< Index for previous state (not needed in OF, but necessary here)
+INTEGER(IntKi),   PARAMETER             :: STATE_CURR = 1      !< Index for current state
+INTEGER(IntKi),   PARAMETER             :: STATE_PRED = 2      !< Index for predicted state
+   ! Note the indexing is different on inputs (no clue why, but thats how OF handles it)
+INTEGER(IntKi),   PARAMETER             :: INPUT_LAST = 3      !< Index for previous  input at t-dt
+INTEGER(IntKi),   PARAMETER             :: INPUT_CURR = 2      !< Index for current   input at t
+INTEGER(IntKi),   PARAMETER             :: INPUT_PRED = 1      !< Index for predicted input at t+dt
 
-!------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------------------------------------------------------------------
 !  Meshes for motions and loads
 TYPE(MeshType)                          :: MD_MotionMesh       !< mesh for motions of external nodes
 TYPE(MeshType)                          :: MD_LoadMesh         !< mesh for loads  for external nodes
@@ -57,16 +69,17 @@ TYPE(MeshMapType)                       :: Map_Motion_2_MD_WB  !< Mesh mapping b
 TYPE(MeshMapType)                       :: Map_MD_WB_2_Load    !< Mesh mapping between MD output WAMIT body loads mesh and external nodes mesh
 
 !  Motions input (so that we don't have to reallocate all the time)
-REAL(ReKi)                              :: tmpPositions(6,1)    !< temp array.  Probably don't need this, but makes conversion from C clearer.
-REAL(ReKi)                              :: tmpVelocities(6,1)   !< temp array.  Probably don't need this, but makes conversion from C clearer.
-REAL(ReKi)                              :: tmpForces(6,1)       !< temp array.  Probably don't need this, but makes conversion to   C clearer.
+REAL(ReKi)                              :: tmpPositions(6,1)   !< temp array.  Probably don't need this, but makes conversion from C clearer.
+REAL(ReKi)                              :: tmpVelocities(6,1)  !< temp array.  Probably don't need this, but makes conversion from C clearer.
+REAL(ReKi)                              :: tmpAccelerations(6,1) !< temp array.  Probably don't need this, but makes conversion from C clearer.
+REAL(ReKi)                              :: tmpForces(6,1)      !< temp array.  Probably don't need this, but makes conversion to   C clearer.
 
 CONTAINS
 
 !===============================================================================================================
 !---------------------------------------------- MD INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
+SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, InterpOrder_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
 
     !TEMPORARY hack until Waves handling is finalized
     USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_y0, WaveGrid_dx, WaveGrid_dy, WaveGrid_nx, WaveGrid_ny, WaveGrid_nz
@@ -78,6 +91,7 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: RHO_C
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DEPTH_C
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6)
+    INTEGER(C_INT)                                 , INTENT(IN   )   :: InterpOrder_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
     CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(100000)
@@ -95,9 +109,9 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     ! Hard coded for 10 wave steps.  Doesn't actually matter since it will get zeroed
     INTEGER(IntKi)                                                   :: NStepWave = 10
 
-    ! Initialize ErrStat
+    ! Set up error handling for MD_CALCOUTPUT_C
     ErrStat = ErrID_None
-    ErrMsg  = ""
+    ErrMsg = ''
 
     ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
     CALL C_F_pointer(InputFileString_C, InputFileString)
@@ -111,6 +125,14 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     END IF
 
     ! Set other inputs for calling MD_Init
+    IF (InterpOrder_C .EQ. 1 .OR. InterpOrder_C .EQ. 2) THEN
+        InterpOrder = INT(InterpOrder_C, IntKi)
+        ALLOCATE(InputTimes, InterpOrder+1)
+    ELSE
+        PRINT*, 'MD_INIT_C: Please set InterpOrder to 1 (linear) or 2 (quadratic)'
+        RETURN
+    END IF
+
     DTcoupling               = REAL(DT_C, DbKi)
     InitInp%FileName         = 'notUsed'
     InitInp%RootName         = 'MDroot'
@@ -144,20 +166,21 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     InitInp%WavePDyn         = 0.0_ReKi
     InitInp%WaveElev         = 0.0_ReKi
 
-    ALLOCATE(u(2), STAT=ErrStat)
+    ALLOCATE(u(InterpOrder+1), STAT=ErrStat)
     IF (ErrStat .GE. AbortErrLev) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg  = "MD_INIT_C: Could not allocate input"
+         ErrMsg  = "MD_INIT_C: Could not allocate input u"
          RETURN
     END IF
     
     !-------------------------------------------------
     ! Call the main subroutine MD_Init
     !-------------------------------------------------
-    CALL MD_Init(InitInp, u(1), p, x, xd, z, other, y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)
+    CALL MD_Init(InitInp, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)
     IF (ErrStat .GE. AbortErrLev) THEN
-        PRINT *, "MD_INIT_C: Main MD_Init subroutine failed!"
-        PRINT *, ErrMsg
+        CALL WrScr(trim(ErrMsg))
+        ErrStat_C = ErrStat
+        ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
         RETURN
     END IF
 
@@ -181,6 +204,33 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     ! null terminate the string
     OutputChannelNames_C(k) = C_NULL_CHAR
     OutputChannelUnits_C(k) = C_NULL_CHAR
+
+    !-------------------------------------------------------------
+   ! Set the interface  meshes for motion inputs and loads output
+   !-------------------------------------------------------------
+   CALL SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2);    IF (Failed())  RETURN
+
+    DO i=2,InterpOrder+1
+        CALL MD_CopyInput (u(1),  u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+        IF (Failed())  RETURN
+    END DO
+    InputTimePrev = -DTcoupling    ! Initialize for MD_UpdateStates_C
+
+    !-------------------------------------------------------------
+   ! Initial setup of other pieces of x,xd,z,other
+   !-------------------------------------------------------------
+   CALL MD_CopyContState  ( x(          STATE_CURR), x(          STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL MD_CopyDiscState  ( xd(         STATE_CURR), xd(         STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL MD_CopyConstrState( z(          STATE_CURR), z(          STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL MD_CopyOtherState ( other(STATE_CURR), other(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);                if (Failed())  return
+
+   !-------------------------------------------------------------
+   ! Setup the previous timestep copies of states
+   !-------------------------------------------------------------
+   CALL MD_CopyContState  ( x(          STATE_CURR), x(          STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL MD_CopyDiscState  ( xd(         STATE_CURR), xd(         STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL MD_CopyConstrState( z(          STATE_CURR), z(          STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL MD_CopyOtherState ( other(STATE_CURR), other(STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);                if (Failed())  return
 
     !-------------------------------------------------
     ! Clean up variables and set up for MD_CALCOUTPUT_C
@@ -222,40 +272,103 @@ END SUBROUTINE MD_INIT_C
 !===============================================================================================================
 !---------------------------------------------- MD UPDATE STATES -----------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_UPDATESTATES_C(TIME_C, TIME2_C, POSITIONS_C, VELOCITIES_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_UPDATESTATES_C')
+SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_UPDATESTATES_C')
 
-    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: TIME_C, TIME2_C
+    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: T0_C, T1_C, T2_C
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: POSITIONS_C(1,6)
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: VELOCITIES_C(1,6)
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: ACCELERATIONS_C(1,6)
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
-    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025)
 
     ! Local Variables
-    REAL(DbKi)                                                       :: t_array(2)
     INTEGER(IntKi)                                                   :: ErrStat, ErrStat2, J
     CHARACTER(ErrMsgLen)                                             :: ErrMsg, ErrMsg2
+    LOGICAL                                                          :: CorrectionStep
+
+    ! Set up error handling for MD_CALCOUTPUT_C
+    ErrStat = ErrID_None
+    ErrMsg = ''
+    CorrectionStep = .FALSE.
 
     ! Set up inputs to MD_UpdateStates
-    t_array(1)  = REAL(TIME_C, DbKi)          ! t
-    t_array(2)  = REAL(TIME2_C, DbKi)         ! t + dt
-
-    ALLOCATE(u(InterpOrder+1), STAT=ErrStat)
-    IF (ErrStat .GE. AbortErrLev) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = "MD_UPDATESTATES_C: Could not allocate input"
-         RETURN
+    IF (InterpOrder == 1) THEN
+        InputTimes(1)  = REAL(T1_C, DbKi)         ! t
+        InputTimes(2)  = REAL(T2_C, DbKi)         ! t + dt
+    ELSEIF (InterpOrder == 2) THEN
+        InputTimes(1)  = REAL(T0_C, DbKi)         ! t - dt
+        InputTimes(2)  = REAL(T1_C, DbKi)         ! t
+        InputTimes(3)  = REAL(T2_C, DbKi)         ! t + dt
+    ELSE
+        PRINT*,'MD_UPDATESTATES_C: INTERPORDER MUST BE 1 (LINEAR) OR 2 (QUADRATIC). YOU SHOULDNT BE HERE!'
+        RETURN
     END IF
 
-    ! Reshape position and velocity (from a row vector to a column vector)
+   !-------------------------------------------------------
+   ! Check the time for current timestep and next timestep
+   !-------------------------------------------------------
+   !     These inputs are used in the time stepping algorithm within MD_UpdateStates
+   !     For quadratic interpolation (InterpOrder==2), 3 timesteps are used.  For
+   !     linear (InterOrder==1), 2 timesteps (the MD code can handle either).
+   !        u(1)  inputs at t + dt        ! Next timestep
+   !        u(2)  inputs at t             ! This timestep
+   !        u(3)  inputs at t - dt        ! previous timestep (quadratic only)
+   !
+   !  NOTE: Within MD, the Radiation calculations can be done at an integer multiple of the
+   !        timestep.  This is checked at each UpdateStates call.  However, if we compile
+   !        in double precision, the values of Time_C and TimeNext_C are in double precison,
+   !        but InputTimes is in DbKi (which is promoted quad precision when compiling in
+   !        double precision) and the check may fail.  So we are going to set the times we
+   !        we pass over to UpdateStates using the global timestep and the stored DbKi value
+   !        for the timestep rather than the lower precision (when compiled double) time
+   !        values passed in.  It is a bit of a clumsy workaround for this precision loss,
+   !        but should not affect any results.
+
+   !  Check if we are repeating an UpdateStates call (for example in a predictor/corrector loop)
+    IF ( EqualRealNos( REAL(T1_C,DbKi), InputTimePrev ) ) THEN
+        CorrectionStep = .TRUE.
+    ELSE ! Setup time input times array
+        InputTimePrev  = REAL(T1_C,DbKi)            ! Store for check next time
+    END IF
+
+
+    IF (CorrectionStep) THEN
+        ! Step back to previous state because we are doing a correction step
+        !     -- repeating the T -> T+dt update with new inputs at T+dt
+        !     -- the STATE_CURR contains states at T+dt from the previous call, so revert those
+        CALL MD_CopyContState   (x(          STATE_LAST), x(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+        CALL MD_CopyDiscState   (xd(         STATE_LAST), xd(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+        CALL MD_CopyConstrState (z(          STATE_LAST), z(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+        CALL MD_CopyOtherState  (other(STATE_LAST), other(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);              if (Failed())  return
+    ELSE
+        ! Cycle inputs back one timestep since we are moving forward in time.
+        IF (InterpOrder>1) THEN ! quadratic, so keep the old time
+            CALL MD_CopyInput( u(INPUT_CURR), u(INPUT_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);        if (Failed())  return
+        END IF
+        ! Move inputs from previous t+dt (now t) to t
+        CALL MD_CopyInput( u(INPUT_PRED), u(INPUT_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);           if (Failed())  return
+    END IF
+
+    ! Reshape position and velocity (transposing from a row vector to a column vector)
     DO J = 1,6
-        tmpPositions(J,1)  = REAL(POSITIONS_C(1,J),ReKi)
-        tmpVelocities(J,1) = REAL(VELOCITIES_C(1,J),ReKi)
+        tmpPositions(J,1)     = REAL(POSITIONS_C(1,J),ReKi)
+        tmpVelocities(J,1)    = REAL(VELOCITIES_C(1,J),ReKi)
+        tmpAccelerations(J,1) = REAL(ACCELERATIONS_C(1,J),ReKi)
     END DO
 
     ! Transfer motions to input meshes
-   call Set_MotionMesh()                                       ! update motion mesh with input motion arrays
-   call MD_SetInputMotion( u(1), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
-      if (Failed())  return
+    CALL Set_MotionMesh( ErrStat2, ErrMsg2 )                    ! update motion mesh with input motion arrays
+    IF (Failed()) RETURN
+    CALL MD_SetInputMotion( u(1), ErrStat2, ErrMsg2 )           ! transfer input motion mesh to u(1) meshes
+    IF (Failed()) RETURN
+
+    ! Set copy the current state over to the predicted state for sending to UpdateStates
+    !     -- The STATE_PREDicted will get updated in the call.
+    !     -- The UpdateStates routine expects this to contain states at T at the start of the call (history not passed in)
+    CALL MD_CopyContState   (x(          STATE_CURR), x(          STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyConstrState (z(          STATE_CURR), z(          STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyOtherState  (other(STATE_CURR), other(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);              IF (Failed())  RETURN
 
     !-------------------------------------------------
     ! Call the main subroutine MD_UpdateStates
@@ -267,10 +380,27 @@ SUBROUTINE MD_UPDATESTATES_C(TIME_C, TIME2_C, POSITIONS_C, VELOCITIES_C, ErrStat
         RETURN
     END IF
 
+   !-------------------------------------------------------
+   ! Cycle the states
+   !-------------------------------------------------------
+   ! Move current state at T to previous state at T-dt
+   !     -- STATE_LAST now contains info at time T
+   !     -- this allows repeating the T --> T+dt update
+    CALL MD_CopyContState   (x(          STATE_CURR), x(          STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyConstrState (z(          STATE_CURR), z(          STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyOtherState  (other(STATE_CURR), other(STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);              IF (Failed())  RETURN
+    ! Update the predicted state as the new current state
+    !     -- we have now advanced from T to T+dt.  This allows calling with CalcOuput to get the outputs at T+dt
+    CALL MD_CopyContState   (x(          STATE_PRED), x(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyDiscState   (xd(         STATE_PRED), xd(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyConstrState (z(          STATE_PRED), z(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  IF (Failed())  RETURN
+    CALL MD_CopyOtherState  (other(STATE_PRED), other(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);              IF (Failed())  RETURN
+
     !-------------------------------------------------
     ! Convert the outputs of MD_UpdateStates back to C
     !-------------------------------------------------
-    IF (ErrStat .GE. 4) THEN
+    IF (ErrStat .GE. AbortErrLev) THEN
         ErrStat_C = ErrID_Fatal
     ELSE
         ErrStat_C = ErrID_None
@@ -295,41 +425,40 @@ END SUBROUTINE MD_UPDATESTATES_C
 !===============================================================================================================
 !---------------------------------------------- MD CALC OUTPUT -------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, FORCES_C, OUTPUTS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOUTPUT_C')
+SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, FORCES_C, OUTPUTS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOUTPUT_C')
 
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: Time_C
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: POSITIONS_C(1,6)
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: VELOCITIES_C(1,6)
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: ACCELERATIONS_C(1,6)
     REAL(C_FLOAT)                                  , INTENT(  OUT)   :: FORCES_C(1,6)
     REAL(C_FLOAT)                                  , INTENT(  OUT)   :: OUTPUTS_C(p%NumOuts)
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
-    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C
+    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(1025)
 
     ! Local Variables
     REAL(DbKi)                                                       :: t
     INTEGER(IntKi)                                                   :: ErrStat, ErrStat2, J
     CHARACTER(ErrMsgLen)                                             :: ErrMsg, ErrMsg2
 
-    PRINT*, 'inside MD_CALCOUTPUT_C'
+    ! Set up error handling for MD_CALCOUTPUT_C
+    ErrStat = ErrID_None
+    ErrMsg = ''
 
     ! Set up inputs to MD_CalcOutput
     t = REAL(Time_C, DbKi)
-    ALLOCATE(u(2), STAT=ErrStat)
-    if (ErrStat .GE. AbortErrLev) then
-        ErrStat = ErrID_Fatal
-        ErrMsg  = "MD_CALCOUTPUT_C: Could not allocate input"
-        RETURN
-    end if
 
     ! Reshape position and velocity (from row vector to a column vector)
     DO J = 1,6
-        tmpPositions(J,1)    = REAL(POSITIONS_C(1,J),ReKi)
-        tmpVelocities(J,1)   = REAL(VELOCITIES_C(1,J),ReKi)
+        tmpPositions(J,1)       = REAL(POSITIONS_C(1,J),ReKi)
+        tmpVelocities(J,1)      = REAL(VELOCITIES_C(1,J),ReKi)
+        tmpAccelerations(J,1)   = REAL(ACCELERATIONS_C(1,J),ReKi)
     END DO
 
     ! Transfer motions to input meshes
-    CALL Set_MotionMesh()                            ! update motion mesh with input motion arrays
-    CALL MD_SetInputMotion( u(1), ErrStat, ErrMsg )  ! transfer input motion mesh to u(1) meshes
+    CALL Set_MotionMesh(ErrStat2, ErrMsg2 )             ! update motion mesh with input motion arrays
+    IF (Failed())  RETURN
+    CALL MD_SetInputMotion( u(1), ErrStat2, ErrMsg2 )   ! transfer input motion mesh to u(1) meshes
     IF (Failed())  RETURN
 
     !-------------------------------------------------
@@ -347,7 +476,7 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, FORCES_C, OUTPUTS_
     !-------------------------------------------------
     ! Transfer resulting load meshes to intermediate mesh
     CALL MD_TransferLoads( u(1), y, ErrStat, ErrMsg )
-    if (Failed())  return
+    IF (Failed())  RETURN
 
     ! Set output force/moment array
     CALL Set_OutputLoadArray( )
@@ -358,7 +487,7 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, FORCES_C, OUTPUTS_
 
     OUTPUTS_C = REAL(y%WriteOutput, C_FLOAT)
 
-    IF (ErrStat .GE. 4) THEN
+    IF (ErrStat .GE. AbortErrLev) THEN
         ErrStat_C = ErrID_Fatal
     ELSE
         ErrStat_C = ErrID_None
@@ -386,19 +515,15 @@ END SUBROUTINE MD_CALCOUTPUT_C
 SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
 
     INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
-    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C
+    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(1025)
 
     ! Local variables
-    INTEGER(IntKi)                                     :: ErrStat, ErrStat2
+    INTEGER(IntKi)                                     :: ErrStat, ErrStat2, i
     CHARACTER(ErrMsgLen)                               :: ErrMsg, ErrMsg2
 
-    ! Set up inputs for MD_End
-    allocate(u(2), STAT=ErrStat)
-    if (ErrStat .GE. AbortErrLev) then
-       ErrStat = ErrID_Fatal
-       ErrMsg  = "MD_END_C: Could not allocate input"
-       RETURN
-    END IF
+    ! Set up error handling for MD_END_C
+    ErrStat = ErrID_None
+    ErrMsg = ''
 
     ! Call the main subroutine MD_End
     CALL MD_End(u(1), p, x, xd, z, other, y, m, ErrStat , ErrMsg)
@@ -408,8 +533,20 @@ SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
         RETURN
     END IF
 
+    !  NOTE: MoorDyn_End only takes 1 instance of u, not the array.  So extra
+    !        logic is required here (this isn't necessary in the fortran driver
+    !        or in openfast, but may be when this code is called from C, Python,
+    !        or some other code using the c-bindings.
+    IF (allocated(u)) THEN
+        DO i=2,size(u)
+            call MD_DestroyInput( u(i), ErrStat2, ErrMsg2 )            
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_END_C' )
+        END DO
+        IF (allocated(u))             deallocate(u)
+    END IF
+
     ! Convert the outputs of MD_End from Fortran to C
-    IF (ErrStat .GE. 4) THEN
+    IF (ErrStat .GE. AbortErrLev) THEN
         ErrStat_C = ErrID_Fatal
     ELSE
         ErrStat_C = ErrID_None
@@ -440,18 +577,18 @@ END SUBROUTINE MD_END_C
 !! This subroutine sets the interface meshes to map to the input motions to the MD
 !! meshes for WAMIT.  This subroutine also sets the meshes for the output loads.
 SUBROUTINE SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
-    integer(IntKi),         intent(  out)  :: ErrStat    !< temporary error status
-    character(ErrMsgLen),   intent(  out)  :: ErrMsg     !< temporary error message
-    real(ReKi)                             :: InitPos(3)
-    real(R8Ki)                             :: theta(3)
-    real(R8Ki)                             :: Orient(3,3)
+    INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat    !< temporary error status
+    CHARACTER(ErrMsgLen),   INTENT(  OUT)  :: ErrMsg     !< temporary error message
+    REAL(ReKi)                             :: InitPos(3)
+    REAL(R8Ki)                             :: theta(3)
+    REAL(R8Ki)                             :: Orient(3,3)
     !-------------------------------------------------------------
     ! Set the interface  meshes for motion inputs and loads output
     !-------------------------------------------------------------
     ! Motion mesh
     !     This point mesh may contain more than one point. Mapping will be used to map
     !     this to the input meshes for WAMIT and Morison.
-    call MeshCreate(  MD_MotionMesh                       ,  &
+    CALL MeshCreate(  MD_MotionMesh                       ,  &
                       IOS              = COMPONENT_INPUT  ,  &
                       Nnodes           = 1                ,  &
                       ErrStat          = ErrStat         ,  &
@@ -459,16 +596,16 @@ SUBROUTINE SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
                       TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
                       TranslationVel   = .TRUE.,    RotationVel = .TRUE., &
                       TranslationAcc   = .TRUE.,    RotationAcc = .TRUE.  )
-    if (ErrStat >= AbortErrLev) RETURN
+    IF (ErrStat >= AbortErrLev) RETURN
 
     ! initial position and orientation of node
     InitPos  = tmpPositions(1:3,1)
-    theta    = real(tmpPositions(4:6,1),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-    Orient   = EulerConstruct( theta )
+    theta    = REAL(tmpPositions(4:6,1),DbKi)    ! convert ReKi to DbKi to avoid roundoff
+    CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
     CALL MeshPositionNode(  MD_MotionMesh            , &
                             1                        , &
                             InitPos                  , &  ! position
-                            ErrStat, ErrMsg        , &
+                            ErrStat, ErrMsg          , &
                             Orient                     )  ! orientation
     IF (ErrStat >= AbortErrLev) RETURN
      
@@ -493,11 +630,11 @@ SUBROUTINE SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
                    DestMesh = MD_LoadMesh        ,&
                    CtrlCode = MESH_SIBLING       ,&
                    IOS      = COMPONENT_OUTPUT   ,&
-                   ErrStat  = ErrStat           ,&
-                   ErrMess  = ErrMsg            ,&
+                   ErrStat  = ErrStat            ,&
+                   ErrMess  = ErrMsg             ,&
                    Force    = .TRUE.             ,&
                    Moment   = .TRUE.             )
-    IF (ErrStat >= AbortErrLev) return
+    IF (ErrStat >= AbortErrLev) RETURN
     
     MD_LoadMesh%RemapFlag  = .TRUE.
 
@@ -530,29 +667,33 @@ SUBROUTINE SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
     ! Set the mapping meshes
     ! WAMIT - floating bodies using potential flow
     IF ( u(1)%CoupledKinematics%Committed ) THEN      ! input motions
-       CALL MeshMapCreate( MD_MotionMesh, u(1)%CoupledKinematics, Map_Motion_2_MD_WB, ErrStat, ErrMsg )
-          IF (ErrStat >= AbortErrLev) RETURN
+        CALL MeshMapCreate( MD_MotionMesh, u(1)%CoupledKinematics, Map_Motion_2_MD_WB, ErrStat, ErrMsg )
+        IF (ErrStat >= AbortErrLev) RETURN
     END IF
-    IF (    y%CoupledLoads%Committed ) THEN           ! output loads
-       CALL MeshMapCreate( y%CoupledLoads, MD_LoadMesh, Map_MD_WB_2_Load, ErrStat, ErrMsg )
-          IF (ErrStat >= AbortErrLev) RETURN
-        END IF
+    IF ( y%CoupledLoads%Committed ) THEN              ! output loads
+        CALL MeshMapCreate( y%CoupledLoads, MD_LoadMesh, Map_MD_WB_2_Load, ErrStat, ErrMsg )
+        IF (ErrStat >= AbortErrLev) RETURN
+    END IF
 
 END SUBROUTINE SetMotionLoadsInterfaceMeshes
 
 ! SUBROUTINE Set_MotionMesh
 !---------------------------------------------------------------------------------------------------------------
 !> This routine is operating on module level data, hence few inputs
-SUBROUTINE Set_MotionMesh()
-    real(R8Ki)                                :: theta(3)
-    real(R8Ki)                                :: Orient(3,3)
+SUBROUTINE Set_MotionMesh(ErrStat3, ErrMsg3)
+    REAL(R8Ki)                                :: theta(3)
+    REAL(R8Ki)                                :: Orient(3,3)
+    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat
+    CHARACTER(ErrMsgLen),      INTENT(  OUT)  :: ErrMsg
     ! Set mesh corresponding to input motions
-       theta    = real(tmpPositions(4:6,1),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-       Orient   = EulerConstruct( theta )
+       theta = REAL(tmpPositions(4:6,1),DbKi)    ! convert ReKi to DbKi to avoid roundoff
+       CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
        MD_MotionMesh%TranslationDisp(1:3,1) = tmpPositions(1:3,1) - MD_MotionMesh%Position(1:3,1)  ! relative displacement only
        MD_MotionMesh%Orientation(1:3,1:3,1) = Orient
        MD_MotionMesh%TranslationVel( 1:3,1) = tmpVelocities(1:3,1)
        MD_MotionMesh%RotationVel(    1:3,1) = tmpVelocities(4:6,1)
+       MD_MotionMesh%TranslationAcc( 1:3,1) = tmpAccelerations(1:3,1)
+       MD_MotionMesh%RotationAcc(    1:3,1) = tmpAccelerations(4:6,1)
 END SUBROUTINE Set_MotionMesh
 
 ! SUBROUTINE MD_SetInputMotion
@@ -560,11 +701,11 @@ END SUBROUTINE Set_MotionMesh
 !> Map the motion of the intermediate input mesh over to the input meshes
 !! This routine is operating on module level data, hence few inputs
 SUBROUTINE MD_SetInputMotion( u_local, ErrStat, ErrMsg )
-    TYPE(MD_InputType),        INTENT(inout)  :: u_local
-    INTEGER(IntKi),            INTENT(  out)  :: ErrStat
-    CHARACTER(ErrMsgLen),      INTENT(  out)  :: ErrMsg
+    TYPE(MD_InputType),        INTENT(INOUT)  :: u_local
+    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat
+    CHARACTER(ErrMsgLen),      INTENT(  OUT)  :: ErrMsg
     !  WAMIT mesh
-    IF ( u_local%CoupledKinematics%Committed ) then
+    IF ( u_local%CoupledKinematics%Committed ) THEN
         CALL Transfer_Point_to_Point( MD_MotionMesh, u_local%CoupledKinematics, Map_Motion_2_MD_WB, ErrStat, ErrMsg )
         IF (ErrStat >= AbortErrLev) RETURN
     END IF
@@ -578,13 +719,13 @@ END SUBROUTINE MD_SetInputMotion
 !! temporary mesh -- prevents accidental overwrite of WAMIT loads on MD_LoadMesh with the 
 !! mapping of the Morison loads. This routine is operating on module level data, hence few inputs
 SUBROUTINE MD_TransferLoads( u_local, y_local, ErrStat, ErrMsg )
-    type(MD_InputType),        intent(in   )  :: u_local           ! Only one input (probably at T)
-    type(MD_OutputType),       intent(in   )  :: y_local     ! Only one input (probably at T)
-    integer(IntKi),            intent(  out)  :: ErrStat
-    character(ErrMsgLen),      intent(  out)  :: ErrMsg
+    TYPE(MD_InputType),        INTENT(in   )  :: u_local     ! Only one input (probably at T)
+    TYPE(MD_OutputType),       INTENT(in   )  :: y_local     ! Only one input (probably at T)
+    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat
+    CHARACTER(ErrMsgLen),      INTENT(  OUT)  :: ErrMsg
  
-    MD_LoadMesh%Force    = 0.0_ReKi
-    MD_LoadMesh%Moment   = 0.0_ReKi
+    MD_LoadMesh%Force            = 0.0_ReKi
+    MD_LoadMesh%Moment           = 0.0_ReKi
  
     !  WAMIT mesh
     IF ( y_local%CoupledLoads%Committed ) THEN
@@ -592,8 +733,8 @@ SUBROUTINE MD_TransferLoads( u_local, y_local, ErrStat, ErrMsg )
         MD_LoadMesh_tmp%Moment   = 0.0_ReKi
         CALL Transfer_Point_to_Point( y_local%CoupledLoads, MD_LoadMesh_tmp, Map_MD_WB_2_Load, ErrStat, ErrMsg, u_local%CoupledKinematics, MD_MotionMesh )
         IF (ErrStat >= AbortErrLev)  RETURN
-        MD_LoadMesh%Force    = MD_LoadMesh%Force  + MD_LoadMesh_tmp%Force
-        MD_LoadMesh%Moment   = MD_LoadMesh%Moment + MD_LoadMesh_tmp%Moment
+        MD_LoadMesh%Force        = MD_LoadMesh%Force  + MD_LoadMesh_tmp%Force
+        MD_LoadMesh%Moment       = MD_LoadMesh%Moment + MD_LoadMesh_tmp%Moment
     END IF
 END SUBROUTINE MD_TransferLoads
 
@@ -603,8 +744,8 @@ END SUBROUTINE MD_TransferLoads
 !! This routine is operating on module level data, hence few inputs
 SUBROUTINE Set_OutputLoadArray()
     ! Set mesh corresponding to input motions
-       tmpForces(1:3,1)   = MD_LoadMesh%Force (1:3,1)
-       tmpForces(4:6,1)   = MD_LoadMesh%Moment(1:3,1)
+       tmpForces(1:3,1)          = MD_LoadMesh%Force (1:3,1)
+       tmpForces(4:6,1)          = MD_LoadMesh%Moment(1:3,1)
 END SUBROUTINE Set_OutputLoadArray
 
 END MODULE

@@ -97,7 +97,7 @@ fh.close()
 # Basic alogrithm for using MoorDyn library
 
 # Time inputs
-t_start             = 0                  # initial or start time
+t_start             = 0                  # initial or start time. MUST BE >= 0
 md_lib.dt           = 0.1                # time interval that it's being called at
 md_lib.total_time   = 1                  # total or end time
 time                = np.arange(t_start,md_lib.total_time + md_lib.dt,md_lib.dt)
@@ -171,6 +171,8 @@ for i in range( 0, len(time)-1):
                 md_lib.md_updateStates(0, time[i], time[i+1], Positions, Velocities, Accelerations)
             except Exception as e:
                 print("{}".format(e))   # Exceptions handled in moordyn_library.py
+                if verbose:
+                    dbg_outfile.end()
                 exit(1)
         elif InterpOrder == 2:
             try: 
