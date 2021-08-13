@@ -1,10 +1,17 @@
 
 .. _AD_theory:
 
-AeroDynTheory
-=============
+AeroDyn Theory
+==============
 
-This theory manual is work in progress, please refer to the AeroDyn manual for more details. 
+This theory manual is work in progress, please refer to the AeroDyn 14 manual for more details :cite:`ad-AeroDyn:manual`. Many changes have occured since AeroDyn 14 (e.g. BEM formulation, coordinate system used in the BEM equations, dynamic stall, dynamic BEM), but these changes are not yet documented here.
+
+
+
+Steady BEM
+~~~~~~~~~~
+
+The steady blade element momentum (BEM) equations are solved as a constrained equation, and the formulation follows the description from Ning :cite:`ad-Ning:2014`.
 
 
 .. _AD_twr_shadow:
@@ -28,48 +35,6 @@ Eames tower shadow model (**TwrShadow=2**) is given by:
                \exp{\left(  -\frac{1}{2}  \left(\frac{ \overline{y}}{ TI \: \overline{x} } \right)^2 \right) }
 
 where :math:`TI` is the turbulence intensity at the tower node. 
-
-
-
-
-.. _AD_UA:
-
-Unsteady aerodynamics
----------------------
-
-Beddoes-Leishman type models (UAMod=2,3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The Beddoes-Leishman type dynamic stall models are currently described in the document: 
-The Unsteady Aerodynamics Module for FAST 8, from  Rick Damiani and Greg Hayman (2017)
-
-
-Beddoes-Leishman state space models (UAMod=4,5)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-TODO
-
-
-Oye model (UAMod=6)
-~~~~~~~~~~~~~~~~~~~
-
-
-See Hansen book
-
-Boeing-Vertol model (UAMod=7)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The Boeing-Vertol is used mentioned in the following paper: The Development of CACTUS, a Wind and Marine Turbine Performance Simulation Code from Jonathan C. Murray  and Matthew Barone (2011).
-The documentation presented here was inspired from the implementation done in the vortex code CACTUS.
-
-
-
-.. math::
-
-   \alpha_{dyn} = \alpha_qs - k_1 \gamma \sqrt{\left| \frac{c\dot{\alpha}}{2U}\right|}
-
-
-
 
 
 

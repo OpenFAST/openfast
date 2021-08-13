@@ -293,6 +293,8 @@ described in :numref:`OLAF-Input-Files`.  ``OLAFInputFileName`` is the filename
 for this input file.
 
 
+.. _ad_ua_inputs: 
+
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -306,6 +308,11 @@ The input parameters in this section are used only when ``AFAeroMod
 - ``3``: the extensions to B-L developed by Minnema/Pierce
 - ``4``: a continuous-state model developed by Hansen, Gaunna, and Madsen (HGM)
 - ``5``: a model similar to HGM with an additional state for vortex generation
+- ``6``: Oye's dynamic stall model
+- ``7``: Boeing-Vertol model
+
+The models are described in :numref:`AD_UA`.
+
 
 **While all of the UA models are documented in this
 manual, the original B-L model is not yet functional. Testing has shown
@@ -512,6 +519,13 @@ When ``InterpOrd`` is 1, linear interpolation is used; when
 ``InterpOrd`` is 3, the data will be interpolated with cubic splines;
 if the keyword ``DEFAULT`` is entered in place of a numerical value,
 ``InterpOrd`` is set to 1.
+
+
+``RelThickness`` is the non-dimensional thickness of the airfoil 
+(thickness over chord ratio), expressed as a fraction (not a percentage), 
+typically between 0.1 and 1. 
+The parameter is currently used when `UAMod=7`, but might be used more in the future.
+The default value of 0.2 if provided for convenience.
 
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
 local ``BlChord`` squared), but is currently unused by AeroDyn.
