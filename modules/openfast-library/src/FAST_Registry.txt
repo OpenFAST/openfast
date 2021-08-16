@@ -630,7 +630,6 @@ typedef	^	FAST_ModuleMapType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_NacelleLoads	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh_2	-	-	-	"copy of ED input mesh (used only for temporary storage)"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh_3	-	-	-	"copy of ED input mesh (used only for temporary storage)"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_TowerPtloads	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_BladePtLoads	{:}	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_SD_TPMesh	-	-	-	"copy of SD input mesh"

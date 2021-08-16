@@ -811,13 +811,24 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    if ( p_FAST%CompServo  == Module_SrvD ) then 
          ! get the jacobians
       call SrvD_JacobianPInput( t_global, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
-                                   SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%D )
+                                   SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, ErrStat2, ErrMsg2,    &
+                                   dXdu=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%B, &
+                                   dYdu=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%D )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
+      call SrvD_JacobianPContState( t_global, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
+                                       SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, ErrStat2, ErrMsg2, &
+                                       dYdx=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%C, &
+                                       dXdx=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%A )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
       ! get the operating point
       call SrvD_GetOP( t_global, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
-                       SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%op_u, &
-                       y_op=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%op_y )
+                       SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, ErrStat2, ErrMsg2, &
+                                                       u_op=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%op_u,  &
+                                                      dx_op=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%op_dx, &
+                                                       x_op=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%op_x,  &
+                                                       y_op=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%op_y   )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >=AbortErrLev) then
             call cleanup()
@@ -837,9 +848,12 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
          
             ! Jacobians
          if (p_FAST%LinOutJac) then
-            !dYdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', &
-               UseRow=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_y, UseCol=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_u )
+            ! Jacobians
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx')
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_u)
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_y)
+            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_y, &
+                                                                                                           UseCol=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_u)
          end if
       
             ! finish writing the file
@@ -1655,7 +1669,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
    !!                  0 & 0 & 0 & 0                                               & \frac{\partial U_\Lambda^{AD}}{\partial u^{AD}} \\
    !!  \end{bmatrix} \f$
    !.....................................
-! LIN-TODO: Add doc strings for new modules: HD & MAP & SD
+! LIN-TODO: Add doc strings for new modules: SrvD & HD & MAP & SD
    
    if (.not. allocated(dUdu)) then
       call AllocAry(dUdu, y_FAST%Lin%Glue%SizeLin(LIN_INPUT_COL), y_FAST%Lin%Glue%SizeLin(LIN_INPUT_COL), 'dUdu', ErrStat2, ErrMsg2)
@@ -1692,16 +1706,25 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       call Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, AD%Input(1), dUdu )
    end if ! we're using the InflowWind module
    
+      !............
+      ! \f$ \frac{\partial U_\Lambda^{SrvD}}{\partial u^{SrvD}} \end{bmatrix} = \f$ (dUdu block row 2=SrvD)
+      !............
+   if (p_FAST%CompServo == MODULE_SrvD) then
+      call Linear_SrvD_InputSolve_du( p_FAST, y_FAST, SrvD%p, SrvD%Input(1), ED%y, BD, SD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end if
+   
       !............ 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{BD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{AD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{HD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{SD}} \end{bmatrix} = \f$ and 
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{MAP}} \end{bmatrix} = \f$ (dUdu block row 3=ED)
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{SrvD}} \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{BD}}   \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{AD}}   \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{HD}}   \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{SD}}   \end{bmatrix} = \f$ and 
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{MAP}}  \end{bmatrix} = \f$ (dUdu block row 3=ED)
       !............   
    ! we need to do this for CompElast=ED and CompElast=BD
 
-   call Linear_ED_InputSolve_du( p_FAST, y_FAST, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, HD, SD, MAPp, MD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
+   call Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, HD, SD, MAPp, MD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
       !............
@@ -1709,7 +1732,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       ! \f$ \frac{\partial U_\Lambda^{BD}}{\partial u^{AD}} \end{bmatrix} = \f$ (dUdu block row 4=BD)
       !............   
    IF (p_FAST%CompElast == Module_BD) THEN
-      call Linear_BD_InputSolve_du( p_FAST, y_FAST, ED%y, AD%y, AD%Input(1), BD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
+      call Linear_BD_InputSolve_du( p_FAST, y_FAST, SrvD, ED%y, AD%y, AD%Input(1), BD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    END IF
       
@@ -1737,13 +1760,13 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial u^{MAP}} \end{bmatrix} = \f$ (dUdu block row 7=SD)
       !............
    IF (p_FAST%CompSub == MODULE_SD) THEN 
-      call Linear_SD_InputSolve_du( p_FAST, y_FAST, SD%Input(1), SD%y, ED%y, HD, MAPp, MD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
+      call Linear_SD_InputSolve_du( p_FAST, y_FAST, SrvD, SD%Input(1), SD%y, ED%y, HD, MAPp, MD, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    ELSE IF (p_FAST%CompSub == Module_ExtPtfm) THEN
        CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO')
    ENDIF 
    
-   ! LIN-TODO: Update the doc lines below to include HD, SD, and MAP
+   ! LIN-TODO: Update the doc lines below to include SrvD, HD, SD, and MAP
    !.....................................
    ! dUdy
    !> \f$ \frac{\partial U_\Lambda}{\partial y} =  
@@ -1777,21 +1800,22 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       ! \f$ \frac{\partial U_\Lambda^{SrvD}}{\partial y^{ED}} \end{bmatrix} = \f$ (dUdy block row 2=SrvD)
       !............
    if (p_FAST%CompServo == MODULE_SrvD) then   ! need to do this regardless of CompElast
-      call Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy )
+      call Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, SrvD%p, SrvD%Input(1), ED%y, BD, SD%y, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
    
 
       !............
       ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{SrvD}} \end{bmatrix} = \f$
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{ED}} \end{bmatrix} = \f$
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{BD}} \end{bmatrix} = \f$
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{AD}} \end{bmatrix} = \f$
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{HD}} \end{bmatrix} = \f$
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{SD}} \end{bmatrix} = \f$
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{MAP}} \end{bmatrix} = \f$ (dUdy block row 3=ED)
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{ED}}   \end{bmatrix} = \f$
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{BD}}   \end{bmatrix} = \f$
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{AD}}   \end{bmatrix} = \f$
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{HD}}   \end{bmatrix} = \f$
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{SD}}   \end{bmatrix} = \f$
+      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial y^{MAP}}  \end{bmatrix} = \f$ (dUdy block row 3=ED)
       !............
 
-   call Linear_ED_InputSolve_dy( p_FAST, y_FAST, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, HD, SD, MAPp, MD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+   call Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, HD, SD, MAPp, MD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
       !............
@@ -1800,7 +1824,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       ! \f$ \frac{\partial U_\Lambda^{BD}}{\partial y^{AD}} \end{bmatrix} = \f$ (dUdy block row 4=BD)
       !............
    if (p_FAST%CompElast == MODULE_BD) then
-      call Linear_BD_InputSolve_dy( p_FAST, y_FAST, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+      call Linear_BD_InputSolve_dy( p_FAST, y_FAST, SrvD, ED%Input(1), ED%y, AD%y, AD%Input(1), BD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
    
@@ -1843,7 +1867,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
    
    !LIN-TODO: Add doc strings and look at above doc string
    IF (p_FAST%CompSub == Module_SD) THEN
-       call Linear_SD_InputSolve_dy( p_FAST, y_FAST, SD%Input(1), SD%y, ED%y, HD, MAPp, MD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+       call Linear_SD_InputSolve_dy( p_FAST, y_FAST, SrvD, SD%Input(1), SD%y, ED%y, HD, MAPp, MD, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    ELSE IF (p_FAST%CompSub == Module_ExtPtfm) THEN
        write(*,*)'>>> FAST_LIN: Linear_ExtPtfm_InputSolve_dy, TODO'
@@ -1866,9 +1890,9 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
 
-   
-   
 END SUBROUTINE Glue_Jacobians
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{IfW}/du^{AD} block of dUdu. (i.e., how do changes in the AD inputs affect IfW inputs?)
 SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
@@ -1927,14 +1951,16 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
          END DO              
          
       END IF     
-   
 END SUBROUTINE Linear_IfW_InputSolve_du_AD
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{ED}/du^{BD} and dU^{ED}/du^{AD} blocks (ED row) of dUdu. (i.e., how do changes in the AD and BD inputs affect the ED inputs?)
-SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, HD, SD, MAPp, MD, MeshMapData, dUdu, ErrStat, ErrMsg )
+SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD, BD, HD, SD, MAPp, MD, MeshMapData, dUdu, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST         !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST         !< Glue-code output parameters (for linearization)
+   type(ServoDyn_Data),            intent(in   )  :: SrvD           !< SrvD parameters
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED           !< ED Inputs at t
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED           !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD           !< AeroDyn outputs
@@ -1950,7 +1976,9 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg         !< Error message
    
       ! local variables
+   INTEGER(IntKi)                                 :: j              ! Loops through StC instances
    INTEGER(IntKi)                                 :: K              ! Loops through blades
+   INTEGER(IntKi)                                 :: SrvD_Start     ! starting index of dUdu (column) where SrvD StC load is
    INTEGER(IntKi)                                 :: BD_Start       ! starting index of dUdu (column) where BD root motion inputs are located
    INTEGER(IntKi)                                 :: AD_Start_Bl    ! starting index of dUdu (column) where AD blade motion inputs are located
    INTEGER(IntKi)                                 :: ED_Start_mt    ! starting index of dUdu (row) where ED blade/tower or hub moment inputs are located
@@ -1968,6 +1996,93 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       
    ErrStat = ErrID_None
    ErrMsg = ""
+
+   !..........
+   ! dU^{ED}/du^{SrvD}
+   !..........
+   if (p_FAST%CompServo == MODULE_SrvD) then
+      ED_Start_mt = y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
+      !--------------------
+      ! Blade (BD or ED)
+      if ( p_FAST%CompElast == Module_ED ) then
+         if ( allocated(SrvD%y%BStCLoadMesh) ) then
+            do j=1,size(SrvD%y%BStCLoadMesh,2)
+               do K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
+                  if (SrvD%y%BStCLoadMesh(K,j)%Committed) then
+                     CALL Linearize_Point_to_Point( SrvD%y%BStCLoadMesh(k,j), u_ED%BladePtLoads(k), MeshMapData%BStC_P_2_ED_P_B(k,j), ErrStat2, ErrMsg2, SrvD%Input(1)%BStCMotionMesh(k,j), y_ED%BladeLn2Mesh(k) )
+                        call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+                     ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(k)%NNodes*3         ! 3 forces at each node (we're going to start at the moments since the M_us matrix is for moments...)
+                     SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_BStC_u(1,k,j)
+                     ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+                     if (allocated(MeshMapData%BStC_P_2_ED_P_B(k,j)%dM%m_us )) then
+                        call SetBlockMatrix( dUdu, MeshMapData%BStC_P_2_ED_P_B(k,j)%dM%m_us, ED_Start_mt, SrvD_Start )
+                     end if
+                     ! get starting index of next blade
+                     ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(k)%NNodes* 3
+                  endif
+               enddo
+            enddo
+         endif
+      endif
+      !--------------------
+      ! Nacelle (ED only)
+      if ( allocated(SrvD%y%NStCLoadMesh) ) then
+         do j = 1,size(SrvD%y%NStCLoadMesh)
+            if (SrvD%y%NStCLoadMesh(j)%Committed) then
+               call Linearize_Point_to_Point( SrvD%y%NStCLoadMesh(j), u_ED%NacelleLoads, MeshMapData%NStC_P_2_ED_P_N(j), ErrStat2, ErrMsg2, SrvD%Input(1)%NStCMotionMesh(j), y_ED%NacelleMotion )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+               ED_Start_mt = Indx_u_ED_Nacelle_Start(u_ED, y_FAST) &
+                             + u_ED%NacelleLoads%NNodes      * 3             ! 3 forces at the nacelle (so we start at the moments)
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_NStC_u(1,j)
+               ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+               if (allocated(MeshMapData%NStC_P_2_ED_P_N(j)%dM%m_us )) then
+                  call SetBlockMatrix( dUdu, MeshMapData%NStC_P_2_ED_P_N(j)%dM%m_us, ED_Start_mt, SrvD_Start )
+               end if
+            endif
+         enddo
+      endif
+      !--------------------
+      ! Tower (ED only)
+      if ( allocated(SrvD%y%TStCLoadMesh) ) then
+         do j = 1,size(SrvD%y%TStCLoadMesh)
+            if (SrvD%y%TStCLoadMesh(j)%Committed) then
+               call Linearize_Point_to_Point( SrvD%y%TStCLoadMesh(j), u_ED%TowerPtLoads, MeshMapData%TStC_P_2_ED_P_T(j), ErrStat2, ErrMsg2, SrvD%Input(1)%TStCMotionMesh(j), y_ED%TowerLn2Mesh )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+               ED_Start_mt = Indx_u_ED_Tower_Start(u_ED, y_FAST) &
+                             + u_ED%TowerPtLoads%NNodes      * 3             ! 3 forces at the nacelle (so we start at the moments)
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_TStC_u(1,j)
+               ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+               if (allocated(MeshMapData%TStC_P_2_ED_P_T(j)%dM%m_us )) then
+                  call SetBlockMatrix( dUdu, MeshMapData%TStC_P_2_ED_P_T(j)%dM%m_us, ED_Start_mt, SrvD_Start )
+               endif
+            endif
+         enddo
+      endif
+      !--------------------
+      ! Substructure (SD or ED)
+      if (p_FAST%CompSub /= MODULE_SD) then
+         if ( allocated(SrvD%y%SStCLoadMesh) ) then
+            do j=1,size(SrvD%y%SStCLoadMesh)
+               if (SrvD%y%SStCLoadMesh(j)%Committed) then
+                  call Linearize_Point_to_Point( SrvD%y%SStCLoadMesh(j), u_ED%PlatformPtMesh, MeshMapData%SStC_P_P_2_ED_P(j), ErrStat2, ErrMsg2, SrvD%Input(1)%SStCMotionMesh(j), y_ED%PlatformPtMesh )
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+                  ED_Start_mt = Indx_u_ED_Platform_Start(u_ED, y_FAST) &
+                                + u_ED%PlatformPtMesh%NNodes      * 3             ! 3 forces at the nacelle (so we start at the moments)
+                  SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_u(1,j)
+                  ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+                  if (allocated(MeshMapData%SStC_P_P_2_ED_P(j)%dM%m_us )) then
+                     call SetBlockMatrix( dUdu, MeshMapData%SStC_P_P_2_ED_P(j)%dM%m_us, ED_Start_mt, SrvD_Start )
+                  endif
+               endif
+            enddo
+         endif
+      endif
+   endif
+
 
    !..........
    ! dU^{ED}/du^{AD}
@@ -2153,12 +2268,14 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    end if    
 END SUBROUTINE Linear_ED_InputSolve_du
 
+
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine forms the dU^{SD}/du^{HD} and dU^{SD}/du^{SD} and dU^{SD}/du^{MAP} blocks (SD row) of dUdu. (i.e., how do changes in the HD and SD inputs affect the SD inputs?)
-SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, MD, MeshMapData, dUdu, ErrStat, ErrMsg )
+!> This routine forms the dU^{SD}/du^{SrvD}, dU^{SD}/du^{HD}, dU^{SD}/du^{SD}, dU^{SD}/du^{MAP}, dU^{SD}/du^{MD}and blocks (SD row) of dUdu. (i.e., how do changes in SrvD, HD, SD, and MAP inputs affect the SD inputs?)
+SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, MAPp, MD, MeshMapData, dUdu, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST         !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST         !< Glue-code output parameters (for linearization)
+   type(ServoDyn_Data),            intent(in   )  :: SrvD           !< SrvD parameters
    TYPE(SD_InputType),             INTENT(INOUT)  :: u_SD           !< SD Inputs at t
    TYPE(SD_OutputType),            INTENT(IN   )  :: y_SD           !< SubDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED           !< ElastoDyn outputs
@@ -2171,6 +2288,7 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg         !< Error message
    
       ! local variables
+   INTEGER(IntKi)                                 :: j, SrvD_Start
    INTEGER(IntKi)                                 :: HD_Start
    INTEGER(IntKi)                                 :: MAP_Start, MD_Start
    INTEGER(IntKi)                                 :: SD_Start, SD_Start_td, SD_Start_tr
@@ -2187,6 +2305,32 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
 
    IF ( p_FAST%CompSub == Module_SD ) THEN ! see routine U_ED_SD_HD_BD_Orca_Residual() in SolveOption1
    
+
+   !..........
+   ! dU^{SD}/du^{SrvD}
+   !..........
+   if (p_FAST%CompServo == MODULE_SrvD) then
+      !--------------------
+      ! Substructure (SD or ED)
+      if ( allocated(SrvD%y%SStCLoadMesh) ) then
+         SD_Start = Indx_u_SD_LMesh_Start(u_SD, y_FAST) &
+                              + u_SD%LMesh%NNodes * 3         ! 3 forces at each node (we're going to start at the moments)
+         do j=1,size(SrvD%y%SStCLoadMesh)
+            if (SrvD%y%SStCLoadMesh(j)%Committed) then
+               call Linearize_Point_to_Point( SrvD%y%SStCLoadMesh(j), u_SD%LMesh, MeshMapData%SStC_P_P_2_SD_P(j), ErrStat2, ErrMsg2, SrvD%Input(1)%SStCMotionMesh(j), y_SD%Y2Mesh )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_u(1,j)
+               ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+               if (allocated(MeshMapData%SStC_P_P_2_SD_P(j)%dM%m_us )) then
+                  call SetBlockMatrix( dUdu, MeshMapData%SStC_P_P_2_SD_P(j)%dM%m_us, SD_Start, SrvD_Start )
+               endif
+            endif
+         enddo
+      endif
+   endif
+
+
    !..........
    ! dU^{SD}/du^{SD}
    !..........
@@ -2307,12 +2451,14 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
    END IF   
 END SUBROUTINE Linear_SD_InputSolve_du
 
+
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine forms the dU^{SD}/du^{HD} and dU^{SD}/du^{SD} blocks (SD row) of dUdu. (i.e., how do changes in the HD and SD inputs affect the SD inputs?)
-SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, MD, MeshMapData, dUdy, ErrStat, ErrMsg )
+!> This routine forms the dU^{SD}/dy^{SrvD}, dU^{SD}/dy^{HD} and dU^{SD}/dy^{SD} blocks (SD row) of dUdu. (i.e., how do changes in SrvD, HD, and SD inputs affect the SD inputs?)
+SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, MAPp, MD, MeshMapData, dUdy, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST         !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST         !< Glue-code output parameters (for linearization)
+   type(ServoDyn_Data),            intent(in   )  :: SrvD           !< SrvD parameters
    TYPE(SD_InputType),             INTENT(INOUT)  :: u_SD           !< SD Inputs at t
    TYPE(SD_OutputType),            INTENT(IN   )  :: y_SD           !< SubDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED           !< ElastoDyn outputs
@@ -2325,7 +2471,7 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg         !< Error message
    
       ! local variables
-   INTEGER(IntKi)                                 :: SD_Start, SD_Out_Start, HD_Start, HD_Out_Start, ED_Out_Start, MAP_Out_Start, MD_Out_Start
+   INTEGER(IntKi)                                 :: j, SrvD_Out_Start, SD_Start, SD_Out_Start, HD_Start, HD_Out_Start, ED_Out_Start, MAP_Out_Start, MD_Out_Start
    INTEGER(IntKi)                                 :: MAP_Start, MD_Start
    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
@@ -2339,6 +2485,23 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
    ErrMsg = ""
    if ( p_FAST%CompSub /= Module_SD ) return
    
+   !..........
+   ! dU^{SD}/dy^{SrvD}
+   !..........
+   if (p_FAST%CompServo == MODULE_SrvD) then
+      !--------------------
+      ! Substructure (SD or ED)
+      if ( allocated(SrvD%y%SStCLoadMesh) ) then
+         SD_Start   = Indx_u_SD_LMesh_Start(u_SD, y_FAST)   ! start of u_SD%LMesh%Force field
+         do j=1,size(SrvD%y%SStCLoadMesh)
+            if (SrvD%y%SStCLoadMesh(j)%Committed) then
+               SrvD_Out_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_y(1,j)
+               call Assemble_dUdy_Loads(SrvD%y%SStCLoadMesh(j), u_SD%LMesh, MeshMapData%SStC_P_P_2_SD_P(j), SD_Start, SrvD_Out_Start, dUdy)
+            endif
+         enddo
+      endif
+   endif
+
    !..........
    ! dU^{SD}/dy^{ED}
    !..........
@@ -2428,10 +2591,11 @@ END SUBROUTINE Linear_SD_InputSolve_dy
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{BD}/du^{BD} and dU^{BD}/du^{AD} blocks (BD row) of dUdu. (i.e., how do changes in the AD and BD inputs 
 !! affect the BD inputs?) This should be called only when p_FAST%CompElast == Module_BD.
-SUBROUTINE Linear_BD_InputSolve_du( p_FAST, y_FAST, y_ED, y_AD, u_AD, BD, MeshMapData, dUdu, ErrStat, ErrMsg )
+SUBROUTINE Linear_BD_InputSolve_du( p_FAST, y_FAST, SrvD, y_ED, y_AD, u_AD, BD, MeshMapData, dUdu, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST         !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST         !< Glue-code output parameters (for linearization)
+   type(ServoDyn_Data),            intent(in   )  :: SrvD           !< SrvD parameters
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED           !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD           !< AeroDyn outputs
    TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD           !< AD inputs (for AD-ED load linerization)
@@ -2443,7 +2607,9 @@ SUBROUTINE Linear_BD_InputSolve_du( p_FAST, y_FAST, y_ED, y_AD, u_AD, BD, MeshMa
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg         !< Error message
    
       ! local variables
+   INTEGER(IntKi)                                 :: j              ! Loops through StC instances
    INTEGER(IntKi)                                 :: k              ! Loops through blades
+   INTEGER(IntKi)                                 :: SrvD_Start     ! starting index of dUdu (row) where BD inputs are located
    INTEGER(IntKi)                                 :: BD_Start       ! starting index of dUdu (row) where BD inputs are located
    INTEGER(IntKi)                                 :: AD_Start       ! starting index of dUdu (column) where AD inputs are located
    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
@@ -2456,6 +2622,34 @@ SUBROUTINE Linear_BD_InputSolve_du( p_FAST, y_FAST, y_ED, y_AD, u_AD, BD, MeshMa
       
    ErrStat = ErrID_None
    ErrMsg = ""
+
+   !..........
+   ! dU^{BD}/du^{SrvD}
+   !..........
+   if (p_FAST%CompServo == MODULE_SrvD) then
+      !--------------------
+      ! Blade (BD or ED)
+      if ( allocated(SrvD%y%BStCLoadMesh) ) then
+         do j=1,size(SrvD%y%BStCLoadMesh,2)
+            do K = 1,p_FAST%nBeams ! Loop through all blades
+               if (SrvD%y%BStCLoadMesh(K,j)%Committed) then
+                  CALL Linearize_Point_to_Line2( SrvD%y%BStCLoadMesh(k,j), BD%Input(1,k)%DistrLoad, MeshMapData%BStC_P_2_BD_P_B(k,j), ErrStat2, ErrMsg2, SrvD%Input(1)%BStCMotionMesh(k,j), BD%y(k)%BldMotion )
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+                  BD_Start = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_INPUT_COL) &
+                           + BD%Input(1,k)%RootMotion%NNodes *18  & ! displacement, rotation, & acceleration fields for each node
+                           + BD%Input(1,k)%PointLoad%NNodes  * 6  & ! force + moment fields for each node
+                           + BD%Input(1,k)%DistrLoad%NNodes  * 3    ! force field for each node (start with moment field)
+                  SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_BStC_u(1,k,j)
+                  ! SrvD is source in the mapping, so we want M_{uSm} (moments)
+                  if (allocated(MeshMapData%BStC_P_2_BD_P_B(k,j)%dM%m_us )) then
+                     call SetBlockMatrix( dUdu, MeshMapData%BStC_P_2_BD_P_B(k,j)%dM%m_us, BD_Start, SrvD_Start )
+                  end if
+               endif
+            enddo
+         enddo
+      endif
+   endif
 
    !..........
    ! dU^{BD}/du^{AD}
@@ -2630,56 +2824,327 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
       end if
 
    END DO
-      
-   
-   
 END SUBROUTINE Linear_AD_InputSolve_du
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine forms the dU^{SrvD}/dy^{ED} block of dUdy. (i.e., how do changes in the ED outputs affect the SrvD inputs?)
-SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy  )
-!..................................................................................................................................
 
-   TYPE(FAST_ParameterType),       INTENT(IN)     :: p_FAST         !< Glue-code simulation parameters
-   TYPE(FAST_OutputFileType),      INTENT(IN)     :: y_FAST         !< Output variables for the glue code
-   REAL(R8Ki),                     INTENT(INOUT)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{SrvD}/dy^{ED} block
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine forms the dU^{SrvD}/du^{SrvD} block (SrvD row) of dUdu.
+!! (i.e., how do changes in the SrvD inputs affect the SrvD inputs?)
+SUBROUTINE Linear_SrvD_InputSolve_du( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, SD, MeshMapData, dUdu, ErrStat, ErrMsg )
+   type(FAST_ParameterType),     intent(in   )  :: p_FAST         !< Glue-code simulation parameters
+   type(FAST_OutputFileType),    intent(in   )  :: y_FAST         !< Glue-code output parameters (for linearization)
+   type(SrvD_ParameterType),     intent(in   )  :: p_SrvD         !< SrvD parameters
+   type(SrvD_InputType),         intent(inout)  :: u_SrvD         !< SrvD Inputs at t
+   type(ED_OutputType),          intent(in   )  :: y_ED           !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
+   type(BeamDyn_Data),           intent(in   )  :: BD             !< BD data at t
+   type(SubDyn_Data),            intent(in   )  :: SD             !< SD data at t
+   type(FAST_ModuleMapType),     intent(inout)  :: MeshMapData    !< Data for mapping between modules
+   real(R8Ki),                   intent(inout)  :: dUdu(:,:)      !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
+   integer(IntKi),               intent(  out)  :: ErrStat        !< Error status
+   character(*),                 intent(  out)  :: ErrMsg         !< Error message
    
-   integer(intKi)                                 :: ED_Start_Yaw   !< starting index of dUdy (column) where ED Yaw/YawRate/HSS_Spd outputs are located (just before WriteOutput)
-   integer(intKi)                                 :: thisModule
+      ! local variables
+   integer(IntKi)                               :: i,j,k          ! Generic counters 
+   INTEGER(IntKi)                               :: SrvD_Start     ! starting index of dUdu (column) where the StC motion inputs are located
+   integer(IntKi)                               :: ErrStat2       ! temporary Error status of the operation
+   character(ErrMsgLen)                         :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+   character(*), parameter                      :: RoutineName = 'Linear_SrvD_InputSolve_du'
    
+      ! Initialize error status
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   !--------------------
+   ! dU^{SrvD}/du^{SrvD}
+   !--------------------
+   ! Blade StrucCtrl
+   if ( p_FAST%CompElast == Module_ED ) then
+      if ( ALLOCATED(u_SrvD%BStCMotionMesh) ) then
+         do j=1,size(u_SrvD%BStCMotionMesh,2)
+            do K = 1,size(y_ED%BladeLn2Mesh)
+               if (u_SrvD%BStCMotionMesh(K,j)%Committed) then
+                  CALL Linearize_Line2_to_Point( y_ED%BladeLn2Mesh(K), u_SrvD%BStCMotionMesh(K,j), MeshMapData%ED_L_2_BStC_P_B(K,j), ErrStat2, ErrMsg2 )
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+                  ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+                  ! translational velocity:
+                  if (allocated(MeshMapData%ED_L_2_BStC_P_B(K,j)%dM%tv_uD )) then
+                     SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j) + 6) ! skip translational displacement and orientation fields
+                     call SetBlockMatrix( dUdu, MeshMapData%ED_L_2_BStC_P_B(K,j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+                  end if
+
+                  ! translational acceleration:
+                  if (allocated(MeshMapData%ED_L_2_BStC_P_B(K,j)%dM%ta_uD )) then
+                     SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j) + 12) ! skip translational displacement and orientation fields
+                     call SetBlockMatrix( dUdu, MeshMapData%ED_L_2_BStC_P_B(K,j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+                  end if
+                endif
+             enddo
+          enddo
+       endif
+    elseif ( p_FAST%CompElast == Module_BD ) then
+       if ( ALLOCATED(u_SrvD%BStCMotionMesh) ) then
+          do j=1,size(u_SrvD%BStCMotionMesh,2)
+             do K = 1,p_FAST%nBeams
+                if (u_SrvD%BStCMotionMesh(K,j)%Committed) then
+                   CALL Linearize_Line2_to_Point( BD%y(k)%BldMotion, u_SrvD%BStCMotionMesh(K,j), MeshMapData%BD_L_2_BStC_P_B(K,j), ErrStat2, ErrMsg2 )
+                      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+                  ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+                  ! translational velocity:
+                  if (allocated(MeshMapData%BD_L_2_BStC_P_B(K,j)%dM%tv_uD )) then
+                     SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j) + 6) ! skip translational displacement and orientation fields
+                     call SetBlockMatrix( dUdu, MeshMapData%BD_L_2_BStC_P_B(K,j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+                  end if
+
+                  ! translational acceleration:
+                  if (allocated(MeshMapData%BD_L_2_BStC_P_B(K,j)%dM%ta_uD )) then
+                     SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j) + 12) ! skip translational displacement and orientation fields
+                     call SetBlockMatrix( dUdu, MeshMapData%BD_L_2_BStC_P_B(K,j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+                  end if
+                endif
+             enddo
+          enddo
+       endif
+    endif
+   !--------------------
+   ! Nacelle (ED only)
+   if ( ALLOCATED(u_SrvD%NStCMotionMesh) ) then
+      do j = 1,size(u_SrvD%NStCMotionMesh)
+         if (u_SrvD%NStCMotionMesh(j)%Committed) then
+            call Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStCMotionMesh(j), MeshMapData%ED_P_2_NStC_P_N(j), ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+            ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+            ! translational velocity:
+            if (allocated(MeshMapData%ED_P_2_NStC_P_N(j)%dM%tv_uD )) then
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_NStC_u(1,j) + 6) ! skip translational displacement and orientation fields
+               call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_NStC_P_N(j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+            end if
+
+            ! translational acceleration:
+            if (allocated(MeshMapData%ED_P_2_NStC_P_N(j)%dM%ta_uD )) then
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_NStC_u(1,j) + 12) ! skip translational displacement and orientation fields
+               call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_NStC_P_N(j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+            end if
+         endif
+      enddo
+   endif
+   !--------------------
+   ! Tower
+   if ( ALLOCATED(u_SrvD%TStCMotionMesh) ) then
+      do j = 1,size(u_SrvD%TStCMotionMesh)
+         if (u_SrvD%TStCMotionMesh(j)%Committed) then
+            call Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStCMotionMesh(j), MeshMapData%ED_L_2_TStC_P_T(j), ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+            ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+            ! translational velocity:
+            if (allocated(MeshMapData%ED_L_2_TStC_P_T(j)%dM%tv_uD )) then
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_TStC_u(1,j) + 6) ! skip translational displacement and orientation fields
+               call SetBlockMatrix( dUdu, MeshMapData%ED_L_2_TStC_P_T(j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+            end if
+
+            ! translational acceleration:
+            if (allocated(MeshMapData%ED_L_2_TStC_P_T(j)%dM%ta_uD )) then
+               SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_TStC_u(1,j) + 12) ! skip translational displacement and orientation fields
+               call SetBlockMatrix( dUdu, MeshMapData%ED_L_2_TStC_P_T(j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+            end if
+         endif
+      enddo
+   endif
+   !--------------------
+   ! Substructure (SD or ED)
+   if (p_FAST%CompSub /= MODULE_SD) then
+      if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
+         do j=1,size(u_SrvD%SStCMotionMesh)
+            if (u_SrvD%SStCMotionMesh(j)%Committed) then
+               CALL Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%ED_P_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+               ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+               ! translational velocity:
+               if (allocated(MeshMapData%ED_P_2_SStC_P_P(j)%dM%tv_uD )) then
+                  SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j) + 6) ! skip translational displacement and orientation fields
+                  call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_SStC_P_P(j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+               end if
    
-   INTEGER(IntKi)                                   :: i            ! loop counter
+               ! translational acceleration:
+               if (allocated(MeshMapData%ED_P_2_SStC_P_P(j)%dM%ta_uD )) then
+                  SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j) + 12) ! skip translational displacement and orientation fields
+                  call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_SStC_P_P(j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+               end if
+            endif
+         enddo
+      endif
+   else
+      if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
+         do j=1,size(u_SrvD%SStCMotionMesh)
+            IF (u_SrvD%SStCMotionMesh(j)%Committed) then
+               CALL Linearize_Point_to_Point( SD%y%y2Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SD_P_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+               ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+               ! translational velocity:
+               if (allocated(MeshMapData%SD_P_2_SStC_P_P(j)%dM%tv_uD )) then
+                  SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j) + 6) ! skip translational displacement and orientation fields
+                  call SetBlockMatrix( dUdu, MeshMapData%SD_P_2_SStC_P_P(j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+               end if
    
-   CHARACTER(*), PARAMETER                          :: RoutineName = 'Linear_SrvD_InputSolve_dy'
+               ! translational acceleration:
+               if (allocated(MeshMapData%SD_P_2_SStC_P_P(j)%dM%ta_uD )) then
+                  SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j) + 12) ! skip translational displacement and orientation fields
+                  call SetBlockMatrix( dUdu, MeshMapData%SD_P_2_SStC_P_P(j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+               end if
+            endif
+         enddo
+      endif
+   endif
+END SUBROUTINE Linear_SrvD_InputSolve_du
+
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine forms the dU^{SrvD}/dy^{ED}, dU^{SrvD}/dy^{BD}, dU^{SrvD}/dy^{SD} block of dUdy.
+!! (i.e., how do changes in the ED, SD, BD outputs affect the SrvD inputs?)
+!! NOTE: Linearze_Point_to_Point routines done in Linear_SrvD_InputSolve_du
+SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, y_SD, MeshMapData, dUdy, ErrStat, ErrMsg )
+!..................................................................................................................................
+   type(FAST_ParameterType),        intent(in   )  :: p_FAST           !< Glue-code simulation parameters
+   type(FAST_OutputFileType),       intent(in   )  :: y_FAST           !< Output variables for the glue code
+   type(SrvD_ParameterType),        intent(in   )  :: p_SrvD           !< SrvD parameters (holds indices for jacobian entries for each StC)
+   type(SrvD_InputType),            intent(inout)  :: u_SrvD           !< SrvD Inputs at t
+   type(ED_OutputType),             intent(in   )  :: y_ED             !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
+   type(BeamDyn_Data),              intent(in   )  :: BD               !< BeamDyn   data
+   type(SD_OutputType),             intent(in   )  :: y_SD             !< SubDyn    outputs (need translation displacement on meshes for loads mapping)
+                                    
+   type(FAST_ModuleMapType),        intent(inout)  :: MeshMapData      !< Data for mapping between modules
+   real(R8Ki),                      intent(inout)  :: dUdy(:,:)        !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
+   integer(IntKi),                  intent(  out)  :: ErrStat          !< Error status
+   character(*),                    intent(  out)  :: ErrMsg           !< Error message
+                                    
+   integer(IntKi)                                  :: i,j,k            ! loop counters
+   integer(intKi)                                  :: ED_Start_Yaw     !< starting index of dUdy (column) where ED Yaw/YawRate/HSS_Spd outputs are located (just before WriteOutput)
+   integer(IntKi)                                  :: SrvD_Start, ED_Out_Start, BD_Out_Start, SD_Out_Start
+   character(*), parameter                         :: RoutineName = 'Linear_SrvD_InputSolve_dy' 
    
-      thisModule = Module_ED
-   ED_Start_Yaw = Indx_y_Yaw_Start(y_FAST, ThisModule) ! start of ED where Yaw, YawRate, HSS_Spd occur (right before WriteOutputs)
-   
-   do i=1,size(SrvD_Indx_Y_BlPitchCom)
+      ! Initialize error status
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   !--------------------
+   ! dU^{SrvD}/dy^{ED}
+   !--------------------
+   ED_Start_Yaw = Indx_y_Yaw_Start(y_FAST, Module_ED) ! start of ED where Yaw, YawRate, HSS_Spd occur (right before WriteOutputs)
+   do i=1,size(SrvD_Indx_Y_BlPitchCom)    ! first 3 columns
       dUdy(y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + SrvD_Indx_Y_BlPitchCom(i) - 1, ED_Start_Yaw + i - 1) = -1.0_ReKi
    end do
-      
-   !IF (u_SrvD%NStC%Mesh%Committed) THEN
-   !   
-   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStC%Mesh, MeshMapData%ED_P_2_NStC_P_N, ErrStat2, ErrMsg2 )
-   !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   !         
-   !END IF
-   !
-   !IF (u_SrvD%TSC%Mesh%Committed) THEN
-   !   
-   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStC%Mesh, MeshMapData%ED_L_2_TStC_P_T, ErrStat2, ErrMsg2 )
-   !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   !         
-   !END IF
-                                    
+
+   !----------------------------------------
+   ! Structural controls
+   !----------------------------------------
+   ! Blade
+   if ( p_FAST%CompElast == Module_ED ) then
+      !--------------------
+      ! dU^{SrvD}/dy^{ED}
+      !--------------------
+      if ( ALLOCATED(u_SrvD%BStCMotionMesh) ) then
+         do j=1,size(u_SrvD%BStCMotionMesh,2)
+            do K = 1,size(y_ED%BladeLn2Mesh)
+               if (u_SrvD%BStCMotionMesh(K,j)%Committed) then
+                  SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j))
+                  ED_Out_Start = Indx_y_ED_Blade_Start(y_ED, y_FAST, k)    ! start of %TranslationDisp field
+                  call Assemble_dUdy_Motions( y_ED%BladeLn2Mesh(K), u_SrvD%BStCMotionMesh(K,j), MeshMapData%ED_L_2_BStC_P_B(K,j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+               endif
+            enddo
+         enddo
+      endif
+   elseif ( p_FAST%CompElast == Module_BD ) then
+      !--------------------
+      ! dU^{SrvD}/dy^{BD}
+      !--------------------
+      if ( ALLOCATED(u_SrvD%BStCMotionMesh) ) then
+         do j=1,size(u_SrvD%BStCMotionMesh,2)
+            do K = 1,p_FAST%nBeams
+               if (u_SrvD%BStCMotionMesh(K,j)%Committed) then
+                  SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_BStC_u(1,k,j))
+                  BD_Out_Start = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL)    ! start of %TranslationDisp field
+                  call Assemble_dUdy_Motions( BD%y(k)%BldMotion, u_SrvD%BStCMotionMesh(K,j), MeshMapData%BD_L_2_BStC_P_B(K,j), SrvD_Start, BD_Out_Start, dUdy, .false.)
+               endif
+            enddo
+         enddo
+      endif
+   endif
+
+   !--------------------
+   ! Nacelle -- dU^{SrvD}/dy^{ED}
+   !--------------------
+   if ( ALLOCATED(u_SrvD%NStCMotionMesh) ) then
+      do j = 1,size(u_SrvD%NStCMotionMesh)
+         if (u_SrvD%NStCMotionMesh(j)%Committed) then
+            SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_NStC_u(1,j))
+            ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST)    ! start of %TranslationDisp field
+            call Assemble_dUdy_Motions( y_ED%NacelleMotion, u_SrvD%NStCMotionMesh(j), MeshMapData%ED_P_2_NStC_P_N(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+         endif
+      enddo
+   endif
+
+   !--------------------
+   ! Tower -- dU^{SrvD}/dy^{ED}
+   !--------------------
+   if ( ALLOCATED(u_SrvD%TStCMotionMesh) ) then
+      do j = 1,size(u_SrvD%TStCMotionMesh)
+         if (u_SrvD%TStCMotionMesh(j)%Committed) then
+            SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_TStC_u(1,j))
+            ED_Out_Start = Indx_y_ED_Tower_Start(y_ED, y_FAST)    ! start of %TranslationDisp field
+            call Assemble_dUdy_Motions( y_ED%TowerLn2Mesh, u_SrvD%TStCMotionMesh(j), MeshMapData%ED_L_2_TStC_P_T(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+         endif
+      enddo
+   endif
+
+   !--------------------
+   ! Substructure (SD or ED)
+   !--------------------
+   if (p_FAST%CompSub /= MODULE_SD) then
+      !--------------------
+      ! dU^{SrvD}/dy^{ED}
+      !--------------------
+      if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
+         do j=1,size(u_SrvD%SStCMotionMesh)
+            if (u_SrvD%SStCMotionMesh(j)%Committed) then
+               SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j))
+               ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of %TranslationDisp field
+               call Assemble_dUdy_Motions( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%ED_P_2_SStC_P_P(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+            endif
+         enddo
+      endif
+   else
+      !--------------------
+      ! dU^{SrvD}/dy^{SD}
+      !--------------------
+      if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
+         do j=1,size(u_SrvD%SStCMotionMesh)
+            if (u_SrvD%SStCMotionMesh(j)%Committed) then
+               SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j))
+               SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST)   ! start of %TranslationDisp field
+               call Assemble_dUdy_Motions( y_SD%y2Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SD_P_2_SStC_P_P(j), SrvD_Start, SD_Out_Start, dUdy, .false.)
+            endif
+         enddo
+      endif
+   endif
 END SUBROUTINE Linear_SrvD_InputSolve_dy
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{ED}/dy^{SrvD}, dU^{ED}/dy^{ED}, dU^{ED}/dy^{BD},  dU^{ED}/dy^{AD}, dU^{ED}/dy^{HD}, and dU^{ED}/dy^{MAP}
 !! blocks of dUdy. (i.e., how do changes in the SrvD, ED, BD, AD, HD, and MAP outputs effect the ED inputs?)
-SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, HD, SD, MAPp, MD, MeshMapData, dUdy, ErrStat, ErrMsg )
+SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD, BD, HD, SD, MAPp, MD, MeshMapData, dUdy, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST           !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST           !< FAST output file data (for linearization)
+   type(ServoDyn_Data),            intent(in   )  :: SrvD             !< SrvD parameters
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED             !< ED Inputs at t
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED             !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD             !< AeroDyn outputs
@@ -2697,7 +3162,9 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    
       ! local variables
    INTEGER(IntKi)                                 :: i                ! rows/columns
+   INTEGER(IntKi)                                 :: j                ! Loops through StC instance 
    INTEGER(IntKi)                                 :: K                ! Loops through blades
+   INTEGER(IntKi)                                 :: SrvD_Out_Start   ! starting index of dUdy (column) where the StC motion inputs are located
    INTEGER(IntKi)                                 :: AD_Out_Start     ! starting index of dUdy (column) where particular AD fields are located
    INTEGER(IntKi)                                 :: BD_Out_Start     ! starting index of dUdy (column) where particular BD fields are located
    INTEGER(IntKi)                                 :: ED_Start         ! starting index of dUdy (row) where ED input fields are located
@@ -2713,8 +3180,11 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       
    ErrStat = ErrID_None
    ErrMsg = ""
-   
-      ! ED inputs from ServoDyn outputs
+
+   !..........
+   ! dU^{ED}/dy^{SrvD}
+   !  ED inputs from ServoDyn outputs
+   !..........
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
 
          ! BlPitchCom, YawMom, GenTrq
@@ -2722,17 +3192,76 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       do i=1,size(u_ED%BlPitchCom)+2 ! BlPitchCom, YawMom, GenTrq (NOT collective pitch)
          dUdy(ED_Start + i - 1, y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + i - 1) = -1.0_ReKi !SrvD_Indx_Y_BlPitchCom
       end do
-      
-      !IF (y_SrvD%NStC%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%NStC%Mesh, u_ED%NacelleLoads, MeshMapData%NStC_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NStC%Mesh, y_ED%NacelleMotion )
-      !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%NacelleLoads' )                  
-      !END IF
-      !
-      !IF (y_SrvD%TStC%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%TStC%Mesh, u_ED%TowerPtLoads, MeshMapData%TStC_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TStC%Mesh, y_ED%TowerLn2Mesh )
-      !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerPtLoads' )                  
-      !END IF
-            
+      !--------------------
+      ! Blade (BD or ED)
+      if ( p_FAST%CompElast == Module_ED ) then
+         if ( allocated(SrvD%y%BStCLoadMesh) ) then
+            do j=1,size(SrvD%y%BStCLoadMesh,2)
+               do K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
+                  if (SrvD%y%BStCLoadMesh(K,j)%Committed) then
+                     ED_Start       = Indx_u_ED_Blade_Start(u_ED, y_FAST, k) ! start of u_ED%BladePtLoads(k)%Force field
+                     SrvD_Out_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_BStC_y(1,k,j)
+                     call Assemble_dUdy_Loads(SrvD%y%BStCLoadMesh(k,j), u_ED%BladePtLoads(k), MeshMapData%BStC_P_2_ED_P_B(k,j), ED_Start, SrvD_Out_Start, dUdy)
+
+                     ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+                     ED_Start     = Indx_u_ED_Blade_Start(u_ED, y_FAST, k) + u_ED%BladePtLoads(k)%NNodes*3  ! start of u_ED%BladePtLoads(k)%Moment field (skip the ED forces)
+                     ED_Out_Start = Indx_y_ED_Blade_Start(y_ED, y_FAST, k)                                  ! start of y_ED%BladeLn2Mesh(1)%TranslationDisp field
+                     call SumBlockMatrix( dUdy, MeshMapData%BStC_P_2_ED_P_B(k,j)%dM%m_uD, ED_Start, ED_Out_Start )
+                  endif
+               enddo
+            enddo
+         endif
+      endif
+      !--------------------
+      ! Nacelle (ED only)
+      if ( allocated(SrvD%y%NStCLoadMesh) ) then
+         do j = 1,size(SrvD%y%NStCLoadMesh)
+            if (SrvD%y%NStCLoadMesh(j)%Committed) then
+               ED_Start       = Indx_u_ED_Nacelle_Start(u_ED, y_FAST)
+               SrvD_Out_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_NStC_y(1,j)
+               call Assemble_dUdy_Loads(SrvD%y%NStCLoadMesh(j), u_ED%NacelleLoads, MeshMapData%NStC_P_2_ED_P_N(j), ED_Start, SrvD_Out_Start, dUdy)
+
+               ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+               ED_Start     = Indx_u_ED_Nacelle_Start(u_ED, y_FAST) + u_ED%NacelleLoads%NNodes*3   ! start of u_ED%NacelleLoads%Moment field (skip the ED forces)
+               ED_Out_Start = Indx_y_ED_Nacelle_Start(y_ED, y_FAST)                                ! start of y_ED%NacelleMotion%TranslationDisp field
+               call SumBlockMatrix( dUdy, MeshMapData%NStC_P_2_ED_P_N(j)%dM%m_uD, ED_Start, ED_Out_Start )
+            endif
+         enddo
+      endif
+      !--------------------
+      ! Tower (ED only)
+      if ( allocated(SrvD%y%TStCLoadMesh) ) then
+         do j = 1,size(SrvD%y%TStCLoadMesh)
+            if (SrvD%y%TStCLoadMesh(j)%Committed) then
+               ED_Start       = Indx_u_ED_Tower_Start(u_ED, y_FAST)
+               SrvD_Out_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_TStC_y(1,j)
+               call Assemble_dUdy_Loads(SrvD%y%TStCLoadMesh(j), u_ED%TowerPtLoads, MeshMapData%TStC_P_2_ED_P_T(j), ED_Start, SrvD_Out_Start, dUdy)
+
+                  ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+               ED_Start     = Indx_u_ED_Tower_Start(u_ED, y_FAST) + u_ED%TowerPtLoads%NNodes*3  ! start of u_ED%TowerPtLoads%Moment field  [skip the ED forces to get to the moments]
+               ED_Out_Start = Indx_y_ED_Tower_Start(y_ED, y_FAST)                               ! start of y_ED%TowerLn2Mesh%TranslationDisp field
+               call SumBlockMatrix( dUdy, MeshMapData%TStC_P_2_ED_P_T(j)%dM%m_uD, ED_Start, ED_Out_Start )
+            endif
+         enddo
+      endif
+      !--------------------
+      ! Substructure (SD or ED)
+      if (p_FAST%CompSub /= MODULE_SD) then
+         if ( allocated(SrvD%y%SStCLoadMesh) ) then
+            do j=1,size(SrvD%y%SStCLoadMesh)
+               if (SrvD%y%SStCLoadMesh(j)%Committed) then
+                  ED_Start       = Indx_u_ED_Platform_Start(u_ED, y_FAST)
+                  SrvD_Out_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_y(1,j)
+                  call Assemble_dUdy_Loads(SrvD%y%SStCLoadMesh(j), u_ED%PlatformPtMesh, MeshMapData%SStC_P_P_2_ED_P(j), ED_Start, SrvD_Out_Start, dUdy)
+
+                     ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+                  ED_Start     = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
+                  ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST)                                  ! start of y_ED%PlatformPtMesh%TranslationDisp field
+                  call SumBlockMatrix( dUdy, MeshMapData%HD_M_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+               endif
+            enddo
+         endif
+      endif
    END IF
 
    ! parts of dU^{ED}/dy^{AD} and dU^{ED}/dy^{ED}:
@@ -2755,7 +3284,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
                ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
             ED_Start = Indx_u_ED_Blade_Start(u_ED, y_FAST, k) + u_ED%BladePtLoads(k)%NNodes*3   ! start of u_ED%BladePtLoads(k)%Moment field (skip the ED forces)
             ED_Out_Start = Indx_y_ED_Blade_Start(y_ED, y_FAST, k) ! start of y_ED%BladeLn2Mesh(1)%TranslationDisp field
-            call SetBlockMatrix( dUdy, MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD, ED_Start, ED_Out_Start )
+            call SumBlockMatrix( dUdy, MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD, ED_Start, ED_Out_Start )
 
             AD_Out_Start = AD_Out_Start + y_AD%rotors(1)%BladeLoad(k)%NNodes*6        ! start of y_AD%BladeLoad(k+1)%Force field [skip 2 fields to forces on next blade]
          END DO
@@ -2775,7 +3304,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
             ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
          ED_Start = ED_Start + u_ED%TowerPtLoads%NNodes*3 ! start of u_ED%TowerPtLoads%Moment field  [skip the ED forces to get to the moments]
          ED_Out_Start  = Indx_y_ED_Tower_Start(y_ED, y_FAST) ! start of y_ED%TowerLn2Mesh%TranslationDisp field
-         call SetBlockMatrix( dUdy, MeshMapData%AD_L_2_ED_P_T%dM%m_uD, ED_Start, ED_Out_Start )
+         call SumBlockMatrix( dUdy, MeshMapData%AD_L_2_ED_P_T%dM%m_uD, ED_Start, ED_Out_Start )
             
       END IF ! tower
       
@@ -2893,10 +3422,11 @@ END SUBROUTINE Linear_ED_InputSolve_dy
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{BD}/dy^{ED}, dU^{BD}/dy^{BD}, and dU^{BD}/dy^{AD} blocks of dUdy. (i.e., how do 
 !! changes in the ED, BD, and AD outputs effect the BD inputs?)
-SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, MeshMapData, dUdy, ErrStat, ErrMsg )
+SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD, BD, MeshMapData, dUdy, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST           !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST           !< FAST output file data (for linearization)
+   type(ServoDyn_Data),            intent(in   )  :: SrvD             !< SrvD parameters
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED             !< ED Inputs at t
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED             !< ElastoDyn outputs (need translation displacement on meshes for loads mapping)
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD             !< AeroDyn outputs
@@ -2909,7 +3439,9 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg           !< Error message
    
       ! local variables
+   INTEGER(IntKi)                                 :: j                ! Loops through StC instance
    INTEGER(IntKi)                                 :: K                ! Loops through blades
+   INTEGER(IntKi)                                 :: SrvD_Out_Start   ! starting index of dUdy (column) where particular SrvD fields are located
    INTEGER(IntKi)                                 :: AD_Out_Start     ! starting index of dUdy (column) where particular AD fields are located
    INTEGER(IntKi)                                 :: BD_Start         ! starting index of dUdy (column) where particular BD fields are located
    INTEGER(IntKi)                                 :: BD_Out_Start     ! starting index of dUdy (column) where BD output fields are located
@@ -2924,6 +3456,29 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       
    ErrStat = ErrID_None
    ErrMsg = ""
+
+   !..........
+   ! dU^{ED}/du^{SrvD}
+   !..........
+   if (p_FAST%CompServo == MODULE_SrvD) then
+      !--------------------
+      ! Blade (BD or ED)
+      if ( allocated(SrvD%y%BStCLoadMesh) ) then
+         do j=1,size(SrvD%y%BStCLoadMesh,2)
+            do K = 1,p_FAST%nBeams ! Loop through all blades
+               if (SrvD%y%BStCLoadMesh(K,j)%Committed) then
+                  ! Start of DistrLoad nodes
+                  BD_Start = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_INPUT_COL) &
+                           + BD%Input(1,k)%RootMotion%NNodes *18  & ! displacement, rotation, & acceleration fields for each node
+                           + BD%Input(1,k)%PointLoad%NNodes  * 6    ! force + moment fields for each node
+                  SrvD_Out_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_BStC_y(1,k,j)
+                  call Assemble_dUdy_Loads(SrvD%y%BStCLoadMesh(k,j), BD%Input(1,k)%DistrLoad, MeshMapData%BStC_P_2_BD_P_B(k,j), BD_Start, SrvD_Out_Start, dUdy)
+               endif
+            enddo
+         enddo
+      endif
+   endif
+
 
    ! parts of dU^{BD}/dy^{AD} and dU^{BD}/dy^{BD}:
    
@@ -3739,7 +4294,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   !LIN-TODO: Update doc string comments below for HD, MAP, SD
+   !LIN-TODO: Update doc string comments below for SrvD, HD, MAP, SD
    
    !.....................................   
    ! allocate the glue-code state matrices; after this call they will contain the state matrices from the 
@@ -4348,6 +4903,19 @@ FUNCTION Indx_y_ED_BladeRoot_Start(y_ED, y_FAST, BladeNum) RESULT(ED_Out_Start)
    end do
 END FUNCTION Indx_y_ED_BladeRoot_Start
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine returns the starting index for the y_ED%BladeRootMotion(BladeNum) mesh in the FAST linearization outputs.
+FUNCTION Indx_y_ED_Nacelle_Start(y_ED, y_FAST) RESULT(ED_Out_Start)
+   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
+   TYPE(ED_OutputType),            INTENT(IN )  :: y_ED             !< ED outputs at t
+   INTEGER                                      :: k                !< blade number loop
+
+   INTEGER                                      :: ED_Out_Start     !< starting index of this blade mesh in ElastoDyn outputs
+
+   ED_Out_Start = Indx_y_ED_BladeRoot_Start(y_ED, y_FAST, size(y_ED%BladeRootMotion))        ! start of last blade root
+   ED_Out_Start = ED_Out_Start + y_ED%BladeRootMotion(size(y_ED%BladeRootMotion))%NNodes*18  ! N blade roots, 6 fields with 3 components per blade.
+   ED_Out_Start = ED_Out_Start + y_ED%NacelleMotion%NNodes*18     ! 6 fields with 3 components
+END FUNCTION Indx_y_ED_Nacelle_Start
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for y_ED%Yaw in the FAST linearization outputs.
 FUNCTION Indx_y_Yaw_Start(y_FAST, ThisModule) RESULT(ED_Out_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
@@ -4520,7 +5088,8 @@ FUNCTION Indx_y_SD_Y1Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
    INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
 
    SD_Out_Start = y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
-END FUNCTION Indx_y_SD_Y1Mesh_Start!----------------------------------------------------------------------------------------------------------------------------------
+END FUNCTION Indx_y_SD_Y1Mesh_Start
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the y_SD%Y2Mesh mesh in the FAST linearization outputs.
 FUNCTION Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
