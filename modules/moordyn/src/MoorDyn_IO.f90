@@ -1227,13 +1227,30 @@ CONTAINS
 
          END DO ! I, loop through OutParam
 
+      END IF
 
+         ! check if this is a repeated time step, in which case exit instead of writing a duplicate line to the output files
+         if (Time <= m%LastOutTime) then
+            return
+         else
+            m%LastOutTime = Time
+         end if
+
+         ! if using a certain output time step, check whether we should output, and exit the subroutine if not
+         if (p%dtOut > 0)  then
+            !if (Time < (floor((Time-p%dtCoupling)/p%dtOut) + 1.0)*p%dtOut)  then
+            if ( abs(MOD( Time - 0.5*p%dtOut, p%dtOut) - 0.5*p%dtOut) >= 0.5*p%dtCoupling)  then
+                return
+            end if
+         end if
+         ! What the above does is say if ((dtOut==0) || (t >= (floor((t-dtC)/dtOut) + 1.0)*dtOut)), continue to writing files
+
+      if ( p%NumOuts > 0_IntKi ) then  
+      
          ! Write the output parameters to the file
-
          Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,e12.5))'   ! should evenutally use user specified format?
-
+         
          WRITE(p%MDUnOut,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
-
       END IF
 
 
@@ -1252,10 +1269,13 @@ CONTAINS
                          + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(7:9)) &
                                + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
            
+           if (m%LineList(I)%OutFlagList(2) == 1) THEN   ! if node positions are included, make them using a float format for higher precision
+            Frmt = '(F10.4,'//TRIM(Int2LStr(3*(m%LineList(I)%N + 1)))//'(A1,F12.4)),'//TRIM(Int2LStr(LineNumOuts - 3*(m%LineList(I)%N - 1)))//'(A1,e12.5))'  
+           else
+            Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e12.5))'   ! should evenutally use user specified format?
+           end if
            
-           Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e12.5))'   ! should evenutally use user specified format?
-
-           L = 1 ! start of index of line output file at first entry
+           L = 1 ! start of index of line output file at first entry   12345.7890
            
            ! Time
       !     m%LineList(I)%LineWrOutput(L) = Time
@@ -1543,9 +1563,9 @@ CONTAINS
       REAL(DbKi)                       :: Tmag_squared   
    
       if (i==0) then
-         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i) + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
+         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
       else if (i==Line%N) then                          
-         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i) + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
+         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
       else 
          Tmag_squared = 0.0_DbKi 
          DO J=1,3

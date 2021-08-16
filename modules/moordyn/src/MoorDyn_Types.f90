@@ -353,6 +353,7 @@ IMPLICIT NONE
     TYPE(MD_ContinuousStateType)  :: xdTemp      !< contains temporary state derivative vector used in integration (put here so it's only allocated once) [-]
     REAL(DbKi) , DIMENSION(1:6)  :: zeros6      !< array of zeros for convenience [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: MDWrOutput      !< Data from time step to be written to a MoorDyn output file [-]
+    REAL(DbKi)  :: LastOutTime      !< Time of last writing to MD output files [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PtfmInit      !< initial position of platform for an individual (non-farm) MD instance [-]
   END TYPE MD_MiscVarType
 ! =======================
@@ -383,6 +384,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: dtM0      !< desired mooring model time step [[s]]
     REAL(DbKi)  :: dtCoupling      !< coupling time step that MoorDyn should expect [[s]]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
+    REAL(DbKi)  :: dtOut      !< interval for writing output file lines [[s]]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(MD_OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
@@ -8027,6 +8029,7 @@ IF (ALLOCATED(SrcMiscData%MDWrOutput)) THEN
   END IF
     DstMiscData%MDWrOutput = SrcMiscData%MDWrOutput
 ENDIF
+    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
     DstMiscData%PtfmInit = SrcMiscData%PtfmInit
  END SUBROUTINE MD_CopyMisc
 
@@ -8457,6 +8460,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! MDWrOutput upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%MDWrOutput)  ! MDWrOutput
   END IF
+      Db_BufSz   = Db_BufSz   + 1  ! LastOutTime
       Re_BufSz   = Re_BufSz   + SIZE(InData%PtfmInit)  ! PtfmInit
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -9104,6 +9108,8 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+    DbKiBuf(Db_Xferred) = InData%LastOutTime
+    Db_Xferred = Db_Xferred + 1
     DO i1 = LBOUND(InData%PtfmInit,1), UBOUND(InData%PtfmInit,1)
       ReKiBuf(Re_Xferred) = InData%PtfmInit(i1)
       Re_Xferred = Re_Xferred + 1
@@ -9945,6 +9951,8 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+    OutData%LastOutTime = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     i1_l = LBOUND(OutData%PtfmInit,1)
     i1_u = UBOUND(OutData%PtfmInit,1)
     DO i1 = LBOUND(OutData%PtfmInit,1), UBOUND(OutData%PtfmInit,1)
@@ -10029,6 +10037,7 @@ ENDIF
     DstParamData%dtM0 = SrcParamData%dtM0
     DstParamData%dtCoupling = SrcParamData%dtCoupling
     DstParamData%NumOuts = SrcParamData%NumOuts
+    DstParamData%dtOut = SrcParamData%dtOut
     DstParamData%RootName = SrcParamData%RootName
 IF (ALLOCATED(SrcParamData%OutParam)) THEN
   i1_l = LBOUND(SrcParamData%OutParam,1)
@@ -10443,6 +10452,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! dtM0
       Db_BufSz   = Db_BufSz   + 1  ! dtCoupling
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
+      Db_BufSz   = Db_BufSz   + 1  ! dtOut
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
   Int_BufSz   = Int_BufSz   + 1     ! OutParam allocated yes/no
   IF ( ALLOCATED(InData%OutParam) ) THEN
@@ -10671,6 +10681,8 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%dtOut
+    Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(InData%RootName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -11227,6 +11239,8 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%dtOut = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(OutData%RootName)
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1

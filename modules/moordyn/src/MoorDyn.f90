@@ -30,7 +30,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a10', '9 July 2021' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a11', '2 August 2021' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -164,6 +164,7 @@ CONTAINS
       p%g                    = InitInp%g
       p%rhoW                 = InitInp%rhoW
       p%WtrDpth              = InitInp%WtrDepth
+      ! TODO:   add MSL2SWL from OpenFAST <<<<
       ! set the following to some defaults
       p%kBot                 = 3.0E6
       p%cBot                 = 3.0E5
@@ -172,7 +173,7 @@ CONTAINS
       InputFileDat%CdScaleIC = 4.0_ReKi
       InputFileDat%threshIC  = 0.01_ReKi
       p%WaterKin             = 0_IntKi
-      !p%dtOut                = 0.0_DbKi
+      p%dtOut                = 0.0_DbKi
       
       
       m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
@@ -1271,8 +1272,8 @@ CONTAINS
                      read (OptValue,*) InputFileDat%threshIC
                   else if ( OptString == 'WATERKIN')  then
                      read (OptValue,*) p%WaterKin
-                 !else if ( OptString == 'DTOUT')  then
-                 !   read (OptValue,*) p%dtOut
+                  else if ( OptString == 'DTOUT')  then
+                     read (OptValue,*) p%dtOut
                   else
                      CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
                   end if

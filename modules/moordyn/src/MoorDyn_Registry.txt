@@ -325,6 +325,7 @@ typedef   ^       ^           MD_ContinuousStateType       xTemp             -  
 typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"
 typedef   ^       ^                    DbKi                zeros6           {6}  -  -   "array of zeros for convenience"
 typedef   ^       ^                    DbKi                MDWrOutput       {:}  -  -   "Data from time step to be written to a MoorDyn output file"
+typedef   ^       ^                    DbKi                LastOutTime      -    -  -   "Time of last writing to MD output files"
 typedef   ^           ^                ReKi               PtfmInit      {6} -    -   "initial position of platform for an individual (non-farm) MD instance"     -
 
 
@@ -354,6 +355,7 @@ typedef   ^       ^                    DbKi                cBot           -     
 typedef   ^       ^                    DbKi                dtM0           -     -    -   "desired mooring model time step"          "[s]"
 typedef   ^       ^                    DbKi                dtCoupling     -     -    -   "coupling time step that MoorDyn should expect"              "[s]"
 typedef   ^       ^                    IntKi               NumOuts        -     -    -   "Number of parameters in the output list (number of outputs requested)"    -
+typedef   ^       ^                    DbKi                dtOut          -     -    -   "interval for writing output file lines"              "[s]"
 typedef   ^       ^                    CHARACTER(1024)     RootName       -     -    -   "RootName for writing output files"          -
 typedef   ^       ^                    MD_OutParmType      OutParam       {:}   -    -   "Names and units (and other characteristics) of all requested output parameters"          -
 typedef   ^       ^                    CHARACTER(1)        Delim          -     -    -   "Column delimiter for output text files"     -

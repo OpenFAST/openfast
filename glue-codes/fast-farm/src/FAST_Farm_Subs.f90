@@ -1720,7 +1720,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    ELSE
       IF ( farm%p%dt_mooring > farm%p%DT_low ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg = "The mooring coupling time step ("//TRIM(Num2LStr(farm%p%dt_mooring))// &
+         ErrMsg = "The farm mooring coupling time step ("//TRIM(Num2LStr(farm%p%dt_mooring))// &
                     " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(farm%p%DT_low))//" s)."
       ELSE
             ! calculate the number of FAST-MoorDyn subcycles:
@@ -2131,7 +2131,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    INTEGER(IntKi), ALLOCATABLE             :: ErrStatF(:)                     ! Temporary Error status for FAST
    CHARACTER(ErrMsgLen), ALLOCATABLE       :: ErrMsgF (:)                     ! Temporary Error message for FAST
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_UpdateStates'
-!   REAL(DbKi)                              :: tm1,tm2,tm3
+   REAL(DbKi)                              :: tm1,tm2,tm3, tm01, tm02, tm03, tmSF, tmSM  ! timer variables
    
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -2141,6 +2141,12 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    allocate ( ErrMsgF ( farm%p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrMsgF.', errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
+   
+   
+   #ifdef _OPENMP
+      #define printthreads
+   #endif    
+   
    
    !.......................................................................................
    ! update module states (steps 1. and 2. and 3. and 4. can be done in parallel)
@@ -2182,53 +2188,64 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    ! Original case: no shared moorings 
    if (farm%p%MooringMod == 0) then     
       
-      !#ifdef _OPENMP
-      !   tm1 = omp_get_wtime()  
-      !#endif     
+      #ifdef printthreads
+         tm1 = omp_get_wtime()  
+      #endif     
       !$OMP PARALLEL DO DEFAULT(Shared) Private(nt) !Private(nt,tm2,tm3)
       DO nt = 1,farm%p%NumTurbines+1
          if(nt.ne.farm%p%NumTurbines+1) then  
-      !#ifdef _OPENMP
-      !         tm3 = omp_get_wtime()  
-      !#endif     
+            #ifdef printthreads
+               tm3 = omp_get_wtime()  
+            #endif     
             call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                         farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
             
-      !#ifdef _OPENMP
-      !         tm2 = omp_get_wtime() 
-      !         write(*,*)  '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
-      !#endif
+            #ifdef printthreads
+               tm2 = omp_get_wtime() 
+               write(*,*)  '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
+            #endif
 
          else
-      !#ifdef _OPENMP
-      !         tm3 = omp_get_wtime()  
-      !#endif    
+            #ifdef printthreads
+               tm3 = omp_get_wtime()  
+            #endif    
             call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
                         farm%AWAE%OtherSt, farm%AWAE%m, ErrStatAWAE, ErrMsgAWAE )       
 
-      !#ifdef _OPENMP
-      !         tm2 = omp_get_wtime() 
-      !         write(*,*)  '    AWAE_UpdateStates using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
-      !#endif
+            #ifdef printthreads
+               tm2 = omp_get_wtime() 
+               write(*,*)  '    AWAE_UpdateStates using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
+            #endif
          endif
          
       END DO
       !$OMP END PARALLEL DO  
 
-      !#ifdef _OPENMP   
-      !  tm2 = omp_get_wtime()
-      !  write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
-      !#endif 
+      #ifdef printthreads   
+        tm2 = omp_get_wtime()
+        write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
+      #endif 
 
    
    ! Farm-level moorings case using MoorDyn
    else if (farm%p%MooringMod == 3) then
       
+      #ifdef printthreads
+         tm1 = omp_get_wtime()  
+      #endif     
+      
       ! Set up two parallel sections - one for FAST-MoorDyn steps (FAST portion in parallel for each step), and the other for AWAE.
       !$OMP PARALLEL SECTIONS DEFAULT(Shared)
       
+      
       ! The first section, for looping through FAST and farm-level MoorDyn time steps
       !$OMP SECTION
+      
+      #ifdef printthreads
+         tm3 = omp_get_wtime()  
+         tmSF = 0.0_DbKi 
+         tmSM = 0.0_DbKi 
+      #endif     
       
       ! This is the FAST-MoorDyn farm-level substepping loop        
       do n_ss = 1, farm%p%n_mooring                   ! do n_mooring substeps (number of FAST/FarmMD steps per Farm time step)
@@ -2236,6 +2253,10 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
          n_FMD = n*farm%p%n_mooring  + n_ss - 1       ! number of the current time step of the call to FAST and MoorDyn         
          t2   = t + farm%p%DT_mooring*(n_ss - 1)      ! current time in the loop
 
+         #ifdef printthreads
+            tm01 = omp_get_wtime()  
+         #endif
+         
          ! A nested parallel for loop to call each instance of OpenFAST in parallel
          !$OMP PARALLEL DO DEFAULT(Shared) Private(nt)
          DO nt = 1,farm%p%NumTurbines
@@ -2243,18 +2264,52 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
                         farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
          END DO              
          !$OMP END PARALLEL DO
+         
+         #ifdef printthreads
+            tm02 = omp_get_wtime()  
+         #endif  
       
          ! call farm-level MoorDyn time step here (can't multithread this with FAST since it needs inputs from all FAST instances)
          call Farm_MD_Increment( t2, n_FMD, farm, ErrStatMD, ErrMsgMD)
          call SetErrStat(ErrStatMD, ErrMsgMD, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! MD error status <<<<<
+         
+         #ifdef printthreads
+            tm03 = omp_get_wtime()
+            tmSF = tmSF + tm02-tm01
+            tmSM = tmSM + tm03-tm02
+         #endif           
+         
       end do    ! n_ss substepping
+   
+      #ifdef printthreads
+         tm2 = omp_get_wtime() 
+         write(*,*)  '    Turbine and support structure simulations with parent thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
+         write(*,*)  '       Time on FAST sims: '//trim(num2lstr(tmSF))//' s.  Time on Farm MoorDyn: '//trim(num2lstr(tmSM))//' seconds'
+      #endif
+   
    
       ! The second section, for updating AWAE states on a separate thread in parallel with the FAST/MoorDyn time stepping
       !$OMP SECTION
+      
+      #ifdef printthreads
+         tm3 = omp_get_wtime()  
+      #endif    
+            
       call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
                         farm%AWAE%OtherSt, farm%AWAE%m, ErrStatAWAE, ErrMsgAWAE )       
      
+      #ifdef printthreads
+         tm2 = omp_get_wtime() 
+         write(*,*)  '    AWAE_UpdateStates using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
+      #endif
+     
+     
       !$OMP END PARALLEL SECTIONS  
+      
+      #ifdef printthreads   
+        tm2 = omp_get_wtime()
+        write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
+      #endif 
       
    else
       CALL SetErrStat( ErrID_Fatal, 'MooringMod must be 0 or 3.', ErrStat, ErrMsg, RoutineName )
