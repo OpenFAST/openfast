@@ -22,7 +22,7 @@
 # This is the Python-C interface library for MoorDyn
 # Usage: THIS LIBRARY IS NOT TO BE CHANGED OR EDITED BY THE USER
 from ctypes import (
-	CDLL,
+    CDLL,
     POINTER,
     create_string_buffer,
     byref,
@@ -60,14 +60,14 @@ class MoorDynLibAPI(CDLL):
         self.error_message     = create_string_buffer(1025)
         self.ended             = False   # For error handling at end
 
-        self._channel_names    = create_string_buffer(20*4000)
-        self._channel_units    = create_string_buffer(20*4000)
+        self._channel_names    = create_string_buffer(256*1000)
+        self._channel_units    = create_string_buffer(256*1000)
 
         self.dt                = c_double(0)
         self.total_time        = c_double(0)
         self.numTimeSteps      = c_int(0)
 
-    # _initialize_routines ------------------------------------------------------------------------------------------------------------
+    # Initialize routines ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
         self.MD_INIT_C.argtypes = [
             POINTER(c_char_p),                    # IN: input file string
@@ -119,14 +119,15 @@ class MoorDynLibAPI(CDLL):
     # md_init ------------------------------------------------------------------------------------------------------------
     def md_init(self, input_string_array, g, rho_water, depth_water, platform_init_pos, interpOrder):
 
-        print('MoorDyn_Library.py: Running MD_INIT_C .....')
+        # For debugging only
+        #print('MoorDyn_Library.py: Running MD_INIT_C .....')
 
         # Convert the string into a c_char byte array
         input_string = '\x00'.join(input_string_array)
         input_string = input_string.encode('utf-8')
         input_string_length = len(input_string)
 
-        # Convert the positions array into c_float array
+        # Convert the initial positions array into c_float array
         init_positions_c = (c_float * 6)(0.0, )
         for i, p in enumerate(platform_init_pos):
             init_positions_c[i] = c_float(p)
@@ -151,12 +152,14 @@ class MoorDynLibAPI(CDLL):
         
         self.check_error()
 
-        print('MoorDyn_Library.py: Completed MD_INIT_C')
+        # For debugging only
+        #print('MoorDyn_Library.py: Completed MD_INIT_C')
 
     # md_calcOutput ------------------------------------------------------------------------------------------------------------
-    def md_calcOutput(self,t, positions, velocities, accelerations, forces, output_channel_values):
+    def md_calcOutput(self, t, positions, velocities, accelerations, forces, output_channel_values):
 
-        print('MoorDyn_Library.py: Running MD_CALCOUTPUT_C .....')
+        # For debugging only
+        #print('MoorDyn_Library.py: Running MD_CALCOUTPUT_C .....')
 
         positions_c = (c_float * 6)(0.0,)
         for i, p in enumerate(positions):
@@ -191,12 +194,14 @@ class MoorDynLibAPI(CDLL):
         
         self.check_error()
 
-        print('MoorDyn_Library.py: Completed MD_CALCOUTPUT_C')
+        # For debugging only
+        #print('MoorDyn_Library.py: Completed MD_CALCOUTPUT_C')
 
     # md_updateStates ------------------------------------------------------------------------------------------------------------
     def md_updateStates(self, t0, t1, t2, positions, velocities, accelerations):
 
-        print('MoorDyn_Library.py: Running MD_UPDATESTATES_C .....')
+        # For debugging only
+        #print('MoorDyn_Library.py: Running MD_UPDATESTATES_C .....')
 
         positions_c = (c_float * 6)(0.0,)
         for i, p in enumerate(positions):
@@ -223,12 +228,14 @@ class MoorDynLibAPI(CDLL):
         
         self.check_error()
 
-        print('MoorDyn_Library.py: Completed MD_UPDATESTATES_C')
+        # For debugging only
+        #print('MoorDyn_Library.py: Completed MD_UPDATESTATES_C')
 
     # md_end ------------------------------------------------------------------------------------------------------------
     def md_end(self):
 
-        print('MoorDyn_Library.py: Running MD_END_C .....')
+        # For debugging only
+        #print('MoorDyn_Library.py: Running MD_END_C .....')
 
         if not self.ended:
             self.ended = True
@@ -238,7 +245,8 @@ class MoorDynLibAPI(CDLL):
             )
             self.check_error()
 
-        print('MoorDyn_Library.py: Completed MD_END_C')
+        # For debugging only
+        #print('MoorDyn_Library.py: Completed MD_END_C')
     
     #===============================================================================
     # OTHER FUNCTIONS --------------------------------------------------------------------------------------------------
@@ -258,10 +266,27 @@ class MoorDynLibAPI(CDLL):
             self.md_end()
             raise Exception("\nMoorDyn terminated prematurely.")
 
+    # Output Channel Functions
+    @property
+    def output_channel_names(self):
+        if len(self._channel_names.value.split()) == 0:
+             return []
+        output_channel_names = self._channel_names.value.split()
+        output_channel_names = [n.decode('UTF-8') for n in output_channel_names]
+        return output_channel_names
+
+    @property
+    def output_channel_units(self):
+        if len(self._channel_units.value.split()) == 0:
+            return []
+        output_channel_units = self._channel_units.value.split()
+        output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
+        return output_channel_units
+
 #===============================================================================
-#   Helper class for writing channels to file.
-#   for the regression testing to mirror the output from the InfowWind Fortran
-#   driver.  This may also have value for debugging the interfacing to IfW.
+#   Helper class for writing output channels to file.
+#   For the regression testing to mirror the output from the InfowWind Fortran
+#   driver.  This may also have value for debugging the interfacing to MD.
 
 class WriteOutChans():
     """
@@ -328,7 +353,7 @@ class DriverDbg():
         self.DbgFile.write("#\n")
         f_string = "{:^25s}"
         self.DbgFile.write("#        T     ")
-        for i in range(1,self.numNodePts+1):
+        for i in range(1,2):
             f_num = "N{0:04d}_".format(i)
             self.DbgFile.write(f_string.format(f_num+"x"  ))
             self.DbgFile.write(f_string.format(f_num+"y"  ))
@@ -356,7 +381,7 @@ class DriverDbg():
             self.DbgFile.write(f_string.format(f_num+"Mz" ))
         self.DbgFile.write("\n")
         self.DbgFile.write("#       (s)    ")
-        for i in range(1,self.numNodePts+1):
+        for i in range(1,2):
             self.DbgFile.write(f_string.format("(m)"      ))
             self.DbgFile.write(f_string.format("(m)"      ))
             self.DbgFile.write(f_string.format("(m)"      ))
@@ -384,15 +409,14 @@ class DriverDbg():
         self.DbgFile.write("\n")
         self.opened = True
 
-    def write(self,t,nodePos,nodeVel,nodeAcc,nodeFrc):
+    def write(self,t,Positions,Velocities,Accelerations,Forces):
         t_string = "{:10.4f}"
         f_string = "{:25.7f}"*6
         self.DbgFile.write(t_string.format(t))
-        for i in range(0,self.numNodePts):
-            self.DbgFile.write(f_string.format(*nodePos[i,:]))
-            self.DbgFile.write(f_string.format(*nodeVel[i,:]))
-            self.DbgFile.write(f_string.format(*nodeAcc[i,:]))
-            self.DbgFile.write(f_string.format(*nodeFrc[i,:]))
+        self.DbgFile.write(f_string.format(*Positions[:]))
+        self.DbgFile.write(f_string.format(*Velocities[:]))
+        self.DbgFile.write(f_string.format(*Accelerations[:]))
+        self.DbgFile.write(f_string.format(*Forces[:]))
         self.DbgFile.write("\n")
 
     def end(self):
