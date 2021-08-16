@@ -2068,10 +2068,10 @@ CONTAINS
           IF ( ALLOCATED(y_SrvD%SStCLoadMesh) ) THEN        ! Platform
             do j=1,size(y_SrvD%SStCLoadMesh)
                IF (y_SrvD%SStCLoadMesh(j)%Committed) THEN
-                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(j), MeshMapData%u_ED_PlatformPtMesh_3, MeshMapData%SStC_P_P_2_ED_P(j), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(j), PlatformMotions )
+                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(j), MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%SStC_P_P_2_ED_P(j), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(j), PlatformMotions )
                      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
-                  MeshMapData%u_ED_PlatformPtMesh_2%Force  = MeshMapData%u_ED_PlatformPtMesh_2%Force  + MeshMapData%u_ED_PlatformPtMesh_3%Force
-                  MeshMapData%u_ED_PlatformPtMesh_2%Moment = MeshMapData%u_ED_PlatformPtMesh_2%Moment + MeshMapData%u_ED_PlatformPtMesh_3%Moment
+                  MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
+                  MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
                ENDIF
             enddo
          ENDIF
@@ -4889,9 +4889,6 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 
       CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_2' )                 
-
-      CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_3, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_3' )
 
              
       IF ( p_FAST%CompElast == Module_BD ) THEN
