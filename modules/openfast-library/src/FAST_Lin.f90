@@ -1768,6 +1768,14 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
        CALL WrScr('>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO')
    ENDIF 
    
+      !............
+      ! \f$ \frac{\partial U_\Lambda^{MD}}{\partial u^{MD}} \end{bmatrix} = \f$ (dUdu block row 9=MD) <<<<
+      !............
+   if (p_FAST%CompMooring == MODULE_MD) then
+      call Linear_MD_InputSolve_du( p_FAST, y_FAST, MD%Input(1), ED%y, SD%y, MeshMapData, dUdu, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end if
+
    ! LIN-TODO: Update the doc lines below to include SrvD, HD, SD, and MAP
    !.....................................
    ! dUdy
@@ -4119,7 +4127,7 @@ SUBROUTINE Linear_MD_InputSolve_du( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
          end if
          
             ! translational acceleration:
-         MD_Start_tr = MD_Start_tr + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
+         MD_Start_tr = MD_Start_tr + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
          if (allocated(MeshMapData%ED_P_2_Mooring_P%dM%ta_uD )) then            
             call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_Mooring_P%dM%ta_ud, MD_Start_tr, MD_Start_td )
          end if
@@ -4172,12 +4180,16 @@ SUBROUTINE Linear_MD_InputSolve_dy( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
          !!!call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MD%CoupledKinematics(1), MeshMapData%SD_P_2_Mooring_P, ErrStat2, ErrMsg2 )
 
          SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y3Mesh%TranslationDisp field
-         call Assemble_dUdy_Motions(    y_SD%Y3Mesh, u_MD%CoupledKinematics(1), MeshMapData%SDy3_P_2_Mooring_P, MD_Start, SD_Out_Start, dUdy) ! OnlyTranslationDisp=.true.
+         call Assemble_dUdy_Motions(    y_SD%Y3Mesh, u_MD%CoupledKinematics(1), MeshMapData%SDy3_P_2_Mooring_P, MD_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.false.)
 
       else if ( p_FAST%CompSub == Module_None ) THEN
          ! dU^{MD}/dy^{ED}
+         !!! ! This linearization was done in forming dUdu (see Linear_MD_InputSolve_du()), so we don't need to re-calculate these matrices 
+         !!! ! while forming dUdy, too.
+         !!!call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MD%CoupledKinematics, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+
          ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, MD_Start, ED_Out_Start, dUdy) ! OnlyTranslationDisp=.true.
+         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, MD_Start, ED_Out_Start, dUdy, OnlyTranslationDisp=.false.)
 
        end if  
       
