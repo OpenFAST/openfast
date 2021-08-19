@@ -1846,15 +1846,6 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
 
 
       !............
-      ! \f$ \frac{\partial U_\Lambda^{HD}}{\partial y^{ED}} \end{bmatrix} = \f$
-      ! \f$ \frac{\partial U_\Lambda^{HD}}{\partial y^{SD}} \end{bmatrix} = \f$ (dUdy block row 6=HD)
-      !............
-   if (p_FAST%CompHydro == MODULE_HD) then
-      call Linear_HD_InputSolve_dy( p_FAST, y_FAST, HD%Input(1), ED%y, SD%y, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   end if
-
-      !............
       ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial y^{ED}} \end{bmatrix} = \f$
       ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial y^{HD}} \end{bmatrix} = \f$
       ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial y^{SD}} \end{bmatrix} = \f$
