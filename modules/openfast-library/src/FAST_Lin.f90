@@ -1116,7 +1116,9 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
    if ( p_FAST%CompMooring  == Module_MD ) then
       
       call MD_JacobianPInput( t_global, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), &
-                                   MD%OtherSt(STATE_CURR), MD%y, MD%m, ErrStat2, ErrMsg2, y_FAST%Lin%Modules(Module_MD)%Instance(1)%D )
+                                   MD%OtherSt(STATE_CURR), MD%y, MD%m, ErrStat2, ErrMsg2, &
+                                   dXdu=y_FAST%Lin%Modules(Module_MD)%Instance(1)%B, &
+                                   dYdu=y_FAST%Lin%Modules(Module_MD)%Instance(1)%D )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       call MD_JacobianPContState( t_global, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), MD%OtherSt(STATE_CURR), &
