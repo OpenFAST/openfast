@@ -12,7 +12,36 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 
 OpenFAST v3.0.0 to OpenFAST `dev`
 ---------------------------------
-No changes.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST dev
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   AeroControlSec     ---------------------- AERODYNAMIC FLOW CONTROL --------------------------------
+ServoDyn                                      61   AfCmode            0             AfCmode      - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+ServoDyn                                      61   AfC_Mean           0             AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
+ServoDyn                                      61   AfC_Amp            0             AfC_Amp      - Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]
+ServoDyn                                      61   AfC_Phase          0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]
+ServoDyn                                      74   CablesSection      ---------------------- CABLE CONTROL -------------------------------------------
+ServoDyn                                      75   CCmode             0             CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Modified in OpenFAST dev
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      65   StCSection         ---------------------- STRUCTURAL CONTROL ---------------------------------------
+ServoDyn                                      66   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
+ServoDyn                                      67   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
+ServoDyn                                      68   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
+ServoDyn                                      69   NStCfiles          "unused"      NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
+ServoDyn                                      70   NumTStC            0             NumTStC      - Number of tower structural controllers (integer)
+ServoDyn                                      71   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
+ServoDyn                                      72   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
+ServoDyn                                      73   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 
 

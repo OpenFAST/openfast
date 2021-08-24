@@ -340,9 +340,25 @@ CONTAINS
          END IF
       END DO   
       
-      ! allocate the input arrays
-      ALLOCATE ( u%DeltaL(N), u%DeltaLdot(N), STAT = ErrStat2 )
-      
+      ! allocate the input arrays (if any requested)
+      if (N > 0) then
+         call AllocAry( u%DeltaL, N, 'u%DeltaL', ErrStat2, ErrMsg2 )
+            call CheckError( ErrStat2, ErrMsg2 )
+            if (ErrStat >= AbortErrLev) return
+            u%DeltaL =  0.0_ReKi
+         call AllocAry( u%DeltaLdot, N, 'u%DeltaLdot', ErrStat2, ErrMsg2 )
+            call CheckError( ErrStat2, ErrMsg2 )
+            if (ErrStat >= AbortErrLev) return
+            u%DeltaLdot =  0.0_ReKi
+         call AllocAry( InitOut%CableCChanRqst, N, 'CableCChanRqst', ErrStat2, ErrMsg2 )
+            call CheckError( ErrStat2, ErrMsg2 )
+            if (ErrStat >= AbortErrLev) return
+         InitOut%CableCChanRqst = .FALSE.    ! Initialize to false
+         do J=1,p%NLines
+            if (m%LineList(J)%CtrlChan > 0)  InitOut%CableCChanRqst(m%LineList(J)%CtrlChan) = .TRUE.
+         enddo
+      endif
+
 
       ! --------------------------------------------------------------------
       ! go through lines and initialize internal node positions using Catenary()

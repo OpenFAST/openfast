@@ -2375,6 +2375,7 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\servodyn\src\BladedInterface.F90"/>
+		<File RelativePath="..\..\modules\servodyn\src\BladedInterface_EX.F90"/>
 		<File RelativePath="..\..\modules\servodyn\src\PitchCntrl_ACH.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\ServoDyn.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\ServoDyn_IO.f90"/>
