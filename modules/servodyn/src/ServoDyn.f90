@@ -2605,7 +2605,7 @@ subroutine Jac_dYdu( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! Note this is similiar to SrvD_CalcOutput
+   ! Allocate the dYdu array
    if (.not. allocated(dYdu)) then
       call allocAry(dYdu, p%Jac_ny, p%Jac_nu, 'dYdu', ErrStat2, ErrMsg2)
       if (Failed())  return
@@ -3005,21 +3005,16 @@ subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! make a copy of the inputs to perturb if an StC exists
-   if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
-      if (.not. allocated(dXdu)) then
-         call allocAry(dXdu, p%Jac_nx, p%Jac_nu, 'dXdu', ErrStat2, ErrMsg2)
-         if (Failed())  return
-      elseif ( (size(dXdu,1) /= p%Jac_nx) .or. (size(dXdu,2) /= p%Jac_nu) ) then
-         deallocate(dXdu)
-         call allocAry(dXdu, p%Jac_nx, p%Jac_nu, 'dXdu', ErrStat2, ErrMsg2)
-         if (Failed())  return
-      endif
-      dXdu      = 0.0_R8Ki
-   else
-      if (allocated(dXdu))    deallocate(dXdu)
-      return
+   ! Allocate the dXdu array regardless what states may or may not exist (glue code needs this)
+   if (.not. allocated(dXdu)) then
+      call allocAry(dXdu, p%Jac_nx, p%Jac_nu, 'dXdu', ErrStat2, ErrMsg2)
+      if (Failed())  return
+   elseif ( (size(dXdu,1) /= p%Jac_nx) .or. (size(dXdu,2) /= p%Jac_nu) ) then
+      deallocate(dXdu)
+      call allocAry(dXdu, p%Jac_nx, p%Jac_nu, 'dXdu', ErrStat2, ErrMsg2)
+      if (Failed())  return
    endif
+   dXdu      = 0.0_R8Ki
 
    !-------------------------------------------------------------
    ! Perturb each StC instance individually and place in appropriate location in dXdu
@@ -3031,6 +3026,8 @@ subroutine Jac_dXdu(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdu)
       call SrvD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
       call SrvD_CopyContState( x, dx_p,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
       call SrvD_CopyContState( x, dx_m,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+   else
+      return   ! nothing further to do here
    endif
    !-------------------
    ! Blade StC
@@ -3605,21 +3602,16 @@ subroutine Jac_dYdx( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! make a copy of the states to perturb if an StC exists
-   if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
-      if (.not. allocated(dYdx)) then
-         call allocAry(dYdx, p%Jac_ny, p%Jac_nx, 'dYdx', ErrStat2, ErrMsg2)
-         if (Failed())  return
-      elseif ( (size(dYdx,1) /= p%Jac_ny) .or. (size(dYdx,2) /= p%Jac_nx) ) then
-         deallocate(dYdx)
-         call allocAry(dYdx, p%Jac_ny, p%Jac_nx, 'dYdx', ErrStat2, ErrMsg2)
-         if (Failed())  return
-      endif
-      dYdx      = 0.0_R8Ki
-   else
-      if (allocated(dYdx))    deallocate(dYdx)
-      return
+   ! Allocate the dYdx array regardless what states may or may not exist (glue code needs this)
+   if (.not. allocated(dYdx)) then
+      call allocAry(dYdx, p%Jac_ny, p%Jac_nx, 'dYdx', ErrStat2, ErrMsg2)
+      if (Failed())  return
+   elseif ( (size(dYdx,1) /= p%Jac_ny) .or. (size(dYdx,2) /= p%Jac_nx) ) then
+      deallocate(dYdx)
+      call allocAry(dYdx, p%Jac_ny, p%Jac_nx, 'dYdx', ErrStat2, ErrMsg2)
+      if (Failed())  return
    endif
+   dYdx      = 0.0_R8Ki
 
    !-------------------------------------------------------------
    ! Perturb each StC instance individually and place in appropriate location in dYdx
@@ -3631,6 +3623,8 @@ subroutine Jac_dYdx( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx 
       call SrvD_CopyContState( x, x_temp, MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
       call SrvD_CopyOutput(    y, y_p,    MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
       call SrvD_CopyOutput(    y, y_m,    MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
+   else
+      return      ! Nothing further to do here
    endif
    !-------------------
    ! Blade StC
@@ -3895,21 +3889,16 @@ subroutine Jac_dXdx(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdx)
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! make a copy of the inputs to perturb if an StC exists
-   if ( (p%NumBStC + p%NumNStC + p%NumTStC + p%NumSStC) > 0 ) then
-      if (.not. allocated(dXdx)) then
-         call allocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2)
-         if (Failed())  return
-      elseif ( (size(dXdx,1) /= p%Jac_nx) .or. (size(dXdx,2) /= p%Jac_nx) ) then
-         deallocate(dXdx)
-         call allocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2)
-         if (Failed())  return
-      endif
-      dXdx      = 0.0_R8Ki
-   else
-      if (allocated(dXdx))    deallocate(dXdx)
-      return
+   ! Allocate the dXdx array regardless what states may or may not exist (glue code needs this)
+   if (.not. allocated(dXdx)) then
+      call allocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2)
+      if (Failed())  return
+   elseif ( (size(dXdx,1) /= p%Jac_nx) .or. (size(dXdx,2) /= p%Jac_nx) ) then
+      deallocate(dXdx)
+      call allocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2)
+      if (Failed())  return
    endif
+   dXdx      = 0.0_R8Ki
 
    !-------------------------------------------------------------
    ! Perturb each StC instance individually and place in appropriate location in dYdx
@@ -3921,6 +3910,8 @@ subroutine Jac_dXdx(t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg, dXdx)
       call SrvD_CopyContState( x, x_temp, MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed())  return;
       call SrvD_CopyContState( x, dx_p,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
       call SrvD_CopyContState( x, dx_m,  MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed())  return;
+   else
+      return      ! Nothing futher to do here
    endif
    !-------------------
    ! Blade StC
