@@ -44,7 +44,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: dx = 0      !< size of grids in the x direction (in the 3 files above) [-]
     REAL(ReKi)  :: dy = 0      !< size of grids in the y direction (in the 3 files above) [-]
     REAL(ReKi)  :: dz = 0      !< size of grids in the z direction (in the 3 files above) [-]
-    TYPE(IfW_FFWind_InitInputType)  :: FF      !< scaling data [-]
+    TYPE(IfW_FFWind_InitInputType)  :: FF      !< scaling data and wind box exceedence flags [-]
   END TYPE IfW_HAWCWind_InitInputType
 ! =======================
 ! =========  IfW_HAWCWind_InitOutputType  =======

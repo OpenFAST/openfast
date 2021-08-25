@@ -114,6 +114,8 @@ typedef  ^                       ^                 FileInfoType      WindType2Da
 typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for 4D external wind data"                                             -
 typedef  ^                       ^                 ReKi              RadAvg                   -       -        -     "Radius (from hub) used for averaging wind speed" -
+typedef  ^                       ^                 IntKi             BoxExceedAllowIdx    -  -1       -     "Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim)" -
+typedef  ^                       ^                 LOGICAL           BoxExceedAllowF      -  .FALSE.  -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 
 
 # Init Output

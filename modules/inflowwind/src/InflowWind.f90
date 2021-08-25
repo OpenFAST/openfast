@@ -482,6 +482,13 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             TSFF_InitData%WindFileName                   =  InputFileData%TSFF_FileName
             TSFF_InitData%SumFileUnit                    =  SumFileUnit
 
+               ! Set flags for box exceedence (FVW and Lidar only)
+            TSFF_InitData%FF%BoxExceedAllowF             =  InitInp%BoxExceedAllowF
+            TSFF_InitData%FF%BoxExceedAllowIdx           =  huge(1_IntKi)
+            if (InitInp%BoxExceedAllowF .and. ( InitInp%BoxExceedAllowIdx <= InitInp%NumWindPoints )) then
+               TSFF_InitData%FF%BoxExceedAllowIdx        =  InitInp%BoxExceedAllowIdx
+            endif
+
                ! Initialize the TSFFWind module
             CALL IfW_TSFFWind_Init(TSFF_InitData, p%TSFFWind, &
                            m%TSFFWind, TSFF_InitOutData,  TmpErrStat, TmpErrMsg)
@@ -523,6 +530,13 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
                BladedFF_InitData%NativeBladedFmt         = .true.
                !call IfW_FFWind_CopyInitInput( InputFileData%FF, BladedFF_InitData%FF, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
             end if
+
+               ! Set flags for box exceedence (FVW and Lidar only)
+            BladedFF_InitData%FF%BoxExceedAllowF         =  InitInp%BoxExceedAllowF
+            BladedFF_InitData%FF%BoxExceedAllowIdx       =  huge(1_IntKi)
+            if (InitInp%BoxExceedAllowF .and. ( InitInp%BoxExceedAllowIdx <= InitInp%NumWindPoints )) then
+               BladedFF_InitData%FF%BoxExceedAllowIdx    =  InitInp%BoxExceedAllowIdx
+            endif
                         
                ! Initialize the BladedFFWind module
             CALL IfW_BladedFFWind_Init(BladedFF_InitData, p%BladedFFWind, m%BladedFFWind, &
@@ -564,6 +578,13 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             HAWC_InitData%dx                 = InputFileData%HAWC_dx
             HAWC_InitData%dy                 = InputFileData%HAWC_dy
             HAWC_InitData%dz                 = InputFileData%HAWC_dz
+
+               ! Set flags for box exceedence (FVW and Lidar only)
+            HAWC_InitData%FF%BoxExceedAllowF       =  InitInp%BoxExceedAllowF
+            HAWC_InitData%FF%BoxExceedAllowIdx     =  huge(1_IntKi)
+            if (InitInp%BoxExceedAllowF .and. ( InitInp%BoxExceedAllowIdx <= InitInp%NumWindPoints )) then
+               HAWC_InitData%FF%BoxExceedAllowIdx  =  InitInp%BoxExceedAllowIdx
+            endif
 
             call IfW_FFWind_CopyInitInput( InputFileData%FF, HAWC_InitData%FF, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
                    

@@ -138,6 +138,20 @@ SUBROUTINE IfW_BladedFFWind_Init(InitInp, ParamData, MiscVars, InitOutData, ErrS
    
    
       !-------------------------------------------------------------------------------------------------
+      ! Set box exceedence averaging grid
+      !-------------------------------------------------------------------------------------------------
+
+      ParamData%FF%BoxExceedAllowF     = InitInp%FF%BoxExceedAllowF
+      ParamData%FF%BoxExceedAllowIdx   = InitInp%FF%BoxExceedAllowIdx
+
+      if ( ParamData%FF%BoxExceedAllowF ) then
+         call GenMeanGridProfileTimeSeries( ParamData%FF, TmpErrStat, TmpErrMsg )
+         call SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+         if ( ErrStat >= AbortErrLev )  return
+      endif
+
+
+      !-------------------------------------------------------------------------------------------------
       ! Set the InitOutput information
       !-------------------------------------------------------------------------------------------------
 
@@ -185,6 +199,21 @@ SUBROUTINE IfW_BladedFFWind_Init(InitInp, ParamData, MiscVars, InitOutData, ErrS
          WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Z range (m):                 [ '// &
                      TRIM(Num2LStr(ParamData%FF%RefHt - ParamData%FF%FFZHWid))//' : '//TRIM(Num2LStr(ParamData%FF%RefHt + ParamData%FF%FFZHWid))//' ]'
       ENDIF
+
+      IF ( ParamData%FF%BoxExceedAllowF ) THEN
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Wind grid exceedence allowed:  '// &
+                     'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '                                    '// &
+                     '             Out of bounds values are linearly interpolated to mean at Z loction for'
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '                                    '// &
+                     '             given timestep and X,T value. Values above grid are held to top of wind'
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '                                    '// &
+                     '             grid value'
+      ELSE
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Wind grid exceedence allowed:  '// &
+                     'False'
+      ENDIF
+
 
 
          ! We are assuming that if the last line was written ok, then all of them were.

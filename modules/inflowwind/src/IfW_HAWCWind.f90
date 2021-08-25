@@ -145,6 +145,21 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
    if (InitInp%FF%ScaleMethod /= ScaleMethod_None) call SubtractMeanVelocity(p%FF%FFData)
    if (.not. p%FF%AddMeanAfterInterp) call AddMeanVelocity(InitInp%FF, p%FF%GridBase, 1.0_ReKi/p%FF%InvFFZD, 1.0_ReKi/p%FF%InvFFYD, p%FF%FFData)
    
+
+   !-------------------------------------------------------------------------------------------------
+   ! Set box exceedence averaging grid
+   !-------------------------------------------------------------------------------------------------
+
+   p%FF%BoxExceedAllowF     = InitInp%FF%BoxExceedAllowF
+   p%FF%BoxExceedAllowIdx   = InitInp%FF%BoxExceedAllowIdx
+
+   if ( p%FF%BoxExceedAllowF ) then
+      call GenMeanGridProfileTimeSeries( p%FF, TmpErrStat, TmpErrMsg )
+      call SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      if ( ErrStat >= AbortErrLev )  return
+   endif
+
+
    !-------------------------------------------------------------------------------------------------
    ! write info to summary file, if necessary
    !-------------------------------------------------------------------------------------------------
@@ -165,6 +180,20 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
                      TRIM(Num2LStr(-p%FF%FFYHWid))//' : '//TRIM(Num2LStr(p%FF%FFYHWid))//' ]'
       WRITE(InitInp%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     Z range (m):                 [ '// &
                      TRIM(Num2LStr(p%FF%GridBase))//' : '//TRIM(Num2LStr(p%FF%GridBase + p%FF%FFZHWid*2.0))//' ]'
+
+      IF ( p%FF%BoxExceedAllowF ) THEN
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Wind grid exceedence allowed:  '// &
+                     'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '                                    '// &
+                     '             Out of bounds values are linearly interpolated to mean at Z loction for'
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '                                    '// &
+                     '             given timestep and X,T value. Values above grid are held to top of wind'
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '                                    '// &
+                     '             grid value'
+      ELSE
+         WRITE(InitInp%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Wind grid exceedence allowed:  '// &
+                     'False'
+      ENDIF
       
       WRITE(InitInp%SumFileUnit,'(A)', IOSTAT=TmpErrStat)    'Scaling factors used:'
       WRITE(InitInp%SumFileUnit,'(A)', IOSTAT=TmpErrStat)    '  u           v           w       '

@@ -1201,5 +1201,64 @@ END SUBROUTINE ConvertFFWind_toVTK
 
    
 !====================================================================================================
+!> This subroutine generates the mean wind vector timeseries for each height above the ground.  This
+!! is essentially compressing the Y dimension of the wind box leaving a Z-T plane of vectors.  The
+!! resulting dimensions will be (NZGrids, NYGrids, NFFComp, NFFSteps)
+subroutine GenMeanGridProfileTimeSeries( p, ErrStat, ErrMsg )
+   type(IfW_FFWind_ParameterType),           intent(inout)  :: p                 !< Parameters
+   integer(IntKi),                           intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                             intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+      ! Local variables
+   integer                                                  :: i
+   integer                                                  :: iy
+   integer                                                  :: iz
+   integer                                                  :: it
+
+   INTEGER(IntKi)                                           :: ErrStat2
+   CHARACTER(ErrMsgLen)                                     :: ErrMsg2
+   CHARACTER(*), PARAMETER                                  :: RoutineName = 'GenMeanProfileTimeSeries'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   if ( .not. p%BoxExceedAllowF )         return
+   if ( p%BoxExceedAllowIdx <= 0_IntKi )  return      ! Index too low, so skip
+   if ( .not. allocated( p%FFData ) ) then
+      ErrStat = ErrID_Fatal
+      ErrMSg   = "Call before data has been read or allocated."
+      return
+   endif
+
+   ! Allocate array
+   if ( .not. allocated( p%FFAvgData ) ) then
+      CALL AllocAry( p%FFAvgData, p%NZGrids, p%NFFComp, p%NFFSteps, &
+            'Full-field average wind profile timeseries data array.', ErrStat2, ErrMsg2 )
+      if (Failed())  return
+      p%FFAvgData = 0.0_SiKi
+   endif
+
+
+   ! Populate array based on FFData (we don't consider any tower info -- we can get that from the tower interp later)
+   ! NOTE: this looping structure may be a bit slow.  We are averaging across an intermediate dimension
+   do it=1,p%NFFSteps
+      do i=1,p%NFFComp
+         do iz=1,p%NZGrids
+            do iy=1,p%NYGrids
+               p%FFAvgData(iz,i,it) = p%FFAvgData(iz,i,it) + p%FFData(iz,iy,i,it)
+            enddo
+            p%FFAvgData(iz,i,it) = p%FFAvgData(iz,i,it) / real(p%NYGrids, SiKi)
+         enddo
+      enddo
+   enddo
+
+contains
+   logical function Failed()
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+
+end subroutine GenMeanGridProfileTimeSeries
+!====================================================================================================
 
 END MODULE IfW_FFWind_Base

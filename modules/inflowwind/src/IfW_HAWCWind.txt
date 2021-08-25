@@ -22,7 +22,7 @@ typedef  ^                       ^                 IntKi                        
 typedef  ^                       ^                 ReKi                         dx                -     0     -     "size of grids in the x direction (in the 3 files above)" -
 typedef  ^                       ^                 ReKi                         dy                -     0     -     "size of grids in the y direction (in the 3 files above)" -
 typedef  ^                       ^                 ReKi                         dz                -     0     -     "size of grids in the z direction (in the 3 files above)" -
-typedef  ^                       ^                 IfW_FFWind_InitInputType     FF                -     -     -     "scaling data" -
+typedef  ^                       ^                 IfW_FFWind_InitInputType     FF                -     -     -     "scaling data and wind box exceedence flags" -
 
 
 # Init Output
