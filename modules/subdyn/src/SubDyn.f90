@@ -28,6 +28,7 @@ Module SubDyn
    USE SubDyn_Output
    USE SubDyn_Tests
    USE SD_FEM
+   USE FEM, only: FINDLOCI
    
    IMPLICIT NONE
 

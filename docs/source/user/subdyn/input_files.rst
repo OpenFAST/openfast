@@ -42,11 +42,18 @@ for debugging errors in the driver file). The echo file has the naming
 convention of **OutRootName.dvr.ech**. **OutRootName** is specified
 in the SUBDYN section of the driver input file (see below).
 
+Environmental conditions
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 Set the gravity constant using the **Gravity** parameter. SubDyn
 expects a magnitude, so in SI units this would be set to 9.80665
 :math:`\frac{m}{s^{2}}` for standard gravity. **WtrDpth** specifies
 the water depth (depth of the seabed), based on the reference MSL, and
 must be a value greater than zero.
+
+
+SubDyn module inputs
+~~~~~~~~~~~~~~~~~~~~
 
 **SDInputFile** is the file name of the primary SubDyn input file.
 This name should be in quotations and can contain an absolute path or a
@@ -66,6 +73,10 @@ allowing for different substructure orientations about the vertical, the
 user can set **SubRotateZ** to a prescribed angle in degrees with
 respect to the global *Z*-axis. The entire substructure will be rotated
 by that angle. (This feature is only available in stand-alone mode.)
+
+
+Input motion 
+~~~~~~~~~~~~
 
 Setting **InputsMod** = 0 sets all TP reference-point input motions to
 zero for all time steps. Setting **InputsMod** = 1 allows the user to
@@ -104,6 +115,45 @@ Table 1. TP Reference Point Inputs Time-Series Data File Contents
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
 | 17-19           | TP reference point rotational accelerations about *X*, *Y*, and *Z*                                   | `rad/s^2`                                |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+
+
+Applied loads
+~~~~~~~~~~~~~
+The next section of the input file provides options to apply loads at given joints of the structure.
+**nAppliedLoads** [-] specifies the number of applied loads listed in the subsequent table.
+The user can specify a combination of steady loads and unsteady loads (both are added together).
+The loads are in the global coordinate sytem.
+The steady loads are given as columns of the table
+(Fx, Fy, Fz, Mx, My, Mz), whereas the unsteady loads are provided in a CSV file.
+The CSV filename is provided in the last entry of the table. 
+If the filename is empty, the unsteady loads are not read.
+An example of applied loads table is given below:
+
+.. code::
+
+   ---------------------- LOADS --------------------------------------------------------------------
+   1    nAppliedLoads  - Number of applied loads at given nodes
+   ALJointID    Fx     Fy    Fz     Mx     My     Mz   UnsteadyFile
+      (-)       (N)    (N)   (N)   (Nm)   (Nm)   (Nm)     (-)
+      15       100      0     0     0       0      0      ""
+      23        0       0     0     0       0      0      "Force_TS.csv"
+
+In the above example, a steady applied force of 100N is applied at the joint with ID=15 of the structure,
+and an unsteady load is applied to joint 23. The time series of unsteady loads is a CSV file with
+7 columns (Time, Fx, Fy, Fz, Mx, My, Mz) and one line of header. The time vector needs to be increasing, 
+but does not need to be linear or cover the full range of the simulation. Interpolation is done in between
+time stamps, and the first are last values are used for times smaller and larger than the simulation time range respectively.
+An example of time series is shown below:
+
+.. code::
+
+   #Time_[s] , Fx_[N] , Fy_[N] , Fz_[N] , Mx_[Nm] , My_[Nm] , Mz_[Nm]
+   0.0       , 0.0    , 0.0    , 0.0    , 0.0     , 0.0     , 0.0
+   10.0      , 100.0  , 0.0    , 0.0    , 0.0     , 0.0     , 0.0
+   11.0      , 0.0    , 0.0    , 0.0    , 0.0     , 0.0     , 0.0
+
+
+
 
 .. _sd_main-input-file:
 

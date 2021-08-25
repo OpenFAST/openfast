@@ -83,11 +83,6 @@ MODULE SD_FEM
   LOGICAL, PARAMETER :: ANALYTICAL_LIN = .true.
   LOGICAL, PARAMETER :: GUYAN_RIGID_FLOATING = .true.
 
-  INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
-     MODULE PROCEDURE FINDLOCI_ReKi
-     MODULE PROCEDURE FINDLOCI_IntKi
-  END INTERFACE
-
 
 CONTAINS
 !------------------------------------------------------------------------------------------------------
@@ -277,7 +272,7 @@ END SUBROUTINE RigidTrnsf
 !------------------------------------------------------------------------------------------------------
 ! --- Main routines, more or less listed in order in which they are called
 !------------------------------------------------------------------------------------------------------
-!>
+!> Reindexing 
 ! - Removes the notion of "ID" and use Index instead
 ! - Creates Nodes (use indices instead of ID), similar to Joints array
 ! - Creates Elems (use indices instead of ID)  similar to Members array
@@ -298,15 +293,17 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    ErrMsg  = ""
 
    ! TODO See if Elems is actually used elsewhere
-
-   CALL AllocAry(p%Elems,         Init%NElem,    MembersCol, 'p%Elems',         ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(Init%Nodes,      p%nNodes,    JointsCol,  'Init%Nodes',      ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(p%Elems         ,Init%NElem,MembersCol        ,'p%Elems'         ,ErrStat2,ErrMsg2); if(Failed())return
+   CALL AllocAry(Init%Nodes      ,p%nNodes  ,JointsCol         ,'Init%Nodes'      ,ErrStat2,ErrMsg2); if(Failed())return
+   CALL AllocAry(p%NodeID2JointID,p%nNodes                     ,'p%NodeID2JointID',ErrStat2,ErrMsg2); if(Failed())return
 
    ! --- Initialize Nodes
-   Init%Nodes = -999999 ! Init to unphysical values
+   Init%Nodes       = -999999 ! Init to unphysical values
+   p%NodeID2JointID = -999999
    do I = 1,Init%NJoints
       Init%Nodes(I, 1) = I                                     ! JointID replaced by index I
       Init%Nodes(I, 2:JointsCol) = Init%Joints(I, 2:JointsCol) ! All the rest is copied
+      p%NodeID2JointID(I) = Init%Joints(I,1)                   ! JointID
    enddo
 
    ! --- Re-Initialize Reactions, pointing to index instead of JointID
@@ -405,6 +402,7 @@ CONTAINS
 END SUBROUTINE SD_ReIndex_CreateNodesAndElems
 
 !----------------------------------------------------------------------------
+!> Divide (split) members into nDIV element. Only beams are split.
 SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    TYPE(SD_InitType),            INTENT(INOUT)  ::Init
    TYPE(SD_ParameterType),       INTENT(INOUT)  ::p

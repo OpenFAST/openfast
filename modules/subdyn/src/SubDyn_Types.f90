@@ -223,6 +223,7 @@ IMPLICIT NONE
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (with initial cable force T0), not reduced [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NodeID2JointID      !< Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes) [-]
     LOGICAL  :: reduced      !< True if system has been reduced to account for constraints [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red_T      !< Transpose of T_red [-]
@@ -6982,6 +6983,18 @@ IF (ALLOCATED(SrcParamData%DP0)) THEN
   END IF
     DstParamData%DP0 = SrcParamData%DP0
 ENDIF
+IF (ALLOCATED(SrcParamData%NodeID2JointID)) THEN
+  i1_l = LBOUND(SrcParamData%NodeID2JointID,1)
+  i1_u = UBOUND(SrcParamData%NodeID2JointID,1)
+  IF (.NOT. ALLOCATED(DstParamData%NodeID2JointID)) THEN 
+    ALLOCATE(DstParamData%NodeID2JointID(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%NodeID2JointID.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%NodeID2JointID = SrcParamData%NodeID2JointID
+ENDIF
     DstParamData%reduced = SrcParamData%reduced
 IF (ALLOCATED(SrcParamData%T_red)) THEN
   i1_l = LBOUND(SrcParamData%T_red,1)
@@ -7781,6 +7794,9 @@ ENDIF
 IF (ALLOCATED(ParamData%DP0)) THEN
   DEALLOCATE(ParamData%DP0)
 ENDIF
+IF (ALLOCATED(ParamData%NodeID2JointID)) THEN
+  DEALLOCATE(ParamData%NodeID2JointID)
+ENDIF
 IF (ALLOCATED(ParamData%T_red)) THEN
   DEALLOCATE(ParamData%T_red)
 ENDIF
@@ -8041,6 +8057,11 @@ ENDIF
   IF ( ALLOCATED(InData%DP0) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! DP0 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%DP0)  ! DP0
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! NodeID2JointID allocated yes/no
+  IF ( ALLOCATED(InData%NodeID2JointID) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! NodeID2JointID upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%NodeID2JointID)  ! NodeID2JointID
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! reduced
   Int_BufSz   = Int_BufSz   + 1     ! T_red allocated yes/no
@@ -8588,6 +8609,21 @@ ENDIF
           ReKiBuf(Re_Xferred) = InData%DP0(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%NodeID2JointID) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%NodeID2JointID,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%NodeID2JointID,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%NodeID2JointID,1), UBOUND(InData%NodeID2JointID,1)
+        IntKiBuf(Int_Xferred) = InData%NodeID2JointID(i1)
+        Int_Xferred = Int_Xferred + 1
       END DO
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%reduced, IntKiBuf(1))
@@ -9956,6 +9992,24 @@ ENDIF
           OutData%DP0(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NodeID2JointID not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%NodeID2JointID)) DEALLOCATE(OutData%NodeID2JointID)
+    ALLOCATE(OutData%NodeID2JointID(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%NodeID2JointID.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%NodeID2JointID,1), UBOUND(OutData%NodeID2JointID,1)
+        OutData%NodeID2JointID(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
       END DO
   END IF
     OutData%reduced = TRANSFER(IntKiBuf(Int_Xferred), OutData%reduced)
