@@ -191,6 +191,12 @@ class MoorDynLibAPI(CDLL):
             byref(self.error_status),              # OUT: ErrStat_C
             self.error_message                     # OUT: ErrMsg_C
         )
+
+        for i in range(0,len(forces_c)):
+            forces[i] = c_float(forces_c[i]).value
+
+        for i in range(0,len(outputs_c)):
+            output_channel_values[i] = c_float(outputs_c[i]).value
         
         self.check_error()
 

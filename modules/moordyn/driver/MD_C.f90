@@ -464,6 +464,10 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
         tmpAccelerations(J,1)   = REAL(ACCELERATIONS_C(1,J),ReKi)
     END DO
 
+    PRINT *, 'POSITIONS_C = ',POSITIONS_C
+    PRINT *, 'VELOCITIES_C = ',VELOCITIES_C
+    PRINT *, 'ACCELERATIONS_C = ',ACCELERATIONS_C
+
     ! Transfer motions to input meshes
     CALL Set_MotionMesh(ErrStat, ErrMsg )             ! update motion mesh with input motion arrays
     LocMsg = "MD_CALCOUTPUT_C: Set_MotionMesh failed"
@@ -476,6 +480,8 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
     !-------------------------------------------------
     ! Call the main subroutine MD_CalcOutput
     !-------------------------------------------------
+    
+
     CALL MD_CalcOutput( t, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, ErrStat, ErrMsg )
     LocMsg = "MD_CALCOUTPUT_C: Call to main MD_CalcOutput routine failed!"
     IF (Failed(LocMsg)) RETURN
@@ -495,7 +501,9 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
     DO J = 1,6
         FORCES_C(1,J) = REAL(tmpForces(J,1), c_float)
     END DO
+    PRINT *, 'FORCES_C = ',FORCES_C
 
+    PRINT *, 'MD_CALCOUTPUT_C: output channel values = ', REAL(y%WriteOutput, C_FLOAT)
     OUTPUTS_C = REAL(y%WriteOutput, C_FLOAT)
 
     IF (ErrStat .GE. AbortErrLev) THEN

@@ -51,6 +51,9 @@ if verbose:
     dbgFileName = "MD.dbg"
     dbg_outfile = MoorDyn_Library.DriverDbg(dbgFileName)
 
+# Test file
+md_test_file = "5MW_OC4Semi_WSt_WavesWN.out"
+
 #=============================================================================================================================
 #-------------------------------------------------------- SET INPUTS ---------------------------------------------------------
 #=============================================================================================================================
@@ -115,27 +118,45 @@ for line in fh:
   md_input_string_array.append(line.rstrip())
 fh.close()
 
+# Test file for MoorDyn time-accurate inputs from OC4 Semi Test Case
+try:
+    ft = open(md_test_file, "r")
+    tmp = ft.read().splitlines() # each line in file is a row in tmp
+    tmp2 = tmp[8:-1] # skip the header rows - get the raw data only
+    data = np.empty([len(tmp2),96])
+    time = np.empty(len(tmp2))
+    for d in range(0,len(tmp2)):
+        tmp3 = tmp2[d].split() # split the row into columns
+        for k in range(0,len(tmp3)):
+            data[d,k] = float(tmp3[k]) # for each column, convert the string into a float
+        time[d] = data[d,0]
+    ft.close()
+except Exception as e:
+    print("{}".format(e))
+    print(f"Cannot load MoorDyn test file")
+    exit(1)
+
 #==============================================================================
 # Basic alogrithm for using the MoorDyn library
 
 # Time inputs
-t_start             = 0                  # initial or start time. MUST BE >= 0
-md_lib.dt           = 0.1                # time interval
-md_lib.total_time   = 1                  # total or end time
-time                = np.arange(t_start,md_lib.total_time + md_lib.dt,md_lib.dt)
+t_start             = time[0]            # initial or start time. MUST BE >= 0
+md_lib.dt           = time[1] - time[0]  # time interval
+md_lib.total_time   = time[-1]           # total or end time
+# time                = np.arange(t_start,md_lib.total_time + md_lib.dt,md_lib.dt)
 md_lib.numTimeSteps = len(time)
 
 # System inputs
-g                   = 9.806              # gravitational acceleration (m/s^2). usage: g is positive
-rho_h2o             = 1000               # water density (kg/m^3)
-d_h2o               = 50                 # water depth (m). usage: depth is positive
-platform_init_pos   = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # platform/hull/substructure initial position [x, y, z, Rx, Ry, Rz] in openFAST global coordinates [m, m, m, rad, rad, rad]
-platform_init_vel   = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # platform/hull/substructure initial velocities [x,y,z,Rx,Ry,Rz]_dot  -- first deriv (velocities)
-platform_init_acc   = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # platform/hull/substructure initial accelerations [x,y,z,Rx,Ry,Rz]_ddot -- second deriv (accelerations)
-forces              = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # platform/hull/substructure forces (output) [Fx,Fy,Fz,Mx,My,Mz]   -- resultant forces/moments at each node
+g                   = 9.80665            # gravitational acceleration (m/s^2). usage: g is positive
+rho_h2o             = 1025               # water density (kg/m^3)
+d_h2o               = 200                # water depth (m). usage: depth is positive
+platform_init_pos   = np.array([data[0,54], data[0,55], data[0,56], data[0,57], data[0,58], data[0,59]]) # platform/hull/substructure initial position [x, y, z, Rx, Ry, Rz] in openFAST global coordinates [m, m, m, rad, rad, rad]
+platform_init_vel   = np.array([data[0,60], data[0,61], data[0,62], data[0,63], data[0,64], data[0,65]]) # platform/hull/substructure initial velocities [x,y,z,Rx,Ry,Rz]_dot  -- first deriv (velocities)
+platform_init_acc   = np.array([data[0,66], data[0,67], data[0,68], data[0,69], data[0,70], data[0,71]]) # platform/hull/substructure initial accelerations [x,y,z,Rx,Ry,Rz]_ddot -- second deriv (accelerations)
+forces              = np.array([data[0,0], data[0,0], data[0,0], data[0,0], data[0,0], data[0,0]]) # platform/hull/substructure forces (output) [Fx,Fy,Fz,Mx,My,Mz]   -- resultant forces/moments at each node
 
 # Interpolation Order - MUST BE 1: linear (uses two time steps) or 2: quadratic (uses three time steps)
-InterpOrder         = 1
+InterpOrder         = 2
 
 # PREDICTOR-CORRECTOR: For checking if our library is correctly handling correction steps, set this to > 0
 NumCorrections      = 0 # SET TO 0 IF NOT DOING CORRECTION STEP
@@ -166,7 +187,13 @@ output_channel_array  = np.zeros( (md_lib.numTimeSteps,md_lib._numChannels.value
 # MD_calcOutput: calculates outputs for initial time t=0 and initial position & velocity
 # ----------------------------------------------------------------------------------------------------------------------------
 try: 
+    # Debugging only - delete when done
+    print("Initial positions = ", platform_init_pos)
+    print("Initial velocities = ", platform_init_vel)
+    print("Initial accelerations = ", platform_init_acc)
     md_lib.md_calcOutput(time[0], platform_init_pos, platform_init_vel, platform_init_acc, forces, output_channel_values)
+    print("Initial forces = ", forces)
+    print("Initial outputs = ", output_channel_values)
 except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
     if verbose:
@@ -180,23 +207,28 @@ output_channel_array[0,:] = np.append(time[0],output_channel_values)
 if verbose:
     dbg_outfile.write(time[0],platform_init_pos,platform_init_vel,platform_init_acc,forces)
 
+exit(1)
+
 # Run MD at each time step
 # ----------------------------------------------------------------------------------------------------------------------------
 for i in range( 0, len(time)-1):
+
+    # Current t = time[i]
 
     # IF DOING PREDICTOR-CORRECTOR
     for correction in range(0, NumCorrections+1):
 
         # User must update position, velocities, and accelerations at each time step
         # Note: MD currently handles one interface point, i.e. substructure is represented as a single point
-        Positions     = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
-        Velocities    = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06]
-        Accelerations = [0.001, 0.002, 0.003, 0.004, 0.005, 0.006]
+        Positions     = [data[i+1,54], data[i+1,55], data[i+1,56], data[i+1,57], data[i+1,58], data[i+1,59]]
+        Velocities    = [data[i+1,60], data[i+1,61], data[i+1,62], data[i+1,63], data[i+1,64], data[i+1,65]]
+        Accelerations = [data[i+1,66], data[i+1,67], data[i+1,68], data[i+1,69], data[i+1,70], data[i+1,71]]
 
         # Call md_updateStates - propagate the arrays
         if InterpOrder == 1:
             try: 
-                md_lib.md_updateStates(0, time[i], time[i+1], Positions, Velocities, Accelerations) # @ANDY to check indexing
+                #                     ---    t          t+dt
+                md_lib.md_updateStates(0, time[i], time[i+1], Positions, Velocities, Accelerations) # positions, velocities, and accelerations are all at current time
             except Exception as e:
                 print("{}".format(e))   # Exceptions handled in moordyn_library.py
                 if verbose:
@@ -205,7 +237,11 @@ for i in range( 0, len(time)-1):
                 exit(1)
         elif InterpOrder == 2:
             try: 
-                md_lib.md_updateStates(time[i], time[i+1], time[i+2], Positions, Velocities, Accelerations) # @ANDY to check indexing
+                if i ==0:
+                    md_lib.md_updateStates(-md_lib.dt, time[i], time[i+1], Positions, Velocities, Accelerations) # positions, velocities, and accelerations are all at current time
+                else:
+                    #                         t-dt      t           t+dt
+                    md_lib.md_updateStates(time[i-1], time[i], time[i+1], Positions, Velocities, Accelerations) # positions, velocities, and accelerations are all at current time
             except Exception as e:
                 print("{}".format(e))   # Exceptions handled in moordyn_library.py
                 if verbose:
@@ -217,7 +253,7 @@ for i in range( 0, len(time)-1):
             dbg_outfile.end()
             exit(1)
 
-        # Call md_calcOutput: calculate outputs for the current time step
+        # Call md_calcOutput: calculate outputs for the current time step @ t+dt
         try: 
             md_lib.md_calcOutput(time[i+1], Positions, Velocities, Accelerations, forces, output_channel_values) # output channel values are overwritten for each time step
         except Exception as e:
