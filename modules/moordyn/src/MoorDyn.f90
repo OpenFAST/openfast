@@ -1543,7 +1543,7 @@ CONTAINS
          m%ConnectList(m%CpldConIs(l))%r(2) = InitInp%PtfmInit(2) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3)
          m%ConnectList(m%CpldConIs(l))%r(3) = InitInp%PtfmInit(3) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3)
          
-         u%CoupledKinematics%TranslationDisp(:,J) = m%ConnectList(m%CpldConIs(l))%r(1) - rRef   ! initial displacement from reference position
+         u%CoupledKinematics%TranslationDisp(:,J) = m%ConnectList(m%CpldConIs(l))%r - rRef(1:3)   ! initial displacement from reference position
          CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)
 
          ! lastly, do this to set the attached line endpoint positions:
