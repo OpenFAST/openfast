@@ -879,21 +879,13 @@ p%WaterKin  = 0
                   
                   else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a fairlead, add to list and add 
                      m%ConnectList(l)%typeNum = -1
-                     p%nCpldCons=p%nCpldCons+1  ! add this rod to coupled list                          
+                     p%nCpldCons=p%nCpldCons+1  ! add this point to coupled list                          
                      m%CpldConIs(p%nCpldCons) = l
 
-                     ! this is temporary for backwards compatibility >>>>> will need to update for more versatile coupling >>>>   <<<<<<< this looks pretty good. Make sure it's done only once - either here or near end of init. Same for Rods and bodies.
-                     ! NOTE: second index would be used for multi-turbine couplings in FAST.Farm
-                     CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
-                     !CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,1),InitInp%PtfmInit(5,1),InitInp%PtfmInit(6,1), OrMat, '', ErrStat2, ErrMsg2)
-
-                     ! set initial node position, including adjustments due to initial platform rotations and translations  <<< could convert to array math
-                     m%ConnectList(l)%r(1) = InitInp%PtfmInit(1) + OrMat(1,1)*tempArray(1) + OrMat(2,1)*tempArray(2) + OrMat(3,1)*tempArray(3)
-                     m%ConnectList(l)%r(2) = InitInp%PtfmInit(2) + OrMat(1,2)*tempArray(1) + OrMat(2,2)*tempArray(2) + OrMat(3,2)*tempArray(3)
-                     m%ConnectList(l)%r(3) = InitInp%PtfmInit(3) + OrMat(1,3)*tempArray(1) + OrMat(2,3)*tempArray(2) + OrMat(3,3)*tempArray(3)
-                     !m%ConnectList(l)%r(1) = InitInp%PtfmInit(1,1) + OrMat(1,1)*tempArray(1) + OrMat(2,1)*tempArray(2) + OrMat(3,1)*tempArray(3)
-                     !m%ConnectList(l)%r(2) = InitInp%PtfmInit(2,1) + OrMat(1,2)*tempArray(1) + OrMat(2,2)*tempArray(2) + OrMat(3,2)*tempArray(3)
-                     !m%ConnectList(l)%r(3) = InitInp%PtfmInit(3,1) + OrMat(1,3)*tempArray(1) + OrMat(2,3)*tempArray(2) + OrMat(3,3)*tempArray(3)
+                     ! temporarily set node position to relative position in input file
+                     m%ConnectList(l)%r(1) = tempArray(1)
+                     m%ConnectList(l)%r(2) = tempArray(2)
+                     m%ConnectList(l)%r(3) = tempArray(3)
                  
                   else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
                      m%ConnectList(l)%typeNum = 0
@@ -1484,7 +1476,7 @@ p%WaterKin  = 0
       IF (ErrStat >= AbortErrLev) RETURN
             
       ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then connections
-      ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation -- below or where the objects are first created <<<<
+      ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation below
       
       J = 0 ! this is the counter through the mesh points
       
@@ -1528,9 +1520,17 @@ p%WaterKin  = 0
       
          J = J + 1
          
-         rRef(1:3) = m%ConnectList(m%CpldConIs(l))%r         ! for now set reference position as per input file <<<
-         CALL MeshPositionNode(u%CoupledKinematics, J, rRef, ErrStat2, ErrMsg2)   ! defaults to identity orientation matrix
-         u%CoupledKinematics%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
+         ! set reference position as per input file
+         rRef(1:3) = m%ConnectList(m%CpldConIs(l))%r                             
+         CALL MeshPositionNode(u%CoupledKinematics, J, rRef, ErrStat2, ErrMsg2)
+         
+         ! set initial node position, including adjustments due to initial platform rotations and translations  <<< could convert to array math
+         CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
+         m%ConnectList(m%CpldConIs(l))%r(1) = InitInp%PtfmInit(1) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3)
+         m%ConnectList(m%CpldConIs(l))%r(2) = InitInp%PtfmInit(2) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3)
+         m%ConnectList(m%CpldConIs(l))%r(3) = InitInp%PtfmInit(3) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3)
+         
+         u%CoupledKinematics%TranslationDisp(:,J) = m%ConnectList(m%CpldConIs(l))%r - rRef(1:3)   ! initial displacement from reference position
          CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)
 
          ! lastly, do this to set the attached line endpoint positions:
