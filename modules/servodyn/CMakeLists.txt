@@ -21,6 +21,7 @@ endif()
 
 set(SrvD_SOURCES
   src/BladedInterface.f90
+  src/BladedInterface_EX.f90
   src/UserSubs.f90
   src/PitchCntrl_ACH.f90
   src/StrucCtrl.f90

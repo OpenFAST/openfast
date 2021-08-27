@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2020 National Renewable Energy Laboratory
-! Copyright (C) 2020 Matthew Hall
+! Copyright (C) 2020-2021 Alliance for Sustainable Energy, LLC
+! Copyright (C) 2015-2019 Matthew Hall
 !
 !    This file is part of MoorDyn.
 !
@@ -85,6 +85,7 @@ PROGRAM MoorDyn_Driver
 
    ! -------------------------------------------------------------------------
    ! Initialize MoorDyn
+                                                                                   
    ! -------------------------------------------------------------------------
   
    dtC = 0.01                   ! desired coupling time step size for communicating with MoorDyn
@@ -103,6 +104,21 @@ PROGRAM MoorDyn_Driver
    MD_InitInput%rhoW        = 1025     ! This needs to be set according to seawater density in HydroDyn      
    MD_InitInput%PtfmInit    = 0.0
    MD_InitInput%RootName    = "MoorDyn.MD"
+   
+   ! fill in the hydrodynamics data
+   ALLOCATE( MD_InitInput%WaveVel (2,200,3))
+   ALLOCATE( MD_InitInput%WaveAcc (2,200,3))
+   ALLOCATE( MD_InitInput%WavePDyn(2,200)  )
+   ALLOCATE( MD_InitInput%WaveElev(2,200)  )
+   ALLOCATE( MD_InitInput%WaveTime(2)      )
+   MD_InitInput%WaveVel  = 0.0_ReKi
+   MD_InitInput%WaveAcc  = 0.0_ReKi
+   MD_InitInput%WavePDyn = 0.0_ReKi
+   MD_InitInput%WaveElev = 0.0_ReKi
+   MD_InitInput%WaveTime = 0.0_ReKi
+   DO I = 1,SIZE(MD_InitInput%WaveTime)
+      MD_InitInput%WaveTime(I) = 600.0*I
+   END DO
    
    CALL GetNewUnit( Un )
    OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
@@ -196,10 +212,14 @@ PROGRAM MoorDyn_Driver
       print *, "Read ", ntIn, " time steps from input file."
       print *, PtfmMotIn
 
+       
+                                                        
    END IF
 
   
    ! ----------------------- specify stepping details -----------------------
+
+                                                                                                
 
    IF (ntIn > 0) THEN
       tMax = PtfmMotIn(ntIn, 1)    ! save last time step as total sim time
@@ -251,18 +271,30 @@ PROGRAM MoorDyn_Driver
    ELSE 
       PtfmMot = 0.0_Reki
    END IF
-   
-   
+
    
    
    ! ---------------------------------------------------------------
    ! Set the initial input values
    ! ---------------------------------------------------------------
    
-   ! start with zeros   >>> or should this be the initial row of DOFs? <<<
+   ! zero the displacements to start with
    MD_Input(1)%PtFairleadDisplacement%TranslationDisp = 0.0_ReKi   
+   
+   ! zero the tension commands
    MD_Input(1)%DeltaL = 0.0_ReKi
    MD_Input(1)%DeltaLdot = 0.0_ReKi
+   
+!   ! zero water inputs (if passing wave info in from glue code)
+!   MD_Input(1)%U    = 0.0  
+!   MD_Input(1)%Ud   = 0.0  
+!   MD_Input(1)%zeta = 0.0  
+!   MD_Input(1)%PDyn = 0.0  
+!   ! now add some current in x for testing
+!   MD_Input(1)%U(1,:) = 1.0
+   
+   
+   
       
    DO i = 2, MD_interp_order + 1  
       CALL MD_CopyInput( MD_Input(1), MD_Input(i), MESH_NEWCOPY, ErrStat, ErrMsg )
@@ -293,8 +325,10 @@ PROGRAM MoorDyn_Driver
   
   
   ! -------------------------------------------------------------------------
-  ! BEGIN time marching  >>> note that 3 rotational platform DOFs are currently neglected <<<
+  ! BEGIN time marching  >>> note that 3 rotational platform DOFs are currently neglected <<< 
   ! -------------------------------------------------------------------------
+  
+  ! TODO: add rotational DOFs,   update coupling points, add filtering, and add velocity and acceleration <<<<
 
    print *,"Doing time marching now..."
 
@@ -304,14 +338,22 @@ PROGRAM MoorDyn_Driver
 
       t = dtC*(i-1)
 
+      print *, t
+                                                                                 
       MD_InputTimes(1) = t + dtC
       !MD_InputTimes(2) = MD_InputTimes(1) - dtC 
       !MD_InputTimes(3) = MD_InputTimes(2) - dtC
 
       ! apply platform translations (neglecting rotations for now)
-      MD_Input(1)%PtFairleadDisplacement%TranslationDisp(1,1) = PtfmMot(i, 1)  
-      MD_Input(1)%PtFairleadDisplacement%TranslationDisp(1,2) = PtfmMot(i, 2)  
-      MD_Input(1)%PtFairleadDisplacement%TranslationDisp(1,3) = PtfmMot(i, 3)  
+      DO J = 1,MD_Parameter%nCpldCons
+         MD_Input(1)%PtFairleadDisplacement%TranslationDisp(1,J) = PtfmMot(i, 1)  
+         MD_Input(1)%PtFairleadDisplacement%TranslationDisp(2,J) = PtfmMot(i, 2)  
+         MD_Input(1)%PtFairleadDisplacement%TranslationDisp(3,J) = PtfmMot(i, 3)  
+      END DO
+                                     
+      !MD_Input(1)%PtFairleadDisplacement%TranslationDisp(1,1) = PtfmMot(i, 1)  
+      !MD_Input(1)%PtFairleadDisplacement%TranslationDisp(1,2) = PtfmMot(i, 2)  
+      !MD_Input(1)%PtFairleadDisplacement%TranslationDisp(1,3) = PtfmMot(i, 3)  
 
       !MD_Input(2)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
       !MD_Input(3)%PtFairleadDisplacement%TranslationDisp(1,1) = .001*n_t_global  
