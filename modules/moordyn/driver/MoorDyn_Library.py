@@ -73,9 +73,9 @@ class MoorDynLibAPI(CDLL):
             POINTER(c_char_p),                    # IN: input file string
             POINTER(c_int),                       # IN: input file string length
             POINTER(c_double),                    # IN: dt
-            POINTER(c_double),                    # IN: g
-            POINTER(c_double),                    # IN: rho_water
-            POINTER(c_double),                    # IN: depth_water
+            POINTER(c_float),                     # IN: g
+            POINTER(c_float),                     # IN: rho_water
+            POINTER(c_float),                     # IN: depth_water
             POINTER(c_float),                     # IN: platform initial position
             POINTER(c_int),                       # IN: interpolation order
             POINTER(c_int),                       # OUT: number of channels

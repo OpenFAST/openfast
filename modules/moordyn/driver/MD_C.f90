@@ -89,9 +89,9 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C        !< Input file as a single string with lines deliniated by C_NULL_CHAR
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C  !< length of the input file string
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
-    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: G_C
-    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: RHO_C
-    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DEPTH_C
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: G_C
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: RHO_C
+    REAL(C_FLOAT)                                  , INTENT(IN   )   :: DEPTH_C
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6)
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InterpOrder_C
     INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
@@ -144,9 +144,9 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     InitInp%UsePrimaryInputFile = .FALSE.
 
     ! Environment variables -- These should be passed in from C.
-    InitInp%g                = REAL(G_C, DbKi)
-    InitInp%rhoW             = REAL(RHO_C, DbKi)
-    InitInp%WtrDepth         = REAL(DEPTH_C, DbKi)
+    InitInp%g                = REAL(G_C, ReKi)
+    InitInp%rhoW             = REAL(RHO_C, ReKi)
+    InitInp%WtrDepth         = REAL(DEPTH_C, ReKi)
 
     ! Platform position (x,y,z,Rx,Ry,Rz) -- where rotations are small angle assumption in radians.
     ! This data is used to set the CoupledKinematics mesh that will be used at each timestep call
