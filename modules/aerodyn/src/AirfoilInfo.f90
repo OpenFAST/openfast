@@ -391,6 +391,7 @@ CONTAINS
       CHARACTER(*), PARAMETER                 :: RoutineName = 'ReadAFfile'
       CHARACTER(10)                           :: defaultStr
       CHARACTER(1024)                         :: PriPath
+      CHARACTER(1024)                         :: sLine
       
       TYPE (AFI_UA_BL_Default_Type), ALLOCATABLE :: CalcDefaults(:)            ! Whether to calculate default values for the UA parameters
       
@@ -424,8 +425,16 @@ CONTAINS
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! RelThickness, default is 0.2 if user doesn't know it, only used for Boing-Vertol UA model = 7
-      CALL ParseVarWDefault ( FileInfo, CurLine, 'RelThickness', p%RelThickness, 0.2, ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      sLine = FileInfo%Lines(CurLine)
+      call Conv2UC(sLine)  ! to uppercase
+      if (index(sLine, 'RELTHICKNESS')>1) then
+         CALL ParseVarWDefault ( FileInfo, CurLine, 'RelThickness', p%RelThickness, 0.2, ErrStat2, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      else
+         p%RelThickness=-1 ! To trigger an error
+         !call WrScr('Skipping. RelThickness not found on line 7 of Profile file: '//trim(InitInp%FileName) )
+      endif
+
          
          ! NonDimArea is currently unused by AirfoilInfo or codes using AirfoilInfo.  GJH 9/13/2017
       CALL ParseVar ( FileInfo, CurLine, 'NonDimArea', p%NonDimArea, ErrStat2, ErrMsg2, UnEc )

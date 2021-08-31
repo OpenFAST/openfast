@@ -3084,6 +3084,12 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
 
    elseif (p%UAMod == UA_BV) then
       ! --- CalcOutput Boeing-Vertol
+      if (AFInfo%RelThickness<0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Relative thickness should be provided in the profile file to use the Boeing-Vertol model.'
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         return
+      endif
       call BV_CalcOutput()
       if (ErrStat >= AbortErrLev) return
 
