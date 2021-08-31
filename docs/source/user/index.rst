@@ -5,6 +5,11 @@ User Documentation
 
 We are in the process of transitioning legacy FAST v8 documentation, which can be found at https://nwtc.nrel.gov/.
 
+.. note::
+
+    Much of the documentation here is legacy documentation from FAST v8. While most of it is still
+    directly applicable to OpenFAST, portions may be out of date.
+
 
 General
 ~~~~~~~
@@ -68,4 +73,4 @@ Mesh Mapping
 - `FAST Modular Wind Turbine CAE Tool: Nonmatching Spatial and Temporal Meshes <https://www.nrel.gov/docs/fy14osti/60742.pdf>`_
 - `FAST Modular Framework for Wind Turbine Simulation: New Algorithms and Numerical Examples <https://dx.doi.org/10.2514/6.2015-1461>`_
 - :download:`OpenFAST_Algorithms.pdf <../../OtherSupporting/OpenFAST_Algorithms/OpenFAST_Algorithms.pdf>`
-- :download:`Preditctor-Corrector Approach <../../OtherSupporting/ProposedPCApproach_Rev4.docx>`
+- :download:`Predictor-Corrector Approach <../../OtherSupporting/ProposedPCApproach_Rev4.docx>`
