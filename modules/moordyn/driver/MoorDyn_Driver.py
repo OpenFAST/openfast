@@ -188,12 +188,12 @@ output_channel_array  = np.zeros( (md_lib.numTimeSteps,md_lib._numChannels.value
 # ----------------------------------------------------------------------------------------------------------------------------
 try: 
     # Debugging only - delete when done
-    print("Initial positions = ", platform_init_pos)
-    print("Initial velocities = ", platform_init_vel)
-    print("Initial accelerations = ", platform_init_acc)
+    #print("Initial positions = ", platform_init_pos)
+    #print("Initial velocities = ", platform_init_vel)
+    #print("Initial accelerations = ", platform_init_acc)
     md_lib.md_calcOutput(time[0], platform_init_pos, platform_init_vel, platform_init_acc, forces, output_channel_values)
-    print("Initial forces = ", forces)
-    print("Initial outputs = ", output_channel_values)
+    #print("Initial forces = ", forces)
+    #print("Initial outputs = ", output_channel_values)
 except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
     if verbose:
@@ -206,8 +206,6 @@ print("t = ",time[0]," completed")
 output_channel_array[0,:] = np.append(time[0],output_channel_values)
 if verbose:
     dbg_outfile.write(time[0],platform_init_pos,platform_init_vel,platform_init_acc,forces)
-
-exit(1)
 
 # Run MD at each time step
 # ----------------------------------------------------------------------------------------------------------------------------
