@@ -41,11 +41,10 @@ typedef     ^                   ^               IntKi                           
 
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............
-typedef  FVW/FVW           Wng_ParameterType    ReKi                             Chord        : -  - "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 
+typedef  FVW/FVW           Wng_ParameterType    ReKi                             chord_LL     : -  -  "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 
+typedef     ^                   ^               ReKi                             chord_CP     : -  -  "Chord on LL cp " m
 typedef     ^                   ^               ReKi                             s_LL         : -  -  "Spanwise coordinate of LL elements" m
-typedef     ^                   ^               ReKi                             s_CP_LL      : -  -  "Spanwise coordinate of LL CP" m
-typedef     ^                   ^               ReKi                             chord_LL     : -  -   "chord on LL nodes " m
-typedef     ^                   ^               ReKi                             chord_CP_LL  : -  -  "chord on LL cp " m
+typedef     ^                   ^               ReKi                             s_CP         : -  -  "Spanwise coordinate of LL CP" m
 typedef     ^                   ^               IntKi                            iRotor       - -  -  "Index of rotor the wing belong to" -
 typedef     ^                   ^               IntKi                            AFindx       :: -  - "Index to the airfoils from AD15 [BladeNode,BladeIndex=1]" - 
 typedef     ^                   ^               IntKi                            nSpan             -  -  -  "TODO, should be defined per wing. Number of spanwise element"          -
@@ -59,6 +58,7 @@ typedef     ^                   ^               IntKi                           
 #typedef     ^                   ^               IntKi                            Rot2Wings         :  -   - "Index mapping from wings to rotors"  -
 typedef     ^                   ^               Wng_ParameterType                W                 :  -   - "Wings parameters"  -
 typedef     ^                   ^               IntKi                            Bld2Wings        :: -  - "Index mapping from blades to wings" - 
+typedef     ^                   ^               IntKi                            iNWStart          -  -  -  "Index where NW start in r_NW. (iNWStart=2, the first panel contains the lifting line panel, otherwise, start at 1)"          -
 typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWFree           -  -  -  "Number of fw panels that are free, per wing"          -
@@ -95,6 +95,11 @@ typedef     ^                   ^               CHARACTER(1024)                 
 typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileRoot - - - "Rootdirectory for writing VTK files"	-
 typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileBase - - - "Basename for writing VTK files"	-
 typedef     ^                   ^               IntKi                            nGridOut      -  - -    "Number of VTK grid to output" -
+# Parameters advanced options
+typedef     ^                   ^               Logical                          InductionAtCP - - -  "Compute induced velocities at nodes or CP" 
+typedef     ^                   ^               Logical                          WakeAtTE      - - -  "Start the wake at the trailing edge, or at the LL" 
+typedef     ^                   ^               Logical                          DStallOnWake  - - -  "Dynamic stall has influence on wake" 
+typedef     ^                   ^               Logical                          Induction     - - -  "Compute induction" 
 
 #.......... ContinuousStateType ......
 typedef FVW/FVW            Wng_ContinuousStateType   ReKi                        Gamma_NW     ::  -  -  "Circulation of the near wake panels (    nSpan     x nNW  )" -
@@ -118,7 +123,7 @@ typedef  FVW/FVW           Wng_MiscVarType      ReKi                            
 typedef     ^                   ^               ReKi                             TE           ::  -  -  "Trailing edge points" -
 typedef     ^                   ^               ReKi                             r_LL         ::: - -   "Position    of the Lifting line panels" -
 # Variables at control point - Dimensions nSpan 
-typedef     ^                   ^               ReKi                             CP_LL        ::  -  -  "Coordinates of LL CP" -
+typedef     ^                   ^               ReKi                             CP           ::  -  -  "Coordinates of LL CP" -
 typedef     ^                   ^               ReKi                             Tang         ::  -  -  "Unit Tangential vector on LL CP" -
 typedef     ^                   ^               ReKi                             Norm         ::  -  -  "Unit Normal vector on LL CP    " -
 typedef     ^                   ^               ReKi                             Orth         ::  -  -  "Unit Orthogonal vector on LL CP" -
@@ -126,10 +131,10 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Area         :   -  -  "Area of each LL panel" -
 typedef     ^                   ^               ReKi                             diag_LL      :   -  -  "Diagonal length of each LL panel" -
 #typedef     ^                   ^               Reki                             Gamma_LL     :   -  -  "Circulation on the wing lifting line (COPY of Constraint State)" -
-typedef     ^                   ^               ReKi                             Vind_LL      ::  -  -  "Induced velocity on lifting line control points" m/s
-typedef     ^                   ^               ReKi                             Vtot_LL      ::  -  -  "Total velocity on lifting line control points" m/s
-typedef     ^                   ^               ReKi                             Vstr_LL      ::  -  -  "Structural velocity on LL CP" m/s
-typedef     ^                   ^               ReKi                             Vwnd_LL      ::  -  -  "Wind on lifting line control points" m/s 
+typedef     ^                   ^               ReKi                             Vind_CP      ::  -  -  "Induced velocity on lifting line control points" m/s
+typedef     ^                   ^               ReKi                             Vtot_CP      ::  -  -  "Total velocity on lifting line control points" m/s
+typedef     ^                   ^               ReKi                             Vstr_CP      ::  -  -  "Structural velocity on LL CP" m/s
+typedef     ^                   ^               ReKi                             Vwnd_CP      ::  -  -  "Wind on lifting line control points" m/s 
 typedef     ^                   ^               ReKi                             Vwnd_NW      ::: -  -  "Wind on near wake panels" m/s 
 typedef     ^                   ^               ReKi                             Vwnd_FW      ::: -  -  "Wind on far  wake panels" m/s 
 typedef     ^                   ^               ReKi                             Vind_NW      ::: -  -  "Induced velocity on near wake panels" m/s 
@@ -146,6 +151,10 @@ typedef     ^                   ^               UA_MiscVarType                  
 typedef     ^                   ^               UA_OutputType                    y_UA          -  -  -  "outputs from UnsteadyAero"        -
 typedef     ^                   ^               UA_ParameterType                 p_UA          -  -  -  "parameters for UnsteadyAero"        -
 # for calculating outputs at blade nodes
+typedef     ^                   ^               ReKi                             Vind_LL      ::    -  -  "Induced velocity on lifting line nodes" m/s
+#typedef     ^                   ^               ReKi                             Vtot_LL      ::    -  -  "Total velocity on lifting line nodes" m/s
+#typedef     ^                   ^               ReKi                             Vstr_LL      ::    -  -  "Structural velocity on LL nodes" m/s
+#typedef     ^                   ^               ReKi                             Vwnd_LL      ::    -  -  "Wind on lifting line nodes" m/s 
 typedef     ^                   ^               ReKi                             BN_AxInd      :    -  -  "Axial induction [size (NumBlNds,numBlades)]" -
 typedef     ^                   ^               ReKi                             BN_TanInd     :    -  -  "Tangential induction [size (NumBlNds,numBlades)]" -
 typedef     ^                   ^               ReKi                             BN_Vrel       :    -  -  "Relative velocity [size (NumBlNds,numBlades)]" m/s
@@ -174,7 +183,6 @@ typedef     ^                   ^               DbKi                            
 typedef     ^                   ^               ReKi                             r_wind        ::   -  -  "List of points where wind is requested for next time step"  -
 typedef     ^                   ^               Logical                          ComputeWakeInduced - - - "Compute induced velocities on this timestep" -
 typedef     ^                   ^               DbKi                             OldWakeTime   -   -   -  "Time the wake induction velocities were last calculated" s
-typedef     ^                   ^               ReKi                             tSpent        -   -  -  "Time spent in expensive Biot-Savart computation" s
 typedef     ^                   ^               FVW_ContinuousStateType          dxdt          -   -  -  "State time derivatie, stored for overcycling and convenience" - 
 typedef     ^                   ^               FVW_ContinuousStateType          x1            -  -  -   "States at t (for overcycling) "        -
 typedef     ^                   ^               FVW_ContinuousStateType          x2            -  -  -   "States at t+DTFVW (for overcycling)"        -
@@ -194,7 +202,7 @@ typedef     ^                   ^               GridOutType                     
 typedef  FVW/FVW           Rot_InputType        ReKi                             HubOrientation {3}{3} -  -  "Orientation of hub coordinate system (for output only)" -
 typedef     ^                   ^               ReKi                             HubPosition    {3}    -  -  "Origin of hub (for output only)" -
 # Wings 
-typedef  FVW/FVW           Wng_InputType        ReKi                             Vwnd_LLMP      {:}{:} -  - "Disturbed wind at LL mesh points (not CP), for UA only"  -
+typedef  FVW/FVW           Wng_InputType        ReKi                             Vwnd_LL      {:}{:} -  - "Disturbed wind at LL mesh points (not CP), for UA only"  -
 typedef     ^                   ^               ReKi                             omega_z         {:}  -  - "rotation of no-sweep-pitch-twist coordinate system around z (for CDBEMT and CUA)" "rad/s"
 
 # FVW_InputType
@@ -224,9 +232,11 @@ typedef   ^                       ^             UA_OtherStateType               
 
 #.......... InitInputType ......
 typedef  FVW/FVW           Wng_InitInputType    IntKi                            AFindx            ::  -  - "Index to the airfoils from AD15 [idx1=BladeNode, idx2=Blade number=1]" - 
-typedef     ^                   ^               ReKi                             Chord             :  -  - "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 
+typedef     ^                   ^               ReKi                             chord             :  -  - "Chord of each blade element from input file [idx1=BladeNode, idx2=Blade number]" - 
 typedef     ^                   ^               ReKi                             RElm              :  -  - "radius of center of each element"  - 
 typedef     ^                   ^               IntKi                            iRotor            - -  -  "Index of rotor the wing belong to" -
+typedef     ^                   ^              INTEGER                  UAOff_innerNode          - - -   "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
+typedef     ^                   ^              INTEGER                  UAOff_outerNode          - - -   "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
 
 
 # FVW_InitInputType
@@ -242,6 +252,7 @@ typedef     ^                   ^              IntKi                            
 typedef     ^                   ^              LOGICAL                           UA_Flag           - - -   "logical flag indicating whether to use UnsteadyAero"        -
 typedef     ^                   ^              LOGICAL                           Flookup           - - -   "Use table lookup for f' and f'' "    -
 typedef     ^                   ^              ReKi                              a_s               - - -   "speed of sound"        m/s
+typedef     ^                   ^              LOGICAL                           SumPrint          - - -   "Whether to print summary file (primarially in in UA)"    -
 
 #.......... InputFileType ......
 # FVW_InputFile

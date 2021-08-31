@@ -60,9 +60,9 @@ contains
    !----------------------------------------------------------------------------------------------------------------------------------
    !> Based on an input mesh, sets the following:
    !!  - s_LL       : Dimensionless spanwise coordinate of LL    
-   !!  - s_CP_LL    : Dimensionless spanwise coordinate of LL CP 
-   !!  - chord_LL   : chord on LL 
-   !!  - chord_LL_CP: chord on LL cp  
+   !!  - s_CP       : Dimensionless spanwise coordinate of LL CP 
+   !!  - chord_LL   : chord on LL nodes
+   !!  - chord_CP   : chord on LL control points (CP)
    subroutine Wings_Panelling_Init(Meshes, p, m, ErrStat, ErrMsg )
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
       type(FVW_ParameterType),         intent(inout)  :: p              !< Parameters
@@ -85,7 +85,6 @@ contains
          if (allocated(s_in)) deallocate(s_in)
          allocate(s_in(1:Meshes(iW)%nNodes))
          ! --- Computing spanwise coordinate of input mesh normalized from 0 to 1
-!Note: this info also exists in InitInp%zLocal 
          s_in(:) = -999
          s_in(1) = 0
          do iSpan = 2, Meshes(iW)%nNodes
@@ -101,14 +100,14 @@ contains
          endif
          do iSpan = 1, p%W(iW)%nSpan+1
             p%W(iW)%s_LL    (iSpan) = s_in(iSpan)
-            p%W(iW)%chord_LL(iSpan) = p%W(iW)%chord(iSpan)
+            !p%W(iW)%chord_LL(iSpan) = p%W(iW)%chord(iSpan)
          enddo
          ! --- Control points spanwise location
          ! NOTE: we use the cos approximation of VanGarrel. For equispacing, it returns mid point
          !       otherwise, points are slightly closer to panels that are shorter
-         !call Meshing('middle'           , p%W(iW)%s_LL(:), p%W(iW)%nSpan, p%s_CP_LL(:))
-         call Meshing('fullcosineapprox' , p%W(iW)%s_LL(:), p%W(iW)%nSpan, p%W(iW)%s_CP_LL(:))
-         call InterpArray(p%W(iW)%s_LL(:), p%W(iW)%chord_LL(:), p%W(iW)%s_CP_LL(:), p%W(iW)%chord_CP_LL(:))
+         !call Meshing('middle'           , p%W(iW)%s_LL(:), p%W(iW)%nSpan, p%s_CP(:))
+         call Meshing('fullcosineapprox' , p%W(iW)%s_LL(:), p%W(iW)%nSpan, p%W(iW)%s_CP(:))
+         call InterpArray(p%W(iW)%s_LL(:), p%W(iW)%chord_LL(:), p%W(iW)%s_CP(:), p%W(iW)%chord_CP(:))
 
          deallocate(s_in)
       enddo
@@ -118,13 +117,13 @@ contains
    !> Based on an input mesh, sets the following:
    !!  - LE      : Leading edge points                 (3 x nSpan+1 x nWings)
    !!  - TE      : Trailing edge points                (3 x nSpan+1 x nWings)
-   !!  - CP_LL   : Coordinates of LL CP"              (3 x nSpan x nWings)
+   !!  - CP      : Coordinates of LL CP"              (3 x nSpan x nWings)
    !!  - Tang    : Unit Tangential vector on LL CP" -
    !!  - Norm    : Unit Normal vector on LL CP    " -
    !!  - Orth    : Unit Orthogonal vector on LL CP" -
    !!  - Vstr_LL : Structural velocity on LL CP" m/s
    subroutine Wings_Panelling(Meshes, p, m, ErrStat, ErrMsg )
-      type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
+      type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh at aerodynamic center
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
@@ -193,31 +192,44 @@ contains
          end do
       enddo
       ! --- Lifting Line/ Bound Circulation panel
-      ! For now: goes from 1/4 chord to TE
-      ! More panelling options may be considered in the future
-      do iW = 1,p%nWings
-         do iSpan = 1,p%W(iW)%nSpan+1
-            m%W(iW)%r_LL(1:3,iSpan,1)= m%W(iW)%TE(1:3,iSpan)*0.25_ReKi+m%W(iW)%LE(1:3,iSpan)*0.75_ReKi  ! 1/4 chord
-            m%W(iW)%r_LL(1:3,iSpan,2)= m%W(iW)%TE(1:3,iSpan)                                         ! TE
+      if (p%WakeAtTE) then
+         ! For now: goes from 1/4 chord to TE
+         ! More panelling options may be considered in the future
+         do iW = 1,p%nWings
+            do iSpan = 1,p%W(iW)%nSpan+1
+               m%W(iW)%r_LL(1:3,iSpan,1)= m%W(iW)%TE(1:3,iSpan)*0.25_ReKi+m%W(iW)%LE(1:3,iSpan)*0.75_ReKi  ! 1/4 chord
+               m%W(iW)%r_LL(1:3,iSpan,2)= m%W(iW)%TE(1:3,iSpan)                                         ! TE
+            enddo
          enddo
-      enddo
+      else
+         ! In this formulation we collapse the "TE" and "LL"
+         do iW = 1,p%nWings
+            do iSpan = 1,p%W(iW)%nSpan+1
+               m%W(iW)%r_LL(1:3,iSpan,1)= m%W(iW)%TE(1:3,iSpan)*0.25_ReKi+m%W(iW)%LE(1:3,iSpan)*0.75_ReKi  ! 1/4 chord
+               m%W(iW)%r_LL(1:3,iSpan,2)= m%W(iW)%r_LL(1:3,iSpan,1)
+            enddo
+         enddo
+      endif
 
-      ! --- Position of control points CP_LL
+      ! --- Position of control points CP
       ! For now: placed exactly on the LL panel
       ! NOTE: separated from other loops just in case a special discretization is used
       do iW = 1,p%nWings
-         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(1,:,1), p%W(iW)%s_CP_LL(:), m%W(iW)%CP_LL(1,:))
-         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(2,:,1), p%W(iW)%s_CP_LL(:), m%W(iW)%CP_LL(2,:))
-         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(3,:,1), p%W(iW)%s_CP_LL(:), m%W(iW)%CP_LL(3,:))
+         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(1,:,1), p%W(iW)%s_CP(:), m%W(iW)%CP(1,:))
+         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(2,:,1), p%W(iW)%s_CP(:), m%W(iW)%CP(2,:))
+         call InterpArray(p%W(iW)%s_LL(:), m%W(iW)%r_LL(3,:,1), p%W(iW)%s_CP(:), m%W(iW)%CP(3,:))
       enddo
 
-      ! --- Structural velocity on LL
+      ! --- Structural velocity on LL CP and Nodes
       ! TODO: difference meshes in/LL
       do iW = 1,p%nWings
-         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(1,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(1,:))
-         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(2,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(2,:))
-         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(3,:) ,p%W(iW)%s_CP_LL(:), m%W(iW)%Vstr_LL(3,:))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(1,:) ,p%W(iW)%s_CP(:), m%W(iW)%Vstr_CP(1,:))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(2,:) ,p%W(iW)%s_CP(:), m%W(iW)%Vstr_CP(2,:))
+         call InterpArray(p%W(iW)%s_LL(:), Meshes(iW)%TranslationVel(3,:) ,p%W(iW)%s_CP(:), m%W(iW)%Vstr_CP(3,:))
       enddo
+      !do iW = 1,p%nWings
+      !   m%W(iW)%Vstr_LL(1:3,:)= Meshes(iW)%TranslationVel(1:3,:)
+      !enddo
    end subroutine Wings_Panelling
 
    !----------------------------------------------------------------------------------------------------------------------------------
@@ -268,8 +280,8 @@ contains
       if (p%CirculationMethod==idCircPrescribed) then 
          do iW = 1, p%nWings !Loop over lifting lines
             z%W(iW)%Gamma_LL(1:p%W(iW)%nSpan) = p%W(iW)%PrescribedCirculation(1:p%W(iW)%nSpan)
-            m%W(iW)%Vind_LL=-9999._ReKi !< Safety 
-            m%W(iW)%Vtot_LL=-9999._ReKi !< Safety 
+            m%W(iW)%Vind_CP=-9999._ReKi !< Safety 
+            m%W(iW)%Vtot_CP=-9999._ReKi !< Safety 
          enddo
 
       else if (p%CirculationMethod==idCircPolarData) then 
@@ -340,7 +352,7 @@ contains
       if (m%FirstCall) then
          ! We find a guess by looking simply at the Wind and Elasticity velocity
          do iW=1,p%nWings
-            m%W(iW)%Vtot_ll = m%W(iW)%Vwnd_LL - m%W(iW)%Vstr_ll
+            m%W(iW)%Vtot_CP = m%W(iW)%Vwnd_CP - m%W(iW)%Vstr_CP
          enddo
          ! Input: Vtot_LL, output: GammaLastIter
          call CirculationFromPolarData(GammaLastIter, p, m, AFInfo,ErrStat2,ErrMsg2);  if(Failed()) return;
@@ -364,15 +376,17 @@ contains
       call AllocAry(Vvar,  3, nCP_tot, 'Vvar',  ErrStat2, ErrMsg2);  if(Failed()) return;
       call AllocAry(Vcst,  3, nCP_tot, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
 
-      ! Set m%W(iW)%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
-      ! Input: m%W%CP_LL, output: m%W%Vind_LL
-      call LiftingLineInducedVelocities(p, x, iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
+      !--- Induction on the lifting line control point or nodes
+      ! Set induced velocity from Known wake only (after iNWStart+1)
+      ! if     InductionAtCP : In: m%W%CP,     Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+      ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
+      call LiftingLineInducedVelocities(p, x, p%InductionAtCP, p%iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
 
       kCP=0
       do iW=1,p%nWings
         do iSpan=1,p%W(iW)%nSpan
            kCP=kCP+1
-           Vcst(1:3,kCP) = m%W(iW)%Vind_LL(1:3,iSpan) + m%W(iW)%Vwnd_LL(1:3,iSpan) - m%W(iW)%Vstr_ll(1:3,iSpan)
+           Vcst(1:3,kCP) = m%W(iW)%Vind_CP(1:3,iSpan) + m%W(iW)%Vwnd_CP(1:3,iSpan) - m%W(iW)%Vstr_CP(1:3,iSpan)
          enddo
       enddo
 
@@ -382,10 +396,10 @@ contains
             if (any(x%W(iW)%r_NW(1,:,1:m%nNW+1)<-999)) then
                ErrMsg='Wings_ComputeCirculationPolarData: Problem in input NW points'; ErrStat=ErrID_Fatal; return
             endif
-            if (any(m%W(iW)%Vind_LL(1:3,:)<-99)) then
+            if (any(m%W(iW)%Vind_CP(1:3,:)<-99)) then
                ErrMsg='Wings_ComputeCirculationPolarData: Problem in induced velocity on LL points'; ErrStat=ErrID_Fatal; return
             endif
-            if (any(m%W(iW)%Vwnd_LL(1:3,:)<-99)) then
+            if (any(m%W(iW)%Vwnd_CP(1:3,:)<-99)) then
                ErrMsg='Wings_ComputeCirculationPolarData: Problem in wind velocity on LL points'; ErrStat=ErrID_Fatal; return
             endif
          enddo
@@ -403,7 +417,7 @@ contains
              do iSpan=1,p%W(iW)%nSpan
                 kCP=kCP+1
                 Gamm=GammaLastIter(kCP) 
-                do iDepth=1,iNWStart ! Two first panels
+                do iDepth=1,p%iNWStart ! Two first panels
                    ! --- Defining a ring
                    P1=x%W(iW)%r_NW(1:3,iSpan  ,iDepth  )
                    P2=x%W(iW)%r_NW(1:3,iSpan+1,iDepth  )
@@ -413,8 +427,8 @@ contains
                    kCP2=1
                    do iWCP=1,p%nWings
                       nCPs=p%W(iWCP)%nSpan
-                      !call ui_quad_n1(m%W(iWCP)%CP_LL(1:3,1:nCPs), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%W(iW)%Eps_NW(1,iSpan,iDepth), Vvar(1:3,1:nCPs,iWCP))
-                      call ui_quad_n1(m%W(iWCP)%CP_LL(1:3,1:nCPs), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%W(iW)%Eps_NW(1,iSpan,iDepth), Vvar(1:3, kCP2:kCP2+nCPs-1))
+                      !call ui_quad_n1(m%W(iWCP)%CP(1:3,1:nCPs), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%W(iW)%Eps_NW(1,iSpan,iDepth), Vvar(1:3,1:nCPs,iWCP))
+                      call ui_quad_n1(m%W(iWCP)%CP(1:3,1:nCPs), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, x%W(iW)%Eps_NW(1,iSpan,iDepth), Vvar(1:3, kCP2:kCP2+nCPs-1))
                       kCP2=kCP2+nCPs
                    enddo  ! Wings CP
                 enddo  ! Depth
@@ -426,7 +440,7 @@ contains
           do iW=1,p%nWings
              do iSpan=1,p%W(iW)%nSpan
                 kCP=kCP+1
-                m%W(iW)%Vtot_LL(:,iSpan) = Vcst(:,kCP) + Vvar(:,kCP)
+                m%W(iW)%Vtot_CP(:,iSpan) = Vcst(:,kCP) + Vvar(:,kCP)
              enddo
           enddo
           ! --- Computing circulation based on Vtot_LL
@@ -469,17 +483,17 @@ contains
       !call Output_Gamma(m%CP_ll(1:3,:), Gamma_LL(:), iW, m%iStep, iLabel, iIter)
       !call print_mean_3d( m%Vwnd_LL(:,:,:), 'Mean wind    vel. LL (cst)')
       !call print_mean_3d( m%Vstr_LL(:,:,:), 'Mean struct  vel. LL (cst)')
-      !call print_mean_3d( m%W(iW)%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
+      !call print_mean_3d( m%W(iW)%Vind_CP(:,:,:), 'Mean induced vel. LL (cst)')
       !call print_mean_3d( Vvar(:,:,:)     , 'Mean induced vel. LL (var)')
-      !call print_mean_3d( Vvar+m%W(iW)%Vind_LL(:,:,:), 'Mean induced vel. LL (tot)')
+      !call print_mean_3d( Vvar+m%W(iW)%Vind_CP(:,:,:), 'Mean induced vel. LL (tot)')
       !call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
-      !print*,'m%W(iW)%Vind_LL',m%Vind_LL(1,:,:)
+      !print*,'m%W(iW)%Vind_CP',m%Vind_CP(1,:,:)
       !print*,'m%Vwnd_LL',m%Vwnd_LL(1,:,:)
       !print*,'m%Vcst_LL',Vcst(1,:,:)
       !print*,'Gamm: ',Gamma_LL(1, 1), Gamma_LL(p%W(iW)%nSpan,1)
       do iW=1,size(p%W)
-         m%W(iW)%Vind_LL=-9999._ReKi !< Safety (the induction above was not the true one)
-         m%W(iW)%Vtot_LL=-9999._ReKi !< Safety 
+         m%W(iW)%Vind_CP=-9999._ReKi !< Safety (the induction above was not the true one)
+         m%W(iW)%Vtot_CP=-9999._ReKi !< Safety 
       enddo
       call CleanUp()
    contains
@@ -530,7 +544,7 @@ contains
             ! Aliases to shorten notations
             N    = m%W(iW)%Norm(1:3, icp) 
             Tc   = m%W(iW)%Tang(1:3, icp)
-            Vrel = m%W(iW)%Vtot_LL(1:3,icp)
+            Vrel = m%W(iW)%Vtot_CP(1:3,icp)
             ! "Orth": cross sectional plane of the lifting line 
             Vrel_orth(1:3)  = dot_product(Vrel,N)*N + dot_product(Vrel,Tc)*Tc
             Vrel_orth_norm  = TwoNorm(Vrel_orth(1:3))
@@ -540,7 +554,7 @@ contains
             Vrel_norm = TwoNorm(Vrel)
 
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
-            Re = p%W(iW)%Chord(icp) * Vrel_norm  / p%KinVisc  ! Reynolds number (not in Million)
+            Re = p%W(iW)%chord_CP(icp) * Vrel_norm  / p%KinVisc  ! Reynolds number (not in Million)
 
             !if (p%CircSolvPolar==idPolarAeroDyn) then
                ! compute steady Airfoil Coefs      ! NOTE: UserProp set to 0.0_ReKi (no idea what it does).  Also, note this assumes airfoils at nodes.
