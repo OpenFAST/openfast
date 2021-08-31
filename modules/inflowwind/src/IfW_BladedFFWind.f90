@@ -99,6 +99,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitInp, ParamData, MiscVars, InitOutData, ErrS
 
    if (InitInp%NativeBladedFmt) then
       ParamData%FF%InterpTower = .true.
+      ParamData%FF%AddMeanAfterInterp = .true.
       
          ! Validate scaling data if we've got native-Bladed format
       CALL FFWind_ValidateInput(FF_InitInp, ParamData%FF%NFFComp, TmpErrStat, TmpErrMsg)
@@ -111,7 +112,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitInp, ParamData, MiscVars, InitOutData, ErrS
          IF (ErrStat >= AbortErrLev) RETURN      
       
          ! Add the mean wind speed to the u component.
-      call AddMeanVelocity(FF_InitInp, ParamData%FF%GridBase, 1.0_ReKi/ParamData%FF%InvFFZD, ParamData%FF%FFData)
+      if (.not. ParamData%FF%AddMeanAfterInterp) call AddMeanVelocity(FF_InitInp, ParamData%FF%GridBase, 1.0_ReKi/ParamData%FF%InvFFZD, ParamData%FF%FFData)
    else
       ParamData%FF%InterpTower = .false.
    end if
