@@ -138,9 +138,9 @@ class MoorDynLibAPI(CDLL):
             c_char_p(input_string),                # IN: input file string
             byref(c_int(input_string_length)),     # IN: input file string length
             byref(c_double(self.dt)),              # IN: time step (dt)
-            byref(c_double(g)),                    # IN: g
-            byref(c_double(rho_water)),            # IN: rho_water
-            byref(c_double(depth_water)),          # IN: depth_water
+            byref(c_float(g)),                     # IN: g
+            byref(c_float(rho_water)),             # IN: rho_water
+            byref(c_float(depth_water)),           # IN: depth_water
             init_positions_c,                      # IN: platform initial position
             byref(c_int(interpOrder)),             # IN: interpolation order
             byref(self._numChannels),              # OUT: number of channels
