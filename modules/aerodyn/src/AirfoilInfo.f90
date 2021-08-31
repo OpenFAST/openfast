@@ -476,6 +476,10 @@ CONTAINS
       
       ! Reading Boundary layer file  for aeroacoustics
       CALL ParseVar ( FileInfo, CurLine, 'BL_file' , p%BL_file , ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2 >= AbortErrLev) then
+         p%BL_file = "unused"
+         ErrStat2=ErrID_None
+      end if
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( p%BL_file ) )  p%BL_file=trim(PriPath)//trim(p%BL_file)
          
