@@ -179,8 +179,8 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
    REAL(ReKi)                                            :: ZGRID
    REAL(ReKi)                                            :: N(8)           ! array for holding scaling factors for the interpolation algorithm
    REAL(ReKi)                                            :: u(8)           ! array for holding the corner values for the interpolation algorithm across a cubic volume
-   REAL(ReKi)                                            :: M(4)           ! array for holding scaling factors for the interpolation algorithm
-   REAL(ReKi)                                            :: v(4)           ! array for holding the corner values for the interpolation algorithm across an area
+   REAL(ReKi)                                            :: M(4)           ! array for holding scaling factors for the interpolation algorithm -- 4 point method for tower interp
+   REAL(ReKi)                                            :: v(4)           ! array for holding the corner values for the interpolation algorithm across an area -- 4 point method for tower interp
 
    INTEGER(IntKi)                                        :: IDIM
    INTEGER(IntKi)                                        :: ITHI
@@ -200,175 +200,32 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
 
    ErrStat              = ErrID_None
    ErrMsg               = ""
-      
-   
-   !-------------------------------------------------------------------------------------------------
-   ! By definition, wind below the ground is always zero (no turbulence, either). 
-   !-------------------------------------------------------------------------------------------------
-   IF ( Position(3) <= 0.0_ReKi ) THEN
-      FFWind_Interp = 0.0_ReKi
-      RETURN
-   END IF
-   
-
-   !-------------------------------------------------------------------------------------------------
-   ! Find the bounding time slices.
-   !-------------------------------------------------------------------------------------------------
-
-   ! Perform the time shift.  At time=0, a point half the grid width downstream (p%FFYHWid) will index into the zero time slice.
-   ! If we did not do this, any point downstream of the tower at the beginning of the run would index outside of the array.
-   ! This all assumes the grid width is at least as large as the rotor.  If it isn't, then the interpolation will not work.
-
-
-   TimeShifted = TIME + ( p%InitXPosition - Position(1) )*p%InvMFFWS    ! in distance, X: InputInfo%Position(1) - p%InitXPosition - TIME*p%MeanFFWS
-
-
-   IF ( p%Periodic ) THEN ! translate TimeShifted to ( 0 <= TimeShifted < p%TotalTime )
-
-      TimeShifted = MODULO( TimeShifted, p%TotalTime )
-            ! If TimeShifted is a very small negative number, modulo returns the incorrect value due to internal rounding errors.
-            ! See bug report #471
-      IF (TimeShifted == p%TotalTime) TimeShifted = 0.0_ReKi
-
-      TGRID = TimeShifted*p%FFRate
-      ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0)
-      T     = 2.0_ReKi * ( TGRID - REAL(ITLO, ReKi) ) - 1.0_ReKi     ! a value between -1 and 1 that indicates a relative position between ITLO and ITHI
-
-      ITLO = ITLO + 1
-      IF ( ITLO == p%NFFSteps ) THEN
-         ITHI = 1
-      ELSE
-         IF (ITLO > p%NFFSteps) ITLO = 1
-         ITHI = ITLO + 1
-      ENDIF
-
-
-   ELSE
-
-      TGRID = TimeShifted*p%FFRate
-      ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0)
-      T     = 2.0_ReKi * ( TGRID - REAL(ITLO, ReKi) ) - 1.0_ReKi     ! a value between -1 and 1 that indicates a relative position between ITLO and ITHI
-
-      ITLO = ITLO + 1                  ! add one since our grids start at 1, not 0
-      ITHI = ITLO + 1
-
-      IF ( ITLO >= p%NFFSteps .OR. ITLO < 1 ) THEN
-         IF ( ITLO == p%NFFSteps  ) THEN
-            ITHI = ITLO
-            IF ( T <= TOL ) THEN ! we're on the last point
-               T = -1.0_ReKi
-            ELSE  ! We'll extrapolate one dt past the last value in the file
-               ITLO = ITHI - 1
-            ENDIF
-         ELSE
-            ErrMsg   = ' Error: FF wind array was exhausted at '//TRIM( Num2LStr( REAL( TIME,   ReKi ) ) )// &
-                       ' seconds (trying to access data at '//TRIM( Num2LStr( REAL( TimeShifted, ReKi ) ) )//' seconds).'
-            ErrStat  = ErrID_Fatal
-            RETURN
-         ENDIF
-      ENDIF
-
-   ENDIF
 
 
    !-------------------------------------------------------------------------------------------------
-   ! Find the bounding rows for the Z position. [The lower-left corner is (1,1) when looking upwind.]
+   ! By definition, wind below the ground is always zero (no turbulence, either).
    !-------------------------------------------------------------------------------------------------
-
-   ZGRID = ( Position(3) - p%GridBase )*p%InvFFZD
-
-   IF (ZGRID > -1*TOL) THEN
-      OnGrid = .TRUE.
-
-         ! Index for start and end slices
-      IZLO = INT( ZGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
-      IZHI = IZLO + 1
-
-         ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.
-         ! Subtract 1_IntKi from Z since the indices are starting at 1, not 0
-      Z = 2.0_ReKi * (ZGRID - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
-
-      IF ( IZLO < 1 ) THEN
-         IF ( IZLO == 0 .AND. Z >= 1.0-TOL ) THEN
-            Z    = -1.0_ReKi
-            IZLO = 1
-         ELSE
-            ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
-                        TRIM(Num2LStr(Position(3)))//' m is below the grid).'
-            ErrStat  = ErrID_Fatal
-            RETURN
-         ENDIF
-      ELSEIF ( IZLO >= p%NZGrids ) THEN
-         IF ( IZLO == p%NZGrids .AND. Z <= TOL ) THEN
-            Z    = -1.0_ReKi
-            IZHI = IZLO                   ! We're right on the last point, which is still okay
-         ELSE
-            ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
-                        TRIM(Num2LStr(Position(3)))//' m is above the grid).'
-            ErrStat  = ErrID_Fatal
-            RETURN
-         ENDIF
-      ENDIF
-
-   ELSE
-
-      OnGrid = .FALSE.  ! this is on the tower
-      
-      IF (p%InterpTower) then
-         
-         ! get Z between ground and bottom of grid
-         ZGRID = Position(3)/p%GridBase
-         Z = 2.0_ReKi * ZGRID - 1.0_ReKi
-         IZHI = 1
-         IZLO = 0
-         
-         IF ( ZGRID < 0.0_ReKi ) THEN
-            ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction '// &
-                        '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the ground).'
-            ErrStat  = ErrID_Fatal
-            RETURN
-         ENDIF         
-         
-      ELSE
-         
-         IF ( p%NTGrids < 1) THEN
-            ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction '// &
-                        '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).'
-            ErrStat  = ErrID_Fatal
-            RETURN
-         ENDIF
-
-         IZLO = INT( -1.0*ZGRID ) + 1            ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+   IF ( Position(3) <= 0.0_ReKi ) RETURN
 
 
-         IF ( IZLO >= p%NTGrids ) THEN  !our dz is the difference between the bottom tower point and the ground
-            IZLO  = p%NTGrids
+   !-------------------------------------------------------------------------------------------------
+   ! get the bounding limits for T and Z
+   !-------------------------------------------------------------------------------------------------
+   call GetTBounds();         if (ErrStat >= AbortErrLev) return
+   call GetZBounds();         if (ErrStat >= AbortErrLev) return
 
-               ! Check that this isn't zero.  Value between -1 and 1 corresponding to the relative position.
-            Z = 1.0_ReKi - 2.0_ReKi * (Position(3) / (p%GridBase - REAL(IZLO - 1_IntKi, ReKi)/p%InvFFZD))
 
-         ELSE
-
-               ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.  Used in the interpolation.
-            Z = 2.0_ReKi * (ABS(ZGRID) - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
-
-         ENDIF
-         IZHI = IZLO + 1
-
-      ENDIF
-
-   END IF
-
+   !-------------------------------------------------------------------------------------------------
+   ! Calculate the value
+   !-------------------------------------------------------------------------------------------------
    IF ( OnGrid ) THEN      ! The tower points don't use this
 
-      CALL GetInterpValues(); if (ErrStat/=ErrID_None) return
-      
-      !-------------------------------------------------------------------------------------------------
+      call GetYBounds();         if (ErrStat >= AbortErrLev) return
+      call GetInterpWeights3D();
+
+      !--------------------------------------------------------
       ! Interpolate on the grid
-      !-------------------------------------------------------------------------------------------------
-
       DO IDIM=1,p%NFFComp       ! all the components
-
          u(1)  = p%FFData( IZHI, IYLO, IDIM, ITLO )
          u(2)  = p%FFData( IZHI, IYHI, IDIM, ITLO )
          u(3)  = p%FFData( IZLO, IYHI, IDIM, ITLO )
@@ -377,54 +234,36 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
          u(6)  = p%FFData( IZHI, IYHI, IDIM, ITHI )
          u(7)  = p%FFData( IZLO, IYHI, IDIM, ITHI )
          u(8)  = p%FFData( IZLO, IYLO, IDIM, ITHI )
-            
-         FFWind_Interp(IDIM)  =  SUM ( N * u ) 
-
+         FFWind_Interp(IDIM)  =  SUM ( N * u )
       END DO !IDIM
 
    ELSE
 
       IF (p%InterpTower) THEN
-         
-         CALL GetInterpValues(); if (ErrStat >= AbortErrLev) return
-         
-      !-------------------------------------------------------------------------------------------------
-      ! Interpolate on the bottom of the grid to the ground
-      !-------------------------------------------------------------------------------------------------
+         !-----------------------------------------------------
+         ! Interpolate on the bottom of the grid to the ground
+         !     ground points set to zero
+         call GetYBounds();         if (ErrStat >= AbortErrLev) return
+         call GetInterpWeights3D();
 
          DO IDIM=1,p%NFFComp       ! all the components
-
             u(1)  = p%FFData( IZHI, IYLO, IDIM, ITLO )
             u(2)  = p%FFData( IZHI, IYHI, IDIM, ITLO )
-            u(3)  = 0.0_ReKi !p%FFData( IZLO, IYHI, IDIM, ITLO )
-            u(4)  = 0.0_ReKi !p%FFData( IZLO, IYLO, IDIM, ITLO )
+            u(3)  = 0.0_ReKi                             ! ground
+            u(4)  = 0.0_ReKi                             ! ground
             u(5)  = p%FFData( IZHI, IYLO, IDIM, ITHI )
             u(6)  = p%FFData( IZHI, IYHI, IDIM, ITHI )
-            u(7)  = 0.0_ReKi !p%FFData( IZLO, IYHI, IDIM, ITHI )
-            u(8)  = 0.0_ReKi !p%FFData( IZLO, IYLO, IDIM, ITHI )
-            
-            FFWind_Interp(IDIM)  =  SUM ( N * u ) 
-
-         END DO !IDIM         
-         
+            u(7)  = 0.0_ReKi                             ! ground
+            u(8)  = 0.0_ReKi                             ! ground
+            FFWind_Interp(IDIM)  =  SUM ( N * u )
+         END DO !IDIM
       ELSE
-         
-      !-------------------------------------------------------------------------------------------------
-      ! Interpolate on the tower array
-      !-------------------------------------------------------------------------------------------------
-            ! Setup the scaling factors.  Set the unused portion of the array to zero
-         M(1)  =  ( 1.0_ReKi + Z )*( 1.0_ReKi - T )
-         M(2)  =  ( 1.0_ReKi + Z )*( 1.0_ReKi + T )
-         M(3)  =  ( 1.0_ReKi - Z )*( 1.0_ReKi - T )
-         M(4)  =  ( 1.0_ReKi - Z )*( 1.0_ReKi + T )
-         M     =  M / 4.0_ReKi               ! normalize
-
+         !-----------------------------------------------------
+         ! Interpolate on the tower array (no y bounds)
+         call GetInterpWeightsPlane();
 
          DO IDIM=1,p%NFFComp    ! all the components
-
-            !----------------------------------------------------------------------------------------------
             ! Interpolate between the two times using an area interpolation.
-            !----------------------------------------------------------------------------------------------
 
             IF (IZHI > p%NTGrids) THEN
                v(1)  =  0.0_ReKi  ! on the ground
@@ -433,57 +272,185 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
                v(1)  =  p%FFTower( IDIM, IZHI, ITLO )
                v(2)  =  p%FFTower( IDIM, IZHI, ITHI )
             END IF
-            
+
             v(3)  =  p%FFTower( IDIM, IZLO, ITLO )
             v(4)  =  p%FFTower( IDIM, IZLO, ITHI )
-            
-            FFWind_Interp(IDIM)  =  SUM ( M * v ) 
 
-
+            FFWind_Interp(IDIM)  =  SUM ( M * v )
          END DO !IDIM
-         
       END IF ! Interpolate below the grid
-      
    ENDIF ! OnGrid
+
    RETURN
 
-CONTAINS 
-   SUBROUTINE GetInterpValues()
-   
-      !-------------------------------------------------------------------------------------------------
-      ! Find the bounding columns for the Y position. [The lower-left corner is (1,1) when looking upwind.]
-      !-------------------------------------------------------------------------------------------------
+CONTAINS
 
-         YGRID = ( Position(2) + p%FFYHWid )*p%InvFFYD    ! really, it's (Position(2) - -1.0*p%FFYHWid)
+   !-------------------------------------------------------------------------------------------------
+   !> Find the bounding time slices.
+   !! Perform the time shift.  At time=0, a point half the grid width downstream (p%FFYHWid) will index into the zero time slice.
+   !! If we did not do this, any point downstream of the tower at the beginning of the run would index outside of the array.
+   !! This all assumes the grid width is at least as large as the rotor.  If it isn't, then the interpolation will not work.
+   SUBROUTINE GetTBounds()
 
-         IYLO = INT( YGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
-         IYHI = IYLO + 1
+      TimeShifted = TIME + ( p%InitXPosition - Position(1) )*p%InvMFFWS    ! in distance, X: InputInfo%Position(1) - p%InitXPosition - TIME*p%MeanFFWS
 
-            ! Set Y as a value between -1 and 1 for the relative location between IYLO and IYHI.  Used in the interpolation.
-            ! Subtract 1_IntKi from IYLO since grids start at index 1, not 0
-         Y = 2.0_ReKi * (YGRID - REAL(IYLO - 1_IntKi, ReKi)) - 1.0_ReKi
+      IF ( p%Periodic ) THEN ! translate TimeShifted to ( 0 <= TimeShifted < p%TotalTime )
 
-         IF ( IYLO >= p%NYGrids .OR. IYLO < 1 ) THEN
-            IF ( IYLO == 0 .AND. Y >= 1.0-TOL ) THEN
-               Y    = -1.0_ReKi
-               IYLO = 1
-            ELSE IF ( IYLO == p%NYGrids .AND. Y <= TOL ) THEN
-               Y    = -1.0_ReKi
-               IYHI = IYLO                   ! We're right on the last point, which is still okay
+         TimeShifted = MODULO( TimeShifted, p%TotalTime )
+               ! If TimeShifted is a very small negative number, modulo returns the incorrect value due to internal rounding errors.
+         IF (TimeShifted == p%TotalTime) TimeShifted = 0.0_ReKi
+
+         TGRID = TimeShifted*p%FFRate
+         ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0)
+         T     = 2.0_ReKi * ( TGRID - REAL(ITLO, ReKi) ) - 1.0_ReKi     ! a value between -1 and 1 that indicates a relative position between ITLO and ITHI
+
+         ITLO = ITLO + 1
+         IF ( ITLO == p%NFFSteps ) THEN
+            ITHI = 1
+         ELSE
+            IF (ITLO > p%NFFSteps) ITLO = 1
+            ITHI = ITLO + 1
+         ENDIF
+
+      ELSE
+
+         TGRID = TimeShifted*p%FFRate
+         ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0)
+         T     = 2.0_ReKi * ( TGRID - REAL(ITLO, ReKi) ) - 1.0_ReKi     ! a value between -1 and 1 that indicates a relative position between ITLO and ITHI
+
+         ITLO = ITLO + 1                  ! add one since our grids start at 1, not 0
+         ITHI = ITLO + 1
+
+         IF ( ITLO >= p%NFFSteps .OR. ITLO < 1 ) THEN
+            IF ( ITLO == p%NFFSteps  ) THEN
+               ITHI = ITLO
+               IF ( T <= TOL ) THEN ! we're on the last point
+                  T = -1.0_ReKi
+               ELSE  ! We'll extrapolate one dt past the last value in the file
+                  ITLO = ITHI - 1
+               ENDIF
             ELSE
-               ErrMsg   = ' FF wind array boundaries violated: Grid too small in Y direction. Y='// &
-                           TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*p%FFYHWid))// &
-                           ', '//TRIM(Num2LStr(p%FFYHWid))//']'
-               ErrStat = ErrID_Fatal         ! we don't return anything
+               ErrMsg   = ' Error: FF wind array was exhausted at '//TRIM( Num2LStr( REAL( TIME,   ReKi ) ) )// &
+                          ' seconds (trying to access data at '//TRIM( Num2LStr( REAL( TimeShifted, ReKi ) ) )//' seconds).'
+               ErrStat  = ErrID_Fatal
                RETURN
             ENDIF
          ENDIF
-         
-      !-------------------------------------------------------------------------------------------------
-      ! Get normalization values for 3d-linear interpolation on the grid
-      !-------------------------------------------------------------------------------------------------
-         
-!New Algorithm here
+
+      ENDIF
+   END SUBROUTINE GetTBounds
+
+   !-------------------------------------------------------------------------------------------------
+   !> Find the bounding rows for the Z position. [The lower-left corner is (1,1) when looking upwind.]
+   SUBROUTINE GetZBounds()
+
+      ZGRID = ( Position(3) - p%GridBase )*p%InvFFZD
+
+      IF (ZGRID > -1*TOL) THEN
+         OnGrid = .TRUE.
+
+            ! Index for start and end slices
+         IZLO = INT( ZGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+         IZHI = IZLO + 1
+
+         ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.
+         ! Subtract 1_IntKi from Z since the indices are starting at 1, not 0
+         Z = 2.0_ReKi * (ZGRID - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
+
+         IF ( IZLO < 1 ) THEN
+            IF ( IZLO == 0 .AND. Z >= 1.0-TOL ) THEN
+               Z    = -1.0_ReKi
+               IZLO = 1
+            ELSE
+               ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
+                           TRIM(Num2LStr(Position(3)))//' m is below the grid).'
+               ErrStat  = ErrID_Fatal
+               RETURN
+            ENDIF
+         ELSEIF ( IZLO >= p%NZGrids ) THEN
+            IF ( IZLO == p%NZGrids .AND. Z <= TOL ) THEN
+               Z    = -1.0_ReKi
+               IZHI = IZLO                   ! We're right on the last point, which is still okay
+            ELSE
+               ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
+                           TRIM(Num2LStr(Position(3)))//' m is above the grid).'
+               ErrStat  = ErrID_Fatal
+               RETURN
+            ENDIF
+         ENDIF
+
+      ELSE
+
+         OnGrid = .FALSE.  ! this is on the tower
+
+         IF (p%InterpTower) then
+            ! get Z between ground and bottom of grid
+            ZGRID = Position(3)/p%GridBase
+            Z = 2.0_ReKi * ZGRID - 1.0_ReKi
+            IZHI = 1
+            IZLO = 0
+
+            IF ( ZGRID < 0.0_ReKi ) THEN
+               ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction '// &
+                           '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the ground).'
+               ErrStat  = ErrID_Fatal
+               RETURN
+            ENDIF
+         ELSE
+            IF ( p%NTGrids < 1) THEN
+               ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction '// &
+                           '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).'
+               ErrStat  = ErrID_Fatal
+               RETURN
+            ENDIF
+
+            IZLO = INT( -1.0*ZGRID ) + 1            ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+
+            IF ( IZLO >= p%NTGrids ) THEN  !our dz is the difference between the bottom tower point and the ground
+               IZLO  = p%NTGrids
+               ! Check that this isn't zero.  Value between -1 and 1 corresponding to the relative position.
+               Z = 1.0_ReKi - 2.0_ReKi * (Position(3) / (p%GridBase - REAL(IZLO - 1_IntKi, ReKi)/p%InvFFZD))
+            ELSE
+               ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.  Used in the interpolation.
+               Z = 2.0_ReKi * (ABS(ZGRID) - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
+            ENDIF
+            IZHI = IZLO + 1
+         ENDIF
+      END IF
+   END SUBROUTINE GetZBounds
+
+   !-------------------------------------------------------------------------------------------------
+   !> Find the bounding columns for the Y position. [The lower-left corner is (1,1) when looking upwind.]
+   SUBROUTINE GetYBounds()
+
+      YGRID = ( Position(2) + p%FFYHWid )*p%InvFFYD    ! really, it's (Position(2) - -1.0*p%FFYHWid)
+      IYLO  = INT( YGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+      IYHI  = IYLO + 1
+
+      ! Set Y as a value between -1 and 1 for the relative location between IYLO and IYHI.  Used in the interpolation.
+      ! Subtract 1_IntKi from IYLO since grids start at index 1, not 0
+      Y = 2.0_ReKi * (YGRID - REAL(IYLO - 1_IntKi, ReKi)) - 1.0_ReKi
+
+      IF ( IYLO >= p%NYGrids .OR. IYLO < 1 ) THEN
+         IF ( IYLO == 0 .AND. Y >= 1.0-TOL ) THEN
+            Y    = -1.0_ReKi
+            IYLO = 1
+         ELSE IF ( IYLO == p%NYGrids .AND. Y <= TOL ) THEN
+            Y    = -1.0_ReKi
+            IYHI = IYLO                   ! We're right on the last point, which is still okay
+         ELSE
+            ErrMsg   = ' FF wind array boundaries violated: Grid too small in Y direction. Y='// &
+                        TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*p%FFYHWid))// &
+                        ', '//TRIM(Num2LStr(p%FFYHWid))//']'
+            ErrStat = ErrID_Fatal         ! we don't return anything
+            RETURN
+         ENDIF
+      ENDIF
+   END SUBROUTINE GetYBounds
+
+   !-------------------------------------------------------------------------------------------------
+   !> Get normalization values for 3d-linear interpolation on the grid
+   SUBROUTINE GetInterpWeights3D()
       N(1)  = ( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )
       N(2)  = ( 1.0_ReKi + Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )
       N(3)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )
@@ -493,9 +460,19 @@ CONTAINS
       N(7)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + Y )*( 1.0_ReKi + T )
       N(8)  = ( 1.0_ReKi - Z )*( 1.0_ReKi - Y )*( 1.0_ReKi + T )
       N     = N / REAL( SIZE(N), ReKi )  ! normalize
-                  
-   END SUBROUTINE GetInterpValues
+   END SUBROUTINE GetInterpWeights3D
+
+   !-------------------------------------------------------------------------------------------------
+   !> Get normalization values for 3d-linear interpolation on the grid
+   SUBROUTINE GetInterpWeightsPlane()
+      M(1)  = ( 1.0_ReKi + Z )*( 1.0_ReKi - T )
+      M(2)  = ( 1.0_ReKi + Z )*( 1.0_ReKi + T )
+      M(3)  = ( 1.0_ReKi - Z )*( 1.0_ReKi - T )
+      M(4)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + T )
+      M     = M / REAL( SIZE(M), ReKi )  ! normalize
+   END SUBROUTINE GetInterpWeightsPlane
 END FUNCTION FFWind_Interp
+
 !====================================================================================================
 !>  This routine is used read scale the full-field turbulence data stored in HAWC format.
 SUBROUTINE ScaleTurbulence(InitInp, FFData, ScaleFactors, ErrStat, ErrMsg)
