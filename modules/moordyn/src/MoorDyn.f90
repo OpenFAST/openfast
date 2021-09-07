@@ -6434,7 +6434,7 @@ SUBROUTINE MD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! get central difference:
          ! we may have had an error allocating memory, so we'll check
          if(Failed()) return
-         ! get central difference:
+         ! get central difference (state entries are mapped the the dXdu column in routine):
          call MD_Compute_dX( p, x_p, x_m, delta_p, dXdu(:,i) )
       end do
    END IF ! dXdu
@@ -6506,15 +6506,17 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       ! make a copy of outputs because we will need two for the central difference computations (with orientations)
       call MD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call MD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-      do i=1,p%Jac_nx
+      !  Loop over the dx dimension of the dYdx array.  Perturb the corresponding state (note difference in ordering of dYdx and x%states).
+      !  The p%dxIdx_map2_xStateIdx(i) is the index to the state array for the given dx index
+      do i=1,p%Jac_nx      ! index into dx dimension
          ! get x_op + delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, i, 1, x_perturb, delta )
+         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), 1, x_perturb, delta )
          ! compute y at x_op + delta x
          call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get x_op - delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, i, -1, x_perturb, delta )
+         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), -1, x_perturb, delta )
          ! compute y at x_op - delta x
          call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get central difference:
@@ -6528,15 +6530,18 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       if (.not. allocated(dXdx)) then
          call AllocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2); if(Failed()) return
       end if
-      do i=1,p%Jac_nx
+      !  Loop over the dx dimension of the array.  Perturb the corresponding state (note difference in ordering of dXdx and x%states).
+      !  The resulting x_p and x_m are used to calculate the column for dXdx (mapping of state entry to dXdx row entry occurs in MD_Compute_dX)
+      !  The p%dxIdx_map2_xStateIdx(i) is the index to the state array for the given dx index
+      do i=1,p%Jac_nx      ! index into dx dimension
          ! get x_op + delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, i, 1, x_perturb, delta )
+         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), 1, x_perturb, delta )
          ! compute x at x_op + delta x
          call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          ! get x_op - delta x
          call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, i, -1, x_perturb, delta )
+         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), -1, x_perturb, delta )
          ! compute x at x_op - delta x
          call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
          if(Failed()) return
@@ -6713,7 +6718,7 @@ SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          call AllocAry(x_op, p%Jac_nx,'x_op',ErrStat2,ErrMsg2); if (Failed()) return
       end if
       do i=1, p%Jac_nx
-         x_op(i) = x%states(i)
+         x_op(i) = x%states(p%dxIdx_map2_xStateIdx(i))      ! x for lin is different order, so use mapping
       end do
    END IF
    ! state derivatives?
@@ -6723,7 +6728,7 @@ SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       end if
       call MD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) ; if(Failed()) return
       do i=1, p%Jac_nx
-         dx_op(i) = dx%states(i)
+         dx_op(i) = dx%states(p%dxIdx_map2_xStateIdx(i))    ! x for lin is different order, so use mapping
       end do
    END IF
    IF ( PRESENT( xd_op ) ) THEN
@@ -7439,13 +7444,13 @@ END SUBROUTINE MD_GetOP
 !====================================================================================================
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
-!! Do not change the order of this packing without changing subroutine !
+!! Do not change the order of this packing without changing subroutines calculating dXdx etc (MD_Compute_dX)
 SUBROUTINE MD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
-   TYPE(MD_InitInputType)               , INTENT(IN   ) :: Init                  !< Init
+   TYPE(MD_InitInputType)            , INTENT(IN   ) :: Init                  !< Init
    TYPE(MD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
    TYPE(MD_InputType)                , INTENT(IN   ) :: u                     !< inputs
    TYPE(MD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
-   TYPE(MD_MiscVarType)              , INTENT(INOUT) :: m                     !< misc variables <<<<<<<<
+   TYPE(MD_MiscVarType)              , INTENT(INOUT) :: m                     !< misc variables
    TYPE(MD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
@@ -7498,90 +7503,210 @@ contains
 
    !> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
    SUBROUTINE Init_Jacobian_x()
+      INTEGER(IntKi) :: idx      ! index into the LinNames_x array
       INTEGER(IntKi) :: i
       INTEGER(IntKi) :: l
       INTEGER(IntKi) :: N
+
       
       p%Jac_nx = m%Nx ! size of (continuous) state vector (includes the first derivatives)
       
       ! allocate space for the row/column names and for perturbation sizes
-      CALL AllocAry(InitOut%LinNames_x  , p%Jac_nx, 'LinNames_x'  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(InitOut%RotFrame_x  , p%Jac_nx, 'RotFrame_x'  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(InitOut%DerivOrder_x, p%Jac_nx, 'DerivOrder_x', ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(p%dx,                 p%Jac_nx, 'p%dx'        , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(InitOut%LinNames_x    , p%Jac_nx, 'LinNames_x'            , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(InitOut%RotFrame_x    , p%Jac_nx, 'RotFrame_x'            , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(InitOut%DerivOrder_x  , p%Jac_nx, 'DerivOrder_x'          , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(p%dx                  , p%Jac_nx, 'p%dx'                  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(p%dxIdx_map2_xStateIdx, p%Jac_nx, 'p%dxIdx_map2_xStateIdx', ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+
+      p%dxIdx_map2_xStateIdx = 0_IntKi ! all values should be overwritten by logic below
+
       ! set linearization output names and default perturbations, p%dx:
-      
-      DO l = 1,p%nFreeBodies                                          ! Body m%BodyList(m%FreeBodyIs(l))
-         p%dx( m%BodyStateIs1(l)   : m%BodyStateIs1(l)+2 ) = 0.1          ! body translational velocity [m/s]
-         p%dx( m%BodyStateIs1(l)+3 : m%BodyStateIs1(l)+5 ) = 0.1          ! body rotational velocity [rad/s]
-         p%dx( m%BodyStateIs1(l)+6 : m%BodyStateIs1(l)+8 ) = 0.2          ! body displacement [m]
-         p%dx( m%BodyStateIs1(l)+9 : m%BodyStateIs1(l)+11) = 0.02         ! body rotation [rad]
-         InitOut%LinNames_x(m%BodyStateIs1(l)  ) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+7) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+8) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+9) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+10)= 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
-         InitOut%LinNames_x(m%BodyStateIs1(l)+11)= 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'         
+      !  NOTE: the order is different than the order of the internal states.  This is to
+      !        match what the OpenFAST framework is expecting: all positions first, then all
+      !        derviatives of positions (velocity terms) second.  This adds slight complexity
+      !        here, but considerably simplifies post processing of the full OpenFAST results
+      !        for linearization.
+      !        The p%dxIdx_map2_xStateIdx array holds the index for the x%states array
+      !        corresponding to the current jacobian index.
+
+      !-----------------
+      ! position states
+      !-----------------
+      idx = 0
+      ! Free bodies
+      DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
+         p%dx(idx+1:idx+3) = 0.2             ! body displacement [m]
+         p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
+         ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+11)
+         InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
+         InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
+         InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
+         InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
+         InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
+         InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+6         ! x%state index for Px
+         p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+7         ! x%state index for Py
+         p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+8         ! x%state index for Pz
+         p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+9         ! x%state index for rot_x
+         p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+10        ! x%state index for rot_y
+         p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+11        ! x%state index for rot_z
+         idx = idx + 6
       END DO      
-      DO l = 1,p%nFreeRods                                            ! Rod m%RodList(m%FreeRodIs(l))
-         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then               ! pinned rod
-            p%dx( m%RodStateIs1(l)   : m%RodStateIs1(l)+2 ) = 0.1         ! body rotational velocity [rad/s]
-            p%dx( m%RodStateIs1(l)+3 : m%RodStateIs1(l)+5 ) = 0.02        ! body rotation [rad]
-            InitOut%LinNames_x(m%RodStateIs1(l)  ) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
-            InitOut%LinNames_x(m%RodStateIs1(l)+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
-            InitOut%LinNames_x(m%RodStateIs1(l)+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
-         else                                                           ! free rod
-            p%dx( m%RodStateIs1(l)   : m%RodStateIs1(l)+2 ) = 0.1         ! body translational velocity [m/s]
-            p%dx( m%RodStateIs1(l)+3 : m%RodStateIs1(l)+5 ) = 0.02        ! body rotational velocity [rad/s]
-            p%dx( m%RodStateIs1(l)+6 : m%RodStateIs1(l)+8 ) = 0.1         ! body displacement [m]
-            p%dx( m%RodStateIs1(l)+9 : m%RodStateIs1(l)+11) = 0.02        ! body rotation [rad]
-            InitOut%LinNames_x(m%RodStateIs1(l)  ) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vx, m/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vy, m/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vz, m/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
-            InitOut%LinNames_x(m%RodStateIs1(l)+6) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Px, m'
-            InitOut%LinNames_x(m%RodStateIs1(l)+7) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Py, m'
-            InitOut%LinNames_x(m%RodStateIs1(l)+8) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Pz, m'
-            InitOut%LinNames_x(m%RodStateIs1(l)+9) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
-            InitOut%LinNames_x(m%RodStateIs1(l)+10)= 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
-            InitOut%LinNames_x(m%RodStateIs1(l)+11)= 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
+
+      ! Rods
+      DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
+         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then  ! pinned rod
+            p%dx(idx+1:idx+3) = 0.02         ! body rotation [rad]
+            ! corresponds to state indices: (m%RodStateIs1(l)+3:m%RodStateIs1(l)+5)
+            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
+            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+3          ! x%state index for rot_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+4          ! x%state index for rot_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+5          ! x%state index for rot_z
+            idx = idx + 3
+         else                                ! free rod
+            p%dx(idx+1:idx+3) = 0.1          ! body displacement [m]
+            p%dx(idx+4:idx+6) = 0.02         ! body rotation [rad]
+            ! corresponds to state indices: (m%RodStateIs1(l)+6:m%RodStateIs1(l)+11)
+            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Px, m'
+            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Py, m'
+            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Pz, m'
+            InitOut%LinNames_x(idx+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(idx+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(idx+6) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
+            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+6          ! x%state index for Px
+            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+7          ! x%state index for Py
+            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+8          ! x%state index for Pz
+            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+9          ! x%state index for rot_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+10         ! x%state index for rot_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+11         ! x%state index for rot_z
+            idx = idx + 6
          end if
       END DO      
-      DO l = 1,p%nFreeCons                                            ! Point m%ConnectList(m%FreeConIs(l))
-         p%dx( m%ConStateIs1(l)   : m%ConStateIs1(l)+2 ) = 0.1            ! point translational velocity [m/s]
-         p%dx( m%ConStateIs1(l)+3 : m%ConStateIs1(l)+5 ) = 0.1            ! point displacement [m]
-         InitOut%LinNames_x(m%RodStateIs1(l)  ) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vx, m/s'
-         InitOut%LinNames_x(m%RodStateIs1(l)+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vy, m/s'
-         InitOut%LinNames_x(m%RodStateIs1(l)+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vz, m/s'
-         InitOut%LinNames_x(m%RodStateIs1(l)+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Px, m'
-         InitOut%LinNames_x(m%RodStateIs1(l)+4) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Py, m'
-         InitOut%LinNames_x(m%RodStateIs1(l)+5) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Pz, m'
-      END DO      
-      DO l = 1,p%nLines                                               ! Line m%LineList(l)         
-         N = m%LineList(l)%N                                              ! number of segments in the line
-         p%dx( m%LineStateIs1(l)       : m%LineStateIs1(l)+3*N-4 ) = 0.1  ! line internal node translational velocity [m/s]
-         p%dx( m%LineStateIs1(l)+3*N-3 : m%LineStateIs1(l)+6*N-7 ) = 0.1  ! line internal node displacement [m]
+
+      ! Free Connnections
+      DO l = 1,p%nFreeCons                   ! Point m%ConnectList(m%FreeConIs(l))
+         ! corresponds to state indices: (m%ConStateIs1(l)+3:m%ConStateIs1(l)+5)
+         p%dx(idx+1:idx+3) = 0.1             ! point displacement [m]
+         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Px, m'
+         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Py, m'
+         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Pz, m'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%ConStateIs1(l)+3          ! x%state index for Px
+         p%dxIdx_map2_xStateIdx(idx+2) = m%ConStateIs1(l)+4          ! x%state index for Py
+         p%dxIdx_map2_xStateIdx(idx+3) = m%ConStateIs1(l)+5          ! x%state index for Pz
+         idx = idx + 3
+      END DO
+
+      ! Lines
+      DO l = 1,p%nLines                      ! Line m%LineList(l)         
+         ! corresponds to state indices: (m%LineStateIs1(l)+3*N-3:m%LineStateIs1(l)+6*N-7) -- NOTE: end nodes not included 
+         N = m%LineList(l)%N                 ! number of segments in the line
          DO i = 0,N-2
-            InitOut%LinNames_x( m%LineStateIs1(l)     +3*i  ) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vx, m/s'
-            InitOut%LinNames_x( m%LineStateIs1(l)     +3*i+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vy, m/s'
-            InitOut%LinNames_x( m%LineStateIs1(l)     +3*i+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vz, m/s'
-            InitOut%LinNames_x( m%LineStateIs1(l)+3*N +3*i-3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Px, m'
-            InitOut%LinNames_x( m%LineStateIs1(l)+3*N +3*i-2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Py, m'
-            InitOut%LinNames_x( m%LineStateIs1(l)+3*N +3*i-1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Pz, m'
+            p%dx(idx+1:idx+3) = 0.1          ! line internal node displacement [m]
+            InitOut%LinNames_x(idx+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Px, m'
+            InitOut%LinNames_x(idx+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Py, m'
+            InitOut%LinNames_x(idx+3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Pz, m'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%LineStateIs1(l)+3*N+3*i-3 ! x%state index for Px
+            p%dxIdx_map2_xStateIdx(idx+2) = m%LineStateIs1(l)+3*N+3*i-2 ! x%state index for Py
+            p%dxIdx_map2_xStateIdx(idx+3) = m%LineStateIs1(l)+3*N+3*i-1 ! x%state index for Pz
+            idx = idx + 3
          END DO         
       END DO
-            
+
+      !-----------------
+      ! velocity states
+      !-----------------
+      ! Free bodies
+      DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
+         ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
+         p%dx(idx+1:idx+3) = 0.1             ! body translational velocity [m/s]
+         p%dx(idx+4:idx+6) = 0.1             ! body rotational velocity [rad/s]
+         InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
+         InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
+         InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
+         InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
+         InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
+         InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for Rx
+         p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for Ry
+         p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for Rz
+         p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for omega_x
+         p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4         ! x%state index for omega_y
+         p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5         ! x%state index for omega_z
+         idx = idx + 6
+      END DO      
+
+      ! Rods
+      DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
+         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then ! pinned rod
+            ! corresponds to state indices: (m%RodStateIs1(l):m%RodStateIs1(l)+2)
+            p%dx(idx+1:idx+3) = 0.1          ! body rotational velocity [rad/s]
+            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+0          ! x%state index for Vx
+            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+1          ! x%state index for Vy
+            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+2          ! x%state index for Vz
+            idx = idx + 3
+         else                                ! free rod
+            ! corresponds to state indices: (m%RodStateIs1(l):m%RodStateIs1(l)+5)
+            p%dx(idx+1:idx+3) = 0.1          ! body translational velocity [m/s]
+            p%dx(idx+4:idx+6) = 0.02         ! body rotational velocity [rad/s]
+            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vx, m/s'
+            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vy, m/s'
+            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vz, m/s'
+            InitOut%LinNames_x(idx+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(idx+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(idx+6) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+0          ! x%state index for Vx
+            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+1          ! x%state index for Vy
+            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+2          ! x%state index for Vz
+            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+3          ! x%state index for omega_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+4          ! x%state index for omega_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+5          ! x%state index for omega_z
+            idx = idx + 6
+         end if
+      END DO      
+
+      ! Free Connnections
+      DO l = 1,p%nFreeCons                   ! Point m%ConnectList(m%FreeConIs(l))
+         ! corresponds to state indices: (m%ConStateIs1(l):m%ConStateIs1(l)+2)
+         p%dx(idx+1:idx+3) = 0.1             ! point translational velocity [m/s]
+         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vx, m/s'
+         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vy, m/s'
+         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vz, m/s'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%ConStateIs1(l)+0          ! x%state index for Vx
+         p%dxIdx_map2_xStateIdx(idx+2) = m%ConStateIs1(l)+1          ! x%state index for Vy
+         p%dxIdx_map2_xStateIdx(idx+3) = m%ConStateIs1(l)+2          ! x%state index for Vz
+         idx = idx + 3
+      END DO
+
+      ! Lines
+      DO l = 1,p%nLines                      ! Line m%LineList(l)         
+         ! corresponds to state indices: (m%LineStateIs1(l):m%LineStateIs1(l)+3*N-4) -- NOTE: end nodes not included
+         N = m%LineList(l)%N                 ! number of segments in the line
+         DO i = 0,N-2
+            p%dx(idx+1:idx+3) = 0.1          ! line internal node translational velocity [m/s]
+            InitOut%LinNames_x(idx+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vx, m/s'
+            InitOut%LinNames_x(idx+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vy, m/s'
+            InitOut%LinNames_x(idx+3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vz, m/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%LineStateIs1(l)+3*i+0  ! x%state index for Vx
+            p%dxIdx_map2_xStateIdx(idx+2) = m%LineStateIs1(l)+3*i+1  ! x%state index for Vy
+            p%dxIdx_map2_xStateIdx(idx+3) = m%LineStateIs1(l)+3*i+2  ! x%state index for Vz
+            idx = idx + 3
+         END DO
+      END DO
+
+      ! If a summary file is ever made...
+      !  !Formatting may be needed to make it pretty
+      !  if(UnSum > 0) then
+      !     write(UnSum,*) ' Lin_Jac_x       idx        x%state idx'
+      !     do i=1,p%Jac_nx
+      !        write(UnSum,*) InitOut%LinNames_x(i),'  ',i,'   ',p%dxIdx_map2_xStateIdx(i)
+      !     enddo
+      !  endif
+
       InitOut%RotFrame_x   = .false.
       InitOut%DerivOrder_x = 2      
    END SUBROUTINE Init_Jacobian_x
@@ -7735,9 +7860,9 @@ END SUBROUTINE MD_Compute_dY
 !! Do not change this without making sure subroutine MD_init_jacobian is consistant with this routine!
 SUBROUTINE MD_Perturb_x( p, i, perturb_sign, x, dx )
    TYPE(MD_ParameterType)      , INTENT(IN   ) :: p            !< parameters
-   INTEGER( IntKi )            , INTENT(IN   ) :: i         !< node number
+   INTEGER( IntKi )            , INTENT(IN   ) :: i            !< state array index number 
    INTEGER( IntKi )            , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(MD_ContinuousStateType), INTENT(INOUT) :: x            !< perturbed SD states
+   TYPE(MD_ContinuousStateType), INTENT(INOUT) :: x            !< perturbed MD states
    REAL( R8Ki )                , INTENT(  OUT) :: dx           !< amount that specific state was perturbed
 
    dx=p%dx(i)
@@ -7747,14 +7872,15 @@ END SUBROUTINE MD_Perturb_x
 !> This routine uses values of two output types to compute an array of differences.
 !! Do not change this packing without making sure subroutine MD_init_jacobian is consistant with this routine!
 SUBROUTINE MD_Compute_dX(p, x_p, x_m, delta, dX)
-   TYPE(MD_ParameterType)      , INTENT(IN   ) :: p                                !< parameters
-   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_p                              !< SD continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
-   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_m                              !< SD continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)
-   REAL(R8Ki)                  , INTENT(IN   ) :: delta                            !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
-   REAL(R8Ki)                  , INTENT(INOUT) :: dX(:)                            !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
+   TYPE(MD_ParameterType)      , INTENT(IN   ) :: p            !< parameters
+   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_p          !< <D continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
+   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_m          !< <D continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)
+   REAL(R8Ki)                  , INTENT(IN   ) :: delta        !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(R8Ki)                  , INTENT(INOUT) :: dX(:)        !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
    INTEGER(IntKi) :: i ! loop over modes
-   do i=1,p%Jac_nx
-      dX(i) = x_p%states(i) - x_m%states(i)
+   do i=1,p%Jac_nx   ! index to dX 
+      ! NOTE: order of entries in dX is different than the x%states, so mapping is required
+      dX(i) = x_p%states(p%dxIdx_map2_xStateIdx(i)) - x_m%states(p%dxIdx_map2_xStateIdx(i))
    end do
    dX = dX / (2.0_R8Ki*delta)
 END SUBROUTINE MD_Compute_dX
@@ -7762,3 +7888,4 @@ END SUBROUTINE MD_Compute_dX
 
 
 END MODULE MoorDyn
+
