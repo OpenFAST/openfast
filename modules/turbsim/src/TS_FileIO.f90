@@ -250,10 +250,6 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_CTS), "WrACT", "Output coherent time series files? [RootName.cts]",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
-   CALL ReadVar( UI, InFile, p%grid%Clockwise, "Clockwise", "Clockwise rotation when looking downwind?",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
       ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
    CALL ReadVar( UI, InFile, p%IEC%ScaleIEC, "ScaleIEC", "Scale IEC turbulence models to specified standard deviation?",&
                                  ErrStat2, ErrMsg2, UnEc)
@@ -1982,9 +1978,6 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    REAL(ReKi)                  :: TI(3)                         ! Turbulence intensity for scaling data
    REAL(ReKi)                  :: TmpU                          ! Max value of |V(:,:,1)-UHub|
 
-   INTEGER(B4Ki)               :: CFirst
-   INTEGER(B4Ki)               :: CLast
-   INTEGER(B4Ki)               :: CStep
    INTEGER(B4Ki)               :: II
    INTEGER(B4Ki)               :: IT
    INTEGER(B4Ki)               :: IY
@@ -2085,19 +2078,6 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
       WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! the longitudinal length scale of the vertical component, not used
 
 
-         ! Compute parameters for ordering output for FF AeroDyn files. (This is for BLADED compatibility.)
-
-      IF ( p%grid%Clockwise )  THEN
-         CFirst = p%grid%NumGrid_Y
-         CLast  = 1
-         CStep  = -1
-      ELSE
-         CFirst = 1
-         CLast  = p%grid%NumGrid_Y
-         CStep  = 1
-      ENDIF
-
-
          ! Loop through time.
 
       DO IT=1,p%grid%NumOutSteps  !Use only the number of timesteps requested originally
@@ -2105,7 +2085,7 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
             ! Write out grid data in binary form.
          IP = 1
          DO IZ=1,p%grid%NumGrid_Z
-            DO IY=CFirst,CLast,CStep
+            DO IY=1,p%grid%NumGrid_Y
 
                II = ( IZ - 1 )*p%grid%NumGrid_Y + IY
 
@@ -3579,7 +3559,6 @@ SUBROUTINE WrSum_EchoInputs(p )
    WRITE (p%US,"( L10 , 2X , 'Output tower data?' )"                        )  p%WrFile(FileExt_TWR)
    WRITE (p%US,"( L10 , 2X , 'Output formatted FF files?' )"                )  p%WrFile(FileExt_UVW)
    WRITE (p%US,"( L10 , 2X , 'Output coherent turbulence time step file?' )")  p%WrFile(FileExt_CTS)
-   WRITE (p%US,"( L10 , 2X , 'Clockwise rotation when looking downwind?' )" )  p%grid%Clockwise   
    
    SELECT CASE ( p%IEC%ScaleIEC )
       CASE (0)

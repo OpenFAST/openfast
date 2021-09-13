@@ -136,7 +136,6 @@ use NWTC_Library
       INTEGER(IntKi)               :: NumOutSteps                              ! Number of output time steps.
                   
       LOGICAL                      :: Periodic                                 ! Flag to indicate that output files must contain exactly one full (time) period
-      LOGICAL                      :: Clockwise                                ! Flag to indicate clockwise rotation when looking downwind.
       
    end type Grid_ParameterType
    
