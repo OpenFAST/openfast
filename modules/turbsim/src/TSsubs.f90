@@ -2235,8 +2235,14 @@ IF ( ANY (p%WrFile) )  THEN
       
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (coherent turbulence time step file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.cts (coherent turbulence time step file)' )
+   ENDIF
 
+   IF ( p%WrFile(FileExt_HAWC) )  THEN
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-u.bin (HAWC binary full-field u-component file)' )")  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-v.bin (HAWC binary full-field v-component file)' )")  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-w.bin (HAWC binary full-field w-component file)' )")  
    ENDIF
 
    IF ( p%WrFile(FileExt_UVW) )  THEN
@@ -2253,7 +2259,7 @@ ENDIF
 
    ! WARN if using a large grid and not creating ff output files
 IF ( p%grid%NumGrid_Y*p%grid%NumGrid_Z > 250 ) THEN 
-   IF (.NOT. p%WrFile(FileExt_WND) .AND. .NOT. p%WrFile(FileExt_BTS) .AND. .NOT. p%WrFile(FileExt_UVW) ) THEN
+   IF (.NOT. p%WrFile(FileExt_WND) .AND. .NOT. p%WrFile(FileExt_BTS) .AND. .NOT. p%WrFile(FileExt_HAWC) .AND. .NOT. p%WrFile(FileExt_UVW) ) THEN
    
       CALL SetErrStat( ErrID_Warn, 'You are using a large number of grid points but are not generating full-field output files.'//&
             ' The simulation will run faster if you reduce the number of points on the grid.', ErrStat, ErrMsg, RoutineName) 

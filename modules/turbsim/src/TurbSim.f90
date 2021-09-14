@@ -310,7 +310,7 @@ ENDIF !WrACT
 !..................................................................................................................................
 
    ! Are we generating binary FF files?
-IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
+IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_HAWC) ) THEN
    CALL WrSum_InterpolatedHubStats(p, V)
       
    IF ( p%WrFile(FileExt_BTS) ) THEN
@@ -322,6 +322,12 @@ IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
       CALL WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
       CALL CheckError(ErrStat, ErrMsg)
    END IF
+   
+   IF ( p%WrFile(FileExt_HAWC) ) THEN
+      CALL WrBinHAWC( p, V, USig, VSig, WSig, ErrStat, ErrMsg )
+      CALL CheckError(ErrStat, ErrMsg)
+   END IF
+   
 END IF
 
 
