@@ -17,14 +17,14 @@ results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
 compiler type to the appropriate solution set from these combinations:
 
-================== ========== ============================
- Operating System   Compiler   Hardware
-================== ========== ============================
- **macOS**          **GNU**    **2017 MacbookPro**
- CentOS 7           Intel      NREL Eagle - Intel Skylake
- CentOS 7           GNU        NREL Eagle - Intel Skylake
- Windows 10         Intel      Dell Precision 3530
-================== ========== ============================
+================== ============== ============================
+ Operating System   Compiler       Hardware
+================== ============== ============================
+ macOS 10.15        GNU 10.2       2020 MacbookPro
+ Ubuntu 20.04       Intel oneAPI   Docker
+ Ubuntu 20.04       GNU 10.2       Docker
+ Windows 10         Intel oneAPI   Dell Precision 3530
+================== ============== ============================
 
 The compiler versions, specific math libraries, and more info on hardware used
 to generate the baseline solutions are documented in the

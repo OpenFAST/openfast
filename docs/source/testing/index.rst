@@ -58,7 +58,7 @@ build process with an additional CMake flag:
     # BUILD_TESTING     - Build the testing tree (Default: OFF)
     cmake .. -DBUILD_TESTING:BOOL=ON
 
-Aside from this flags, the default CMake configuration is suitable for most systems.
+Aside from this flag, the default CMake configuration is suitable for most systems.
 See the :ref:`understanding_cmake` section for more details on configuring
 the CMake targets. While the unit tests must be built with CMake due to its external
 dependencies, the regression test may be executed without CMake, as described in
