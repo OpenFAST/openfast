@@ -2087,10 +2087,9 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    
       ! Put normalizing factors into the summary file.  The user can use them to
       ! tell a simulation program how to rescale the data.
-
    TI(1)  = MAX(100.0*Tolerance, NewUSig) / p%UHub
-   TI(2)  = MAX(100.0*Tolerance, VSig)    / p%UHub
-   TI(3)  = MAX(100.0*Tolerance, WSig)    / p%UHub
+   TI(2)  = MAX(100.0*Tolerance, VSig, 0.05*ABS(MAXVAL(V(:,:,2))), 0.05*ABS(MINVAL(V(:,:,2))) ) / p%UHub  ! put the abs() after the maxval() and minval() to avoid stack-overflow issues with large wind files 
+   TI(3)  = MAX(100.0*Tolerance, WSig, 0.05*ABS(MAXVAL(V(:,:,3))), 0.05*ABS(MINVAL(V(:,:,3))) ) / p%UHub  ! put the abs() after the maxval() and minval() to avoid stack-overflow issues with large wind files 
 
    WRITE (p%US,"(//,'Normalizing Parameters for Binary Data (approximate statistics):',/)")
 
@@ -2105,16 +2104,17 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    WRITE (p%US,FormStr)  'Grid Base    ', p%grid%Zbottom,                                               ' m'
    
    WRITE (p%US,'()'   )
-   IF ( p%grid%Periodic ) THEN 
-      WRITE (p%US,'( A)' ) 'Creating a PERIODIC output file.'
-   END IF
+IF ( p%grid%Periodic ) THEN 
+   WRITE (p%US,'( A)' ) 'Creating a PERIODIC output file.'
+END IF
+   WRITE (p%US,'( A)' ) 'Creating a BLADED LEFT-HAND RULE output file.'
  
       ! Calculate some numbers for normalizing the data.
 
-   U_C1 = 1000.0/( p%UHub*TI(1) )
-   U_C2 = 1000.0/TI(1)
-   V_C  = 1000.0/( p%UHub*TI(2) )
-   W_C  = 1000.0/( p%UHub*TI(3) )
+   U_C1 =  1000.0/( p%UHub*TI(1) )
+   U_C2 =  1000.0/TI(1)
+   V_C  = -1000.0/( p%UHub*TI(2) )      ! Bladed convention is positive V is pointed along negative Y (IEC turbine coordinate)
+   W_C  =  1000.0/( p%UHub*TI(3) )
 
 
    IF ( p%WrFile(FileExt_WND) )  THEN
