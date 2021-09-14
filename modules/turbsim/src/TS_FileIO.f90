@@ -5472,7 +5472,8 @@ TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p                            !< T
          p%met%WindProfileType = 'API'  ! ADDED BY YG
          
       CASE DEFAULT
-         p%met%WindProfileType = 'IEC'
+!         p%met%WindProfileType = 'IEC'
+         p%met%WindProfileType = 'PL'
    END SELECT
 
 
