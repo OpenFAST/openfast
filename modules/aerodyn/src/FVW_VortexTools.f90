@@ -187,6 +187,18 @@ contains
       enddo
    end subroutine
 
+   subroutine VecToLattice2D(PointVectors, LatticeVals, iHeadP)
+      real(Reki), dimension(:,:),        intent(in   )  :: PointVectors   !< nVal x n
+      real(ReKi), dimension(:,:),        intent(inout)  :: LatticeVals    !< nVal x nSpan
+      integer(IntKi),                    intent(inout)  :: iHeadP         !< Index indicating where to start in PointVectors
+      integer(IntKi) :: iSpan
+      do iSpan = 1, size(LatticeVals,2)
+         LatticeVals(:, iSpan) = PointVectors(:, iHeadP)
+         iHeadP=iHeadP+1
+      enddo
+   end subroutine
+
+
    subroutine LatticeToPoints(LatticePoints, iDepthStart, Points, iHeadP)
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points 3 x nSpan x nDepth
       integer(IntKi),                  intent(in   )  :: iDepthStart    !< Start index for depth dimension
@@ -210,6 +222,19 @@ contains
       enddo
 
    endsubroutine LatticeToPoints
+
+   subroutine LatticeToPoints2D(LatticePoints, Points, iHeadP)
+      real(Reki), dimension(:,:),     intent(in   )  :: LatticePoints  !< Points 3 x nSpan 
+      real(ReKi), dimension(:,:),      intent(inout)  :: Points         !< 
+      integer(IntKi),                  intent(inout)  :: iHeadP         !< Index indicating where to start in Points
+      ! Local
+      integer(IntKi) :: iSpan, iDepth
+      do iSpan = 1, size(LatticePoints,2)
+         Points(1:3,iHeadP) = LatticePoints(1:3, iSpan)
+         iHeadP=iHeadP+1
+      enddo
+   endsubroutine LatticeToPoints2D
+
 
    subroutine LatticeToSegments(LatticePoints, LatticeGamma, LatticeEpsilon, iDepthStart, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, bShedVorticity, bShedLastVorticity, bHackEpsilon )
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points  3 x nSpan x nDepth
@@ -1025,5 +1050,166 @@ contains
          end if ! had more than 1 particles
       end subroutine ui_tree_11
    end subroutine  ui_tree
+
+   ! --------------------------------------------------------------------------------
+   ! --- Vector analysis tools 
+   ! --------------------------------------------------------------------------------
+   !> Compute the curl of a 3d vector field (stored on a regular grid) using 4th order finite differences
+   subroutine curl_regular_grid(f,rotf,ix,iy,iz,nx,ny,nz,dx,dy,dz)
+      ! Arguments
+      integer, intent(in)  :: nx,ny,nz !< Dimensions of grid
+      integer, intent(in)  :: ix,iy,iz !< Dimensions of grid
+      real(ReKi), intent(in) :: dx,dy,dz !< grid spacing
+      real(ReKi), dimension(:,:,:,:), intent(in)  :: f   !< vector field
+      real(ReKi), dimension(:,:,:,:), intent(out) :: rotf !< curl of f
+      ! Variables
+      integer :: i,j,k,l
+      real(ReKi),dimension(3) :: dfi_dx, dfi_dy, dfi_dz
+      real(ReKi) dx2,dy2,dz2
+      dx2=2.0_ReKi*dx
+      dy2=2.0_ReKi*dy
+      dz2=2.0_ReKi*dz
+
+      ! left boundary: forward difference   (a=0, b=5) and (a=1, b=3)&
+      ! right boundary: backward difference (a=3, b=1) and (a=0, b=5)&
+      ! elsewhere: centered difference (a=2,b=2)&
+      do k = iz,nz
+         do j = iy,ny
+            do i = ix,nx
+               ! x-derivatives of fy and fz
+               if ((nx-ix)<=3) then
+                  dfi_dx=0.0_ReKi
+               else
+                  do l=2,3
+                     if (i==ix) then
+                        dfi_dx(l) = ( - 25.0_ReKi/6.0_ReKi * f(l,i  ,j,k)&
+                            &         +           8.0_ReKi * f(l,i+1,j,k)&
+                            &         -           6.0_ReKi * f(l,i+2,j,k)&
+                            &         +  8.0_ReKi/3.0_ReKi * f(l,i+3,j,k)&
+                            &         -  1.0_ReKi/2.0_ReKi * f(l,i+4,j,k))/dx2
+                     elseif (i==ix+1) then
+                        dfi_dx(l)  = ( - 1.0_ReKi/2.0_ReKi * f(l,i-1,j,k)&
+                           &           - 5.0_ReKi/3.0_ReKi * f(l,i  ,j,k)&
+                           &           +          3.0_ReKi * f(l,i+1,j,k)&
+                           &           -          1.0_ReKi * f(l,i+2,j,k)&
+                           &           + 1.0_ReKi/6.0_ReKi * f(l,i+3,j,k))/dx2
+                     elseif (i==nx-1) then
+                        dfi_dx(l)  = ( - 1.0_ReKi/6.0_ReKi * f(l,i-3,j,k)&
+                           &           +          1.0_ReKi * f(l,i-2,j,k)&
+                           &           -          3.0_ReKi * f(l,i-1,j,k)&
+                           &           + 5.0_ReKi/3.0_ReKi * f(l,i  ,j,k)&
+                           &           + 1.0_ReKi/2.0_ReKi * f(l,i+1,j,k))/dx2
+                     elseif (i==nx) then
+                        dfi_dx(l) = (    1.0_ReKi/2.0_ReKi * f(l,i-4,j,k)&
+                           &          -  8.0_ReKi/3.0_ReKi * f(l,i-3,j,k)&
+                           &          +           6.0_ReKi * f(l,i-2,j,k)&
+                           &          -           8.0_ReKi * f(l,i-1,j,k)&
+                           &          + 25.0_ReKi/6.0_ReKi * f(l,i  ,j,k))/dx2
+                     else
+                        dfi_dx(l)  = (   1.0_ReKi/6.0_ReKi * f(l,i-2,j,k)&
+                           &           - 4.0_ReKi/3.0_ReKi * f(l,i-1,j,k)&
+                           &           + 4.0_ReKi/3.0_ReKi * f(l,i+1,j,k)&
+                           &           - 1.0_ReKi/6.0_ReKi * f(l,i+2,j,k))/dx2
+                     end if
+                  end do
+               endif
+
+               ! y-derivatives of fx and fz
+               if ((ny-iy)<=3) then
+                  dfi_dy=0.0_ReKi
+               else
+                  do l=1,3,2
+                     if (j==iy) then
+                        dfi_dy(l) = ( - 25.0_ReKi/6.0_ReKi * f(l,i,j  ,k)&
+                           &          +           8.0_ReKi * f(l,i,j+1,k)&
+                           &          -           6.0_ReKi * f(l,i,j+2,k)&
+                           &          +  8.0_ReKi/3.0_ReKi * f(l,i,j+3,k)&
+                           &          -  1.0_ReKi/2.0_ReKi * f(l,i,j+4,k))/dy2
+                     elseif (j==iy+1) then
+                        dfi_dy(l)  = ( - 1.0_ReKi/2.0_ReKi * f(l,i,j-1,k)&
+                           &           - 5.0_ReKi/3.0_ReKi * f(l,i,j  ,k)&
+                           &           +          3.0_ReKi * f(l,i,j+1,k)&
+                           &           -          1.0_ReKi * f(l,i,j+2,k)&
+                           &           + 1.0_ReKi/6.0_ReKi * f(l,i,j+3,k))/dy2
+                     elseif (j==ny-1) then
+                        dfi_dy(l)  = ( - 1.0_ReKi/6.0_ReKi * f(l,i,j-3,k)&
+                           &           +          1.0_ReKi * f(l,i,j-2,k)&
+                           &           -          3.0_ReKi * f(l,i,j-1,k)&
+                           &           + 5.0_ReKi/3.0_ReKi * f(l,i,j  ,k)&
+                           &           + 1.0_ReKi/2.0_ReKi * f(l,i,j+1,k))/dy2
+                     elseif (j==ny) then
+                        dfi_dy(l) = (    1.0_ReKi/2.0_ReKi * f(l,i,j-4,k)&
+                           &          -  8.0_ReKi/3.0_ReKi * f(l,i,j-3,k)&
+                           &          +           6.0_ReKi * f(l,i,j-2,k)&
+                           &          -           8.0_ReKi * f(l,i,j-1,k)&
+                           &          + 25.0_ReKi/6.0_ReKi * f(l,i,j  ,k))/dy2
+                     else
+                        dfi_dy(l)  = (   1.0_ReKi/6.0_ReKi * f(l,i,j-2,k)&
+                           &           - 4.0_ReKi/3.0_ReKi * f(l,i,j-1,k)&
+                           &           + 4.0_ReKi/3.0_ReKi * f(l,i,j+1,k)&
+                           &           - 1.0_ReKi/6.0_ReKi * f(l,i,j+2,k))/dy2
+                     end if
+                  end do
+               endif
+
+               ! z-derivatives of fy and fx
+               if ((nz-iz)<=3) then
+                  dfi_dz=0.0_ReKi
+               else
+                  do l=1,2
+                     if (k==iz) then
+                        dfi_dz(l) = ( - 25.0_ReKi/6.0_ReKi * f(l,i,j,k  )&
+                           &          +           8.0_ReKi * f(l,i,j,k+1)&
+                           &          -           6.0_ReKi * f(l,i,j,k+2)&
+                           &          +  8.0_ReKi/3.0_ReKi * f(l,i,j,k+3)&
+                           &          -  1.0_ReKi/2.0_ReKi * f(l,i,j,k+4))/dz2
+                     elseif (k==iz+1) then
+                        dfi_dz(l)  = ( - 1.0_ReKi/2.0_ReKi * f(l,i,j,k-1)&
+                           &           - 5.0_ReKi/3.0_ReKi * f(l,i,j,k  )&
+                           &           +          3.0_ReKi * f(l,i,j,k+1)&
+                           &           -          1.0_ReKi * f(l,i,j,k+2)&
+                           &           + 1.0_ReKi/6.0_ReKi * f(l,i,j,k+3))/dz2
+                     elseif (k==nz-1) then
+                        dfi_dz(l)  = ( - 1.0_ReKi/6.0_ReKi * f(l,i,j,k-3)&
+                           &           +          1.0_ReKi * f(l,i,j,k-2)&
+                           &           -          3.0_ReKi * f(l,i,j,k-1)&
+                           &           + 5.0_ReKi/3.0_ReKi * f(l,i,j,k  )&
+                           &           + 1.0_ReKi/2.0_ReKi * f(l,i,j,k+1))/dz2
+
+                     elseif (k==nz) then
+                        dfi_dz(l)  = (    1.0_ReKi/2.0_ReKi * f(l,i,j,k-4)&
+                           &           -  8.0_ReKi/3.0_ReKi * f(l,i,j,k-3)&
+                           &           +           6.0_ReKi * f(l,i,j,k-2)&
+                           &           -           8.0_ReKi * f(l,i,j,k-1)&
+                           &           + 25.0_ReKi/6.0_ReKi * f(l,i,j,k  ))/dz2
+                     else
+                        dfi_dz(l) = (   1.0_ReKi/6.0_ReKi * f(l,i,j,k-2)&
+                           &          - 4.0_ReKi/3.0_ReKi * f(l,i,j,k-1)&
+                           &          + 4.0_ReKi/3.0_ReKi * f(l,i,j,k+1)&
+                           &          - 1.0_ReKi/6.0_ReKi * f(l,i,j,k+2))/dz2
+                     end if
+                  end do
+               endif
+               ! Rotational
+               rotf(1,i,j,k)= dfi_dy(3)-dfi_dz(2)
+               rotf(2,i,j,k)= dfi_dz(1)-dfi_dx(3)
+               rotf(3,i,j,k)= dfi_dx(2)-dfi_dy(1)
+            end do !i
+         end do ! j
+      end do ! k
+      ! If not enough data..
+      !if ((nx-ix)<=3) then
+      !   rotf(2,:,:,:)=0.0_ReKi
+      !   rotf(3,:,:,:)=0.0_ReKi
+      !endif
+      !if ((ny-iy)<=3) then
+      !   rotf(1,:,:,:)=0.0_ReKi
+      !   rotf(3,:,:,:)=0.0_ReKi
+      !endif
+      !if ((nz-iz)<=3) then
+      !   rotf(1,:,:,:)=0.0_ReKi
+      !   rotf(2,:,:,:)=0.0_ReKi
+      !endif
+   end subroutine curl_regular_grid
 
 end module FVW_VortexTools
