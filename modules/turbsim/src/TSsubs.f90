@@ -1151,8 +1151,8 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          
          
          DO iPoint=1+p%usr%NPoints,p%grid%NPoints
-            CALL Spec_TimeSer( p, p%grid%Z(iPoint), U(iPoint), LastIndex, SSVS )            
-            S(:,iPoint,:) = SSVS*HalfDelF               
+            CALL Spec_TimeSer( p, p%grid%Z(iPoint), U(iPoint), LastIndex, SSVS )
+            S(:,iPoint,:) = SSVS*HalfDelF
          ENDDO                  
          
       CASE ( SpecModel_USRVKM )
@@ -1815,7 +1815,7 @@ SUBROUTINE ScaleTimeSeries(p, V, ErrStat, ErrMsg)
          SpecModel_USRVKM, &
          SpecModel_TIDAL,  &
          SpecModel_RIVER,  &
-         SpecModel_USER  ) ! Do reynolds stress for HYDRO also.
+         SpecModel_USER    )
                
    
       CALL TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
@@ -1875,7 +1875,7 @@ SUBROUTINE TimeSeriesScaling_IEC(p, V)
                
       ELSE  ! Scale each point individually
                
-         DO Indx = 1,p%grid%NPoints             
+         DO Indx = 1,p%grid%NPoints
             CGridSum  = 0.0
             CGridSum2 = 0.0
                                     
@@ -2166,7 +2166,6 @@ IF ( ANY (p%WrFile) )  THEN
    CALL GetNewUnit( UnOut )
 
    WRITE (p%US,"( // 'You have requested that the following file(s) be generated:' / )")
-!   CALL WrScr1  (   ' You have requested that the following file(s) be generated:' )
 
    IF ( p%WrFile(FileExt_BIN) )  THEN   
 
@@ -2176,7 +2175,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bin (binary hub-height turbulence-parameter file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bin (binary hub-height turbulence-parameter file)' )
 
    ENDIF
 
@@ -2187,7 +2185,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US, "( 3X ,'"//TRIM( p%RootName)//".dat (formatted turbulence-parameter file)' )")  
-!      CALL WrScr   (  '    '//TRIM( p%RootName)//'.dat (formatted turbulence-parameter file)' )
 
    ENDIF
 
@@ -2198,7 +2195,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".hh  (AeroDyn hub-height file)' )")
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.hh  (AeroDyn hub-height file)' )
 
    ENDIF
 
@@ -2209,7 +2205,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bts (AeroDyn/TurbSim full-field wind file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bts (AeroDyn/TurbSim full-field wind file)' )
 
    ENDIF
 
@@ -2220,7 +2215,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".wnd (AeroDyn/BLADED full-field wnd file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.wnd (AeroDyn/BLADED full-field wnd file)' )
 
    ENDIF
    
@@ -2231,7 +2225,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".twr (binary tower file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.twr (binary tower file)' )
 
    ENDIF
 
@@ -2243,17 +2236,15 @@ IF ( ANY (p%WrFile) )  THEN
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (coherent turbulence time step file)' )")  
 !      CALL WrScr   ( '    '//TRIM( p%RootName)//'.cts (coherent turbulence time step file)' )
+
    ENDIF
 
    IF ( p%WrFile(FileExt_UVW) )  THEN
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".u (formatted full-field U-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.u (formatted full-field U-component file)' )
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".v (formatted full-field V-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.v (formatted full-field V-component file)' )
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".w (formatted full-field W-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.w (formatted full-field W-component file)' )
    ENDIF
 
 ELSE
