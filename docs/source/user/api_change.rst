@@ -25,6 +25,7 @@ Added in OpenFAST dev
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
+TurbSim                                       13   WrHAWCFF           False    WrHAWCFF            - Output full-field time-series data in HAWC form?  (Generates RootName-u.bin, RootName-v.bin, RootName-w.bin, RootName.hawc)
 AeroDyn 15                                    40   UAStartRad          0.25    UAStartRad          - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
 AeroDyn 15                                    41   UAEndRad            0.95    UAEndRad            - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
 AirFoilTables                                 12\* alphaUpper          5.0   alphaUpper          ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
@@ -32,7 +33,6 @@ AirFoilTables                                 13\* alphaLower         \-3.0   al
 AirFoilTables                                 42\* UACutout_delta     "DEFAULT"  UACutout_delta  ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
-TurbSim                                       13   WrHAWCFF        False         WrHAWCFF        - Output full-field time-series data in HAWC form?  (Generates RootName-u.bin, RootName-v.bin, RootName-w.bin, RootName.hawc)
 \*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
 
 
