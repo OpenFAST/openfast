@@ -8,7 +8,7 @@ maintain stability in new and existing code, a test suite is included
 directly in the source code. Two primary levels of tests exist:
 regression tests at the highest level and unit tests at the lowest
 level. The regression tests compare locally generated results with
-stored "baseline" results. This test gives an indication of whether the
+stored "baseline" results. These tests give an indication of whether the
 full-system or sub-system response has changed. The unit tests focus on
 a single subroutine or code block. These tests need not be physically
 realistic and focus on the mathematics and exersizing of an algorithm.
