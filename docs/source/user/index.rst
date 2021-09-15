@@ -11,6 +11,8 @@ We are in the process of transitioning legacy FAST v8 documentation, which can b
     directly applicable to OpenFAST, portions may be out of date.
 
 
+.. _general-reference-docs:
+
 General
 ~~~~~~~
 .. toctree::
