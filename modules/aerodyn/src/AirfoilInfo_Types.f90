@@ -167,6 +167,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: AFTabMod      !< Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp} [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: secondVals      !< The values of the 2nd dependent variable when using multiple airfoil tables (Re or UserProp, saved in an array so that the logic in the interpolation scheme is cleaner) [-]
     INTEGER(IntKi)  :: InterpOrd      !< Interpolation order [-]
+    REAL(ReKi)  :: RelThickness      !< Relative thickness of airfoil thickness/chord [-]
     REAL(ReKi)  :: NonDimArea      !< The non-dimensional area of the airfoil (area/chord^2) [unused] [-]
     INTEGER(IntKi)  :: NumCoords      !< The number of coordinates which define the airfoil shape [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X_Coord      !< X-coordinate for the airfoil shape [unused] [-]
@@ -1794,6 +1795,7 @@ IF (ALLOCATED(SrcParamData%secondVals)) THEN
     DstParamData%secondVals = SrcParamData%secondVals
 ENDIF
     DstParamData%InterpOrd = SrcParamData%InterpOrd
+    DstParamData%RelThickness = SrcParamData%RelThickness
     DstParamData%NonDimArea = SrcParamData%NonDimArea
     DstParamData%NumCoords = SrcParamData%NumCoords
 IF (ALLOCATED(SrcParamData%X_Coord)) THEN
@@ -1914,6 +1916,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%secondVals)  ! secondVals
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! InterpOrd
+      Re_BufSz   = Re_BufSz   + 1  ! RelThickness
       Re_BufSz   = Re_BufSz   + 1  ! NonDimArea
       Int_BufSz  = Int_BufSz  + 1  ! NumCoords
   Int_BufSz   = Int_BufSz   + 1     ! X_Coord allocated yes/no
@@ -2009,6 +2012,8 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%InterpOrd
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RelThickness
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%NonDimArea
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumCoords
@@ -2155,6 +2160,8 @@ ENDIF
   END IF
     OutData%InterpOrd = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%RelThickness = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%NonDimArea = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%NumCoords = IntKiBuf(Int_Xferred)

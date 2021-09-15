@@ -148,6 +148,7 @@ typedef   ^                     ^                INTEGER             ColUAf     
 typedef   ^                     ^                INTEGER             AFTabMod     -        -   -   "Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp}" -
 typedef   ^                     ^                ReKi                secondVals  {:}       -   -   "The values of the 2nd dependent variable when using multiple airfoil tables (Re or UserProp, saved in an array so that the logic in the interpolation scheme is cleaner)" -
 typedef   ^                     ^                IntKi               InterpOrd    -        -   -   "Interpolation order"   -
+typedef   ^                     ^                ReKi                RelThickness -        -   -   "Relative thickness of airfoil thickness/chord"   -
 typedef   ^                     ^                ReKi                NonDimArea   -        -   -   "The non-dimensional area of the airfoil (area/chord^2) [unused]" -
 typedef   ^                     ^                IntKi               NumCoords    -        -   -   "The number of coordinates which define the airfoil shape" -
 typedef   ^                     ^                ReKi                X_Coord     {:}       -   -   "X-coordinate for the airfoil shape [unused]" -

@@ -60,6 +60,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootPosition      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation      !< DCM reference orientation of nacelle [-]
+    INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
   END TYPE RotInitInputType
 ! =======================
 ! =========  AD_InitInputType  =======
@@ -254,7 +255,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Y      !< tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade [N/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: M      !< pitching moment per unit length of the jth node in the kth blade [Nm/m]
     REAL(ReKi) , DIMENSION(1:3)  :: V_DiskAvg      !< disk-average relative wind speed [m/s]
-    REAL(ReKi) , DIMENSION(1:3)  :: hub_theta_x_root      !< angles saved for FAST.Farm [rad]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: hub_theta_x_root      !< angles saved for FAST.Farm [rad]
     REAL(ReKi)  :: V_dot_x 
     TYPE(MeshType)  :: HubLoad      !< mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only) [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_L_2_H_P      !< mapping data structure to map each bladeLoad output mesh to the MiscVar%HubLoad mesh [-]
@@ -300,6 +301,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure [Pa]
     REAL(ReKi)  :: FluidDepth      !< Submerged hub height [m]
+    INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -409,6 +411,7 @@ IF (ALLOCATED(SrcRotInitInputTypeData%BladeRootOrientation)) THEN
     DstRotInitInputTypeData%BladeRootOrientation = SrcRotInitInputTypeData%BladeRootOrientation
 ENDIF
     DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
+    DstRotInitInputTypeData%AeroProjMod = SrcRotInitInputTypeData%AeroProjMod
  END SUBROUTINE AD_CopyRotInitInputType
 
  SUBROUTINE AD_DestroyRotInitInputType( RotInitInputTypeData, ErrStat, ErrMsg )
@@ -477,6 +480,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%BladeRootOrientation)  ! BladeRootOrientation
   END IF
       Db_BufSz   = Db_BufSz   + SIZE(InData%NacelleOrientation)  ! NacelleOrientation
+      Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -567,6 +571,8 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
     END DO
+    IntKiBuf(Int_Xferred) = InData%AeroProjMod
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_PackRotInitInputType
 
  SUBROUTINE AD_UnPackRotInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -678,6 +684,8 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
     END DO
+    OutData%AeroProjMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_UnPackRotInitInputType
 
  SUBROUTINE AD_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -7358,7 +7366,18 @@ IF (ALLOCATED(SrcRotMiscVarTypeData%M)) THEN
     DstRotMiscVarTypeData%M = SrcRotMiscVarTypeData%M
 ENDIF
     DstRotMiscVarTypeData%V_DiskAvg = SrcRotMiscVarTypeData%V_DiskAvg
+IF (ALLOCATED(SrcRotMiscVarTypeData%hub_theta_x_root)) THEN
+  i1_l = LBOUND(SrcRotMiscVarTypeData%hub_theta_x_root,1)
+  i1_u = UBOUND(SrcRotMiscVarTypeData%hub_theta_x_root,1)
+  IF (.NOT. ALLOCATED(DstRotMiscVarTypeData%hub_theta_x_root)) THEN 
+    ALLOCATE(DstRotMiscVarTypeData%hub_theta_x_root(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%hub_theta_x_root.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstRotMiscVarTypeData%hub_theta_x_root = SrcRotMiscVarTypeData%hub_theta_x_root
+ENDIF
     DstRotMiscVarTypeData%V_dot_x = SrcRotMiscVarTypeData%V_dot_x
       CALL MeshCopy( SrcRotMiscVarTypeData%HubLoad, DstRotMiscVarTypeData%HubLoad, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7504,6 +7523,9 @@ IF (ALLOCATED(RotMiscVarTypeData%Y)) THEN
 ENDIF
 IF (ALLOCATED(RotMiscVarTypeData%M)) THEN
   DEALLOCATE(RotMiscVarTypeData%M)
+ENDIF
+IF (ALLOCATED(RotMiscVarTypeData%hub_theta_x_root)) THEN
+  DEALLOCATE(RotMiscVarTypeData%hub_theta_x_root)
 ENDIF
   CALL MeshDestroy( RotMiscVarTypeData%HubLoad, ErrStat, ErrMsg )
 IF (ALLOCATED(RotMiscVarTypeData%B_L_2_H_P)) THEN
@@ -7731,7 +7753,11 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%M)  ! M
   END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%V_DiskAvg)  ! V_DiskAvg
+  Int_BufSz   = Int_BufSz   + 1     ! hub_theta_x_root allocated yes/no
+  IF ( ALLOCATED(InData%hub_theta_x_root) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! hub_theta_x_root upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%hub_theta_x_root)  ! hub_theta_x_root
+  END IF
       Re_BufSz   = Re_BufSz   + 1  ! V_dot_x
       Int_BufSz   = Int_BufSz + 3  ! HubLoad: size of buffers for each call to pack subtype
       CALL MeshPack( InData%HubLoad, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! HubLoad 
@@ -8250,10 +8276,21 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%V_DiskAvg(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%hub_theta_x_root,1), UBOUND(InData%hub_theta_x_root,1)
-      ReKiBuf(Re_Xferred) = InData%hub_theta_x_root(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( .NOT. ALLOCATED(InData%hub_theta_x_root) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%hub_theta_x_root,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%hub_theta_x_root,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%hub_theta_x_root,1), UBOUND(InData%hub_theta_x_root,1)
+        ReKiBuf(Re_Xferred) = InData%hub_theta_x_root(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
     ReKiBuf(Re_Xferred) = InData%V_dot_x
     Re_Xferred = Re_Xferred + 1
       CALL MeshPack( InData%HubLoad, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! HubLoad 
@@ -8997,12 +9034,24 @@ ENDIF
       OutData%V_DiskAvg(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%hub_theta_x_root,1)
-    i1_u = UBOUND(OutData%hub_theta_x_root,1)
-    DO i1 = LBOUND(OutData%hub_theta_x_root,1), UBOUND(OutData%hub_theta_x_root,1)
-      OutData%hub_theta_x_root(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! hub_theta_x_root not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%hub_theta_x_root)) DEALLOCATE(OutData%hub_theta_x_root)
+    ALLOCATE(OutData%hub_theta_x_root(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%hub_theta_x_root.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%hub_theta_x_root,1), UBOUND(OutData%hub_theta_x_root,1)
+        OutData%hub_theta_x_root(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
     OutData%V_dot_x = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
@@ -9981,6 +10030,7 @@ ENDIF
     DstRotParameterTypeData%Patm = SrcRotParameterTypeData%Patm
     DstRotParameterTypeData%Pvap = SrcRotParameterTypeData%Pvap
     DstRotParameterTypeData%FluidDepth = SrcRotParameterTypeData%FluidDepth
+    DstRotParameterTypeData%AeroProjMod = SrcRotParameterTypeData%AeroProjMod
     DstRotParameterTypeData%NumOuts = SrcRotParameterTypeData%NumOuts
     DstRotParameterTypeData%RootName = SrcRotParameterTypeData%RootName
 IF (ALLOCATED(SrcRotParameterTypeData%OutParam)) THEN
@@ -10199,6 +10249,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Patm
       Re_BufSz   = Re_BufSz   + 1  ! Pvap
       Re_BufSz   = Re_BufSz   + 1  ! FluidDepth
+      Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
   Int_BufSz   = Int_BufSz   + 1     ! OutParam allocated yes/no
@@ -10471,6 +10522,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%FluidDepth
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%AeroProjMod
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%RootName)
@@ -10849,6 +10902,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%FluidDepth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%AeroProjMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%RootName)
