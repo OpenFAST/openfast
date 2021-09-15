@@ -3141,7 +3141,6 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)                   ! Eq. 81
       
    ! bjj: do we need to check that u%alpha is between -pi and + pi?
-      ! y%Cl = AFI_interp%Cl < TODO consider using this in front of x4 for "true" Cl
          y%Cl = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs  + pi * Tu * u%omega                                        ! Eq. 78
 
          call AddOrSub2Pi(u%alpha, alphaE)
