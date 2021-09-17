@@ -292,6 +292,7 @@ SET ModuleName=
 SET CURR_LOC=
 
 SET Root_Loc=
+SET Output_Loc=
 
 SET Subs_Loc=
 SET FAST_Loc=

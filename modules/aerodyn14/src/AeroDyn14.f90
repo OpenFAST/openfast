@@ -107,6 +107,8 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
          ! Display the module information
 
    CALL DispNVD( AD14_Ver )
+
+   CALL ProgWarn( ' AeroDyn 14 is deprecated and will be removed in a future release.' )
    
    InitOut%Ver = AD14_Ver
    m%FirstWarn = .TRUE.

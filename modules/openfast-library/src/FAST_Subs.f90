@@ -451,9 +451,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF
 
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
-
-      allocate(Init%InData_AD%rotors(1), stat=errStat) 
-      if (errStat/=0) then
+   
+      allocate(Init%InData_AD%rotors(1), stat=ErrStat2) 
+      if (ErrStat2 /= 0 ) then
          call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, RoutineName )
          call Cleanup()
          return
@@ -5272,7 +5272,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
    TYPE(IceDyn_Data),        INTENT(IN   ) :: IceD                !< All the IceDyn data used in time-step loop
 
 
-   logical                                 :: outputFields        ! flag to determine if we want to output the HD mesh fields
+!   logical                                 :: outputFields        ! flag to determine if we want to output the HD mesh fields
    INTEGER(IntKi)                          :: NumBl, k
    INTEGER(IntKi)                          :: j                   ! counter for StC instance at location
 
