@@ -43,12 +43,12 @@ jobs:
           pip install numpy Bokeh==1.4
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_TESTING:BOOL=ON \
@@ -56,7 +56,7 @@ jobs:
             ${GITHUB_WORKSPACE}
       - name: Build OpenFAST
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}
 
       - name: Run AeroDyn tests
@@ -84,14 +84,14 @@ jobs:
         with:
           name: regression-tests-release
           path: |
-            ${{runner.workspace}}/build/reg_tests/modules
-            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
   # regression-tests-debug:
   #   runs-on: ubuntu-20.04
