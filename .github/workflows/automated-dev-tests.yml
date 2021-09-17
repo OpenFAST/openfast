@@ -28,72 +28,72 @@ env:
 #     os: [macOS-10.14, ubuntu-18.04]
 
 jobs:
-  regression-tests-release:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: recursive
+  # regression-tests-release:
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@main
+  #       with:
+  #         submodules: recursive
 
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.7'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh==1.4
+  #     - name: Setup Python
+  #       uses: actions/setup-python@v2
+  #       with:
+  #         python-version: '3.7'
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install numpy Bokeh==1.4
 
-      - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
-      - name: Configure Build
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
-            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Build OpenFAST
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
+  #     - name: Setup Workspace
+  #       run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+  #     - name: Configure Build
+  #       working-directory: ${{runner.workspace}}/openfast/build
+  #       run: |
+  #         cmake \
+  #           -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+  #           -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+  #           -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+  #           -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+  #           -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+  #           -DBUILD_TESTING:BOOL=ON \
+  #           -DCTEST_PLOT_ERRORS:BOOL=ON \
+  #           ${GITHUB_WORKSPACE}
+  #     - name: Build OpenFAST
+  #       # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+  #       working-directory: ${{runner.workspace}}/openfast/build
+  #       run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
 
-      - name: Run AeroDyn tests
-        uses: ./.github/actions/tests-module-aerodyn
-        with:
-          test-target: regression
-      - name: Run BeamDyn tests
-        uses: ./.github/actions/tests-module-beamdyn
-        with:
-          test-target: regression
-      - name: Run HydroDyn tests
-        uses: ./.github/actions/tests-module-hydrodyn
-      - name: Run SubDyn tests
-        uses: ./.github/actions/tests-module-subdyn
-      - name: Run OpenFAST tests
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        uses: ./.github/actions/tests-gluecode-openfast
+  #     - name: Run AeroDyn tests
+  #       uses: ./.github/actions/tests-module-aerodyn
+  #       with:
+  #         test-target: regression
+  #     - name: Run BeamDyn tests
+  #       uses: ./.github/actions/tests-module-beamdyn
+  #       with:
+  #         test-target: regression
+  #     - name: Run HydroDyn tests
+  #       uses: ./.github/actions/tests-module-hydrodyn
+  #     - name: Run SubDyn tests
+  #       uses: ./.github/actions/tests-module-subdyn
+  #     - name: Run OpenFAST tests
+  #       # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+  #       uses: ./.github/actions/tests-gluecode-openfast
 
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-release
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+  #     - name: Failing test artifacts
+  #       uses: actions/upload-artifact@v2
+  #       if: failure()
+  #       with:
+  #         name: regression-tests-release
+  #         path: |
+  #           ${{runner.workspace}}/openfast/build/reg_tests/modules
+  #           ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+  #           !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+  #           !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+  #           !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+  #           !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+  #           !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+  #           !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
   regression-tests-debug:
     runs-on: ubuntu-20.04
