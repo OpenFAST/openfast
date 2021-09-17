@@ -157,7 +157,7 @@ jobs:
         run: |
           find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
           cd ..
-          gcovr -g -k -r . --html --html-details -o regressioncov.html # -v
+          gcovr -g -k -r . -o regressioncov.txt  # --html --html-details -o regressioncov.html # -v
 
           # cp `find . -name *.gcno` .
           # cp `find . -name *.gcda` .
@@ -167,7 +167,7 @@ jobs:
         with:
           dry_run: false
           # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./regressioncov.html # optional
+          files: ./regressioncov.txt # optional
           flags: regtests # optional
           # name: codecov-umbrella # optional
           fail_ci_if_error: true # optional (default = false)
@@ -180,7 +180,7 @@ jobs:
         with:
           name: regression-tests-debug
           path: |
-            ${{runner.workspace}}/openfast/regressioncov.html
+            ${{runner.workspace}}/openfast/regressioncov.txt
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
         if: failure()
