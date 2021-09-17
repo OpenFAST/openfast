@@ -98,6 +98,17 @@ jobs:
           # cp `find . -name *.gcno` .
           # cp `find . -name *.gcda` .
           # ${{env.GCOV_EXE}} -b -l -p -c *.gcno
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          dry_run: false
+          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./regressioncov.html # optional
+          flags: regtests # optional
+          # name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+          directory: ${{runner.workspace}}/openfast
 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
