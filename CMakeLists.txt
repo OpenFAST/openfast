@@ -49,6 +49,7 @@ endif()
 # Do this before configuring modules so that the flags are included
 option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
+  option(CODECOV "Enable infrastructure for measuring code coverage." OFF)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
 endif()
 option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
@@ -58,6 +59,24 @@ endif()
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
+
+# Configure measuring code coverage in tests
+if(CODECOV)
+  # Only supports GNU
+  if(NOT CMAKE_Fortran_COMPILER_ID MATCHES GNU)
+    message(WARNING "CODECOV is only support with GNU Compilers. The current Fortran compiler is ${CMAKE_Fortran_COMPILER_ID}")
+  endif()
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES GNU)
+    message(WARNING "CODECOV is only support with GNU Compilers. The current C++ compiler is ${CMAKE_CXX_COMPILER_ID}")
+  endif()
+  if(NOT CMAKE_C_COMPILER_ID MATCHES GNU)
+    message(WARNING "CODECOV is only support with GNU Compilers. The current C compiler is ${CMAKE_C_COMPILER_ID}")
+  endif()
+
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} --coverage")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
+endif()
 
 if (USE_DLL_INTERFACE)
   add_definitions(-DUSE_DLL_INTERFACE)
