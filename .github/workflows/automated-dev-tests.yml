@@ -17,6 +17,9 @@ on:
 
 env:
   FORTRAN_COMPILER: gfortran-10
+  CXX_COMPILER: g++-10
+  C_COMPILER: gcc-10
+  GCOV_EXE: gcov-10
   NUM_PROCS: 8
 
 # runs-on: ${{ matrix.os }}
@@ -42,6 +45,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy Bokeh==1.4
 
+          sudo apt-get update -y
+          sudo apt-get install -y gcovr
+
       - name: Setup Workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
@@ -50,8 +56,11 @@ jobs:
           cmake \
             -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
+            -DCODECOV:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build OpenFAST
@@ -78,6 +87,18 @@ jobs:
       # - name: Run OpenFAST tests
       #   # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
       #   uses: ./.github/actions/tests-gluecode-openfast
+
+      - name: Generate coverage report
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+          cd ..
+          gcovr -g -k -r . --html --html-details -o regressioncov.html # -v
+
+          # cp `find . -name *.gcno` .
+          # cp `find . -name *.gcda` .
+          # ${{env.GCOV_EXE}} -b -l -p -c *.gcno
+
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
         if: failure()
