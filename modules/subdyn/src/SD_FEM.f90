@@ -455,6 +455,30 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    ! NOTE: need NNode and NElem 
    CALL SD_ReIndex_CreateNodesAndElems(Init, p, ErrStat2, ErrMsg2);  if(Failed()) return
    
+   ! --- Perform some sanity checks (irrespectively of NDiv) Would be better to do that before Reindexing...
+    do I = 1, p%NMembers !the first p%NMembers rows of p%Elems contain the element information
+       ! Member data
+       Node1 = p%Elems(I, 2)
+       Node2 = p%Elems(I, 3)
+       Prop1 = p%Elems(I, iMProp  )
+       Prop2 = p%Elems(I, iMProp+1)
+       eType = p%Elems(I, iMType  )
+
+       if ( Node1==Node2 ) THEN
+          CALL Fatal(' Same starting and ending node in the member. (See member at position '//trim(num2lstr(I))//' in member list)')
+          return
+       endif
+
+       if (eType==idMemberBeam) then
+          if  ( ( .not. EqualRealNos(Init%PropSetsB(Prop1, 2),Init%PropSetsB(Prop2, 2) ) ) &
+           .or. ( .not. EqualRealNos(Init%PropSetsB(Prop1, 3),Init%PropSetsB(Prop2, 3) ) ) &
+           .or. ( .not. EqualRealNos(Init%PropSetsB(Prop1, 4),Init%PropSetsB(Prop2, 4) ) ) ) then
+             call Fatal(' Material E, G and rho in a member must be the same (See member at position '//trim(num2lstr(I))//' in member list)')
+             return
+          endif
+       endif ! is beam
+    enddo
+
   
     Init%MemberNodes = 0
     ! --- Setting up MemberNodes (And Elems, Props, Nodes if divisions)
@@ -491,11 +515,6 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           Prop2 = TempMembers(I, iMProp+1)
           eType = TempMembers(I, iMType  )
           
-          IF ( Node1==Node2 ) THEN
-             CALL Fatal(' Same starting and ending node in the member.')
-             RETURN
-          ENDIF
-          
           if (eType/=idMemberBeam) then
              ! --- Cables and rigid links are not subdivided and have same prop at nodes
              ! No need to create new properties or new nodes
@@ -509,14 +528,6 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           ! --- Subdivision of beams
           Init%MemberNodes(I,           1) = Node1
           Init%MemberNodes(I, Init%NDiv+1) = Node2
-
-          IF  ( ( .not. EqualRealNos(TempProps(Prop1, 2),TempProps(Prop2, 2) ) ) &
-           .OR. ( .not. EqualRealNos(TempProps(Prop1, 3),TempProps(Prop2, 3) ) ) &
-           .OR. ( .not. EqualRealNos(TempProps(Prop1, 4),TempProps(Prop2, 4) ) ) )  THEN
-          
-             CALL Fatal(' Material E,G and rho in a member must be the same')
-             RETURN
-          ENDIF
 
           x1 = Init%Nodes(Node1, 2)
           y1 = Init%Nodes(Node1, 3)
@@ -549,8 +560,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           
           IF ( CreateNewProp ) THEN   
                ! create a new property set 
-               ! k, E, G, rho, d, t, Init
                kprop = kprop + 1
+               !                  k,  E1,                  G1,                  rho1,                d,     t,    
                CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), TempProps(Prop1, 4), d1+dd, t1+dt, TempProps)           
                kelem = kelem + 1
                CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p); if (ErrStat>ErrID_None) return;
@@ -570,8 +581,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              
              IF ( CreateNewProp ) THEN   
                   ! create a new property set 
-                  ! k, E, G, rho, d, t, Init                
                   kprop = kprop + 1
+                  !                  k,  E1,                  G1,                  rho1,                     d,          t
                   CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), Init%PropSetsB(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempProps)           
                   kelem = kelem + 1
                   CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p); if (ErrStat>ErrID_None) return;
@@ -781,9 +792,9 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
 
       ! --- Properties that are specific to some elements
       if (eType==idMemberBeam) then
-         E   = Init%PropsB(P1, 2)
-         G   = Init%PropsB(P1, 3)
-         rho = Init%PropsB(P1, 4)
+         E   = Init%PropsB(P1, 2) ! TODO E2 
+         G   = Init%PropsB(P1, 3) ! TODO G2
+         rho = Init%PropsB(P1, 4) ! TODO rho2
          D1  = Init%PropsB(P1, 5)
          t1  = Init%PropsB(P1, 6)
          D2  = Init%PropsB(P2, 5)
@@ -1780,7 +1791,7 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
    iTmp                 = INodesID(1)
    INodesID(1)          = INodesID(iiMainNode)
    INodesID(iiMainNode) = iTmp
-   print*,'   Nodes involved in assembly (main put first  )',INodesID
+   print*,'   Nodes involved in assembly:',INodesID
 
    ! --- Building Transformation matrix
    nNodes =size(INodesID)

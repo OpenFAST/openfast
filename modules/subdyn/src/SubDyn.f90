@@ -3327,7 +3327,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsB(:,1), propIDs(2))
            mMass= BeamMass(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
-                             Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, .TRUE.)
+                             Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, method=-1)
 
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
@@ -3667,27 +3667,48 @@ END FUNCTION MemberLength
 !------------------------------------------------------------------------------------------------------
 !> Calculate member mass, given properties at the ends, keep units consistent
 !! For now it works only for circular pipes or for a linearly varying area
-FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,ctube)
+FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
    REAL(ReKi), INTENT(IN) :: rho1,D1,t1,rho2,D2,t2 ,L       ! Density, OD and wall thickness for circular tube members at ends, Length of member
-   LOGICAL, INTENT(IN)    :: ctube          ! =TRUE for circular pipes, false elseshape
-   REAL(ReKi)             :: BeamMass  !mass
+   INTEGER(IntKi), INTENT(IN) :: method ! -1: FEM compatible, 0: mid values, 1: circular tube, integral, 
+   REAL(ReKi)  :: BeamMass  !mass
    REAL(ReKi)  :: a0,a1,a2,b0,b1,dd,dt  !temporary coefficients
+   REAL(ReKi)  :: Area,r1,r2,t
    !Density allowed to vary linearly only
    b0=rho1
    b1=(rho2-rho1)/L
    !Here we will need to figure out what element it is for now circular pipes
-   IF (ctube) THEN !circular tube
+   IF (method<=0) THEN 
+      ! Mid values for r, t, and potentially rho
+      r1 = 0.25_ReKi*(D1 + D2)
+      t  = 0.50_ReKi*(t1 + t2)
+      if ( EqualRealNos(t, 0.0_ReKi) ) then
+         r2 = 0
+      else
+         r2 = r1 - t
+      endif
+      Area = Pi_D*(r1*r1-r2*r2)
+      if (method==0) then 
+         BeamMass= (rho2+rho1)/2 * L  * Area
+      else
+         BeamMass = rho1 * L  * Area ! WHAT is currently used by FEM
+      endif
+   ELSEIF (method==1) THEN !circular tube
       a0=pi * (D1*t1-t1**2.)
       dt=t2-t1 !thickness variation
       dd=D2-D1 !OD variation
       a1=pi * ( dd*t1 + D1*dt -2.*t1*dt)/L 
       a2=pi * ( dd*dt-dt**2.)/L**2.
-   ELSE  !linearly varying area
+      BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+   ELSEIF (method==2) THEN !linearly varying area
       a0=D1  !This is an area
       a1=(D2-D1)/L !Delta area
       a2=0.
+      BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+   ELSE
+      print*,'Wrong call to BeamMass, method unknown',method
+      STOP
    ENDIF
-   BeamMass= b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+
 END FUNCTION BeamMass
 
 !------------------------------------------------------------------------------------------------------
