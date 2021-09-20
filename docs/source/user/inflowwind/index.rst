@@ -9,7 +9,7 @@ InflowWind Users Guide and Theory Manual
    issued and as needed to provide further information on advancements or
    modifications to the software.
 
-   The information here is incomplete. Please see the 
+   The information here is incomplete. Please see the original
    :download:`InflowWind Manual <InflowWind_Manual.pdf>`
    until it has been converted to OpenFAST's documentation style.
 
