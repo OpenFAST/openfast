@@ -1256,8 +1256,10 @@ CONTAINS
                      read (OptValue,*) p%g
                   else if ( OptString == 'RHOW') then
                      read (OptValue,*) p%rhoW
-                  else if ( OptString == 'WTRDPTH') then
-                     read (OptValue,*) p%WtrDpth
+                  ! else if ( OptString == 'WTRDPTH') then
+                     ! read (OptValue,*) p%WtrDpth
+                  else if ( OptString == 'WTRDPTH') then    ! can be either a p or a m, same as the x and y values, probably p
+                     CALL getDepthOrBathymetry(OptValue, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, m%BathGrid_npoints)
                   else if ( OptString == 'KBOT')  then
                      read (OptValue,*) p%kBot
                   else if ( OptString == 'CBOT')  then
@@ -4234,14 +4236,24 @@ CONTAINS
          ! F-K force from fluid acceleration not implemented yet
 
          ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
+         
+         ! interpolate the local depth from the bathymetry grid
+         CALL getBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Line%r(1,I), Line%r(2,I), depth)
 
-         IF (Line%r(3,I) < -p%WtrDpth) THEN
+         IF (Line%r(3,I) < -depth) THEN
             IF (I==0) THEN
-               Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(            Line%l(I+1) ) 
+               Line%B(3,I) = ( (-depth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(            Line%l(I+1) ) 
             ELSE IF (I==N) THEN
-               Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I)               ) 
+               Line%B(3,I) = ( (-depth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I)               ) 
             ELSE
-               Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) ) 
+               Line%B(3,I) = ( (-depth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) ) 
+         ! IF (Line%r(3,I) < -p%WtrDpth) THEN
+         !    IF (I==0) THEN
+         !       Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(            Line%l(I+1) ) 
+         !    ELSE IF (I==N) THEN
+         !       Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I)               ) 
+         !    ELSE
+         !       Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) ) 
 
 
 
@@ -5593,14 +5605,21 @@ CONTAINS
             Rod%Pd(:,I) = 0.0_DbKi  ! assuming zero for sides for now, until taper comes into play
             
             ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
-            IF (Rod%r(3,I) < -p%WtrDpth) THEN
+            IF (Rod%r(3,I) < -depth) THEN
                IF (I==0) THEN
-                  Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(            Rod%l(I+1) ) 
+                  Rod%B(3,I) = ( (-depth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(            Rod%l(I+1) ) 
                ELSE IF (I==N) THEN
-                  Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I)               ) 
+                  Rod%B(3,I) = ( (-depth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I)               ) 
                ELSE
-                  Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I) + Rod%l(I+1) ) 
+                  Rod%B(3,I) = ( (-depth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I) + Rod%l(I+1) ) 
                END IF
+               ! IF (I==0) THEN
+               !    Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(            Rod%l(I+1) ) 
+               ! ELSE IF (I==N) THEN
+               !    Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I)               ) 
+               ! ELSE
+               !    Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I) + Rod%l(I+1) ) 
+               ! END IF
             ELSE
                Rod%B(3,I) = 0.0_DbKi
             END IF
@@ -6871,6 +6890,26 @@ END SUBROUTINE MD_GetOP
       
       
    END SUBROUTINE
+
+
+   SUBROUTINE getBathymetry(BathymetryGrid, BathGrid_Xs, BathGrid_Ys, LineX, LineY, depth)
+
+      REAL(DbKi),      INTENT(IN   )       :: BathymetryGrid(:,:) ! need colons or some sort of dimension setting
+      REAL(DbKi),      INTENT(IN   )       :: BathGrid_Xs(:)
+      REAL(DbKi),      INTENT(IN   )       :: BathGrid_Ys(:)
+      REAL(DbKi),      INTENT(IN   )       :: LineX
+      REAL(DbKi),      INTENT(IN   )       :: LineY 
+      REAL(DbKi),      INTENT(  OUT)       :: depth 
+
+      INTEGER(IntKi)                       :: ix, iy         ! indeces for interpolation      
+      Real(DbKi)                           :: fx, fy         ! interpolation fractions
+
+      CALL getInterpNums(BathGrid_Xs, LineX, 1, ix, fx)
+      CALL getInterpNums(BathGrid_Ys, LineY, 1, iy, fy)
+
+      CALL calculate2Dinterpolation(BathymetryGrid, ix, iy, fx, fy, depth)
+
+   END SUBROUTINE getBathymetry
    
    
    SUBROUTINE getInterpNums(xlist, xin, istart, i, fout)
@@ -7022,7 +7061,34 @@ END SUBROUTINE MD_GetOP
 
    END SUBROUTINE
 
+   SUBROUTINE calculate2Dinterpolation(f, ix0, iy0, fx, fy, c)
+      REAL(DbKi),     INTENT (IN   )        :: f(:,:)                    ! data array
+      INTEGER(IntKi), INTENT (IN   )        :: ix0, iy0                  ! indices for interpolation
+      REAL(DbKi),     INTENT (IN   )        :: fx, fy                    ! interpolation fractions
+      REAL(DbKi),     INTENT (  OUT)        :: c                         ! the output value
+      
+      INTEGER(IntKi)                        :: ix1, iy1                  ! second indices
+      REAL(DbKi)                            :: c00, c01, c10, c11, c0, c1  
 
+      ! handle end case conditions
+      IF (fx == 0) THEN
+         ix1 = ix0
+      ELSE
+         ix1 = min(ix0+1,size(f,2))  ! don't overstep bounds
+      END IF
+      IF (fy == 0) THEN
+         iy1 = iy0
+      ELSE
+         iy1 = min(iy0+1,size(f,1))  ! don't overstep bounds
+      END IF
+      c00 = f(iy0, ix0)
+      c01 = f(iy1, ix0)
+      c10 = f(iy0, ix1)
+      c11 = f(iy1, ix1)
+      c0  = c00 *(1.0-fx) + c10 *fx
+      c1  = c01 *(1.0-fx) + c11 *fx
+      c   = c0  *(1.0-fy) + c1  *fy
+   END SUBROUTINE calculate2Dinterpolation
 
    ! ============ below are some math convenience functions ===============
    ! should add error checking if I keep these, but hopefully there are existing NWTCLib functions to replace them
