@@ -31,6 +31,7 @@ Workshop material, legacy documentation, and other resources are listed below.
 - `FAST modularization framework for wind turbine simulation: full-system linearization <https://www.nrel.gov/docs/fy17osti/67015.pdf>`_
 - `Full-System Linearization for Floating Offshore Wind Turbines in OpenFAST <https://www.nrel.gov/docs/fy19osti/71865.pdf>`_ 
 - :download:`FAST with Labview <../../OtherSupporting/UsingFAST4Labview.pdf>`
+- :download:`OutListParameters.xlsx <../../OtherSupporting/OutListParameters.xlsx>` - Contains the full list of outputs for each module.
 
 
 Module Documentation
