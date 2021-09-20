@@ -242,41 +242,91 @@ jobs:
   #         path: |
   #           ${{runner.workspace}}/build/reg_tests/glue-codes/fastfarm
 
-  # unit-test:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@main
-  #       with:
-  #         submodules: recursive
-  #     - name: Setup
-  #       run: cmake -E make_directory ${{runner.workspace}}/build
-  #     - name: Configure
-  #       working-directory: ${{runner.workspace}}/build
-  #       run: |
-  #         cmake \
-  #           -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
-  #           -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-  #           -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-  #           -DBUILD_TESTING:BOOL=ON \
-  #           ${GITHUB_WORKSPACE}
+  unit-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
 
-  #     - name: Build unit tests
-  #       working-directory: ${{runner.workspace}}/build
-  #       run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
 
-  #     - name: Run NWTC Library tests
-  #       uses: ./.github/actions/tests-module-nwtclibrary
-  #     - name: Run AeroDyn tests
-  #       uses: ./.github/actions/tests-module-aerodyn
-  #       with:
-  #         test-target: unit
-  #     - name: Run BeamDyn tests
-  #       uses: ./.github/actions/tests-module-beamdyn
-  #       with:
-  #         test-target: unit
-  #     - name: Run InflowWind tests
-  #       uses: ./.github/actions/tests-module-inflowwind
+          sudo apt-get update -y
+          sudo apt-get install -y gcovr
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCODECOV:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+
+      - name: Build unit tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
+
+      - name: Run NWTC Library tests
+        uses: ./.github/actions/tests-module-nwtclibrary
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          test-target: unit
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
+        with:
+          test-target: unit
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+
+      - name: Generate coverage report
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+          cd ..
+          gcovr -g -k -r . --xml unitcov.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          dry_run: false
+          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./unitcov.xml # optional
+          flags: unittests # optional
+          # name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+          directory: ${{runner.workspace}}/openfast
+
+      - name: Success artifacts
+        uses: actions/upload-artifact@v2
+        if: success()
+        with:
+          name: unit-tests
+          path: |
+            ${{runner.workspace}}/openfast/unitcov.xml
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: unit-tests
+          path: |
+            ${{runner.workspace}}/openfast/build/unit_tests
 
   # compile-all-single-precision:
   #   # Test if single precision compile completes.
