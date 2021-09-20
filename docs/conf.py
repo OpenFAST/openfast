@@ -65,6 +65,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinxcontrib.doxylink',
     'sphinxcontrib.bibtex',
+    'sphinxcontrib.mermaid',
 ]
 
 autodoc_default_flags = [
