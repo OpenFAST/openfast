@@ -2549,7 +2549,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       !if (p%SDDeltaT>dt_max) then
       !   print*,'info: time step may be too large compared to max SubDyn frequency.'
       !endif
-      write(Info,'(3x,A,F8.5,A,F8.5,A,F8.5)') 'SubDyn recommended dt:',dt_max, ' - Current dt:', p%SDDeltaT,' - Max frequency:', freq_max
+      write(Info,'(3x,A,F8.5,A,F8.5,A,F9.3)') 'SubDyn recommended dt:',dt_max, ' - Current dt:', p%SDDeltaT,' - Max frequency:', freq_max
       call WrScr(Info)
    ELSE ! no retained modes, so 
       ! OmegaM, JDampings, PhiM, MBM, MMB,  x don't exist in this case
@@ -3141,8 +3141,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
    INTEGER(IntKi)         :: iNode1, iNode2 ! Node indices
    INTEGER(IntKi)         :: mType ! Member Type
-   Real(ReKi)             :: mMass, mLength ! Member mass and length
-   REAL(ReKi)             :: MRB(6,6)    ! REDUCED SYSTEM Kmatrix, equivalent mass matrix
+   REAL(ReKi)             :: mMass, mLength ! Member mass and length
+   REAL(ReKi)             :: M_O(6,6)    ! Equivalent mass matrix at origin
+   REAL(ReKi)             :: M_P(6,6)    ! Equivalent mass matrix at P (ref point)
+   REAL(ReKi)             :: M_G(6,6)    ! Equivalent mass matrix at G (center of mass)
+   REAL(ReKi)             :: rOG(3)      ! Vector from origin to G
+   REAL(ReKi)             :: rOP(3)      ! Vector from origin to P (ref point)
+   REAL(ReKi)             :: rPG(3)      ! Vector from origin to G
    REAL(FEKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
    REAL(ReKi)             :: XYZ1(3),XYZ2(3) !temporary arrays
    REAL(FEKi)             :: DirCos(3,3) ! direction cosine matrix (global to local)
@@ -3185,18 +3190,69 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    UnSum = -1            ! we haven't opened the summary file, yet.   
 
    CALL SDOut_OpenSum( UnSum, SummaryName, SD_ProgDesc, ErrStat2, ErrMsg2 ); if(Failed()) return
-   !-------------------------------------------------------------------------------------------------------------
-   ! write discretized data to a txt file
-   !-------------------------------------------------------------------------------------------------------------
-!bjj: for debugging, i recommend using the p% versions of all these variables whenever possible in this summary file:
-! (it helps in debugging)
    WRITE(UnSum, '(A)')  '#Unless specified, units are consistent with Input units, [SI] system is advised.'
+
+
+   !-------------------------------------------------------------------------------------------------------------
+   ! --- Most useful data
+   !-------------------------------------------------------------------------------------------------------------
+   ! --- Rigid body equivalent data
    WRITE(UnSum, '(A)') SectionDivide
-   write(UnSum,'(A,3(E15.6))')'#TP reference point:',InitInput%TP_RefPoint(1:3)
-   
+   WRITE(UnSum, '(A)') '# RIGID BODY EQUIVALENT DATA'
+   WRITE(UnSum, '(A)') SectionDivide
+   ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
+   CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Compute Rigid body mass matrix (without Soil, and using both Interface and Reactions nodes as leader DOF)
+   if (p%nDOFR__/=p%nDOF__Rb) then
+      call SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat2, ErrMsg2); if(Failed()) return
+      M_O=matmul(TRANSPOSE(TI2),matmul(MBB,TI2)) !Equivalent mass matrix of the rigid body
+   else
+      M_O=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
+   endif
+   deallocate(TI2)
+   ! Clean up for values that ought to be 0
+   M_O(1,2:4)= 0.0_ReKi; 
+   M_O(2,1  )= 0.0_ReKi; M_O(2,3  )= 0.0_ReKi; M_O(2,5  )= 0.0_ReKi;
+   M_O(3,1:2)= 0.0_ReKi; M_O(3,6  )= 0.0_ReKi
+   M_O(4,1  )= 0.0_ReKi; M_O(5,2  )= 0.0_ReKi; M_O(6,3  )= 0.0_ReKi;
+
+   call rigidBodyMassMatrixCOG(M_O, rOG)   ! r_OG=distance from origin to center of mass
+   call translateMassMatrixToCOG(M_O, M_G) ! M_G mass matrix at COG
+   call translateMassMatrixToP(M_O, InitInput%TP_RefPoint(1:3), M_P) ! Mass matrix to TP ref point
+   call yaml_write_var  (UnSum, 'Mass', M_O(1,1), ReFmt, ErrStat2, ErrMsg2, comment='Total Mass')
+   call yaml_write_list (UnSum, 'CM_point', rOG                       , ReFmt, ErrStat2, ErrMsg2, comment='Center of mass coordinates (Xcm,Ycm,Zcm)')
+   call yaml_write_list (UnSum, 'TP_point', InitInput%TP_RefPoint(1:3) ,ReFmt, ErrStat2, ErrMsg2, comment='Transition piece reference point')
+   call yaml_write_array(UnSum, 'MRB' , M_O     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).')
+   call yaml_write_array(UnSum, 'M_P' , M_P     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. TP Ref point')
+   call yaml_write_array(UnSum, 'M_G' , M_G     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. CM (Xcm,Ycm,Zcm).')
+
+   ! --- write CB system KBBt and MBBt matrices, eq stiffness matrices of the entire substructure at the TP ref point
+   WRITE(UnSum, '(A)') SectionDivide
+   WRITE(UnSum, '(A)') '# GUYAN MATRICES at the TP reference point'
+   WRITE(UnSum, '(A)') SectionDivide
+   call yaml_write_array(UnSum, 'KBBt', p%KBB, ReFmt, ErrStat2, ErrMsg2)
+   call yaml_write_array(UnSum, 'MBBt', p%MBB, ReFmt, ErrStat2, ErrMsg2)
+   call yaml_write_array(UnSum, 'CBBt', p%CBB, Refmt, ErrStat2, ErrMsg2, comment='(user Guyan Damping + potential joint damping from CB-reduction)')
+
+   !-------------------------------------------------------------------------------------------------------------
+   ! write Eigenvalues of full SYstem and CB reduced System
+   !-------------------------------------------------------------------------------------------------------------
+   WRITE(UnSum, '(A)') SectionDivide
+   WRITE(UnSum, '(A)') '# SYSTEM FREQUENCIES'
+   WRITE(UnSum, '(A)') SectionDivide
+   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies [Hz] for full system, with reaction constraints (+ Soil K/M + SoilDyn K0) "
+   call yaml_write_array(UnSum, 'Full_frequencies', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
+   WRITE(UnSum, '(A, I6)') "#Frequencies of Craig-Bampton modes [Hz]"
+   call yaml_write_array(UnSum, 'CB_frequencies', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
+
+   !-------------------------------------------------------------------------------------------------------------
+   ! FEM data
+   !-------------------------------------------------------------------------------------------------------------
    ! --- Internal FEM representation
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A)') '# Internal FEM representation'
+   WRITE(UnSum, '(A)') SectionDivide
    call yaml_write_var(UnSum, 'nNodes_I', p%nNodes_I,IFmt, ErrStat2, ErrMsg2, comment='Number of Nodes: "interface" (I)')
    call yaml_write_var(UnSum, 'nNodes_C', p%nNodes_C,IFmt, ErrStat2, ErrMsg2, comment='Number of Nodes: "reactions" (C)')
    call yaml_write_var(UnSum, 'nNodes_L', p%nNodes_L,IFmt, ErrStat2, ErrMsg2, comment='Number of Nodes: "internal"  (L)')
@@ -3364,14 +3420,6 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
       WRITE(UnSum, '("#",I9,9(ES11.3E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
 
-   !-------------------------------------------------------------------------------------------------------------
-   ! write Eigenvalues of full SYstem and CB reduced System
-   !-------------------------------------------------------------------------------------------------------------
-   WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies [Hz] for full system, with reaction constraints (+ Soil K/M + SoilDyn K0) "
-   call yaml_write_array(UnSum, 'Full_frequencies', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
-   WRITE(UnSum, '(A, I6)') "#CB frequencies [Hz]"
-   call yaml_write_array(UnSum, 'CB_frequencies', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
     
    !-------------------------------------------------------------------------------------------------------------
    ! write Eigenvectors of full System 
@@ -3389,38 +3437,14 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    call yaml_write_array(UnSum, 'PhiM', CBparams%PhiL(:,1:p%nDOFM ), ReFmt, ErrStat2, ErrMsg2, comment='(CB modes)')
    call yaml_write_array(UnSum, 'PhiR', CBparams%PhiR, ReFmt, ErrStat2, ErrMsg2, comment='(Guyan modes)')
            
-   !-------------------------------------------------------------------------------------------------------------
-   ! write CB system KBBt and MBBt matrices, eq stiffness matrices of the entire substructure at the TP ref point
-   !-------------------------------------------------------------------------------------------------------------
-   WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') "#SubDyn's Structure Equivalent Stiffness and Mass Matrices at the TP reference point (Guyan DOFs)"
-   call yaml_write_array(UnSum, 'KBBt', p%KBB, ReFmt, ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'MBBt', p%MBB, ReFmt, ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'CBBt', p%CBB, Refmt, ErrStat2, ErrMsg2, comment='(user Guyan Damping + potential joint damping from CB-reduction)')
- 
-   ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
-   CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
-   ! Compute Rigid body mass matrix (without Soil, and using both Interface and Reactions nodes as leader DOF)
-   if (p%nDOFR__/=p%nDOF__Rb) then
-      call SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat2, ErrMsg2); if(Failed()) return
-      MRB=matmul(TRANSPOSE(TI2),matmul(MBB,TI2)) !Equivalent mass matrix of the rigid body
-   else
-      MRB=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
-   endif
-   WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') '#Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
-   call yaml_write_array(UnSum, 'MRB', MRB, ReFmt, ErrStat2, ErrMsg2)
-   WRITE(UnSum, '(A,ES15.6E2)')    "#SubDyn's Total Mass (structural and non-structural)=", MRB(1,1) 
-   WRITE(UnSum, '(A,3(ES15.6E2))') "#SubDyn's Total Mass CM coordinates (Xcm,Ycm,Zcm)   =", (/-MRB(3,5),-MRB(1,6), MRB(1,5)/) /MRB(1,1)        
-   deallocate(TI2)
    
 
    if(p%OutAll) then ! //--- START DEBUG OUTPUTS
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') '#**** Additional Debugging Information ****'
+   WRITE(UnSum, '(A)') '# ADDITIONAL DEBUGGING INFORMATION'
+   WRITE(UnSum, '(A)') SectionDivide
 
    ! --- Element Me,Ke,Fg, Fce
    CALL ElemM(p%ElemProps(1), Me)

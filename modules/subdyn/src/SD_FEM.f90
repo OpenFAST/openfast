@@ -1070,12 +1070,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       Jxx = Init%CMass(I,3 ); Jxy = Init%CMass(I,6 ); x = Init%CMass(I,9 );
       Jyy = Init%CMass(I,4 ); Jxz = Init%CMass(I,7 ); y = Init%CMass(I,10);
       Jzz = Init%CMass(I,5 ); Jyz = Init%CMass(I,8 ); z = Init%CMass(I,11);
-      M66(1 , :)=(/ m       , 0._ReKi , 0._ReKi , 0._ReKi             ,  z*m                , -y*m                 /)
-      M66(2 , :)=(/ 0._ReKi , m       , 0._ReKi , -z*m                , 0._ReKi             ,  x*m                 /)
-      M66(3 , :)=(/ 0._ReKi , 0._ReKi , m       ,  y*m                , -x*m                , 0._ReKi              /)
-      M66(4 , :)=(/ 0._ReKi , -z*m    ,  y*m    , Jxx + m*(y**2+z**2) , Jxy - m*x*y         , Jxz  - m*x*z         /)
-      M66(5 , :)=(/  z*m    , 0._ReKi , -x*m    , Jxy - m*x*y         , Jyy + m*(x**2+z**2) , Jyz  - m*y*z         /)
-      M66(6 , :)=(/ -y*m    , x*m     , 0._ReKi , Jxz - m*x*z         , Jyz - m*y*z         , Jzz  + m*(x**2+y**2) /)
+      call rigidBodyMassMatrix(m, Jxx, Jyy, Jzz, Jxy, Jxz, Jyz, x, y, z, M66)
       ! Adding
       DO J = 1, 6
          jGlob = p%NodesDOF(iNode)%List(J)
@@ -2171,5 +2166,86 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    endif
    CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
 END SUBROUTINE ElemF
+
+!> Return skew symmetric matrix
+SUBROUTINE skew(x,M33)
+   real(ReKi), intent(in   ) :: x(3)
+   real(ReKi), intent(  out) :: M33(3,3)
+   M33(1 , :)=(/0.0_ReKi , -x(3)        , x (2)   /)
+   M33(2 , :)=(/  x(3 )  , 0.0_ReKi     , -x(1)   /)
+   M33(3 , :)=(/ -x(2 )  , x(1)        , 0.0_ReKi /)
+END SUBROUTINE
+
+!>Transform inertia matrix with respect to point P to the inertia matrix with respect to the COG
+!!NOTE: the vectors and the inertia matrix needs to be expressed in the same coordinate system.
+SUBROUTINE translateInertiaMatrixToCOG(I_P, Mass, r_PG, I_G)
+   real(ReKi), intent(in   ) :: I_P(3,3) !< Inertia matrix 3x3 with respect to point P
+   real(ReKi), intent(in   ) :: Mass     !< Mass of the body
+   real(ReKi), intent(in   ) :: r_PG(3)  !< vector from P to COG 
+   real(ReKi), intent(  out) :: I_G(3,3) !< Inertia matrix (3x3) with respect to COG
+   real(ReKi) :: S1(3,3) 
+   call skew(r_PG, S1) 
+   I_G = I_P + Mass * MATMUL(S1, S1)
+END SUBROUTINE
+
+!>Transform mass matrix with respect to point P to the mass matrix with respect to the COG
+SUBROUTINE translateMassMatrixToCOG(MM, MM_G)
+   real(ReKi), intent(in   ) :: MM(6,6)   !< Mass matrix (6x6) with respect to point P
+   real(ReKi), intent(  out) :: MM_G(6,6) !< Mass matrix with respect to COG
+   real(ReKi) :: m        ! Mass of the body
+   real(ReKi) :: r_PG(3)  ! Vector from point P to G
+   real(ReKi) :: J_P(3,3),  J_G(3,3) 
+   ! Distance from refpoint to COG
+   call rigidBodyMassMatrixCOG(MM, r_PG)
+   ! Inertia at ref point
+   J_P = MM(4:6,4:6)
+   ! Inertia at COG
+   call translateInertiaMatrixToCOG(J_P, MM(1,1), r_PG, J_G) 
+   ! Rigid body mass matrix at COG
+   call rigidBodyMassMatrix(MM(1,1), J_G(1,1), J_G(2,2), J_G(3,3), J_G(1,2), J_G(1,3), J_G(2,3), 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, MM_G)
+END SUBROUTINE
+
+!>Transform mass matrix with respect to point P1 to the mass matrix with respect to point P2
+SUBROUTINE translateMassMatrixToP(MM1, r_P1P2, MM2)
+   real(ReKi), intent(in   ) :: MM1(6,6) !< Mass matrix (6x6) with respect to point P1
+   real(ReKi), intent(in   ) :: r_P1P2(3)!< vector from P1 to P2
+   real(ReKi), intent(  out) :: MM2(6,6) !< Mass matrix with respect to point P2
+   real(ReKi) :: MM_G(6,6) !< Mass matrix with respect to COG
+   real(ReKi) :: m        ! Mass of the body
+   real(ReKi) :: r_P1G(3), r_P2G(3)  ! vector from P to COG 
+   real(ReKi) :: J_G(3,3) 
+   ! Rigid body mass matrix at COG to get inertia at COG
+   call translateMassMatrixToCOG(MM1, MM_G)
+   J_G = MM_G(4:6,4:6)
+   ! Distance from refpoint to COG
+   call rigidBodyMassMatrixCOG(MM1, r_P1G)
+   r_P2G=-r_P1P2+r_P1G
+   ! Rigid body mass matrix at Point P2
+   call rigidBodyMassMatrix(MM1(1,1), J_G(1,1), J_G(2,2), J_G(3,3), J_G(1,2), J_G(1,3), J_G(2,3), r_P2G(1), r_P2G(2), r_P2G(3), MM2)
+END SUBROUTINE
+
+!> Return Center of gravity location from a 6x6 mass matrix
+SUBROUTINE rigidBodyMassMatrixCOG(MM, r_PG)
+   real(ReKi), intent(in   ) :: MM(6,6) !< Mass matrix (6x6) with respect to point P
+   real(ReKi), intent(  out) :: r_PG(3) !< vector from P to G (center of mass)
+   r_PG = (/ 0.5_ReKi*( MM(2,6)-MM(3,5)), & ! Using average of Coeffs
+             0.5_ReKi*(-MM(1,6)+MM(3,4)), &
+             0.5_ReKi*( MM(1,5)-MM(2,4)) /)
+   r_PG = r_PG/MM(1,1)
+END SUBROUTINE
+
+!> Rigid body mass matrix (6x6) at a given reference point P
+SUBROUTINE rigidBodyMassMatrix(m, Jxx, Jyy, Jzz, Jxy, Jxz, Jyz, x, y, z, M66)
+   real(ReKi), intent(in   ) :: m             !< Mass of body
+   real(ReKi), intent(in   ) :: Jxx, Jyy, Jzz, Jxy, Jxz, Jyz !< Inertia of body at COG
+   real(ReKi), intent(in   ) :: x, y, z       !< x,y,z position of center of gravity (COG) with respect to the reference point
+   real(ReKi), intent(  out) :: M66(6,6)      !< Mass matrix (6x6) with respect to point P
+   M66(1 , :)=(/ m       , 0._ReKi , 0._ReKi , 0._ReKi             ,  z*m                , -y*m                 /)
+   M66(2 , :)=(/ 0._ReKi , m       , 0._ReKi , -z*m                , 0._ReKi             ,  x*m                 /)
+   M66(3 , :)=(/ 0._ReKi , 0._ReKi , m       ,  y*m                , -x*m                , 0._ReKi              /)
+   M66(4 , :)=(/ 0._ReKi , -z*m    ,  y*m    , Jxx + m*(y**2+z**2) , Jxy - m*x*y         , Jxz  - m*x*z         /)
+   M66(5 , :)=(/  z*m    , 0._ReKi , -x*m    , Jxy - m*x*y         , Jyy + m*(x**2+z**2) , Jyz  - m*y*z         /)
+   M66(6 , :)=(/ -y*m    , x*m     , 0._ReKi , Jxz - m*x*z         , Jyz - m*y*z         , Jzz  + m*(x**2+y**2) /)
+END SUBROUTINE
 
 END MODULE SD_FEM
