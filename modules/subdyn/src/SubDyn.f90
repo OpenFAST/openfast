@@ -3159,7 +3159,9 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    integer(IntKi) :: nOmega
    real(FEKi), dimension(:,:), allocatable :: Modes
    real(R8Ki), dimension(:,:), allocatable :: AA, BB, CC, DD ! Linearization matrices
+   real(FEKi), dimension(:,:), allocatable :: Modes_GY       ! Guyan modes
    real(FEKi), dimension(:)  , allocatable :: Omega
+   real(FEKi), dimension(:)  , allocatable :: Omega_Gy       ! Frequencies of Guyan modes
    logical, allocatable                    :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
    character(len=*),parameter :: ReFmt='ES15.6E2'
    character(len=*),parameter :: SFmt='A15,1x' ! Need +1 for comma compared to ReFmt
@@ -3182,7 +3184,14 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2); if(Failed()) return
    call EigenSolveWrap(Init%K, Init%M, p%nDOF_red, nOmega, .False., Modes, Omega, ErrStat2, ErrMsg2, bDOF); if(Failed()) return
    IF (ALLOCATED(bDOF)  ) DEALLOCATE(bDOF)
-
+   ! Guyan Modes 
+   CALL AllocAry(Omega_GY,                size(p%KBB,1), 'Omega_GY', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Modes_GY, size(p%KBB,1), size(p%KBB,1), 'Modes_GY', ErrStat2, ErrMsg2); if(Failed()) return
+   call EigenSolveWrap(real(p%KBB,FEKi), real(p%MBB,FEKi), size(p%KBB,1), size(p%KBB,1), .False., Modes_GY, Omega_GY, ErrStat2, ErrMsg2); 
+   if (Errstat2/=ErrID_None) then
+      Omega_GY=-99999.9 ! No error handling
+   endif
+   IF (ALLOCATED(Modes_GY)  ) DEALLOCATE(Modes_GY)
    !-------------------------------------------------------------------------------------------------------------
    ! open txt file
    !-------------------------------------------------------------------------------------------------------------
@@ -3243,6 +3252,8 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A, I6)') "#Eigenfrequencies [Hz] for full system, with reaction constraints (+ Soil K/M + SoilDyn K0) "
    call yaml_write_array(UnSum, 'Full_frequencies', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
+   WRITE(UnSum, '(A, I6)') "#Frequencies of Guyan modes [Hz]"
+   call yaml_write_array(UnSum, 'GY_frequencies', Omega_GY/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
    WRITE(UnSum, '(A, I6)') "#Frequencies of Craig-Bampton modes [Hz]"
    call yaml_write_array(UnSum, 'CB_frequencies', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
 
@@ -3515,8 +3526,16 @@ contains
         if (Failed) call CleanUp()
    END FUNCTION Failed
    SUBROUTINE CleanUp()
-      if(allocated(Omega)) deallocate(Omega)
-      if(allocated(Modes)) deallocate(Modes)
+      if(allocated(Omega))      deallocate(Omega)
+      if(allocated(Modes))      deallocate(Modes)
+      if(allocated(Omega_GY))   deallocate(Omega_GY)
+      if(allocated(Modes_GY))   deallocate(Modes_GY)
+      if(allocated(DummyArray)) deallocate(DummyArray)
+      if(allocated(TI2))        deallocate(TI2)
+      if(allocated(AA))         deallocate(AA)
+      if(allocated(BB))         deallocate(BB)
+      if(allocated(CC))         deallocate(CC)
+      if(allocated(DD))         deallocate(DD)
       CALL SDOut_CloseSum( UnSum, ErrStat2, ErrMsg2 )  
    END SUBROUTINE CleanUp
 END SUBROUTINE OutSummary
