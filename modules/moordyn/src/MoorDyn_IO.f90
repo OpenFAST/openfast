@@ -110,13 +110,13 @@ MODULE MoorDyn_IO
 CONTAINS
 
 
-   SUBROUTINE getDepthOrBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints)
+   SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
 
       CHARACTER(40),    INTENT(IN   )  :: inputString
-      REAL(DbKi),       INTENT(  OUT)  :: BathGrid (:,:)
-      REAL(DbKi),       INTENT(  OUT)  :: BathGrid_Xs (:)
-      REAL(DbKi),       INTENT(  OUT)  :: BathGrid_Ys (:)
-      REAL(DbKi),       INTENT(  OUT)  :: BathGrid_npoints
+      REAL(DbKi),       INTENT(INOUT)  :: BathGrid (:,:)
+      REAL(DbKi),       INTENT(INOUT)  :: BathGrid_Xs (:)
+      REAL(DbKi),       INTENT(INOUT)  :: BathGrid_Ys (:)
+      REAL(IntKi),      INTENT(INOUT)  :: BathGrid_npoints
 
       INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
       CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None
@@ -146,7 +146,7 @@ CONTAINS
          CALL GetNewUnit( UnCoef ) ! unit number for coefficient input file
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )
 
-         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line1   ! skip the first title line
+         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first title line
          READ(UnCoef,*,IOSTAT=ErrStat4) nGridX_string, nGridX  ! read in the second line as the number of x values in the BathGrid
          READ(UnCoef,*,IOSTAT=ErrStat4) nGridY_string, nGridY  ! read in the third line as the number of y values in the BathGrid
 
@@ -170,7 +170,7 @@ CONTAINS
 
          IF (I < 2) THEN
             ErrStat3 = ErrID_Fatal
-            ErrMssg3 = "Less than the minimum of 2 data lines found in file "//TRIM(inputString)//
+            ErrMsg3 = "Less than the minimum of 2 data lines found in file "//TRIM(inputString)
             CLOSE (UnCoef)
             RETURN
          ELSE 
@@ -180,7 +180,7 @@ CONTAINS
       
       END IF
 
-   END SUBROUTINE getDepthOrBathymetry
+   END SUBROUTINE getBathymetry
    
 
    ! read in stiffness/damping coefficient or load nonlinear data file if applicable

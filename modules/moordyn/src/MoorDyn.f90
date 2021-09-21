@@ -1258,8 +1258,8 @@ CONTAINS
                      read (OptValue,*) p%rhoW
                   ! else if ( OptString == 'WTRDPTH') then
                      ! read (OptValue,*) p%WtrDpth
-                  else if ( OptString == 'WTRDPTH') then    ! can be either a p or a m, same as the x and y values, probably p
-                     CALL getDepthOrBathymetry(OptValue, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, m%BathGrid_npoints)
+                  else if ( OptString == 'WTRDPTH') then
+                     CALL getBathymetry(OptValue, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, m%BathGrid_npoints, ErrStat2, ErrMsg2)
                   else if ( OptString == 'KBOT')  then
                      read (OptValue,*) p%kBot
                   else if ( OptString == 'CBOT')  then
@@ -4238,7 +4238,7 @@ CONTAINS
          ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
          
          ! interpolate the local depth from the bathymetry grid
-         CALL getBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Line%r(1,I), Line%r(2,I), depth)
+         CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Line%r(1,I), Line%r(2,I), depth)
 
          IF (Line%r(3,I) < -depth) THEN
             IF (I==0) THEN
@@ -6892,7 +6892,7 @@ END SUBROUTINE MD_GetOP
    END SUBROUTINE
 
 
-   SUBROUTINE getBathymetry(BathymetryGrid, BathGrid_Xs, BathGrid_Ys, LineX, LineY, depth)
+   SUBROUTINE getDepthFromBathymetry(BathymetryGrid, BathGrid_Xs, BathGrid_Ys, LineX, LineY, depth)
 
       REAL(DbKi),      INTENT(IN   )       :: BathymetryGrid(:,:) ! need colons or some sort of dimension setting
       REAL(DbKi),      INTENT(IN   )       :: BathGrid_Xs(:)
@@ -6909,7 +6909,7 @@ END SUBROUTINE MD_GetOP
 
       CALL calculate2Dinterpolation(BathymetryGrid, ix, iy, fx, fy, depth)
 
-   END SUBROUTINE getBathymetry
+   END SUBROUTINE getDepthFromBathymetry
    
    
    SUBROUTINE getInterpNums(xlist, xin, istart, i, fout)
