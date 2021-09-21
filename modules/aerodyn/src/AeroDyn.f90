@@ -2181,11 +2181,14 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
                ! ....... compute inputs to UA ...........
                u_UA%alpha    = alpha
                u_UA%U        = Vrel
+               u_UA%Re       = Re
+               ! calculated in m%FVW%u_UA??? :u_UA%UserProp = 0.0_ReKi ! FIX ME
+
                u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
                u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
+               ! calculated in m%FVW%u_UA??? : u_UA%omega = dot_product( u%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
                call UA_CalcOutput(j, 1, t, u_UA, m%FVW%W(iW)%p_UA, x%FVW%UA(iW), xd%FVW%UA(iW), OtherState%FVW%UA(iW), p%AFI(p%FVW%W(iW)%AFindx(j,1)), m%FVW%W(iW)%y_UA, m%FVW%W(iW)%m_UA, errStat2, errMsg2 )
                   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
-                              call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
                Cl_dyn = m%FVW%W(iW)%y_UA%Cl
                Cd_dyn = m%FVW%W(iW)%y_UA%Cd
                Cm_dyn = m%FVW%W(iW)%y_UA%Cm
