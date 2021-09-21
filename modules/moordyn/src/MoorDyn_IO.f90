@@ -112,11 +112,11 @@ CONTAINS
 
    SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
 
-      CHARACTER(40),    INTENT(IN   )  :: inputString
-      REAL(DbKi),       INTENT(INOUT)  :: BathGrid (:,:)
-      REAL(DbKi),       INTENT(INOUT)  :: BathGrid_Xs (:)
-      REAL(DbKi),       INTENT(INOUT)  :: BathGrid_Ys (:)
-      REAL(IntKi),      INTENT(INOUT)  :: BathGrid_npoints
+      CHARACTER(40),           INTENT(IN   )  :: inputString
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid (:,:)
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Xs (:)
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Ys (:)
+      REAL(IntKi),             INTENT(INOUT)  :: BathGrid_npoints
 
       INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
       CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None

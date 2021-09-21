@@ -327,7 +327,7 @@ typedef   ^       ^                    DbKi                zeros6           {6} 
 typedef   ^       ^                    DbKi                MDWrOutput       {:}  -  -   "Data from time step to be written to a MoorDyn output file"
 typedef   ^       ^                    DbKi                LastOutTime      -    -  -   "Time of last writing to MD output files"
 typedef   ^           ^                ReKi               PtfmInit      {6} -    -   "initial position of platform for an individual (non-farm) MD instance"     -
-typedef   ^       ^                    DbKi                BathGrid         {:}{:} -  -  "matrix describing the bathymetry in a grid of x's and y's"
+typedef   ^       ^                    DbKi                BathymetryGrid   {:}{:} -  -  "matrix describing the bathymetry in a grid of x's and y's"
 typedef   ^       ^                    DbKi                BathGrid_Xs      {:} -  -  "array of x-coordinates in the bathymetry grid"
 typedef   ^       ^                    DbKi                BathGrid_Ys      {:} -  -  "array of y-coordinates in the bathymetry grid"
 typedef   ^       ^                    IntKi               BathGrid_npoints {:} -  -  "number of grid points to describe the bathymetry grid"
