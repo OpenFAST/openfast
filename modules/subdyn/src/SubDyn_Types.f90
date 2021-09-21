@@ -306,6 +306,8 @@ IMPLICIT NONE
     TYPE(MeshAuxDataType) , DIMENSION(:), ALLOCATABLE  :: MoutLst3      !< List of all member joint nodes and elements for output [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< An array holding names, units, and indices of all of the selected output channels.   logical [-]
     LOGICAL  :: OutAll      !< Flag to output or not all joint forces [-]
+    INTEGER(IntKi)  :: OutCBModes      !< Flag to output CB and Guyan modes to a given format [-]
+    INTEGER(IntKi)  :: OutFEMModes      !< Flag to output FEM modes to a given format [-]
     LOGICAL  :: OutReact      !< Flag to check whether reactions are requested [-]
     INTEGER(IntKi)  :: OutAllInt      !< Integer version of OutAll [-]
     INTEGER(IntKi)  :: OutAllDims      !< Integer version of OutAll [-]
@@ -7747,6 +7749,8 @@ IF (ALLOCATED(SrcParamData%OutParam)) THEN
     ENDDO
 ENDIF
     DstParamData%OutAll = SrcParamData%OutAll
+    DstParamData%OutCBModes = SrcParamData%OutCBModes
+    DstParamData%OutFEMModes = SrcParamData%OutFEMModes
     DstParamData%OutReact = SrcParamData%OutReact
     DstParamData%OutAllInt = SrcParamData%OutAllInt
     DstParamData%OutAllDims = SrcParamData%OutAllDims
@@ -8473,6 +8477,8 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! OutAll
+      Int_BufSz  = Int_BufSz  + 1  ! OutCBModes
+      Int_BufSz  = Int_BufSz  + 1  ! OutFEMModes
       Int_BufSz  = Int_BufSz  + 1  ! OutReact
       Int_BufSz  = Int_BufSz  + 1  ! OutAllInt
       Int_BufSz  = Int_BufSz  + 1  ! OutAllDims
@@ -9793,6 +9799,10 @@ ENDIF
     END DO
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%OutAll, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%OutCBModes
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%OutFEMModes
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%OutReact, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -11407,6 +11417,10 @@ ENDIF
     END DO
   END IF
     OutData%OutAll = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutAll)
+    Int_Xferred = Int_Xferred + 1
+    OutData%OutCBModes = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%OutFEMModes = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%OutReact = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutReact)
     Int_Xferred = Int_Xferred + 1

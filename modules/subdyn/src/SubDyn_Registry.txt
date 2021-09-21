@@ -261,6 +261,8 @@ typedef  ^  ParameterType  MeshAuxDataType MoutLst2  {:}    -  -  "List of all m
 typedef  ^  ParameterType  MeshAuxDataType MoutLst3  {:}    -  -  "List of all member joint nodes and elements for output"
 typedef  ^  ParameterType  OutParmType     OutParam  {:}    -  -  "An array holding names, units, and indices of all of the selected output channels. # logical"
 typedef  ^  ParameterType  LOGICAL         OutAll        -  -  -  "Flag to output or not all joint forces"
+typedef  ^  ParameterType  IntKi           OutCBModes    -  -  -  "Flag to output CB and Guyan modes to a given format"
+typedef  ^  ParameterType  IntKi           OutFEMModes   -  -  -  "Flag to output FEM modes to a given format"
 typedef  ^  ParameterType  LOGICAL         OutReact      -  -  -  "Flag to check whether reactions are requested"
 typedef  ^  ParameterType  IntKi           OutAllInt     -  -  -  "Integer version of OutAll"
 typedef  ^  ParameterType  IntKi           OutAllDims    -  -  -  "Integer version of OutAll"

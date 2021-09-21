@@ -77,6 +77,11 @@ MODULE SD_FEM
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
+  ! Output Formats
+  INTEGER(IntKi),   PARAMETER  :: idOutputFormatNone  = 0
+  INTEGER(IntKi),   PARAMETER  :: idOutputFormatJSON  = 1
+
+
   ! Implementation Flags
   LOGICAL, PARAMETER :: DEV_VERSION    = .false.
   LOGICAL, PARAMETER :: BC_Before_CB   = .true.
