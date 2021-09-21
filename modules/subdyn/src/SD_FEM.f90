@@ -835,6 +835,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%ShearG = G
          p%ElemProps(i)%Area   = A
          p%ElemProps(i)%Rho    = rho
+         p%ElemProps(i)%D      = (/D1, D2/)
 
       else if (eType==idMemberCable) then
          if (DEV_VERSION) then
@@ -844,6 +845,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
          p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
          p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
+         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05)     
 
       else if (eType==idMemberRigid) then
          if (DEV_VERSION) then
@@ -851,6 +853,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          endif
          p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
          p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
+         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05)     
 
       else
          ! Should not happen
@@ -1360,8 +1363,8 @@ END SUBROUTINE FindClosestNodes
 !! - p%reduced: true if a reduction is needed, i.e. a T matrix is needed, and nDOF_red<nDOF
 !!
 !! Variables returned:
-!! - Tred: retuction matrix such that x= Tred.x~ where x~ is the reduced vector of DOF
-SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
+!! - T_red: retuction matrix such that x= T_red.x~ where x~ is the reduced vector of DOF
+SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, T_red, ErrStat, ErrMsg)
    use IntegerList, only: init_list, find, pop, destroy_list, len
    use IntegerList, only: print_list
    TYPE(SD_InitType),            INTENT(IN   ) :: Init
@@ -1370,7 +1373,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    integer(IntKi), dimension(:), INTENT(IN   ) :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   real(FEKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
+   real(FEKi), dimension(:,:), allocatable :: T_red !< Transformation matrix for DOF elimination
    ! Local  
    real(ReKi), dimension(:,:), allocatable   :: Tc
    integer(IntKi), dimension(:), allocatable :: INodesID !< List of unique nodes involved in Elements
@@ -1405,8 +1408,8 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    if (DEV_VERSION) then
       print*,'nDOF constraint elim', p%nDOF_red , '/' , p%nDOF
    endif
-   CALL AllocAry( Tred, p%nDOF, p%nDOF_red, 'p%T_red',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-   Tred=0
+   CALL AllocAry( T_red, p%nDOF, p%nDOF_red, 'p%T_red',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   T_red=0.0_FeKi
    call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2); if(Failed()) return;
    IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
    if (DEV_VERSION) then
@@ -1504,12 +1507,12 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
          print*,'N',iNodeSel,'I ',IDOFOld
          print*,'N',iNodeSel,'It',IDOFNew
       endif
-      Tred(IDOFOld, IDOFNew) = Tc
+      T_red(IDOFOld, IDOFNew) = Tc
       iPrev = iPrev + nc
    enddo
    if (DEV_VERSION) then
       print'(A)','--- End of BuildTMatrix'
-      print*,'   - Tred set'
+      print*,'   - T_red set'
       print*,'   - p%nDOF_red', p%nDOF_red
       print*,'   - p%reduced ', p%reduced
       print*,'   - p%NodesDOFred: (list of reduced DOF indices per node) '

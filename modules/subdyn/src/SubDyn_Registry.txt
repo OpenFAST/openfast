@@ -37,6 +37,7 @@ typedef  ^   ElemPropType  ReKi    Kappa    -  -  -  "Shear coefficient"
 typedef  ^   ElemPropType  ReKi    YoungE   -  -  -  "Young's modulus"
 typedef  ^   ElemPropType  ReKi    ShearG   -  -  -  "Shear modulus"  N/m^2
 # Properties common to all element types:
+typedef  ^   ElemPropType  ReKi    D      {2} -  -  "Diameter at node 1 and 2, for visualization only" m 
 typedef  ^   ElemPropType  ReKi    Area    -  -  -  "Area of an element" m^2
 typedef  ^   ElemPropType  ReKi    Rho     -  -  -  "Density"        kg/m^3
 typedef  ^   ElemPropType  ReKi    T0      -  -  -  "Pretension "    N

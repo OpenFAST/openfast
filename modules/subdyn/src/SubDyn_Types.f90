@@ -72,6 +72,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Kappa      !< Shear coefficient [-]
     REAL(ReKi)  :: YoungE      !< Young's modulus [-]
     REAL(ReKi)  :: ShearG      !< Shear modulus [N/m^2]
+    REAL(ReKi) , DIMENSION(1:2)  :: D      !< Diameter at node 1 and 2, for visualization only [m]
     REAL(ReKi)  :: Area      !< Area of an element [m^2]
     REAL(ReKi)  :: Rho      !< Density [kg/m^3]
     REAL(ReKi)  :: T0      !< Pretension  [N]
@@ -1668,6 +1669,7 @@ ENDIF
     DstElemPropTypeData%Kappa = SrcElemPropTypeData%Kappa
     DstElemPropTypeData%YoungE = SrcElemPropTypeData%YoungE
     DstElemPropTypeData%ShearG = SrcElemPropTypeData%ShearG
+    DstElemPropTypeData%D = SrcElemPropTypeData%D
     DstElemPropTypeData%Area = SrcElemPropTypeData%Area
     DstElemPropTypeData%Rho = SrcElemPropTypeData%Rho
     DstElemPropTypeData%T0 = SrcElemPropTypeData%T0
@@ -1729,6 +1731,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Kappa
       Re_BufSz   = Re_BufSz   + 1  ! YoungE
       Re_BufSz   = Re_BufSz   + 1  ! ShearG
+      Re_BufSz   = Re_BufSz   + SIZE(InData%D)  ! D
       Re_BufSz   = Re_BufSz   + 1  ! Area
       Re_BufSz   = Re_BufSz   + 1  ! Rho
       Re_BufSz   = Re_BufSz   + 1  ! T0
@@ -1778,6 +1781,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ShearG
     Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%D,1), UBOUND(InData%D,1)
+      ReKiBuf(Re_Xferred) = InData%D(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     ReKiBuf(Re_Xferred) = InData%Area
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Rho
@@ -1838,6 +1845,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%ShearG = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%D,1)
+    i1_u = UBOUND(OutData%D,1)
+    DO i1 = LBOUND(OutData%D,1), UBOUND(OutData%D,1)
+      OutData%D(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%Area = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Rho = ReKiBuf(Re_Xferred)

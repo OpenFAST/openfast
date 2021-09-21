@@ -321,6 +321,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! note p%KBB/MBB are KBBt/MBBt
       ! Write a summary of the SubDyn Initialization                     
       CALL OutSummary(Init, p, m, InitInput, CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
+      CALL OutModes(Init, p, m, InitInput, CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
    ENDIF 
    
    ! Initialize the outputs & Store mapping between nodes and elements  
@@ -2986,7 +2987,7 @@ END SUBROUTINE LeverArm
 !------------------------------------------------------------------------------------------------------
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
 !! First, the full vector of external forces is built on the non-reduced DOF
-!! Then, the vector is reduced using the Tred matrix
+!! Then, the vector is reduced using the T_red matrix
 SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadCorrection, RotateLoads, U_full)
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
@@ -3121,6 +3122,171 @@ SUBROUTINE GetExtForceOnInterfaceDOF(  p, Fext, F_I)
       F_I(startDOF:startDOF+5) = Fext(p%NodesDOF(iSDNode)%List(1:6)) !TODO try to use Fext_red
    ENDDO
 END SUBROUTINE GetExtForceOnInterfaceDOF
+
+
+!------------------------------------------------------------------------------------------------------
+!> Output the modes file    
+SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
+   use YAML
+   TYPE(SD_InitType),      INTENT(INOUT)  :: Init           ! Input data for initialization routine
+   TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters
+   TYPE(SD_MiscVarType)  , INTENT(IN)     :: m              ! Misc
+   TYPE(SD_InitInputType), INTENT(IN)     :: InitInput   !< Input data for initialization routine         
+   TYPE(CB_MatArrays),     INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
+   INTEGER(IntKi),         INTENT(OUT)    :: ErrStat        ! Error status of the operation
+   CHARACTER(*),           INTENT(OUT)    :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   ! LOCALS
+   INTEGER(IntKi)         :: UnSum          ! unit number for this file
+   INTEGER(IntKi)         :: ErrStat2       ! Temporary storage for local errors
+   CHARACTER(ErrMsgLen)   :: ErrMsg2        ! Temporary storage for local errors
+   CHARACTER(1024)        :: FileName       ! name of the filename for modes
+   INTEGER(IntKi), allocatable, dimension(:,:) :: Connectivity
+   INTEGER(IntKi) :: I
+   real(ReKi), allocatable, dimension(:)   :: U         ! Mode
+   real(ReKi), allocatable, dimension(:)   :: U_red     ! Mode
+   real(ReKi), allocatable, dimension(:,:) :: NodesDisp ! Mode
+   integer(IntKi), allocatable, dimension(:) :: Ix, Iy, Iz
+   real(ReKi) :: dx, dy, dz, maxDisp, maxAmplitude
+   character(len=*),parameter :: ReFmt='ES15.6E2'
+   character(len=*),parameter :: SFmt='A15,1x' ! Need +1 for comma compared to ReFmt
+   character(len=*),parameter :: IFmt='I7'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   CALL WrScr('   Exporting modes')
+
+   !-------------------------------------------------------------------------------------------------------------
+   FileName = trim(Init%RootName)//'.modes.json'
+   UnSum = -1            ! we haven't opened the summary file, yet.   
+   call GetNewUnit( UnSum )
+   call OpenFOutFile ( UnSum, FileName, ErrStat2, ErrMsg2 ) 
+   write(UnSum, *)'{'
+
+   ! --- Misc
+   write(UnSum, '(A,E10.3,",")') '"groundLevel": ', -InitInput%WtrDpth
+
+   ! --- Connectivity
+   CALL AllocAry( Connectivity,  size(p%ElemProps), 2, 'Connectivity', ErrStat2, ErrMsg2 ); if(Failed()) return
+   do i=1,size(p%ElemProps)
+      Connectivity(i,1) = p%Elems(i,2)-1 ! Node 1
+      Connectivity(i,2) = p%Elems(i,3)-1 ! Node 2
+   enddo
+   call yaml_write_array(UnSum, '"Connectivity"', Connectivity, 'I0', ErrStat2, ErrMsg2, json=.true.); write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+
+   ! --- Nodes
+   call yaml_write_array(UnSum, '"Nodes"', Init%Nodes(:,2:4), ReFmt, ErrStat2, ErrMsg2, json=.true.);  write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+
+   ! --- Elem props
+   write(UnSum, '(A)') '"ElemProps": ['
+   do i = 1, size(p%ElemProps)
+      write(UnSum, '(A,I0,A,F8.4,A)', advance='no') '  {"shape": "cylinder", "type": ',p%ElemProps(i)%eType, ', "Diam":',p%ElemProps(i)%D(1),'}'
+      if (i<size(p%ElemProps)) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+   enddo
+   write(UnSum, '(A)') '],'
+
+   ! --------------------------------------------------------------------------------
+   ! --- Modes 
+   ! --------------------------------------------------------------------------------
+   call AllocAry( U        , p%nDOF    , 'U'    , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( U_red    , p%nDOF_red, 'U_red', ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( Ix       , p%nNodes,   'Ix'   , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( Iy       , p%nNodes,   'Iy'   , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( Iz       , p%nNodes,   'Iz'   , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( NodesDisp, p%nNodes, 3,'NodesDisp', ErrStat2, ErrMsg2); if(Failed()) return
+
+   ! Creating index of "x, y z displacements" in DOF vector for each node
+   do i = 1, p%nNodes
+      Ix(i) = p%NodesDOF(i)%List(1)
+      Iy(i) = p%NodesDOF(i)%List(2)
+      Iz(i) = p%NodesDOF(i)%List(3)
+   enddo
+
+   ! Computing max displacements
+   dx = maxval(Init%Nodes(:,2))-minval(Init%Nodes(:,2))
+   dy = maxval(Init%Nodes(:,3))-minval(Init%Nodes(:,3))
+   dz = maxval(Init%Nodes(:,4))-minval(Init%Nodes(:,4))
+   maxDisp = max(dx,dy,dz)*0.1 ! 10% of max length
+
+   write(UnSum, '(A)') '"Modes": ['
+   ! --- Guyan Modes
+   do i = 1, size(CBparams%PhiR,2)
+      write(UnSum, '(A,I0,A)', advance='no') '  {"name": "GY',i, '", "omega": 1.0, '
+      ! U_red
+      U_red              = 0.0_ReKi
+      U_red(p%ID__Rb(i)) = 1.0
+      U_red(p%ID__L)     = CBparams%PhiR(:,i)
+      ! U_full
+      if(p%reduced) then
+         U = matmul(p%T_red, U_red)
+      else
+         U = U_red
+      endif
+      ! Displacements (x,y,z)
+      NodesDisp(:,1) = U(Ix)
+      NodesDisp(:,2) = U(Iy)
+      NodesDisp(:,3) = U(Iz)
+
+      ! Normalizing
+      maxAmplitude = maxval(abs(NodesDisp))
+      if (maxAmplitude>1e-5) then
+         NodesDisp(:,:) = NodesDisp(:,:)*maxDisp/maxAmplitude
+      endif
+
+      call yaml_write_array(UnSum, '"Displ"', NodesDisp, ReFmt, ErrStat2, ErrMsg2, json=.true.);  
+      write(UnSum, '(A)', advance='no')'}'
+      if (i<size(CBparams%PhiR,2)) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+   enddo
+   if (p%nDOFM>0) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+   ! --- CB Modes
+   do i = 1, p%nDOFM
+      write(UnSum, '(A,I0,A)', advance='no') '  {"name": "CB',i, '", "omega": 1.0, '
+      ! U_red
+      U_red              = 0.0_ReKi
+      U_red(p%ID__L)     = CBparams%PhiL(:,i)
+      ! U_full
+      if(p%reduced) then
+         U = matmul(p%T_red, U_red)
+      else
+         U = U_red
+      endif
+      ! Displacements (x,y,z)
+      NodesDisp(:,1) = U(Ix)
+      NodesDisp(:,2) = U(Iy)
+      NodesDisp(:,3) = U(Iz)
+      ! Normalizing
+      maxAmplitude = maxval(abs(NodesDisp))
+      if (maxAmplitude>1e-5) then
+         NodesDisp(:,:) = NodesDisp(:,:)*maxDisp/maxAmplitude
+      endif
+
+      call yaml_write_array(UnSum, '"Displ"', NodesDisp, ReFmt, ErrStat2, ErrMsg2, json=.true.);  
+      write(UnSum, '(A)', advance='no')'}'
+      if (i<p%nDOFM) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+   enddo
+
+   write(UnSum, '(A)') ']'
+
+   write(UnSum, *)'}'
+
+
+
+contains
+   LOGICAL FUNCTION Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'OutModes') 
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call CleanUp()
+   END FUNCTION Failed
+   SUBROUTINE CleanUp()
+      if(allocated(Connectivity)) deallocate(Connectivity)
+      if(allocated(Ix))   deallocate(Ix)
+      if(allocated(Iy))   deallocate(Iy)
+      if(allocated(Iz))   deallocate(Iz)
+      if(allocated(NodesDisp))   deallocate(NodesDisp)
+      if(allocated(U_red))   deallocate(U_red)
+      if(allocated(U))   deallocate(U)
+      if(UnSum>0) close(UnSum)
+   END SUBROUTINE CleanUp
+END SUBROUTINE OutModes
 
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
@@ -3308,7 +3474,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
 
    ! Nodes properties
    write(UnSum, '("#",4x,1(A9),8('//trim(SFmt)//'))') 'Node_[#]', 'X_[m]','Y_[m]','Z_[m]', 'JType_[-]', 'JDirX_[-]','JDirY_[-]','JDirZ_[-]','JStff_[Nm/rad]'
-   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),4(E15.6,",")') !, comment='',label=.true.)
+   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),3(E15.6,","),E15.6') !, comment='',label=.true.)
 
    ! Element properties
    CALL AllocAry( DummyArray,  size(p%ElemProps), 16, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -3331,7 +3497,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
       DummyArray(i,16) = p%ElemProps(i)%T0    ! Pretension [N]
    enddo
    write(UnSum, '("#",4x,6(A9),10('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
-   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),7(E15.6,",")') !, comment='',label=.true.)
+   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),6(E15.6,","),E15.6') !, comment='',label=.true.)
    deallocate(DummyArray)
 
    ! --- C
