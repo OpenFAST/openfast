@@ -28,8 +28,8 @@ typedef   ^                   ^                             SiKi              Cu
 typedef   ^                   ^                             SiKi              CurrDIDir              -          -        -         ""    -
 typedef   ^                   ^                             INTEGER           CurrMod                -          -        -         ""    -
 typedef   ^                   ^                             SiKi              WtrDpth                -          -        -         ""    -
-typedef   ^                   ^                             SiKi              MorisonNodezi         {:}         -        -         ""    -
-typedef   ^                   ^                             INTEGER           NMorisonNodes          -          -        -         ""    -
+typedef   ^                   ^                             SiKi              WaveKinzi             {:}         -        -         ""    -
+typedef   ^                   ^                             INTEGER           NGridPts               -          -        -         ""    -
 typedef   ^                   ^                             CHARACTER(1024)   DirRoot                -         ""        -         ""    -
 #
 #

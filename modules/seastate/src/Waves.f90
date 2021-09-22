@@ -555,7 +555,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local Variables
-   INTEGER                      :: I, J                          ! Generic index
+   INTEGER                      :: I, J,k, count                          ! Generic index
    INTEGER(IntKi)               :: ErrStatTmp                    ! Temporary error status
    
       ! Initialize ErrStat
@@ -572,31 +572,31 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
-      ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',         ErrStat,ErrMsg,'StillWaterWaves_Init')
+      !ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',         ErrStat,ErrMsg,'StillWaterWaves_Init')
       ALLOCATE ( InitOut%WaveElevC0 (2, 0:InitOut%NStepWave2                ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'StillWaterWaves_Init')
 
-      ALLOCATE ( InitOut%WaveElev   (0:InitOut%NStepWave,InitInp%NWaveElev  ) , STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveElev   (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
 
-      ALLOCATE ( InitOut%WaveDynP  (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'StillWaterWaves_Init')
+      ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( InitOut%WaveVel   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
+      ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( InitOut%WaveAcc   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
+      ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-      ALLOCATE ( InitOut%PWaveDynP0  (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveDynP0.', ErrStat,ErrMsg,'StillWaterWaves_Init')
-
-      ALLOCATE ( InitOut%PWaveVel0   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveVel0.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
-
-      ALLOCATE ( InitOut%PWaveAcc0   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
+      !ALLOCATE ( InitOut%PWaveDynP0 (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveDynP0.', ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%PWaveVel0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveVel0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
       ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
@@ -609,49 +609,41 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       InitOut%WaveDOmega = 0.0
       InitOut%WaveTime   = (/ 0.0_DbKi, 1.0_DbKi, 2.0_DbKi /)   ! We must have at least two different time steps in the interpolation
-      InitOut%WaveElev0 = 0.0
+     ! InitOut%WaveElev0 = 0.0
       InitOut%WaveElevC0 = 0.0
       InitOut%WaveElev   = 0.0
-      InitOut%PWaveDynP0  = 0.0
-      InitOut%PWaveVel0   = 0.0
-      InitOut%PWaveAcc0   = 0.0
+      !InitOut%PWaveDynP0  = 0.0
+      !InitOut%PWaveVel0   = 0.0
+      !InitOut%PWaveAcc0   = 0.0
       InitOut%WaveDynP   = 0.0
       InitOut%WaveVel    = 0.0
       InitOut%WaveAcc    = 0.0
       InitOut%WaveDirArr = 0.0
-      
-      ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
-      ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series
-      ! is created with the first index corresponding to the timestep, and second index corresponding to the second
-      ! index of the WaveElevXY array.
-      IF ( ALLOCATED(InitInp%WaveElevXY)) THEN
-         ALLOCATE ( InitOut%WaveElevSeries (0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)) , STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) THEN
-            CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevSeries.',ErrStat,ErrMsg,'VariousWaves_Init')
-            RETURN
-         END IF
-          ! Calculate the wave elevation at all points requested in the array WaveElevXY
-         DO I = 0,InitOut%NStepWave
-             DO J = 1,SIZE(InitInp%WaveElevXY, DIM=2)
-                 InitOut%WaveElevSeries(I,J) = 0.0_ReKi
-             ENDDO
-         ENDDO
-      ENDIF
+    
 
       
       ! Add the current velocities to the wave velocities:
 
-      DO J = 1,InitInp%NWaveKin    ! Loop through all Morison element nodes where the incident wave kinematics will be computed
-         
-         InitOut%WaveVel(:,J,1) =  InitInp%CurrVxi(J)  ! xi-direction
-         InitOut%WaveVel(:,J,2) =  InitInp%CurrVyi(J)  ! yi-direction
-         IF (    InitInp%WaveKinzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(J) <= 0 )  THEN
+     
+      count = 1
+      
+      !DO J = 1,InitInp%NWaveKin      ! Loop through all points where the incident wave kinematics will be computed
+      do k = 1, InitInp%NGrid(3)
+         do j = 1, InitInp%NGrid(2)
+            do i = 1, InitInp%NGrid(1)   
+               InitOut%WaveVel(:,i,j,k,1) =  InitInp%CurrVxi(count)  ! xi-direction
+               InitOut%WaveVel(:,i,j,k,2) =  InitInp%CurrVyi(count)  ! yi-direction
+               IF (    InitInp%WaveKinzi(count) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(count) <= 0 )  THEN
                
-            InitOut%nodeInWater(:, J) = 1
-         ELSE
-            InitOut%nodeInWater(:, J) = 0
-         END IF
-      END DO                ! J - All points where the incident wave kinematics will be computed
+                  InitOut%nodeInWater(:,count) = 1
+               ELSE
+                  InitOut%nodeInWater(:, count) = 0
+               END IF
+            end do
+         end do
+      end do
+      
+     ! END DO                ! J - All points where the incident wave kinematics will be computed
 
 END SUBROUTINE StillWaterWaves_Init
 
@@ -762,15 +754,16 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 !   REAL(SiKi)                   :: WGNC_Fact
 !   INTEGER                      :: GHNStepWave                                     ! Total number of time steps in the GH Bladed wave data files.
 !   INTEGER                      :: GHNWvDpth                                       ! Number of vertical locations in GH Bladed wave data files.
-   INTEGER                      :: I                                               ! Generic index
+   INTEGER                      :: I,count                                               ! Generic index
 !   INTEGER                      :: I_Orig                                          ! The index of the time step from original (input) part of data
    INTEGER                      :: I_WaveTp                                        ! The index of the frequency component nearest to WaveTp
-   INTEGER                      :: J                                               ! Generic index
+   INTEGER                      :: J ,jj,kk,ii                                              ! Generic index
    INTEGER                      :: J_Min                                           ! The minimum value of index J such that WaveKinzi(J) >= -WtrDpth
    INTEGER                      :: K                                               ! Generic index
    INTEGER                      :: LastInd                                         ! Index into the arrays saved from the last call as a starting point for this call
    INTEGER                      :: nSeeds                                          ! number of seeds required to initialize the intrinsic random number generator
    INTEGER                      :: NWaveKin0Prime                                  ! Number of points where the incident wave kinematics will be computed before applying stretching to the instantaneous free surface (-)
+   integer                      :: primeCount                                      ! Counter for locations before applying stretching
    INTEGER,    ALLOCATABLE      :: TmpWaveSeeds   (:)                              ! A temporary array used for portability. IVF/CVF use a random number generator initialized with 2 seeds; other platforms can use different implementations (e.g. gfortran needs 8 or 12 seeds)
    COMPLEX(SiKi)                :: tmpComplex                                      ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
    COMPLEX(SiKi),ALLOCATABLE    :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use. 
@@ -1089,10 +1082,10 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
       !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'VariousWaves_Init')
+      !ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( InitOut%WaveElev  (0:InitOut%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveElev  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
       ALLOCATE ( WaveDynP0B        (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
@@ -1137,25 +1130,45 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveKin ), STAT=ErrStatTmp )
       !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VPz0.',     ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+!TODO: These InitOut arrays now need to be organized for the grid points 
+      
+      ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-      ALLOCATE ( InitOut%PWaveDynP0 (0:InitOut%NStepWave,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveDynP0.', ErrStat,ErrMsg,'VariousWaves_Init')
-
-      ALLOCATE ( InitOut%PWaveVel0  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveVel0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-
-      ALLOCATE ( InitOut%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      !ALLOCATE ( InitOut%PWaveDynP0 (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveDynP0.', ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%PWaveVel0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveVel0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%PWaveDynP0 (0:InitOut%NStepWave,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveDynP0.', ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%PWaveVel0  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveVel0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !ALLOCATE ( InitOut%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-      
+! END TODO SECTION      
 
       ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',  ErrStat,ErrMsg,'VariousWaves_Init')
@@ -1764,16 +1777,18 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
       
          ! We'll need the following for wave stretching once we implement it.
-      CALL    ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
-      CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,'VariousWaves_Init')
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-      DO J = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations can be output
+     ! CALL    ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+      !CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,'VariousWaves_Init')
+      !IF ( ErrStat >= AbortErrLev ) THEN
+      !   CALL CleanUp()
+      !   RETURN
+      !END IF
+!TODO: FIX ME For generating grid elevations
+      DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
-         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevxi(J), InitInp%WaveElevyi(J), InitOut%WaveElev(:,J), ErrStatTmp, ErrMsgTmp )
+         i = mod(k-1, InitInp%NGrid(1)) + 1
+         j = (k-1) / InitInp%NGrid(2) + 1
+         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), InitOut%WaveElev(:,i,j), ErrStatTmp, ErrMsgTmp )
          CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'VariousWaves_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -1782,28 +1797,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END DO                   ! J - All points where the incident wave elevations can be output
 
 
-      ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
-      ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series
-      ! is created with the first index corresponding to the timestep, and second index corresponding to the second
-      ! index of the WaveElevXY array.
-      IF ( ALLOCATED(InitInp%WaveElevXY)) THEN
-         ALLOCATE ( InitOut%WaveElevSeries (0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)) , STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) THEN
-            CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevSeries.',ErrStat,ErrMsg,'VariousWaves_Init')
-            CALL CleanUp()
-            RETURN
-         END IF
-          ! Calculate the wave elevation at all points requested in the array WaveElevXY
-         DO J = 1,SIZE(InitInp%WaveElevXY, DIM=2)
-               ! This subroutine call applies the FFT at the correct location.
-            CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevXY(1,J),  InitInp%WaveElevXY(2,J),   InitOut%WaveElevSeries(0:InitOut%NStepWave,J), ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL CleanUp()
-               RETURN
-            END IF
-         ENDDO
-      ENDIF
 
       
          ! User requested data points -- Do all the FFT calls first, then return if something failed.
@@ -1922,34 +1915,47 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !   the mean sea level are left unchanged; below the seabed or above the
       !   mean sea level, the wave kinematics are zero:
 
-      InitOut%PWaveDynP0(:,:)   = 0.0
-      InitOut%PWaveVel0 (:,:,:) = 0.0
-      InitOut%PWaveAcc0 (:,:,:) = 0.0
-      K = 1
-      DO J = 1,InitInp%NWaveKin      ! Loop through all points where the incident wave kinematics will be computed
+   !   InitOut%PWaveDynP0(:,:,:,:)   = 0.0
+   !   InitOut%PWaveVel0 (:,:,:,:,:) = 0.0
+   !   InitOut%PWaveAcc0 (:,:,:,:,:) = 0.0
+      
+      primeCount = 1
+      count = 1
+      !DO J = 1,InitInp%NWaveKin      ! Loop through all points where the incident wave kinematics will be computed
+      do k = 1, InitInp%NGrid(3)
+         do j = 1, InitInp%NGrid(2)
+            do i = 1, InitInp%NGrid(1)
+               
+             !  ii = mod(count-1, InitInp%NGrid(1)) + 1
+             !  jj = mod( (count-1) /InitInp%NGrid(1), InitInp%NGrid(2) ) + 1
+             !  kk = (count-1) / (InitInp%NGrid(1)*InitInp%NGrid(2)) + 1
 
-         IF (   ( InitInp%WaveKinzi(J) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinzi(J) > 0.0 ) ) THEN
-            ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
-            ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+               IF (   ( InitInp%WaveKinzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinzi(count) > 0.0 ) ) THEN
+                  ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
+                  ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
 
-            InitOut%WaveDynP(:,J  )  = 0.0
-            InitOut%WaveVel (:,J,:)  = 0.0
-            InitOut%WaveAcc (:,J,:)  = 0.0        
+                  InitOut%WaveDynP(:,i,j,k  )  = 0.0
+                  InitOut%WaveVel (:,i,j,k,:)  = 0.0
+                  InitOut%WaveAcc (:,i,j,k,:)  = 0.0        
 
-         ELSE
-            ! The elevation of the point defined by WaveKinzi(J) must lie between the seabed and the mean sea level (inclusive)
+               ELSE
+                  ! The elevation of the point defined by WaveKinzi(J) must lie between the seabed and the mean sea level (inclusive)
 
-            InitOut%WaveDynP(0:InitOut%NStepWave-1,J  ) = WaveDynP0B( 0:InitOut%NStepWave-1,K)
-            InitOut%WaveVel (0:InitOut%NStepWave-1,J,1) = WaveVel0Hxi(0:InitOut%NStepWave-1,K)
-            InitOut%WaveVel (0:InitOut%NStepWave-1,J,2) = WaveVel0Hyi(0:InitOut%NStepWave-1,K)
-            InitOut%WaveVel (0:InitOut%NStepWave-1,J,3) = WaveVel0V(  0:InitOut%NStepWave-1,K)
-            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,1) = WaveAcc0Hxi(0:InitOut%NStepWave-1,K)
-            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,2) = WaveAcc0Hyi(0:InitOut%NStepWave-1,K)
-            InitOut%WaveAcc (0:InitOut%NStepWave-1,J,3) = WaveAcc0V(  0:InitOut%NStepWave-1,K)
-            K = K + 1
-         END IF
-
-      END DO                   ! J - All points where the incident wave kinematics will be computed
+                  InitOut%WaveDynP(0:InitOut%NStepWave-1,i,j,k  ) = WaveDynP0B( 0:InitOut%NStepWave-1,primeCount)
+                  InitOut%WaveVel (0:InitOut%NStepWave-1,i,j,k,1) = WaveVel0Hxi(0:InitOut%NStepWave-1,primeCount)
+                  InitOut%WaveVel (0:InitOut%NStepWave-1,i,j,k,2) = WaveVel0Hyi(0:InitOut%NStepWave-1,primeCount)
+                  InitOut%WaveVel (0:InitOut%NStepWave-1,i,j,k,3) = WaveVel0V(  0:InitOut%NStepWave-1,primeCount)
+                  InitOut%WaveAcc (0:InitOut%NStepWave-1,i,j,k,1) = WaveAcc0Hxi(0:InitOut%NStepWave-1,primeCount)
+                  InitOut%WaveAcc (0:InitOut%NStepWave-1,i,j,k,2) = WaveAcc0Hyi(0:InitOut%NStepWave-1,primeCount)
+                  InitOut%WaveAcc (0:InitOut%NStepWave-1,i,j,k,3) = WaveAcc0V(  0:InitOut%NStepWave-1,primeCount)
+                  primeCount = primeCount + 1
+               END IF
+               count = count + 1
+            end do
+         end do
+      end do
+      
+    !  END DO                   ! J - All points where the incident wave kinematics will be computed
 
     !  CASE ( 1 )                 ! Vertical stretching.
 
@@ -1998,13 +2004,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
   !    ENDSELECT
 
       ! Set the ending timestep to the same as the first timestep
-      InitOut%WaveDynP(InitOut%NStepWave,:  )  = InitOut%WaveDynP(0,:  )
-      InitOut%WaveVel (InitOut%NStepWave,:,:)  = InitOut%WaveVel (0,:,:)
-      InitOut%WaveAcc (InitOut%NStepWave,:,:)  = InitOut%WaveAcc (0,:,:)
-      InitOut%PWaveDynP0(InitOut%NStepWave,:  )  = InitOut%PWaveDynP0(0,:  )
-      InitOut%PWaveVel0 (InitOut%NStepWave,:,:)  = InitOut%PWaveVel0 (0,:,:)
-      InitOut%PWaveAcc0 (InitOut%NStepWave,:,:)  = InitOut%PWaveAcc0 (0,:,:)
-      InitOut%WaveElev0 (InitOut%NStepWave)      = InitOut%WaveElev0 (0    )
+      InitOut%WaveDynP(InitOut%NStepWave,:,:,:  )  = InitOut%WaveDynP(0,:,:,:  )
+      InitOut%WaveVel (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveVel (0,:,:,:,:)
+      InitOut%WaveAcc (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveAcc (0,:,:,:,:)
+  !    InitOut%PWaveDynP0(InitOut%NStepWave,:,:,:  )  = InitOut%PWaveDynP0(0,:,:,:  )
+  !    InitOut%PWaveVel0 (InitOut%NStepWave,:,:,:,:)  = InitOut%PWaveVel0 (0,:,:,:,:)
+  !    InitOut%PWaveAcc0 (InitOut%NStepWave,:,:,:,:)  = InitOut%PWaveAcc0 (0,:,:,:,:)
+   !   InitOut%WaveElev0 (InitOut%NStepWave)      = InitOut%WaveElev0 (0    )
 
 
 
@@ -2041,7 +2047,7 @@ CONTAINS
       ENDDO
 
       CALL ApplyFFT_cx (   WaveElevSeriesAtXY(0:InitOut%NStepWave-1),   tmpComplexArr, FFT_Data,   ErrStatLcl2  )
-      CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT to InitOut%WaveElevSeries.',ErrStatLcl,ErrMsgLcl,'WaveElevTimeSeriesAtXY')
+      CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStatLcl,ErrMsgLcl,'WaveElevTimeSeriesAtXY')
 
          ! Append first datpoint as the last as aid for repeated wave data
       WaveElevSeriesAtXY(InitOut%NStepWave) = WaveElevSeriesAtXY(0)
@@ -2173,6 +2179,7 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%WaveDir      = InitInp%WaveDir     ! Not sure why there are so many copies of this variable, but InitOut%WaveDir must be set, and isn't in all cases otherwise.
 
 
+      
             ! Initialize the variables associated with the incident wave:
 
       SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?

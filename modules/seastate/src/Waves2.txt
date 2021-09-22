@@ -32,10 +32,11 @@ typedef     ^                 ^                 SiKi                 WaveDOmega 
 typedef     ^                 ^                 INTEGER              WaveStMod         -        -        -        "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
 
 typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
-typedef     ^                 ^                 SiKi                 WaveDirArr        {:}      -        -        "Wave direction array.  Each frequency has a unique direction of WaveNDir > 1" (degrees)
-typedef     ^                 ^                 SiKi                 WaveElevC0        {:}{:}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
-typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
+typedef     ^                 ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction array.  Each frequency has a unique direction of WaveNDir > 1" (degrees)
+typedef     ^                 ^                 SiKi                 WaveElevC0        {*}{*}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
+typedef     ^                 ^                 SiKi                 WaveTime          {*}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 
+typedef     ^                 ^                 integer              nGrid             3        -        -        "Grid dimensions"
 typedef     ^                 ^                 INTEGER              NWaveElev         -        -        -        "Number of points where the incident wave elevations can be output"  -
 typedef     ^                 ^                 SiKi                 WaveElevxi        {:}      -        -        "xi-coordinates for points where the incident wave elevations can be output"  (meters)
 typedef     ^                 ^                 SiKi                 WaveElevyi        {:}      -        -        "yi-coordinates for points where the incident wave elevations can be output"  (meters)
@@ -54,41 +55,40 @@ typedef     ^                 ^                 SiKi                 WvHiCOffD  
 typedef     ^                 ^                 SiKi                 WvLowCOffS        -        -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                 WvHiCOffS         -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 
-typedef     ^                 ^                 CHARACTER(ChanLen)   OutList           {18}     -        -        "This should really be dimensioned with MaxOutPts"    -
-typedef     ^                 ^                 LOGICAL              OutAll            -        -        -        ""    -
-typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""    -
-typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
+#typedef     ^                 ^                 CHARACTER(ChanLen)   OutList           {18}     -        -        "This should really be dimensioned with MaxOutPts"    -
+#typedef     ^                 ^                 LOGICAL              OutAll            -        -        -        ""    -
+#typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""    -
+#typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
 
 
 # Define outputs from the initialization routine here:
 #
-typedef     ^                 InitOutputType    CHARACTER(ChanLen)   WriteOutputHdr    {:}      -        -        ""    -
-typedef     ^                 ^                 CHARACTER(ChanLen)   WriteOutputUnt    {:}      -        -        ""    -
-typedef     ^                 ^                 SiKi                 WaveElevSeries2   {:}{:}   -        -        "" (m)
+#typedef     ^                 InitOutputType    CHARACTER(ChanLen)   WriteOutputHdr    {:}      -        -        ""    -
+#typedef     ^                 ^                 CHARACTER(ChanLen)   WriteOutputUnt    {:}      -        -        ""    -
 #                                                                                                                 "Instantaneous elevation time-series at each of the points given by WaveElevXY.  Used for making movies of the waves. First index is the timestep. Second index is XY point number corresponding to second index of WaveElevXY." (m)
-typedef     ^                 ^                 SiKi                 WaveAcc2D         {:}{:}{:} -       -        "" (m/s^2)
+typedef     ^                 InitOutputType    SiKi                 WaveAcc2D         {:}{:}{:}{:}{:} -       -        "" (m/s^2)
 #                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (m/s^2)
-typedef     ^                 ^                 SiKi                 WaveDynP2D        {:}{:}   -        -        "" (N/m^2)
+typedef     ^                 ^                 SiKi                 WaveDynP2D        {:}{:}{:}{:}   -        -        "" (N/m^2)
 #                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the dynamic pressure of incident waves                                                              , at each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
-typedef     ^                 ^                 SiKi                 WaveAcc2S         {:}{:}{:} -       -        "" (m/s^2)
+typedef     ^                 ^                 SiKi                 WaveAcc2S         {:}{:}{:}{:}{:} -       -        "" (m/s^2)
 #                                                                                                                 "Instantaneous 2nd-order sum        frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed" (m/s^2)
-typedef     ^                 ^                 SiKi                 WaveDynP2S        {:}{:}   -        -        "" (N/m^2)
+typedef     ^                 ^                 SiKi                 WaveDynP2S        {:}{:}{:}{:}   -        -        "" (N/m^2)
 #                                                                                                                 "Instantaneous 2nd-order sum        frequency correction for the dynamic pressure of incident waves                                                              , at each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
-typedef     ^                 ^                 SiKi                 WaveVel2D         {:}{:}{:} -       -        "" (m/s)
+typedef     ^                 ^                 SiKi                 WaveVel2D         {:}{:}{:}{:}{:} -       -        "" (m/s)
 #                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
-typedef     ^                 ^                 SiKi                 WaveVel2S         {:}{:}{:} -       -        "" (m/s)                                                                          
+typedef     ^                 ^                 SiKi                 WaveVel2S         {:}{:}{:}{:}{:} -       -        "" (m/s)                                                                          
 #                                                                                                                 "Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
-typedef     ^                 ^                 SiKi                 WaveAcc2D0        {:}{:}{:} -       -        "" (m/s^2)
+#typedef     ^                 ^                 SiKi                 WaveAcc2D0        {:}{:}{:}{:}{:} -       -        "" (m/s^2)
 #                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (m/s^2)
-typedef     ^                 ^                 SiKi                 WaveDynP2D0       {:}{:}   -        -        "" (N/m^2)
+#typedef     ^                 ^                 SiKi                 WaveDynP2D0       {:}{:}{:}{:}   -        -        "" (N/m^2)
 #                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the dynamic pressure of incident waves                                                              , at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
-typedef     ^                 ^                 SiKi                 WaveAcc2S0        {:}{:}{:} -       -        "" (m/s^2)
+#typedef     ^                 ^                 SiKi                 WaveAcc2S0        {:}{:}{:}{:}{:} -       -        "" (m/s^2)
 #                                                                                                                 "Instantaneous 2nd-order sum        frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (m/s^2)
-typedef     ^                 ^                 SiKi                 WaveDynP2S0       {:}{:}   -        -        "" (N/m^2)
+#typedef     ^                 ^                 SiKi                 WaveDynP2S0       {:}{:}{:}{:}   -        -        "" (N/m^2)
 #                                                                                                                 "Instantaneous 2nd-order sum        frequency correction for the dynamic pressure of incident waves                                                              , at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
-typedef     ^                 ^                 SiKi                 WaveVel2D0        {:}{:}{:} -       -        "" (m/s)
+#typedef     ^                 ^                 SiKi                 WaveVel2D0        {:}{:}{:}{:}{:} -       -        "" (m/s)
 #                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
-typedef     ^                 ^                 SiKi                 WaveVel2S0        {:}{:}{:} -       -        "" (m/s)                                                                          
+#typedef     ^                 ^                 SiKi                 WaveVel2S0        {:}{:}{:}{:}{:} -       -        "" (m/s)                                                                          
 #                                                                                                                 "Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
 
 
@@ -126,19 +126,19 @@ typedef     ^                 ^                 LOGICAL              WvSumQTFF  
 typedef     ^                 ^                 INTEGER              NWaveElev         -        -        -        "Number of points where the incident wave elevations can be output"  -
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
-typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
-typedef     ^                 ^                 SiKi                 WaveElev2         {:}{:}   -        -        "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
-#typedef     ^                 ^                 SiKi                 WaveElev2D        {:}{:}   -        -        "" (m)
+#typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
+typedef     ^                 ^                 SiKi                 WaveElev2         {:}{:}{:}   -        -        "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
+#typedef     ^                 ^                 SiKi                 WaveElev2D        {:}{:}{:}   -        -        "" (m)
 #                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
-#typedef     ^                 ^                 SiKi                 WaveElev2S        {:}{:}   -        -        "" (m)
+#typedef     ^                 ^                 SiKi                 WaveElev2S        {:}{:}{:}   -        -        "" (m)
 #                                                                                                                 "Instantaneous 2nd-order sum frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
-typedef     ^                 ^                 OutParmType          OutParam          {:}      -        -        ""        -
-typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""        -
-typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
-typedef     ^                 ^                 CHARACTER(20)        OutFmt            -        -        -        ""        -
-typedef     ^                 ^                 CHARACTER(20)        OutSFmt           -        -        -        ""        -
-typedef     ^                 ^                 CHARACTER(ChanLen)   Delim             -        -        -        ""        -
-typedef     ^                 ^                 INTEGER              UnOutFile         -        -        -        ""        -
+#typedef     ^                 ^                 OutParmType          OutParam          {:}      -        -        ""        -
+#typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""        -
+#typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
+#typedef     ^                 ^                 CHARACTER(20)        OutFmt            -        -        -        ""        -
+#typedef     ^                 ^                 CHARACTER(20)        OutSFmt           -        -        -        ""        -
+#typedef     ^                 ^                 CHARACTER(ChanLen)   Delim             -        -        -        ""        -
+#typedef     ^                 ^                 INTEGER              UnOutFile         -        -        -        ""        -
 
 
 
@@ -151,4 +151,5 @@ typedef     ^                 InputType         SiKi                 DummyInput 
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef     ^                 OutputType        ReKi                 WriteOutput       {:}      -        -        ""  -
+typedef     ^                 OutputType         SiKi                 DummyOutput        -        -        -        "Remove this variable if you have output data"   -
+#typedef     ^                 OutputType        ReKi                 WriteOutput       {:}      -        -        ""  -

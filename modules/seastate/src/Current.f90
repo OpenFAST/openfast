@@ -208,16 +208,16 @@ SUBROUTINE Current_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    
       ! IF there are Morison elements, then compute the current components at each morison node elevation
       
-   IF ( InitInp%NMorisonNodes > 0 ) THEN    
+   IF ( InitInp%NGridPts > 0 ) THEN    
          
-      ALLOCATE ( InitOut%CurrVxi( InitInp%NMorisonNodes ) , STAT=ErrStat )
+      ALLOCATE ( InitOut%CurrVxi( InitInp%NGridPts ) , STAT=ErrStat )
       IF ( ErrStat /= ErrID_None )  THEN
          ErrMsg = ' Error allocating memory for the CurrVxi array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
       
-      ALLOCATE ( InitOut%CurrVyi( InitInp%NMorisonNodes ) , STAT=ErrStat )
+      ALLOCATE ( InitOut%CurrVyi( InitInp%NGridPts ) , STAT=ErrStat )
       IF ( ErrStat /= ErrID_None )  THEN
          ErrMsg = ' Error allocating memory for the CurrVyi array.'
          ErrStat = ErrID_Fatal
@@ -227,9 +227,9 @@ SUBROUTINE Current_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       
          ! Loop over all of the points where current information is required
       
-      DO I = 1, InitInp%NMorisonNodes
+      DO I = 1, InitInp%NGridPts
          
-         CALL Calc_Current( InitInp, InitInp%MorisonNodezi(I), InitInp%WtrDpth, InitInp%DirRoot, CurrVxi, CurrVyi )        
+         CALL Calc_Current( InitInp, InitInp%WaveKinzi(I), InitInp%WtrDpth, InitInp%DirRoot, CurrVxi, CurrVyi )        
          
          InitOut%CurrVxi(I) = CurrVxi
          InitOut%CurrVyi(I) = CurrVyi

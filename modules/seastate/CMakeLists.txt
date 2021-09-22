@@ -1,0 +1,54 @@
+#
+# Copyright 2021 National Renewable Energy Laboratory
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+if (GENERATE_TYPES)
+  generate_f90_types(src/Current.txt ${CMAKE_CURRENT_LIST_DIR}/src/Current_Types.f90)
+  generate_f90_types(src/Waves.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves_Types.f90)
+  generate_f90_types(src/Waves2.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves2_Types.f90 -noextrap)
+  generate_f90_types(src/seastate_interp.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Interp_Types.f90 -noextrap)
+  generate_f90_types(src/SeaState.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Types.f90 -noextrap)
+endif()
+
+set(SEAST_SOURCES
+  src/Current.f90
+  src/Waves.f90
+  src/Waves2.f90
+  src/UserWaves.f90
+  src/seastate_interp.f90
+  src/SeaState.f90
+  src/SeaState_Output.f90
+  src/Current_Types.f90
+  src/Waves_Types.f90
+  src/Waves2_Types.f90
+  src/SeaState_Interp_Types.f90
+  src/SeaState_Types.f90
+)
+
+add_library(seastlib ${SEAST_SOURCES})
+target_link_libraries(seastlib nwtclibs)
+
+set(SEAST_DRIVER_SOURCES
+  src/SeaState_DriverCode.f90
+)
+
+add_executable(seastate_driver ${SEAST_DRIVER_SOURCES})
+target_link_libraries(seastate_driver seastlib ${CMAKE_DL_LIBS})
+
+install(TARGETS seastate_driver seastlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)

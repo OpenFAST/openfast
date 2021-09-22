@@ -1,0 +1,634 @@
+!> This module is an interpolator for SeaState pointer arrays based on a 3D grid and time.  
+!! @note  This module does not need to exactly conform to the FAST Modularization Framework standards.  Three routines are required
+!! though:
+!!    -- SeaState_Interp_Init          -- Load or create any wind data.  Only called at the start of FAST.
+!!    -- SeaState_Interp_CalcOutput    -- This will be called at each timestep with a series of data points to give the wave kinematics.
+!!    -- SeaState_Interp_End           -- clear out any stored stuff.  Only called at the end of FAST.
+MODULE SeaState_Interp
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2016  National Renewable Energy Laboratory
+!
+!    This file is part of SeaState.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!
+!**********************************************************************************************************************************
+
+   USE                                       NWTC_Library
+   USE                                       SeaState_Interp_Types
+
+   IMPLICIT                                  NONE
+   PRIVATE
+
+   TYPE(ProgDesc),   PARAMETER               :: SeaState_Interp_Ver = ProgDesc( 'SeaState_Interp', '', '' )
+
+   PUBLIC                                    :: SeaState_Interp_Init
+   PUBLIC                                    :: SeaState_Interp_End
+   PUBLIC                                    :: SeaState_Interp_3D
+   PUBLIC                                    :: SeaState_Interp_4D
+   PUBLIC                                    :: SeaState_Interp_4D_Vec
+   public                                    :: SeaState_Interp_Setup
+
+CONTAINS
+
+!====================================================================================================
+
+!----------------------------------------------------------------------------------------------------
+!> A subroutine to initialize the SeaState 4D interpolator module. 
+!----------------------------------------------------------------------------------------------------
+SUBROUTINE SeaState_Interp_Init(InitInp, p, ErrStat, ErrMsg)
+
+
+   IMPLICIT                                                       NONE
+
+      ! Passed Variables
+
+   TYPE(SeaState_Interp_InitInputType),            INTENT(IN   )  :: InitInp           !< Input data for initialization
+   TYPE(SeaState_Interp_ParameterType),            INTENT(  OUT)  :: p                 !< Parameters
+  ! TYPE(SeaState_Interp_InitOutputType),           INTENT(  OUT)  :: InitOut           !< Initial output
+
+ !  REAL(DbKi),                               INTENT(IN   )  :: Interval          !< Do not change this!!
+
+
+
+      ! Error handling
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< determines if an error has been encountered
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< A message about the error.  See NWTC_Library info for ErrID_* levels.
+
+      ! local variables
+   ! Put local variables used during initializing your wind here.  DO NOT USE GLOBAL VARIABLES EVER!
+  ! INTEGER(IntKi)                                              :: UnitWind          ! Use this unit number if you need to read in a file.
+
+      ! Temporary variables for error handling
+   INTEGER(IntKi)                                              :: ErrStat2         ! Temp variable for the error status
+   CHARACTER(ErrMsgLen)                                        :: ErrMsg2          ! temporary error message
+   CHARACTER(*), PARAMETER                                     :: RoutineName = 'SeaState_Interp_Init'
+
+      !-------------------------------------------------------------------------------------------------
+      ! Set the Error handling variables
+      !-------------------------------------------------------------------------------------------------
+
+   ErrStat     = ErrID_None
+   ErrMsg      = ""
+
+
+      !-------------------------------------------------------------------------------------------------
+      ! Copy things from the InitData to the ParamData.  
+      !-------------------------------------------------------------------------------------------------
+   p%n     = InitInp%n        ! number of points on the evenly-spaced grid (in each direction)
+   p%delta = InitInp%delta    ! distance between consecutive grid points in each direction
+   p%pZero = InitInp%pZero    ! fixed location of first XYZ grid point (i.e., XYZ coordinates of m%V(:,1,1,1,:))
+   p%Z_Depth = InitInp%Z_Depth
+
+
+      !-------------------------------------------------------------------------------------------------
+      ! Set the InitOutput information. Set any outputs here.
+      !-------------------------------------------------------------------------------------------------
+
+  ! InitOut%Ver         = SeaState_Interp_Ver
+
+   RETURN
+
+END SUBROUTINE SeaState_Interp_Init
+
+!====================================================================================================
+
+!-------------------------------------------------------------------------------------------------
+!>  This routine and its subroutines calculate the wind velocity at a set of points given in
+!!  PositionXYZ.  The UVW velocities are returned in OutData%Velocity
+!-------------------------------------------------------------------------------------------------
+SUBROUTINE SeaState_Interp_CalcOutput(Time, PositionXYZ, p, pWaveKinXX, WaveKinVal, ErrStat, ErrMsg)
+
+   IMPLICIT                                                       NONE
+
+   CHARACTER(*),           PARAMETER                           :: RoutineName="SeaState_Interp_CalcOutput"
+
+
+      ! Passed Variables
+   REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
+   REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
+   TYPE(SeaState_Interp_ParameterType),          INTENT(IN   )  :: p                 !< Parameters
+   REAL(ReKi),                                  INTENT(IN   )  :: pWaveKinXX(:,:,:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
+   REAL(ReKi),                                  INTENT(  out)  :: WaveKinVal
+      ! Error handling
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< The error message
+
+
+      ! local counters
+   INTEGER(IntKi)                                              :: PointNum          ! a loop counter for the current point
+
+      ! local variables
+   INTEGER(IntKi)                                              :: NumPoints         ! Number of points passed in
+
+      ! temporary variables
+   INTEGER(IntKi)                                              :: ErrStat2        ! temporary error status
+   CHARACTER(ErrMsgLen)                                        :: ErrMsg2         ! temporary error message
+
+
+
+      !-------------------------------------------------------------------------------------------------
+      ! Initialize some things
+      !-------------------------------------------------------------------------------------------------
+
+   ErrStat     = ErrID_None
+   ErrMsg      = ""
+
+
+      ! The array is transposed so that the number of points is the second index, x/y/z is the first.
+      ! This is just in case we only have a single point, the SIZE command returns the correct number of points.
+   !NumPoints   =  SIZE(PositionXYZ,DIM=2)
+   !
+   !
+   !   ! Step through all the positions and get the velocities
+   !DO PointNum = 1, NumPoints
+   !
+   !
+   !      ! Calculate the velocity for the position
+   !   Velocity(:,PointNum) = Interp4D(Time, PositionXYZ(:,PointNum), p, m, ErrStat2, ErrMsg2 )
+   !
+   !
+   !      ! Error handling
+   !   IF (ErrStat2 /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
+   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//" [position=("//   &
+   !                                         TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
+   !                                         TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
+   !                                         TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in wind-file coordinates]" )
+   !      IF (ErrStat >= AbortErrLev) RETURN
+   !   END IF
+   !   
+   !   
+   !ENDDO
+
+   RETURN
+
+END SUBROUTINE SeaState_Interp_CalcOutput
+
+subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, ErrMsg)
+   REAL(ReKi),                                  INTENT(IN   )  :: p              !<
+   REAL(ReKi),                                  INTENT(IN   )  :: pZero
+   REAL(ReKi),                                  INTENT(IN   )  :: delta
+   INTEGER(IntKi),                              INTENT(in   )  :: nMax
+   INTEGER(IntKi),                              intent(inout)  :: Indx_Lo
+   INTEGER(IntKi),                              intent(inout)  :: Indx_Hi
+   real(ReKi),                                  intent(inout)  :: isopc
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                                              :: i
+   real(ReKi)                                                  :: Tmp
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+                  
+   isopc   = -1.0
+   Indx_Lo = 0
+   Indx_Hi = 0
+   
+   
+   Tmp =  (p-pZero) / delta
+   Indx_Lo = INT( Tmp ) + 1    ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
+   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo - 1, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
+   
+   if ( Indx_Lo < 1 ) then
+      Indx_Lo = 1
+      isopc = -1.0
+      call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary',ErrStat,ErrMsg,'SetCartesianIndex') !error out if time is outside the lower bounds
+   end if
+   
+   Indx_Hi = min( Indx_Lo + 1, nMax )     ! make sure it's a valid index, zero-based
+   
+   if ( Indx_Lo >= Indx_Hi ) then
+      ! Need to clamp to grid boundary
+      Indx_Lo = Indx_Hi - 1
+      isopc = 1.0
+      call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary',ErrStat,ErrMsg,'SetCartesianIndex') !error out if time is outside the lower bounds
+   end if
+   
+   
+   
+   !-------------------------------------------------------------------------------------------------
+   ! to verify that we don't extrapolate, make sure isopc is bound between -1 and 1 (effectively nearest neighbor)
+   !-------------------------------------------------------------------------------------------------            
+   isopc = min( 1.0_SiKi, isopc )
+   isopc = max(-1.0_SiKi, isopc )
+   
+   
+end subroutine SetCartesianXYIndex
+
+subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, ErrMsg)
+   REAL(ReKi),                                  INTENT(IN   )  :: p              !< time from the start of the simulation
+   REAL(ReKi),                                  INTENT(IN   )  :: z_depth
+   REAL(ReKi),                                  INTENT(IN   )  :: delta
+   INTEGER(IntKi),                              INTENT(in   )  :: nMax
+   INTEGER(IntKi),                              intent(inout)  :: Indx_Lo
+   INTEGER(IntKi),                              intent(inout)  :: Indx_Hi
+   real(ReKi),                                  intent(inout)  :: isopc
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                                              :: i
+   real(ReKi)                                                  :: Tmp
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+                  
+   isopc   = -1.0
+   Indx_Lo = 0
+   Indx_Hi = 0
+   
+  
+   !Tmp =  acos(-p / z_depth) / delta
+   Tmp = acos(1+(p / z_depth)) / delta
+   Tmp =  nmax - 1 - Tmp
+   Indx_Lo = INT( Tmp ) + 1    ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
+   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo - 1, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
+   
+   if ( Indx_Lo < 1 ) then
+      Indx_Lo = 1
+      isopc = -1.0
+      call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary',ErrStat,ErrMsg,'SetCartesianIndex') !error out if time is outside the lower bounds
+   end if
+   
+   Indx_Hi = min( Indx_Lo + 1, nMax )     ! make sure it's a valid index, one-based
+   
+   if ( Indx_Lo >= Indx_Hi ) then
+      ! Need to clamp to grid boundary
+      Indx_Lo = Indx_Hi - 1
+      isopc = 1.0
+      call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary',ErrStat,ErrMsg,'SetCartesianIndex') !error out if time is outside the lower bounds
+   end if
+   
+   
+   
+   !-------------------------------------------------------------------------------------------------
+   ! to verify that we don't extrapolate, make sure isopc is bound between -1 and 1 (effectively nearest neighbor)
+   !-------------------------------------------------------------------------------------------------            
+   isopc = min( 1.0_SiKi, isopc )
+   isopc = max(-1.0_SiKi, isopc )
+   
+   
+end subroutine SetCartesianZIndex
+   
+subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, ErrMsg)
+   REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
+   REAL(ReKi),                                  INTENT(IN   )  :: deltaT
+   INTEGER(IntKi),                              INTENT(in   )  :: nMax
+   INTEGER(IntKi),                              intent(inout)  :: Indx_Lo
+   INTEGER(IntKi),                              intent(inout)  :: Indx_Hi
+   real(ReKi),                                  intent(inout)  :: isopc
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                                              :: i
+   real(ReKi)                                                  :: Tmp
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+                  
+   isopc   = -1.0
+   Indx_Lo = 0
+   Indx_Hi = 0
+   if ( Time < 0.0_DbKi ) then
+      CALL SetErrStat(ErrID_Fatal,'Time value must be greater than or equal to zero!',ErrStat,ErrMsg,'SetTimeLoIndex') !error out if time is outside the lower bounds
+      RETURN
+   end if
+   
+   !TODO: Add mod to wrap time
+   Tmp =  Time / deltaT
+   Indx_Lo = INT( Tmp )     ! convert REAL to INTEGER
+   
+   if (Indx_Lo >= (nMax-1)) then  ! Wrap the time series back to the beginning of the signal
+     ! Indx_Lo = mod(Indx_Lo, nMax)
+      Indx_Lo = Indx_Lo - (nMax - 1)
+      Tmp = Tmp - real(nMax - 1, ReKi)
+   end if
+   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo , ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
+   
+   !-------------------------------------------------------------------------------------------------
+   ! to verify that we don't extrapolate, make sure isopc is bound between -1 and 1 (effectively nearest neighbor)
+   !-------------------------------------------------------------------------------------------------            
+   isopc = min( 1.0_SiKi, isopc )
+   isopc = max(-1.0_SiKi, isopc )
+   
+   Indx_Hi = min( Indx_Lo + 1, nMax - 1 )     ! make sure it's a valid index, zero-based
+   
+end subroutine SetTimeIndex
+   
+   
+!====================================================================================================
+!> This routine sets up interpolation of a 3-d or 4-d dataset.
+!! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
+subroutine SeaState_Interp_Setup( Time, Position, p, m, ErrStat, ErrMsg )
+
+      ! I/O variables
+
+   REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
+   REAL(ReKi),                                  INTENT(IN   )  :: Position(3)       !< Array of XYZ coordinates, 3
+   TYPE(SeaState_Interp_ParameterType),         INTENT(IN   )  :: p                 !< Parameters
+   TYPE(SeaState_Interp_MiscVarType),           INTENT(INOUT)  :: m                !< MiscVars
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   
+   CHARACTER(*), PARAMETER                                     :: RoutineName = 'SeaState_Interp_Setup'   
+
+      ! Local variables
+
+   INTEGER(IntKi)                      :: i                                         ! loop counter
+   INTEGER(IntKi)                      :: ic                                        ! wind-component counter
+   
+   REAL(SiKi)                           :: isopc(4)                                 ! isoparametric coordinates 
+
+   REAL(SiKi)                           :: u(16)                                    ! size 2^n
+   REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
+   integer(IntKi)                       :: ErrStat2
+   character(ErrMsgLen)                 :: ErrMsg2
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+                  
+
+   !-------------------------------------------------------------------------------------------------
+   ! Find the bounding indices for time 
+   !-------------------------------------------------------------------------------------------------
+   call SetTimeIndex(Time, p%delta(1), p%n(1), m%Indx_Lo(1), m%Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the lower bounds
+      if (ErrStat >= AbortErrLev ) return
+      
+   
+   !-------------------------------------------------------------------------------------------------
+   ! Find the bounding indices for XY position
+   !-------------------------------------------------------------------------------------------------
+   do i=2,3    
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the lower bounds
+   enddo
+   
+            
+   if (ErrStat >= AbortErrLev ) return
+   
+   !-------------------------------------------------------------------------------------------------
+   ! Find the bounding indices for Z position
+   !-------------------------------------------------------------------------------------------------
+   i=4
+   call SetCartesianZIndex(Position(i-1), p%Z_Depth, p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the lower bounds
+   if (ErrStat >= AbortErrLev ) return   
+            
+   !-------------------------------------------------------------------------------------------------
+   ! compute weighting factors
+   !-------------------------------------------------------------------------------------------------
+   
+   m%N4D( 1) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D( 2) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D( 3) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D( 4) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )    
+   m%N4D( 5) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D( 6) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D( 7) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D( 8) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )    
+   m%N4D( 9) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D(10) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D(11) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D(12) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D(13) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D(14) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D(15) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   m%N4D(16) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   m%N4D     = m%N4D / REAL( SIZE(m%N4D), SiKi )  ! normalize
+   
+  
+END Subroutine SeaState_Interp_Setup   
+
+!====================================================================================================
+!> This routine interpolates a 4-d dataset.
+!! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
+FUNCTION SeaState_Interp_4D( pKinXX, m, ErrStat, ErrMsg )
+
+      ! I/O variables
+
+   real(SiKi),                                  intent(in   )  :: pKinXX(0:,:,:,:)
+   TYPE(SeaState_Interp_MiscVarType),           INTENT(IN   )  :: m                 !< Parameters
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   
+   CHARACTER(*), PARAMETER                                     :: RoutineName = 'SeaState_Interp_PointSetup'   
+   Real(SiKi) :: SeaState_Interp_4D
+      ! Local variables
+
+   REAL(SiKi)                           :: u(16)                                    ! size 2^n
+   
+   
+   SeaState_Interp_4D = 0.0_SiKi
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+                  
+   !-------------------------------------------------------------------------------------------------
+   ! interpolate
+   !-------------------------------------------------------------------------------------------------
+
+      u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) )
+      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) )
+      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) )
+      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) )
+      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) )
+      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )
+      u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) )
+      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) )
+      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) )
+      u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) )
+      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+      u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) )
+      u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )      
+   
+      SeaState_Interp_4D = SUM ( m%N4D * u )
+
+END FUNCTION SeaState_Interp_4D
+
+!====================================================================================================
+!> This routine interpolates a 4-d dataset.
+!! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
+FUNCTION SeaState_Interp_4D_Vec( pKinXX, m, ErrStat, ErrMsg )
+
+      ! I/O variables
+
+   real(SiKi),                                  intent(in   )  :: pKinXX(0:,:,:,:,:)
+   TYPE(SeaState_Interp_MiscVarType),           INTENT(IN   )  :: m                 !< Parameters
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   
+   CHARACTER(*), PARAMETER                                     :: RoutineName = 'SeaState_Interp_PointSetup'   
+   Real(SiKi) :: SeaState_Interp_4D_Vec(3)
+      ! Local variables
+
+   REAL(SiKi)                           :: u(16)                                    ! size 2^n
+   integer(IntKi)                       :: iDir
+   
+   SeaState_Interp_4D_Vec = 0.0_SiKi
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+                  
+   !-------------------------------------------------------------------------------------------------
+   ! interpolate
+   !-------------------------------------------------------------------------------------------------
+   do iDir = 1,3
+      u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
+      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
+      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
+      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
+      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )      
+   
+      SeaState_Interp_4D_Vec(iDir) = SUM ( m%N4D * u )
+   end do
+END FUNCTION SeaState_Interp_4D_Vec
+
+ !====================================================================================================
+!> This routine interpolates a 3-d dataset with index 1 = time (zero-based indexing), 2 = x-coordinate (1-based indexing), 3 = y-coordinate (1-based indexing)
+!! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
+FUNCTION SeaState_Interp_3D( Time, Position, pKinXX, p, ErrStat, ErrMsg )
+
+      ! I/O variables
+   REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
+   REAL(ReKi),                                  INTENT(IN   )  :: Position(2)       !< Array of XYZ coordinates, 3
+   real(SiKi),                                  intent(in   )  :: pKinXX(0:,:,:)     !< 3D Wave elevation data (SiKi for storage space reasons)
+   TYPE(SeaState_Interp_ParameterType),         INTENT(IN   )  :: p                 !< Parameters
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   
+   CHARACTER(*), PARAMETER                                     :: RoutineName = 'SeaState_Interp_3D'   
+   Real(SiKi) :: SeaState_Interp_3D
+      ! Local variables
+
+   REAL(SiKi)                           :: u(8)                                    ! size 2^n
+   real(ReKi)                           :: N3D(8)
+   integer(IntKi)                       :: Indx_Lo(3), Indx_Hi(3)
+   INTEGER(IntKi)                       :: i                                         ! loop counter
+   INTEGER(IntKi)                       :: ic                                        ! wind-component counter   
+   REAL(SiKi)                           :: isopc(3)                                 ! isoparametric coordinates 
+   REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
+   integer(IntKi)                       :: ErrStat2
+   character(ErrMsgLen)                 :: ErrMsg2
+
+   SeaState_Interp_3D = 0.0_SiKi
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+
+   !-------------------------------------------------------------------------------------------------
+   ! Find the bounding indices for time 
+   !-------------------------------------------------------------------------------------------------
+   call SetTimeIndex(Time, p%delta(1), p%n(1), Indx_Lo(1), Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the lower bounds
+      if (ErrStat >= AbortErrLev ) return
+      
+   !-------------------------------------------------------------------------------------------------
+   ! Find the bounding indices for XY position
+   !-------------------------------------------------------------------------------------------------
+   do i=2,3
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the lower bounds
+   end do
+      if (ErrStat >= AbortErrLev ) return
+      
+                          
+   
+   N3D(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
+   N3D(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
+   N3D(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
+   N3D(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
+   N3D(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
+   N3D(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
+   N3D(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
+   N3D(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
+   N3D     = N3D / REAL( SIZE(N3D), ReKi )  ! normalize
+   
+   !-------------------------------------------------------------------------------------------------
+   ! interpolate
+   !-------------------------------------------------------------------------------------------------
+   
+      u(1)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Lo(3) )
+      u(2)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Lo(3) )
+      u(3)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Lo(3) )
+      u(4)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Lo(3) )
+      u(5)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Hi(3) )
+      u(6)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Hi(3) )
+      u(7)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Hi(3) )
+      u(8)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Hi(3) )   
+      
+      SeaState_Interp_3D = SUM ( N3D * u )
+
+END FUNCTION SeaState_Interp_3D    
+      
+!----------------------------------------------------------------------------------------------------
+!> This routine deallocates any memory in the FDext module.
+SUBROUTINE SeaState_Interp_End( ParamData, MiscVars, ErrStat, ErrMsg)
+
+
+   IMPLICIT                                                       NONE
+
+   CHARACTER(*),           PARAMETER                           :: RoutineName="SeaState_Interp_End"
+
+
+      ! Passed Variables
+   TYPE(SeaState_Interp_ParameterType),            INTENT(INOUT)  :: ParamData         !< Parameters
+   TYPE(SeaState_Interp_MiscVarType),              INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
+
+
+      ! Error Handling
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< determines if an error has been encountered
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Message about errors
+
+
+      ! Local Variables
+   INTEGER(IntKi)                                              :: TmpErrStat        ! temporary error status
+   CHARACTER(ErrMsgLen)                                        :: TmpErrMsg         ! temporary error message
+
+
+   ErrMsg   = ''
+   ErrStat  = ErrID_None
+
+
+
+      ! Destroy parameter data
+
+   CALL SeaState_Interp_DestroyParam(       ParamData,     TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+
+
+      ! Destroy the misc data
+
+   CALL SeaState_Interp_DestroyMisc(  MiscVars,   TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+
+
+END SUBROUTINE SeaState_Interp_End
+!====================================================================================================
+END MODULE SeaState_Interp

@@ -658,7 +658,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          IF (ALLOCATED( WaveElevData%WaveElev   ))    DEALLOCATE( WaveElevData%WaveElev,     STAT=ErrStatTmp)
          IF (ALLOCATED( WaveElevData%WaveTime   ))    DEALLOCATE( WaveElevData%WaveTime,     STAT=ErrStatTmp)
          IF (ALLOCATED( TmpFFTWaveElev          ))    DEALLOCATE( TmpFFTWaveElev,            STAT=ErrStatTmp)
-         IF (ALLOCATED( InitOut%WaveElevC0      ))    DEALLOCATE( InitOut%WaveElevC0,        STAT=ErrStatTmp)
+     !    IF (ALLOCATED( InitOut%WaveElevC0      ))    DEALLOCATE( InitOut%WaveElevC0,        STAT=ErrStatTmp)
 
       END SUBROUTINE CleanUp
   
@@ -735,19 +735,19 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,RoutineName)
 
-   ALLOCATE ( InitOut%WaveElev   (0:InitOut%NStepWave,InitInp%NWaveElev  ) , STAT=ErrStatTmp )
+   ALLOCATE ( InitOut%WaveElev (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2) ) , STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,RoutineName)
    InitOut%WaveElev = 0.0_SiKi
    
-   ALLOCATE ( InitOut%WaveDynP  (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,RoutineName)
+  ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'VariousWaves_Init')
 
-   ALLOCATE ( InitOut%WaveVel   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,RoutineName)
+   ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
-   ALLOCATE ( InitOut%WaveAcc   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,RoutineName)
-
+   ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
    
    
       ! Now check if all the allocations worked properly
@@ -801,8 +801,8 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END DO
       
    END DO
-   
-   InitOut%WaveVel (:,:,1)  = WaveData(:,:)
+ !TODO: Rework onto grid  
+ !  InitOut%WaveVel (:,:,1)  = WaveData(:,:)
    
    ! Now read the remaining files and check that the elements are consistent with the first file
    DO iFile = 2,7
@@ -853,20 +853,21 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       
       END DO
       SELECT CASE (iFile)
-         CASE (1)              
-            InitOut%WaveVel (:,:,1)  = WaveData(:,:)
-         CASE (2)             
-            InitOut%WaveVel (:,:,2)  = WaveData(:,:)
-         CASE (3)             
-            InitOut%WaveVel (:,:,3)  = WaveData(:,:) 
-         CASE (4)             
-            InitOut%WaveAcc (:,:,1)  = WaveData(:,:)
-         CASE (5)             
-            InitOut%WaveAcc (:,:,2)  = WaveData(:,:)
-         CASE (6)             
-            InitOut%WaveAcc (:,:,3)  = WaveData(:,:) 
-         CASE (7)              
-            InitOut%WaveDynP         = WaveData
+      !TODO: Rework onto grid points
+         !CASE (1)              
+         !   InitOut%WaveVel (:,:,1)  = WaveData(:,:)
+         !CASE (2)             
+         !   InitOut%WaveVel (:,:,2)  = WaveData(:,:)
+         !CASE (3)             
+         !   InitOut%WaveVel (:,:,3)  = WaveData(:,:) 
+         !CASE (4)             
+         !   InitOut%WaveAcc (:,:,1)  = WaveData(:,:)
+         !CASE (5)             
+         !   InitOut%WaveAcc (:,:,2)  = WaveData(:,:)
+         !CASE (6)             
+         !   InitOut%WaveAcc (:,:,3)  = WaveData(:,:) 
+         !CASE (7)              
+         !   InitOut%WaveDynP         = WaveData
       END SELECT
                   
       CLOSE(UnWv)
@@ -878,60 +879,42 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    END DO
    
    ! WaveElev
-   IF ( InitInp%NWaveElev > 0 ) THEN
-      CALL GetNewUnit( UnWv )
-
-      FileName = TRIM(InitInp%WvKinFile) // '.Elev'
-   
-      CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
-      IF ( ErrStat /= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Failed to open wave elevations file, ' //  TRIM(FileName) 
-         RETURN
-      END IF
-
-      Frmt = '('//TRIM(Int2LStr(InitInp%NWaveElev))//'(:,A,ES11.4e2))'
-   
-      CALL ReadCom( UnWv, FileName, 'HydroDyn wave elevations file header line 1', ErrStatTmp, ErrMsgTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup() 
-            RETURN
-         END IF
-         
-      DO i = 0,InitOut%NStepWave-1        
-         Read(UnWv,Frmt)   ( Delim,  InitOut%WaveElev(i,j)  , j=1,InitInp%NWaveElev ) 
-      END DO
-      CLOSE(UnWv)
-   END IF
+!TODO FIX for new grid of XY wave elevations
+!   IF ( InitInp%NWaveElev > 0 ) THEN
+!      CALL GetNewUnit( UnWv )
+!
+!      FileName = TRIM(InitInp%WvKinFile) // '.Elev'
+!   
+!      CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
+!      IF ( ErrStat /= 0 ) THEN
+!         ErrStat = ErrID_Fatal
+!         ErrMsg  = 'Failed to open wave elevations file, ' //  TRIM(FileName) 
+!         RETURN
+!      END IF
+!
+!      Frmt = '('//TRIM(Int2LStr(InitInp%NWaveElev))//'(:,A,ES11.4e2))'
+!   
+!      CALL ReadCom( UnWv, FileName, 'HydroDyn wave elevations file header line 1', ErrStatTmp, ErrMsgTmp )
+!         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+!         IF (ErrStat >= AbortErrLev) THEN
+!            CALL Cleanup() 
+!            RETURN
+!         END IF
+!!TODO: FIX WaveElev based on grid now.         
+!      !DO t = 0,InitOut%NStepWave-1        
+!      !   Read(UnWv,Frmt)   ( Delim,  InitOut%WaveElev(t,i,j)  , j=1,InitInp%NWaveElev ) 
+!      !END DO
+!      CLOSE(UnWv)
+!   END IF
    CALL CleanUp( )
    
    ! Need to append the first time step record to the end of each array for periodic waves
-   InitOut%WaveVel (InitOut%NStepWave,:,:)  = InitOut%WaveVel (0,:,:)
-   InitOut%WaveAcc (InitOut%NStepWave,:,:)  = InitOut%WaveAcc (0,:,:)
-   InitOut%WaveDynP(InitOut%NStepWave,:)    = InitOut%WaveDynP(0,:  )
-   InitOut%WaveElev(InitOut%NStepWave,:)     = InitOut%WaveElev(0,:)
+   InitOut%WaveVel (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveVel (0,:,:,:,:)
+   InitOut%WaveAcc (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveAcc (0,:,:,:,:)
+   InitOut%WaveDynP(InitOut%NStepWave,:,:,:)    = InitOut%WaveDynP(0,:,:,:  )
+   InitOut%WaveElev(InitOut%NStepWave,:,:)     = InitOut%WaveElev(0,:,:)
    InitOut%nodeInWater(InitOut%NStepWave,:)  = InitOut%nodeInWater(0,:)
    
-
-
-   ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
-   ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series
-   ! is created with the first index corresponding to the timestep, and second index corresponding to the second
-   ! index of the WaveElevXY array.
-   IF ( ALLOCATED(InitInp%WaveElevXY)) THEN
-      ALLOCATE ( InitOut%WaveElevSeries (0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevSeries.',ErrStat,ErrMsg,'VariousWaves_Init')
-         RETURN
-      END IF
-       ! Calculate the wave elevation at all points requested in the array WaveElevXY
-      DO I = 0,InitOut%NStepWave
-          DO J = 1,SIZE(InitInp%WaveElevXY, DIM=2)
-              InitOut%WaveElevSeries(I,J) = 0.0_ReKi ! TODO, these values should be interpolated based on inputs
-          ENDDO
-      ENDDO
-   ENDIF
 
    
 CONTAINS
