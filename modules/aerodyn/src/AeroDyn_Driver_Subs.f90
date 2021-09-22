@@ -577,15 +577,17 @@ subroutine concatOutputHeaders(dvr, WriteOutputHdr, WriteOutputUnt, errStat, err
    errStat = ErrID_None
    errMsg  = ''
 
+
    if (.not.allocated(dvr%out%WriteOutputHdr)) then
       call move_alloc(WriteOutputHdr, dvr%out%WriteOutputHdr)
       call move_alloc(WriteOutputUnt, dvr%out%WriteOutputUnt)   
    else
+      nOld = size(dvr%out%WriteOutputHdr)
+      nAdd = size(WriteOutputHdr)
+
       call move_alloc(dvr%out%WriteOutputHdr, TmpHdr)
       call move_alloc(dvr%out%WriteOutputUnt, TmpUnt)   
 
-      nOld = size(dvr%out%WriteOutputHdr)
-      nAdd = size(WriteOutputHdr)
       allocate(dvr%out%WriteOutputHdr(nOld+nAdd))
       allocate(dvr%out%WriteOutputUnt(nOld+nAdd))
       dvr%out%WriteOutputHdr(1:nOld) = TmpHdr

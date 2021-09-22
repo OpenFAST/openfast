@@ -213,7 +213,11 @@ Output Options
 
 **WrVTK** [flag] specifies if Visualization Toolkit (VTK) visualization files
 are to be written out. *WrVTK* = *[0]* does not write out any VTK files. *WrVTK*
-= *[1]* outputs a VTK file at every time step. The outputs are written in the
+= *[1]* outputs VTK files at time steps defined by *VTK_fps*.
+*WrVTK*= *[2]*, outputs at time steps defined by *VTK_fps*, but ensures that
+a file is written at the beginning and the end of the simulation (typically 
+used with `VTK_fps=0` to output only at the end of the simulation).
+The outputs are written in the
 folder, ``vtk_fvw.``   The parameters *WrVTK*, *VTKCoord*, and *VTK_fps* are
 independent of the glue code VTK output options.
 
@@ -229,29 +233,36 @@ coordinate system *[2]*. The default option is *[1]*.
 **VTK_fps** [:math:`1`/sec] specifies the output frequency of the VTK files. The
 provided value is rounded to the nearest allowable multiple of the time step.
 The default value is :math:`1/dt_\text{fvw}`. Specifying *VTK_fps* = *[all]*,
-is equivalent to using the value :math:`1/dt_\text{aero}`.
-
+is equivalent to using the value :math:`1/dt_\text{aero}`. If *VTK_fps<0*, then 
+no outputs are created, except if *WrVTK=2*.
 
 **nGridOut** [-] specifies the number of grid outputs. The default value is 0.
-The grid outputs are velocity fields that are exported on a regular Cartesian grid. 
-The are defined using a table that follows on the subsequent lines, with two lines of headers. 
-The user needs to specify a **GridName**, used for the VTK output filename, a time interval 
-**DTOut**, and the grid extent in each directions, e.g. **XStart**, **XEnd**, **nX**. 
-With these options, it is possible to export the velocity field at a point (**nX=nY=nZ=1**),
-a line, a plane, or a box. When the variable **DTOut** is set to "all", the AeroDyn time step is used,  when it is set to "default", the OLAF time step is used. 
+The grid outputs are fields (velocity, vorticity) that are exported on a regular Cartesian grid. 
+They are defined using a table that follows on the subsequent lines, with two lines of headers. 
+The user needs to specify a name (**GridName**) used for the VTK output filename,
+a grid type (**GridType**), a start time (**TStart**), an end time (**TEnd**), a time interval 
+(**DTOut**), and the grid extent in each directions, e.g. **XStart**, **XEnd**, **nX**. 
+When **GridType** is 1, the velocity field is written to disk, when **GridType** is 2, 
+both the velocity field and the vorticity field (computed using finite differences) are written.
+It is possible to export fields at a point (**nX=nY=nZ=1**),
+a line, a plane, or a 3D grid.
+When set to "default", the start time is 0 and the end time is set to the end of the simulation.
+The outputs are done for :math:`t_{Start}\leq t \leq t_{End}`
+When the variable **DTOut** is set to "all", the AeroDyn time step is used,  when it is set to "default", the OLAF time step is used. 
 An example of input is given below: 
 
 .. code::
 
     3       nGridOut           Number of grid outputs
-    GridName    DTOut     XStart    XEnd   nX    YStart   YEnd    nY    ZStart   ZEnd   nZ
-    (-)         (s)        (m)      (m)    (-)    (m)     (m)     (-)    (m)     (m)    (-)
-    "box"       all        -200     1000.    5    -150.   150.    20      5.     300.    30
-    "vert"      default    -200     1000.   100     0.     0.     1       5.     300.    30
-    "hori"      2.0        -200     1000.   100   -150.   150.    20     100.    100.    1
+    GridName  GridType  TStart  TEnd     DTOut     XStart    XEnd   nX    YStart   YEnd    nY    ZStart   ZEnd   nZ
+    (-)         (-)      (s)     (s)      (s)        (m)      (m)    (-)    (m)     (m)     (-)    (m)     (m)    (-)
+    "box"        2     default default  all        -200     1000.    5    -150.   150.    20      5.     300.    30
+    "vert"       1     default default  default    -200     1000.   100     0.     0.     1       5.     300.    30
+    "hori"       1     default default  2.0        -200     1000.   100   -150.   150.    20     100.    100.    1
 
 In this example, the first grid, named "box", is exported at the AeroDyn time step, and consists 
-of a box of shape 5x20x30 and dimension 1200x300x295.  The two other grids are vertical and horizontal planes.
+of a box of shape 5x20x30 and dimension 1200x300x295.  The grid contains both the velocity and vorticity.
+The two other grids are vertical and horizontal planes containing only the velocity.
 
 
 AeroDyn15 Input File

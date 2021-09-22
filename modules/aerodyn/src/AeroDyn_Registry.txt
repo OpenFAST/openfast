@@ -160,6 +160,8 @@ typedef	^	AD_InputFile	CHARACTER(ChanLen)	BldNd_OutList	{:}	-	-	"List of user-re
 typedef  ^  AD_InputFile   CHARACTER(1024) BldNd_BlOutNd_Str - - - "String to parse for the blade nodes to actually output (AD_AllBldNdOuts)" -
 typedef  ^  AD_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
 #typedef  ^  AD_InputFile   CHARACTER(1024) BldNd_BladesOut_Str - - - "String to parse for the he blades to output (AD_AllBldNdOuts)" -
+typedef  ^  AD_InputFile   ReKi             UAStartRad  -  -  - Starting radius for dynamic stall (fraction of rotor radius)
+typedef  ^  AD_InputFile   ReKi             UAEndRad    -  -  - Ending radius for dynamic stall (fraction of rotor radius)
 typedef  ^  AD_InputFile   RotInputFile  rotors {:} - - "Rotor (blades and tower) input file data" -
 
 

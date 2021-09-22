@@ -12,13 +12,48 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 
 OpenFAST v3.0.0 to OpenFAST `dev`
 ---------------------------------
-No changes.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST dev
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+AeroDyn 15                                    40   UAStartRad          0.25    UAStartRad          - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+AeroDyn 15                                    41   UAEndRad            0.95    UAEndRad            - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+AirFoilTables                                 12\* alphaUpper          5.0   alphaUpper          ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
+AirFoilTables                                 13\* alphaLower         \-3.0   alphaLower         ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
+AirFoilTables                                 42\* UACutout_delta     "DEFAULT"  UACutout_delta  ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
 
 
 
 OpenFAST v2.6.0 to OpenFAST v3.0.0
 ----------------------------------
-No changes.
+
+-  ServoDyn
+
+   -  The input file parser is updated to a keyword/value pair based input.
+      Each entry must have a corresponding keyword with the same spelling as
+      expected
+   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+      module (StC) with updated capabilities and input file.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST v3.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
+ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
+ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
+ServoDyn                                      64   NStCfiles          "unused"      NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
+ServoDyn                                      65   NumTStC            0             NumTStC      - Number of tower structural controllers (integer)
+ServoDyn                                      66   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
+ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
+ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 
 
@@ -28,14 +63,6 @@ OpenFAST v2.5.0 to OpenFAST v2.6.0
 Many changes were applied to SubDyn input file format. You may consult the following example:
 :download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
 and the online SubDyn documentation.
-
--  ServoDyn
-
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
-      module (StC) with updated capabilities and input file.
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
 Added in OpenFAST v2.6.0
@@ -67,7 +94,13 @@ ServoDyn                                      65   NumTStC            0         
 ServoDyn                                      66   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
 ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
 ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+AirFoilTables                                 12\* alphaUpper          5.0   alphaUpper        ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
+AirFoilTables                                 13\* alphaLower         \-3.0   alphaLower        ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
+AirFoilTables                                 42\* UACutout_delta     "DEFAULT"  UACutout_delta  ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
 ============================================= ==== =============== ========================================================================================================================================================================================================
+
+\*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
+
 
 ============================================= ====== =============== ======================================================================================================================================================================================================
 Modified in OpenFAST v2.6.0
@@ -158,6 +191,7 @@ MoorDyn                        na    added CtrlChan column in LINE PROPERTIES ta
 ============================ ====== ================================================ ====================================================================================
 
 
+
 OpenFAST v2.3.0 to OpenFAST v2.4.0
 ----------------------------------
 
@@ -197,7 +231,6 @@ InflowWind     49   XOffset                    0  XOffset      - Initial offset 
 ============== ==== ================== ======================================================================================================================================================= =========================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.
-
 
 
 
