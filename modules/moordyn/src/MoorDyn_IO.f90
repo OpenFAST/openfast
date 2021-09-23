@@ -99,6 +99,7 @@ MODULE MoorDyn_IO
 
 
   ! PUBLIC :: MDIO_ReadInput
+   PUBLIC :: getBathymetry
    PUBLIC :: getCoefficientOrCurve
    PUBLIC :: DecomposeString
    PUBLIC :: MDIO_OpenOutput
@@ -110,13 +111,14 @@ MODULE MoorDyn_IO
 CONTAINS
 
 
-   SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
+   SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, ErrStat3, ErrMsg3)
+   ! SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
 
-      CHARACTER(40),           INTENT(IN   )  :: inputString
+      CHARACTER(20),           INTENT(IN   )  :: inputString
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid (:,:)
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Xs (:)
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Ys (:)
-      REAL(IntKi),             INTENT(INOUT)  :: BathGrid_npoints
+      ! INTEGER(IntKi),          INTENT(INOUT)  :: BathGrid_npoints
 
       INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
       CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None
@@ -138,6 +140,12 @@ CONTAINS
          ! If the input does not have any of these string values, let's treat it as a number but store in a matrix
          ALLOCATE(BathGrid(1,1), STAT=ErrStat4)
          READ(inputString, *, IOSTAT=ErrStat4) BathGrid(1,1)
+         
+         ALLOCATE(BathGrid_Xs(1), STAT=ErrStat4)
+         BathGrid_Xs(1) = 0.0_DbKi
+         
+         ALLOCATE(BathGrid_Ys(1), STAT=ErrStat4)
+         BathGrid_Ys(1) = 0.0_DbKi
 
       ELSE ! otherwise interpret the input as a file name to load the bathymetry lookup data from
          PRINT *, "found a letter in the depth value so will try to load a bathymetry file"
@@ -155,7 +163,7 @@ CONTAINS
          ALLOCATE(BathGrid_Xs(nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Ys(nGridY), STAT=ErrStat4)
 
-         DO I = 1, nGridY  ! loop through each line in the rest of the bathymetry file
+         DO I = 1, nGridY+1  ! loop through each line in the rest of the bathymetry file
 
             READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! read into a line and call it Line2
             IF (ErrStat4 > 0) EXIT
@@ -174,7 +182,7 @@ CONTAINS
             CLOSE (UnCoef)
             RETURN
          ELSE 
-            BathGrid_npoints = nGridX*nGridY       ! save the number of points in the grid
+            ! BathGrid_npoints = nGridX*nGridY       ! save the number of points in the grid
             CLOSE (UnCoef)
          END IF
       

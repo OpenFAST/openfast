@@ -1259,7 +1259,8 @@ CONTAINS
                   ! else if ( OptString == 'WTRDPTH') then
                      ! read (OptValue,*) p%WtrDpth
                   else if ( OptString == 'WTRDPTH') then
-                     CALL getBathymetry(OptValue, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, m%BathGrid_npoints, ErrStat2, ErrMsg2)
+                     CALL getBathymetry(OptValue, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, ErrStat2, ErrMsg2)
+                     ! CALL getBathymetry(OptValue, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, m%BathGrid_npoints, ErrStat2, ErrMsg2)
                   else if ( OptString == 'KBOT')  then
                      read (OptValue,*) p%kBot
                   else if ( OptString == 'CBOT')  then
