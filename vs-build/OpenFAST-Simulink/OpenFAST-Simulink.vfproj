@@ -36,7 +36,7 @@
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release_Matlab|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199"/>
-				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemWindows" LinkDLL="true" AdditionalDependencies="&quot;C:\Program Files\MATLAB\R2018a\extern\lib\win64\microsoft\libmex.lib&quot;"/>
+				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemWindows" LinkDLL="true" AdditionalDependencies="&quot;C:\Program Files\MATLAB\R2019b\extern\lib\win64\microsoft\libmex.lib&quot;"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
