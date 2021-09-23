@@ -428,7 +428,7 @@ CONTAINS
       sLine = FileInfo%Lines(CurLine)
       call Conv2UC(sLine)  ! to uppercase
       if (index(sLine, 'RELTHICKNESS')>1) then
-         CALL ParseVarWDefault ( FileInfo, CurLine, 'RelThickness', p%RelThickness, 0.2, ErrStat2, ErrMsg2, UnEc )
+         CALL ParseVarWDefault ( FileInfo, CurLine, 'RelThickness', p%RelThickness, 0.2_ReKi, ErrStat2, ErrMsg2, UnEc )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       else
          p%RelThickness=-1 ! To trigger an error
