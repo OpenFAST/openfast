@@ -19,10 +19,6 @@ env:
   FORTRAN_COMPILER: gfortran-10
   NUM_PROCS: 8
 
-# runs-on: ${{ matrix.os }}
-# strategy:
-#   matrix:
-#     os: [macOS-10.14, ubuntu-18.04]
 
 jobs:
   regression-tests-release:
@@ -91,7 +87,17 @@ jobs:
             !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
 
   regression-tests-debug:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macOS-11
+            FORTRAN_COMPILER: gfortran-11
+          - os: ubuntu-20.04
+            FORTRAN_COMPILER: gfortran-10
+
+    name: regression-test-debug-${{ matrix.os }}-${{ matrix.FORTRAN_COMPILER }}
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -114,7 +120,7 @@ jobs:
         run: |
           cmake \
             -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_Fortran_COMPILER:STRING=${{matrix.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \

@@ -629,6 +629,8 @@ or calculating it based on the polar coefficient data in the airfoil table:
    well as to the pitch rate and pitch acceleration derived from AoA
    within UA; if the keyword ``DEFAULT`` is entered in place of a
    numerical value, ``filtCutOff`` is set to 0.5.
+   This non-dimensional value corresponds to a frequency of 
+   :math:`\frac{U \times \mathrm{filtCutOff}}{\pi \times \mathrm{chord}}` Hz.
 
 ``NumAlf`` is the number of distinct AoA entries and determines the
 number of rows in the subsequent table of static airfoil coefficients;
