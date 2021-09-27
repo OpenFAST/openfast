@@ -5565,7 +5565,7 @@ CONTAINS
             ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
 
             ! Froud-Krylov force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)*0.5* (2.0/3.0*Pi*Rod%d**3 /8) * aq
+            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)* (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
             
             ! dynamic pressure force
             Rod%Pd(:,I) = Rod%Pd(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
@@ -5574,9 +5574,9 @@ CONTAINS
             DO J=1,3
                DO K=1,3
                   IF (J==K) THEN
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
+                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                   ELSE
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
+                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                   END IF
                END DO
             END DO
@@ -5597,7 +5597,7 @@ CONTAINS
             Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
             
             ! Froud-Krylov force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)*0.5* (2.0/3.0*Pi*Rod%d**3 /8) * aq
+            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)* (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
             
             ! dynamic pressure force
             Rod%Pd(:,I) = Rod%Pd(:,I) - VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
@@ -5606,9 +5606,9 @@ CONTAINS
             DO J=1,3
                DO K=1,3
                   IF (J==K) THEN
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
+                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                   ELSE
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
+                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                   END IF
                END DO
             END DO
