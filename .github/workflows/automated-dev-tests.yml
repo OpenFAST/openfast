@@ -130,6 +130,7 @@ jobs:
           cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}
           cmake --build . --target beamdyn_driver -- -j ${{env.NUM_PROCS}}
           cmake --build . --target hydrodyn_driver -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target inflowwind_driver -- -j ${{env.NUM_PROCS}}
           cmake --build . --target subdyn_driver -- -j ${{env.NUM_PROCS}}
 
       - name: Run AeroDyn tests
