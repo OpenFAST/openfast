@@ -17,7 +17,7 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-MODULE InflowWindAPI
+MODULE InflowWind_C_BINDING
 
     USE ISO_C_BINDING
     USE InflowWind
@@ -27,9 +27,9 @@ MODULE InflowWindAPI
 
    IMPLICIT NONE
 
-   PUBLIC :: IFW_INIT_C
-   PUBLIC :: IFW_CALCOUTPUT_C
-   PUBLIC :: IFW_END_C
+   PUBLIC :: IfW_C_Init
+   PUBLIC :: IfW_C_CalcOutput
+   PUBLIC :: IfW_C_End
 
    ! Accessible to all routines inside module
    TYPE(InflowWind_InputType)              :: InputGuess        !< An initial guess for the input; the input mesh must be defined, returned by Init
@@ -45,8 +45,8 @@ MODULE InflowWindAPI
    TYPE(InflowWind_OutputType)             :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
    TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
 
-   !  This must exactly match the value in the python-lib. If ErrMsgLen changes
-   !  at some point in the nwtc-library, this should be updated, but the logic
+   !  This must exactly match the value in the Python interface. If ErrMsgLen changes
+   !  in the NWTC Library, this should be updated, but the logic
    !  exists to correctly handle different lengths of the strings
    integer(IntKi),   parameter            :: ErrMsgLen_C=1025
 
@@ -73,7 +73,7 @@ end subroutine SetErr
 !===============================================================================================================
 !--------------------------------------------- IFW INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE IfW_Init_c(InputFileString_C, InputFileStringLength_C, InputUniformString_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IfW_Init_c')
+SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformString_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IfW_C_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: IfW_Init_c
@@ -101,7 +101,7 @@ SUBROUTINE IfW_Init_c(InputFileString_C, InputFileStringLength_C, InputUniformSt
     INTEGER                                                          :: ErrStat2                   !< temporary error status  from a call
     CHARACTER(ErrMsgLen)                                             :: ErrMsg2                    !< temporary error message from a call
     INTEGER                                                          :: i,j,k
-    character(*), parameter                                          :: RoutineName = 'IFW_INIT_C' !< for error handling
+    character(*), parameter                                          :: RoutineName = 'IfW_C_Init' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -172,13 +172,13 @@ CONTAINS
       CALL InflowWind_DestroyInput(InputGuess, ErrStat2, ErrMsg2 )
       CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat2, ErrMsg2 )
    end subroutine Cleanup 
-END SUBROUTINE IfW_Init_c
+END SUBROUTINE IfW_C_Init
 
 !===============================================================================================================
 !--------------------------------------------- IFW CALCOUTPUT --------------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE IfW_CalcOutput_c(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_CalcOutput_c')
+SUBROUTINE IfW_C_CalcOutput(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_CalcOutput')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: IfW_CalcOutput_c
@@ -197,7 +197,7 @@ SUBROUTINE IfW_CalcOutput_c(Time_C,Positions_C,Velocities_C,OutputChannelValues_
    CHARACTER(ErrMsgLen)                               :: ErrMsg                           !< aggregated error message
    INTEGER                                            :: ErrStat2                         !< temporary error status  from a call
    CHARACTER(ErrMsgLen)                               :: ErrMsg2                          !< temporary error message from a call
-   character(*), parameter                            :: RoutineName = 'IFW_CALCOUTPUT_C' !< for error handling
+   character(*), parameter                            :: RoutineName = 'IfW_C_CalcOutput' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -225,13 +225,13 @@ CONTAINS
       Failed = ErrStat >= AbortErrLev
       if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
-END SUBROUTINE IfW_CalcOutput_c
+END SUBROUTINE IfW_C_CalcOutput
 
 !===============================================================================================================
 !--------------------------------------------------- IFW END ---------------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE IfW_End_c(ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_End_c')
+SUBROUTINE IfW_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_End')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: IfW_End_c
@@ -249,6 +249,6 @@ SUBROUTINE IfW_End_c(ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_End_c')
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
-END SUBROUTINE IfW_End_c
+END SUBROUTINE IfW_C_End
 
 END MODULE
