@@ -21,5 +21,5 @@ runs:
           # Exclude the Python-interface tests since those are run directly in the job
         fi
 
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{runner.workspace}}/openfast/build
       shell: bash

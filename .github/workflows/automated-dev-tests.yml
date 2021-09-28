@@ -43,12 +43,12 @@ jobs:
           pip install numpy Bokeh==1.4
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_TESTING:BOOL=ON \
@@ -56,7 +56,7 @@ jobs:
             ${GITHUB_WORKSPACE}
       - name: Build OpenFAST
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
 
       - name: Run AeroDyn tests
@@ -85,14 +85,14 @@ jobs:
         with:
           name: regression-tests-release
           path: |
-            ${{runner.workspace}}/build/reg_tests/modules
-            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
   regression-tests-debug:
     runs-on: ubuntu-20.04
@@ -112,12 +112,12 @@ jobs:
           pip install numpy Bokeh==1.4
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
@@ -125,7 +125,7 @@ jobs:
             ${GITHUB_WORKSPACE}
 
       - name: Build OpenFAST
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}
           cmake --build . --target beamdyn_driver -- -j ${{env.NUM_PROCS}}
@@ -156,7 +156,7 @@ jobs:
         with:
           name: regression-tests-debug
           path: |
-            ${{runner.workspace}}/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
 
   fastfarm-regression-test:
     runs-on: ubuntu-20.04
@@ -176,12 +176,12 @@ jobs:
           pip install numpy Bokeh==1.4
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DOPENMP:BOOL=ON \
             -DBUILD_FASTFARM:BOOL=ON \
@@ -191,7 +191,7 @@ jobs:
             ${GITHUB_WORKSPACE}
       - name: Build FAST.Farm
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
@@ -200,7 +200,7 @@ jobs:
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         run: |
           ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         shell: bash
 
       - name: Failing test artifacts
@@ -209,7 +209,7 @@ jobs:
         with:
           name: test-results
           path: |
-            ${{runner.workspace}}/build/reg_tests/glue-codes/fastfarm
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fastfarm
 
   unit-test:
     runs-on: ubuntu-20.04
@@ -219,19 +219,19 @@ jobs:
         with:
           submodules: recursive
       - name: Setup
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_TESTING:BOOL=ON \
             ${GITHUB_WORKSPACE}
 
       - name: Build unit tests
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
 
       - name: Run NWTC Library tests
@@ -262,22 +262,22 @@ jobs:
         with:
           submodules: recursive
       - name: Setup
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DDOUBLE_PRECISION:BOOL=OFF \
             -DGENERATE_TYPES:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build all
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target all -- -j ${{env.NUM_PROCS}}
       - name: Test
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: ./glue-codes/openfast/openfast -v
 
   interface-tests:
@@ -300,12 +300,12 @@ jobs:
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_OPENFAST_CPP_API:BOOL=ON \
@@ -315,7 +315,7 @@ jobs:
             ${GITHUB_WORKSPACE}
       - name: Build OpenFAST Interfaces
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target openfastlib -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
@@ -323,12 +323,12 @@ jobs:
           cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
 
       - name: Run C++ API tests
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           ctest -VV -L cpp
 
       - name: Run Python API tests
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           ctest -VV -L python
 
@@ -338,6 +338,6 @@ jobs:
         with:
           name: test-results
           path: |
-            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast-cpp
-            ${{runner.workspace}}/build/reg_tests/modules/inflowwind
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
