@@ -21,6 +21,7 @@
 # This is the Python interface library for InflowWind
 
 
+
 from ctypes import (
     CDLL,
     POINTER,
@@ -34,6 +35,7 @@ from ctypes import (
 )
 import datetime
 import os
+
 
 
 class InflowWindLib(CDLL):
@@ -84,7 +86,7 @@ class InflowWindLib(CDLL):
 
         self.numChannels = 0                # Number of channels returned
 
-
+        
     def _initialize_routines(self):
         """
         Initialize the Python handles to necessary routines in the InflowWind library.
@@ -155,7 +157,7 @@ class InflowWindLib(CDLL):
         
         # Initialize output channels
         self.numChannels = self._numChannels_c.value
-
+        
 
     def ifw_calc_output(self, time, positions, velocities, outputChannelValues):
         """
@@ -235,7 +237,6 @@ class InflowWindLib(CDLL):
         output_channel_units = self._channel_units_c.value.split()
         output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
         return output_channel_units
-
 
 ### Helper functions for development
 
