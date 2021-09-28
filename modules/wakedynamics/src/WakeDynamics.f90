@@ -825,7 +825,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                dvdr = m%dvx_dy(iy,iz,i-1) * C  + m%dvx_dz(iy,iz,i-1) * S !!!!! Check this derivative
                m%vt_amb2(iy,iz,i-1) = EddyTermA
                m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)* abs(dvdr) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-               m%vt_tot2(iy,iz,i-1) = max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), 1e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt)
+               m%vt_tot2(iy,iz,i-1) = max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), abs(1.e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt))
             enddo
          enddo
       endif
