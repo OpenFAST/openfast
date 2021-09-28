@@ -135,7 +135,6 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: TempLoads      !< temp loads mesh (for AzimAvg_Ct) [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ADRotorDisk      !< Mesh that does not deflect with the blade (for AzimAvg_Ct) [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_L2L      !< Map AD loads from deflected mesh to rotor-disk plane [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: yHat_blade      !< Vector tangential to blade [-]
   END TYPE FWrap_MiscVarType
 ! =======================
 ! =========  FWrap_ParameterType  =======
@@ -1261,7 +1260,6 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FWrap_CopyMisc'
@@ -1335,20 +1333,6 @@ IF (ALLOCATED(SrcMiscData%AD_L2L)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcMiscData%yHat_blade)) THEN
-  i1_l = LBOUND(SrcMiscData%yHat_blade,1)
-  i1_u = UBOUND(SrcMiscData%yHat_blade,1)
-  i2_l = LBOUND(SrcMiscData%yHat_blade,2)
-  i2_u = UBOUND(SrcMiscData%yHat_blade,2)
-  IF (.NOT. ALLOCATED(DstMiscData%yHat_blade)) THEN 
-    ALLOCATE(DstMiscData%yHat_blade(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%yHat_blade.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%yHat_blade = SrcMiscData%yHat_blade
-ENDIF
  END SUBROUTINE FWrap_CopyMisc
 
  SUBROUTINE FWrap_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1384,9 +1368,6 @@ DO i1 = LBOUND(MiscData%AD_L2L,1), UBOUND(MiscData%AD_L2L,1)
   CALL NWTC_Library_Destroymeshmaptype( MiscData%AD_L2L(i1), ErrStat, ErrMsg )
 ENDDO
   DEALLOCATE(MiscData%AD_L2L)
-ENDIF
-IF (ALLOCATED(MiscData%yHat_blade)) THEN
-  DEALLOCATE(MiscData%yHat_blade)
 ENDIF
  END SUBROUTINE FWrap_DestroyMisc
 
@@ -1534,11 +1515,6 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
     END DO
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! yHat_blade allocated yes/no
-  IF ( ALLOCATED(InData%yHat_blade) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! yHat_blade upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%yHat_blade)  ! yHat_blade
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1759,26 +1735,6 @@ ENDIF
       ENDIF
     END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%yHat_blade) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%yHat_blade,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%yHat_blade,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%yHat_blade,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%yHat_blade,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%yHat_blade,2), UBOUND(InData%yHat_blade,2)
-        DO i1 = LBOUND(InData%yHat_blade,1), UBOUND(InData%yHat_blade,1)
-          ReKiBuf(Re_Xferred) = InData%yHat_blade(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
  END SUBROUTINE FWrap_PackMisc
 
  SUBROUTINE FWrap_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1795,7 +1751,6 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FWrap_UnPackMisc'
@@ -2072,29 +2027,6 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! yHat_blade not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%yHat_blade)) DEALLOCATE(OutData%yHat_blade)
-    ALLOCATE(OutData%yHat_blade(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%yHat_blade.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%yHat_blade,2), UBOUND(OutData%yHat_blade,2)
-        DO i1 = LBOUND(OutData%yHat_blade,1), UBOUND(OutData%yHat_blade,1)
-          OutData%yHat_blade(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
   END IF
  END SUBROUTINE FWrap_UnPackMisc
 
