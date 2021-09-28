@@ -144,6 +144,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vamb_low      !< UVW components of ambient wind across the low-resolution domain throughout the farm [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vamb_lowpol      !< UVW components of disturbed wind (ambient + wakes) at points in the polar grid for each wake plane for each turbine [m/s]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vdist_low      !< UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm [m/s]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vdist_low_full      !< UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm, for outputs [m/s]
     TYPE(AWAE_HighWindGrid) , DIMENSION(:), ALLOCATABLE  :: Vamb_High      !< UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: xhat_plane      !< Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: yhat_plane      !< Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain [-]
@@ -3276,6 +3277,24 @@ IF (ALLOCATED(SrcMiscData%Vdist_low)) THEN
   END IF
     DstMiscData%Vdist_low = SrcMiscData%Vdist_low
 ENDIF
+IF (ALLOCATED(SrcMiscData%Vdist_low_full)) THEN
+  i1_l = LBOUND(SrcMiscData%Vdist_low_full,1)
+  i1_u = UBOUND(SrcMiscData%Vdist_low_full,1)
+  i2_l = LBOUND(SrcMiscData%Vdist_low_full,2)
+  i2_u = UBOUND(SrcMiscData%Vdist_low_full,2)
+  i3_l = LBOUND(SrcMiscData%Vdist_low_full,3)
+  i3_u = UBOUND(SrcMiscData%Vdist_low_full,3)
+  i4_l = LBOUND(SrcMiscData%Vdist_low_full,4)
+  i4_u = UBOUND(SrcMiscData%Vdist_low_full,4)
+  IF (.NOT. ALLOCATED(DstMiscData%Vdist_low_full)) THEN 
+    ALLOCATE(DstMiscData%Vdist_low_full(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vdist_low_full.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%Vdist_low_full = SrcMiscData%Vdist_low_full
+ENDIF
 IF (ALLOCATED(SrcMiscData%Vamb_High)) THEN
   i1_l = LBOUND(SrcMiscData%Vamb_High,1)
   i1_u = UBOUND(SrcMiscData%Vamb_High,1)
@@ -3592,6 +3611,9 @@ ENDIF
 IF (ALLOCATED(MiscData%Vdist_low)) THEN
   DEALLOCATE(MiscData%Vdist_low)
 ENDIF
+IF (ALLOCATED(MiscData%Vdist_low_full)) THEN
+  DEALLOCATE(MiscData%Vdist_low_full)
+ENDIF
 IF (ALLOCATED(MiscData%Vamb_High)) THEN
 DO i1 = LBOUND(MiscData%Vamb_High,1), UBOUND(MiscData%Vamb_High,1)
   CALL AWAE_Destroyhighwindgrid( MiscData%Vamb_High(i1), ErrStat, ErrMsg )
@@ -3710,6 +3732,11 @@ ENDIF
   IF ( ALLOCATED(InData%Vdist_low) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! Vdist_low upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vdist_low)  ! Vdist_low
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Vdist_low_full allocated yes/no
+  IF ( ALLOCATED(InData%Vdist_low_full) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! Vdist_low_full upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vdist_low_full)  ! Vdist_low_full
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Vamb_High allocated yes/no
   IF ( ALLOCATED(InData%Vamb_High) ) THEN
@@ -4012,6 +4039,36 @@ ENDIF
           DO i2 = LBOUND(InData%Vdist_low,2), UBOUND(InData%Vdist_low,2)
             DO i1 = LBOUND(InData%Vdist_low,1), UBOUND(InData%Vdist_low,1)
               ReKiBuf(Re_Xferred) = InData%Vdist_low(i1,i2,i3,i4)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Vdist_low_full) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_low_full,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_low_full,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_low_full,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_low_full,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_low_full,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_low_full,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_low_full,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_low_full,4)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i4 = LBOUND(InData%Vdist_low_full,4), UBOUND(InData%Vdist_low_full,4)
+        DO i3 = LBOUND(InData%Vdist_low_full,3), UBOUND(InData%Vdist_low_full,3)
+          DO i2 = LBOUND(InData%Vdist_low_full,2), UBOUND(InData%Vdist_low_full,2)
+            DO i1 = LBOUND(InData%Vdist_low_full,1), UBOUND(InData%Vdist_low_full,1)
+              ReKiBuf(Re_Xferred) = InData%Vdist_low_full(i1,i2,i3,i4)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -4702,6 +4759,39 @@ ENDIF
           DO i2 = LBOUND(OutData%Vdist_low,2), UBOUND(OutData%Vdist_low,2)
             DO i1 = LBOUND(OutData%Vdist_low,1), UBOUND(OutData%Vdist_low,1)
               OutData%Vdist_low(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vdist_low_full not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vdist_low_full)) DEALLOCATE(OutData%Vdist_low_full)
+    ALLOCATE(OutData%Vdist_low_full(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vdist_low_full.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i4 = LBOUND(OutData%Vdist_low_full,4), UBOUND(OutData%Vdist_low_full,4)
+        DO i3 = LBOUND(OutData%Vdist_low_full,3), UBOUND(OutData%Vdist_low_full,3)
+          DO i2 = LBOUND(OutData%Vdist_low_full,2), UBOUND(OutData%Vdist_low_full,2)
+            DO i1 = LBOUND(OutData%Vdist_low_full,1), UBOUND(OutData%Vdist_low_full,1)
+              OutData%Vdist_low_full(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
