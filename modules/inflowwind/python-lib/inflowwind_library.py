@@ -21,7 +21,6 @@
 # This is the Python interface library for InflowWind
 
 
-
 from ctypes import (
     CDLL,
     POINTER,
@@ -35,7 +34,6 @@ from ctypes import (
 )
 import datetime
 import os
-
 
 
 class InflowWindLib(CDLL):
@@ -237,6 +235,7 @@ class InflowWindLib(CDLL):
         output_channel_units = self._channel_units_c.value.split()
         output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
         return output_channel_units
+
 
 ### Helper functions for development
 
