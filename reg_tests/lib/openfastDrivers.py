@@ -28,11 +28,14 @@ import subprocess
 import rtestlib as rtl
 
 def _runCase(executable, inputFile, logFile, stdout):
-    command = "{} {} > {}".format(executable, inputFile, logFile)
+    if logFile is None:
+        command = "{} {}".format(executable, inputFile, logFile)
+    else:
+        command = "{} {} > {}".format(executable, inputFile, logFile)
     print(command)
     return subprocess.call(command, stdout=stdout, shell=True)
     
-def _runGenericCase(inputFile, executable, verbose=False):
+def _runGenericCase(inputFile, executable, verbose=False, log=True):
     stdout = sys.stdout if verbose else open(os.devnull, 'w')
     
     rtl.validateFileOrExit(inputFile)
@@ -40,7 +43,10 @@ def _runGenericCase(inputFile, executable, verbose=False):
     
     casebase = os.path.sep.join(inputFile.split(os.path.sep)[-1].split('.')[:-1])
     caseparent = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
-    logFile = caseparent + os.path.sep + casebase + '.log'
+    if verbose:
+        logFile = None
+    else:
+        logFile = caseparent + os.path.sep + casebase + '.log'
     
     returnCode = _runCase(executable, inputFile, logFile, stdout)
     print("COMPLETE with code {}".format(returnCode), flush=True)    

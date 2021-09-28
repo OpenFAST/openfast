@@ -276,11 +276,12 @@ Dynamic Blade-Element/Momentum Theory Options
 
 The input parameters in this section are used only when ``WakeMod = 2``.
 
-Set ``DBEMT_Mod`` to 1 for the constant-tau1 model, or set ``DBEMT_Mod`` to 2
-to use a model where tau1 varies with time.
+Set ``DBEMT_Mod`` to 1 for the constant-tau1 model, set ``DBEMT_Mod`` to 2
+to use a model where tau1 varies with time, or set ``DBEMT_Mod`` to 3
+to use a continuous-state model with constant tau1.
 
-If ``DBEMT_Mod=1`` (constant-tau1 model), set ``tau1_const`` to the time 
-constant to use for DBEMT.
+If ``DBEMT_Mod=1`` (constant-tau1 model) or ``DBEMT_Mod=3`` (continuous-state constant-tau1 model), 
+set ``tau1_const`` to the time constant to use for DBEMT.
 
 OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -292,16 +293,28 @@ described in :numref:`OLAF-Input-Files`.  ``OLAFInputFileName`` is the filename
 for this input file.
 
 
+.. _ad_ua_inputs: 
+
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are only used when ``AFAeroMod
+The input parameters in this section are used only when ``AFAeroMod
 = 2``.
 
-``UAMod`` determines the UA model. Setting ``UAMod`` to 1 enables
-original theoretical developments of B-L, 2 enables the extensions to
-B-L developed by González, and 3 enables the extensions to B-L developed
-by Minnema/Pierce. **While all of the UA models are documented in this
+``UAMod`` determines the UA model. It has the following options:
+
+- ``1``: the original theoretical developments of B-L (**not currently functional**), 
+- ``2``: the extensions to B-L developed by González 
+- ``3``: the extensions to B-L developed by Minnema/Pierce
+- ``4``: a continuous-state model developed by Hansen, Gaunna, and Madsen (HGM)
+- ``5``: a model similar to HGM with an additional state for vortex generation
+- ``6``: Oye's dynamic stall model
+- ``7``: Boeing-Vertol model
+
+The models are described in :numref:`AD_UA`.
+
+
+**While all of the UA models are documented in this
 manual, the original B-L model is not yet functional. Testing has shown
 that the González and Minnema/Pierce models produce reasonable
 hysteresis of the normal force, tangential force, and pitching-moment
@@ -321,7 +334,21 @@ value, *f’*, will be calculated. When ``FLookup`` is set to TRUE, *f’*
 is determined via a lookup into the static lift-force coefficient and
 drag-force coefficient data. **Using best-fit exponential equations
 (``FLookup = FALSE``) is not yet available, so ``FLookup`` must be
-``TRUE`` in this version of AeroDyn.**
+``TRUE`` in this version of AeroDyn.** Note, ``FLookup`` is not used when ``UAMod=5``.
+
+``UAStartRad`` is the starting rotor radius where dynamic stall
+will be turned on. Enter a number between 0 and 1, representing a fraction of rotor radius,
+to indicate where unsteady aerodynamics should begin turning on. If this line is
+omitted from the input file, ``UAStartRad`` will default to 0 (turning on at the blade root).
+All blade nodes that are located at a rotor radius less than ``UAStartRad`` will have
+unsteady aerodynamics turned off for the entire simulation.
+
+``UAEndRad`` is the ending rotor radius where dynamic stall
+will be turned on. Enter a number between 0 and 1, representing a fraction of rotor radius,
+to indicate the last rotor radius where unsteady aerodynamics should be turned on. If this line is
+omitted from the input file, ``UAEndRad`` will default to 1 (the blade tip).
+All blade nodes that are located at a rotor radius greater than ``UAEndRad`` will have
+unsteady aerodynamics turned off for the entire simulation.
 
 
 .. _airfoil_information:
@@ -409,10 +436,15 @@ Outputs
 ~~~~~~~
 
 Specifying ``SumPrint`` to TRUE causes AeroDyn to generate a summary
-file with name ``OutFileRoot**.AD.sum*. ``OutFileRoot`` is either
+file with name ``<OutFileRoot>.AD.sum``. ``<OutFileRoot>`` is either
 specified in the I/O SETTINGS section of the driver input file when
 running AeroDyn standalone, or by the OpenFAST program when running a
 coupled simulation. See :numref:`sec:ad_SumFile` for summary file details.
+If ``AFAeroMod=2``, the unsteady aero module will also generate a file
+called ``<OutFileRoot>.UA.sum`` that will list all of the UA parameters
+used in the airfoil tables. This allows the user to check what values
+are being used in case the code has computed the parameters
+without user input.
 
 AeroDyn can output aerodynamic and kinematic quantities at up to nine
 nodes specified along the tower and up to nine nodes along each blade.
@@ -489,6 +521,13 @@ When ``InterpOrd`` is 1, linear interpolation is used; when
 if the keyword ``DEFAULT`` is entered in place of a numerical value,
 ``InterpOrd`` is set to 1.
 
+
+``RelThickness`` is the non-dimensional thickness of the airfoil 
+(thickness over chord ratio), expressed as a fraction (not a percentage), 
+typically between 0.1 and 1. 
+The parameter is currently used when `UAMod=7`, but might be used more in the future.
+The default value of 0.2 if provided for convenience.
+
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
 local ``BlChord`` squared), but is currently unused by AeroDyn.
 ``NumCoords`` is the number of points to define the exterior shape of
@@ -519,9 +558,11 @@ primary AeroDyn input file is set to use 2D interpolation based on
 ``Re`` or ``UserProp``. If 1D interpolation (based only on angle of attack)
 is used, only the first table in the file will be used.
 
-Set ``InclUAdata`` to TRUE if you are including the 32 UA model
-parameters (required when ``AFAeroMod = 2`` in the AeroDyn primary
-input file):
+Set ``InclUAdata`` to TRUE if you are including the UA model
+parameters. If this is set to FALSE, all of the UA model parameters 
+will be determined by the code. Any lines that are missing from this section
+will have their values determined by the code, either using a default value
+or calculating it based on the polar coefficient data in the airfoil table:
 
 -  ``alpha0`` specifies the zero-lift AoA (in degrees);
 
@@ -530,6 +571,15 @@ input file):
 
 -  ``alpha2`` specifies the AoA (in degrees) less than ``alpha0``
    for which *f* equals 0.7; approximately the negative stall angle;
+
+-  ``alphaUpper`` specifies the AoA (in degrees) of the upper boundary of 
+    fully-attached region of the cn or cl curve. It is used to 
+    compute the separation function when ``UAMod=5``.
+
+-  ``alphaLower`` specifies the AoA (in degrees) of the lower boundary of 
+    fully-attached region of the cn or cl curve. It is used to 
+    compute the separation function when ``UAMod=5``. (The separation function
+    will have a value of 1 between ``alphaUpper`` and ``alphaLower``.)   
 
 -  ``eta_e`` is the recovery factor and typically has a value in the
    range [0.85 to 0.95] for ``UAMod = 1``; if the keyword ``DEFAULT`` is
@@ -661,11 +711,22 @@ input file):
    UA are disabled; if the keyword ``DEFAULT`` is entered in place of a
    numerical value, ``UACutOut`` is set to 45.
 
+-  ``UACutOut_delta`` is the AoA difference (in degrees) which, together
+   with ``UACutOut`` determines when unsteady aero begins to turn off; 
+   if the keyword ``DEFAULT`` is entered in place of a
+   numerical value, ``UACutOut_delta`` is set to 5 degrees.
+   The unsteady solution is used at angles of attack less than
+   ``UACutOut - UACutout_delta`` degrees. Above ``UACutout``, the steady solution is 
+   used (i.e., UA is disabled). The steady and unsteady solutions are blended between
+   those two angles.
+
 -  ``filtCutOff`` is the cut-off reduced frequency
    of the low-pass filter applied to the AoA input to UA, as
    well as to the pitch rate and pitch acceleration derived from AoA
    within UA; if the keyword ``DEFAULT`` is entered in place of a
    numerical value, ``filtCutOff`` is set to 0.5.
+   This non-dimensional value corresponds to a frequency of 
+   :math:`\frac{U \times \mathrm{filtCutOff}}{\pi \times \mathrm{chord}}` Hz.
 
 ``NumAlf`` is the number of distinct AoA entries and determines the
 number of rows in the subsequent table of static airfoil coefficients;
@@ -693,8 +754,8 @@ coefficient, ``Coefs``\ (:,1), the drag-force coefficient,
 ``InCol_Alfa``, ``InCol_Cl``, ``InCol_Cd``, ``InCol_Cm``,
 and ``InCol_Cpmin`` in the AIRFOIL INFORMATION section of the AeroDyn
 primary input file. AoA must be entered in monotonically increasing
-order—from lowest to highest AoA—and the first row should be for AoA =
-–180 and the last should be for AoA = +180 (unless ``NumAlf = 1``, in
+order—from lowest to highest AoA; the first row should be for AoA =
+–180 degrees and the last should be for AoA = +180 (unless ``NumAlf = 1``, in
 which case AoA is unused). If pitching-moment terms are neglected with
 ``UseBlCm = FALSE`` in the ROTOR/BLADE PROPERTIES section of the
 AeroDyn primary input file, the column containing pitching-moment

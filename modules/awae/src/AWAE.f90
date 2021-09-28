@@ -486,7 +486,11 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
              end do!nr
 
-             if ( wsum_tmp > 0.0_ReKi ) y%V_plane(:,np,nt) = y%V_plane(:,np,nt)/wsum_tmp
+             if ( EqualRealNos( wsum_tmp, 0.0_ReKi ) ) then
+                y%V_plane(:,np,nt) = 0.0_ReKi
+             else
+                y%V_plane(:,np,nt) = y%V_plane(:,np,nt)/wsum_tmp
+             end if
 
          end if
 
