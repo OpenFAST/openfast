@@ -87,7 +87,7 @@ It is compiled into HTML with Sphinx and is tied to a particular version
 of OpenFAST. `Readthedocs <http://openfast.readthedocs.io>`_ hosts the following
 versions of the documentation:
 
-* ``latest`` - The latest commit on the ``master`` branch
+* ``latest`` - The latest commit on the ``main`` branch
 * ``stable`` - Corresponds to the last tagged release
 * ``dev`` - The latest commit on the ``dev`` branch
 

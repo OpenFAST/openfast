@@ -65,6 +65,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: DBEMT_Mod      !< DBEMT model.  1 = constant tau1, 2 = time dependent tau1 [-]
     REAL(ReKi)  :: tau1_const      !< DBEMT time constant (when DBEMT_Mod=1) [s]
     REAL(ReKi)  :: yawCorrFactor      !< constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    LOGICAL  :: SumPrint      !< logical flag indicating whether to use UnsteadyAero [-]
   END TYPE BEMT_InitInputType
 ! =======================
 ! =========  BEMT_InitOutputType  =======
@@ -301,6 +305,32 @@ ENDIF
     DstInitInputData%DBEMT_Mod = SrcInitInputData%DBEMT_Mod
     DstInitInputData%tau1_const = SrcInitInputData%tau1_const
     DstInitInputData%yawCorrFactor = SrcInitInputData%yawCorrFactor
+IF (ALLOCATED(SrcInitInputData%UAOff_innerNode)) THEN
+  i1_l = LBOUND(SrcInitInputData%UAOff_innerNode,1)
+  i1_u = UBOUND(SrcInitInputData%UAOff_innerNode,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%UAOff_innerNode)) THEN 
+    ALLOCATE(DstInitInputData%UAOff_innerNode(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%UAOff_innerNode.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%UAOff_innerNode = SrcInitInputData%UAOff_innerNode
+ENDIF
+IF (ALLOCATED(SrcInitInputData%UAOff_outerNode)) THEN
+  i1_l = LBOUND(SrcInitInputData%UAOff_outerNode,1)
+  i1_u = UBOUND(SrcInitInputData%UAOff_outerNode,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%UAOff_outerNode)) THEN 
+    ALLOCATE(DstInitInputData%UAOff_outerNode(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%UAOff_outerNode.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%UAOff_outerNode = SrcInitInputData%UAOff_outerNode
+ENDIF
+    DstInitInputData%RootName = SrcInitInputData%RootName
+    DstInitInputData%SumPrint = SrcInitInputData%SumPrint
  END SUBROUTINE BEMT_CopyInitInput
 
  SUBROUTINE BEMT_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -329,6 +359,12 @@ IF (ALLOCATED(InitInputData%zTip)) THEN
 ENDIF
 IF (ALLOCATED(InitInputData%rLocal)) THEN
   DEALLOCATE(InitInputData%rLocal)
+ENDIF
+IF (ALLOCATED(InitInputData%UAOff_innerNode)) THEN
+  DEALLOCATE(InitInputData%UAOff_innerNode)
+ENDIF
+IF (ALLOCATED(InitInputData%UAOff_outerNode)) THEN
+  DEALLOCATE(InitInputData%UAOff_outerNode)
 ENDIF
  END SUBROUTINE BEMT_DestroyInitInput
 
@@ -418,6 +454,18 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! DBEMT_Mod
       Re_BufSz   = Re_BufSz   + 1  ! tau1_const
       Re_BufSz   = Re_BufSz   + 1  ! yawCorrFactor
+  Int_BufSz   = Int_BufSz   + 1     ! UAOff_innerNode allocated yes/no
+  IF ( ALLOCATED(InData%UAOff_innerNode) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! UAOff_innerNode upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%UAOff_innerNode)  ! UAOff_innerNode
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! UAOff_outerNode allocated yes/no
+  IF ( ALLOCATED(InData%UAOff_outerNode) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! UAOff_outerNode upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%UAOff_outerNode)  ! UAOff_outerNode
+  END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
+      Int_BufSz  = Int_BufSz  + 1  ! SumPrint
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -597,6 +645,42 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%yawCorrFactor
     Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%UAOff_innerNode) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UAOff_innerNode,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UAOff_innerNode,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%UAOff_innerNode,1), UBOUND(InData%UAOff_innerNode,1)
+        IntKiBuf(Int_Xferred) = InData%UAOff_innerNode(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%UAOff_outerNode) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UAOff_outerNode,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UAOff_outerNode,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%UAOff_outerNode,1), UBOUND(InData%UAOff_outerNode,1)
+        IntKiBuf(Int_Xferred) = InData%UAOff_outerNode(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    DO I = 1, LEN(InData%RootName)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%SumPrint, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BEMT_PackInitInput
 
  SUBROUTINE BEMT_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -798,6 +882,48 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%yawCorrFactor = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UAOff_innerNode not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%UAOff_innerNode)) DEALLOCATE(OutData%UAOff_innerNode)
+    ALLOCATE(OutData%UAOff_innerNode(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UAOff_innerNode.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%UAOff_innerNode,1), UBOUND(OutData%UAOff_innerNode,1)
+        OutData%UAOff_innerNode(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UAOff_outerNode not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%UAOff_outerNode)) DEALLOCATE(OutData%UAOff_outerNode)
+    ALLOCATE(OutData%UAOff_outerNode(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UAOff_outerNode.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%UAOff_outerNode,1), UBOUND(OutData%UAOff_outerNode,1)
+        OutData%UAOff_outerNode(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    DO I = 1, LEN(OutData%RootName)
+      OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%SumPrint = TRANSFER(IntKiBuf(Int_Xferred), OutData%SumPrint)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BEMT_UnPackInitInput
 
  SUBROUTINE BEMT_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
