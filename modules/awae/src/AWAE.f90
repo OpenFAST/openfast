@@ -214,6 +214,9 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi)      :: i,np1,errStat2
    character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'
    logical             :: within
+   real(SiKi), dimension(3,3) :: C_rot
+   real(SiKi) :: C_rot_norm
+   integer, parameter :: Mod_Deficit = 2
 
    errStat = ErrID_None
    errMsg  = ""
@@ -243,7 +246,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, xhatBar_plane, x_end_plane,nt,np,x_start_plane,delta,deltad,&
    !$OMP&                    p_tmp_plane,tmp_vec,r_vec_plane,y_tmp_plane,z_tmp_plane,xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp,&
    !$OMP&                    nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,&
-   !$OMP&                    xHat_plane, yHat_plane, zHat_plane,&
+   !$OMP&                    xHat_plane, yHat_plane, zHat_plane, C_rot, C_rot_norm, &
    !$OMP&                    tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, i,np1,errStat2) & 
    !$OMP&            SHARED(m,u,p,maxPln,errStat,errMsg) DEFAULT(NONE)
    !do nz_low=0, p%nZ_low-1
@@ -257,7 +260,8 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             nz_low =     int( i / (p%nX_low*p%nY_low) )
 
                ! set the disturbed flow equal to the ambient flow for this time step
-            m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
+            m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
+            m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
 
             !nXYZ_low = nXYZ_low + 1
             nXYZ_low = i + 1
@@ -357,7 +361,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
            else
               xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
            end if
-
            ! Compute average contributions
            ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
            ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
@@ -371,7 +374,36 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
            end do
            ! [I - XX']V = V - (V dot X)X
            Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
-           m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+           ! Compute C matrix and update Vdist_low
+           if(Mod_Deficit==1) then              
+              ! Full field is for VTK outputs, contains the cross flow components
+              m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+              m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+              
+           else if (Mod_Deficit==2) then
+              C_rot(1,1) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
+              C_rot(1,2) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
+              C_rot(1,3) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+
+              C_rot(2,1) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
+              C_rot(2,2) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
+              C_rot(2,3) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+              
+              C_rot(3,1) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
+              C_rot(3,2) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
+              C_rot(3,3) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+
+              C_rot_norm = C_rot(1,1) + C_rot(2,2) + C_rot(3,3) 
+              if (EqualRealNos( C_rot_norm, 0.0_SiKi) ) then
+                 ! do nothing
+              else
+                 C_rot = C_rot / C_rot_norm
+                 ! Full field is for VTK outputs, contains the cross flow components
+                 m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + matmul(C_rot, real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi))
+                 m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low)               + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+              endif
+           endif
+           
         end if  ! (n_wake > 0)
    end do ! i, loop NumGrid_low points
    !      end do ! do nx_low=0, p%nX_low-1
@@ -1125,6 +1157,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_lowpol.', errStat, errMsg, RoutineName )
    allocate ( m%Vdist_low  ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low.', errStat, errMsg, RoutineName )
+   allocate ( m%Vdist_low_full  ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low_full', errStat, errMsg, RoutineName )
 
    allocate ( m%Vamb_high(1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high.', errStat, errMsg, RoutineName )
@@ -1450,7 +1484,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          ! XY plane slices
       do k = 1,p%NOutDisWindXY
 
-         call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low, m%outVizXYPlane(:,:,:,1))
+         call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low_full, m%outVizXYPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisXY"//trim(num2lstr(k))//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
@@ -1464,7 +1498,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
          ! YZ plane slices
       do k = 1,p%NOutDisWindYZ
-         call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low, m%outVizYZPlane(:,:,:,1))
+         call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low_full, m%outVizYZPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisYZ"//trim(num2lstr(k))//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
@@ -1477,7 +1511,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
          ! XZ plane slices
       do k = 1,p%NOutDisWindXZ
-         call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low, m%outVizXZPlane(:,:,:,1))
+         call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low_full, m%outVizXZPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisXZ"//trim(num2lstr(k))//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
