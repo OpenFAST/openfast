@@ -57,12 +57,12 @@ jobs:
 
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
-      - name: Run HydroDyn tests
-        uses: ./.github/actions/tests-module-hydrodyn
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
         with:
           test-target: regression
+      - name: Run HydroDyn tests
+        uses: ./.github/actions/tests-module-hydrodyn
       - name: Run BeamDyn tests
         uses: ./.github/actions/tests-module-beamdyn
         with:
@@ -126,7 +126,7 @@ jobs:
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
 
-      - name: Build OpenFAST
+      - name: Build Drivers
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}

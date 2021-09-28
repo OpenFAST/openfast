@@ -819,7 +819,6 @@ REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
 LOGICAL                      :: Dummy_Bool
 INTEGER(IntKi)               :: Dummy_Int
-INTEGER(IntKi)               :: fOffset
 INTEGER(IntKi)       :: ErrStat2
 CHARACTER(ErrMsgLen) :: ErrMsg2
 ! Initialize ErrStat
@@ -1218,39 +1217,32 @@ IF (Check( Init%nCMass < 0     , 'NCMass must be >=0')) return
 
 !---------------------------- OUTPUT: SUMMARY & OUTFILE ------------------------------
 CALL ReadCom (UnIn, SDInputFile,               'OUTPUT'                                            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-fOffset = ftell(UnIn)
 CALL ReadLVar(UnIn, SDInputFile, Init%SSSum  , 'SSSum'  , 'Summary File Logic Variable'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 ! --- Reading OutCBModes and OutFEM Modes (temporary backward compatibility if missing)
 !CALL ReadIVar( UnIn, SDInputFile, p%OutCBModes  , 'OutCBModes'  , 'Output of CB Modes'  , ErrStat2 , ErrMsg2 , UnEc ); if(Failed()) return
-!CALL ReadIVar( UnIn, SDInputFile, p%OutFEMModes , 'OutFEMModes' , 'Output of FEM Modes' , ErrStat2 , ErrMsg2 , UnEc ); if(Failed()) return
-fOffset = ftell(UnIn)
 read(UnIn,'(A)',iostat=ErrStat2) Line
-call ftell(UnIn, Dummy_Int) ! Somehow needed
 call Conv2UC(Line)  ! to uppercase
 if (index(Line, 'OUTCBMODES')>1) then
    read(Line, *, iostat=ErrStat2) p%OutCBModes
    ErrMsg2='Error reading OutCBModes in file:'//trim(SDInputFile)
    if(Failed()) return 
-else
-   p%OutCBModes=idOutputFormatNone
-   call LegacyWarning('OutCBModes is not present in input file towards the output section')
-   call fseek(UnIn, fOffset, 0)
-endif
-fOffset = ftell(UnIn)
-read(UnIn,'(A)',iostat=ErrStat2) Line
-call ftell(UnIn, Dummy_Int) ! Somehow needed
-call Conv2UC(Line)  ! to uppercase
-if (index(Line, 'OUTFEMMODES')>1) then
-   read(Line, *, iostat=ErrStat2) p%OutFEMModes
-   ErrMsg2='Error reading OutFEMModes in file:'//trim(SDInputFile)
+
+   CALL ReadIVar( UnIn, SDInputFile, p%OutFEMModes , 'OutFEMModes' , 'Output of FEM Modes' , ErrStat2 , ErrMsg2 , UnEc ); if(Failed()) return
    if(Failed()) return 
+
+   CALL ReadLVar(UnIn, SDInputFile, Init%OutCOSM, 'OutCOSM', 'Cosine Matrix Logic Variable'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return !bjj: TODO: OutCOSM isn't used anywhere else.
 else
-   p%OutFEMModes=idOutputFormatNone
-   call LegacyWarning('OutFEMModes is not present in input file towards the output section')
-   call fseek(UnIn, fOffset, 0)
+   p%OutCBModes  = idOutputFormatNone
+   p%OutFEMModes = idOutputFormatNone
+   call LegacyWarning('OutCBModes and OutFEMModes are not present in input file towards the output section')
+
+   read(Line, *, iostat=ErrStat2) Init%OutCOSM
+   ErrMsg2='Error reading OutCOSM in file:'//trim(SDInputFile)
+   if(Failed()) return 
+
 endif
 ! --- Continue
-CALL ReadLVar(UnIn, SDInputFile, Init%OutCOSM, 'OutCOSM', 'Cosine Matrix Logic Variable'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return !bjj: TODO: OutCOSM isn't used anywhere else.
+!CALL ReadLVar(UnIn, SDInputFile, Init%OutCOSM, 'OutCOSM', 'Cosine Matrix Logic Variable'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return !bjj: TODO: OutCOSM isn't used anywhere else.
 CALL ReadLVar(UnIn, SDInputFile, p%OutAll    , 'OutAll' , 'Output all Member Forces Logic Variable',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 !Store an integer version of it
 p%OutAllInt= 1
