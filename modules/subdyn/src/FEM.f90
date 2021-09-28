@@ -24,6 +24,12 @@ MODULE FEM
 
   INTEGER, PARAMETER  :: FEKi = R8Ki  ! Define the kind to be used for FEM
   INTEGER, PARAMETER  :: LaKi = R8Ki  ! Define the kind to be used for LaPack
+
+  INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
+     MODULE PROCEDURE FINDLOCI_ReKi
+     MODULE PROCEDURE FINDLOCI_IntKi
+  END INTERFACE
+
  
 CONTAINS
 !------------------------------------------------------------------------------------------------------

@@ -19,20 +19,27 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-PROGRAM TestSubDyn
+PROGRAM SubDyn_Driver
 
    USE NWTC_Library
    USE SubDyn
    USE SubDyn_Types
    USE SubDyn_Output
+   USE FEM, only: FINDLOCI
    USE VersionInfo
 
    IMPLICIT NONE
 
    INTEGER(IntKi), PARAMETER                          :: NumInp = 1           ! Number of inputs sent to SD_UpdateStates
    
+   type ALoadType
+      integer(IntKi)         :: NodeID            ! Joint and then Node ID where force is applied
+      real(ReKi)             :: SteadyLoad(6)     ! Steady Load (Fx, Fy, Fz, Mx, My, Mz)
+      real(ReKi),allocatable :: UnsteadyLoad(:,:) ! Unsteady Load nx7 : (Time, Fx, Fy, Fz, Mx, My, Mz)
+      integer(IntKi)         :: iTS               ! Optimization index to find closest time stamp in user defined time series of unsteady load
+   end type ALoadType
    
-   TYPE SD_Drvr_InitInput
+   TYPE SD_dvr_InitInput
       LOGICAL         :: Echo
       REAL(ReKi)      :: Gravity
       CHARACTER(1024) :: SDInputFile
@@ -47,7 +54,8 @@ PROGRAM TestSubDyn
       REAL(ReKi)      :: uTPInSteady(6)
       REAL(ReKi)      :: uDotTPInSteady(6)
       REAL(ReKi)      :: uDotDotTPInSteady(6)
-   END TYPE SD_Drvr_InitInput
+      type(ALoadType), allocatable :: AppliedLoads(:)  ! 7 x nSteadyForces: JointID, Fx, Fy, Fz, Mx, My, Mz
+   END TYPE SD_dvr_InitInput
    
    
       ! Program variables
@@ -68,6 +76,7 @@ PROGRAM TestSubDyn
    TYPE(SD_ParameterType)          :: p                    ! Parameters
    TYPE(SD_InputType)              :: u(NumInp)            ! System inputs
    TYPE(SD_OutputType)             :: y                    ! System outputs
+   TYPE(ALoadType), pointer        :: AL                   ! Applied Load (alias to shorten notations)
 
 
    INTEGER(IntKi)                  :: n                    ! Loop counter (for time step)
@@ -75,15 +84,19 @@ PROGRAM TestSubDyn
    CHARACTER(1024)                 :: ErrMsg, ErrMsg1, ErrMsg2, ErrMsg3              ! Error message if ErrStat /= ErrID_None
 
 
-   CHARACTER(1024)                 :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
-   TYPE(SD_Drvr_InitInput)         :: drvrInitInp          ! Initialization data for the driver program
+   CHARACTER(1024)                 :: dvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
+   TYPE(SD_dvr_InitInput), target  :: drvrInitInp          ! Initialization data for the driver program
    INTEGER                         :: UnIn                 ! Unit number for the input file
    INTEGER                         :: UnEcho          ! The local unit number for this module's echo file
    INTEGER(IntKi)                  :: UnSD_Out             ! Output file identifier
    REAL(ReKi), ALLOCATABLE         :: SDin(:,:)            ! Variable for storing time, forces, and body velocities, in m/s or rad/s for SubDyn inputs
-   INTEGER(IntKi)                  :: J                    ! Generic loop counter
+   INTEGER(IntKi)                  :: I,J                  ! Generic loop counter
+   INTEGER(IntKi)                  :: iLoad                ! Index on loads             
+   INTEGER(IntKi)                  :: iNode                ! Index on nodes
+   INTEGER(IntKi)                  :: JointID              ! JointID
    REAL(ReKi)                      :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
    CHARACTER(10)                   :: AngleMsg             ! For debugging, a string version of the largest rotation input
+   real(ReKi)                      :: UnsteadyLoad(6)      ! Unsteady Load interpolated at a given time
    
       ! Other/Misc variables
    REAL(DbKi)                      :: TiLstPrn             ! The time of the last print
@@ -128,9 +141,9 @@ PROGRAM TestSubDyn
 
    ! Parse the driver input file and run the simulation based on that file
    IF ( command_argument_count() == 1 ) THEN
-      CALL get_command_argument(1, drvrFilename)
+      CALL get_command_argument(1, dvrFilename)
 
-      CALL ReadDriverInputFile( drvrFilename, drvrInitInp);
+      CALL ReadDriverInputFile( dvrFilename, drvrInitInp);
       InitInData%g            = drvrInitInp%Gravity
       InitInData%SDInputFile  = drvrInitInp%SDInputFile
       InitInData%RootName     = drvrInitInp%OutRootName
@@ -142,13 +155,13 @@ PROGRAM TestSubDyn
 
    TMax = TimeInterval * drvrInitInp%NSteps
    
-   ! Initialize the module
+   ! Initialize SubDyn module
    CALL SD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 ); call AbortIfFailed()
 
-   CALL AllocAry(SDin, drvrInitInp%NSteps, 19, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
-   SDin(:,:)=0.0_ReKi
 
    ! Read Input time series data from a file
+   CALL AllocAry(SDin, drvrInitInp%NSteps, 19, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
+   SDin(:,:)=0.0_ReKi
    IF ( drvrInitInp%InputsMod == 2 ) THEN
       ! Open the  inputs data file
       CALL GetNewUnit( UnIn ) 
@@ -169,6 +182,20 @@ PROGRAM TestSubDyn
          !SDin(n+1,14:19) = drvrInitInp%uDotDotTPInSteady(1:6)  ! Accelerations
       enddo
    end if 
+
+   ! Setup Applied Loads 
+   do iLoad=1,size(drvrInitInp%AppliedLoads)
+      AL => drvrInitInp%AppliedLoads(iLoad)
+      JointID = AL%NodeID
+      AL%NodeID = findloci(p%NodeID2JointID, JointID) ! Replace JointID with Index
+      if (AL%NodeID<0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Applied load JointID '//trim(num2lstr(JointID))//' is not found in SubDyn joint list.'
+         call AbortIfFailed()
+      endif
+      AL%iTS=1 ! important init
+   enddo
+
   
    ! Destroy initialization data
    CALL SD_DestroyInitInput(  InitInData,  ErrStat2, ErrMsg2 ); call AbortIfFailed()
@@ -193,10 +220,6 @@ PROGRAM TestSubDyn
 
       ! Set module inputs u (likely from the outputs of another module or a set of test conditions) here:
       IF ( u(1)%TPMesh%Initialized ) THEN 
-         ! For now, set all hydrodynamic load inputs to 0.0
-         u(1)%LMesh%Force  (:,:) = 0.0
-         u(1)%LMesh%Moment (:,:) = 0.0
-         
          ! Input displacements, velocities and potentially accelerations
          u(1)%TPMesh%TranslationDisp(:,1)   = SDin(n+1,2:4) 
          CALL SmllRotTrans( 'InputRotation', REAL(SDin(n+1,5),reki), REAL(SDin(n+1,6),reki), REAL(SDin(n+1,7),reki), dcm, 'Junk', ErrStat, ErrMsg )            
@@ -212,6 +235,24 @@ PROGRAM TestSubDyn
             u(1)%TPMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotTPInSteady(4:6) 
          END IF
       END IF   
+      ! Set LMesh applied loads
+      if ( u(1)%LMesh%Initialized ) then 
+         ! Default, set all external load to 0.0
+         u(1)%LMesh%Force  (:,:) = 0.0
+         u(1)%LMesh%Moment (:,:) = 0.0
+         ! Add applied loads
+         do iLoad=1, size(drvrInitInp%AppliedLoads)
+            AL => drvrInitInp%AppliedLoads(iLoad)
+            iNode = AL%NodeID
+            u(1)%LMesh%Force(:,iNode)  = u(1)%LMesh%Force(:,iNode)  + AL%SteadyLoad(1:3)
+            u(1)%LMesh%Moment(:,iNode) = u(1)%LMesh%Moment(:,iNode) + AL%SteadyLoad(4:6)
+            if (allocated(AL%UnsteadyLoad)) then
+               call interpTimeValue(AL%UnsteadyLoad, Time, AL%iTS, UnsteadyLoad)
+               u(1)%LMesh%Force(:,iNode)  = u(1)%LMesh%Force(:,iNode)  + UnsteadyLoad(1:3)
+               u(1)%LMesh%Moment(:,iNode) = u(1)%LMesh%Moment(:,iNode) + UnsteadyLoad(4:6)
+            endif
+         enddo
+      endif
 
 
       ! Calculate outputs at n
@@ -239,6 +280,7 @@ CONTAINS
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SubDyn_Driver') 
         IF ( ErrStat /= ErrID_None ) THEN
            CALL WrScr( ErrMsg )
+           CALL WrScr('')
         END IF
         if (ErrStat >= AbortErrLev) then
            call CleanUp()
@@ -247,6 +289,14 @@ CONTAINS
    END SUBROUTINE AbortIfFailed
 
    SUBROUTINE CleanUp()
+      integer :: iForce
+      if(allocated(drvrInitInp%AppliedLoads)) then
+          do iForce=1,size(drvrInitInp%AppliedLoads) 
+             if (allocated(drvrInitInp%AppliedLoads(iForce)%UnsteadyLoad)) then
+                deallocate(drvrInitInp%AppliedLoads(iForce)%UnsteadyLoad)
+             endif
+          enddo
+       endif
       if(UnEcho>0) CLOSE(UnEcho)
       if(UnEcho>0) CLOSE( UnIn)
       if(allocated(SDin)) deallocate(SDin)
@@ -254,11 +304,12 @@ CONTAINS
 
    !-------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE ReadDriverInputFile( inputFile, InitInp)
-      CHARACTER(*),                  INTENT( IN    )   :: inputFile
-      TYPE(SD_Drvr_InitInput),       INTENT(   OUT )   :: InitInp
+      CHARACTER(*),                 INTENT( IN    )   :: inputFile
+      TYPE(SD_dvr_InitInput),       INTENT(   OUT )   :: InitInp
       ! Local variables  
       INTEGER                                          :: I                    ! generic integer for counting
       INTEGER                                          :: J                    ! generic integer for counting
+      INTEGER                                          :: iDummy               ! dummy integer
       CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
 
       CHARACTER(1024)                                  :: EchoFile             ! Name of SubDyn echo file  
@@ -266,12 +317,14 @@ CONTAINS
       CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
       CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
       CHARACTER(1024)                                  :: FileName             ! Name of SubDyn input file  
-      CHARACTER(1024)                                  :: FilePath             ! Path Name of SubDyn input file  
+      CHARACTER(1024)                                  :: PriPath             ! Path Name of SubDyn input file  
    
       UnEcho=-1
       UnIn  =-1
    
       FileName = TRIM(inputFile)
+      ! Primary path, relative files will be based on it
+      CALL GetPath( FileName, PriPath )
    
       CALL GetNewUnit( UnIn )   
       CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2);
@@ -319,23 +372,86 @@ CONTAINS
          InitInp%uTPInSteady       = 0.0
          InitInp%uDotTPInSteady    = 0.0
          InitInp%uDotDotTPInSteady = 0.0
+         CALL ReadCom( UnIn, FileName, '0.0   0.0   0.0   0.0   0.0   0.0   uTPInSteady     ', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+         CALL ReadCom( UnIn, FileName, '0.0   0.0   0.0   0.0   0.0   0.0   uDotTPInSteady  ', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+         CALL ReadCom( UnIn, FileName, '0.0   0.0   0.0   0.0   0.0   0.0   uDotTPInSteady  ', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       END IF
+      CALL AbortIfFailed()
+      !---------------------- FORCES ----------------------------------------
+      CALL ReadCom( UnIn, FileName, '--- FORCES INPUTS header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      CALL ReadVar ( UnIn, FileName, iDummy,  'nApplied Forces', 'Number of applied forces', ErrStat2,  ErrMsg2, UnEcho); 
+      !call AbortIfFailed()
+      if (ErrStat2/=ErrID_None) then
+         ! TODO Temporary
+         call LegacyWarning('Applied loads input missing.')
+         allocate(InitInp%AppliedLoads(0), stat=ErrStat2); ErrMsg2='Allocating Forces'; call AbortIfFailed()
+      else
+         allocate(InitInp%AppliedLoads(iDummy), stat=ErrStat2); ErrMsg2='Allocating Forces'; call AbortIfFailed()
+         CALL ReadCom( UnIn, FileName, 'JointID    Fx     Fy    Fz     Mx     My     Mz', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+         CALL ReadCom( UnIn, FileName, ' (-)       (N)   (N)    (N)   (Nm)   (Nm)   (Nm)', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+         do i=1,iDummy
+            ! Read line and extract loads
+            read(UnIn, fmt='(A)', iostat=ErrStat2) Line ; ErrMsg2='Erro reading force input line'//num2lstr(i); call AbortIfFailed()
+            call readAppliedForce(Line, InitInp%AppliedLoads(i), PriPath, Errstat2, ErrMsg2); call AbortIfFailed()
+         enddo
+      endif
+
+   
       if(UnEcho>0) CLOSE( UnEcho )
       if(UnIn>0)   CLOSE( UnIn   )
-   
-      ! Perform input checks and triggers
-      CALL GetPath( FileName, FilePath )
+      ! --- Perform input checks and triggers
       IF ( PathIsRelative( InitInp%SDInputFile ) ) then
-         InitInp%SDInputFile = TRIM(FilePath)//TRIM(InitInp%SDInputFile)
+         InitInp%SDInputFile = TRIM(PriPath)//TRIM(InitInp%SDInputFile)
       END IF
       IF ( PathIsRelative( InitInp%OutRootName ) ) then
-         InitInp%OutRootName = TRIM(FilePath)//TRIM(InitInp%OutRootName)
+         InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
       endif
       IF ( PathIsRelative( InitInp%InputsFile ) ) then
-         InitInp%InputsFile = TRIM(FilePath)//TRIM(InitInp%InputsFile)
+         InitInp%InputsFile = TRIM(PriPath)//TRIM(InitInp%InputsFile)
       endif
 
    END SUBROUTINE ReadDriverInputFile
+
+   subroutine readAppliedForce(Line, AL, PriPath, Errstat, ErrMsg)
+      character(*         ), intent(in   ) :: Line    ! Input line from input file
+      type     (ALoadType) , intent(inout) :: AL      ! Applied force
+      character(*         ), intent(in   ) :: PriPath ! Path to base relative file from
+      integer  (IntKi     ), intent(out  ) :: ErrStat ! Error status of the operation
+      character(*         ), intent(out  ) :: ErrMsg  ! Error message if ErrStat /    = ErrID_None
+      character(255) :: StrArray(8) ! Array of strings extracted from line
+      ! Set default err stat
+      AL%SteadyLoad=-9999.9_ReKi ! Init
+      if (allocated(AL%UnsteadyLoad)) deallocate(AL%UnsteadyLoad)
+      ! Convert line to str array
+      StrArray(:)='';
+      CALL ReadCAryFromStr(Line, StrArray, 8, 'StrArray', 'StrArray', ErrStat, ErrMsg)! NOTE:No Error handling!
+      ErrStat=ErrID_Fatal
+      ErrMsg='Error reading force inputs.'//char(10)//'Prolematic line: '//trim(Line)
+      ! NodeID
+      if (.not. is_int(StrArray(1), AL%NodeID) ) then
+         ErrMsg=trim(ErrMsg)//achar(13)//achar(10)//'NodeID needs to be an integer.'
+         return
+      endif
+      ! Steady Load
+      if (.not. is_numeric(StrArray(2), AL%SteadyLoad(1)) ) return
+      if (.not. is_numeric(StrArray(3), AL%SteadyLoad(2)) ) return
+      if (.not. is_numeric(StrArray(4), AL%SteadyLoad(3)) ) return
+      if (.not. is_numeric(StrArray(5), AL%SteadyLoad(4)) ) return
+      if (.not. is_numeric(StrArray(6), AL%SteadyLoad(5)) ) return
+      if (.not. is_numeric(StrArray(7), AL%SteadyLoad(6)) ) return
+      ! Unsteady Load
+      if (len_trim(StrArray(8))>0) then
+         ErrMsg='Unsteady load file not yet supported but the input file `'//trim(StrArray(8))//'` was given.'//char(10)//'Prolematic line: '//trim(Line)
+         call ReadDelimFile(StrArray(8), 7, AL%UnsteadyLoad, ErrStat, ErrMsg, 1, priPath)
+         return
+         ! TODO read file here and allocate. See new AeroDyn driver to read csv
+
+      endif
+      print'(A,I5,6(E10.2))','    Applied Load: ',AL%NodeID, AL%SteadyLoad
+      ! Success
+      ErrStat=ErrID_None
+      ErrMsg=''
+   end subroutine readAppliedForce
 
    subroutine print_help()
        print '(a)', 'usage: '
@@ -345,5 +461,151 @@ CONTAINS
        print '(a)', 'Where driverfilename is the name of the SubDyn driver input file.'
        print '(a)', ''
    end subroutine print_help
+
+   subroutine LegacyWarning(Message)
+      character(len=*), intent(in) :: Message
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      call WrScr('Warning: the SubDyn driver input file is not at the latest format!' )
+      call WrScr('         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html')
+      call WrScr('> Issue: '//trim(Message))
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+   end subroutine LegacyWarning
+
+   ! --------------------------------------------------------------------------------
+   ! --- Generic routines (also present in other modules, e.g. OLAF, AD Driver) 
+   ! --------------------------------------------------------------------------------
+   function is_numeric(string, x)
+      implicit none
+      character(len=*), intent(in) :: string
+      real(reki), intent(out) :: x
+      logical :: is_numeric
+      integer :: e,n
+      character(len=12) :: fmt
+      x = 0.0_reki
+      n=len_trim(string)
+      write(fmt,'("(F",I0,".0)")') n
+      read(string,fmt,iostat=e) x
+      is_numeric = e == 0
+   end function is_numeric
+
+   function is_int(string, x)
+      implicit none
+      character(len=*), intent(in) :: string
+      integer(IntKi), intent(out) :: x
+      logical :: is_int
+      integer :: e,n
+      character(len=12) :: fmt
+      x = 0
+      n=len_trim(string)
+      write(fmt,'("(I",I0,")")') n
+      read(string,fmt,iostat=e) x
+      is_int = e == 0
+   end function is_int
+
+   !> Read a delimited file with one line of header
+   subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, priPath)
+      character(len=*),                        intent(in)  :: Filename
+      integer,                                 intent(in)  :: nCol
+      real(ReKi), dimension(:,:), allocatable, intent(out) :: Array
+      integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
+      character(*)           ,                 intent(out) :: errMsg  ! Error message if ErrStat /= ErrID_None
+      integer(IntKi), optional,                intent(in ) :: nHeaderLines
+      character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
+      integer              :: UnIn, i, j, nLine, nHead
+      character(len= 2048) :: line
+      integer(IntKi)       :: errStat2      ! local status of error message
+      character(ErrMsgLen) :: errMsg2       ! temporary Error message
+      character(len=2048) :: Filename_Loc   ! filename local to this function
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      Filename_Loc = Filename
+      if (present(priPath)) then
+         if (PathIsRelative(Filename_Loc)) Filename_Loc = trim(PriPath)//trim(Filename)
+      endif
+
+
+      ! Open file
+      call GetNewUnit(UnIn) 
+      call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
+      if (errStat >= AbortErrLev) return
+      ! Count number of lines
+      nLine = line_count(UnIn)
+      allocate(Array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
+      if (errStat >= AbortErrLev) return
+      ! Read header
+      nHead=1
+      if (present(nHeaderLines)) nHead = nHeaderLines
+      do i=1,nHead
+         read(UnIn, *, IOSTAT=errStat2) line
+         errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename_Loc)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
+         if (errStat >= AbortErrLev) return
+      enddo
+      ! Read data
+      do I = 1,nLine-1
+         read (UnIn,*,IOSTAT=errStat2) (Array(I,J), J=1,nCol)
+         errMsg2 = ' Error reading line '//trim(Num2LStr(I+1))//' of file: '//trim(Filename_Loc)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
+         if (errStat >= AbortErrLev) return
+      end do  
+      close(UnIn) 
+   end subroutine ReadDelimFile
+
+   !> Counts number of lines in a file
+   integer function line_count(iunit)
+      integer, intent(in) :: iunit
+      character(len=2048) :: line
+      ! safety for infinite loop..
+      integer :: i
+      integer, parameter :: nline_max=100000000 ! 100 M
+      line_count=0
+      do i=1,nline_max 
+         line=''
+         read(iunit,'(A)',END=100)line
+         line_count=line_count+1
+      enddo
+      if (line_count==nline_max) then
+         print*,'Error: maximum number of line exceeded for line_count'
+         STOP
+      endif
+   100 if(len(trim(line))>0) then
+         line_count=line_count+1
+      endif
+      rewind(iunit)
+      return
+    end function
+   !> Perform linear interpolation of an array, where first column is assumed to be ascending time values
+   !! First value is used for times before, and last value is used for time beyond
+   subroutine interpTimeValue(array, time, iLast, values)
+      real(ReKi), dimension(:,:), intent(in)    :: array !< vector of time steps
+      real(DbKi),                 intent(in)    :: time  !< time
+      integer,                    intent(inout) :: iLast
+      real(ReKi), dimension(:),   intent(out)   :: values !< vector of values at given time
+      integer :: i
+      real(ReKi) :: alpha
+      if (array(iLast,1)> time) then 
+         values = array(iLast,2:)
+      elseif (iLast == size(array,1)) then 
+         values = array(iLast,2:)
+      else
+         ! Look for index
+         do i=iLast,size(array,1)
+            if (array(i,1)<=time) then
+               iLast=i
+            else
+               exit
+            endif
+         enddo
+         if (iLast==size(array,1)) then
+            values = array(iLast,2:)
+         else
+            ! Linear interpolation
+            alpha = (array(iLast+1,1)-time)/(array(iLast+1,1)-array(iLast,1))
+            values = array(iLast,2:)*alpha + array(iLast+1,2:)*(1-alpha)
+            !print*,'time', array(iLast,1), '<=', time,'<',  array(iLast+1,1), 'fact', alpha
+         endif
+      endif
+   end subroutine interpTimeValue
 !----------------------------------------------------------------------------------------------------------------------------------
-END PROGRAM TestSubDyn
+END PROGRAM 

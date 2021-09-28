@@ -37,6 +37,7 @@ typedef  ^   ElemPropType  ReKi    Kappa    -  -  -  "Shear coefficient"
 typedef  ^   ElemPropType  ReKi    YoungE   -  -  -  "Young's modulus"
 typedef  ^   ElemPropType  ReKi    ShearG   -  -  -  "Shear modulus"  N/m^2
 # Properties common to all element types:
+typedef  ^   ElemPropType  ReKi    D      {2} -  -  "Diameter at node 1 and 2, for visualization only" m 
 typedef  ^   ElemPropType  ReKi    Area    -  -  -  "Area of an element" m^2
 typedef  ^   ElemPropType  ReKi    Rho     -  -  -  "Density"        kg/m^3
 typedef  ^   ElemPropType  ReKi    T0      -  -  -  "Pretension "    N
@@ -164,16 +165,17 @@ typedef  ^    MiscVarType    ReKi           Fext_red  {:} -  -     "External loa
 
 # ============================== Parameters ============================================================================================================================================
 # --- Parameters - Algo
-typedef  ^  ParameterType   DbKi           SDDeltaT    -  -  -  "Time step (for integration of continuous states)"  seconds
-typedef  ^  ParameterType   IntKi          IntMethod   -  -  -  "Integration Method (1/2/3)Length of y2 array"
+typedef  ^  ParameterType   DbKi           SDDeltaT      -  -  -  "Time step (for integration of continuous states)"  seconds
+typedef  ^  ParameterType   IntKi          IntMethod     -  -  -  "Integration Method (1/2/3)Length of y2 array"
 # --- Parameters - FEM
-typedef  ^  ParameterType  INTEGER         nDOF         -  -  -  "Total degree of freedom"
-typedef  ^  ParameterType  INTEGER         nDOF_red     -  -  -  "Total degree of freedom after constraint reduction"
-typedef  ^  ParameterType  IntKi           Nmembers     -  -  -  "Number of members of the sub structure"
-typedef  ^  ParameterType  IntKi           Elems  {:}{:}   -  -  "Element nodes connections"
+typedef  ^  ParameterType  INTEGER         nDOF          -  -  -  "Total degree of freedom"
+typedef  ^  ParameterType  INTEGER         nDOF_red      -  -  -  "Total degree of freedom after constraint reduction"
+typedef  ^  ParameterType  IntKi           Nmembers      -  -  -  "Number of members of the sub structure"
+typedef  ^  ParameterType  IntKi           Elems  {:}{:}    -  -  "Element nodes connections"
 typedef  ^  ParameterType  ElemPropType    ElemProps   {:}   - -  "List of element properties"
-typedef  ^  ParameterType  R8Ki            FG         {:}   - -  "Gravity force vector (with initial cable force T0), not reduced"  N
+typedef  ^  ParameterType  R8Ki            FG         {:}    - -  "Gravity force vector (with initial cable force T0), not reduced"  N
 typedef  ^  ParameterType  ReKi            DP0        {:}{:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"  m
+typedef  ^  ParameterType  IntKi           NodeID2JointID {:} - - "Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes)"  "-"
 # --- Parameters - Constraints reduction
 typedef  ^  ParameterType  Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
 typedef  ^  ParameterType  R8Ki    T_red             {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"  "-"
@@ -260,6 +262,8 @@ typedef  ^  ParameterType  MeshAuxDataType MoutLst2  {:}    -  -  "List of all m
 typedef  ^  ParameterType  MeshAuxDataType MoutLst3  {:}    -  -  "List of all member joint nodes and elements for output"
 typedef  ^  ParameterType  OutParmType     OutParam  {:}    -  -  "An array holding names, units, and indices of all of the selected output channels. # logical"
 typedef  ^  ParameterType  LOGICAL         OutAll        -  -  -  "Flag to output or not all joint forces"
+typedef  ^  ParameterType  IntKi           OutCBModes    -  -  -  "Flag to output CB and Guyan modes to a given format"
+typedef  ^  ParameterType  IntKi           OutFEMModes   -  -  -  "Flag to output FEM modes to a given format"
 typedef  ^  ParameterType  LOGICAL         OutReact      -  -  -  "Flag to check whether reactions are requested"
 typedef  ^  ParameterType  IntKi           OutAllInt     -  -  -  "Integer version of OutAll"
 typedef  ^  ParameterType  IntKi           OutAllDims    -  -  -  "Integer version of OutAll"

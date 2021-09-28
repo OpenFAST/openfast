@@ -55,6 +55,10 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
 
+      - name: Run SubDyn tests
+        uses: ./.github/actions/tests-module-subdyn
+      - name: Run HydroDyn tests
+        uses: ./.github/actions/tests-module-hydrodyn
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
         with:
@@ -63,10 +67,6 @@ jobs:
         uses: ./.github/actions/tests-module-beamdyn
         with:
           test-target: regression
-      - name: Run HydroDyn tests
-        uses: ./.github/actions/tests-module-hydrodyn
-      - name: Run SubDyn tests
-        uses: ./.github/actions/tests-module-subdyn
       - name: Run OpenFAST tests
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         uses: ./.github/actions/tests-gluecode-openfast
@@ -134,18 +134,18 @@ jobs:
           cmake --build . --target hydrodyn_driver -- -j ${{env.NUM_PROCS}}
           cmake --build . --target subdyn_driver -- -j ${{env.NUM_PROCS}}
 
+      - name: Run SubDyn tests
+        uses: ./.github/actions/tests-module-subdyn
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
         with:
           test-target: regression
+      - name: Run HydroDyn tests
+        uses: ./.github/actions/tests-module-hydrodyn
       - name: Run BeamDyn tests
         uses: ./.github/actions/tests-module-beamdyn
         with:
           test-target: regression
-      - name: Run HydroDyn tests
-        uses: ./.github/actions/tests-module-hydrodyn
-      - name: Run SubDyn tests
-        uses: ./.github/actions/tests-module-subdyn
 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
