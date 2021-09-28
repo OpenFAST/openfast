@@ -239,4 +239,4 @@ sd_regression("SD_SparHanging"                                "subdyn;offshore")
 
 # InflowWind regression tests
 ifw_regression("ifw_turbsimff"                                "inflowwind")
-ifw_py_regression("ifw_py_turbsimff"                             "inflowwind")
+ifw_py_regression("ifw_py_turbsimff"                          "inflowwind;python")
