@@ -18,25 +18,24 @@
 #
 #**********************************************************************************************************************************
 #
-# This is the Python-C interface library for InflowWind
-# Usage: THIS LIBRARY IS NOT TO BE CHANGED OR EDITED BY THE USER
+# This is the Python interface library for InflowWind
+
+
+
 from ctypes import (
     CDLL,
     POINTER,
     create_string_buffer,
     byref,
-    c_byte,
     c_int,
     c_double,
-    c_float, 
+    c_float,
     c_char,
-    c_char_p, 
-    c_wchar, 
-    c_wchar_p,
-    c_bool
+    c_char_p
 )
-import numpy as np
 import datetime
+import os
+
 
 
 class InflowWindLib(CDLL):
@@ -87,9 +86,12 @@ class InflowWindLib(CDLL):
 
         self.numChannels = 0                # Number of channels returned
 
-    # _initialize_routines() ------------------------------------------------------------------------------------------------------------
+        
     def _initialize_routines(self):
-        self.IfW_Init_c.argtypes = [
+        """
+        Initialize the Python handles to necessary routines in the InflowWind library.
+        """
+        self.IfW_C_Init.argtypes = [
             POINTER(c_char_p),                    # input file string
             POINTER(c_int),                       # input file string length
             POINTER(c_char_p),                    # uniform file string
@@ -102,9 +104,9 @@ class InflowWindLib(CDLL):
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
-        self.IfW_Init_c.restype = c_int
+        self.IfW_C_Init.restype = c_int
 
-        self.IfW_CalcOutput_c.argtypes = [
+        self.IfW_C_CalcOutput.argtypes = [
             POINTER(c_double),                    # Time_C
             POINTER(c_float),                     # Positions
             POINTER(c_float),                     # Velocities
@@ -112,16 +114,19 @@ class InflowWindLib(CDLL):
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
-        self.IfW_CalcOutput_c.restype = c_int
+        self.IfW_C_CalcOutput.restype = c_int
 
-        self.IfW_End_c.argtypes = [
+        self.IfW_C_End.argtypes = [
             POINTER(c_int),                       # ErrStat_C
             POINTER(c_char)                       # ErrMsg_C
         ]
-        self.IfW_End_c.restype = c_int
+        self.IfW_C_End.restype = c_int
 
-    # ifw_init ------------------------------------------------------------------------------------------------------------
+
     def ifw_init(self, input_string_array, uniform_string_array):
+        """
+        Call the initialization routine in the InflowWind library.
+        """
 
         # Set up inputs: Pass single NULL joined string
         input_string = '\x00'.join(input_string_array)
@@ -134,8 +139,7 @@ class InflowWindLib(CDLL):
         
         self._numChannels_c = c_int(0)
 
-        # Run IFW_INIT_C
-        self.IfW_Init_c(
+        self.IfW_C_Init(
             c_char_p(input_string),                # IN: input file string
             byref(c_int(input_string_length)),     # IN: input file string length
             c_char_p(uniform_string),              # IN: uniform file string
@@ -153,10 +157,12 @@ class InflowWindLib(CDLL):
         
         # Initialize output channels
         self.numChannels = self._numChannels_c.value
+        
 
-    # ifw_calcOutput ------------------------------------------------------------------------------------------------------------
-    def ifw_calcOutput(self, time, positions, velocities, outputChannelValues):
-
+    def ifw_calc_output(self, time, positions, velocities, outputChannelValues):
+        """
+        Call the calculation routine in the InflowWind library.
+        """
         # Set up inputs
         positions_flat = [pp for p in positions for pp in p] # need to flatten to pass through to Fortran (to reshape)
         positions_flat_c = (c_float * (3 * self.numWindPts))(0.0,)
@@ -168,7 +174,7 @@ class InflowWindLib(CDLL):
         outputChannelValues_c = (c_float * self.numChannels)(0.0,)
 
         # Run IFW_CALCOUTPUT_C
-        self.IfW_CalcOutput_c(
+        self.IfW_C_CalcOutput(
             byref(c_double(time)),                 # IN: time at which to calculate velocities
             positions_flat_c,                      # IN: positions - specified by user, flattened to 1D
             velocities_flat_c,                     # OUT: velocities at desired positions, flattened to 1D
@@ -191,19 +197,21 @@ class InflowWindLib(CDLL):
             velocities[j,2] = velocities_flat_c[count+2]
             count = count + 3
 
-    # ifw_end ------------------------------------------------------------------------------------------------------------
+
     def ifw_end(self):
+        """
+        Call the cleanup routine in the InflowWind library.
+        """
         if not self.ended:
             self.ended = True
-            # Run IFW_END_C
-            self.IfW_End_c(
+            self.IfW_C_End(
                 byref(self.error_status_c),
                 self.error_message_c
             )
 
             self.check_error()
 
-    # other functions ----------------------------------------------------------------------------------------------------------
+
     def check_error(self):
         if self.error_status_c.value == 0:
             return
@@ -212,7 +220,7 @@ class InflowWindLib(CDLL):
         else:
             print(f"{self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
             self.ifw_end()
-            raise Exception("\nInflowWind terminated prematurely.")
+            raise Exception(f"{os.linesep}InflowWind terminated prematurely.")
 
     @property
     def output_channel_names(self):
@@ -230,10 +238,7 @@ class InflowWindLib(CDLL):
         output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
         return output_channel_units
 
-#===============================================================================
-#   Helper class for handling the debugging test output.  This is used only
-#   for the regression testing to mirror the output from the InfowWind Fortran
-#   driver.  This may also have value for debugging the interfacing to IfW.
+### Helper functions for development
 
 class DebugOut():
     """
@@ -243,32 +248,31 @@ class DebugOut():
     velocities array would be passed back to the calling code for use in
     the aerodynamic solver.
     """
-    def __init__(self,filename,numWindPts):
-        self.DbgFile=open(filename,'wt')        # open output file and write header info
+    def __init__(self, filename, numWindPts):
+
+        self.debug_file = open(filename, 'w')        # open output file and write header info
+
         # write file header
         t_string=datetime.datetime.now()
         dt_string=datetime.date.today()
-        self.DbgFile.write(f"## This file was generated by InflowWind_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
-        self.DbgFile.write(f"## This file contains the wind velocity at the {numWindPts} points specified in the file ")
-        self.DbgFile.write(f"{filename}\n")
-        self.DbgFile.write("#\n")
-        self.DbgFile.write("#        T                X                Y                Z                U                V                W\n")
-        self.DbgFile.write("#       (s)              (m)              (m)              (m)             (m/s)            (m/s)            (m/s)\n")
+        self.debug_file.write(f"## This file was generated by InflowWind_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}{os.linesep}")
+        self.debug_file.write(f"## This file contains the wind velocity at the {numWindPts} points specified in the file ")
+        self.debug_file.write(f"{filename}{os.linesep}")
+        self.debug_file.write(f"#{os.linesep}")
+        self.debug_file.write(f"#        T                X                Y                Z                U                V                W{os.linesep}")
+        self.debug_file.write(f"#       (s)              (m)              (m)              (m)             (m/s)            (m/s)            (m/s){os.linesep}")
         self.opened = True
 
     def write(self,t,positions,velocities):
         for p, v in zip(positions,velocities):
-            self.DbgFile.write('  %14.7f   %14.7f   %14.7f   %14.7f   %14.7f   %14.7f   %14.7f\n' % (t,p[0],p[1],p[2],v[0],v[1],v[2]))
+            # TODO: does \n work as expected on Windows?
+            self.debug_file.write('  %14.7f   %14.7f   %14.7f   %14.7f   %14.7f   %14.7f   %14.7f\n' % (t,p[0],p[1],p[2],v[0],v[1],v[2]))
 
     def end(self):
         if self.opened:
-            self.DbgFile.close()
+            self.debug_file.close()
             self.opened = False
 
-#===============================================================================
-#   Helper class for writing channels to file. 
-#   for the regression testing to mirror the output from the InfowWind Fortran
-#   driver.  This may also have value for debugging the interfacing to IfW.
 
 class WriteOutChans():
     """
@@ -278,37 +282,36 @@ class WriteOutChans():
     file there.
     """
     def __init__(self,filename,chan_names,chan_units):
-        self.OutFile=open(filename,'wt')        # open output file and write header info
+
+        self.out_file = open(filename, 'w')        # open output file and write header info
+
         # write file header
         t_string=datetime.datetime.now()
         dt_string=datetime.date.today()
-        self.OutFile.write(f"## This file was generated by InflowWind_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
-        self.OutFile.write(f"## This file contains output channels requested from the OutList section of the input file")
-        self.OutFile.write(f"{filename}\n")
-        self.OutFile.write("#\n")
-        self.OutFile.write("#\n")
-        self.OutFile.write("#\n")
-        self.OutFile.write("#\n")
-        self.OutFile.write('                Time')
+        self.out_file.write(f"## This file was generated by InflowWind_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}{os.linesep}")
+        self.out_file.write(f"## This file contains output channels requested from the OutList section of the input file")
+        self.out_file.write(f"{filename}{os.linesep}")
+        self.out_file.write(f"#{os.linesep}")
+        self.out_file.write(f"#{os.linesep}")
+        self.out_file.write(f"#{os.linesep}")
+        self.out_file.write(f"#{os.linesep}")
+        self.out_file.write('                Time')
         for data in chan_names:
-            self.OutFile.write('%20s' % data)
-        self.OutFile.write("\n")    # end line for chan_names
-        self.OutFile.write('                 (s)')
+            self.out_file.write('%20s' % data)
+        self.out_file.write(f"{os.linesep}")    # end line for chan_names
+        self.out_file.write('                 (s)')
         for data in chan_units:
-            self.OutFile.write('%20s' % data)
-        self.OutFile.write("\n")    # end line for chan_units
+            self.out_file.write('%20s' % data)
+        self.out_file.write(f"{os.linesep}")    # end line for chan_units
         self.opened = True
 
     def write(self,chan_data):
         l = chan_data.shape[1]
         f_string = "{:20.7f}"*l
         for i in range(chan_data.shape[0]):
-            self.OutFile.write(f_string.format(*chan_data[i,:]) + '\n')
+            self.out_file.write(f_string.format(*chan_data[i,:]) + os.linesep)
 
     def end(self):
         if self.opened:
-            self.OutFile.close()
+            self.out_file.close()
             self.opened = False
-
- 
-
