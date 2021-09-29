@@ -73,6 +73,7 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg
 
       ! local variables
    INTEGER(IntKi)                                              :: NumPoints         ! Number of points specified by the PositionXYZ array
+   LOGICAL                                                     :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
 
       ! local counters
    INTEGER(IntKi)                                              :: PointNum          ! a loop counter for the current point
@@ -105,8 +106,23 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg
    !OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
    DO PointNum = 1, NumPoints
 
+         ! is this point allowed beyond the bounds of the wind box?
+      GridExceedAllow = p%BoxExceedAllowF .and. ( PointNum >= p%BoxExceedAllowIdx )
+
+if (isnan(PositionXYZ(1,PointNum)) .or. isnan(PositionXYZ(2,PointNum)) .or. isnan(PositionXYZ(3,PointNum))) then
+ErrStat=ErrID_Fatal
+if(GridExceedAllow) then
+ErrMsg="NaN passed into IfW at "//trim(num2lstr(TIME))//" for PointNum "//trim(num2lstr(PointNum))//" of "//trim(num2lstr(NumPoints))//" with GridExceedAllow = true"
+else
+ErrMsg="NaN passed into IfW at "//trim(num2lstr(TIME))//" for PointNum "//trim(num2lstr(PointNum))//" of "//trim(num2lstr(NumPoints))//" with GridExceedAllow = fals"
+endif
+return
+endif
          ! Calculate the velocity for the position
-      Velocity(:,PointNum) = FFWind_Interp(Time,PositionXYZ(:,PointNum),p,TmpErrStat,TmpErrMsg)
+      Velocity(:,PointNum) = FFWind_Interp(Time,PositionXYZ(:,PointNum),p,GridExceedAllow,TmpErrStat,TmpErrMsg)
+if (TIME > 12.4_DbKi) then
+write(23,*) TIME,PointNum,PositionXYZ(:,PointNum),Velocity(:,PointNum)
+endif
 
          ! Error handling
       IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
@@ -153,7 +169,7 @@ END SUBROUTINE IfW_FFWind_CalcOutput
 !!    09/23/2009 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
 !!                 Height is now relative to the ground
 !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
+FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, ErrStat, ErrMsg)
 
    IMPLICIT                                              NONE
 
@@ -162,6 +178,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
    REAL(DbKi),                            INTENT(IN   )  :: Time              !< time (s)
    REAL(ReKi),                            INTENT(IN   )  :: Position(3)       !< takes the place of XGrnd, YGrnd, ZGrnd
    TYPE(IfW_FFWind_ParameterType),        INTENT(IN   )  :: p                 !< Parameters
+   LOGICAL,                               INTENT(IN   )  :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
    REAL(ReKi)                                            :: FFWind_Interp(3)  !< The U, V, W velocities
 
    INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status
@@ -181,6 +198,9 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
    REAL(ReKi)                                            :: u(8)           ! array for holding the corner values for the interpolation algorithm across a cubic volume
    REAL(ReKi)                                            :: M(4)           ! array for holding scaling factors for the interpolation algorithm -- 4 point method for tower interp
    REAL(ReKi)                                            :: v(4)           ! array for holding the corner values for the interpolation algorithm across an area -- 4 point method for tower interp
+   ! Arrays for scaling and corner factors for interpolation in grid exceed case between tower to ground to grid-bottom
+   REAL(ReKi)                                            :: NGe(10)        ! scaling factors
+   REAL(ReKi)                                            :: uGe(10)        ! the corner values
 
    INTEGER(IntKi)                                        :: IDIM
    INTEGER(IntKi)                                        :: ITHI
@@ -190,7 +210,28 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
    INTEGER(IntKi)                                        :: IZHI
    INTEGER(IntKi)                                        :: IZLO
 
-   LOGICAL                                               :: OnGrid
+   LOGICAL                                               :: AboveGridBottom
+
+   !> If GridExceedAllow is true, values for this point will be interpolated between the value at the edge of the grid
+   !! and the average value over Y for that (X,Z,T) location. This method is not ideal but should yield relatively
+   !! reasonable results for wake convection (OLAF points) and Lidar measurements far off the grid.  A better method of
+   !! interpolation above the grid using the wind profile would likely be better, but the resulting impact on the
+   !! physics of the turbine is expected to be limited.
+   !!
+   !! For points above the top of the grid, the value is interpolated between the average value for the top of the grid
+   !! and the closest (X,Y,Z,T) point (interpolated over half grid height span, then held constant over remainder of Z).
+   !!
+   !! For points below the top of the grid, the value is interpolated between the Y averaged value for that (X,Z,T)
+   !! location and the closest (X,Y,Z,T) point (interpolated over half grid width span, then held constant over all
+   !! points further out in Y.
+   INTEGER(IntKi)                                        :: IY2
+   REAL(ReKi)                                            :: Y2             ! for points away from tower below grid
+   REAL(ReKi)                                            :: Z2             ! for points away from tower below grid
+   REAL(ReKi)                                            :: YgZt           ! for points away from tower below grid
+   LOGICAL                                               :: GridExceedY    ! point is beyond bounds of grid in Y.  Interpolate to average Z level over one grid width if GridExceedAllow
+   LOGICAL                                               :: GridExceedZmax ! point is beyond upper bounds of grid in Z.  Interpolate to average Z value at top of box over one half grid height if GridExceedAllow
+   LOGICAL                                               :: GridExceedZmin ! point is below  lower bounds of grid in Z.  Interpolate to average Z value at top of box over one half grid height if GridExceedAllow
+   LOGICAL                                               :: GridExtrap     ! Extrapolation outside grid is allowed and point lies outside grid above z_min
 
    !-------------------------------------------------------------------------------------------------
    ! Initialize variables
@@ -200,50 +241,203 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
 
    ErrStat              = ErrID_None
    ErrMsg               = ""
-
+   GridExceedY          = .false.
+   GridExceedZmax       = .false.
+   GridExceedZmin       = .false.
+   GridExtrap           = .false.
 
    !-------------------------------------------------------------------------------------------------
    ! By definition, wind below the ground is always zero (no turbulence, either).
    !-------------------------------------------------------------------------------------------------
    IF ( Position(3) <= 0.0_ReKi ) RETURN
 
-
    !-------------------------------------------------------------------------------------------------
-   ! get the bounding limits for T and Z
+   ! get the bounding limits for T, Z, and Y
    !-------------------------------------------------------------------------------------------------
    call GetTBounds();         if (ErrStat >= AbortErrLev) return
    call GetZBounds();         if (ErrStat >= AbortErrLev) return
+   if (GridExceedAllow) then
+      call GetYBoundsGridExceed();
+   else
+      call GetYBounds();      if (ErrStat >= AbortErrLev) return
+   endif
 
 
    !-------------------------------------------------------------------------------------------------
    ! Calculate the value
    !-------------------------------------------------------------------------------------------------
-   IF ( OnGrid ) THEN      ! The tower points don't use this
-
-      call GetYBounds();         if (ErrStat >= AbortErrLev) return
+   IF ( AboveGridBottom ) THEN      ! The tower points don't use this
+      ! get the Y indices amd get interpolation values
       call GetInterpWeights3D();
 
-      !--------------------------------------------------------
-      ! Interpolate on the grid
-      DO IDIM=1,p%NFFComp       ! all the components
-         u(1)  = p%FFData( IZHI, IYLO, IDIM, ITLO )
-         u(2)  = p%FFData( IZHI, IYHI, IDIM, ITLO )
-         u(3)  = p%FFData( IZLO, IYHI, IDIM, ITLO )
-         u(4)  = p%FFData( IZLO, IYLO, IDIM, ITLO )
-         u(5)  = p%FFData( IZHI, IYLO, IDIM, ITHI )
-         u(6)  = p%FFData( IZHI, IYHI, IDIM, ITHI )
-         u(7)  = p%FFData( IZLO, IYHI, IDIM, ITHI )
-         u(8)  = p%FFData( IZLO, IYLO, IDIM, ITHI )
-         FFWind_Interp(IDIM)  =  SUM ( N * u )
-      END DO !IDIM
+      if ( GridExtrap ) then   ! only true if allowed and beyond grid
+
+         !--------------------------------------------------------
+         !  Interpolate from grid edge averaged values at (Z,T) at
+         !  boundary at half grid width beyond
+         !
+         !  NOTE: above grid top, the interpolate to value of average
+         !        across top of grid (Y values) at +FFZHWid
+         if ( GridExceedY ) then
+            if ( GridExceedZmax ) then
+               ! Above the grid and beyond +/-Y
+               !  NOTE: IZLO==IZHI  -- top of grid
+               !        IZHI        -- top of grid+FFZHWid
+               !        IYLO==IYHI  -- side of grid point is beyond
+               do IDIM=1,p%NFFComp       ! all the components
+                  u(1)  = p%FFAvgData( IZHI,       IDIM, ITLO )
+                  u(2)  = p%FFAvgData( IZHI,       IDIM, ITLO )
+                  u(3)  = p%FFAvgData( IZLO,       IDIM, ITLO )
+                  u(4)  = p%FFData(    IZLO, IYLO, IDIM, ITLO )
+                  u(5)  = p%FFAvgData( IZHI,       IDIM, ITHI )
+                  u(6)  = p%FFAvgData( IZHI,       IDIM, ITHI )
+                  u(7)  = p%FFAvgData( IZLO,       IDIM, ITHI )
+                  u(8)  = p%FFData(    IZLO, IYLO, IDIM, ITHI )
+                  FFWind_Interp(IDIM)  =  SUM ( N * u )
+               end do !IDIM
+            else
+               ! Beyond +/-Y of grid, but within +/-Z
+               !  NOTE: IYLO==IYHI  -- side of grid point is beyond
+               do IDIM=1,p%NFFComp       ! all the components
+                  u(1)  = p%FFData(    IZHI, IYLO, IDIM, ITLO )
+                  u(2)  = p%FFAvgData( IZHI,       IDIM, ITLO )
+                  u(3)  = p%FFAvgData( IZLO,       IDIM, ITLO )
+                  u(4)  = p%FFData(    IZLO, IYLO, IDIM, ITLO )
+                  u(5)  = p%FFData(    IZHI, IYLO, IDIM, ITHI )
+                  u(6)  = p%FFAvgData( IZHI,       IDIM, ITHI )
+                  u(7)  = p%FFAvgData( IZLO,       IDIM, ITHI )
+                  u(8)  = p%FFData(    IZLO, IYLO, IDIM, ITHI )
+                  FFWind_Interp(IDIM)  =  SUM ( N * u )
+               end do !IDIM
+            endif
+         else
+            ! Above the grid, but within +/-Y
+            !  NOTE: IZLO  -- top of grid
+            !        IZHI  -- top of grid+FFZHWid
+            do IDIM=1,p%NFFComp       ! all the components
+               u(1)  = p%FFAvgData( IZHI,       IDIM, ITLO )
+               u(2)  = p%FFAvgData( IZHI,       IDIM, ITLO )
+               u(3)  = p%FFData(    IZLO, IYHI, IDIM, ITLO )
+               u(4)  = p%FFData(    IZLO, IYLO, IDIM, ITLO )
+               u(5)  = p%FFAvgData( IZHI,       IDIM, ITHI )
+               u(6)  = p%FFAvgData( IZHI,       IDIM, ITHI )
+               u(7)  = p%FFData(    IZLO, IYHI, IDIM, ITHI )
+               u(8)  = p%FFData(    IZLO, IYLO, IDIM, ITHI )
+               FFWind_Interp(IDIM)  =  SUM ( N * u )
+            end do !IDIM
+         endif
+      else
+         !--------------------------------------------------------
+         ! Interpolate on the grid itself
+         DO IDIM=1,p%NFFComp       ! all the components
+            u(1)  = p%FFData( IZHI, IYLO, IDIM, ITLO )
+            u(2)  = p%FFData( IZHI, IYHI, IDIM, ITLO )
+            u(3)  = p%FFData( IZLO, IYHI, IDIM, ITLO )
+            u(4)  = p%FFData( IZLO, IYLO, IDIM, ITLO )
+            u(5)  = p%FFData( IZHI, IYLO, IDIM, ITHI )
+            u(6)  = p%FFData( IZHI, IYHI, IDIM, ITHI )
+            u(7)  = p%FFData( IZLO, IYHI, IDIM, ITHI )
+            u(8)  = p%FFData( IZLO, IYLO, IDIM, ITHI )
+            FFWind_Interp(IDIM)  =  SUM ( N * u )
+         END DO !IDIM
+      endif
 
    ELSE
 
-      IF (p%InterpTower) THEN
+      IF ( GridExtrap .and. GridExceedZmin ) THEN
+         ! Below bottom of grid requires some special logic depending if tower
+         ! data exists, and if outside the Y bounds of the grid.
+         if ( GridExceedY ) then
+            ! interp between bottom of grid and ground when outside Y bounds of grid
+            ZGRID = Position(3)/p%GridBase
+            Z = 2.0_ReKi * ZGRID - 1.0_ReKi
+            IZHI = 1
+            IZHI = 0
+
+            ! Get standard interpolation weightings
+            call GetInterpWeights3D();
+
+            ! Beyond the left and right bounds of grid.  Linear interpolate
+            ! between:
+            !     bottom of Yavg          bottom corner of grid
+            !        ground                  ground
+            do IDIM=1,p%NFFComp     ! all the components
+               u(1)  = p%FFData(       1, IYLO, IDIM, ITLO )
+               u(2)  = p%FFAvgData(    1,       IDIM, ITLO )
+               u(3)  = 0.0_ReKi                             ! ground
+               u(4)  = 0.0_ReKi                             ! ground
+               u(5)  = p%FFData(       1, IYLO, IDIM, ITHI )
+               u(6)  = p%FFAvgData(    1,       IDIM, ITHI )
+               u(7)  = 0.0_ReKi                             ! ground
+               u(8)  = 0.0_ReKi                             ! ground
+               FFWind_Interp(IDIM)  =  SUM ( N * u )
+            enddo
+         else
+            if (p%NTGrids < 1) then
+               ! Get standard interpolation weightings
+               call GetInterpWeights3D();
+
+               ! Below grid with no tower points defined
+               do IDIM=1,p%NFFComp     ! all the components
+                  u(1)  = p%FFData(       1, IYLO, IDIM, ITLO )
+                  u(2)  = p%FFData(       1, IYHI, IDIM, ITLO )
+                  u(3)  = 0.0_ReKi                             ! ground
+                  u(4)  = 0.0_ReKi                             ! ground
+                  u(5)  = p%FFData(       1, IYLO, IDIM, ITHI )
+                  u(6)  = p%FFData(       1, IYHI, IDIM, ITHI )
+                  u(7)  = 0.0_ReKi                             ! ground
+                  u(8)  = 0.0_ReKi                             ! ground
+                  FFWind_Interp(IDIM)  =  SUM ( N * u )
+               enddo
+            else  ! Tower grid
+               ! Special weightings required:
+               !     Tower has some number of points, but anywhere either
+               !     side of the tower only has the closest point at the
+               !     bottom of the grid.  So we need to weight across the
+               !     the span differently
+               !  Y2 - scaled distance between side   edge of grid and tower  (in y)
+               !  Z2 - scaled distance between bottom edge of grid and ground (in z)
+               !  Y  - scaled distance between IYLO-IYHI along bottom of grid
+               !  Z  - scaled distance between IZLO-IZHI olong tower line
+               !  IYHI - grid high y point index
+               !  IYLO - grid low  y point index
+               !  IZHI - tower upper point index
+               !  IZLO - tower lower point index
+               Y2 = -2.0_ReKi * abs(Position(2))/p%FFYHWid + 1.0_ReKi      ! From side of grid to tower (tower at +1)
+               Z2 =  2.0_ReKi *     Position(3)/p%GridBase - 1.0_ReKi
+               YgZt = 2.0_ReKi * (abs(Position(2))/(abs(Position(2)) + (p%GridBase-Position(3)))) - 1.0_ReKi   ! on Tower ==-1, on grid bottom == 1
+               NGe=0.0_ReKi
+               NGe(1)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YgZt)*                 ( 1.0_ReKi - Y )*( 1.0_ReKi - T )            ! grid bottom low          (top    right point, lo half)
+               NGe(2)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YgZt)*                 ( 1.0_ReKi + Y )*( 1.0_ReKi - T )            ! grid bottom hi           (top    right point, hi half)
+               NGE(3)  =                  ( 1.0_ReKi-YgZt)*( 1.0_ReKi + Z )*                 ( 1.0_ReKi - T )*2.0_ReKi   ! tower line high          (bottom right point, hi half)
+               NGE(4)  =                  ( 1.0_ReKi-YgZt)*( 1.0_ReKi - Z )*                 ( 1.0_ReKi - T )*2.0_ReKi   ! Tower line lo            (bottom right point, lo half)
+               NGe(5)  = ( 1.0_ReKi - Z2)*                                                   ( 1.0_ReKi - T )*6.0_ReKi   ! ground                   (bottom left  point)
+               NGe(6)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YgZt)*                 ( 1.0_ReKi - Y )*( 1.0_ReKi + T )
+               NGe(7)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YgZt)*                 ( 1.0_ReKi + Y )*( 1.0_ReKi + T )
+               NGE(8)  =                  ( 1.0_ReKi-YgZt)*( 1.0_ReKi + Z )*                 ( 1.0_ReKi + T )*2.0_ReKi
+               NGE(9)  =                  ( 1.0_ReKi-YgZt)*( 1.0_ReKi - Z )*                 ( 1.0_ReKi + T )*2.0_ReKi
+               NGe(10) = ( 1.0_ReKi - Z2)*                                                   ( 1.0_ReKi + T )*6.0_ReKi
+               NGe     = NGe / 16.0_ReKi ! normalize
+               do IDIM=1,p%NFFComp
+                  uGe(1)  = p%FFData(       1, IYLO, IDIM, ITLO )    ! grid bottom low          (top          point, lo half)
+                  uGe(2)  = p%FFData(       1, IYHI, IDIM, ITLO )    ! grid bottom hi           (top          point, hi half)
+                  uGe(3)  = p%FFTower(         IDIM, IZHI, ITLO )    ! tower line high          (bottom       point, hi half)
+                  uGe(4)  = p%FFTower(         IDIM, IZLO, ITLO )    ! Tower line lo            (bottom       point, lo half)
+                  uGe(5)  = 0.0_ReKi                                 ! ground                   (bottom left  point)
+                  uGe(6)  = p%FFData(       1, IYLO, IDIM, ITHI )
+                  uGe(7)  = p%FFData(       1, IYHI, IDIM, ITHI )
+                  uGe(8)  = p%FFTower(         IDIM, IZHI, ITHI )
+                  uGe(9)  = p%FFTower(         IDIM, IZLO, ITHI )
+                  uGe(10) = 0.0_ReKi
+                  FFWind_Interp(IDIM)  =  SUM ( NGe * uGe )
+               enddo
+            endif
+         endif
+      ELSEIF (p%InterpTower) THEN
+
          !-----------------------------------------------------
          ! Interpolate on the bottom of the grid to the ground
          !     ground points set to zero
-         call GetYBounds();         if (ErrStat >= AbortErrLev) return
          call GetInterpWeights3D();
 
          DO IDIM=1,p%NFFComp       ! all the components
@@ -279,7 +473,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
             FFWind_Interp(IDIM)  =  SUM ( M * v )
          END DO !IDIM
       END IF ! Interpolate below the grid
-   ENDIF ! OnGrid
+   ENDIF ! AboveGridBottom
 
    RETURN
 
@@ -347,10 +541,10 @@ CONTAINS
       ZGRID = ( Position(3) - p%GridBase )*p%InvFFZD
 
       IF (ZGRID > -1*TOL) THEN
-         OnGrid = .TRUE.
+         AboveGridBottom = .TRUE.
 
             ! Index for start and end slices
-         IZLO = INT( ZGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+         IZLO = FLOOR( ZGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
          IZHI = IZLO + 1
 
          ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.
@@ -362,6 +556,7 @@ CONTAINS
                Z    = -1.0_ReKi
                IZLO = 1
             ELSE
+               ! Given the first if statement, is it ever possible to end up here???
                ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
                            TRIM(Num2LStr(Position(3)))//' m is below the grid).'
                ErrStat  = ErrID_Fatal
@@ -371,6 +566,14 @@ CONTAINS
             IF ( IZLO == p%NZGrids .AND. Z <= TOL ) THEN
                Z    = -1.0_ReKi
                IZHI = IZLO                   ! We're right on the last point, which is still okay
+            ELSEIF ( GridExceedAllow ) THEN
+               ! calculate new Z between top of grid and half zgrid height above top of grid (range of -1 to 1)
+               Z = 2.0_ReKi * ( Position(3) - (p%GridBase + 2*p%FFZHWid) ) / p%FFZHWid - 1.0_ReKi
+               Z = min(Z,1.0_ReKi)     ! plateau value at grid width above top of grid
+               IZLO = p%NZGrids     ! Top of grid
+               IZHI = p%NZGrids     ! Top of grid
+               GridExceedZmax = .true.
+               GridExtrap     = .true.
             ELSE
                ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
                            TRIM(Num2LStr(Position(3)))//' m is above the grid).'
@@ -380,9 +583,11 @@ CONTAINS
          ENDIF
 
       ELSE
-
-         OnGrid = .FALSE.  ! this is on the tower
-
+         AboveGridBottom = .FALSE.  ! this is below the grid bottom
+         if ( GridExceedAllow ) then
+            GridExceedZmin = .true.
+            GridExtrap     = .true.
+         endif
          IF (p%InterpTower) then
             ! get Z between ground and bottom of grid
             ZGRID = Position(3)/p%GridBase
@@ -391,6 +596,7 @@ CONTAINS
             IZLO = 0
 
             IF ( ZGRID < 0.0_ReKi ) THEN
+               ! note: this is already considered at the start of the routine
                ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction '// &
                            '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the ground).'
                ErrStat  = ErrID_Fatal
@@ -398,25 +604,27 @@ CONTAINS
             ENDIF
          ELSE
             IF ( p%NTGrids < 1) THEN
-               ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction '// &
-                           '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).'
-               ErrStat  = ErrID_Fatal
-               RETURN
-            ENDIF
-
-            IZLO = INT( -1.0*ZGRID ) + 1            ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
-
-            IF ( IZLO >= p%NTGrids ) THEN  !our dz is the difference between the bottom tower point and the ground
-               IZLO  = p%NTGrids
-               ! Check that this isn't zero.  Value between -1 and 1 corresponding to the relative position.
-               Z = 1.0_ReKi - 2.0_ReKi * (Position(3) / (p%GridBase - REAL(IZLO - 1_IntKi, ReKi)/p%InvFFZD))
+               IF ( .not. GridExceedAllow ) THEN
+                  ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction '// &
+                              '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).'
+                  ErrStat  = ErrID_Fatal
+                  RETURN
+               ENDIF
             ELSE
-               ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.  Used in the interpolation.
-               Z = 2.0_ReKi * (ABS(ZGRID) - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
-            ENDIF
-            IZHI = IZLO + 1
-         ENDIF
-      END IF
+               IZLO = INT( -1.0*ZGRID ) + 1            ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+
+               IF ( IZLO >= p%NTGrids ) THEN  !our dz is the difference between the bottom tower point and the ground
+                  IZLO  = p%NTGrids
+                  ! Check that this isn't zero.  Value between -1 and 1 corresponding to the relative position.
+                  Z = 1.0_ReKi - 2.0_ReKi * (Position(3) / (p%GridBase - REAL(IZLO - 1_IntKi, ReKi)/p%InvFFZD))
+               ELSE
+                  ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.  Used in the interpolation.
+                  Z = 2.0_ReKi * (ABS(ZGRID) - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
+               ENDIF
+               IZHI = IZLO + 1
+            ENDIF ! Tower grid
+         ENDIF    ! Interp tower
+      END IF      ! AboveGridBottom
    END SUBROUTINE GetZBounds
 
    !-------------------------------------------------------------------------------------------------
@@ -424,7 +632,8 @@ CONTAINS
    SUBROUTINE GetYBounds()
 
       YGRID = ( Position(2) + p%FFYHWid )*p%InvFFYD    ! really, it's (Position(2) - -1.0*p%FFYHWid)
-      IYLO  = INT( YGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+
+      IYLO  = FLOOR( YGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
       IYHI  = IYLO + 1
 
       ! Set Y as a value between -1 and 1 for the relative location between IYLO and IYHI.  Used in the interpolation.
@@ -449,12 +658,45 @@ CONTAINS
    END SUBROUTINE GetYBounds
 
    !-------------------------------------------------------------------------------------------------
+   !> Find the bounding columns for the Y position. [The lower-left corner is (1,1) when looking upwind.]
+   !! The logic is slightly different when grid exceedence is allowed.
+   SUBROUTINE GetYBoundsGridExceed()
+      YGRID = ( Position(2) + p%FFYHWid )*p%InvFFYD    ! really, it's (Position(2) - -1.0*p%FFYHWid)
+      IYLO  = FLOOR( YGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
+      IYHI  = IYLO + 1
+
+      ! Set Y as a value between -1 and 1 for the relative location between IYLO and IYHI.  Used in the interpolation.
+      ! Subtract 1_IntKi from IYLO since grids start at index 1, not 0
+      Y = 2.0_ReKi * (YGRID - REAL(IYLO - 1_IntKi, ReKi)) - 1.0_ReKi
+
+      ! Using the average across Y as the boundary beyond the grid at +/-2*YHWid
+      IF ( IYLO <= 0 ) THEN   ! Beyond lo side
+         !  calculate new Y between half ygrid width beyond edge (2*FFYHWid) and the
+         !  low side of the grid, then scale to -1 to 1
+         Y = 2.0_ReKi * ( Position(2) + 2*p%FFYHWid ) / p%FFYHWid - 1.0_ReKi
+         Y = max(y,-1.0_ReKi) ! plateau value at grid width lo side of grid
+         IYLO = 1             ! Lo side of grid
+         IYHI = 1             ! Lo side of grid
+         Y = -Y               ! Flip sign so -1 will be grid edge at all times
+         GridExceedY = .true.
+         GridExtrap  = .true.
+      ELSEIF ( IYHI > p%NYGrids ) THEN    ! Beyond hi side
+         Y = 2.0_ReKi * ( Position(2) - p%FFYHWid) / p%FFYHWid - 1.0_ReKi
+         IYLO = p%NYGrids     ! Hi side of grid
+         IYHI = p%NYGrids     ! Hi side of grid
+         Y = min(Y,1.0_ReKi)  ! plateau value at grid width beyond edge
+         GridExceedY = .true.
+         GridExtrap  = .true.
+      ENDIF
+   END SUBROUTINE GetYBoundsGridExceed
+
+   !-------------------------------------------------------------------------------------------------
    !> Get normalization values for 3d-linear interpolation on the grid
    SUBROUTINE GetInterpWeights3D()
-      N(1)  = ( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )
-      N(2)  = ( 1.0_ReKi + Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )
-      N(3)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )
-      N(4)  = ( 1.0_ReKi - Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )
+      N(1)  = ( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )     ! top left
+      N(2)  = ( 1.0_ReKi + Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )     ! top right
+      N(3)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )     ! bottom right
+      N(4)  = ( 1.0_ReKi - Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )     ! bottom left
       N(5)  = ( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi + T )
       N(6)  = ( 1.0_ReKi + Z )*( 1.0_ReKi + Y )*( 1.0_ReKi + T )
       N(7)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + Y )*( 1.0_ReKi + T )

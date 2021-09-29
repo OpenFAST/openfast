@@ -59,25 +59,26 @@ SUBROUTINE DispHelpText( ErrStat, ErrMsg )
    CALL WrScr("                                    (no driver input file)")
    CALL WrScr("")
    CALL WrScr("              The following options will overwrite values in the driver input file:")
-   CALL WrScr("                  "//SwChar//"DT[#]         -- timestep                                        ")
-   CALL WrScr("                  "//SwChar//"TStart[#]     -- start time                                      ")
-   CALL WrScr("                  "//SwChar//"TSteps[#]     -- number of timesteps                             ")
-   CALL WrScr("                  "//SwChar//"xrange[#:#]   -- range of x (#'s are reals)                      ")
-   CALL WrScr("                  "//SwChar//"yrange[#:#]   -- range of y                                      ")
-   CALL WrScr("                  "//SwChar//"zrange[#:#]   -- range in z (ground = 0.0)                       ")
-   CALL WrScr("                  "//SwChar//"Dx[#]         -- spacing in x                                    ")
-   CALL WrScr("                  "//SwChar//"Dy[#]         -- spacing in y                                    ")
-   CALL WrScr("                  "//SwChar//"Dz[#]         -- spacing in z                                    ")
-!   CALL WrScr("                  "//SwChar//"sum           -- summarize wind file info                        [N/A]")
-!   CALL WrScr("                  "//SwChar//"FFT[X,Y,Z]    -- an fft over all t using specified DT at X,Y,Z   [N/A]")
-   CALL WrScr("                  "//SwChar//"points[FILE]  -- calculates at x,y,z coordinates specified in a  ")
+   CALL WrScr("                  "//SwChar//"DT[#]          -- timestep                                        ")
+   CALL WrScr("                  "//SwChar//"TStart[#]      -- start time                                      ")
+   CALL WrScr("                  "//SwChar//"TSteps[#]      -- number of timesteps                             ")
+   CALL WrScr("                  "//SwChar//"xrange[#:#]    -- range of x (#'s are reals)                      ")
+   CALL WrScr("                  "//SwChar//"yrange[#:#]    -- range of y                                      ")
+   CALL WrScr("                  "//SwChar//"zrange[#:#]    -- range in z (ground = 0.0)                       ")
+   CALL WrScr("                  "//SwChar//"Dx[#]          -- spacing in x                                    ")
+   CALL WrScr("                  "//SwChar//"Dy[#]          -- spacing in y                                    ")
+   CALL WrScr("                  "//SwChar//"Dz[#]          -- spacing in z                                    ")
+!   CALL WrScr("                  "//SwChar//"sum            -- summarize wind file info                        [N/A]")
+!   CALL WrScr("                  "//SwChar//"FFT[X,Y,Z]     -- an fft over all t using specified DT at X,Y,Z   [N/A]")
+   CALL WrScr("                  "//SwChar//"points[FILE]   -- calculates at x,y,z coordinates specified in a  ")
    CALL WrScr("                                    white space delimited FILE")
-   CALL WrScr("                  "//SwChar//"v             -- verbose output ")
-   CALL WrScr("                  "//SwChar//"vv            -- very verbose output ")
-   CALL WrScr("                  "//SwChar//"HAWC          -- convert contents of <filename> to HAWC format ")
-   CALL WrScr("                  "//SwChar//"Bladed        -- convert contents of <filename> to Bladed format ")
-   CALL WrScr("                  "//SwChar//"vtk           -- convert contents of <filename> to vtk format ")
-   CALL WrScr("                  "//SwChar//"help          -- print this help menu and exit")
+   CALL WrScr("                  "//SwChar//"v              -- verbose output ")
+   CALL WrScr("                  "//SwChar//"vv             -- very verbose output ")
+   CALL WrScr("                  "//SwChar//"HAWC           -- convert contents of <filename> to HAWC format ")
+   CALL WrScr("                  "//SwChar//"Bladed         -- convert contents of <filename> to Bladed format ")
+   CALL WrScr("                  "//SwChar//"vtk            -- convert contents of <filename> to vtk format ")
+   CALL WrScr("                  "//SwChar//"BoxExceedAllow -- set flag to allow FF points outside wind box")
+   CALL WrScr("                  "//SwChar//"help           -- print this help menu and exit")
    CALL WrScr("")
    CALL WrScr("   Notes:")
    CALL WrScr("   -- Unspecified ranges and resolutions default to what is in the file.")
@@ -326,6 +327,8 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             RETURN
          ELSEIF   ( TRIM(ThisArgUC) == "UNIFORM"   )   THEN
             CLFlags%WrUniform    = .TRUE.
+         ELSEIF   ( TRIM(ThisArgUC) == "BOXEXCEEDALLOW"   )   THEN
+            CLFlags%BoxExceedAllowF = .TRUE.
             RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &
@@ -1340,6 +1343,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    DvrFlags%WrBladed  = DvrFlags%WrBladed  .or. CLFlags%WrBladed           ! create file if specified in either place
    DvrFlags%WrVTK     = DvrFlags%WrVTK     .or. CLFlags%WrVTK              ! create file if specified in either place
    DvrFlags%WrUniform = DvrFlags%WrUniform .or. CLFlags%WrUniform          ! create file if specified in either place
+   DvrFlags%BoxExceedAllowF   = DvrFlags%BoxExceedAllowF .or. CLFlags%BoxExceedAllowF  ! flag to allow points beyond box for FF
 
 !      ! Due to the complexity, we are handling overwriting driver input file settings with
 !      ! command line settings and the instance where no driver input file is read separately.
@@ -1387,6 +1391,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
 
       ! Make sure there is at least one timestep
    DvrSettings%NumTimeSteps   =  MAX(DvrSettings%NumTimeSteps,1_IntKi)
+
 
 
       !--------------------------------------------
@@ -1763,7 +1768,6 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    IF ( .NOT. DvrFlags%DT ) THEN
       DvrSettings%DT =  0.025_DbKi     ! This value gets passed into the IfW_Init routine, so something must be set.
    ENDIF
-
 
 
 END SUBROUTINE UpdateSettingsWithCL
@@ -2283,7 +2287,7 @@ SUBROUTINE WindGridVel_OutputWrite (FileUnit, FileName, Initialized, Settings, G
    INTEGER(IntKi)                                     :: I                    !< generic counter
 
 
-   WindVelFmt = "(3(F14.7,3x),3(F10.3,3x))"
+   WindVelFmt = "(3(F14.7,3x),3(F14.7,3x))"
 
    ErrMsg      = ''
    ErrStat     = ErrID_None

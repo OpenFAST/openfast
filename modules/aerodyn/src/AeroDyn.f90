@@ -62,6 +62,7 @@ module AeroDyn
    PUBLIC :: AD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
    
    PUBLIC :: AD_NumWindPoints                  !< Routine to return then number of windpoints required by AeroDyn
+   PUBLIC :: AD_BoxExceedPointsIdx             !< Routine to set the start of the OLAF wind points
    PUBLIC :: AD_GetExternalWind                !< Set the external wind into AeroDyn inputs
    PUBLIC :: AD_SetExternalWindPositions       !< Set the external wind points needed by AeroDyn inputs 
   
@@ -7002,6 +7003,22 @@ integer(IntKi) function AD_NumWindPoints(u_AD, o_AD) result(n)
       n = n + size(o_AD%WakeLocationPoints, dim=2)
    end if
 end function AD_NumWindPoints
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Start index of the OLAF wind points for this turbine
+!! Should respect the order of AD_GetExternalWind and AD_SetExternalWindPositions
+integer(IntKi) function AD_BoxExceedPointsIdx(u_AD, o_AD) result(n)
+   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
+   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
+   ! locals
+   integer(IntKi)                  :: k
+   integer(IntKi)                  :: TotPts ! call AD_NumWindPts, then subtract
+   TotPts = AD_NumWindPoints(u_AD, o_AD)
+   if (allocated(o_AD%WakeLocationPoints)) then
+      n = TotPts - size(o_AD%WakeLocationPoints, dim=2) + 1    ! start index of the olaf points
+   else  ! No OLAF, so return -1 to indicate not used
+      n = -1
+   endif 
+end function AD_BoxExceedPointsIdx
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Sets the wind calculated by InflowWind into the AeroDyn arrays ("InputSolve_IfW")
 !! Should respect the order of AD_NumWindPoints and AD_SetExternalWindPositions

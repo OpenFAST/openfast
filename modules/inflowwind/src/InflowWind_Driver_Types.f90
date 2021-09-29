@@ -66,6 +66,7 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: FFTOutputInit        = .FALSE.      !< Is the FFT output file initialized
       LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
       LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
+      LOGICAL                 :: BoxExceedAllowF      = .FALSE.      !< set flag to allow exceeding wind box boundaries for FF files (for diagnostic purposes)
 
       LOGICAL                 :: WrHAWC               = .FALSE.      !< Requested file conversion to HAWC2 format?
       LOGICAL                 :: WrBladed             = .FALSE.      !< Requested file conversion to Bladed format?
