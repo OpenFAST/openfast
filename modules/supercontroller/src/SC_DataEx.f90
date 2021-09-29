@@ -139,8 +139,8 @@ SUBROUTINE SC_DX_SetInputs(p_FAST, y_SrvD, SC_DX, ErrStat, ErrMsg )
    CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-   INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
+!   INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
+!   CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
                                                    
    CHARACTER(*),   PARAMETER                       :: RoutineName = 'SC_DX_SetInputs'
    
@@ -166,8 +166,8 @@ SUBROUTINE SC_DX_SetOutputs(p_FAST, u_SrvD, SC_DX, ErrStat, ErrMsg )
    CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-   INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
+!   INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
+!   CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
                                                    
    CHARACTER(*),   PARAMETER                       :: RoutineName = 'SC_DX_SetOutputs'
    
