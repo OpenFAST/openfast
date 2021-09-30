@@ -1849,10 +1849,10 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          BlmomentBplus(3) = BlmomentBplus(3) + BlglobCBplus(1) * BlforceBplus(2) - BlglobCBplus(2) * BlforceBplus(1)
 
             ! Buoyant force and moment in global coordinates, expressed per unit length
-         BlforceB = BlforceB / p%BlDL(j,k)
-         BlmomentB = BlmomentB / p%BlDL(j,k)
-         BlforceBplus = BlforceBplus / p%BlDL(j,k)
-         BlmomentBplus = BlmomentBplus / p%BlDL(j,k)
+         BlforceB = BlforceB / (p%BlDL(j,k)/2)
+         BlmomentB = BlmomentB / (p%BlDL(j,k)/2)
+         BlforceBplus = BlforceBplus / (p%BlDL(j,k)/2)
+         BlmomentBplus = BlmomentBplus / (p%BlDL(j,k)/2)
 
             ! Buoyant force and moment in global coordinates, with internal nodes expressed as the weighted average of contributions from each neighboring element
          if ( j==1 ) then
@@ -1939,10 +1939,10 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          end if
 
             ! Buoyant force and moment in global coordinates, expressed per unit length
-         TwrforceB = TwrforceB / p%TwrDL(j)
-         TwrmomentB = TwrmomentB / p%TwrDL(j)
-         TwrforceBplus = TwrforceBplus / p%TwrDL(j)
-         TwrmomentBplus = TwrmomentBplus / p%TwrDL(j)
+         TwrforceB = TwrforceB / (p%TwrDL(j)/2)
+         TwrmomentB = TwrmomentB / (p%TwrDL(j)/2)
+         TwrforceBplus = TwrforceBplus / (p%TwrDL(j)/2)
+         TwrmomentBplus = TwrmomentBplus / (p%TwrDL(j)/2)
 
             ! Buoyant force and moment in global coordinates, with internal nodes expressed as the weighted average of contributions from each neighboring element
          if ( j==1 ) then
