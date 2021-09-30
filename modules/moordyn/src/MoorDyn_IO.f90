@@ -100,6 +100,7 @@ MODULE MoorDyn_IO
 
   ! PUBLIC :: MDIO_ReadInput
    PUBLIC :: getCoefficientOrCurve
+   PUBLIC :: SplitByBars
    PUBLIC :: DecomposeString
    PUBLIC :: MDIO_OpenOutput
    PUBLIC :: MDIO_CloseOutput
@@ -178,7 +179,35 @@ CONTAINS
    END SUBROUTINE getCoefficientOrCurve
    
    
+   ! Split a string into separate strings by the bar (|) symbol
+   SUBROUTINE SplitByBars(instring, n, outstrings)
+   
+      CHARACTER(*),          INTENT(INOUT)  :: instring
+      INTEGER(IntKi),        INTENT(  OUT)  :: n
+      CHARACTER(40),         INTENT(INOUT)  :: outstrings(6)  ! array of output strings. Up to 6 strings can be read
       
+      INTEGER :: pos1, pos2, i
+ 
+      n = 0
+      pos1=1
+ 
+      DO
+         pos2 = INDEX(instring(pos1:), "|")  ! find index of next comma
+         IF (pos2 == 0) THEN                 ! if there isn't another comma, read the last entry and call it done (this could be the only entry if no commas)
+            n = n + 1
+            outstrings(n) = instring(pos1:)
+            EXIT
+         END IF
+         n = n + 1
+         if (n > 6) then
+            print *, "ERROR - SplitByBars cannot do more than 6 entries"
+         end if
+         outstrings(n) = instring(pos1:pos1+pos2-2)
+         pos1 = pos2+pos1
+      END DO
+      
+   END SUBROUTINE SplitByBars
+
 
    ! Split a string into separate letter strings and integers. Letters are converted to uppercase.
    SUBROUTINE DecomposeString(outWord, let1, num1, let2, num2, let3)
@@ -370,6 +399,7 @@ CONTAINS
         READ (num1,*) oID                                           ! this is the line number
         p%OutParam(I)%ObjID  = oID                                  ! record the ID of the line
         p%OutParam(I)%NodeID = m%LineList(oID)%N                    ! specify node N (end B, fairlead)
+        ! >>> should check validity of ObjID and NodeID <<<
         
       ! achor tension case
       ELSE IF (let1 == 'ANCHTEN') THEN
