@@ -373,7 +373,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! WtrDens - Water density.
 
-   CALL ReadVarWDefault ( UnIn, FileName, InitInp%Waves%WtrDens, 'WtrDens', 'Water density', InitInp%defWtrDens, ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVarWDefault ( UnIn, FileName, InitInp%Waves%WtrDens, 'WtrDens', 'Water density', real(InitInp%defWtrDens,SiKi), ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
