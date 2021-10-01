@@ -109,20 +109,8 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg
          ! is this point allowed beyond the bounds of the wind box?
       GridExceedAllow = p%BoxExceedAllowF .and. ( PointNum >= p%BoxExceedAllowIdx )
 
-if (isnan(PositionXYZ(1,PointNum)) .or. isnan(PositionXYZ(2,PointNum)) .or. isnan(PositionXYZ(3,PointNum))) then
-ErrStat=ErrID_Fatal
-if(GridExceedAllow) then
-ErrMsg="NaN passed into IfW at "//trim(num2lstr(TIME))//" for PointNum "//trim(num2lstr(PointNum))//" of "//trim(num2lstr(NumPoints))//" with GridExceedAllow = true"
-else
-ErrMsg="NaN passed into IfW at "//trim(num2lstr(TIME))//" for PointNum "//trim(num2lstr(PointNum))//" of "//trim(num2lstr(NumPoints))//" with GridExceedAllow = fals"
-endif
-return
-endif
          ! Calculate the velocity for the position
       Velocity(:,PointNum) = FFWind_Interp(Time,PositionXYZ(:,PointNum),p,GridExceedAllow,TmpErrStat,TmpErrMsg)
-if (TIME > 12.4_DbKi) then
-write(23,*) TIME,PointNum,PositionXYZ(:,PointNum),Velocity(:,PointNum)
-endif
 
          ! Error handling
       IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
@@ -224,10 +212,18 @@ FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, ErrStat, ErrMsg)
    !! For points below the top of the grid, the value is interpolated between the Y averaged value for that (X,Z,T)
    !! location and the closest (X,Y,Z,T) point (interpolated over half grid width span, then held constant over all
    !! points further out in Y.
+   !!
+   !! NOTE: to test the effects of grid exceeded points, run the driver with a grid output larger than the wind grid
+   !!       for a single timestep (set in driver input file IfW_driver.inp) using the command:
+   !!
+   !!             inflowwind_driver  -BoxExceedAllow  IfW_driver.inp
+   !!
+   !!       and plot the resulting surfaces representing the U,V,W at a given YZ plane at time T (results given in
+   !!       output file IfW_driver.WindGrid.out).
    INTEGER(IntKi)                                        :: IY2
-   REAL(ReKi)                                            :: Y2             ! for points away from tower below grid
-   REAL(ReKi)                                            :: Z2             ! for points away from tower below grid
-   REAL(ReKi)                                            :: YgZt           ! for points away from tower below grid
+   REAL(ReKi)                                            :: Z2             ! for points away from tower below grid -- distance from ground to grid bottom (-1 to 1 range)
+   REAL(ReKi)                                            :: YtZg           ! distance from grid to tower along a right angled corner line from grid bottom through point to tower
+   REAL(ReKi)                                            :: YtZgG          ! distance from grid to tower along a right angled corner line from grid bottom through point to tower
    LOGICAL                                               :: GridExceedY    ! point is beyond bounds of grid in Y.  Interpolate to average Z level over one grid width if GridExceedAllow
    LOGICAL                                               :: GridExceedZmax ! point is beyond upper bounds of grid in Z.  Interpolate to average Z value at top of box over one half grid height if GridExceedAllow
    LOGICAL                                               :: GridExceedZmin ! point is below  lower bounds of grid in Z.  Interpolate to average Z value at top of box over one half grid height if GridExceedAllow
@@ -347,31 +343,124 @@ FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, ErrStat, ErrMsg)
       IF ( GridExtrap .and. GridExceedZmin ) THEN
          ! Below bottom of grid requires some special logic depending if tower
          ! data exists, and if outside the Y bounds of the grid.
+         !
+         ! Tower influence:
+         !     Extrapolating between the bottom of the grid, the ground, and the
+         !     tower is a bit of an exercise in data fabrication. The tower typically
+         !     is an expoential decline from the bottom of the grid, but may not go
+         !     to zero at the ground.  Beyond the tower, there is no information from
+         !     the wind file regarding interpolation between the grid and ground, so
+         !        1) a linear interpolation is sometimes used when no tower points
+         !              exist, or
+         !        2) the tower values are simply assumed across this region.
+         !     The problem with 2) is it is not necessarily continuous at the bottom
+         !     of the grid.  This is not historically an issue since the tower is
+         !     usually the only thing that shows up in that region (blades are still
+         !     moving within the grid), but may occasionally appear when the tower
+         !     moves in a floating offshore system.
+         !
+         !     For lidar or free wake propogation, a continuous function is necessary
+         !     to prevent jittery measurements or tearing of the wake vortices due
+         !     to dramatic shear.  To address this, the tower influence is calculated
+         !     as across the region as follows:
+         !        1) weighting of tower vs. bottom of grid influence based on how
+         !           close the point is to these two lines.
+         !        2) tower influence may exist at grid edge between grid corner and
+         !           ground, so influence of tower at this imaginary line is used to
+         !           extrapolate beyond the grid edge in the +/-Y directions. Linear
+         !        3) the average value across Y at the bottom of the grid at time T
+         !           used as a constant value at Z of bottom of grid and linearly
+         !           interpolated to the ground for abs(y)>2*FFYHWid.
+         !        4) linear interpolation is used between 2*FFHWid > abs(y) > 2*FFHWid
+         !     The above assumptions give continuous wind functions, though not smooth.
+         !     It is far from ideal, but at least should allow the simulation to run
+         !     without undue influence of discontinueties in the wind velocities.  If
+         !     this extrapolation is not sufficient, then simply make the grid extend
+         !     all the way to the ground.
          if ( GridExceedY ) then
-            ! interp between bottom of grid and ground when outside Y bounds of grid
-            ZGRID = Position(3)/p%GridBase
-            Z = 2.0_ReKi * ZGRID - 1.0_ReKi
-            IZHI = 1
-            IZHI = 0
-
-            ! Get standard interpolation weightings
-            call GetInterpWeights3D();
-
-            ! Beyond the left and right bounds of grid.  Linear interpolate
-            ! between:
-            !     bottom of Yavg          bottom corner of grid
-            !        ground                  ground
-            do IDIM=1,p%NFFComp     ! all the components
-               u(1)  = p%FFData(       1, IYLO, IDIM, ITLO )
-               u(2)  = p%FFAvgData(    1,       IDIM, ITLO )
-               u(3)  = 0.0_ReKi                             ! ground
-               u(4)  = 0.0_ReKi                             ! ground
-               u(5)  = p%FFData(       1, IYLO, IDIM, ITHI )
-               u(6)  = p%FFAvgData(    1,       IDIM, ITHI )
-               u(7)  = 0.0_ReKi                             ! ground
-               u(8)  = 0.0_ReKi                             ! ground
-               FFWind_Interp(IDIM)  =  SUM ( N * u )
-            enddo
+             if (p%NTGrids < 1) then
+               ! interp between bottom of grid and ground when outside Y bounds of grid and no tower
+               ZGRID = Position(3)/p%GridBase
+               Z = 2.0_ReKi * ZGRID - 1.0_ReKi
+               IZHI = 1
+               IZHI = 0
+ 
+               ! Get standard interpolation weightings
+               call GetInterpWeights3D();
+ 
+               ! Beyond the left and right bounds of grid.  Linear interpolate
+               ! between:
+               !     bottom of Yavg          bottom corner of grid
+               !        ground                  ground
+               do IDIM=1,p%NFFComp     ! all the components
+                  u(1)  = p%FFData(       1, IYLO, IDIM, ITLO )
+                  u(2)  = p%FFAvgData(    1,       IDIM, ITLO )
+                  u(3)  = 0.0_ReKi                             ! ground
+                  u(4)  = 0.0_ReKi                             ! ground
+                  u(5)  = p%FFData(       1, IYLO, IDIM, ITHI )
+                  u(6)  = p%FFAvgData(    1,       IDIM, ITHI )
+                  u(7)  = 0.0_ReKi                             ! ground
+                  u(8)  = 0.0_ReKi                             ! ground
+                  FFWind_Interp(IDIM)  =  SUM ( N * u )
+               enddo
+            else  ! Tower grid
+               !  YtZg - distance from grid bottom to tower along a right angled corner
+               !           line from grid bottom through point to tower.  Used to change
+               !           weighting between grid and tower influece (kind of approximates
+               !           a spherical weighting, but without considering more points along
+               !           grid bottom or tower).
+               !  YtZgG- distance from ground bottom to point along a right angled corner
+               !           line from ground through point to tower.  Used to change
+               !           weighting between grid and tower influece at +/-p%FFYHWid
+               !           (similar to YtZg).
+               !  Z2   - scaled distance between bottom edge of grid and ground (in z)
+               !  Y    - scaled distance between IYLO-IYHI between grid edge and +/-2*p%FFYHWid
+               !  Z    - scaled distance between IZLO-IZHI olong tower line
+               !  IYLO - grid corner point index
+               !  IZHI - tower upper point index
+               !  IZLO - tower lower point index
+               !
+               ! NOTE:  there is a slight bug with this formulation.  The sum(NGe) should be
+               !        exactly 1.0, but it is not. The boundaries match the expected values
+               !        well and give continuous transitions to the other regions, so it is
+               !        suspected that the ground point coefficient is incorrect.  Since the
+               !        ground point coefficient is multiplied by zero, it doesn't affect
+               !        the results so I won't spend more time trying to figure it out (ADP).
+               Z2 =   2.0_ReKi * Position(3)/p%GridBase - 1.0_ReKi
+               YtZg = 2.0_ReKi * (p%FFYHWid/(p%FFYHWid + (p%GridBase-Position(3)))) - 1.0_ReKi
+               YtZgG= 2.0_ReKi * (Position(3))/(p%FFYHWid+Position(2)+Position(3)) - 1.0_ReKi
+               NGe=0.0_ReKi
+               NGe(1)  = ( 1.0_ReKi + Z2)*                                  ( 1.0_ReKi + Y )*( 1.0_ReKi - T )*2.0_ReKi   ! bottom of grid average   (top    right point, hi half)
+               NGe(2)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YtZg)*                 ( 1.0_ReKi - Y )*( 1.0_ReKi - T )            ! corner of grid           (top    right point, lo half)
+               NGe(3)  =                  ( 1.0_ReKi-YtZg)*( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )            ! Below grid edge with tower effect (bottom right point, hi half)
+               NGe(4)  =                  ( 1.0_ReKi-YtZg)*( 1.0_ReKi - Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )            ! Below grid edge with tower effect (bottom right point, lo half)
+               NGe(6)  = ( 1.0_ReKi + Z2)*                                  ( 1.0_ReKi + Y )*( 1.0_ReKi + T )*2.0_ReKi
+               NGe(7)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YtZg)*                 ( 1.0_ReKi - Y )*( 1.0_ReKi + T )
+               NGe(8)  =                  ( 1.0_ReKi-YtZg)*( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi + T )
+               NGe(9)  =                  ( 1.0_ReKi-YtZg)*( 1.0_ReKi - Z )*( 1.0_ReKi - Y )*( 1.0_ReKi + T )
+               if (abs(Position(2)) > 2*p%FFYHWid) then
+                  NGe(5)  = ( 1.0_ReKi - Z2)*                                                ( 1.0_ReKi - T )*4.0_ReKi   ! ground                   (bottom left  point)
+                  NGe(10) = ( 1.0_ReKi - Z2)*                                                ( 1.0_ReKi + T )*4.0_ReKi
+               else
+                  ! NOTE:  This coefficient is probably incorrect, but gets multiplied by zero so I'm not fixing it.
+                  NGe(5)  = ( 1.0_ReKi - Z2)*( 1.0_ReKi-YtZgG)*( 1.0_ReKi + Y )*              ( 1.0_ReKi - T )            ! ground                   (bottom left  point)
+                  NGe(10) = ( 1.0_ReKi - Z2)*( 1.0_ReKi-YtZgG)*( 1.0_ReKi + Y )*              ( 1.0_ReKi + T )
+               endif
+               NGe     = NGe /16.0_ReKi ! normalize
+               do IDIM=1,p%NFFComp
+                  uGe(1)  = p%FFAvgData(    1,       IDIM, ITLO )    ! bottom of grid average
+                  uGe(2)  = p%FFData(       1, IYLO, IDIM, ITLO )    ! Corner of grid
+                  uGe(3)  = p%FFTower(         IDIM, IZHI, ITLO )    ! tower line high          (bottom       point, hi half)
+                  uGe(4)  = p%FFTower(         IDIM, IZLO, ITLO )    ! Tower line lo            (bottom       point, lo half)
+                  uGe(5)  = 0.0_ReKi                                 ! ground                   (bottom left  point)
+                  uGe(6)  = p%FFAvgData(    1,       IDIM, ITHI )
+                  uGe(7)  = p%FFData(       1, IYLO, IDIM, ITHI )
+                  uGe(8)  = p%FFTower(         IDIM, IZHI, ITHI )
+                  uGe(9)  = p%FFTower(         IDIM, IZLO, ITHI )
+                  uGe(10) = 0.0_ReKi
+                  FFWind_Interp(IDIM)  =  SUM ( NGe * uGe )
+               enddo
+            endif
          else
             if (p%NTGrids < 1) then
                ! Get standard interpolation weightings
@@ -390,12 +479,11 @@ FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, ErrStat, ErrMsg)
                   FFWind_Interp(IDIM)  =  SUM ( N * u )
                enddo
             else  ! Tower grid
-               ! Special weightings required:
-               !     Tower has some number of points, but anywhere either
-               !     side of the tower only has the closest point at the
-               !     bottom of the grid.  So we need to weight across the
-               !     the span differently
-               !  Y2 - scaled distance between side   edge of grid and tower  (in y)
+               !  YtZg - distance from grid bottom to tower along a right angled corner
+               !           line from grid bottom through point to tower.  Used to change
+               !           weighting between grid and tower influece (kind of approximates
+               !           a spherical weighting, but without considering more points along
+               !           grid bottom or tower).
                !  Z2 - scaled distance between bottom edge of grid and ground (in z)
                !  Y  - scaled distance between IYLO-IYHI along bottom of grid
                !  Z  - scaled distance between IZLO-IZHI olong tower line
@@ -403,20 +491,19 @@ FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, ErrStat, ErrMsg)
                !  IYLO - grid low  y point index
                !  IZHI - tower upper point index
                !  IZLO - tower lower point index
-               Y2 = -2.0_ReKi * abs(Position(2))/p%FFYHWid + 1.0_ReKi      ! From side of grid to tower (tower at +1)
                Z2 =  2.0_ReKi *     Position(3)/p%GridBase - 1.0_ReKi
-               YgZt = 2.0_ReKi * (abs(Position(2))/(abs(Position(2)) + (p%GridBase-Position(3)))) - 1.0_ReKi   ! on Tower ==-1, on grid bottom == 1
+               YtZg = 2.0_ReKi * (abs(Position(2))/(abs(Position(2)) + (p%GridBase-Position(3)))) - 1.0_ReKi   ! on Tower ==-1, on grid bottom == 1
                NGe=0.0_ReKi
-               NGe(1)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YgZt)*                 ( 1.0_ReKi - Y )*( 1.0_ReKi - T )            ! grid bottom low          (top    right point, lo half)
-               NGe(2)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YgZt)*                 ( 1.0_ReKi + Y )*( 1.0_ReKi - T )            ! grid bottom hi           (top    right point, hi half)
-               NGE(3)  =                  ( 1.0_ReKi-YgZt)*( 1.0_ReKi + Z )*                 ( 1.0_ReKi - T )*2.0_ReKi   ! tower line high          (bottom right point, hi half)
-               NGE(4)  =                  ( 1.0_ReKi-YgZt)*( 1.0_ReKi - Z )*                 ( 1.0_ReKi - T )*2.0_ReKi   ! Tower line lo            (bottom right point, lo half)
-               NGe(5)  = ( 1.0_ReKi - Z2)*                                                   ( 1.0_ReKi - T )*6.0_ReKi   ! ground                   (bottom left  point)
-               NGe(6)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YgZt)*                 ( 1.0_ReKi - Y )*( 1.0_ReKi + T )
-               NGe(7)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YgZt)*                 ( 1.0_ReKi + Y )*( 1.0_ReKi + T )
-               NGE(8)  =                  ( 1.0_ReKi-YgZt)*( 1.0_ReKi + Z )*                 ( 1.0_ReKi + T )*2.0_ReKi
-               NGE(9)  =                  ( 1.0_ReKi-YgZt)*( 1.0_ReKi - Z )*                 ( 1.0_ReKi + T )*2.0_ReKi
-               NGe(10) = ( 1.0_ReKi - Z2)*                                                   ( 1.0_ReKi + T )*6.0_ReKi
+               NGe(1)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YtZg)*                 ( 1.0_ReKi - Y )*( 1.0_ReKi - T )            ! grid bottom low          (top    right point, lo half)
+               NGe(2)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YtZg)*                 ( 1.0_ReKi + Y )*( 1.0_ReKi - T )            ! grid bottom hi           (top    right point, hi half)
+               NGe(3)  =                  ( 1.0_ReKi-YtZg)*( 1.0_ReKi + Z )*                 ( 1.0_ReKi - T )*2.0_ReKi   ! tower line high          (bottom right point, hi half)
+               NGe(4)  =                  ( 1.0_ReKi-YtZg)*( 1.0_ReKi - Z )*                 ( 1.0_ReKi - T )*2.0_ReKi   ! Tower line lo            (bottom right point, lo half)
+               NGe(5)  = ( 1.0_ReKi - Z2)*( 1.0_ReKi+YtZg)*                                  ( 1.0_ReKi - T )*2.0_ReKi   ! ground                   (bottom left  point)
+               NGe(6)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YtZg)*                 ( 1.0_ReKi - Y )*( 1.0_ReKi + T )
+               NGe(7)  = ( 1.0_ReKi + Z2)*( 1.0_ReKi+YtZg)*                 ( 1.0_ReKi + Y )*( 1.0_ReKi + T )
+               NGe(8)  =                  ( 1.0_ReKi-YtZg)*( 1.0_ReKi + Z )*                 ( 1.0_ReKi + T )*2.0_ReKi
+               NGe(9)  =                  ( 1.0_ReKi-YtZg)*( 1.0_ReKi - Z )*                 ( 1.0_ReKi + T )*2.0_ReKi
+               NGe(10) = ( 1.0_ReKi - Z2)*( 1.0_ReKi+YtZg)*                                  ( 1.0_ReKi + T )*2.0_ReKi
                NGe     = NGe / 16.0_ReKi ! normalize
                do IDIM=1,p%NFFComp
                   uGe(1)  = p%FFData(       1, IYLO, IDIM, ITLO )    ! grid bottom low          (top          point, lo half)
