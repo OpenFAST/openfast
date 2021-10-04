@@ -931,11 +931,11 @@ CONTAINS
                   else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
                   
                      if (len_trim(num1) > 0) then                     
-                        READ(num1, *) J   ! convert to int, representing parent body index
+                        READ(num1, *) J   ! convert to int, representing turbine index
                         
                         if ((J <= p%nTurbines) .and. (J > 0)) then
                            
-                           m%ConnectList(l)%TypeNum = -1 ! -J                ! typeNum < 0 indicates -turbine number   <<<<  NOT USED, RIGHT??
+                           m%ConnectList(l)%TypeNum = -1            ! set as coupled type   
                            p%nCpldCons(J) = p%nCpldCons(J) + 1      ! increment counter for the appropriate turbine                   
                            m%CpldConIs(p%nCpldCons(J),J) = l
                            print *, ' added connection ', l, ' as fairlead for turbine ', J
@@ -2708,7 +2708,7 @@ CONTAINS
          ! any coupled bodies (type -1)
          DO l = 1,p%nCpldBodies(iTurb)
             J = J + 1
-            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
+            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
             !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics(iTurb)%Orientation(:,:,J) ) )
             r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! <<< changing back
             v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
@@ -2723,7 +2723,7 @@ CONTAINS
          DO l = 1,p%nCpldRods(iTurb)
             J = J + 1
 
-            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
+            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
             r6_in(4:6) = MATMUL( u%CoupledKinematics(iTurb)%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
             v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
             v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
@@ -5669,7 +5669,7 @@ CONTAINS
             ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
 
             ! Froud-Krylov force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)*0.5* (2.0/3.0*Pi*Rod%d**3 /8) * aq
+            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)* (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
             
             ! dynamic pressure force
             Rod%Pd(:,I) = Rod%Pd(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
@@ -5678,9 +5678,9 @@ CONTAINS
             DO J=1,3
                DO K=1,3
                   IF (J==K) THEN
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
+                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                   ELSE
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
+                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                   END IF
                END DO
             END DO
@@ -5701,7 +5701,7 @@ CONTAINS
             Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
             
             ! Froud-Krylov force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)*0.5* (2.0/3.0*Pi*Rod%d**3 /8) * aq
+            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)* (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
             
             ! dynamic pressure force
             Rod%Pd(:,I) = Rod%Pd(:,I) - VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
@@ -5710,9 +5710,9 @@ CONTAINS
             DO J=1,3
                DO K=1,3
                   IF (J==K) THEN
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
+                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                   ELSE
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
+                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                   END IF
                END DO
             END DO
