@@ -215,6 +215,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    Init%g           = InitInput%g   
    Init%TP_RefPoint = InitInput%TP_RefPoint
    Init%SubRotateZ  = InitInput%SubRotateZ
+   Init%RootName    = InitInput%RootName
    if ((allocated(InitInput%SoilStiffness)) .and. (InitInput%SoilMesh%Initialized)) then 
       ! Soil Mesh and Stiffness
       !  SoilMesh has N points.  Correspond in order to the SoilStiffness matrices passed in
