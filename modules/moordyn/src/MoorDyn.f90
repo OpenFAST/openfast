@@ -931,11 +931,11 @@ CONTAINS
                   else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
                   
                      if (len_trim(num1) > 0) then                     
-                        READ(num1, *) J   ! convert to int, representing parent body index
+                        READ(num1, *) J   ! convert to int, representing turbine index
                         
                         if ((J <= p%nTurbines) .and. (J > 0)) then
                            
-                           m%ConnectList(l)%TypeNum = -1 ! -J                ! typeNum < 0 indicates -turbine number   <<<<  NOT USED, RIGHT??
+                           m%ConnectList(l)%TypeNum = -1            ! set as coupled type   
                            p%nCpldCons(J) = p%nCpldCons(J) + 1      ! increment counter for the appropriate turbine                   
                            m%CpldConIs(p%nCpldCons(J),J) = l
                            print *, ' added connection ', l, ' as fairlead for turbine ', J
@@ -2705,7 +2705,7 @@ CONTAINS
          ! any coupled bodies (type -1)
          DO l = 1,p%nCpldBodies(iTurb)
             J = J + 1
-            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
+            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
             !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics(iTurb)%Orientation(:,:,J) ) )
             r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! <<< changing back
             v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
@@ -2720,7 +2720,7 @@ CONTAINS
          DO l = 1,p%nCpldRods(iTurb)
             J = J + 1
 
-            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J)
+            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
             r6_in(4:6) = MATMUL( u%CoupledKinematics(iTurb)%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
             v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
             v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
