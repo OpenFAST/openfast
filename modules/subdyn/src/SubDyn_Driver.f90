@@ -158,6 +158,18 @@ PROGRAM SubDyn_Driver
    ! Initialize SubDyn module
    CALL SD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 ); call AbortIfFailed()
 
+   ! Sanity check for outputs
+   if (p%NumOuts==0) then
+      call WrScr('Warning: No output channels were selected in SubDyn. No output file will be created!')
+   endif
+   if (p%OutSwtch==2) then
+      p%OutSwtch=1
+      call WrScr('Warning: Overring `OutSwitch` to 1 to generate outputs with the driver.')
+      ! TODO not pretty, it'd be nicer to tell SubDyn it's running with the driver
+      drvrInitInp%OutRootName = TRIM(drvrInitInp%OutRootName)//'.SD'
+      CALL SDOUT_OpenOutput( SD_ProgDesc, drvrInitInp%OutRootName, p, InitOutData, ErrStat2, ErrMsg2 ); 
+   endif
+
 
    ! Read Input time series data from a file
    CALL AllocAry(SDin, drvrInitInp%NSteps, 19, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
@@ -400,6 +412,10 @@ CONTAINS
       if(UnEcho>0) CLOSE( UnEcho )
       if(UnIn>0)   CLOSE( UnIn   )
       ! --- Perform input checks and triggers
+      ! If no root is provided, use the SDInputFile
+      IF ( LEN_TRIM(InitInp%OutRootName) == 0 ) THEN
+         CALL GetRoot(InitInp%SDInputFile, InitInp%OutRootName)
+      END IF
       IF ( PathIsRelative( InitInp%SDInputFile ) ) then
          InitInp%SDInputFile = TRIM(PriPath)//TRIM(InitInp%SDInputFile)
       END IF

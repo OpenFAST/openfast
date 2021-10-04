@@ -47,6 +47,7 @@ Module SubDyn
    PUBLIC :: SD_JacobianPDiscState   ! 
    PUBLIC :: SD_JacobianPConstrState ! 
    PUBLIC :: SD_GetOP                ! 
+   PUBLIC :: SD_ProgDesc
    
 CONTAINS
 
