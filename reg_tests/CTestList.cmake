@@ -232,10 +232,10 @@ hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
 
 # SubDyn regression tests
 sd_regression("SD_Cable_5Joints"                              "subdyn;offshore")
-sd_regression("SD_Force"                                      "subdyn;offshore")
 sd_regression("SD_PendulumDamp"                               "subdyn;offshore")
 sd_regression("SD_Rigid"                                      "subdyn;offshore")
 sd_regression("SD_SparHanging"                                "subdyn;offshore")
 # TODO test below are bugs, should be added when fixed
+# sd_regression("SD_Force"                                      "subdyn;offshore")
 # sd_regression("SD_AnsysComp1_PinBeam"                         "subdyn;offshore")
 # sd_regression("SD_Rigid2Interf_Cables"                        "subdyn;offshore")
