@@ -201,8 +201,6 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
       WRITE(InitInp%SumFileUnit,'(F10.3,2x,F10.3,2x,F10.3)',IOSTAT=TmpErrStat)   InitOut%sf      
    ENDIF 
    
-   MiscVars%DummyMiscVar = 0
-      
    RETURN
 
 END SUBROUTINE IfW_HAWCWind_Init
@@ -362,7 +360,7 @@ SUBROUTINE IfW_HAWCWind_CalcOutput(Time, PositionXYZ, p, Velocity, MiscVars, Err
       ! Initialize some things
       !-------------------------------------------------------------------------------------------------
 
-   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, p%FF, Velocity, ErrStat, ErrMsg)
+   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, p%FF, MiscVars%FF, Velocity, ErrStat, ErrMsg)
    RETURN
 
 END SUBROUTINE IfW_HAWCWind_CalcOutput

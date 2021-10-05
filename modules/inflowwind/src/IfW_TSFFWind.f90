@@ -629,7 +629,7 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, p,  Velocity, MiscVars, Er
 
 
 
-   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, p%FF, Velocity, ErrStat, ErrMsg)
+   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, p%FF, MiscVars%FF, Velocity, ErrStat, ErrMsg)
 
 
    RETURN

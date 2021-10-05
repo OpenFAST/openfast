@@ -56,7 +56,7 @@ CONTAINS
 !====================================================================================================
 !> This routine acts as a wrapper for the GetWindSpeed routine. It steps through the array of input
 !! positions and calls the GetWindSpeed routine to calculate the velocities at each point.
-SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg)
+SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, m, Velocity, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -65,6 +65,7 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_FFWind_ParameterType),              INTENT(IN   )  :: p                 !< Parameters
+   TYPE(IfW_FFWind_MiscVarType),                INTENT(INOUT)  :: m                 !< MiscVar
    REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
 
       ! Error handling
@@ -74,6 +75,7 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg
       ! local variables
    INTEGER(IntKi)                                              :: NumPoints         ! Number of points specified by the PositionXYZ array
    LOGICAL                                                     :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
+   LOGICAL                                                     :: GridExtrap        ! did this point fall outside the wind box and get extrapolated?
 
       ! local counters
    INTEGER(IntKi)                                              :: PointNum          ! a loop counter for the current point
@@ -110,7 +112,7 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg
       GridExceedAllow = p%BoxExceedAllowF .and. ( PointNum >= p%BoxExceedAllowIdx )
 
          ! Calculate the velocity for the position
-      Velocity(:,PointNum) = FFWind_Interp(Time,PositionXYZ(:,PointNum),p,GridExceedAllow,TmpErrStat,TmpErrMsg)
+      Velocity(:,PointNum) = FFWind_Interp(Time,PositionXYZ(:,PointNum),p,GridExceedAllow,GridExtrap,TmpErrStat,TmpErrMsg)
 
          ! Error handling
       IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
@@ -123,6 +125,20 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg
                                                       TRIM(Num2LStr(PositionXYZ(3,PointNum)))//")  in wind-file coordinates]" )
          !OMP END CRITICAL
       END IF
+
+      if (GridExceedAllow .and. GridExtrap .and. (.not. m%BoxExceedWarned)) then
+         !$OMP CRITICAL  ! Needed to avoid data race on issuing warning
+         call WrScr( "WARNING from InflowWind:")
+         call WrScr( "------------------------")
+         call WrScr( " Grid point extrapolated beyond bounds of full-field wind grid [position=("                             // &
+               TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "//TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "                   // &
+               TRIM(Num2LStr(PositionXYZ(3,PointNum)))//")  in wind-file coordinates, T="//trim(Num2LStr(Time))//"]."//NewLine// &
+               "This only occurs for free vortex wake points or LidarSim measurement locations. "                             // &
+               "Use a larger full-field wind grid if the simulation yields undesirable results. Further warnings are suppressed.")
+         call WrScr( "------------------------")
+         m%BoxExceedWarned = .TRUE.
+         !$OMP END CRITICAL
+      endif
 
    ENDDO
    !OMP END DO 
@@ -157,7 +173,7 @@ END SUBROUTINE IfW_FFWind_CalcOutput
 !!    09/23/2009 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
 !!                 Height is now relative to the ground
 !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, ErrStat, ErrMsg)
+FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, GridExtrap, ErrStat, ErrMsg)
 
    IMPLICIT                                              NONE
 
@@ -167,6 +183,7 @@ FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, ErrStat, ErrMsg)
    REAL(ReKi),                            INTENT(IN   )  :: Position(3)       !< takes the place of XGrnd, YGrnd, ZGrnd
    TYPE(IfW_FFWind_ParameterType),        INTENT(IN   )  :: p                 !< Parameters
    LOGICAL,                               INTENT(IN   )  :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
+   LOGICAL,                               INTENT(INOUT)  :: GridExtrap        ! Extrapolation outside grid is allowed and point lies outside grid
    REAL(ReKi)                                            :: FFWind_Interp(3)  !< The U, V, W velocities
 
    INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status
@@ -227,7 +244,6 @@ FUNCTION FFWind_Interp(Time, Position, p, GridExceedAllow, ErrStat, ErrMsg)
    LOGICAL                                               :: GridExceedY    ! point is beyond bounds of grid in Y.  Interpolate to average Z level over one grid width if GridExceedAllow
    LOGICAL                                               :: GridExceedZmax ! point is beyond upper bounds of grid in Z.  Interpolate to average Z value at top of box over one half grid height if GridExceedAllow
    LOGICAL                                               :: GridExceedZmin ! point is below  lower bounds of grid in Z.  Interpolate to average Z value at top of box over one half grid height if GridExceedAllow
-   LOGICAL                                               :: GridExtrap     ! Extrapolation outside grid is allowed and point lies outside grid above z_min
 
    !-------------------------------------------------------------------------------------------------
    ! Initialize variables

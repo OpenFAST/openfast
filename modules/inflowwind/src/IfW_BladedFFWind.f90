@@ -1896,7 +1896,7 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, M
 
 
 
-   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, ParamData%FF, Velocity, ErrStat, ErrMsg)
+   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, ParamData%FF, MiscVars%FF, Velocity, ErrStat, ErrMsg)
 
 
    RETURN

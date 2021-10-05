@@ -39,7 +39,7 @@ typedef  ^                    OtherStateType       ReKi           DummyOtherStat
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef    ^              MiscVarType          ReKi     DummyMiscVar - - -  "Remove this variable if you have misc variables" -
+typedef    ^                MiscVarType            IfW_FFWind_MiscVarType    FF      - - -  "Miscvar used in all full-field " -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

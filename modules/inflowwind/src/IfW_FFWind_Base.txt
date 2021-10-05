@@ -62,3 +62,5 @@ typedef  ^                            ^                 ReKi              RefLen
 typedef  ^                            ^                 LOGICAL           BoxExceedAllowF   -  .FALSE.  -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 typedef  ^                            ^                 IntKi             BoxExceedAllowIdx -    -1     -     "Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 
+# ..... MiscVar ...................................................................................................................
+typedef  ^                            MiscVarType       LOGICAL           BoxExceedWarned   -  .FALSE.  -     "Has a warning been issued for points extrapolated beyond FFWind grid" -
