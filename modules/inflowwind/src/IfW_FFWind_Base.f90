@@ -642,8 +642,15 @@ CONTAINS
             IF ( IZLO == 0 .AND. Z >= 1.0-TOL ) THEN
                Z    = -1.0_ReKi
                IZLO = 1
+            ELSEIF ( GridExceedAllow ) THEN
+               ! calculate new Z between top of grid and half zgrid height above top of grid (range of -1 to 1)
+               Z = 2.0_ReKi * ( Position(3)/p%GridBase ) - 1.0_ReKi
+               Z = max(Z,-1.0_ReKi) ! enforce ground boundary
+               IZLO = 0             ! ground
+               IZHI = 1             ! Bottom of grid
+               AboveGridBottom   = .FALSE.  ! this is below the grid bottom
+               GridExtrap        = .true.
             ELSE
-               ! Given the first if statement, is it ever possible to end up here???
                ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
                            TRIM(Num2LStr(Position(3)))//' m is below the grid).'
                ErrStat  = ErrID_Fatal
