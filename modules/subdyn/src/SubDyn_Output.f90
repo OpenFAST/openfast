@@ -251,10 +251,10 @@ CONTAINS
       CALL ElemM(p%ElemProps(iElem),         pLst%Me(:,:,iiNode,iStore))
       CALL ElemK(p%ElemProps(iElem),         pLst%Ke(:,:,iiNode,iStore))
       CALL ElemF(p%ElemProps(iElem), Init%g, pLst%Fg(:,iiNode,iStore), FCe)
-      ! NOTE: Removing this force contribution for now (maybe put Tension only?)
+      ! NOTE: Removing this force contribution for now 
       ! The output of subdyn will just be the "Kx" part for now
       !pLst%Fg(:,iiNode,iStore) = pLst%Fg(:,iiNode,iStore) + FCe(1:12) ! Adding cable element force 
-      pLst%Fg(:,iiNode,iStore) = 0.0_ReKi
+      pLst%Fg(:,iiNode,iStore) = FCe(1:12) ! Adding cable element force 
    END SUBROUTINE ConfigOutputNode_MKF_ID
 
 
