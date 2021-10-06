@@ -23,7 +23,7 @@ MODULE SD_FEM
   IMPLICIT NONE
 
  
-  INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 10                    ! Maximum number of members at one joint
+  INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 20                    ! Maximum number of members at one joint
   INTEGER(IntKi),   PARAMETER  :: MaxOutChs       = 2000                  ! Max number of Output Channels to be read in
   INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
    
@@ -116,8 +116,11 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
       DO J = 1, Init%NElem                          !This should be vectorized                                                                      
          IF ( ( NINT(Init%Nodes(I, 1))==p%Elems(J, 2)) .OR. (NINT(Init%Nodes(I, 1))==p%Elems(J, 3) ) ) THEN   !If i-th nodeID matches 1st node or 2nd of j-th element                                                                   
             k = k + 1                                                                                                     
-            if (k > MaxMemJnt+1) then 
-               CALL SetErrStat(ErrID_Fatal, 'Maximum number of members reached on node'//trim(Num2LStr(NINT(Init%Nodes(I,1)))), ErrStat, ErrMsg, 'NodeCon');
+            if (k+1 > MaxMemJnt+1) then 
+               CALL SetErrStat(ErrID_Fatal, 'Maximum number of members reached on node number '//trim(Num2LStr(NINT(Init%Nodes(I,1))))//&
+                  &' (index in Joint list, not JointID)). The maximum number of member per node is hardcoded to MaxMemJnt='//trim(num2lstr(MaxMemJnt))//&
+                  &'. Recompile the code by changing `MaxMemJnt` in SD_FEM.f90.', ErrStat, ErrMsg, 'NodeCon');
+               return
             endif
             Init%NodesConnE(I, k + 1) = p%Elems(J, 1)                                                                  
          ENDIF                                                                                                            
