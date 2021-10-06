@@ -106,7 +106,7 @@ CONTAINS
       CHARACTER(1024)              :: Line                 ! String to temporarially hold value of read line
       CHARACTER(20)                :: LineOutString        ! String to temporarially hold characters specifying line output options
       CHARACTER(20)                :: OptString            ! String to temporarially hold name of option variable
-      CHARACTER(20)                :: OptValue             ! String to temporarially hold value of options variable input
+      CHARACTER(40)                :: OptValue             ! String to temporarially hold value of options variable input
       INTEGER(IntKi)               :: nOpts                ! number of options lines in input file
       CHARACTER(40)                :: TempString1          !
       CHARACTER(40)                :: TempString2          !

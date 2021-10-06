@@ -114,7 +114,7 @@ CONTAINS
    SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, ErrStat3, ErrMsg3)
    ! SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
 
-      CHARACTER(20),           INTENT(IN   )  :: inputString
+      CHARACTER(40),           INTENT(IN   )  :: inputString
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid (:,:)
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Xs (:)
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Ys (:)
@@ -153,6 +153,7 @@ CONTAINS
          ! load lookup table data from file
          CALL GetNewUnit( UnCoef ) ! unit number for coefficient input file
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )
+         cALL SetErrStat(ErrStat4, ErrMsg4, ErrStat3, ErrMsg3, 'MDIO_getBathymetry')
 
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first title line
          READ(UnCoef,*,IOSTAT=ErrStat4) nGridX_string, nGridX  ! read in the second line as the number of x values in the BathGrid
