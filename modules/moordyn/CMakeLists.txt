@@ -37,7 +37,7 @@ install(TARGETS moordynlib
 #add_executable(moordyn_driver ${MD_DRIVER_SOURCES})
 #target_link_libraries(moordyn_driver moordynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS moordyn_driver
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+#install(TARGETS moordyn_driver
+#  RUNTIME DESTINATION bin
+#  LIBRARY DESTINATION lib
+#  ARCHIVE DESTINATION lib)
