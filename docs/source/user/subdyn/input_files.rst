@@ -59,7 +59,9 @@ SubDyn module inputs
 This name should be in quotations and can contain an absolute path or a
 relative path. All SubDyn-generated output files will be prefixed with
 **OutRootName**. If this parameter includes a file path, the output
-will be generated in that folder. **NSteps** specifies the number of
+will be generated in that folder. If this output is left empty,
+the driver filename is used (without the extension) is used.
+**NSteps** specifies the number of
 simulation time steps, and **TimeStep** specifies the time between
 steps. Next, the user must specify the location of the TP reference
 point **TP\_RefPoint** (in the global reference system). This is
@@ -606,10 +608,25 @@ specified in the SUBDYN section of the driver input file when running
 SubDyn in stand-alone mode, or in the FAST input file when running a
 coupled simulation. See Section 4.2 for summary file details.
 
-In this release, **OutCOSM** is ignored. In future releases,
+Currently, **OutCOSM** is ignored. In future releases,
 specifying **OutCOSM** = TRUE will cause SubDyn to include direction
 cosine matrices (undeflected) in the summary file for only those members
 requested in the list of output channels.
+
+The following two inputs specified whether mode shapes should be written
+to disk.  **OutCBModes** is a flag that controls the output of the Guyan
+and Craig-Bampton modes. Similarly, **OutFEMModes**, controls the output
+of the FEM modes (full sytem with constraints prior to the CB-reduction).
+For now, only the first 30 FEM modes are written to disk, but all CB modes
+selected by the users are written. 
+For both inputs, the following options are available: 0, no ouput, 1, outputs
+in JSON format. The JSON files contain nodes coordinates, connectivity between the nodes, 
+displacements for each modes and nodes, and frequencies for each modes.
+The reading of these files should be straightforward using Matlab or Python using a JSON format parser. 
+The files can be opened to visualize the modes using the tool viz3danim
+(see the `live version <https://ebranlard.github.io/viz3Danim/>`_
+, or its `github repository <https://github.com/ebranlard/viz3danim>`_).
+
 
 Specifying **OutAll** = TRUE causes SubDyn to output forces and
 moments at all of the joints (not internal nodes). That is, the static

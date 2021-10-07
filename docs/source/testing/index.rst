@@ -27,7 +27,14 @@ to automatically execute the test suite for new commits and pull
 requests. This cloud computing resource is available to all
 GitHub users and is highly recommended as part of the development
 workflow. After enabling GitHub Actions in an OpenFAST repository, simply
-pushing new commits will trigger the tests.
+pushing new commits will trigger the tests. The GitHub Actions pipeline
+is configured to measure the level of code coverage in the included
+tests. These reports are currently available only for the module-level
+regression tests and the unit tests, and they are available for viewing
+on the `OpenFAST Codecov.io dashboard <https://app.codecov.io/gh/openfast/openfast>`_.
+For any fork of OpenFAST where the GitHub Actions workflow successfully
+completes, a unique Codecov.io dashboard will be available at
+`https://app.codecov.io/gh/<github account>/openfast`.
 
 Test specific documentation
 ---------------------------

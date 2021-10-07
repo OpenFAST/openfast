@@ -47,6 +47,7 @@ Module SubDyn
    PUBLIC :: SD_JacobianPDiscState   ! 
    PUBLIC :: SD_JacobianPConstrState ! 
    PUBLIC :: SD_GetOP                ! 
+   PUBLIC :: SD_ProgDesc
    
 CONTAINS
 
@@ -87,51 +88,76 @@ END SUBROUTINE CreateTPMeshes
 !---------------------------------------------------------------------------
 !> Create output (Y2, for motion) and input (u, for forces)meshes, based on SubDyn nodes
 !! Ordering of nodes is the same as SubDyn (used to be : I L C)
-SUBROUTINE CreateInputOutputMeshes( NNode, Nodes, inputMesh, outputMesh, ErrStat, ErrMsg )
+SUBROUTINE CreateInputOutputMeshes( NNode, Nodes, inputMesh, outputMesh, outputMesh3, ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT( IN    ) :: NNode                     !total number of nodes in the structure, used to size the array Nodes, i.e. its rows
    REAL(ReKi),                INTENT( IN    ) :: Nodes(NNode, JointsCol)
    TYPE(MeshType),            INTENT( INOUT ) :: inputMesh   ! u%LMesh
    TYPE(MeshType),            INTENT( INOUT ) :: outputMesh  ! y%Y2Mesh
+   TYPE(MeshType),            INTENT( INOUT ) :: outputMesh3 ! y%Y3Mesh, full elastic
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat                   ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    ! Local variables
    REAL(ReKi), dimension(3) :: Point
-   INTEGER         :: I  ! generic counter variable
-   INTEGER         :: nodeIndx
+   INTEGER                  :: I             ! generic counter variable
+   INTEGER                  :: nodeIndx
+   INTEGER(IntKi)           :: ErrStat2      ! Error status of the operation
+   CHARACTER(ErrMsgLen)     :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    
    CALL MeshCreate( BlankMesh        = inputMesh         &
                   ,IOS               = COMPONENT_INPUT   &
                   ,Nnodes            = size(Nodes,1)     &
-                  ,ErrStat           = ErrStat           &
-                  ,ErrMess           = ErrMsg            &
+                  ,ErrStat           = ErrStat2          &
+                  ,ErrMess           = ErrMsg2           &
                   ,Force             = .TRUE.            &
                   ,Moment            = .TRUE.            )
+   if(Failed()) return
 
    DO I = 1,size(Nodes,1)
       Point = Nodes(I, 2:4)
-      CALL MeshPositionNode(inputMesh, I, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I)
+      CALL MeshPositionNode(inputMesh, I, Point, ErrStat2, ErrMsg2); IF(ErrStat2/=ErrID_None) exit
+      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat2, ErrMsg2, I)
    ENDDO 
-   CALL MeshCommit ( inputMesh, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+   if(Failed()) return
+
+   CALL MeshCommit ( inputMesh, ErrStat2, ErrMsg2); if(Failed()) return
          
    ! Create the Interior Points output mesh as a sibling copy of the input mesh
    CALL MeshCopy (    SrcMesh      = inputMesh              &
                      ,DestMesh     = outputMesh             &
                      ,CtrlCode     = MESH_SIBLING           &
                      ,IOS          = COMPONENT_OUTPUT       &
-                     ,ErrStat      = ErrStat                &
-                     ,ErrMess      = ErrMsg                 &
+                     ,ErrStat      = ErrStat2               &
+                     ,ErrMess      = ErrMsg2                &
                      ,TranslationDisp   = .TRUE.            &
                      ,Orientation       = .TRUE.            &
                      ,TranslationVel    = .TRUE.            &
                      ,RotationVel       = .TRUE.            &
                      ,TranslationAcc    = .TRUE.            &
                      ,RotationAcc       = .TRUE.            ) 
-   
-    ! Set the Orientation (rotational) field for the nodes based on assumed 0 (rotational) deflections
-    !Identity should mean no rotation, which is our first guess at the output -RRD
-    CALL Eye( outputMesh%Orientation, ErrStat, ErrMsg )         
-        
+   if(Failed()) return
+   ! Create the Interior Points output mesh as a sibling copy of the input mesh
+   CALL MeshCopy (    SrcMesh      = outputMesh             &
+                     ,DestMesh     = outputMesh3            &
+                     ,CtrlCode     = MESH_COUSIN            & ! Cannot do sibling (mesh can only have one sibling)
+                     ,IOS          = COMPONENT_OUTPUT       &
+                     ,ErrStat      = ErrStat2               &
+                     ,ErrMess      = ErrMsg2                &
+                     ,TranslationDisp   = .TRUE.            &
+                     ,Orientation       = .TRUE.            &
+                     ,TranslationVel    = .TRUE.            &
+                     ,RotationVel       = .TRUE.            &
+                     ,TranslationAcc    = .TRUE.            &
+                     ,RotationAcc       = .TRUE.            ) 
+   if(Failed()) return
+   ! Set the Orientation (rotational) field for the nodes based on assumed 0 (rotational) deflections
+   !Identity should mean no rotation, which is our first guess at the output -RRD
+   CALL Eye(outputMesh%Orientation , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL Eye(outputMesh3%Orientation, ErrStat2, ErrMsg2); if(Failed()) return
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CreateInputOutputMeshes') 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
 END SUBROUTINE CreateInputOutputMeshes
 !---------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
@@ -189,6 +215,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    Init%g           = InitInput%g   
    Init%TP_RefPoint = InitInput%TP_RefPoint
    Init%SubRotateZ  = InitInput%SubRotateZ
+   Init%RootName    = InitInput%RootName
    if ((allocated(InitInput%SoilStiffness)) .and. (InitInput%SoilMesh%Initialized)) then 
       ! Soil Mesh and Stiffness
       !  SoilMesh has N points.  Correspond in order to the SoilStiffness matrices passed in
@@ -318,7 +345,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL CreateTPMeshes( InitInput%TP_RefPoint, u%TPMesh, y%Y1Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
    
    ! Construct the input mesh (u%LMesh, force on nodes) and output mesh (y%Y2Mesh, displacements)
-   CALL CreateInputOutputMeshes( p%nNodes, Init%Nodes, u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL CreateInputOutputMeshes( p%nNodes, Init%Nodes, u%LMesh, y%Y2Mesh, y%Y3Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! --- Eigen values of full system (for summary file output only)
    IF ( Init%SSSum .or. p%OutFEMModes>idOutputFormatNone) THEN 
@@ -488,8 +515,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       RRb2g(4:6,4:6) = Rb2g
      
       ! --------------------------------------------------------------------------------
-      ! --- Output 2, Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
+      ! --- Output 2&3
       ! --------------------------------------------------------------------------------
+      ! Y2Mesh: rigidbody displacements, elastic velocities and accelerations on all FEM nodes
+      ! Y3Mesh: elastic   displacements, elastic velocities and accelerations on all FEM nodes
       ! External force on internal nodes (F_L)
       call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating)); if(Failed()) return
       m%UR_bar        = 0.0_ReKi
@@ -594,14 +623,18 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                m%U_full_dotdot(DOFList(4:6)) = m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
             endif
 
-            ! NOTE: For now, displacements passed to HydroDyn are Guyan only!
+            ! --- Rigid body displacements for hydrodyn
             ! Construct the direction cosine matrix given the output angles
-            !call SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
-            call SmllRotTrans( 'UR_bar input angles', rotations(1), rotations(2), rotations(3), DCM, '', ErrStat2, ErrMsg2) ! NOTE: using only Guyan rotations
+            call SmllRotTrans( 'UR_bar input angles Guyan', rotations(1), rotations(2), rotations(3), DCM, '', ErrStat2, ErrMsg2) ! NOTE: using only Guyan rotations
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
             y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
-            !y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
             y%Y2mesh%TranslationDisp (:,iSDNode)     = duP(1:3)                       ! NOTE: using only the Guyan Displacements
+            ! --- Full elastic displacements for others (moordyn)
+            call SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
+            y%Y3mesh%Orientation     (:,:,iSDNode)   = DCM
+            y%Y3mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
+            ! --- Elastic velocities and accelerations 
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
             y%Y2mesh%TranslationAcc  (:,iSDNode)     = m%U_full_dotdot (DOFList(1:3))
             y%Y2mesh%RotationVel     (:,iSDNode)     = m%U_full_dot    (DOFList(4:6))
@@ -615,6 +648,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             ! Construct the direction cosine matrix given the output angles
             CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
+            y%Y3mesh%Orientation     (:,:,iSDNode)   = DCM
+            y%Y3mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
             y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
             y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
@@ -623,6 +658,14 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             y%Y2mesh%RotationAcc     (:,iSDNode)     = m%U_full_dotdot (DOFList(4:6))
          enddo
       endif
+
+      ! --- Y3 mesh and Y2 mesh both have elastic velocities and accelerations
+      do iSDNode = 1,p%nNodes
+         y%Y3mesh%TranslationVel  (:,iSDNode)     = y%Y2mesh%TranslationVel  (:,iSDNode) 
+         y%Y3mesh%TranslationAcc  (:,iSDNode)     = y%Y2mesh%TranslationAcc  (:,iSDNode)
+         y%Y3mesh%RotationVel     (:,iSDNode)     = y%Y2mesh%RotationVel     (:,iSDNode)
+         y%Y3mesh%RotationAcc     (:,iSDNode)     = y%Y2mesh%RotationAcc     (:,iSDNode)
+      enddo
                                     
       ! --------------------------------------------------------------------------------
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
@@ -2190,7 +2233,7 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       call PackLoadMesh(u%LMesh, u_op, idx)
    END IF
    IF ( PRESENT( y_op ) ) THEN
-      ny = p%Jac_ny + y%Y2Mesh%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+      ny = p%Jac_ny + y%Y2Mesh%NNodes * 6 + y%Y3Mesh%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
       if (.not. allocated(y_op)) then
          call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
       end if
@@ -2204,6 +2247,7 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
       call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask)
+      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask)
       idx = idx - 1
       do i=1,p%NumOuts
          y_op(i+idx) = y%WriteOutput(i)

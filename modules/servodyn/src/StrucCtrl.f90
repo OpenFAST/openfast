@@ -2325,8 +2325,12 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
 
    ! User Defined Stiffness Table
    p%Use_F_TBL = InputFileData%Use_F_TBL
-   call AllocAry(p%F_TBL,SIZE(InputFiledata%F_TBL,1),SIZE(InputFiledata%F_TBL,2),'F_TBL', ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName);  if (ErrStat >= ErrID_Fatal) return
+   if (allocated(InputFileData%F_TBL)) then
+      call AllocAry(p%F_TBL,SIZE(InputFiledata%F_TBL,1),SIZE(InputFiledata%F_TBL,2),'F_TBL', ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName);  if (ErrStat >= ErrID_Fatal) return
+      p%F_TBL = InputFileData%F_TBL
+   endif
+
 
    p%F_TBL = InputFileData%F_TBL;
 

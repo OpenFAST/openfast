@@ -579,7 +579,7 @@ typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_P_2_ED_P	-	-	-	"Map HydroDyn Moris
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_Mooring_P	-	-	-	"Map ElastoDyn PlatformPtMesh to MAP/FEAM/MoorDyn/OrcaFlex point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	Mooring_P_2_ED_P	-	-	-	"Map FEAM/MAP/MoorDyn/OrcaFlex point mesh to ElastoDyn PlatformPtMesh"
 # SD <-> Mooring (MAP, FEAM, MoorDyn, OrcaFlex)
-typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_Mooring_P	-	-	-	"Map SD Motions (y2Mesh) to MAP/FEAM/MoorDyn/OrcaFlex point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_Mooring_P	-	-	-	"Map SD Motions (y3Mesh) to MAP/FEAM/MoorDyn/OrcaFlex point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	Mooring_P_2_SD_P	-	-	-	"Map FEAM/MAP/MoorDyn/OrcaFlex point mesh to SD point loads (LMesh) mesh"
 # ED <-> SD or User-Platform (ExtPtfm_MCKF)
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SD_TP	-	-	-	"Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh"
@@ -602,7 +602,7 @@ typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_BD_P_B 	{:}{:}	-	-	"Map ServoD
 typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_ED_P	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to ElastoDyn     point load mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SStC_P_P	{:}	-	-	"Map ElastoDyn     platform point mesh motion to ServoDyn/SStC point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_SD_P	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to SubDyn        point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_SStC_P_P	{:}	-	-	"Map SubDyn        platform point mesh motion to ServoDyn/SStC point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_SStC_P_P	{:}	-	-	"Map SubDyn        y3mesh   point mesh motion to ServoDyn/SStC point mesh"
 # ED --> SrvD -- PlatformPtMesh motion to SrvD%PtfmMotionMesh for passing to DLL
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn     platform point mesh motion to ServoDyn      point mesh -- for passing to controller"
 # ED/BD <-> AD (blades)
@@ -618,10 +618,10 @@ typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn Bl
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
 # IceF <-> SD
 typedef	^	FAST_ModuleMapType	MeshMapType	IceF_P_2_SD_P	-	-	-	"Map IceFloe point mesh to SubDyn LMesh point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_IceF_P	-	-	-	"Map SubDyn y2Mesh point mesh to IceFloe point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceF_P	-	-	-	"Map SubDyn y3Mesh point mesh to IceFloe point mesh"
 # IceD <-> SD
 typedef	^	FAST_ModuleMapType	MeshMapType	IceD_P_2_SD_P	{:}	-	-	"Map IceDyn point mesh to SubDyn LMesh point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_IceD_P	{:}	-	-	"Map SubDyn y2Mesh point mesh to IceDyn point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceD_P	{:}	-	-	"Map SubDyn y3Mesh point mesh to IceDyn point mesh"
 # Stored Jacobians:
 typedef	^	FAST_ModuleMapType	ReKi	Jacobian_Opt1	{:}{:}	-	-	"Stored Jacobian in ED_HD_InputOutputSolve or FullOpt1_InputOutputSolve"
 typedef	^	FAST_ModuleMapType	Integer	Jacobian_pivot	{:}	-	-	"Pivot array used for LU decomposition of Jacobian_Opt1"

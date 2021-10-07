@@ -283,5 +283,6 @@ typedef  ^  InputType   ReKi        CableDeltaL   {:}      -   - "Cable tension,
 
 # ============================== Outputs ============================================================================================================================================
 typedef  ^  OutputType  MeshType    Y1Mesh         -  - - "Transition piece outputs on a point mesh"
-typedef  ^  OutputType  MeshType    Y2Mesh         -  - - "Interior+Interface nodes outputs on a point mesh"
+typedef  ^  OutputType  MeshType    Y2Mesh         -  - - "Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh"
+typedef  ^  OutputType  MeshType    Y3Mesh         -  - - "Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh"
 typedef  ^  OutputType  ReKi        WriteOutput   {:} - - "Data to be written to an output file"
