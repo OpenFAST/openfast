@@ -34,7 +34,7 @@ set(IFW_SOURCES
   src/IfW_UserWind.f90
   src/IfW_UniformWind.f90
   src/InflowWind_Subs.f90
-  src/InflowWind.f90
+  src/InflowWind.f90 
   src/Lidar.f90
   src/IfW_FFWind_Base.f90
   src/IfW_FFWind_Base_Types.f90
@@ -51,6 +51,13 @@ set(IFW_SOURCES
 add_library(ifwlib ${IFW_SOURCES})
 target_link_libraries(ifwlib nwtclibs)
 
+# C-bound interface library
+add_library(ifw_c_binding SHARED src/IfW_C_Binding.f90)
+target_link_libraries(ifw_c_binding ifwlib)
+if(APPLE OR UNIX)
+   target_compile_definitions(ifw_c_binding PUBLIC -DIMPLICIT_DLLEXPORT)
+endif()
+
 set(IFW_DRIVER_SOURCES
   src/InflowWind_Driver_Types.f90
   src/InflowWind_Driver_Subs.f90
@@ -60,7 +67,7 @@ set(IFW_DRIVER_SOURCES
 add_executable(inflowwind_driver ${IFW_DRIVER_SOURCES})
 target_link_libraries(inflowwind_driver ifwlib ${CMAKE_DL_LIBS})
 
-install(TARGETS inflowwind_driver ifwlib
+install(TARGETS inflowwind_driver ifwlib ifw_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

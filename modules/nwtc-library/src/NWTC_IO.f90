@@ -3439,6 +3439,45 @@ END SUBROUTINE CheckR16Var
 
    END SUBROUTINE ParseChAry
 !=======================================================================
+!> This subroutine parses a comment line
+   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc )
+
+         ! Arguments declarations.
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       !< The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       !< The number of the line to parse.
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          !< I/O unit for echo file. If present and > 0, write to UnEc.
+      CHARACTER(*),   INTENT(OUT)            :: Var                           !< The variable to receive the comment
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      !< The derived type for holding the file information.
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseCom'
+      
+      ErrStat=ErrID_None
+      ErrMsg = ""
+
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The comment line was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
+      Var = trim(FileInfo%Lines(LineNum))
+
+      ! NOTE: comments were removed from fileInfo, so not checking that this line is a "true" comment
+      !if (.not. IsComment(Var)) then
+      !   CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+      !      ' >> The comment line does not start with a comment character.' &
+      !             , ErrStat, ErrMsg, RoutineName )
+      !   return
+      !endif
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  trim(Var)
+      END IF
+      LineNum = LineNum + 1
+
+   END SUBROUTINE ParseCom
+
+!=======================================================================
 !> This subroutine parses the specified line of text for two words.  One should be a
 !! the name of a variable and the other the value of the variable.
 !! Generate an error message if the value is the wrong type or if only one "word" is found.

@@ -19,6 +19,9 @@ AeroDyn Users Guide and Theory Manual
    input.rst
    output.rst
    modeling.rst
+   driver.rst
    theory.rst
+   theory_ua.rst
+   zrefs.rst
    appendix.rst
       
