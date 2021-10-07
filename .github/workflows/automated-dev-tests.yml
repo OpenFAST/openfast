@@ -17,6 +17,9 @@ on:
 
 env:
   FORTRAN_COMPILER: gfortran-10
+  CXX_COMPILER: g++-10
+  C_COMPILER: gcc-10
+  GCOV_EXE: gcov-10
   NUM_PROCS: 8
 
 
@@ -39,20 +42,22 @@ jobs:
           pip install numpy Bokeh==1.4
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build OpenFAST
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
 
       - name: Run SubDyn tests
@@ -63,6 +68,10 @@ jobs:
           test-target: regression
       - name: Run HydroDyn tests
         uses: ./.github/actions/tests-module-hydrodyn
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+        with:
+          test-target: regression
       - name: Run BeamDyn tests
         uses: ./.github/actions/tests-module-beamdyn
         with:
@@ -77,14 +86,14 @@ jobs:
         with:
           name: regression-tests-release
           path: |
-            ${{runner.workspace}}/build/reg_tests/modules
-            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
   regression-tests-debug:
     runs-on: ${{ matrix.os }}
@@ -94,8 +103,10 @@ jobs:
         include:
           - os: macOS-11
             FORTRAN_COMPILER: gfortran-11
+            install_deps: brew install gcovr
           - os: ubuntu-20.04
             FORTRAN_COMPILER: gfortran-10
+            install_deps: sudo apt-get install -y gcovr
 
     name: regression-test-debug-${{ matrix.os }}-${{ matrix.FORTRAN_COMPILER }}
     steps:
@@ -108,30 +119,35 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '3.7'
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy Bokeh==1.4
+          ${{matrix.install_deps}}
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{matrix.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
+            -DCODECOV:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
 
       - name: Build Drivers
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}
           cmake --build . --target beamdyn_driver -- -j ${{env.NUM_PROCS}}
           cmake --build . --target hydrodyn_driver -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target inflowwind_driver -- -j ${{env.NUM_PROCS}}
           cmake --build . --target subdyn_driver -- -j ${{env.NUM_PROCS}}
 
       - name: Run SubDyn tests
@@ -142,18 +158,51 @@ jobs:
           test-target: regression
       - name: Run HydroDyn tests
         uses: ./.github/actions/tests-module-hydrodyn
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+        with:
+          test-target: regression
       - name: Run BeamDyn tests
         uses: ./.github/actions/tests-module-beamdyn
         with:
           test-target: regression
 
+      - name: Generate coverage report
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+          cd ..
+          gcovr -g -k -r . --xml regressioncov.xml  # --html --html-details -o regressioncov.html # -v
+
+          # cp `find . -name *.gcno` .
+          # cp `find . -name *.gcda` .
+          # ${{env.GCOV_EXE}} -b -l -p -c *.gcno
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          dry_run: false
+          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./regressioncov.xml # optional
+          flags: regtests # optional
+          # name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+          directory: ${{runner.workspace}}/openfast
+
+      - name: Success artifacts
+        uses: actions/upload-artifact@v2
+        if: success()
+        with:
+          name: regression-tests-debug
+          path: |
+            ${{runner.workspace}}/openfast/regressioncov.xml
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: regression-tests-debug
           path: |
-            ${{runner.workspace}}/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
 
   fastfarm-regression-test:
     runs-on: ubuntu-20.04
@@ -173,12 +222,12 @@ jobs:
           pip install numpy Bokeh==1.4
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DOPENMP:BOOL=ON \
             -DBUILD_FASTFARM:BOOL=ON \
@@ -188,16 +237,15 @@ jobs:
             ${GITHUB_WORKSPACE}
       - name: Build FAST.Farm
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
 
       - name: Run FAST.Farm tests
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         run: |
           ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         shell: bash
 
       - name: Failing test artifacts
@@ -206,76 +254,9 @@ jobs:
         with:
           name: test-results
           path: |
-            ${{runner.workspace}}/build/reg_tests/glue-codes/fastfarm
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fastfarm
 
   unit-test:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Setup
-        run: cmake -E make_directory ${{runner.workspace}}/build
-      - name: Configure
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-            -DBUILD_TESTING:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-
-      - name: Build unit tests
-        working-directory: ${{runner.workspace}}/build
-        run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
-
-      - name: Run NWTC Library tests
-        uses: ./.github/actions/tests-module-nwtclibrary
-      - name: Run AeroDyn tests
-        uses: ./.github/actions/tests-module-aerodyn
-        with:
-          test-target: unit
-      - name: Run BeamDyn tests
-        uses: ./.github/actions/tests-module-beamdyn
-        with:
-          test-target: unit
-      - name: Run InflowWind tests
-        uses: ./.github/actions/tests-module-inflowwind
-
-  compile-all-single-precision:
-    # Test if single precision compile completes.
-    # Compiles all targets excluding tests.
-    # Run with the OpenFAST registry generating the types files.
-    # Do not run the test suite.
-
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Setup
-        run: cmake -E make_directory ${{runner.workspace}}/build
-      - name: Configure
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=Debug \
-            -DDOUBLE_PRECISION:BOOL=OFF \
-            -DGENERATE_TYPES:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Build all
-        working-directory: ${{runner.workspace}}/build
-        run: cmake --build . --target all -- -j ${{env.NUM_PROCS}}
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        run: ./glue-codes/openfast/openfast -v
-
-  cpp-interface-tests:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -291,40 +272,198 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install numpy Bokeh==1.4
-          sudo apt-get update
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+
+          sudo apt-get update -y
+          sudo apt-get install -y gcovr
 
       - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
-            -DBUILD_SHARED_LIBS:BOOL=ON \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DCODECOV:BOOL=ON \
             ${GITHUB_WORKSPACE}
-      - name: Build OpenFAST C++ API
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
 
-      - name: Run OpenFAST C++ API tests
-        working-directory: ${{runner.workspace}}/build
+      - name: Build unit tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
+
+      - name: Run NWTC Library tests
+        uses: ./.github/actions/tests-module-nwtclibrary
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          test-target: unit
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
+        with:
+          test-target: unit
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+        with:
+          test-target: unit
+
+      - name: Generate coverage report
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -L cpp
+          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+          cd ..
+          gcovr -g -k -r . --xml unitcov.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          dry_run: false
+          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./unitcov.xml # optional
+          flags: unittests # optional
+          # name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+          directory: ${{runner.workspace}}/openfast
+
+      - name: Success artifacts
+        uses: actions/upload-artifact@v2
+        if: success()
+        with:
+          name: unit-tests
+          path: |
+            ${{runner.workspace}}/openfast/unitcov.xml
 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: test-results
+          name: unit-tests
           path: |
-            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast-cpp
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
+            ${{runner.workspace}}/openfast/build/unit_tests
+
+  compile-all-single-precision:
+    # Test if single precision compile completes.
+    # Compiles all targets excluding tests.
+    # Run with the OpenFAST registry generating the types files.
+    # Do not run the test suite.
+
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Setup
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DDOUBLE_PRECISION:BOOL=OFF \
+            -DGENERATE_TYPES:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build all
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target all -- -j ${{env.NUM_PROCS}}
+      - name: Test
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: ./glue-codes/openfast/openfast -v
+
+  interface-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+
+          sudo apt-get update -y
+          sudo apt-get install -y gcovr
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_SHARED_LIBS:BOOL=ON \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DCODECOV:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+
+      - name: Build OpenFAST C-Interfaces
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target openfastlib -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
+
+      - name: Run C++ API tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L cpp
+
+      - name: Run Python API tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L python
+
+      - name: Generate coverage report
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+          cd ..
+          gcovr -g -k -r . --xml regressioncov.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          dry_run: false
+          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./regressioncov.xml # optional
+          flags: regtests # optional
+          # name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+          directory: ${{runner.workspace}}/openfast
+
+      - name: Success artifacts
+        uses: actions/upload-artifact@v2
+        if: success()
+        with:
+          name: c-interface-reg-tests
+          path: |
+            ${{runner.workspace}}/openfast/regressioncov.xml
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: c-interface-reg-tests
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline

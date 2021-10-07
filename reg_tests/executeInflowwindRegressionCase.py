@@ -15,16 +15,16 @@
 #
 
 """
-    This program executes SubDyn and a regression test for a single test case.
+    This program executes InflowWind and a regression test for a single test case.
     The test data is contained in a git submodule, r-test, which must be initialized
     prior to running. See the r-test README or OpenFAST documentation for more info.
     
-    Get usage with: `executeSubdynRegressionCase.py -h`
+    Get usage with: `executeInflowWindRegressionCase.py -h`
 """
 
 import os
 import sys
-basepath = os.path.dirname(__file__)
+basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
@@ -41,17 +41,17 @@ from errorPlotting import exportCaseSummary
 pythonCommand = sys.executable
 
 ### Verify input arguments
-parser = argparse.ArgumentParser(description="Executes SubDyn and a regression test for a single test case.")
+parser = argparse.ArgumentParser(description="Executes OpenFAST and a regression test for a single test case.")
 parser.add_argument("caseName", metavar="Case-Name", type=str, nargs=1, help="The name of the test case.")
-parser.add_argument("executable", metavar="SubDyn-Driver", type=str, nargs=1, help="The path to the SubDyn driver executable.")
+parser.add_argument("executable", metavar="InflowWind-Driver", type=str, nargs=1, help="The path to the InflowWind driver executable.")
 parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str, nargs=1, help="The path to the OpenFAST repository.")
 parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
-parser.add_argument("-p", "-plot", dest="plot",  action='store_true', default=False, help="bool to include matplotlib plots in failed cases")
-parser.add_argument("-n", "-no-exec", dest="noExec",  action='store_true', default=False, help="bool to prevent execution of the test cases")
-parser.add_argument("-v", "-verbose", dest="verbose",  action='store_true', default=False, help="bool to include verbose system output")
+parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
 
 args = parser.parse_args()
 
@@ -60,9 +60,9 @@ executable = args.executable[0]
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
-plotError = args.plot
-noExec = args.noExec
-verbose = args.verbose
+plotError = args.plot if args.plot is False else True
+noExec = args.noExec if args.noExec is False else True
+verbose = args.verbose if args.verbose is False else True
 
 # validate inputs
 rtl.validateExeOrExit(executable)
@@ -74,7 +74,7 @@ if not os.path.isdir(buildDirectory):
 regtests = os.path.join(sourceDirectory, "reg_tests")
 lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
-moduleDirectory = os.path.join(rtest, "modules", "subdyn")
+moduleDirectory = os.path.join(rtest, "modules", "inflowwind")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
 targetOutputDirectory = os.path.join(inputsDirectory)
 testBuildDirectory = os.path.join(buildDirectory, caseName)
@@ -87,23 +87,24 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-# create the local output directory and initialize it with input files (overwrite if exists)
-rtl.copyTree(inputsDirectory, testBuildDirectory, renameExtDict={'.out':'_ref.out'}, includeExt=['.dvr','.dat','.out','.csv'])
+# create the local output directory if it does not already exist
+# and initialize it with input files for all test cases
+if not os.path.isdir(testBuildDirectory):
+    os.makedirs(testBuildDirectory)
+    for file in glob.glob(os.path.join(inputsDirectory,"*inp")):
+        filename = file.split(os.path.sep)[-1]
+        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
 
-    
-### Run SubDyn on the test case
+### Run inflowwind on the test case
 if not noExec:
-    caseInputFile = os.path.join(testBuildDirectory, caseName+".dvr")
-    # delete existing outputs for safety
-    rtl.deleteOutputs(caseInputFile, extensions=['.SD.out','.SD.CBModes.json','.SD.FEMmodes.json','.SD.sum.yaml','.ech','.sum','.html'])
-    # run driver
-    returnCode = openfastDrivers.runSubdynDriverCase(caseInputFile, executable, verbose=verbose)
+    caseInputFile = os.path.join(testBuildDirectory, "ifw_driver.inp")
+    returnCode = openfastDrivers.runInflowwindDriverCase(caseInputFile, executable)
     if returnCode != 0:
         rtl.exitWithError("")
     
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, caseName+".SD.out")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName+".SD.out")
+localOutFile = os.path.join(testBuildDirectory, "Points.Velocity.dat")
+baselineOutFile = os.path.join(targetOutputDirectory, "Points.Velocity.dat")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 

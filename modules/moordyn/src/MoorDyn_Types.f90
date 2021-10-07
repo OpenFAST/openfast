@@ -403,6 +403,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix [-]
     INTEGER(IntKi)  :: Jac_nx      !< number of continuous states in jacobian matrix [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: dxIdx_map2_xStateIdx      !< Mapping array from index of dX array to corresponding state index [-]
   END TYPE MD_ParameterType
 ! =======================
 ! =========  MD_InputType  =======
@@ -10053,6 +10054,18 @@ IF (ALLOCATED(SrcParamData%dx)) THEN
 ENDIF
     DstParamData%Jac_ny = SrcParamData%Jac_ny
     DstParamData%Jac_nx = SrcParamData%Jac_nx
+IF (ALLOCATED(SrcParamData%dxIdx_map2_xStateIdx)) THEN
+  i1_l = LBOUND(SrcParamData%dxIdx_map2_xStateIdx,1)
+  i1_u = UBOUND(SrcParamData%dxIdx_map2_xStateIdx,1)
+  IF (.NOT. ALLOCATED(DstParamData%dxIdx_map2_xStateIdx)) THEN 
+    ALLOCATE(DstParamData%dxIdx_map2_xStateIdx(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dxIdx_map2_xStateIdx.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%dxIdx_map2_xStateIdx = SrcParamData%dxIdx_map2_xStateIdx
+ENDIF
  END SUBROUTINE MD_CopyParam
 
  SUBROUTINE MD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -10114,6 +10127,9 @@ IF (ALLOCATED(ParamData%du)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%dx)) THEN
   DEALLOCATE(ParamData%dx)
+ENDIF
+IF (ALLOCATED(ParamData%dxIdx_map2_xStateIdx)) THEN
+  DEALLOCATE(ParamData%dxIdx_map2_xStateIdx)
 ENDIF
  END SUBROUTINE MD_DestroyParam
 
@@ -10284,6 +10300,11 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Jac_ny
       Int_BufSz  = Int_BufSz  + 1  ! Jac_nx
+  Int_BufSz   = Int_BufSz   + 1     ! dxIdx_map2_xStateIdx allocated yes/no
+  IF ( ALLOCATED(InData%dxIdx_map2_xStateIdx) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! dxIdx_map2_xStateIdx upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%dxIdx_map2_xStateIdx)  ! dxIdx_map2_xStateIdx
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -10767,6 +10788,21 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%Jac_nx
     Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%dxIdx_map2_xStateIdx) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dxIdx_map2_xStateIdx,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dxIdx_map2_xStateIdx,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%dxIdx_map2_xStateIdx,1), UBOUND(InData%dxIdx_map2_xStateIdx,1)
+        IntKiBuf(Int_Xferred) = InData%dxIdx_map2_xStateIdx(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE MD_PackParam
 
  SUBROUTINE MD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -11315,6 +11351,24 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%Jac_nx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dxIdx_map2_xStateIdx not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%dxIdx_map2_xStateIdx)) DEALLOCATE(OutData%dxIdx_map2_xStateIdx)
+    ALLOCATE(OutData%dxIdx_map2_xStateIdx(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dxIdx_map2_xStateIdx.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%dxIdx_map2_xStateIdx,1), UBOUND(OutData%dxIdx_map2_xStateIdx,1)
+        OutData%dxIdx_map2_xStateIdx(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE MD_UnPackParam
 
  SUBROUTINE MD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

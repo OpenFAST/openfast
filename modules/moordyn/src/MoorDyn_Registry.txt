@@ -380,6 +380,7 @@ typedef   ^       ^                    R8Ki         du                 {:}      
 typedef   ^       ^                    R8Ki         dx                 {:}          -  -   "vector that determines size of perturbation for x (continuous states)"
 typedef   ^       ^                    Integer      Jac_ny              -           -  -   "number of outputs in jacobian matrix" -
 typedef   ^       ^                    Integer      Jac_nx              -           -  -   "number of continuous states in jacobian matrix" -
+typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}        -  -   "Mapping array from index of dX array to corresponding state index" -
 
 
 # ============================== Inputs ============================================================================================================================================

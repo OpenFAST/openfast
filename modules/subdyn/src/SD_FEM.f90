@@ -23,7 +23,7 @@ MODULE SD_FEM
   IMPLICIT NONE
 
  
-  INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 10                    ! Maximum number of members at one joint
+  INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 20                    ! Maximum number of members at one joint
   INTEGER(IntKi),   PARAMETER  :: MaxOutChs       = 2000                  ! Max number of Output Channels to be read in
   INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
    
@@ -116,8 +116,11 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
       DO J = 1, Init%NElem                          !This should be vectorized                                                                      
          IF ( ( NINT(Init%Nodes(I, 1))==p%Elems(J, 2)) .OR. (NINT(Init%Nodes(I, 1))==p%Elems(J, 3) ) ) THEN   !If i-th nodeID matches 1st node or 2nd of j-th element                                                                   
             k = k + 1                                                                                                     
-            if (k > MaxMemJnt+1) then 
-               CALL SetErrStat(ErrID_Fatal, 'Maximum number of members reached on node'//trim(Num2LStr(NINT(Init%Nodes(I,1)))), ErrStat, ErrMsg, 'NodeCon');
+            if (k+1 > MaxMemJnt+1) then 
+               CALL SetErrStat(ErrID_Fatal, 'Maximum number of members reached on node number '//trim(Num2LStr(NINT(Init%Nodes(I,1))))//&
+                  &' (index in Joint list, not JointID)). The maximum number of member per node is hardcoded to MaxMemJnt='//trim(num2lstr(MaxMemJnt))//&
+                  &'. Recompile the code by changing `MaxMemJnt` in SD_FEM.f90.', ErrStat, ErrMsg, 'NodeCon');
+               return
             endif
             Init%NodesConnE(I, k + 1) = p%Elems(J, 1)                                                                  
          ENDIF                                                                                                            
@@ -289,7 +292,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variable
-   INTEGER                       :: I, n, iMem, iNode, JointID   
+   INTEGER                       :: I, n, iMem, iNode, JointID, mID, jType, iJoint, iInterf
    INTEGER(IntKi)                :: mType !< Member Type
    CHARACTER(1255)               :: sType !< String for element type
    INTEGER(IntKi)                :: ErrStat2
@@ -341,21 +344,36 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
       endif
    enddo
 
-
    ! --- Initialize Elems, starting with each member as an element (we'll take NDiv into account later)
    p%Elems = 0
    ! --- Replacing "MemberID"  "JointID", and "PropSetID" by simple index in this tables
    DO iMem = 1, p%NMembers
+      mID = Init%Members(iMem, 1)
       ! Column 1  : member index (instead of MemberID)
       p%Elems(iMem,     1)  = iMem
       mType =  Init%Members(iMem, iMType) ! 
       ! Column 2-3: Joint index (instead of JointIDs)
       p%Elems(iMem,     1)  = iMem  ! NOTE: element/member number (not MemberID)
       do iNode=2,3
-         p%Elems(iMem,iNode) = FINDLOCI(Init%Joints(:,1), Init%Members(iMem, iNode) ) 
+         JointID = Init%Members(iMem, iNode)
+         iJoint = FINDLOCI(Init%Joints(:,1), JointID ) 
+         p%Elems(iMem,iNode) = iJoint
          if (p%Elems(iMem,iNode)<=0) then
-            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(Init%Members(iMem, iNode)))//' which is not in the joint list!')
+            CALL Fatal(' MemberID '//TRIM(Num2LStr(mID))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(JointID))//' which is not in the joint list!')
             return
+         endif
+         if (mType==idMemberRigid) then
+            ! Check that rigid link are not connected to ball/pin/universal joints
+            jType = int(Init%Nodes(iJoint, iJointType))
+            if (jType /= idJointCantilever) then
+               CALL Fatal('All joints of a rigid link should be cantilever (not ball/pin/universal). The problematic member is MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is not a cantilever joint).')
+               return
+            endif
+            ! Check that rigid links are not connected to the interface
+            iInterf = FINDLOCI(Init%Joints(:,1), JointID )
+            if (iInterf>=1) then
+               CALL WrScr('[WARNING] There might be a bug when rigid links are connected to the interface nodes (mostly if cables are involved). The problematic member is MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is in an interface joint).')
+            endif
          endif
       enddo
       ! Column 4-5: PropIndex 1-2 (instead of PropSetID1&2)
@@ -850,7 +868,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
          p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
          p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
-         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05)     
+         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05) ! For plotting only
 
       else if (eType==idMemberRigid) then
          if (DEV_VERSION) then
@@ -858,7 +876,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          endif
          p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
          p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
-         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05)     
+         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05) ! For plotting only
 
       else
          ! Should not happen
@@ -1444,7 +1462,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, T_red, ErrStat, ErrMsg)
    iPrev =0 
    do iNode = 1, p%nNodes
       iNodeSel = iNode ! Unless changed by Rigid assembly, using this index
-      if (allocated(Tc)) deallocate(Tc)
+      if (allocated(Tc))      deallocate(Tc)
       if (allocated(IDOFOld)) deallocate(IDOFOld)
       JType = int(Init%Nodes(iNodeSel,iJointType))
       if(JType == idJointCantilever ) then
