@@ -95,11 +95,21 @@ PROGRAM MoorDyn_Driver
    Integer(IntKi)                        :: nTurbines
    Integer(IntKi)                        :: iIn
    integer(intKi)                        :: Un
-   
+  
+   ! data for SimStatus/RunTimes:
+   REAL(DbKi)                            :: PrevSimTime        !< Previous time message was written to screen (s > 0)
+   REAL(ReKi)                            :: PrevClockTime      !< Previous clock time in seconds past midnight
+   INTEGER                               :: SimStrtTime (8)    !< An array containing the elements of the start time (after initialization).
+   INTEGER                               :: ProgStrtTime (8)   !< An array containing the elements of the program start time (before initialization).
+   REAL(ReKi)                            :: SimStrtCPU         !< User CPU time for simulation (without intialization)
+   REAL(ReKi)                            :: ProgStrtCPU        !< User CPU time for program (with intialization)
+
+  
    CHARACTER(20)                         :: FlagArg              ! flag argument from command line
    !CHARACTER(1024)                       :: drvrInitInp%%InputsFile
    CHARACTER(200)                        :: git_commit    ! String containing the current git commit hash
    TYPE(ProgDesc), PARAMETER             :: version = ProgDesc( 'MoorDyn Driver', '', '' )
+  
   
   
    ErrMsg  = ""
@@ -122,7 +132,10 @@ PROGRAM MoorDyn_Driver
    CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
 
 
-
+   
+   CALL DATE_AND_TIME ( Values=ProgStrtTime )                        ! Let's time the whole simulation
+   CALL CPU_TIME ( ProgStrtCPU )                                    ! Initial time (this zeros the start time when used as a MATLAB function)
+   
 
 
 
@@ -252,7 +265,7 @@ PROGRAM MoorDyn_Driver
          READ(UnPtfmMotIn,'(A)',IOSTAT=ErrStat2) Line     !read into a line         
          
          IF (ErrStat2 /= 0) EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
-         print *, TRIM(Line)
+         !print *, TRIM(Line)
          i = i+1
       END DO
 
@@ -288,7 +301,7 @@ PROGRAM MoorDyn_Driver
       CLOSE ( UnPtfmMotIn ) 
       
       print *, "Read ", ntIn, " time steps from input file."
-      print *, PtfmMotIn
+      !print *, PtfmMotIn
 
       ! trim simulation duration to length of input file if needed
       if (PtfmMotIn(ntIn, 1) < TMax) then
@@ -382,6 +395,8 @@ PROGRAM MoorDyn_Driver
   ! -------------------------------------------------------------------------
   
    print *,"Doing time marching now..."
+   
+   CALL SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, SimStrtCPU, t, tMax )
 
    DO i = 1,nt
 
@@ -389,7 +404,10 @@ PROGRAM MoorDyn_Driver
 
       t = dtC*(i-1)
 
-      print *, t
+
+      if ( MOD( i, 20 ) == 0 ) THEN         
+         CALL SimStatus( PrevSimTime, PrevClockTime, t, tMax )
+      end if
                   
       MD_uTimes(1) = t + dtC
       !MD_uTimes(2) = MD_uTimes(1) - dtC 
@@ -404,7 +422,7 @@ PROGRAM MoorDyn_Driver
             ! any coupled bodies (type -1)
             DO l = 1,MD_p%nCpldBodies(iTurb)
                MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,J) = r_in(i, J:J+2)  
-               MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,J) = TRANSPOSE( EulerConstruct( r_in(i, J+3:J+5) ) ) ! full Euler angle approach <<<< need to check order 
+               MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,J) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,J) = rd_in(i, J:J+2)
                MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,J) = rd_in(i, J+3:J+5)
                !a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
@@ -417,7 +435,7 @@ PROGRAM MoorDyn_Driver
             DO l = 1,MD_p%nCpldRods(iTurb)
             
                MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,J) = r_in(i, J:J+2)  
-               MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,J) = TRANSPOSE( EulerConstruct( r_in(i, J+3:J+5) ) )
+               MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,J) = EulerConstruct( r_in(i, J+3:J+5) )
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,J) = rd_in(i, J:J+2)
                MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,J) = rd_in(i, J+3:J+5)
             
@@ -478,6 +496,8 @@ PROGRAM MoorDyn_Driver
    ! -------------------------------------------------------------------------
    ! END time marching
    ! -------------------------------------------------------------------------
+   
+   CALL RunTimes( ProgStrtTime, ProgStrtCPU, SimStrtTime, SimStrtCPU, t )   
    
    ! Destroy all objects
    CALL MD_End( MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()

@@ -1421,6 +1421,12 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   
+   ! --- SIMULATION CONTROL ---   
+   IF ((p%WaveFieldMod .ne. 1) .and. (p%WaveFieldMod .ne. 2)) CALL SetErrStat(ErrID_Fatal,'WaveFieldMod must be 1 or 2.',ErrStat,ErrMsg,RoutineName)
+   IF ((p%MooringMod .ne. 0) .and. (p%MooringMod .ne. 3)) CALL SetErrStat(ErrID_Fatal,'MooringMod must be 0 or 3.',ErrStat,ErrMsg,RoutineName)
+   
+   
    IF (p%DT_low <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_low must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%DT_high <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_high must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%TMax < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TMax must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -1429,7 +1435,10 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    ! --- SUPER CONTROLLER ---
    ! TODO : Verify that the DLL file exists
    
-   
+   ! --- SHARED MOORING SYSTEM ---
+   ! TODO : Verify that p%MD_FileName file exists
+   if ((p%DT_mooring <= 0.0_ReKi) .or. p%DT_mooring > p%DT_high)) CALL SetErrStat(ErrID_Fatal,'DT_mooring must be greater than zero and no greater than dt_high.',ErrStat,ErrMsg,RoutineName)
+      
    ! --- WAKE DYNAMICS ---
    IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
@@ -2763,6 +2772,15 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
       END DO
       
    end if   
+   
+      !--------------
+      ! 5. End farm-level MoorDyn
+   if (farm%p%MooringMod == 3) then
+      call MD_End(farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      !TODO: any related items need to be cleared?
+   end if
+   
    
    !.......................................................................................
    ! close output file
