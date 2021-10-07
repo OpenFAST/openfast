@@ -138,7 +138,7 @@ SUBROUTINE CreateInputOutputMeshes( NNode, Nodes, inputMesh, outputMesh, outputM
    ! Create the Interior Points output mesh as a sibling copy of the input mesh
    CALL MeshCopy (    SrcMesh      = outputMesh             &
                      ,DestMesh     = outputMesh3            &
-                     ,CtrlCode     = MESH_NEWCOPY           & ! Cannot do sibling (mesh can only have one sibling)
+                     ,CtrlCode     = MESH_COUSIN            & ! Cannot do sibling (mesh can only have one sibling)
                      ,IOS          = COMPONENT_OUTPUT       &
                      ,ErrStat      = ErrStat2               &
                      ,ErrMess      = ErrMsg2                &
