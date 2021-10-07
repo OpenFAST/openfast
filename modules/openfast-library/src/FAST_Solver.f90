@@ -207,8 +207,8 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
    CHARACTER(ErrMsgLen)                           :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
    CHARACTER(*), PARAMETER                        :: RoutineName = 'ED_InputSolve' 
 
-   TYPE(MeshType), POINTER                        :: PlatformMotion
-   TYPE(MeshType), POINTER                        :: PlatformLoads
+!   TYPE(MeshType), POINTER                        :: PlatformMotion
+!   TYPE(MeshType), POINTER                        :: PlatformLoads
 
       ! Initialize error status
    ErrStat = ErrID_None
