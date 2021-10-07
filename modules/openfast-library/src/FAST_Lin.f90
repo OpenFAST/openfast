@@ -2405,17 +2405,17 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
          ! Transfer MAP loads to ED PlatformPtmesh input:
          ! we're mapping loads, so we also need the sibling meshes' displacements:
 
-         MAP_Start = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-      
-         ! NOTE: Assumes at least one MAP Fairlead point    
-     
-         CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y3Mesh) !MAPp%Input(1)%ptFairleadLoad and y_SD%Y3Mesh contain the displaced positions for load calculations
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               
-            ! SD is source in the mapping, so we want M_{uSm}
-         if (allocated(MeshMapData%Mooring_P_2_SD_P%dM%m_us )) then
-            call SetBlockMatrix( dUdu, MeshMapData%Mooring_P_2_SD_P%dM%m_us, SD_Start, MAP_Start )
-         end if
+      MAP_Start = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
+   
+      ! NOTE: Assumes at least one MAP Fairlead point    
+  
+      CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y3Mesh) !MAPp%Input(1)%ptFairleadLoad and y_SD%Y3Mesh contain the displaced positions for load calculations
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            
+         ! SD is source in the mapping, so we want M_{uSm}
+      if (allocated(MeshMapData%Mooring_P_2_SD_P%dM%m_us )) then
+         call SetBlockMatrix( dUdu, MeshMapData%Mooring_P_2_SD_P%dM%m_us, SD_Start, MAP_Start )
+      end if
    
    !..........
    ! dU^{SD}/du^{MD}
@@ -4052,6 +4052,83 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
 END SUBROUTINE Linear_MAP_InputSolve_dy
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine forms the dU^{MD}/du^{MD} block of dUdu. (i.e., how do changes in the MD outputs affect 
+!! the MD inputs?)
+SUBROUTINE Linear_MD_InputSolve_du( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapData, dUdu, ErrStat, ErrMsg )
+
+      ! Passed variables
+   TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data    
+   TYPE(FAST_OutputFileType),   INTENT(IN   )   :: y_FAST      !< FAST output file data (for linearization)
+   TYPE(MD_InputType),          INTENT(INOUT)   :: u_MD        !< The inputs to MoorDyn
+   TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
+   TYPE(SD_OutputType),         INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
+   TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData !< Data for mapping between modules
+   REAL(R8Ki),                  INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^{MD}/dy^{ED} block
+   
+   INTEGER(IntKi)                               :: ErrStat     !< Error status of the operation
+   CHARACTER(*)                                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+      ! Local variables:
+
+   INTEGER(IntKi)                               :: MD_Start_td ! starting index of dUdu (column) where particular MD fields are located
+   INTEGER(IntKi)                               :: MD_Start_tr ! starting index of dUdu (row) where particular MD fields are located
+   INTEGER(IntKi)                               :: ErrStat2
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2 
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'Linear_MD_InputSolve_du'
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   IF (u_MD%CoupledKinematics%Committed) THEN 
+         !...................................
+         ! FairLead Mesh
+         !...................................
+
+      if ( p_FAST%CompSub == Module_SD ) THEN
+         ! dU^{MD}/du^{MD}
+         call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MD%CoupledKinematics, MeshMapData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+
+         ! MD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+         MD_Start_td = y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
+         MD_Start_tr = MD_Start_td + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         
+            ! translational velocity:
+         if (allocated(MeshMapData%SDy3_P_2_Mooring_P%dM%tv_uD )) then             
+            call SetBlockMatrix( dUdu, MeshMapData%SDy3_P_2_Mooring_P%dM%tv_ud, MD_Start_tr, MD_Start_td )
+         end if
+         
+            ! translational acceleration:
+         MD_Start_tr = MD_Start_tr + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
+         if (allocated(MeshMapData%SDy3_P_2_Mooring_P%dM%ta_uD )) then            
+            call SetBlockMatrix( dUdu, MeshMapData%SDy3_P_2_Mooring_P%dM%ta_ud, MD_Start_tr, MD_Start_td )
+         end if
+
+      else if ( p_FAST%CompSub == Module_None ) THEN
+         ! dU^{MD}/du^{MD}
+         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MD%CoupledKinematics, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+
+         ! MD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+         MD_Start_td = y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
+         MD_Start_tr = MD_Start_td + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         
+            ! translational velocity:
+         if (allocated(MeshMapData%ED_P_2_Mooring_P%dM%tv_uD )) then             
+            call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_Mooring_P%dM%tv_ud, MD_Start_tr, MD_Start_td )
+         end if
+         
+            ! translational acceleration:
+         MD_Start_tr = MD_Start_tr + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
+         if (allocated(MeshMapData%ED_P_2_Mooring_P%dM%ta_uD )) then            
+            call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_Mooring_P%dM%ta_ud, MD_Start_tr, MD_Start_td )
+         end if
+
+       end if  
+      
+
+   END IF
+END SUBROUTINE Linear_MD_InputSolve_du
+
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{MD}/dy^{ED} block of dUdy. (i.e., how do changes in the ED outputs affect 
 !! the MD inputs?)
 SUBROUTINE Linear_MD_InputSolve_dy( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapData, dUdy, ErrStat, ErrMsg )
@@ -4073,8 +4150,6 @@ SUBROUTINE Linear_MD_InputSolve_dy( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
    INTEGER(IntKi)                               :: MD_Start    ! starting index of dUdy (column) where particular MD fields are located
    INTEGER(IntKi)                               :: ED_Out_Start! starting index of dUdy (row) where particular ED fields are located
    INTEGER(IntKi)                               :: SD_Out_Start! starting index of dUdy (row) where particular SD fields are located
-   INTEGER(IntKi)                               :: ErrStat2
-   CHARACTER(ErrMsgLen)                         :: ErrMsg2 
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Linear_MD_InputSolve_dy'
 
    
@@ -4089,15 +4164,18 @@ SUBROUTINE Linear_MD_InputSolve_dy( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
       
       if ( p_FAST%CompSub == Module_SD ) THEN
          ! dU^{MD}/dy^{SD}
+         
+         !!! ! This linearization was done in forming dUdu (see Linear_MD_InputSolve_du()), so we don't need to re-calculate these matrices 
+         !!! ! while forming dUdy, too.
+         !!!call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MD%CoupledKinematics(1), MeshMapData%SD_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+
          SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y3Mesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MD%CoupledKinematics(1), MeshMapData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(    y_SD%Y3Mesh, u_MD%CoupledKinematics(1), MeshMapData%SDy3_P_2_Mooring_P, MD_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+         call Assemble_dUdy_Motions(    y_SD%Y3Mesh, u_MD%CoupledKinematics(1), MeshMapData%SDy3_P_2_Mooring_P, MD_Start, SD_Out_Start, dUdy) ! OnlyTranslationDisp=.true.
 
       else if ( p_FAST%CompSub == Module_None ) THEN
          ! dU^{MD}/dy^{ED}
          ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(    y_ED%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, MD_Start, ED_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, MD_Start, ED_Out_Start, dUdy) ! OnlyTranslationDisp=.true.
 
        end if  
       
