@@ -2182,7 +2182,7 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
       
          ! NOTE: Assumes at least one MAP Fairlead point    
      
-         CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y2Mesh) !MAPp%Input(1)%ptFairleadLoad and y_SD%Y2Mesh contain the displaced positions for load calculations
+         CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y3Mesh) !MAPp%Input(1)%ptFairleadLoad and y_SD%Y3Mesh contain the displaced positions for load calculations
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
             ! SD is source in the mapping, so we want M_{uSm}
@@ -2279,14 +2279,14 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, u_SD, y_SD, y_ED, HD, MAPp, 
       if ( MAPp%y%ptFairleadLoad%Committed  ) then ! meshes for floating
          !!! ! This linearization was done in forming dUdu (see Linear_SD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         !       CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y2Mesh) !MAPp%Input(1)%ptFairleadLoad and y_ED%Y2Mesh contain the displaced positions for load calculations
+         !       CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y3Mesh) !MAPp%Input(1)%ptFairleadLoad and y_ED%Y3Mesh contain the displaced positions for load calculations
          MAP_Out_Start = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
          SD_Start      = Indx_u_SD_LMesh_Start(u_SD, y_FAST) ! start of u_SD%LMesh%TranslationDisp field
          call Assemble_dUdy_Loads(MAPp%y%ptFairLeadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, SD_Start, MAP_Out_Start, dUdy)
       
          ! SD translation displacement-to-SD moment transfer (dU^{SD}/dy^{SD}):
          SD_Start = Indx_u_SD_LMesh_Start(u_SD, y_FAST) + u_SD%LMesh%NNodes*3   ! start of u_ED%LMesh%Moment field (skip the SD forces)
-         SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y2Mesh%TranslationDisp field
+         SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y3Mesh%TranslationDisp field
          call SumBlockMatrix( dUdy, MeshMapData%Mooring_P_2_SD_P%dM%m_uD, SD_Start, SD_Out_Start )
       end if     
    end if
@@ -3342,9 +3342,9 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
       
       if ( p_FAST%CompSub == Module_SD ) THEN
          ! dU^{MAP}/dy^{SD}
-         SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y2Mesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_SD%Y2Mesh, u_MAP%PtFairDisplacement, MeshMapData%SD_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(y_SD%Y2Mesh    , u_MAP%PtFairDisplacement, MeshMapData%SD_P_2_Mooring_P, MAP_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+         SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y3Mesh%TranslationDisp field
+         call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MAP%PtFairDisplacement, MeshMapData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+         call Assemble_dUdy_Motions(y_SD%Y3Mesh    , u_MAP%PtFairDisplacement, MeshMapData%SDy3_P_2_Mooring_P, MAP_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.true.)
 
       else if ( p_FAST%CompSub == Module_None ) THEN
          ! dU^{MAP}/dy^{ED}
@@ -4329,6 +4329,15 @@ FUNCTION Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
 
    SD_Out_Start = Indx_y_SD_Y1Mesh_Start(y_SD, y_FAST) + y_SD%Y1Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y1Mesh data and get to the beginning of 
 END FUNCTION Indx_y_SD_Y2Mesh_Start
+!> This routine returns the starting index for the y_SD%Y3Mesh mesh in the FAST linearization outputs.
+FUNCTION Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
+   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
+   TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
+
+   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
+
+   SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) + y_SD%Y2Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y1Mesh data and get to the beginning of 
+END FUNCTION Indx_y_SD_Y3Mesh_Start
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine allocates the arrays that store the operating point at each linearization time for later producing VTK
