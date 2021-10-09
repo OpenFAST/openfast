@@ -157,7 +157,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    TYPE(SC_InitInputType)                  :: SC_InitInp              ! input-file data for SC module
    TYPE(SC_InitOutputType)                 :: SC_InitOut              ! Init output for SC module
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Farm_Initialize'       
-   CHARACTER(ChanLen),ALLOCATABLE          :: OutList(:)             ! list of user-requested output channels
+   CHARACTER(ChanLen)                      :: OutList(Farm_MaxOutPts) ! list of user-requested output channels
    INTEGER(IntKi)                          :: i
    !..........
    ErrStat = ErrID_None
@@ -253,7 +253,9 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
-      END IF   
+      END IF
+      
+   farm%AWAE%IsInitialized = .true.
 
    farm%p%X0_Low = AWAE_InitOutput%X0_Low
    farm%p%Y0_low = AWAE_InitOutput%Y0_low
@@ -278,6 +280,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
                return
             end if 
       farm%p%Module_Ver( ModuleFF_SC  ) = SC_InitOut%Ver
+      farm%SC%IsInitialized = .true.
    else
       farm%SC%p%nInpGlobal = 0
       farm%SC%p%NumParamGlobal = 0
@@ -364,7 +367,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    TYPE(WD_InputFileType),         INTENT(  OUT) :: WD_InitInp                      !< input-file data for WakeDynamics module
    TYPE(AWAE_InputFileType),       INTENT(  OUT) :: AWAE_InitInp                    !< input-file data for AWAE module
    TYPE(SC_InitInputType),         INTENT(  OUT) :: SC_InitInp                      !< input-file data for SC module
-   CHARACTER(ChanLen),ALLOCATABLE, INTENT(  OUT) :: OutList(:)                      !< list of user-requested output channels
+   CHARACTER(ChanLen),             INTENT(  OUT) :: OutList(:)                      !< list of user-requested output channels
    INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),                   INTENT(  OUT) :: ErrMsg                          !< Error message
 
@@ -409,13 +412,6 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          call cleanup()
          RETURN        
       end if
-
-   CALL AllocAry( OutList, Farm_MaxOutPts, "FAST.Farm's Input File's Outlist", ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
 
    ! Read the lines up/including to the "Echo" simulation control variable
    ! If echo is FALSE, don't write these lines to the echo file.
@@ -2291,8 +2287,9 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
       ! 1. end AWAE   
    if (farm%AWAE%IsInitialized) then      
       call AWAE_End( farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )         
+                     farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         farm%AWAE%IsInitialized = .false.
    end if      
       
    
@@ -2303,8 +2300,9 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
       DO nt = 1,farm%p%NumTurbines
          if (farm%WD(nt)%IsInitialized) then      
             call WD_End( farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
-                         farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+                         farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
+            farm%WD(nt)%IsInitialized = .false.
          end if      
       END DO
       
@@ -2316,6 +2314,7 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    if ( farm%p%useSC ) then
       CALL SC_End(farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
                      farm%SC%y, farm%SC%m, ErrStat2, ErrMsg2)
+      farm%SC%IsInitialized = .false.
    end if
    
       !--------------
@@ -2327,6 +2326,7 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
             CALL FWrap_End( farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                             farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
+            farm%FWrap(nt)%IsInitialized = .false.
          end if
       END DO
       
@@ -2336,7 +2336,15 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    ! close output file
    !.......................................................................................
    call Farm_EndOutput( farm, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      
+      
+   !.......................................................................................
+   ! clear all data from 'farm' structure
+   !.......................................................................................
+   call Farm_DestroyAll_FastFarm_Data( farm, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
 end subroutine FARM_End
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_FAST_to_WD(farm)

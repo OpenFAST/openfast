@@ -10,12 +10,61 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v2.5.0 to OpenFAST `dev`
+OpenFAST v3.0.0 to OpenFAST `dev`
 ---------------------------------
 
-Many changes were applied to SubDyn input file format. You may consult the following example:
-:download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
-and the online SubDyn documentation.
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST dev
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+AeroDyn 15                                    40   UAStartRad          0.25    UAStartRad          - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+AeroDyn 15                                    41   UAEndRad            0.95    UAEndRad            - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+AirFoilTables                                 12\* alphaUpper          5.0   alphaUpper          ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
+AirFoilTables                                 13\* alphaLower         \-3.0   alphaLower         ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
+AirFoilTables                                 42\* UACutout_delta     "DEFAULT"  UACutout_delta  ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
+
+
+
+-  SubDyn  
+
+   -  SubDyn Driver, applied loads input:
+
+============== ==== ================== =============================================================================================================================================================================
+Added 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =============================================================================================================================================================================
+SubDyn driver    21 [separator line]   ---------------------- LOADS --------------------------------------------------------------------
+SubDyn driver    22 nAppliedLoads              1    nAppliedLoads  - Number of applied loads at given nodes false   
+SubDyn driver    23 ALTableHeader      ALJointID    Fx     Fy    Fz     Mx     My     Mz   UnsteadyFile
+SubDyn driver    24 ALTableUnit           (-)       (N)    (N)   (N)   (Nm)   (Nm)   (Nm)     (-)
+SubDyn driver    25 ALTableLine1           10       0.0    0.0   0.0    0.0   0.0     0.0     ""
+============== ==== ================== =============================================================================================================================================================================
+
+  
+   -  SubDyn: the lines at n+1 and n+2 below were inserted after line n.
+
+============== ==== ================== =============================================================================================================================================================================
+Added 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Module        Line  Flag Name          Example Value
+============== ==== ================== =============================================================================================================================================================================
+SubDyn           n  OutCOSM            Output cosine matrices with the selected output member forces (flag)
+SubDyn         n+1  OutCBModes         Output Guyan and Craig-Bampton modes {0: No output, 1: JSON output}, (flag) 
+SubDyn         n+2  OutFEMModes        Output first 30 FEM modes {0: No output, 1: JSON output} (flag)
+============== ==== ================== =============================================================================================================================================================================
+
+
+
+
+
+
+OpenFAST v2.6.0 to OpenFAST v3.0.0
+----------------------------------
 
 -  ServoDyn
 
@@ -26,7 +75,31 @@ and the online SubDyn documentation.
       module (StC) with updated capabilities and input file.
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
-OpenFAST v2.5.0 to OpenFAST dev 
+Added in OpenFAST v3.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
+ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
+ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
+ServoDyn                                      64   NStCfiles          "unused"      NStCfiles    - Name of the files for nacelle structural controllers (quoted strings) [unused when NumNStC==0]
+ServoDyn                                      65   NumTStC            0             NumTStC      - Number of tower structural controllers (integer)
+ServoDyn                                      66   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
+ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
+ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+
+
+OpenFAST v2.5.0 to OpenFAST v2.6.0
+----------------------------------
+
+Many changes were applied to SubDyn input file format. You may consult the following example:
+:download:`(SubDyn's Input File) <./subdyn/examples/OC4_Jacket_SD_Input.dat>`: 
+and the online SubDyn documentation.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST v2.6.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
@@ -55,10 +128,16 @@ ServoDyn                                      65   NumTStC            0         
 ServoDyn                                      66   TStCfiles          "unused"      TStCfiles    - Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]
 ServoDyn                                      67   NumSStC            0             NumSStC      - Number of substructure structural controllers (integer)
 ServoDyn                                      68   SStCfiles          "unused"      SStCfiles    - Name of the files for substructure structural controllers (quoted strings) [unused when NumSStC==0]
+AirFoilTables                                 12\* alphaUpper          5.0   alphaUpper        ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
+AirFoilTables                                 13\* alphaLower         \-3.0   alphaLower        ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
+AirFoilTables                                 42\* UACutout_delta     "DEFAULT"  UACutout_delta  ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
+\*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
+
+
 ============================================= ====== =============== ======================================================================================================================================================================================================
-Modified in OpenFAST dev
+Modified in OpenFAST v2.6.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line    Flag Name        Example Value
 ============================================= ====== =============== ======================================================================================================================================================================================================
@@ -95,10 +174,8 @@ HydroDyn                                      na                        (-)     
 HydroDyn                                      na     OutList names    *see OutlistParameters.xlsx for new and revised output channel names*
 ============================================= ====== =============== ======================================================================================================================================================================================================
 
-
-
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Removed in OpenFAST dev
+Removed in OpenFAST v2.6.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
@@ -110,7 +187,6 @@ HydroDyn                                      72   PtfmRF            True       
 HydroDyn                                      73   PtfmPF            True             PtfmPF         - Platform pitch tilt rotation force (flag) or DEFAULT
 HydroDyn                                      74   PtfmYF            True             PtfmYF         - Platform yaw rotation force (flag) or DEFAULT
 ============================================= ==== =============== ========================================================================================================================================================================================================
-
 
 
 
@@ -136,7 +212,6 @@ IfW driver     9    WrVTK                false    WrVTK       - Convert all data
 InflowWind     7    VFlowAng                  0   VFlowAng    - Upflow angle (degrees) (not used for native Bladed format WindType=7)
 ============== ==== ================== =============================================================================================================================================================================
 
-
 ============================ ====== ================================================ ====================================================================================
 Modified in OpenFAST v2.5.0
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -148,6 +223,7 @@ MoorDyn                        na    added CtrlChan column in LINE PROPERTIES ta
                                                                                         (-)       (-)       (m)       (-)       (-)       (-)       (-)      (-)
                                                                                         1         main     835.35      20        1         4         -        0
 ============================ ====== ================================================ ====================================================================================
+
 
 
 OpenFAST v2.3.0 to OpenFAST v2.4.0
@@ -192,7 +268,6 @@ InflowWind     49   XOffset                    0  XOffset      - Initial offset 
 
 
 
-
 OpenFAST v2.2.0 to OpenFAST v2.3.0
 ----------------------------------
 
@@ -215,10 +290,12 @@ AeroDyn                                       37   AFTabMod         1   AFTabMod
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 
+
 OpenFAST v2.1.0 to OpenFAST v2.2.0
 ----------------------------------
 
 No changes required.
+
 
 
 OpenFAST v2.0.0 to OpenFAST v2.1.0
@@ -231,6 +308,8 @@ OpenFAST v2.0.0 to OpenFAST v2.1.0
 ============== ==== ================== =====================================================================================================================================================================
 BeamDyn driver 21   GlbRotBladeT0      True   GlbRotBladeT0 - Reference orientation for BeamDyn calculations is aligned with initial blade root?
 ============== ==== ================== =====================================================================================================================================================================
+
+
 
 OpenFAST v1.0.0 to OpenFAST v2.0.0
 ----------------------------------

@@ -1,11 +1,13 @@
 OpenFAST
 ========
 
-|actions| |nbsp| |rtfd|
+|actions| |nbsp| |rtfd| |regtest-coverage|
 
-.. |actions| image:: https://github.com/openfast/openfast/workflows/OpenFAST%20Build%20and%20Test/badge.svg?branch=dev
-   :target: https://github.com/OpenFAST/openfast/actions?query=workflow%3A%22OpenFAST+Build+and+Test%22
+.. |actions| image:: https://github.com/openfast/openfast/actions/workflows/automated-dev-tests.yml/badge.svg?branch=dev
+   :target: https://github.com/OpenFAST/openfast/actions/workflows/automated-dev-tests.yml?query=workflow%3A%22Development+Pipeline%22
    :alt: Build Status
+.. |regtest-coverage| image:: https://codecov.io/gh/openfast/openfast/branch/dev/graph/badge.svg?token=lZzalptLMO
+   :target: https://codecov.io/gh/openfast/openfast
 .. |rtfd| image:: https://readthedocs.org/projects/openfast/badge/?version=dev
    :target: https://openfast.readthedocs.io/en/dev
    :alt: Documentation Status
@@ -87,7 +89,7 @@ It is compiled into HTML with Sphinx and is tied to a particular version
 of OpenFAST. `Readthedocs <http://openfast.readthedocs.io>`_ hosts the following
 versions of the documentation:
 
-* ``latest`` - The latest commit on the ``master`` branch
+* ``latest`` - The latest commit on the ``main`` branch
 * ``stable`` - Corresponds to the last tagged release
 * ``dev`` - The latest commit on the ``dev`` branch
 

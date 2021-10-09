@@ -16,6 +16,15 @@ include   Registry_NWTC_Library.txt
 usefrom   AirfoilInfo_Registry.txt
 #
 #
+
+param     UnsteadyAero/UA       -                INTEGER           UA_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Gonzalez      -        2   -   "UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_MinnemaPierce -        3   -   "[Minnema/Pierce variant (changes in Cc and Cm)]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_HGM           -        4   -   "[continuous variant of HGM (Hansen) model]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_HGMV          -        5   -   "[continuous variant of HGM (Hansen) model with vortex modifications]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Oye           -        6   -   "Stieg Oye dynamic stall model" -
+param     UnsteadyAero/UA       -                INTEGER           UA_BV            -        7   -   "Boeing-Vertol dynamic stall model (e.g. used in CACTUS)" -
+
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 #   e.g.,  the name of the input file,  the file root name,etc.
@@ -29,6 +38,9 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
 typedef   ^                            ^                             LOGICAL                  Flookup                         -             -         -        "Use table lookup for f' and f'' "    -
 typedef   ^                            ^                             Logical                  ShedEffect                      -             .True.    -        "Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods)"        -
+typedef   ^                            ^                             LOGICAL                  WrSum                           -             .false.   -        "Write UA AFI parameters to summary file?"    -
+typedef   ^                            ^                             INTEGER                  UAOff_innerNode                 {:}           -         -        "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
+typedef   ^                            ^                             INTEGER                  UAOff_outerNode                 {:}           -         -        "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
 
 #
 # Define outputs from the initialization routine here:                                                                                    
@@ -93,13 +105,15 @@ typedef   ^                            UA_KelvinChainType            ReKi       
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef   ^                            UA_ElementContinuousStateType R8Ki                     x                                4            -         -        "continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function)"        "{rad, rad, - -}"
+typedef   ^                            UA_ElementContinuousStateType R8Ki                     x                                5            -         -        "continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function)"        "{rad, rad, - -}"
 typedef   ^                            ContinuousStateType           UA_ElementContinuousStateType  element                   {:}{:}        -         -        "continuous states when UA_Mod=4 for each blade/node"        "-"
 
 # Define discrete (non-differentiable) states here:
 #
 typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        "angle of attack, previous time step"      rad
 typedef   ^                            DiscreteStateType             ReKi                     alpha_filt_minus1               {:}{:}        -         -        "filtered angle of attack, previous time step"      rad
+typedef   ^                            DiscreteStateType             ReKi                     alpha_dot                       {:}{:}        -         -        "Rate of change of angle of attack (filtered)"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     alpha_dot_minus1                {:}{:}        -         -        "Rate of change of angle of attack (filtered)"       rad/s
 typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        "non-dimensional pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kalpha_f_minus1                 {:}{:}        -         -        "filtered pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kq_f_minus1                     {:}{:}        -         -        "filtered pitching acceleration, previous time step"        -
@@ -138,14 +152,20 @@ typedef   ^                            ConstraintStateType           ReKi       
 #
 #
 # Define any other states, including integer or logical states here:
-typedef   ^                            OtherStateType                LOGICAL                  UA_off_forGood                  {:}{:}        -         -        "logical flag indicating if UA is off for good"   -
 typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       {:}{:}        -         -        "logical flag indicating if this is the first time step"   -
 typedef   ^                            OtherStateType                ReKi                     sigma1                          {:}{:}        -         -        "multiplier for T_fn"   -
 typedef   ^                            OtherStateType                ReKi                     sigma1c                         {:}{:}        -         -        "multiplier for T_fc"   -
 typedef   ^                            OtherStateType                ReKi                     sigma1m                         {:}{:}        -         -        "multiplier for T_fm"   -
 typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        "multiplier for T_V"   -
 typedef   ^                            OtherStateType                IntKi                    n                               {:}{:}        -         -        "counter for continuous state integration"   -
-typedef   ^                            OtherStateType                UA_ContinuousStateType   xdot                            4             -         -        "counter for continuous state integration"   -
+typedef   ^                            OtherStateType                UA_ContinuousStateType   xdot                            4             -         -        "history states for continuous state integration"   -
+typedef   ^                            OtherStateType                ReKi                     t_vortexBegin                   {:}{:}        -         -        "HGMV model: simulation time when vortex lift term became active"   s
+typedef   ^                            OtherStateType                ReKi                     SignOfOmega                     {:}{:}        -         -        "HGMV model: sign of omega when vortex lift term became active "   s
+typedef   ^                            OtherStateType                LOGICAL                  PositivePressure                {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative)"   -
+typedef   ^                            OtherStateType                LOGICAL                  vortexOn                        {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift term is active"   -
+typedef   ^                            OtherStateType                LOGICAL                  BelowThreshold                  {:}{:}        -         -        "HGMV model: logical flag indicating if cn fell below threshold to form another vortex"   -
+typedef   ^                            OtherStateType                LOGICAL                  activeL                         {:}{:}        -         -        "BV model: logical flag indicating if the lift stall is active"   -
+typedef   ^                            OtherStateType                LOGICAL                  activeD                         {:}{:}        -         -        "BV model: logical flag indicating if the drag stall is active"   -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -179,6 +199,7 @@ typedef   ^                            ^                             CHARACTER(1
 typedef   ^                            ^                             INTEGER                  UnOutFile                       -             0         -        "File unit for the UnsteadyAero outputs"        -
 typedef   ^                            ^                             Logical                  ShedEffect                      -             -         -        "Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods)"        -
 typedef   ^                            ParameterType                 IntKi                    lin_nx                          -             0         -        "Number of continuous states for linearization"            -
+typedef   ^                            ^                             LOGICAL                  UA_off_forGood                  {:}{:}        -         -        "logical flag indicating if UA is off for good"   -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
