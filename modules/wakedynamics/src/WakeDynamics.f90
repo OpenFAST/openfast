@@ -742,8 +742,6 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    errStat = ErrID_None
    errMsg  = ""
    
-   print'(A,F9.3)','-------------------------- WD_UpdateStates  t = ',t
-   
    if ( EqualRealNos(u%D_Rotor,0.0_ReKi) .or. u%D_Rotor < 0.0_ReKi ) then
       ! TEST: E7
       call SetErrStat(ErrID_Fatal, 'Rotor diameter must be greater than zero.', errStat, errMsg, RoutineName)
@@ -847,7 +845,10 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    ! --- Update plane positions and filtered states
    do i = maxPln, 1, -1  
       ! dx  = xd%x_plane(i) - xd%x_plane(i-1)
-      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
+      
+      ! NEW which one for dx? 
+!~       dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
+      dx = dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1))*p%DT_low
 
       ! Update these states to [n+1]
       xd%x_plane     (i) = xd%x_plane    (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low ; don't use absdx here  
@@ -862,9 +863,15 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             call Cleanup()
             return
          end if
-      xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + xd%xhat_plane(:,i-1)*dx + dy_HWkDfl &
-                              + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT_low
-         
+      ! OLD
+!~       dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
+!~       xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + &
+!~                                  xd%xhat_plane(:,i-1)*dx + dy_HWkDfl &
+!~                               + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT_low
+      ! NEW
+      xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + u%V_Plane(:,i-1)       * p%DT_low + dy_HWkDfl 
+!~       xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + xd%V_Plane_filt(:,i-1) * p%DT_low + dy_HWkDfl                       
+      
       xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
       xd%D_rotor_filt     (i) = xd%D_rotor_filt(i-1)
@@ -875,12 +882,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    ! --- Update states at disk-plane (0) to time [n+1] 
    ! --------------------------------------------------------------------------------
    !xd%x_plane         (0) = 0.0_ReKi ! already initialized to zero
-   if (p%Mod_Wake /= Mod_Wake_Curl) then
-      xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0)*p%filtParam + u%xhat_disk(:)*p%oneMinusFiltParam  ! 2-step calculation for xhat_plane at disk
-   else
-      ! TODO align xhat_plane with the wind direction
-      xd%xhat_plane     (:,0) =  (/1.0, 0.0, 0.0/)
-   endif
+   xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0)*p%filtParam + u%xhat_disk(:)*p%oneMinusFiltParam  ! 2-step calculation for xhat_plane at disk
    norm2_xhat_plane        =  TwoNorm( xd%xhat_plane(:,0) ) 
    if ( EqualRealNos(norm2_xhat_plane, 0.0_ReKi) ) then
       ! TEST: E1
@@ -890,9 +892,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    end if
    xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0) / norm2_xhat_plane
    
-   !xd%psi_skew_filt        =  filter_angles(xd%psi_skew_filt, u%psi_skew, p%filtParam, p%oneMinusFiltParam)
-   !xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
-   call filter_angles2(xd%psi_skew_filt, xd%chi_skew_filt, u%psi_skew, u%chi_skew, p%filtParam, p%oneMinusFiltParam)
+   xd%psi_skew_filt        =  filter_angles(xd%psi_skew_filt, u%psi_skew, p%filtParam, p%oneMinusFiltParam)
+   xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
+   !call filter_angles2(xd%psi_skew_filt, xd%chi_skew_filt, u%psi_skew, u%chi_skew, p%filtParam, p%oneMinusFiltParam)
    
    xd%YawErr_filt      (0) =  xd%YawErr_filt(0)*p%filtParam + u%YawErr  *p%oneMinusFiltParam
    xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
@@ -945,6 +947,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
       ! Convert to Cartesian
       call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
+      call FilterVx(xd%Vx_wake2(:,:,0), 1)
       !call Axisymmetric2CartesianVx(m%Vx_polar * sin(xd%chi_skew_filt), p%r, p%y, p%z, xd%Vy_wake2(:,:,0))
       !xd%Vy_wake2(:,:,0) = xd%Vx_wake2(:,:,0) * sin(xd%chi_skew_filt)
       Ct_avg =  get_Ctavg(p%r, xd%Ct_azavg_filt, xd%D_rotor_filt(0))
@@ -1066,10 +1069,21 @@ contains
                
                ! Update state of Vx
                xd%Vx_wake2(iy,iz,i) = xd%Vx_wake2(iy,iz,i-1) -  &
-                                      dx / (xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wind_disk_filt(i-1)) * &
-                                         ((xd%Vy_wake2(iy,iz,i-1)) * m%dvx_dy(iy,iz,i-1) + &
-                                          xd%Vz_wake2(iy,iz,i-1) * m%dvx_dz(iy,iz,i-1) &
-                                         - divTau) 
+                      p%DT_low * ( & 
+!~ (xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wind_disk_filt(i-1) - xd%xhat_plane(1,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)))  - &
+!~                                          ( (xd%Vy_wake2(iy,iz,i-1) - V_mean_yz(2) ) * m%dvx_dy(iy,iz,i-1) + &
+!~                                            (xd%Vz_wake2(iy,iz,i-1) - V_mean_yz(3) ) * m%dvx_dz(iy,iz,i-1) &
+                                         ( (xd%Vy_wake2(iy,iz,i-1) ) * m%dvx_dy(iy,iz,i-1) + &
+                                           (xd%Vz_wake2(iy,iz,i-1) ) * m%dvx_dz(iy,iz,i-1) &
+                                         - divTau) &
+                                         ) 
+
+!              ! Update state of Vx OLD
+!              xd%Vx_wake2(iy,iz,i) = xd%Vx_wake2(iy,iz,i-1) -  &
+!                                     dx / (xd%Vx_wake2(iy,iz,i-1) + xd%Vx_wind_disk_filt(i-1)) * &
+!                                        ((xd%Vy_wake2(iy,iz,i-1)) * m%dvx_dy(iy,iz,i-1) + &
+!                                         xd%Vz_wake2(iy,iz,i-1) * m%dvx_dz(iy,iz,i-1) &
+!                                        - divTau) 
 
                ! Update state (decay) of Vy and Vz
                xd%Vy_wake2(iy,iz,i)  = xd%Vy_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp)
@@ -1392,6 +1406,35 @@ subroutine Axisymmetric2CartesianVx(Vx_axi, r, y, z, Vx)
    enddo
 end subroutine Axisymmetric2CartesianVx
 
+!> Filters the velocity using a box filter
+subroutine FilterVx(Vx, nf)
+   real(ReKi), dimension(:,:), intent(inout) :: Vx     !< Axial velocity, distributed across the plane (m/s)
+   integer(IntKi), intent(in) :: nf     ! The filter width (number of grid points)
+   real(ReKi), dimension(size(Vx,1),size(Vx,2)) :: Vx_filt     !< Axial velocity, distributed across the plane (m/s)
+   integer(IntKi) :: iz, iy, n1, n2
+
+   ! Initialize the filtered vars
+   Vx_filt = 0.
+
+   do iz = 1+nf, size(Vx,2) - nf
+      do iy = 1+nf, size(Vx,1) - nf
+      
+         do n1=-nf,nf
+
+            do n2=-nf,nf
+
+               Vx_filt(iy,iz) = Vx_filt(iy,iz) + Vx(iy + n1, iz + n2)
+
+            enddo
+
+         enddo
+      enddo
+   enddo
+
+   Vx = Vx_filt / ((2. * nf +1)**2 )
+
+end subroutine FilterVx
+
 
 subroutine WD_TEST_Axi2Cart()
    real(ReKi) :: r(4)=(/0.,1.,2.,3./)
@@ -1465,9 +1508,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    real(ReKi), dimension(3) :: dx
    errStat = ErrID_None
    errMsg  = ""
-
-   print'(A,F9.3)','-------------------------- WD_CalcOutput at t = ',t
-
+   
    n = nint(t/p%DT_low)
    
       ! Check if we are fully initialized
@@ -1485,12 +1526,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
             end if
       
          y%p_plane   (:,i) = u%p_hub(:) + y%x_plane(i)*u%xhat_disk(:) + correction
-         if (p%Mod_Wake /= Mod_Wake_Curl) then
-            y%xhat_plane(:,i) = u%xhat_disk(:)
-         else
-            ! TODO align xhat_plane with the wind direction
-            y%xhat_plane(:,i) =  (/1.0, 0.0, 0.0/)
-         endif                 
+         y%xhat_plane(:,i) = u%xhat_disk(:)
          
             ! NOTE: Since we are in firstPass=T, then xd%Vx_wake is already set to zero, so just pass that into WakeDiam
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), u%Vx_wind_disk, u%D_rotor, p%C_WakeDiam)

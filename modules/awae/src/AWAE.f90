@@ -216,7 +216,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    logical             :: within
    real(SiKi), dimension(3,3) :: C_rot
    real(SiKi) :: C_rot_norm
-   integer, parameter :: Mod_Deficit = 1
+   integer, parameter :: Mod_Deficit = 2
 
    errStat = ErrID_None
    errMsg  = ""
