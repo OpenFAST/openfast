@@ -655,7 +655,7 @@ CONTAINS
          Z = 2.0_ReKi * (ZGRID - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
 
          IF ( IZLO < 1 ) THEN
-            IF ( IZLO == 0 .AND. Z >= 1.0-TOL ) THEN
+            IF ( IZLO == 0 .AND. Z >= 1.0-TOL/p%InvFFZD ) THEN       ! Just below bottom edge, but within tolerance
                Z    = -1.0_ReKi
                IZLO = 1
             ELSEIF ( GridExceedAllow ) THEN
