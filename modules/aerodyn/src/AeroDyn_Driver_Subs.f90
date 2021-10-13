@@ -138,7 +138,9 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
       dvr%WT(1)%motionType        = idBldMotionConstant
       dvr%WT(1)%nac%motionType    = idNacMotionConstant
       dvr%WT(1)%hub%motionType    = idHubMotionConstant ! NOTE: we change it back after validate inputs..
-      dvr%WT(1)%bld(:)%motionType = idBldMotionConstant ! Change if needed
+      do j=1,size(dvr%WT(1)%bld)
+         dvr%WT(1)%bld(j)%motionType = idBldMotionConstant ! Change if needed
+      end do
    else if (dvr%analysisType==idAnalysisCombi) then
       call WrScr('------------------------------------------------------------------------------')
       call WrScr('Running combined case '//trim(num2lstr(iCase))//'/'//trim(num2lstr(dvr%numCases)))
@@ -853,7 +855,9 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
       dvr%PLexp      = timeState(2)
       !! Set motion at this time
       dvr%WT(1)%hub%rotSpeed = timeState(3)     ! rad/s
-      dvr%WT(1)%bld(:)%pitch = timeState(4)     ! rad
+      do j=1,size(dvr%WT(1)%bld)
+         dvr%WT(1)%bld(j)%pitch = timeState(4)     ! rad
+      end do
       dvr%WT(1)%nac%yaw      = timeState(5)     ! rad
       ! Getting previous RotSpeed value by interpolation
       timePrev = (nt-1) * dvr%dt
@@ -1340,8 +1344,8 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
 
          ! blades
          allocate(wt%bld(wt%numBlades))
-         wt%bld(:)%pitch = myNaN
          do iB=1,wt%numBlades
+            wt%bld(iB)%pitch              = myNaN
             wt%bld(iB)%origin_h(1:3)      = 0.0_ReKi
             wt%bld(iB)%orientation_h(1)   = (iB-1)*(2._ReKi*Pi)/wt%numBlades
             wt%bld(iB)%orientation_h(2)   = precone
@@ -1370,8 +1374,9 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
             ErrMsg2 = "Error allocating wt%bld"
             if(Failed()) return
          end if
-         wt%bld(:)%pitch = myNaN
+
          do iB=1,wt%numBlades
+            wt%bld(iB)%pitch = myNaN
             sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
             call ParseAry(FileInfo_In, CurLine, 'bldOrigin_h'//sBld , wt%bld(iB)%origin_h, 3, errStat2, errMsg2, unEc); if(Failed()) return
          enddo
@@ -1469,8 +1474,8 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
 
             ! Blade motion
             call ParseVar(FileInfo_In, CurLine, 'bldMotionType'//sWT, bldMotionType, errStat2, errMsg2, unEc); if(Failed()) return
-            wt%bld(:)%motionType=bldMotionType
             do iB=1,wt%numBlades
+               wt%bld(iB)%motionType=bldMotionType
                sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
                call ParseVar(FileInfo_In, CurLine, 'bldPitch'//sBld , wt%bld(iB)%pitch, errStat2, errMsg2, unEc); if(Failed()) return
                wt%bld(iB)%pitch = wt%bld(iB)%pitch*Pi/180_ReKi ! to rad
@@ -1491,8 +1496,10 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
                enddo
             else
                ! Replacing with default motion if AnalysisType is not Regular, shouldbe overriden later
-               wt%bld(:)%motionType = idBldMotionConstant
-               wt%bld(:)%pitch      = myNan
+               do iB=1,size(wt%bld)
+                  wt%bld(iB)%motionType = idBldMotionConstant
+                  wt%bld(iB)%pitch      = myNan
+               end do
             endif
          endif ! numBlade>0
       endif ! BASIC/ADVANCED rotor definition
@@ -1593,6 +1600,8 @@ subroutine setSimpleMotion(wt, rotSpeed, bldPitch, nacYaw, DOF, amplitude, frequ
    integer(IntKi), intent(in   ) :: DOF       ! 0<: None, 1:surge, ... 6: yaw
    real(ReKi),     intent(in   ) :: amplitude ! m or rad
    real(ReKi),     intent(in   ) :: frequency ! Hz
+   
+   integer                       :: i
    wt%degreeofFreedom   = DOF
    wt%amplitude         = amplitude
    wt%frequency         = frequency * 2 *pi ! Hz to rad/s
@@ -1600,8 +1609,12 @@ subroutine setSimpleMotion(wt, rotSpeed, bldPitch, nacYaw, DOF, amplitude, frequ
    wt%nac%yaw           = nacYaw* PI /180._ReKi ! deg 2 rad
    wt%hub%motionType    = idHubMotionConstant
    wt%hub%rotSpeed      = rotSpeed*RPM2RPS     ! rpm 2 rad/s
-   wt%bld(:)%motionType = idBldMotionConstant
-   wt%bld(:)%pitch      = bldPitch * Pi /180._ReKi ! deg 2 rad
+   if (allocated(wt%bld)) then
+      do i=1,size(wt%bld)
+         wt%bld(i)%motionType = idBldMotionConstant
+         wt%bld(i)%pitch      = bldPitch * Pi /180._ReKi ! deg 2 rad
+      end do
+   end if
 end subroutine setSimpleMotion
 
 
@@ -1761,7 +1774,10 @@ subroutine Dvr_InitializeDriverOutputs(dvr, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
-   maxNumBlades=maxval(dvr%WT(:)%numBlades)
+   maxNumBlades = 0
+   do iWT=1,size(dvr%WT)
+      maxNumBlades= max(maxNumBlades, dvr%WT(iWT)%numBlades)
+   end do
 
    ! --- Allocate driver-level outputs
    dvr%out%nDvrOutputs = 1+ 4 + 6 + 3 + 1*maxNumBlades ! 
@@ -1830,7 +1846,12 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
    real(ReKi), pointer :: arr(:)
    errStat = ErrID_None
    errMsg  = ''
-
+   
+   maxNumBlades = 0
+   do iWT=1,size(dvr%WT)
+      maxNumBlades= max(maxNumBlades, dvr%WT(iWT)%numBlades)
+   end do
+   
    do iWT = 1, dvr%numTurbines
       if (dvr%wt(iWT)%numBlades >0 ) then ! TODO, export for tower only
          arr => dvr%wt(iWT)%WriteOutput
@@ -1855,7 +1876,7 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
          arr(k) = dvr%WT(iWT)%nac%yaw*R2D         ; k=k+1 ! yaw [deg]
          arr(k) = modulo(real(dvr%WT(iWT)%hub%azimuth+(dvr%dt * dvr%WT(iWT)%hub%rotSpeed)*R2D, ReKi), 360.0_ReKi); k=k+1 ! azimuth [deg], stored at nt-1
          arr(k) = dvr%WT(iWT)%hub%rotSpeed*RPS2RPM; k=k+1 ! rotspeed [rpm]
-         do j=1,maxval(dvr%WT(:)%numBlades)
+         do j=1,maxNumBlades
             if (j<=dvr%WT(iWT)%numBlades) then
                arr(k) = dvr%WT(iWT)%bld(j)%pitch*R2D ! pitch [deg]
             else
@@ -2101,8 +2122,12 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, AD, ErrStat, ErrMsg)
    ! Get radius for ground (blade length + hub radius):
    GroundRad = MaxBladeLength + MaxTwrLength+ p_FAST%VTKHubRad
    ! write the ground or seabed reference polygon:
-   RefPoint(1) = sum(dvr%WT(:)%originInit(1)) / dvr%numTurbines
-   RefPoint(2) = sum(dvr%WT(:)%originInit(2)) / dvr%numTurbines
+   RefPoint(1:2) = dvr%WT(1)%originInit(1:2)
+   do iWT=2,dvr%numTurbines
+      RefPoint(1:2) = RefPoint(1:2) + dvr%WT(iWT)%originInit(1:2)
+   end do
+   RefPoint(1:2) = RefPoint(1:2) / dvr%numTurbines
+   
    RefPoint(3) = 0.0_ReKi
    RefLengths  = GroundRad  + sqrt((WorldBoxMax(1)-WorldBoxMin(1))**2 + (WorldBoxMax(2)-WorldBoxMin(2))**2)
    call WrVTK_Ground (RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.GroundSurface', ErrStat2, ErrMsg2 )         

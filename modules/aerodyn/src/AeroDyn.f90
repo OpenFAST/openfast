@@ -2869,7 +2869,10 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
    InitInp%DTaero         = p%DT       ! NOTE: FVW can run a lower timestep internally
 
    ! Allocate wings
-   nWings = sum(p%rotors(:)%numBlades)
+   nWings = 0
+   do iR=1,size(p%rotors)
+      nWings = nWings + p%rotors(iR)%numBlades
+   end do
    allocate(InitInp%W(nWings)        , STAT = ErrStat2); ErrMsg2='Allocate W'; if(Failed()) return
    allocate(InitInp%WingsMesh(nWings), STAT = ErrStat2); ErrMsg2='Allocate Wings Mesh'; if(Failed()) return
 
