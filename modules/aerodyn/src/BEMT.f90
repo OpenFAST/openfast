@@ -682,6 +682,7 @@ subroutine BEMT_ReInit(p,x,xd,z,OtherState,misc,ErrStat,ErrMsg)
       end if
    
    else
+      OtherState%ValidPhi = .false.
       misc%AxInduction  = 0.0_ReKi
       misc%TanInduction = 0.0_ReKi
    end if
@@ -1210,6 +1211,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 !!#endif
 
    y%phi = z%phi ! set this before possibly calling UpdatePhi() because phi is intent(inout) in the solve
+   m%ValidPhi = OtherState%ValidPhi ! set this so that we don't overwrite OtherSTate%ValidPhi
    
    !...............................................................................................................................
    ! if we haven't initialized z%phi, we want to get a better guess as to what the actual values of phi are:
@@ -1545,6 +1547,7 @@ subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, AFIn
    
    
    m%phi = z%phi ! set this before possibly calling InitPhi() because phi is intent(inout) in the solve
+   m%ValidPhi = OtherState%ValidPhi ! set this so that we don't overwrite OtherSTate%ValidPhi
    
    !...............................................................................................................................
    ! THIS IS CALLED ONLY DURING LINEARIZATION, where we want to treat z%phi as an implied input, thus we need to recalculate phi

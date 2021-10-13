@@ -140,7 +140,7 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
       dvr%WT(1)%hub%motionType    = idHubMotionConstant ! NOTE: we change it back after validate inputs..
       dvr%WT(1)%bld(:)%motionType = idBldMotionConstant ! Change if needed
    else if (dvr%analysisType==idAnalysisCombi) then
-      print*,'------------------------------------------------------------------------------'
+      call WrScr('------------------------------------------------------------------------------')
       call WrScr('Running combined case '//trim(num2lstr(iCase))//'/'//trim(num2lstr(dvr%numCases)))
       ! Set time
       dvr%dT   = dvr%Cases(iCase)%dT
@@ -200,12 +200,12 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
 
    ! Copy AD input here because tower is modified in ADMeshMap
    do j = 2, numInp
-      call AD_CopyInput (AD%u(1),  AD%u(j),  MESH_NEWCOPY, errStat2, errMsg2)
+      call AD_CopyInput (AD%u(1),  AD%u(j),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
    end do
 
 
    ! Compute driver outputs at t=0 
-   call Set_Mesh_Motion(0,dvr,errStat,errMsg)
+   call Set_Mesh_Motion(0,dvr,errStat2,errMsg2); if(Failed()) return
 
    ! --- Initial AD inputs
    AD%inputTime = -999
@@ -216,13 +216,13 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    ! --- Initialize outputs
    call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
 
-   call Dvr_CalcOutputDriver(dvr, IW%y, errStat, errMsg)
+   call Dvr_CalcOutputDriver(dvr, IW%y, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize VTK
    if (dvr%out%WrVTK>0) then
       dvr%out%n_VTKTime = 1
       dvr%out%VTKRefPoint = (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /)
-      call SetVTKParameters(dvr%out, dvr, InitOutData_AD, AD, errStat2, errMsg2)
+      call SetVTKParameters(dvr%out, dvr, InitOutData_AD, AD, errStat2, errMsg2); if(Failed()) return
    endif
 
    call cleanUp()
@@ -920,8 +920,9 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
          wt%nac%yawSpeed = nacMotion(2)
          wt%nac%yawAcc   = nacMotion(3)
       else
-         print*,'Unknown nac motion type, should never happen'
-         STOP
+         ErrMsg2='Unknown nac motion type; should never happen.'
+         ErrStat2 = ErrID_FATAL
+         if(Failed()) return
       endif
       theta(3) = wt%nac%yaw
       orientation_loc = EulerConstruct(theta)
@@ -1221,7 +1222,7 @@ end subroutine AD_InputSolve_IfW
 !> Read the driver input file
 subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    character(*),                  intent( in    )   :: fileName
-   type(Dvr_SimData), target,    intent(   out )   :: dvr
+   type(Dvr_SimData), target,     intent(   out )   :: dvr
    integer,                       intent(   out )   :: errStat              ! returns a non-zero value when an error occurs  
    character(*),                  intent(   out )   :: errMsg               ! Error message if errStat /= ErrID_None
    ! Local variables
@@ -1269,7 +1270,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    endif
 
    call ParseVar(FileInfo_In, CurLine, "analysisType", dvr%analysisType, errStat2, errMsg2, unEc); if (Failed()) return
-   call ParseVar(FileInfo_In, CurLine, "tMax"        , dvr%tMax            , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "tMax"        , dvr%tMax        , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "dt"          , dvr%dt          , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "AeroFile"    , dvr%AD_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
 
@@ -1296,7 +1297,12 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    ! --- Turbines
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "numTurbines", dvr%numTurbines, errStat2, errMsg2, unEc); if (Failed()) return
-   allocate(dvr%WT(dvr%numTurbines))
+   allocate(dvr%WT(dvr%numTurbines), stat=ErrStat2)
+      if (ErrStat2 /=0) then
+         ErrStat2=ErrID_Fatal
+         ErrMsg2="Error allocating dvr%WT."
+         if(Failed()) return
+      end if
 
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)
@@ -1348,7 +1354,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT     , wt%originInit, 3         , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'baseOrientationInit'//sWT, wt%orientationInit, 3    , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'hasTower'//sWT           , wt%hasTower              , errStat2, errMsg2, unEc); if(Failed()) return
-         call ParseVar(FileInfo_In, CurLine, 'HAWTprojection'//sWT     , wt%HAWTprojection                , errStat2, errMsg2, unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'HAWTprojection'//sWT     , wt%HAWTprojection        , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'twrOrigin_t'//sWT        , wt%twr%origin_t, 3       , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'nacOrigin_t'//sWT        , wt%nac%origin_t, 3       , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'hubOrigin_n'//sWT        , wt%hub%origin_n, 3       , errStat2, errMsg2, unEc); if(Failed()) return
@@ -1358,7 +1364,12 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          ! Blades
          call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT , wt%numBlades, errStat2, errMsg2, unEc); if(Failed()) return
-         allocate(wt%bld(wt%numBlades))
+         allocate(wt%bld(wt%numBlades), stat=ErrStat2)
+         if (errStat2 /= 0) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2 = "Error allocating wt%bld"
+            if(Failed()) return
+         end if
          wt%bld(:)%pitch = myNaN
          do iB=1,wt%numBlades
             sBld = '('//trim(num2lstr(iWT))//'_'//trim(num2lstr(iB))//')'
