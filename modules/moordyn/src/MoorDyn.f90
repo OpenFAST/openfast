@@ -2052,7 +2052,7 @@ CONTAINS
          ! if using viscoelastic model, initialize the internal states
          if (m%LineList(l)%ElasticMod == 2) then
             do I = 1,N
-               x%states(m%LineStateIs1(l) + 6*N-6 + I-1) = m%LineList(l)%dl_S(I)   ! should be zero
+               x%states(m%LineStateIs1(l) + 6*N-6 + I-1) = m%LineList(l)%dl_1(I)   ! should be zero
             end do
          end if
          
@@ -3300,14 +3300,14 @@ CONTAINS
       
       ! if using viscoelastic model, allocate additional state quantities
       if (Line%ElasticMod == 2) then
-         ALLOCATE ( Line%dl_S(N), STAT = ErrStat )
+         ALLOCATE ( Line%dl_1(N), STAT = ErrStat )
          IF ( ErrStat /= ErrID_None ) THEN
-            ErrMsg  = ' Error allocating dl_S array.'
+            ErrMsg  = ' Error allocating dl_1 array.'
             !CALL CleanUp()
             RETURN
          END IF
          ! initialize to zero
-         Line%dl_S = 0.0_DbKi
+         Line%dl_1 = 0.0_DbKi
       end if
       
       ! allocate node and segment tangent vectors
@@ -4129,7 +4129,7 @@ CONTAINS
       ! if using viscoelastic model, also set the static stiffness stretch
       if (Line%ElasticMod == 2) then
          do I=1,Line%N
-            Line%dl_S(I) = X( 6*Line%N-6 + I)   ! these will be the last N entries in the state vector
+            Line%dl_1(I) = X( 6*Line%N-6 + I)   ! these will be the last N entries in the state vector
          end do
       end if
          
@@ -4177,7 +4177,8 @@ CONTAINS
       Real(DbKi)                       :: Xi             ! used in interpolating from lookup table
       Real(DbKi)                       :: Yi             ! used in interpolating from lookup table
       Real(DbKi)                       :: dl             ! stretch of a segment [m]
-      Real(DbKi)                       :: ld_S           ! rate of change of static stiffness portion of segment [m/s]
+      Real(DbKi)                       :: ld_1           ! rate of change of static stiffness portion of segment [m/s]
+      Real(DbKi)                       :: EA_1           ! stiffness of 'static stiffness' portion of segment, combines with dynamic stiffness to give static stiffnes [m/s]
 
 
       N = Line%N                      ! for convenience
@@ -4309,16 +4310,18 @@ CONTAINS
          ! viscoelastic model
          else if (Line%ElasticMod == 2) then
          
+            EA_1 = Line%EA_D*Line%EA/(Line%EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S
+         
             dl = Line%lstr(I) - Line%l(I) ! delta l of this segment
          
-            ld_S = (Line%EA_D*dl - (Line%EA_D + Line%EA)*Line%dl_S(I) + Line%BA_D*Line%lstrd(I)) /( Line%BA_D + Line%BA) ! rate of change of static stiffness portion [m/s]
+            ld_1 = (Line%EA_D*dl - (Line%EA_D + EA_1)*Line%dl_1(I) + Line%BA_D*Line%lstrd(I)) /( Line%BA_D + Line%BA) ! rate of change of static stiffness portion [m/s]
             
             !MagT = (Line%EA*Line%dl_S(I) + Line%BA*ld_S)/ Line%l(I)   ! compute tension based on static portion (dynamic portion would give same)
-            MagT  = Line%EA*Line%dl_S(I)/ Line%l(I)  
-            MagTd = Line%BA*ld_S        / Line%l(I)  
+            MagT  = EA_1*Line%dl_1(I)/ Line%l(I)  
+            MagTd = Line%BA*ld_1        / Line%l(I)  
             
             ! update state derivative for static stiffness stretch (last N entries in the state vector)
-            Xd( 6*N-6 + I) = ld_S
+            Xd( 6*N-6 + I) = ld_1
          
          end if
 

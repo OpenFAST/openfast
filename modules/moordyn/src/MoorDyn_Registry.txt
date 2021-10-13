@@ -246,7 +246,7 @@ typedef  ^            ^                DbKi               l            {:}      
 typedef  ^            ^                DbKi               ld           {:}       -  -   "segment unstretched length rate of change (used in active tensioning)"  "[m]"
 typedef  ^            ^                DbKi               lstr         {:}       -  -   "segment stretched length"  "[m]"
 typedef  ^            ^                DbKi               lstrd        {:}       -  -   "segment change in stretched length"  "[m/s]"
-typedef  ^            ^                DbKi               dl_S         {:}       -  -   "segment stretch attributed to static stiffness portion"  "[m]"
+typedef  ^            ^                DbKi               dl_1         {:}       -  -   "segment stretch attributed to static stiffness portion"  "[m]"
 typedef  ^            ^                DbKi               V            {:}       -  -   "segment volume"  "[m^3]"
 typedef  ^            ^                DbKi               U            {:}{:}    -  -   "water velocity at node"  "[m/s]"
 typedef  ^            ^                DbKi               Ud           {:}{:}    -  -   "water acceleration at node"  "[m/s^2]"
