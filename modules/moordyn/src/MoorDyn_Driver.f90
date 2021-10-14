@@ -43,7 +43,6 @@ PROGRAM MoorDyn_Driver
       INTEGER                 :: InputsMod
       CHARACTER(1024)         :: InputsFile
       INTEGER                 :: nTurb
-      CHARACTER(1024)         :: positions
    END TYPE MD_Drvr_InitInput
 
 
@@ -174,19 +173,13 @@ PROGRAM MoorDyn_Driver
    CALL AllocAry(MD_InitInp%PtfmInit,      6, nTurbines, 'PtfmInit array'     , ErrStat2, ErrMsg2); call AbortIfFailed()
    CALL AllocAry(MD_InitInp%TurbineRefPos, 3, nTurbines, 'TurbineRefPos array', ErrStat2, ErrMsg2); call AbortIfFailed()
   
-   if (drvrInitInp%FarmSize > 0) then    ! if in FAST.Farm mode, specify turbine ref positions and initial positions from driver input file
-      do J=1,drvrInitInp%FarmSize
-         MD_InitInp%TurbineRefPos(1,J) = drvrInitInp%FarmPositions(1,J)
-         MD_InitInp%TurbineRefPos(2,J) = drvrInitInp%FarmPositions(2,J)
-         MD_InitInp%TurbineRefPos(3,J) = 0.0_DbKi
-         MD_InitInp%PtfmInit(:,J)      = drvrInitInp%FarmPositions(3:8,J)
-      end do
-   else     ! if in normal OpenFAST mode, zero the initial platform position since the framework doesn't allow much else
-      MD_InitInp%PtfmInit              = 0.0_DbKi
-      MD_InitInp%TurbineRefPos         = 0.0_DbKi
-   end if
-  
-  
+   do J=1,nTurbines
+      MD_InitInp%TurbineRefPos(1,J) = drvrInitInp%FarmPositions(1,J)
+      MD_InitInp%TurbineRefPos(2,J) = drvrInitInp%FarmPositions(2,J)
+      MD_InitInp%TurbineRefPos(3,J) = 0.0_DbKi
+      MD_InitInp%PtfmInit(:,J)      = drvrInitInp%FarmPositions(3:8,J)
+   end do
+   
    MD_interp_order = 0
   
    ! allocate Input and Output arrays; used for interpolation and extrapolation
@@ -596,21 +589,16 @@ CONTAINS
       CALL ReadVar( UnIn, FileName, InitInp%OutRootName, 'OutRootName', 'MoorDyn output root filename', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%TMax       , 'Tmax', 'Simulation time duration', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%dtC        , 'dtC', 'Time step size for calling MoorDyn', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      ! ---------------------- FAST.Farm ----------------------------------------------------------------      
-      CALL ReadCom( UnIn, FileName, 'FAST.Farm header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      CALL ReadVar( UnIn, FileName, InitInp%InputsMod  , 'InputsMode', 'Mode for the inputs - zero/steady/time-series', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      CALL ReadVar( UnIn, FileName, InitInp%InputsFile , 'InputsFile', 'Filename for the MoorDyn inputs', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%FarmSize   , 'NumTurbines', 'number of turbines in FAST.Farm', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      CALL ReadCom( UnIn, FileName, 'FAST.Farm table header line 1', ErrStat2, ErrMsg2); call AbortIfFailed()
-      CALL ReadCom( UnIn, FileName, 'FAST.Farm table header line 2', ErrStat2, ErrMsg2); call AbortIfFailed()
-      do J=1,InitInp%FarmSize
+      CALL ReadCom( UnIn, FileName, 'Initial positions header', ErrStat2, ErrMsg2); call AbortIfFailed()
+      CALL ReadCom( UnIn, FileName, 'Initial positions table header line 1', ErrStat2, ErrMsg2); call AbortIfFailed()
+      CALL ReadCom( UnIn, FileName, 'Initial positions table header line 2', ErrStat2, ErrMsg2); call AbortIfFailed()
+      do J=1,MAX(1,InitInp%FarmSize)
          CALL ReadAry( UnIn, FileName, InitInp%FarmPositions(:,J), 8, "FarmPositions", "FAST.Farm position inputs", ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      end do      
-      !---------------------- INPUTS -------------------------------------------------------------------
-      CALL ReadCom( UnIn, FileName, 'INPUTS header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      CALL ReadVar( UnIn, FileName, InitInp%InputsMod , 'InputsMod', 'Mode for the inputs - zero/steady/time-series', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      CALL ReadVar( UnIn, FileName, InitInp%InputsFile, 'InputsFile', 'Filename for the MoorDyn inputs', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      CALL ReadCom( UnIn, FileName, 'Header line saying next line will be a list of coupled positions' , ErrStat2, ErrMsg2); call AbortIfFailed()
-      CALL ReadVar( UnIn, FileName, InitInp%positions, 'positions', 'List of positions when InputsMod=1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      
+      end do
+
       ! done reading
       if(UnEcho>0) CLOSE( UnEcho )
       if(UnIn>0)   CLOSE( UnIn   )
