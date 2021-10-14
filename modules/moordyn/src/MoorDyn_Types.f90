@@ -355,6 +355,10 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: MDWrOutput      !< Data from time step to be written to a MoorDyn output file [-]
     REAL(DbKi)  :: LastOutTime      !< Time of last writing to MD output files [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PtfmInit      !< initial position of platform for an individual (non-farm) MD instance [-]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: BathymetryGrid      !< matrix describing the bathymetry in a grid of x's and y's [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_Xs      !< array of x-coordinates in the bathymetry grid [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_Ys      !< array of y-coordinates in the bathymetry grid [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_npoints      !< number of grid points to describe the bathymetry grid [-]
   END TYPE MD_MiscVarType
 ! =======================
 ! =========  MD_ParameterType  =======
@@ -8031,6 +8035,56 @@ IF (ALLOCATED(SrcMiscData%MDWrOutput)) THEN
 ENDIF
     DstMiscData%LastOutTime = SrcMiscData%LastOutTime
     DstMiscData%PtfmInit = SrcMiscData%PtfmInit
+IF (ALLOCATED(SrcMiscData%BathymetryGrid)) THEN
+  i1_l = LBOUND(SrcMiscData%BathymetryGrid,1)
+  i1_u = UBOUND(SrcMiscData%BathymetryGrid,1)
+  i2_l = LBOUND(SrcMiscData%BathymetryGrid,2)
+  i2_u = UBOUND(SrcMiscData%BathymetryGrid,2)
+  IF (.NOT. ALLOCATED(DstMiscData%BathymetryGrid)) THEN 
+    ALLOCATE(DstMiscData%BathymetryGrid(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathymetryGrid.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%BathymetryGrid = SrcMiscData%BathymetryGrid
+ENDIF
+IF (ALLOCATED(SrcMiscData%BathGrid_Xs)) THEN
+  i1_l = LBOUND(SrcMiscData%BathGrid_Xs,1)
+  i1_u = UBOUND(SrcMiscData%BathGrid_Xs,1)
+  IF (.NOT. ALLOCATED(DstMiscData%BathGrid_Xs)) THEN 
+    ALLOCATE(DstMiscData%BathGrid_Xs(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_Xs.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%BathGrid_Xs = SrcMiscData%BathGrid_Xs
+ENDIF
+IF (ALLOCATED(SrcMiscData%BathGrid_Ys)) THEN
+  i1_l = LBOUND(SrcMiscData%BathGrid_Ys,1)
+  i1_u = UBOUND(SrcMiscData%BathGrid_Ys,1)
+  IF (.NOT. ALLOCATED(DstMiscData%BathGrid_Ys)) THEN 
+    ALLOCATE(DstMiscData%BathGrid_Ys(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_Ys.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%BathGrid_Ys = SrcMiscData%BathGrid_Ys
+ENDIF
+IF (ALLOCATED(SrcMiscData%BathGrid_npoints)) THEN
+  i1_l = LBOUND(SrcMiscData%BathGrid_npoints,1)
+  i1_u = UBOUND(SrcMiscData%BathGrid_npoints,1)
+  IF (.NOT. ALLOCATED(DstMiscData%BathGrid_npoints)) THEN 
+    ALLOCATE(DstMiscData%BathGrid_npoints(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_npoints.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%BathGrid_npoints = SrcMiscData%BathGrid_npoints
+ENDIF
  END SUBROUTINE MD_CopyMisc
 
  SUBROUTINE MD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -8131,6 +8185,18 @@ ENDIF
   CALL MD_DestroyContState( MiscData%xdTemp, ErrStat, ErrMsg )
 IF (ALLOCATED(MiscData%MDWrOutput)) THEN
   DEALLOCATE(MiscData%MDWrOutput)
+ENDIF
+IF (ALLOCATED(MiscData%BathymetryGrid)) THEN
+  DEALLOCATE(MiscData%BathymetryGrid)
+ENDIF
+IF (ALLOCATED(MiscData%BathGrid_Xs)) THEN
+  DEALLOCATE(MiscData%BathGrid_Xs)
+ENDIF
+IF (ALLOCATED(MiscData%BathGrid_Ys)) THEN
+  DEALLOCATE(MiscData%BathGrid_Ys)
+ENDIF
+IF (ALLOCATED(MiscData%BathGrid_npoints)) THEN
+  DEALLOCATE(MiscData%BathGrid_npoints)
 ENDIF
  END SUBROUTINE MD_DestroyMisc
 
@@ -8462,6 +8528,26 @@ ENDIF
   END IF
       Db_BufSz   = Db_BufSz   + 1  ! LastOutTime
       Re_BufSz   = Re_BufSz   + SIZE(InData%PtfmInit)  ! PtfmInit
+  Int_BufSz   = Int_BufSz   + 1     ! BathymetryGrid allocated yes/no
+  IF ( ALLOCATED(InData%BathymetryGrid) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! BathymetryGrid upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%BathymetryGrid)  ! BathymetryGrid
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BathGrid_Xs allocated yes/no
+  IF ( ALLOCATED(InData%BathGrid_Xs) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BathGrid_Xs upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%BathGrid_Xs)  ! BathGrid_Xs
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BathGrid_Ys allocated yes/no
+  IF ( ALLOCATED(InData%BathGrid_Ys) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BathGrid_Ys upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%BathGrid_Ys)  ! BathGrid_Ys
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BathGrid_npoints allocated yes/no
+  IF ( ALLOCATED(InData%BathGrid_npoints) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BathGrid_npoints upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%BathGrid_npoints)  ! BathGrid_npoints
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -9114,6 +9200,71 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%PtfmInit(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+  IF ( .NOT. ALLOCATED(InData%BathymetryGrid) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BathymetryGrid,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BathymetryGrid,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BathymetryGrid,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BathymetryGrid,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%BathymetryGrid,2), UBOUND(InData%BathymetryGrid,2)
+        DO i1 = LBOUND(InData%BathymetryGrid,1), UBOUND(InData%BathymetryGrid,1)
+          DbKiBuf(Db_Xferred) = InData%BathymetryGrid(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%BathGrid_Xs) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BathGrid_Xs,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BathGrid_Xs,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%BathGrid_Xs,1), UBOUND(InData%BathGrid_Xs,1)
+        DbKiBuf(Db_Xferred) = InData%BathGrid_Xs(i1)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%BathGrid_Ys) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BathGrid_Ys,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BathGrid_Ys,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%BathGrid_Ys,1), UBOUND(InData%BathGrid_Ys,1)
+        DbKiBuf(Db_Xferred) = InData%BathGrid_Ys(i1)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%BathGrid_npoints) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BathGrid_npoints,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BathGrid_npoints,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%BathGrid_npoints,1), UBOUND(InData%BathGrid_npoints,1)
+        IntKiBuf(Int_Xferred) = InData%BathGrid_npoints(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE MD_PackMisc
 
  SUBROUTINE MD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -9959,6 +10110,83 @@ ENDIF
       OutData%PtfmInit(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BathymetryGrid not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BathymetryGrid)) DEALLOCATE(OutData%BathymetryGrid)
+    ALLOCATE(OutData%BathymetryGrid(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BathymetryGrid.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%BathymetryGrid,2), UBOUND(OutData%BathymetryGrid,2)
+        DO i1 = LBOUND(OutData%BathymetryGrid,1), UBOUND(OutData%BathymetryGrid,1)
+          OutData%BathymetryGrid(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BathGrid_Xs not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BathGrid_Xs)) DEALLOCATE(OutData%BathGrid_Xs)
+    ALLOCATE(OutData%BathGrid_Xs(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BathGrid_Xs.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%BathGrid_Xs,1), UBOUND(OutData%BathGrid_Xs,1)
+        OutData%BathGrid_Xs(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BathGrid_Ys not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BathGrid_Ys)) DEALLOCATE(OutData%BathGrid_Ys)
+    ALLOCATE(OutData%BathGrid_Ys(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BathGrid_Ys.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%BathGrid_Ys,1), UBOUND(OutData%BathGrid_Ys,1)
+        OutData%BathGrid_Ys(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BathGrid_npoints not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BathGrid_npoints)) DEALLOCATE(OutData%BathGrid_npoints)
+    ALLOCATE(OutData%BathGrid_npoints(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BathGrid_npoints.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%BathGrid_npoints,1), UBOUND(OutData%BathGrid_npoints,1)
+        OutData%BathGrid_npoints(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE MD_UnPackMisc
 
  SUBROUTINE MD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )

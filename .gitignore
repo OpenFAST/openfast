@@ -49,3 +49,6 @@ vs-build/
 *.aux
 *.nlo
 *.log
+
+# .vs folders
+.vs

@@ -99,6 +99,7 @@ MODULE MoorDyn_IO
 
 
   ! PUBLIC :: MDIO_ReadInput
+   PUBLIC :: getBathymetry
    PUBLIC :: getCoefficientOrCurve
    PUBLIC :: DecomposeString
    PUBLIC :: MDIO_OpenOutput
@@ -110,6 +111,86 @@ MODULE MoorDyn_IO
 CONTAINS
 
 
+   SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, ErrStat3, ErrMsg3)
+   ! SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
+
+      CHARACTER(40),           INTENT(IN   )  :: inputString
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid (:,:)
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Xs (:)
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Ys (:)
+      ! INTEGER(IntKi),          INTENT(INOUT)  :: BathGrid_npoints
+
+      INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
+      CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None
+
+      INTEGER(IntKi)                   :: I
+      INTEGER(IntKi)                   :: UnCoef   ! unit number for coefficient input file
+      
+      INTEGER(IntKi)                   :: ErrStat4
+      CHARACTER(120)                   :: ErrMsg4         
+      CHARACTER(120)                   :: Line2
+
+      CHARACTER(20)                    :: nGridX_string  ! string to temporarily hold the nGridX string from Line2
+      CHARACTER(20)                    :: nGridY_string  ! string to temporarily hold the nGridY string from Line3
+      INTEGER(IntKi)                   :: nGridX         ! integer of the size of BathGrid_Xs
+      INTEGER(IntKi)                   :: nGridY         ! integer of the size of BathGrid_Ys
+
+
+      IF (SCAN(inputString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
+         ! If the input does not have any of these string values, let's treat it as a number but store in a matrix
+         ALLOCATE(BathGrid(1,1), STAT=ErrStat4)
+         READ(inputString, *, IOSTAT=ErrStat4) BathGrid(1,1)
+         
+         ALLOCATE(BathGrid_Xs(1), STAT=ErrStat4)
+         BathGrid_Xs(1) = 0.0_DbKi
+         
+         ALLOCATE(BathGrid_Ys(1), STAT=ErrStat4)
+         BathGrid_Ys(1) = 0.0_DbKi
+
+      ELSE ! otherwise interpret the input as a file name to load the bathymetry lookup data from
+         PRINT *, "found a letter in the depth value so will try to load a bathymetry file"
+         
+         ! load lookup table data from file
+         CALL GetNewUnit( UnCoef ) ! unit number for coefficient input file
+         CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )
+         cALL SetErrStat(ErrStat4, ErrMsg4, ErrStat3, ErrMsg3, 'MDIO_getBathymetry')
+
+         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first title line
+         READ(UnCoef,*,IOSTAT=ErrStat4) nGridX_string, nGridX  ! read in the second line as the number of x values in the BathGrid
+         READ(UnCoef,*,IOSTAT=ErrStat4) nGridY_string, nGridY  ! read in the third line as the number of y values in the BathGrid
+
+         ! Allocate the bathymetry matrix and associated grid x and y values
+         ALLOCATE(BathGrid(nGridX, nGridY), STAT=ErrStat4)
+         ALLOCATE(BathGrid_Xs(nGridX), STAT=ErrStat4)
+         ALLOCATE(BathGrid_Ys(nGridY), STAT=ErrStat4)
+
+         DO I = 1, nGridY+1  ! loop through each line in the rest of the bathymetry file
+
+            READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! read into a line and call it Line2
+            IF (ErrStat4 > 0) EXIT
+
+            IF (I==1) THEN    ! if it's the first line in the Bathymetry Grid, then it's a list of all the x values
+               READ(Line2, *,IOSTAT=ErrStat4) BathGrid_Xs
+            ELSE              ! if it's not the first line, then the first value is a y value and the rest are the depth values
+               READ(Line2, *,IOSTAT=ErrStat4) BathGrid_Ys(I-1), BathGrid(I-1,:)
+            ENDIF
+         
+         END DO
+
+         IF (I < 2) THEN
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3 = "Less than the minimum of 2 data lines found in file "//TRIM(inputString)
+            CLOSE (UnCoef)
+            RETURN
+         ELSE 
+            ! BathGrid_npoints = nGridX*nGridY       ! save the number of points in the grid
+            CLOSE (UnCoef)
+         END IF
+      
+      END IF
+
+   END SUBROUTINE getBathymetry
+   
 
    ! read in stiffness/damping coefficient or load nonlinear data file if applicable
    SUBROUTINE getCoefficientOrCurve(inputString, LineProp_c, LineProp_npoints, LineProp_Xs, LineProp_Ys, ErrStat3, ErrMsg3)
