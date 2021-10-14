@@ -2204,6 +2204,8 @@ CONTAINS
       
       CALL WrScr('   MoorDyn initialization completed.')
       
+      m%LastOutTime = -1.0_DbKi    ! set to nonzero to ensure that output happens at the start of simulation at t=0
+      
       ! TODO: add feature for automatic water depth increase based on max anchor depth!
 
    CONTAINS
