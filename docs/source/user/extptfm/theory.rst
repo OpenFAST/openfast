@@ -229,7 +229,9 @@ Coupling with another structure
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section illustrates how the equations of motions are set when a
-superelement is coupled to another structure. The superelement is here
+superelement is coupled to another structure. The modular approach
+presented below is the one implemented in OpenFAST.
+The superelement is here
 assumed to represent the substructure (and foundation), but it may be
 applied to other parts of the wind turbine, in particular the entire
 support structure. For simplicity, it is assumed here that all

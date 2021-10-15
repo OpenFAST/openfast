@@ -56,7 +56,7 @@ The input parameters are:
    initialized to 0.
 
 -  ``InitVelList``: list of size ``NInitVelList`` containing the initial
-   positions for the CB modes. This list is not read if
+   velocities for the CB modes. This list is not read if
    ``NInitVelList<=0``, in which case all the CB DOF velocities are
    initialized to 0.
 
@@ -183,7 +183,7 @@ Superelement input file (``FlexASCII``)
 ---------------------------------------
 
 This superelement input file is used to provide the system matrices and time series of loads 
-for superelements with an arbitrary number of Craib-Bampton modes.
+for superelements with an arbitrary number of Craig-Bampton modes.
 
 Example
 ^^^^^^^
@@ -268,9 +268,12 @@ The file follows the following specifications:
       after this keyword should each contain ``n``\ +2 values,
       corresponding to the time :math:`t`, the loads
       :math:`\boldsymbol{f}_r(t)` and the wave elevation
-      :math:`\eta(t)`. The number of lines :math:`N` should be
+      :math:`\eta(t)` NOTE: the wave elevation is intended for outputs
+      only, but it is not outputed yet.
+      The number of lines :math:`N` should be
       consistent with the definition of :math:`dt` and :math:`T` from
-      the header.
+      the header. The inputs are linearly  interpolated if the time step is
+      different from the time step of *ExtPtfm*.
 
 -  For now, the units information and the dimension information after
    the keywords are ignored. Only the dimension provided in the header
