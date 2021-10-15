@@ -84,3 +84,47 @@ NWTC Subroutine Library
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 - :download:`NWTC Library – short overview of subroutines and functions <../../OtherSupporting/NWTC_Library_Description.pdf>`
+
+
+Other Modules
+~~~~~~~~~~~~~
+The resources listed here relate to modules that do not currently
+have formal documentation or are contributed to OpenFAST from organizations
+external to NREL and the core OpenFAST team. As documentation is added,
+these resources will be moved to their appropriate location. If newer versions
+of the external resources are available, please open a `GitHub Issue <https://github.com/openfast/openfast/issues>`_
+with the information for the new documentation.
+
+- External Platform MCKF
+
+  - :download:`Superelement reduction of substructures for sequential load calculations in OpenFAST <https://iopscience.iop.org/article/10.1088/1742-6596/1452/1/012033/pdf>`
+
+- MAP++
+
+  - `Official MAP++ documentation <https://map-plus-plus.readthedocs.io/en/latest/index.html>`_
+  - :download:`Implementation of a Multi-Segmented, Quasi-Static Cable Model <../../OtherSupporting/MAP/cable_model_development.pdf>`
+
+- FEAMooring
+
+  - :download:`Theory Manual <../../OtherSupporting/FEAMooring/FEAM_Theory_Manual.pdf>`
+  - :download:`User's Guide <../../OtherSupporting/FEAMooring/FEAM_Users_Guide.pdf>`
+
+- MoorDyn
+
+  - `Official User’s Guide <http://www.matt-hall.ca/files/MoorDyn%20Users%20Guide%202017-08-16.pdf>`_
+
+- OrcaFlex:
+
+  - :download:`User’s Guide <../../OtherSupporting/OrcaFlex/User_Guide_OrcaFlexInterface.pdf>`
+
+- IceFloe
+
+  - :download:`Ice Load Project Final Technical Report <../../OtherSupporting/IceFloe/Ice_Load_Final_Report.pdf>`
+
+- IceDyn
+
+  - :download:`Draft: FAST Ice Module Manual <../../OtherSupporting/IceDyn/IceDyn_Manual.pdf>`
+
+- TurbSim
+
+  - :download:`User’s Guide <../../OtherSupporting/TurbSim/TurbSim_v2.00.pdf>`
