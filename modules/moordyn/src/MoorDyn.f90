@@ -115,6 +115,8 @@ CONTAINS
       CHARACTER(40)                :: TempString3          !
       CHARACTER(40)                :: TempString4          !
       CHARACTER(1024)              :: FileName             !
+
+      REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid
       
       
       CHARACTER(25)                 :: let1                ! strings used for splitting and parsing identifiers
@@ -917,7 +919,8 @@ CONTAINS
                      ELSE ! otherwise interpret the anchor depth value as a 'seabed' input, meaning the anchor should be on the seabed wherever the bathymetry says it should be
                         PRINT *, "Anchor depth set for seabed; Finding the right seabed depth based on bathymetry"
 
-                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), tempArray(3))
+                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth)
+                        tempArray(3) = -depth
                      
                      END IF
                         
