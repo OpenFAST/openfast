@@ -382,7 +382,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NAnchs = 0      !< number of Anchor type Connections []
     REAL(DbKi)  :: g = 9.81      !< gravitational constant (positive) [[m/s^2]]
     REAL(DbKi)  :: rhoW = 1025      !< density of seawater [[kg/m^3]]
-    REAL(DbKi)  :: WtrDpth      !< water depth [[m]]
     REAL(DbKi)  :: kBot      !< bottom stiffness [[Pa/m]]
     REAL(DbKi)  :: cBot      !< bottom damping [[Pa-s/m]]
     REAL(DbKi)  :: dtM0      !< desired mooring model time step [[s]]
@@ -10259,7 +10258,6 @@ ENDIF
     DstParamData%NAnchs = SrcParamData%NAnchs
     DstParamData%g = SrcParamData%g
     DstParamData%rhoW = SrcParamData%rhoW
-    DstParamData%WtrDpth = SrcParamData%WtrDpth
     DstParamData%kBot = SrcParamData%kBot
     DstParamData%cBot = SrcParamData%cBot
     DstParamData%dtM0 = SrcParamData%dtM0
@@ -10674,7 +10672,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NAnchs
       Db_BufSz   = Db_BufSz   + 1  ! g
       Db_BufSz   = Db_BufSz   + 1  ! rhoW
-      Db_BufSz   = Db_BufSz   + 1  ! WtrDpth
       Db_BufSz   = Db_BufSz   + 1  ! kBot
       Db_BufSz   = Db_BufSz   + 1  ! cBot
       Db_BufSz   = Db_BufSz   + 1  ! dtM0
@@ -10896,8 +10893,6 @@ ENDIF
     DbKiBuf(Db_Xferred) = InData%g
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%rhoW
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%WtrDpth
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%kBot
     Db_Xferred = Db_Xferred + 1
@@ -11454,8 +11449,6 @@ ENDIF
     OutData%g = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%rhoW = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-    OutData%WtrDpth = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%kBot = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
