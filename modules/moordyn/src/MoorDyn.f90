@@ -861,8 +861,18 @@ CONTAINS
                   ! parse out entries: Node Type X Y Z M V FX FY FZ CdA Ca 
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%ConnectList(l)%IdNum, tempString1, tempArray(1), &
-                        tempArray(2), tempArray(3), m%ConnectList(l)%conM, &
+                        tempArray(2), tempString4, m%ConnectList(l)%conM, &
                         m%ConnectList(l)%conV, m%ConnectList(l)%conCdA, m%ConnectList(l)%conCa
+                     
+                     IF (SCAN(tempString4, "seabed") == 0) THEN
+                        ! if the tempString of the anchor depth value does not have any letters that are found in the word seabed, it's a scalar depth value
+                        READ(tempString4, *, IOSTAT=ErrStat2) tempArray(3)
+                     ELSE ! otherwise interpret the anchor depth value as a 'seabed' input, meaning the anchor should be on the seabed wherever the bathymetry says it should be
+                        PRINT *, "Anchor depth set for seabed; Finding the right seabed depth based on bathymetry"
+
+                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), tempArray(3))
+                     
+                     END IF
                         
                      ! not used
                      m%ConnectList(l)%conFX = 0.0_DbKi 
