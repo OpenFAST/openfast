@@ -111,17 +111,16 @@ MODULE MoorDyn_IO
 CONTAINS
 
 
-   SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, ErrStat3, ErrMsg3)
+   SUBROUTINE getBathymetry(inputString, defaultDepth, BathGrid, BathGrid_Xs, BathGrid_Ys, ErrStat3, ErrMsg3)
    ! SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
 
-      CHARACTER(40),           INTENT(IN   )  :: inputString
+      CHARACTER(40),           INTENT(IN   )  :: inputString         ! string describing water depth or bathymetry filename
+      REAL(ReKi),              INTENT(IN   )  :: defaultDepth        ! depth to use if inputString is empty
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid (:,:)
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Xs (:)
       REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Ys (:)
-      ! INTEGER(IntKi),          INTENT(INOUT)  :: BathGrid_npoints
-
-      INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
-      CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat3            ! Error status of the operation
+      CHARACTER(*),            INTENT(  OUT)  :: ErrMsg3             ! Error message if ErrStat /= ErrID_None
 
       INTEGER(IntKi)                   :: I
       INTEGER(IntKi)                   :: UnCoef   ! unit number for coefficient input file
@@ -136,7 +135,18 @@ CONTAINS
       INTEGER(IntKi)                   :: nGridY         ! integer of the size of BathGrid_Ys
 
 
-      IF (SCAN(inputString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
+      IF (LEN_TRIM(inputString) == 0) THEN
+         ! If the input is empty (not provided), make the 1x1 bathymetry grid using the default depth
+         ALLOCATE(BathGrid(1,1), STAT=ErrStat4)
+         BathGrid(1,1) = DBLE(defaultDepth)
+         
+         ALLOCATE(BathGrid_Xs(1), STAT=ErrStat4)
+         BathGrid_Xs(1) = 0.0_DbKi
+         
+         ALLOCATE(BathGrid_Ys(1), STAT=ErrStat4)
+         BathGrid_Ys(1) = 0.0_DbKi     
+         
+      ELSE IF (SCAN(inputString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
          ! If the input does not have any of these string values, let's treat it as a number but store in a matrix
          ALLOCATE(BathGrid(1,1), STAT=ErrStat4)
          READ(inputString, *, IOSTAT=ErrStat4) BathGrid(1,1)

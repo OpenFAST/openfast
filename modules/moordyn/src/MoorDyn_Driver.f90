@@ -353,10 +353,7 @@ PROGRAM MoorDyn_Driver
    ! ---------------------------------------------------------------
    ! Set the initial input values
    ! ---------------------------------------------------------------
-   
-   ! zero the displacements to start with   <<< should this be based on what came out of MD_Init instead? <<<
-   MD_u(1)%CoupledKinematics(1)%TranslationDisp = 0.0_ReKi   
-   
+      
    ! zero the tension commands
    MD_u(1)%DeltaL = 0.0_ReKi
    MD_u(1)%DeltaLdot = 0.0_ReKi
@@ -369,13 +366,13 @@ PROGRAM MoorDyn_Driver
 !   ! now add some current in x for testing
 !   MD_u(1)%U(1,:) = 1.0
    
+   ! copy inputs to initialize input arrays for higher interp orders if applicable (it's not)
    DO i = 2, MD_interp_order + 1  
       CALL MD_CopyInput( MD_u(1), MD_u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call AbortIfFailed()
-   END DO
-  
+   END DO  
    DO i = 1, MD_interp_order + 1  
        MD_uTimes(i) = -(i - 1) * dtC
-   ENDDO
+   END DO
 
    ! get output at initialization (before time stepping)
    t = 0
