@@ -353,7 +353,7 @@ typedef   ^       ^                    IntKi               NConns         -     
 typedef   ^       ^                    IntKi               NAnchs         -     0    -   "number of Anchor type Connections"             ""
 typedef   ^       ^                    DbKi                g              -  9.81    -   "gravitational constant (positive)"   "[m/s^2]"
 typedef   ^       ^                    DbKi                rhoW           -  1025    -   "density of seawater"              "[kg/m^3]"
-typedef   ^       ^                    DbKi                WtrDpth        -     -    -   "water depth"                      "[m]"
+#typedef   ^       ^                    DbKi                WtrDpth        -     -    -   "water depth"                      "[m]"
 typedef   ^       ^                    DbKi                kBot           -     -    -   "bottom stiffness"                 "[Pa/m]"
 typedef   ^       ^                    DbKi                cBot           -     -    -   "bottom damping"                  "[Pa-s/m]"
 typedef   ^       ^                    DbKi                dtM0           -     -    -   "desired mooring model time step"          "[s]"

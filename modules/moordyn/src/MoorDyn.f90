@@ -108,6 +108,7 @@ CONTAINS
       CHARACTER(20)                :: LineOutString        ! String to temporarially hold characters specifying line output options
       CHARACTER(20)                :: OptString            ! String to temporarially hold name of option variable
       CHARACTER(40)                :: OptValue             ! String to temporarially hold value of options variable input
+      CHARACTER(40)                :: DepthValue           ! Temporarily stores the optional WtrDpth setting for MD, which could be a number or a filename
       INTEGER(IntKi)               :: nOpts                ! number of options lines in input file
       CHARACTER(40)                :: TempString1          !
       CHARACTER(40)                :: TempString2          !
@@ -164,7 +165,6 @@ CONTAINS
       p%dtM0                 = DTcoupling      ! default to the coupling interval (but will likely need to be smaller)
       p%g                    = InitInp%g
       p%rhoW                 = InitInp%rhoW
-      p%WtrDpth              = InitInp%WtrDepth
       ! TODO:   add MSL2SWL from OpenFAST <<<<
       ! set the following to some defaults
       p%kBot                 = 3.0E6
@@ -175,6 +175,8 @@ CONTAINS
       InputFileDat%threshIC  = 0.01_ReKi
       p%WaterKin             = 0_IntKi
       p%dtOut                = 0.0_DbKi
+      DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
+                       ! DepthValue and InitInp%WtrDepth are processed later by getBathymetry.
       
       
       m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
@@ -372,11 +374,52 @@ CONTAINS
                
             else if (INDEX(Line, "OPTIONS") > 0) then ! if options header
 
-               ! don't skip any lines (no column headers for the options section)
-
-               ! find how many options have been specified
+               IF (wordy > 0) print *, "Reading Options"
+               
+               ! don't skip any lines (no column headers for the options section)               
+               ! process each line in this section
                Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  
+                  ! parse out entries:  value, option keyword
+                  READ(Line,*,IOSTAT=ErrStat2) OptValue, OptString  ! look at first two entries, ignore remaining words in line, which should be comments
+                  IF ( ErrStat2 /= 0 ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Failed to read options.', ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line had the error
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+                              
+                  CALL Conv2UC(OptString)
+
+                  ! check all possible options types and see if OptString is one of them, in which case set the variable.
+                  if ( OptString == 'DTM') THEN
+                     read (OptValue,*) p%dtM0 
+                  else if ( OptString == 'G') then
+                     read (OptValue,*) p%g
+                  else if ( OptString == 'RHOW') then
+                     read (OptValue,*) p%rhoW
+                  else if ( OptString == 'WTRDPTH') then
+                     read (OptValue,*) DepthValue    ! water depth input read in as a string to be processed by getBathymetry
+                  else if ( OptString == 'KBOT')  then
+                     read (OptValue,*) p%kBot
+                  else if ( OptString == 'CBOT')  then
+                     read (OptValue,*) p%cBot
+                  else if ( OptString == 'DTIC')  then
+                     read (OptValue,*) InputFileDat%dtIC
+                  else if ( OptString == 'TMAXIC')  then
+                     read (OptValue,*) InputFileDat%TMaxIC
+                  else if ( OptString == 'CDSCALEIC')  then
+                     read (OptValue,*) InputFileDat%CdScaleIC
+                  else if ( OptString == 'THRESHIC')  then
+                     read (OptValue,*) InputFileDat%threshIC
+                  else if ( OptString == 'WATERKIN')  then
+                     read (OptValue,*) p%WaterKin
+                  else if ( OptString == 'DTOUT')  then
+                     read (OptValue,*) p%dtOut
+                  else
+                     CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
+                  end if
+
                   nOpts = nOpts + 1
                   Line = NextLine(i)
                END DO
@@ -409,6 +452,9 @@ CONTAINS
       IF (wordy > 0) print *, "  Identified ", p%nLines      , "Lines in input file."
       IF (wordy > 0) print *, "  Identified ", nOpts         , "Options in input file."
 
+
+      ! set up seabed bathymetry
+      CALL getBathymetry(DepthValue, InitInp%WtrDepth, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, ErrStat2, ErrMsg2)
 
 
       ! ----------------------------- misc checks to be sorted -----------------------------
@@ -478,6 +524,7 @@ CONTAINS
       do while ( i <= FileInfo_In%NumLines )
       
          if (INDEX(Line, "---") > 0) then ! look for a header line
+             
 
             !-------------------------------------------------------------------------------------------
             if ( ( INDEX(Line, "LINE DICTIONARY") > 0) .or. ( INDEX(Line, "LINE TYPES") > 0) ) then ! if line dictionary header
@@ -1235,66 +1282,6 @@ CONTAINS
                END DO
                
                
-            !-------------------------------------------------------------------------------------------
-            else if (INDEX(Line, "OPTIONS") > 0) then ! if options header
-
-               IF (wordy > 0) print *, "Reading Options"
-               
-               ! (don't skip any lines)
-               
-               ! process each line
-               DO l = 1,nOpts
-                  
-                  !read into a line
-                  Line = NextLine(i)
-
-                  ! parse out entries:  value, option keyword
-                  READ(Line,*,IOSTAT=ErrStat2) OptValue, OptString  ! look at first two entries, ignore remaining words in line, which should be comments
-                  
-
-                  IF ( ErrStat2 /= 0 ) THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Failed to read options.', ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line had the error
-                     CALL CleanUp()
-                     RETURN
-                  END IF
-                              
-                  CALL Conv2UC(OptString)
-
-                  ! check all possible options types and see if OptString is one of them, in which case set the variable.
-                  if ( OptString == 'DTM') THEN
-                     read (OptValue,*) p%dtM0 
-                  else if ( OptString == 'G') then
-                     read (OptValue,*) p%g
-                  else if ( OptString == 'RHOW') then
-                     read (OptValue,*) p%rhoW
-                  ! else if ( OptString == 'WTRDPTH') then
-                     ! read (OptValue,*) p%WtrDpth
-                  else if ( OptString == 'WTRDPTH') then
-                     CALL getBathymetry(OptValue, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, ErrStat2, ErrMsg2)
-                     ! CALL getBathymetry(OptValue, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, m%BathGrid_npoints, ErrStat2, ErrMsg2)
-                  else if ( OptString == 'KBOT')  then
-                     read (OptValue,*) p%kBot
-                  else if ( OptString == 'CBOT')  then
-                     read (OptValue,*) p%cBot
-                  else if ( OptString == 'DTIC')  then
-                     read (OptValue,*) InputFileDat%dtIC
-                  else if ( OptString == 'TMAXIC')  then
-                     read (OptValue,*) InputFileDat%TMaxIC
-                  else if ( OptString == 'CDSCALEIC')  then
-                     read (OptValue,*) InputFileDat%CdScaleIC
-                  else if ( OptString == 'THRESHIC')  then
-                     read (OptValue,*) InputFileDat%threshIC
-                  else if ( OptString == 'WATERKIN')  then
-                     read (OptValue,*) p%WaterKin
-                  else if ( OptString == 'DTOUT')  then
-                     read (OptValue,*) p%dtOut
-                  else
-                     CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
-                  end if
-
-               END DO
-
-
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "OUTPUT") > 0) then ! if output header
 
