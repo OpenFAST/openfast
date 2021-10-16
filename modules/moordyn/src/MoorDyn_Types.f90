@@ -70,16 +70,19 @@ IMPLICIT NONE
     REAL(DbKi)  :: d      !< volume-equivalent diameter [[m]]
     REAL(DbKi)  :: w      !< per-length weight in air [[kg/m]]
     REAL(DbKi)  :: EA      !< axial stiffness [[N]]
+    REAL(DbKi)  :: EA_D      !< axial stiffness [[N]]
     REAL(DbKi)  :: BA      !< internal damping coefficient times area [[N-s]]
+    REAL(DbKi)  :: BA_D      !< internal damping coefficient times area [[N-s]]
     REAL(DbKi)  :: EI      !< bending stiffness [[N-m]]
     REAL(DbKi)  :: Can      !< transverse added mass coefficient [-]
     REAL(DbKi)  :: Cat      !< tangential added mass coefficient [-]
     REAL(DbKi)  :: Cdn      !< transverse drag coefficient [-]
     REAL(DbKi)  :: Cdt      !< tangential drag coefficient [-]
+    INTEGER(IntKi)  :: ElasticMod      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
     INTEGER(IntKi)  :: nEApoints = 0      !< number of values in stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffXs      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffYs      !< y array for stress-strain lookup table [-]
-    INTEGER(IntKi)  :: nBpoints = 0      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
+    INTEGER(IntKi)  :: nBApoints = 0      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: dampXs      !< x array for stress-strainrate lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: dampYs      !< y array for stress-strainrate lookup table	 [-]
     INTEGER(IntKi)  :: nEIpoints = 0      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
@@ -225,6 +228,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_Line
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this Line [-]
     INTEGER(IntKi)  :: PropsIdNum      !< the IdNum of the associated line properties [-]
+    INTEGER(IntKi)  :: ElasticMod      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: CtrlChan = 0      !< index of control channel that will drive line active tensioning (0 for none) [-]
     INTEGER(IntKi)  :: FairConnect      !< IdNum of Connection at fairlead [-]
@@ -235,21 +239,34 @@ IMPLICIT NONE
     REAL(DbKi)  :: UnstrLen      !< unstretched length of the line [-]
     REAL(DbKi)  :: rho      !< density [[kg/m3]]
     REAL(DbKi)  :: d      !< volume-equivalent diameter [[m]]
-    REAL(DbKi)  :: EA      !< stiffness [[N]]
-    REAL(DbKi)  :: EI      !< bending stiffness [[N-m]]
-    REAL(DbKi)  :: BA      !< internal damping coefficient times area for this line only [[N-s]]
+    REAL(DbKi)  :: EA = 0      !< stiffness [[N]]
+    REAL(DbKi)  :: EA_D = 0      !< dynamic stiffness when using viscoelastic model [[N]]
+    REAL(DbKi)  :: BA = 0      !< internal damping coefficient times area for this line only [[N-s]]
+    REAL(DbKi)  :: BA_D = 0      !< dynamic internal damping coefficient times area when using viscoelastic model [[N-s]]
+    REAL(DbKi)  :: EI = 0      !< bending stiffness [[N-m]]
     REAL(DbKi)  :: Can      !<  [[-]]
     REAL(DbKi)  :: Cat      !<  [[-]]
     REAL(DbKi)  :: Cdn      !<  [[-]]
     REAL(DbKi)  :: Cdt      !<  [[-]]
+    INTEGER(IntKi)  :: nEApoints = 0      !< number of values in stress-strain lookup table (0 means using constant E) [-]
+    REAL(DbKi) , DIMENSION(1:30)  :: stiffXs      !< x array for stress-strain lookup table (up to nCoef) [-]
+    REAL(DbKi) , DIMENSION(1:30)  :: stiffYs      !< y array for stress-strain lookup table [-]
+    INTEGER(IntKi)  :: nBApoints = 0      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
+    REAL(DbKi) , DIMENSION(1:30)  :: dampXs      !< x array for stress-strainrate lookup table (up to nCoef) [-]
+    REAL(DbKi) , DIMENSION(1:30)  :: dampYs      !< y array for stress-strainrate lookup table	 [-]
+    INTEGER(IntKi)  :: nEIpoints = 0      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
+    REAL(DbKi) , DIMENSION(1:30)  :: bstiffXs      !< x array for stress-strain lookup table (up to nCoef) [-]
+    REAL(DbKi) , DIMENSION(1:30)  :: bstiffYs      !< y array for stress-strain lookup table [-]
     REAL(DbKi)  :: time      !< current time [[s]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: r      !< node positions [-]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: rd      !< node velocities [-]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: q      !< node tangent vectors [-]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: qs      !< segment tangent vectors [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: l      !< segment unstretched length [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: ld      !< segment unstretched length rate of change (used in active tensioning) [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: lstr      !< segment stretched length [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: lstrd      !< segment change in stretched length [[m/s]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: dl_S      !< segment stretch attributed to static stiffness portion [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: V      !< segment volume [[m^3]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: U      !< water velocity at node [[m/s]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Ud      !< water acceleration at node [[m/s^2]]
@@ -1401,16 +1418,19 @@ ENDIF
     DstLinePropData%d = SrcLinePropData%d
     DstLinePropData%w = SrcLinePropData%w
     DstLinePropData%EA = SrcLinePropData%EA
+    DstLinePropData%EA_D = SrcLinePropData%EA_D
     DstLinePropData%BA = SrcLinePropData%BA
+    DstLinePropData%BA_D = SrcLinePropData%BA_D
     DstLinePropData%EI = SrcLinePropData%EI
     DstLinePropData%Can = SrcLinePropData%Can
     DstLinePropData%Cat = SrcLinePropData%Cat
     DstLinePropData%Cdn = SrcLinePropData%Cdn
     DstLinePropData%Cdt = SrcLinePropData%Cdt
+    DstLinePropData%ElasticMod = SrcLinePropData%ElasticMod
     DstLinePropData%nEApoints = SrcLinePropData%nEApoints
     DstLinePropData%stiffXs = SrcLinePropData%stiffXs
     DstLinePropData%stiffYs = SrcLinePropData%stiffYs
-    DstLinePropData%nBpoints = SrcLinePropData%nBpoints
+    DstLinePropData%nBApoints = SrcLinePropData%nBApoints
     DstLinePropData%dampXs = SrcLinePropData%dampXs
     DstLinePropData%dampYs = SrcLinePropData%dampYs
     DstLinePropData%nEIpoints = SrcLinePropData%nEIpoints
@@ -1469,16 +1489,19 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! d
       Db_BufSz   = Db_BufSz   + 1  ! w
       Db_BufSz   = Db_BufSz   + 1  ! EA
+      Db_BufSz   = Db_BufSz   + 1  ! EA_D
       Db_BufSz   = Db_BufSz   + 1  ! BA
+      Db_BufSz   = Db_BufSz   + 1  ! BA_D
       Db_BufSz   = Db_BufSz   + 1  ! EI
       Db_BufSz   = Db_BufSz   + 1  ! Can
       Db_BufSz   = Db_BufSz   + 1  ! Cat
       Db_BufSz   = Db_BufSz   + 1  ! Cdn
       Db_BufSz   = Db_BufSz   + 1  ! Cdt
+      Int_BufSz  = Int_BufSz  + 1  ! ElasticMod
       Int_BufSz  = Int_BufSz  + 1  ! nEApoints
       Db_BufSz   = Db_BufSz   + SIZE(InData%stiffXs)  ! stiffXs
       Db_BufSz   = Db_BufSz   + SIZE(InData%stiffYs)  ! stiffYs
-      Int_BufSz  = Int_BufSz  + 1  ! nBpoints
+      Int_BufSz  = Int_BufSz  + 1  ! nBApoints
       Db_BufSz   = Db_BufSz   + SIZE(InData%dampXs)  ! dampXs
       Db_BufSz   = Db_BufSz   + SIZE(InData%dampYs)  ! dampYs
       Int_BufSz  = Int_BufSz  + 1  ! nEIpoints
@@ -1523,7 +1546,11 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%EA
     Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%EA_D
+    Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%BA
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%BA_D
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%EI
     Db_Xferred = Db_Xferred + 1
@@ -1535,6 +1562,8 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%Cdt
     Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%ElasticMod
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nEApoints
     Int_Xferred = Int_Xferred + 1
     DO i1 = LBOUND(InData%stiffXs,1), UBOUND(InData%stiffXs,1)
@@ -1545,7 +1574,7 @@ ENDIF
       DbKiBuf(Db_Xferred) = InData%stiffYs(i1)
       Db_Xferred = Db_Xferred + 1
     END DO
-    IntKiBuf(Int_Xferred) = InData%nBpoints
+    IntKiBuf(Int_Xferred) = InData%nBApoints
     Int_Xferred = Int_Xferred + 1
     DO i1 = LBOUND(InData%dampXs,1), UBOUND(InData%dampXs,1)
       DbKiBuf(Db_Xferred) = InData%dampXs(i1)
@@ -1606,7 +1635,11 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%EA = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
+    OutData%EA_D = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     OutData%BA = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%BA_D = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%EI = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
@@ -1618,6 +1651,8 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%Cdt = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
+    OutData%ElasticMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%nEApoints = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     i1_l = LBOUND(OutData%stiffXs,1)
@@ -1632,7 +1667,7 @@ ENDIF
       OutData%stiffYs(i1) = DbKiBuf(Db_Xferred)
       Db_Xferred = Db_Xferred + 1
     END DO
-    OutData%nBpoints = IntKiBuf(Int_Xferred)
+    OutData%nBApoints = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     i1_l = LBOUND(OutData%dampXs,1)
     i1_u = UBOUND(OutData%dampXs,1)
@@ -4305,6 +4340,7 @@ ENDIF
    ErrMsg  = ""
     DstLineData%IdNum = SrcLineData%IdNum
     DstLineData%PropsIdNum = SrcLineData%PropsIdNum
+    DstLineData%ElasticMod = SrcLineData%ElasticMod
     DstLineData%OutFlagList = SrcLineData%OutFlagList
     DstLineData%CtrlChan = SrcLineData%CtrlChan
     DstLineData%FairConnect = SrcLineData%FairConnect
@@ -4316,12 +4352,23 @@ ENDIF
     DstLineData%rho = SrcLineData%rho
     DstLineData%d = SrcLineData%d
     DstLineData%EA = SrcLineData%EA
-    DstLineData%EI = SrcLineData%EI
+    DstLineData%EA_D = SrcLineData%EA_D
     DstLineData%BA = SrcLineData%BA
+    DstLineData%BA_D = SrcLineData%BA_D
+    DstLineData%EI = SrcLineData%EI
     DstLineData%Can = SrcLineData%Can
     DstLineData%Cat = SrcLineData%Cat
     DstLineData%Cdn = SrcLineData%Cdn
     DstLineData%Cdt = SrcLineData%Cdt
+    DstLineData%nEApoints = SrcLineData%nEApoints
+    DstLineData%stiffXs = SrcLineData%stiffXs
+    DstLineData%stiffYs = SrcLineData%stiffYs
+    DstLineData%nBApoints = SrcLineData%nBApoints
+    DstLineData%dampXs = SrcLineData%dampXs
+    DstLineData%dampYs = SrcLineData%dampYs
+    DstLineData%nEIpoints = SrcLineData%nEIpoints
+    DstLineData%bstiffXs = SrcLineData%bstiffXs
+    DstLineData%bstiffYs = SrcLineData%bstiffYs
     DstLineData%time = SrcLineData%time
 IF (ALLOCATED(SrcLineData%r)) THEN
   i1_l = LBOUND(SrcLineData%r,1)
@@ -4364,6 +4411,20 @@ IF (ALLOCATED(SrcLineData%q)) THEN
     END IF
   END IF
     DstLineData%q = SrcLineData%q
+ENDIF
+IF (ALLOCATED(SrcLineData%qs)) THEN
+  i1_l = LBOUND(SrcLineData%qs,1)
+  i1_u = UBOUND(SrcLineData%qs,1)
+  i2_l = LBOUND(SrcLineData%qs,2)
+  i2_u = UBOUND(SrcLineData%qs,2)
+  IF (.NOT. ALLOCATED(DstLineData%qs)) THEN 
+    ALLOCATE(DstLineData%qs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%qs.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstLineData%qs = SrcLineData%qs
 ENDIF
 IF (ALLOCATED(SrcLineData%l)) THEN
   i1_l = LBOUND(SrcLineData%l,1)
@@ -4412,6 +4473,18 @@ IF (ALLOCATED(SrcLineData%lstrd)) THEN
     END IF
   END IF
     DstLineData%lstrd = SrcLineData%lstrd
+ENDIF
+IF (ALLOCATED(SrcLineData%dl_S)) THEN
+  i1_l = LBOUND(SrcLineData%dl_S,1)
+  i1_u = UBOUND(SrcLineData%dl_S,1)
+  IF (.NOT. ALLOCATED(DstLineData%dl_S)) THEN 
+    ALLOCATE(DstLineData%dl_S(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%dl_S.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstLineData%dl_S = SrcLineData%dl_S
 ENDIF
 IF (ALLOCATED(SrcLineData%V)) THEN
   i1_l = LBOUND(SrcLineData%V,1)
@@ -4670,6 +4743,9 @@ ENDIF
 IF (ALLOCATED(LineData%q)) THEN
   DEALLOCATE(LineData%q)
 ENDIF
+IF (ALLOCATED(LineData%qs)) THEN
+  DEALLOCATE(LineData%qs)
+ENDIF
 IF (ALLOCATED(LineData%l)) THEN
   DEALLOCATE(LineData%l)
 ENDIF
@@ -4681,6 +4757,9 @@ IF (ALLOCATED(LineData%lstr)) THEN
 ENDIF
 IF (ALLOCATED(LineData%lstrd)) THEN
   DEALLOCATE(LineData%lstrd)
+ENDIF
+IF (ALLOCATED(LineData%dl_S)) THEN
+  DEALLOCATE(LineData%dl_S)
 ENDIF
 IF (ALLOCATED(LineData%V)) THEN
   DEALLOCATE(LineData%V)
@@ -4772,6 +4851,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! IdNum
       Int_BufSz  = Int_BufSz  + 1  ! PropsIdNum
+      Int_BufSz  = Int_BufSz  + 1  ! ElasticMod
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutFlagList)  ! OutFlagList
       Int_BufSz  = Int_BufSz  + 1  ! CtrlChan
       Int_BufSz  = Int_BufSz  + 1  ! FairConnect
@@ -4783,12 +4863,23 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! rho
       Db_BufSz   = Db_BufSz   + 1  ! d
       Db_BufSz   = Db_BufSz   + 1  ! EA
-      Db_BufSz   = Db_BufSz   + 1  ! EI
+      Db_BufSz   = Db_BufSz   + 1  ! EA_D
       Db_BufSz   = Db_BufSz   + 1  ! BA
+      Db_BufSz   = Db_BufSz   + 1  ! BA_D
+      Db_BufSz   = Db_BufSz   + 1  ! EI
       Db_BufSz   = Db_BufSz   + 1  ! Can
       Db_BufSz   = Db_BufSz   + 1  ! Cat
       Db_BufSz   = Db_BufSz   + 1  ! Cdn
       Db_BufSz   = Db_BufSz   + 1  ! Cdt
+      Int_BufSz  = Int_BufSz  + 1  ! nEApoints
+      Db_BufSz   = Db_BufSz   + SIZE(InData%stiffXs)  ! stiffXs
+      Db_BufSz   = Db_BufSz   + SIZE(InData%stiffYs)  ! stiffYs
+      Int_BufSz  = Int_BufSz  + 1  ! nBApoints
+      Db_BufSz   = Db_BufSz   + SIZE(InData%dampXs)  ! dampXs
+      Db_BufSz   = Db_BufSz   + SIZE(InData%dampYs)  ! dampYs
+      Int_BufSz  = Int_BufSz  + 1  ! nEIpoints
+      Db_BufSz   = Db_BufSz   + SIZE(InData%bstiffXs)  ! bstiffXs
+      Db_BufSz   = Db_BufSz   + SIZE(InData%bstiffYs)  ! bstiffYs
       Db_BufSz   = Db_BufSz   + 1  ! time
   Int_BufSz   = Int_BufSz   + 1     ! r allocated yes/no
   IF ( ALLOCATED(InData%r) ) THEN
@@ -4804,6 +4895,11 @@ ENDIF
   IF ( ALLOCATED(InData%q) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! q upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%q)  ! q
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! qs allocated yes/no
+  IF ( ALLOCATED(InData%qs) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! qs upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%qs)  ! qs
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! l allocated yes/no
   IF ( ALLOCATED(InData%l) ) THEN
@@ -4824,6 +4920,11 @@ ENDIF
   IF ( ALLOCATED(InData%lstrd) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! lstrd upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%lstrd)  ! lstrd
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! dl_S allocated yes/no
+  IF ( ALLOCATED(InData%dl_S) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! dl_S upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%dl_S)  ! dl_S
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! V allocated yes/no
   IF ( ALLOCATED(InData%V) ) THEN
@@ -4944,6 +5045,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%PropsIdNum
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%ElasticMod
+    Int_Xferred = Int_Xferred + 1
     DO i1 = LBOUND(InData%OutFlagList,1), UBOUND(InData%OutFlagList,1)
       IntKiBuf(Int_Xferred) = InData%OutFlagList(i1)
       Int_Xferred = Int_Xferred + 1
@@ -4968,9 +5071,13 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%EA
     Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%EI
+    DbKiBuf(Db_Xferred) = InData%EA_D
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%BA
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%BA_D
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%EI
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%Can
     Db_Xferred = Db_Xferred + 1
@@ -4980,6 +5087,36 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%Cdt
     Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%nEApoints
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%stiffXs,1), UBOUND(InData%stiffXs,1)
+      DbKiBuf(Db_Xferred) = InData%stiffXs(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%stiffYs,1), UBOUND(InData%stiffYs,1)
+      DbKiBuf(Db_Xferred) = InData%stiffYs(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    IntKiBuf(Int_Xferred) = InData%nBApoints
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%dampXs,1), UBOUND(InData%dampXs,1)
+      DbKiBuf(Db_Xferred) = InData%dampXs(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%dampYs,1), UBOUND(InData%dampYs,1)
+      DbKiBuf(Db_Xferred) = InData%dampYs(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    IntKiBuf(Int_Xferred) = InData%nEIpoints
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%bstiffXs,1), UBOUND(InData%bstiffXs,1)
+      DbKiBuf(Db_Xferred) = InData%bstiffXs(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%bstiffYs,1), UBOUND(InData%bstiffYs,1)
+      DbKiBuf(Db_Xferred) = InData%bstiffYs(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     DbKiBuf(Db_Xferred) = InData%time
     Db_Xferred = Db_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%r) ) THEN
@@ -5042,6 +5179,26 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%qs) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%qs,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%qs,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%qs,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%qs,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%qs,2), UBOUND(InData%qs,2)
+        DO i1 = LBOUND(InData%qs,1), UBOUND(InData%qs,1)
+          DbKiBuf(Db_Xferred) = InData%qs(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%l) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -5099,6 +5256,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%lstrd,1), UBOUND(InData%lstrd,1)
         DbKiBuf(Db_Xferred) = InData%lstrd(i1)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%dl_S) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dl_S,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dl_S,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%dl_S,1), UBOUND(InData%dl_S,1)
+        DbKiBuf(Db_Xferred) = InData%dl_S(i1)
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
@@ -5477,6 +5649,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%PropsIdNum = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%ElasticMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     i1_l = LBOUND(OutData%OutFlagList,1)
     i1_u = UBOUND(OutData%OutFlagList,1)
     DO i1 = LBOUND(OutData%OutFlagList,1), UBOUND(OutData%OutFlagList,1)
@@ -5503,9 +5677,13 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%EA = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%EI = DbKiBuf(Db_Xferred)
+    OutData%EA_D = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%BA = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%BA_D = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%EI = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%Can = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
@@ -5515,6 +5693,48 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%Cdt = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
+    OutData%nEApoints = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%stiffXs,1)
+    i1_u = UBOUND(OutData%stiffXs,1)
+    DO i1 = LBOUND(OutData%stiffXs,1), UBOUND(OutData%stiffXs,1)
+      OutData%stiffXs(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%stiffYs,1)
+    i1_u = UBOUND(OutData%stiffYs,1)
+    DO i1 = LBOUND(OutData%stiffYs,1), UBOUND(OutData%stiffYs,1)
+      OutData%stiffYs(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    OutData%nBApoints = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%dampXs,1)
+    i1_u = UBOUND(OutData%dampXs,1)
+    DO i1 = LBOUND(OutData%dampXs,1), UBOUND(OutData%dampXs,1)
+      OutData%dampXs(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%dampYs,1)
+    i1_u = UBOUND(OutData%dampYs,1)
+    DO i1 = LBOUND(OutData%dampYs,1), UBOUND(OutData%dampYs,1)
+      OutData%dampYs(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    OutData%nEIpoints = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%bstiffXs,1)
+    i1_u = UBOUND(OutData%bstiffXs,1)
+    DO i1 = LBOUND(OutData%bstiffXs,1), UBOUND(OutData%bstiffXs,1)
+      OutData%bstiffXs(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%bstiffYs,1)
+    i1_u = UBOUND(OutData%bstiffYs,1)
+    DO i1 = LBOUND(OutData%bstiffYs,1), UBOUND(OutData%bstiffYs,1)
+      OutData%bstiffYs(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     OutData%time = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! r not allocated
@@ -5582,6 +5802,29 @@ ENDIF
       DO i2 = LBOUND(OutData%q,2), UBOUND(OutData%q,2)
         DO i1 = LBOUND(OutData%q,1), UBOUND(OutData%q,1)
           OutData%q(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! qs not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%qs)) DEALLOCATE(OutData%qs)
+    ALLOCATE(OutData%qs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%qs.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%qs,2), UBOUND(OutData%qs,2)
+        DO i1 = LBOUND(OutData%qs,1), UBOUND(OutData%qs,1)
+          OutData%qs(i1,i2) = DbKiBuf(Db_Xferred)
           Db_Xferred = Db_Xferred + 1
         END DO
       END DO
@@ -5655,6 +5898,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%lstrd,1), UBOUND(OutData%lstrd,1)
         OutData%lstrd(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dl_S not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%dl_S)) DEALLOCATE(OutData%dl_S)
+    ALLOCATE(OutData%dl_S(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dl_S.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%dl_S,1), UBOUND(OutData%dl_S,1)
+        OutData%dl_S(i1) = DbKiBuf(Db_Xferred)
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF

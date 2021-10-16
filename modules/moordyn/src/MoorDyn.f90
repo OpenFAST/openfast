@@ -114,6 +114,7 @@ CONTAINS
       CHARACTER(40)                :: TempString2          !
       CHARACTER(40)                :: TempString3          !
       CHARACTER(40)                :: TempString4          !
+      CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
       CHARACTER(1024)              :: FileName             !
 
       REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid
@@ -556,15 +557,40 @@ CONTAINS
                    
                    !TODO: add check if %name is maximum length, which might indicate the full name was too long <<<
                    
-                   ! process stiffness, damping, and bending coefficients (which might use lookup tables)
-                   CALL getCoefficientOrCurve(tempString1, m%LineTypeList(l)%EA,        &
+                   ! process stiffness coefficients
+                   CALL SplitByBars(tempString1, N, tempStrings)
+                   if (N > 2) then
+                      CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 2 (comma-separated) values.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                   else if (N==2) then                               ! visco-elastic case!
+                      m%LineTypeList(l)%ElasticMod = 2
+                      read(tempStrings(2), *) m%LineTypeList(l)%EA_D 
+                   else
+                     m%LineTypeList(l)%ElasticMod = 1                ! normal case
+                   end if
+                   ! get the regular/static coefficient or relation in all cases (can be from a lookup table)
+                   CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%EA,     &
                                                            m%LineTypeList(l)%nEApoints, &
                                                            m%LineTypeList(l)%stiffXs,   &
                                                            m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2)
-                   CALL getCoefficientOrCurve(tempString2, m%LineTypeList(l)%BA,        &
-                                                           m%LineTypeList(l)%nBpoints,  &
+                                                           
+                   ! process damping coefficients 
+                   CALL SplitByBars(tempString2, N, tempStrings)
+                   if (N > m%LineTypeList(l)%ElasticMod) then
+                      CALL SetErrStat( ErrID_Fatal, 'A line type BA entry cannot have more (comma-separated) values its EA entry.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                   else if (N==2) then                               ! visco-elastic case when two BA values provided
+                      read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
+                   else if (m%LineTypeList(l)%ElasticMod == 2) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
+                      print *, "Warning, viscoelastic model being used with zero damping on the dynamic stiffness."
+                   end if
+                   ! get the regular/static coefficient or relation in all cases (can be from a lookup table?)
+                   CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%BA,     &
+                                                           m%LineTypeList(l)%nBApoints,  &
                                                            m%LineTypeList(l)%dampXs,    &
                                                            m%LineTypeList(l)%dampYs,   ErrStat2, ErrMsg2)
+                                                           
+                   ! process bending stiffness coefficients (which might use lookup tables)
                    CALL getCoefficientOrCurve(tempString3, m%LineTypeList(l)%EI,        &
                                                            m%LineTypeList(l)%nEIpoints, &
                                                            m%LineTypeList(l)%bstiffXs,  &
@@ -1085,9 +1111,14 @@ CONTAINS
                   
                   ! account for states of line
                   m%LineStateIs1(l) = Nx + 1
-                  m%LineStateIsN(l) = Nx + 6*m%LineList(l)%N - 6
-                  Nx = Nx + 6*(m%LineList(l)%N - 1)       
-                
+                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod == 2) then
+                     Nx = Nx + 7*m%LineList(l)%N - 6       ! if using viscoelastic model, need one more state per segment
+                     m%LineStateIsN(l) = Nx          
+                  else
+                     Nx = Nx + 6*m%LineList(l)%N - 6       ! normal case, just 6 states per internal node   
+                     m%LineStateIsN(l) = Nx          
+                  end if
+                  
                   ! Process attachment identfiers and attach line ends 
                   
                   ! First for the anchor (or end A)...
@@ -2029,6 +2060,14 @@ CONTAINS
             END DO
 !            print *, m%LineList(l)%r(:,I)
          END DO
+               
+         ! if using viscoelastic model, initialize the internal states
+         if (m%LineList(l)%ElasticMod == 2) then
+            do I = 1,N
+               x%states(m%LineStateIs1(l) + 6*N-6 + I-1) = m%LineList(l)%dl_1(I)   ! should be zero
+            end do
+         end if
+         
 
       END DO    !l = 1, p%NLines
 
@@ -2915,6 +2954,8 @@ CONTAINS
       ! call ground body to update all the fixed things
       CALL Body_DoRHS(m%GroundBody, m, p)
       
+      
+      !print *, t, m%LineList(1)%T(1,9), m%LineList(1)%T(2,9), m%LineList(1)%T(3,9), m%LineList(3)%T(1,9), m%LineList(3)%T(2,9), m%LineList(3)%T(3,9)
 
    
    END SUBROUTINE MD_CalcContStateDeriv
@@ -3195,10 +3236,10 @@ CONTAINS
       INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(4)                         :: J             ! Generic index
-      INTEGER(4)                         :: K             ! Generic index
+      INTEGER(4)                         :: I, J, K       ! Generic index
       INTEGER(IntKi)                     :: N
       REAL(DbKi)                         :: temp
+
 
       N = Line%N  ! number of segments in this line (for code readability)
 
@@ -3208,11 +3249,37 @@ CONTAINS
       Line%rho = LineProp%w/(Pi/4.0 * Line%d * Line%d)
       
       Line%EA   = LineProp%EA
+      ! note: Line%BA is set later
+      Line%EA_D = LineProp%EA_D
+      Line%BA_D = LineProp%BA_D
+      !Line%EI   = LineProp%EI  <<< for bending stiffness
       
       Line%Can   = LineProp%Can
       Line%Cat   = LineProp%Cat
       Line%Cdn   = LineProp%Cdn
       Line%Cdt   = LineProp%Cdt      
+      
+      ! copy over elasticity data
+      Line%ElasticMod = LineProp%ElasticMod
+      
+      Line%nEApoints = LineProp%nEApoints
+      DO I = 1,Line%nEApoints
+         Line%stiffXs(I) = LineProp%stiffXs(I)
+         Line%stiffYs(I) = LineProp%stiffYs(I)  ! note: this does not convert to E (not EA) like done in C version
+      END DO
+      
+      Line%nBApoints = LineProp%nBApoints
+      DO I = 1,Line%nBApoints
+         Line%dampXs(I) = LineProp%dampXs(I)
+         Line%dampYs(I) = LineProp%dampYs(I)
+      END DO
+      
+      Line%nEIpoints = LineProp%nEIpoints
+      DO I = 1,Line%nEIpoints
+         Line%bstiffXs(I) = LineProp%bstiffXs(I)
+         Line%bstiffYs(I) = LineProp%bstiffYs(I)                     ! copy over
+      END DO
+      
       
       ! Specify specific internal damping coefficient (BA) for this line.
       ! Will be equal to inputted BA of LineType if input value is positive.
@@ -3244,11 +3311,23 @@ CONTAINS
          !CALL CleanUp()
          RETURN
       END IF
-
-      ! allocate node tangent vectors
-      ALLOCATE ( Line%q(3, 0:N), STAT = ErrStat )
+      
+      ! if using viscoelastic model, allocate additional state quantities
+      if (Line%ElasticMod == 2) then
+         ALLOCATE ( Line%dl_1(N), STAT = ErrStat )
+         IF ( ErrStat /= ErrID_None ) THEN
+            ErrMsg  = ' Error allocating dl_1 array.'
+            !CALL CleanUp()
+            RETURN
+         END IF
+         ! initialize to zero
+         Line%dl_1 = 0.0_DbKi
+      end if
+      
+      ! allocate node and segment tangent vectors
+      ALLOCATE ( Line%q(3, 0:N), Line%qs(3, N), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating q array.'
+         ErrMsg  = ' Error allocating q or qs array.'
          !CALL CleanUp()
          RETURN
       END IF
@@ -4060,6 +4139,13 @@ CONTAINS
             
          END DO
       END DO
+      
+      ! if using viscoelastic model, also set the static stiffness stretch
+      if (Line%ElasticMod == 2) then
+         do I=1,Line%N
+            Line%dl_1(I) = X( 6*Line%N-6 + I)   ! these will be the last N entries in the state vector
+         end do
+      end if
          
    END SUBROUTINE Line_SetState
    !--------------------------------------------------------------
@@ -4100,6 +4186,13 @@ CONTAINS
       Real(DbKi)                       :: SumSqVq        !
       Real(DbKi)                       :: MagVp          !
       Real(DbKi)                       :: MagVq          !
+      Real(DbKi)                       :: MagT           ! tension stiffness force magnitude
+      Real(DbKi)                       :: MagTd          ! tension damping force magnitude
+      Real(DbKi)                       :: Xi             ! used in interpolating from lookup table
+      Real(DbKi)                       :: Yi             ! used in interpolating from lookup table
+      Real(DbKi)                       :: dl             ! stretch of a segment [m]
+      Real(DbKi)                       :: ld_1           ! rate of change of static stiffness portion of segment [m/s]
+      Real(DbKi)                       :: EA_1           ! stiffness of 'static stiffness' portion of segment, combines with dynamic stiffness to give static stiffnes [m/s]
 
       Real(DbKi)                       :: depth          ! local water depth interpolated from bathymetry grid
 
@@ -4120,14 +4213,15 @@ CONTAINS
 
 
 
-      ! calculate instantaneous (stretched) segment lengths and rates << should add catch here for if lstr is ever zero
+      ! -------------------- calculate various kinematic quantities ---------------------------
       DO I = 1, N
-         Sum1 = 0.0_DbKi
-         DO J = 1, 3
-            Sum1 = Sum1 + (Line%r(J,I) - Line%r(J,I-1)) * (Line%r(J,I) - Line%r(J,I-1))
-         END DO
-         Line%lstr(I) = sqrt(Sum1)                                  ! stretched segment length
-
+         
+         
+         ! calculate current (Stretched) segment lengths and unit tangent vectors (qs) for each segment (this is used for bending calculations)
+         CALL UnitVector(Line%r(:,I-1), Line%r(:,I), Line%qs(:,I), Line%lstr(I))
+         
+         ! should add catch here for if lstr is ever zero
+   
          Sum1 = 0.0_DbKi
          DO J = 1, 3
             Sum1 = Sum1 + (Line%r(J,I) - Line%r(J,I-1))*(Line%rd(J,I) - Line%rd(J,I-1))
@@ -4185,25 +4279,76 @@ CONTAINS
 
       ! loop through the segments
       DO I = 1, N
+      
+         ! handle nonlinear stiffness if needed
+         if (Line%nEApoints > 0) then
+            
+            Xi = Line%l(I)/Line%lstr(I) - 1.0                   ! strain rate based on inputs
+            Yi = 0.0_DbKi
 
-         ! line tension, inherently including possibility of dynamic length changes in l term
-         IF (Line%lstr(I)/Line%l(I) > 1.0) THEN
-            DO J = 1, 3
-               Line%T(J,I) = Line%EA *( 1.0/Line%l(I) - 1.0/Line%lstr(I) ) * (Line%r(J,I)-Line%r(J,I-1))
-            END DO
-         ELSE
-            DO J = 1, 3
-               Line%T(J,I) = 0.0_DbKi                              ! cable can't "push"
-            END DO
-         END if
+            ! find stress based on strain
+            if (Xi < 0.0) then                                  ! if negative strain (compression), zero stress
+               Yi = 0.0_DbKi
+            else if (Xi < Line%stiffXs(1)) then                 ! if strain below first data point, interpolate from zero
+               Yi = Xi * Line%stiffYs(1)/Line%stiffXs(1)
+            else if (Xi >= Line%stiffXs(Line%nEApoints)) then   ! if strain exceeds last data point, use last data point
+               Yi = Line%stiffYs(Line%nEApoints)
+            else                                                ! otherwise we're in range of the table so interpolate!
+               do J=1, Line%nEApoints-1                         ! go through lookup table until next entry exceeds inputted strain rate
+                  if (Line%stiffXs(J+1) > Xi) then
+                     Yi = Line%stiffYs(J) + (Xi-Line%stiffXs(J)) * (Line%stiffYs(J+1)-Line%stiffYs(J))/(Line%stiffXs(J+1)-Line%stiffXs(J))
+                     exit
+                  end if
+               end do
+            end if
 
-         ! line internal damping force based on line-specific BA value, including possibility of dynamic length changes in l and ld terms
-         DO J = 1, 3
+            ! calculate a young's modulus equivalent value based on stress/strain
+            Line%EA = Yi/Xi
+         end if
+         
+         
+         ! >>>> could do similar as above for nonlinear damping or bending stiffness <<<<         
+         if (Line%nBApoints > 0) print *, 'Nonlinear elastic damping not yet implemented'
+         if (Line%nEIpoints > 0) print *, 'Nonlinear bending stiffness not yet implemented'
+            
+            
+         ! basic elasticity model
+         if (Line%ElasticMod == 1) then
+            ! line tension, inherently including possibility of dynamic length changes in l term
+            if (Line%lstr(I)/Line%l(I) > 1.0) then
+               MagT  =  Line%EA *( Line%lstr(I)/Line%l(I) - 1.0 )
+            else
+               MagT = 0.0_DbKi                              ! cable can't "push"
+            end if
+            ! line internal damping force based on line-specific BA value, including possibility of dynamic length changes in l and ld terms
+            MagTd = Line%BA* ( Line%lstrd(I) -  Line%lstr(I)*Line%ld(I)/Line%l(I) )/Line%l(I)
+         
+         ! viscoelastic model
+         else if (Line%ElasticMod == 2) then
+         
+            EA_1 = Line%EA_D*Line%EA/(Line%EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S
+         
+            dl = Line%lstr(I) - Line%l(I) ! delta l of this segment
+         
+            ld_1 = (Line%EA_D*dl - (Line%EA_D + EA_1)*Line%dl_1(I) + Line%BA_D*Line%lstrd(I)) /( Line%BA_D + Line%BA) ! rate of change of static stiffness portion [m/s]
+            
+            !MagT = (Line%EA*Line%dl_S(I) + Line%BA*ld_S)/ Line%l(I)   ! compute tension based on static portion (dynamic portion would give same)
+            MagT  = EA_1*Line%dl_1(I)/ Line%l(I)  
+            MagTd = Line%BA*ld_1        / Line%l(I)  
+            
+            ! update state derivative for static stiffness stretch (last N entries in the state vector)
+            Xd( 6*N-6 + I) = ld_1
+         
+         end if
+
+         
+         do J = 1, 3
+            !Line%T(J,I) = Line%EA *( 1.0/Line%l(I) - 1.0/Line%lstr(I) ) * (Line%r(J,I)-Line%r(J,I-1))
+            Line%T(J,I)  = MagT * Line%qs(J,I)
             !Line%Td(J,I) = Line%BA* ( Line%lstrd(I) / Line%l(I) ) * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)  ! note new form of damping coefficient, BA rather than Cint
-            Line%Td(J,I) = Line%BA* ( Line%lstrd(I) -  Line%lstr(I)*Line%ld(I)/Line%l(I) )/Line%l(I)  * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)
-         END DO
-      END DO
-
+            Line%Td(J,I) = MagTd * Line%qs(J,I)
+         end do
+      end do
 
 
       ! loop through the nodes
