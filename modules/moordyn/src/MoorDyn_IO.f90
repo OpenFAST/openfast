@@ -547,7 +547,7 @@ CONTAINS
         ELSE IF (qVal == 'AZ') THEN
           p%OutParam(I)%QType = AccZ
           p%OutParam(I)%Units = UnitList(AccZ)
-        ELSE IF ((qVal == 'T') .or. (qval == 'Ten')) THEN
+        ELSE IF ((qVal == 'T') .or. (qVal == 'TEN')) THEN
           p%OutParam(I)%QType = Ten
           p%OutParam(I)%Units = UnitList(Ten)
         ELSE IF (qVal == 'FX') THEN
@@ -1654,9 +1654,9 @@ CONTAINS
       REAL(DbKi)                       :: Tmag_squared   
    
       if (i==0) then
-         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
+         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + Line%Fnet(3,i)**2 )  ! if an end node, use Fnet which already includes weight
       else if (i==Line%N) then                          
-         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
+         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + Line%Fnet(3,i)**2 )
       else 
          Tmag_squared = 0.0_DbKi 
          DO J=1,3

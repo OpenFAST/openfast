@@ -30,7 +30,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a13', '13 October 2021' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a14', '15 October 2021' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -4735,6 +4735,8 @@ CONTAINS
          Connect%M   (J,J) = Connect%M   (J,J) + Connect%conV*p%rhoW*Connect%conCa;                               ! add added mass
 
       END DO
+      
+      ! would this sub ever need to include the m*a inertial term?  Is it ever called for coupled connects? <<<
 
    END SUBROUTINE Connect_DoRHS
    !=====================================================================
