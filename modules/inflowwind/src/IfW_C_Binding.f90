@@ -129,7 +129,7 @@ SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformSt
    TimeInterval                  = REAL(DT_C, DbKi)
 
    ! Call the main subroutine InflowWind_Init - only need InitInp and TimeInterval as inputs, the rest are set by InflowWind_Init
-   CALL InflowWind_Init( InitInp, InputData, p, ContStates, DiscStates, ConstrState, OtherStates, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
+   CALL InflowWind_Init( InitInp, InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
    ! Number of channels
