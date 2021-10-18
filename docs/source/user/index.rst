@@ -47,6 +47,7 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    Aeroacoustics <aerodyn-aeroacoustics/index.rst>
    BeamDyn <beamdyn/index.rst>
    SubDyn <subdyn/index.rst>
+   ExtPtfm <extptfm//index.rst>
    ElastoDyn <elastodyn/index.rst>
    HydroDyn <hydrodyn/index.rst>
    InflowWind <inflowwind/index.rst>
