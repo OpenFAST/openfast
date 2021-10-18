@@ -36,7 +36,10 @@ add_library(scfastlib
   src/SuperController.f90)
 target_link_libraries(scfastlib sctypeslib openfast_prelib nwtclibs)
 
-install(TARGETS sctypeslib scfastlib scdataextypeslib scdataexlib
+add_library(sclib SHARED
+  src/SC_DLL.F90)
+
+install(TARGETS sctypeslib scfastlib scdataextypeslib scdataexlib sclib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
