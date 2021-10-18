@@ -622,21 +622,21 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
       !CALL Eye(R_gl2wt, errStat2, errMsg2) 
       R_gl2wt = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
       orientation = R_gl2wt
-      call CreatePointMesh(wt%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+      
+      !bjj: Inspector consistently gives "Invalid Memory Access" errors here on the allocation of wt%ptMesh%RotationVel in MeshCreate. I haven't yet figured out why.
+      call CreatePointMesh(wt%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
 
       ! Tower
       if (wt%hasTower) then
          pos         = wt%ptMesh%Position(:,1) + matmul(transpose(R_gl2wt),  wt%twr%origin_t)
          orientation = R_gl2wt
-         call CreatePointMesh(wt%twr%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
-         if(Failed())return
+         call CreatePointMesh(wt%twr%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
       endif
 
       ! Nacelle
       pos           = wt%ptMesh%Position(:,1) +  matmul(transpose(R_gl2wt),  wt%nac%origin_t)
       orientation   = R_gl2wt ! Yaw?
-      call CreatePointMesh(wt%nac%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
-      if(Failed())return
+      call CreatePointMesh(wt%nac%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
 
       ! Hub
       R_nac2gl  = transpose(wt%nac%ptMesh%RefOrientation(:,:,1))
@@ -790,7 +790,7 @@ end subroutine Init_ADMeshMap
 !----------------------------------------------------------------------------------------------------------------------------------
 !>
 subroutine CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg)
-   type(MeshType), intent(out) :: mesh
+   type(MeshType), intent(inout) :: mesh
    real(ReKi),                   intent(in   ) :: PosInit(3)                                             !< Xi,Yi,Zi, coordinates of node
    real(R8Ki),                   intent(in   ) :: orientInit(3,3)                                        !< Orientation (direction cosine matrix) of node; identity by default
    integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
