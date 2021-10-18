@@ -2474,7 +2474,7 @@ SUBROUTINE WrBinHAWC( p, V, USig, VSig, WSig, ErrStat, ErrMsg)
 
 
    REAL(ReKi), ALLOCATABLE       :: TmpV(:,:,:)                ! This array holds velocities with the wind direction added (with zero mean)
-   REAL(ReKi), PARAMETER         :: FileSigmas(3) = (/ 1.0, 0.8, 0.5 /) ! These are the ratios we will use for each file generated for HAWC 2
+   REAL(ReKi), PARAMETER         :: FileSigmas(3) = (/ 1.0, 0.8, 0.5 /) ! These are the ratios we will use for each file generated for HAWC2
    REAL(ReKi)                    :: ScaleFactors(3)
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
@@ -2534,7 +2534,7 @@ SUBROUTINE WrBinHAWC( p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    CALL AllocAry( TmpV, p%grid%NumSteps, p%grid%NumGrid_Y*p%grid%NumGrid_Z, 3, 'TmpV', ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
 
-   ! Add the vertical upflow to the wind files before writing them out:
+   ! Create temp file for easier writing (originally added vertical wind component here, first):
    DO IT = 1,p%grid%NumSteps
    
       IH = 1

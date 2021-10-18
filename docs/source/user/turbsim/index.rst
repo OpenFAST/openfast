@@ -8,6 +8,7 @@ TurbSim Users Guide Placeholder
 .. toctree::
    :maxdepth: 2
    
+   output.rst
    appendix.rst
 
       
