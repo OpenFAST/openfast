@@ -471,6 +471,7 @@ contains
    subroutine Cleanup()
 
       CALL AD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Destroyfileinfotype(FileInfo_In, ErrStat2, ErrMsg2)
       IF ( UnEcho > 0 ) CLOSE( UnEcho )
       
    end subroutine Cleanup

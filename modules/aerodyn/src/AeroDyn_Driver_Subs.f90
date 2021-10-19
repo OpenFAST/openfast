@@ -1581,6 +1581,7 @@ contains
    subroutine CleanUp()
       if (UnIn>0) close(UnIn)
       if (UnEc>0) close(UnEc)
+      CALL NWTC_Library_Destroyfileinfotype(FileInfo_In, ErrStat2, ErrMsg2)
    end subroutine cleanup
 
    logical function Failed()
