@@ -146,6 +146,7 @@ PROGRAM MoorDyn_Driver
 
    ! set the input file name and other environment terms
    !MD_InitInp%NStepWave   = 1        ! an arbitrary number > 0 (to set the size of the wave data, which currently contains all zero values)     
+   MD_InitInp%Tmax                    = drvrInitInp%TMax   
    MD_InitInp%g                       = drvrInitInp%Gravity
    MD_InitInp%rhoW                    = drvrInitInp%rhoW
    MD_InitInp%WtrDepth                = drvrInitInp%WtrDepth
@@ -330,8 +331,14 @@ PROGRAM MoorDyn_Driver
                   ! get interpolated position of coupling point
                   r_in(i, J) = PtfmMotIn(iIn, J+1) + frac*(PtfmMotIn(iIn+1, J+1) - PtfmMotIn(iIn, J+1))
                   
-                  ! use forward different to estimate velocity of coupling point
-                  rd_in(i, J) = (PtfmMotIn(iIn+1, J+1) - PtfmMotIn(iIn, J+1)) / (PtfmMotIn(iIn+1, 1) - PtfmMotIn(iIn, 1))
+                  if (iIn==1) then
+                     ! use forward different to estimate velocity of coupling point
+                     rd_in(i, J) = (PtfmMotIn(iIn+1, J+1) - PtfmMotIn(iIn, J+1)) / (PtfmMotIn(iIn+1, 1) - PtfmMotIn(iIn, 1))
+                  else
+                     ! use central different to estimate velocity of coupling point
+                     rd_in(i, J) = (PtfmMotIn(iIn+1, J+1) - PtfmMotIn(iIn-1, J+1)) / (PtfmMotIn(iIn+1, 1) - PtfmMotIn(iIn-1, 1))
+
+                  end if
                END DO
                
                EXIT   ! break out of the loop for this time step once we've done its interpolation

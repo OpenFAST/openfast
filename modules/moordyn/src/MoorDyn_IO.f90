@@ -99,7 +99,7 @@ MODULE MoorDyn_IO
 
 
   ! PUBLIC :: MDIO_ReadInput
-   PUBLIC :: getBathymetry
+   PUBLIC :: setupBathymetry
    PUBLIC :: getCoefficientOrCurve
    PUBLIC :: SplitByBars
    PUBLIC :: DecomposeString
@@ -112,7 +112,7 @@ MODULE MoorDyn_IO
 CONTAINS
 
 
-   SUBROUTINE getBathymetry(inputString, defaultDepth, BathGrid, BathGrid_Xs, BathGrid_Ys, ErrStat3, ErrMsg3)
+   SUBROUTINE setupBathymetry(inputString, defaultDepth, BathGrid, BathGrid_Xs, BathGrid_Ys, ErrStat3, ErrMsg3)
    ! SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
 
       CHARACTER(40),           INTENT(IN   )  :: inputString         ! string describing water depth or bathymetry filename
@@ -200,7 +200,7 @@ CONTAINS
       
       END IF
 
-   END SUBROUTINE getBathymetry
+   END SUBROUTINE setupBathymetry
    
 
    ! read in stiffness/damping coefficient or load nonlinear data file if applicable

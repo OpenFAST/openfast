@@ -26,6 +26,7 @@ typedef   ^           ^                ReKi               WtrDepth       -   -99
 typedef   ^           ^                ReKi               PtfmInit      {:}{:} -    -   "initial position of platform(s) shape: 6, nTurbines"     -
 typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0"     -
 typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
+typedef   ^           ^                ReKi               Tmax           -     -    -   "simulation duration" "[s]"
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
 typedef   ^           ^                CHARACTER(1024)    RootName       -   -      -   "RootName for writing output files"              -
 typedef   ^           ^                LOGICAL            UsePrimaryInputFile    -   .TRUE.  -  "Read input file instead of passed data"   -
@@ -300,14 +301,11 @@ typedef   ^            ^               IntKi                  DerivOrder_x {:}  
 ## ============================== Define Continuous states here: =====================================================================================================================================
 typedef   ^       ContinuousStateType  DbKi                states          {:} ""  -   "state vector of mooring system, e.g. node coordinates and velocities"   ""
 
-
 ## ============================== Define Discrete states here: =====================================================================================================================================
 typedef   ^       DiscreteStateType    SiKi                dummy             -  -  -   "Remove this variable if you have discrete states" -
 
-
 ## ============================== Define constraint states here: =====================================================================================================================================
 typedef   ^       ConstraintStateType  SiKi                dummy            -   -  -   "Remove this variable if you have constraint states"   -
-
 
 ## ============================== Define Other states here: =====================================================================================================================================
 typedef   ^       OtherStateType       SiKi                dummy             -  -  -   "Remove this variable if you have other states" -
@@ -368,9 +366,10 @@ typedef   ^       ^                    IntKi               nCpldRods      {:}   
 typedef   ^       ^                    IntKi               nCpldCons      {:}   -    -   "number of coupled points (for FAST.Farm, size>1 with an entry for each turbine)"             ""
 typedef   ^       ^                    IntKi               NConns         -     0    -   "number of Connect type Connections - not to be confused with NConnects"             ""
 typedef   ^       ^                    IntKi               NAnchs         -     0    -   "number of Anchor type Connections"             ""
+typedef   ^       ^                    DbKi                Tmax           -     -    -   "simulation duration" "[s]"
 typedef   ^       ^                    DbKi                g              -  9.81    -   "gravitational constant (positive)"   "[m/s^2]"
 typedef   ^       ^                    DbKi                rhoW           -  1025    -   "density of seawater"              "[kg/m^3]"
-#typedef   ^       ^                    DbKi                WtrDpth        -     -    -   "water depth"                      "[m]"
+typedef   ^       ^                    DbKi                WtrDpth        -     -    -   "water depth"                      "[m]"
 typedef   ^       ^                    DbKi                kBot           -     -    -   "bottom stiffness"                 "[Pa/m]"
 typedef   ^       ^                    DbKi                cBot           -     -    -   "bottom damping"                  "[Pa-s/m]"
 typedef   ^       ^                    DbKi                dtM0           -     -    -   "desired mooring model time step"          "[s]"
@@ -381,22 +380,31 @@ typedef   ^       ^                    CHARACTER(1024)     RootName       -     
 typedef   ^       ^                    MD_OutParmType      OutParam       {:}   -    -   "Names and units (and other characteristics) of all requested output parameters"          -
 typedef   ^       ^                    CHARACTER(1)        Delim          -     -    -   "Column delimiter for output text files"     -
 typedef   ^       ^                    IntKi               MDUnOut        -     -    -   "Unit number of main output file"
-typedef   ^       ^                    IntKi               WaterKin       -     -    -   "Flag for whether or how to consider water kinematics"
+typedef   ^       ^                    IntKi               WaveKin        -     -    -   "Flag for whether or how to consider water kinematics"
+typedef   ^       ^                    IntKi               Current        -     -    -   "Flag for whether or how to consider water kinematics"
 typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0"
 typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
-
-typedef   ^       ^                    DbKi         ux                 {:}{:}{:}{:} -  -   "water velocities time series at each grid point"            -
-typedef   ^       ^                    DbKi         uy                 {:}{:}{:}{:} -  -   "water velocities time series at each grid point"            -
-typedef   ^       ^                    DbKi         uz                 {:}{:}{:}{:} -  -   "water velocities time series at each grid point"            -
-typedef   ^       ^                    DbKi         ax                 {:}{:}{:}{:} -  -   "water accelerations time series at each grid point"            -
-typedef   ^       ^                    DbKi         ay                 {:}{:}{:}{:} -  -   "water accelerations time series at each grid point"            -
-typedef   ^       ^                    DbKi         az                 {:}{:}{:}{:} -  -   "water accelerations time series at each grid point"            -
-typedef   ^       ^                    DbKi         PDyn               {:}{:}{:}{:} -  -   "water dynamic pressure time series at each grid point"            -
-typedef   ^       ^                    DbKi         zeta               {:}{:}{:}    -  -   "water surface elevations time series at each surface grid point"   -
-typedef   ^       ^                    DbKi         px                 {:}          -  -   ""            -
-typedef   ^       ^                    DbKi         py                 {:}          -  -   ""            -
-typedef   ^       ^                    DbKi         pz                 {:}          -  -   ""            -
-typedef   ^       ^                    DbKi         tWave              {:}          -  -   "wave data time step array"            -
+# --- parameters for wave and current ---
+typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
+typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -
+typedef   ^       ^                    IntKi        nzWave             -            -  -   "number of z wave grid points"            -
+typedef   ^       ^                    IntKi        ntWave             -            -  -   "number of wave time steps"            -
+typedef   ^       ^                    ReKi         pxWave             {:}          -  -   "x location of wave grid points"            -
+typedef   ^       ^                    ReKi         pyWave             {:}          -  -   "y location of wave grid points"            -
+typedef   ^       ^                    ReKi         pzWave             {:}          -  -   "z location of wave grid points"            -
+typedef   ^       ^                    ReKi         dtWave             -            -  -   "wave data time step"            -
+typedef   ^       ^                    ReKi         uxWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
+typedef   ^       ^                    ReKi         uyWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
+typedef   ^       ^                    ReKi         uzWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
+typedef   ^       ^                    ReKi         axWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
+typedef   ^       ^                    ReKi         ayWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
+typedef   ^       ^                    ReKi         azWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
+typedef   ^       ^                    ReKi         PDyn               {:}{:}{:}{:} -  -   "wave dynamic pressure time series at each grid point"            -
+typedef   ^       ^                    ReKi         zeta               {:}{:}{:}    -  -   "wave surface elevations time series at each surface grid point"   -
+typedef   ^       ^                    IntKi        nzCurrent          -            -  -   "number of z current grid points"            -
+typedef   ^       ^                    ReKi         pzCurrent          {:}          -  -   "z location of current grid points"            -
+typedef   ^       ^                    ReKi         uxCurrent          {:}          -  -   "current velocities time series at each grid point"            -
+typedef   ^       ^                    ReKi         uyCurrent          {:}          -  -   "current velocities time series at each grid point"            -
 # --- Parameters for linearization ---
 typedef   ^       ^                    Integer      Nx0                -            -  -   "copy of initial size of system state vector, for linearization routines" -
 typedef   ^       ^                    Integer      Jac_u_indx         {:}{:}       -  -   "matrix to help fill/pack the u vector in computing the jacobian" -
