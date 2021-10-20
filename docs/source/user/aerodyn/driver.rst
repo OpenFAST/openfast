@@ -9,7 +9,7 @@ A standalone AeroDyn driver is provided to perform aerodynamic simulations of ri
 undergoing rigid body motion (fixed, sinusoidal, or arbitrary). 
 The standalone AeroDyn driver code improves on the functionality previously
 available in the separate wind turbine rotor-performance tool WT\_Perf.
-The driver alo supports turbine configurations that are not currently supported by OpenFAST.
+The driver also supports turbine configurations that are not currently supported by OpenFAST.
 
 Examples of applications are:
 
