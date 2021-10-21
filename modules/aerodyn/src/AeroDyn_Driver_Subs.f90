@@ -802,6 +802,7 @@ subroutine CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg)
 
    call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2, Orientation=.true., TranslationDisp=.true., TranslationVel=.true., RotationVel=.true., TranslationAcc=.true., RotationAcc=.true.)
    call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+   if (ErrStat >= AbortErrLev) return
 
    call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
    call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
