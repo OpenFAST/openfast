@@ -164,8 +164,6 @@ typedef   ^                         ^            character(1024)         root   
 typedef   ^                         ^            Dvr_Outputs            out               -      -     -   "data for driver output file" "-"
 typedef   ^                         ^            ADI_Data                ADI              -      -     -   "" -
 typedef   ^                         ^            ADI_IW_InputData        IW_InitInp       -      -     -   "" -
-typedef   ^                         ^            AD_InputType            u_AD              {2} -     -   "Array of system inputs"
-typedef   ^                         ^            DbKi                    InputTime_AD      {2} -     -   "Array of times associated with u array"
 
 # ..... Data to wrap the driver ..........................................................................................................
 typedef   ^                        AllData       Dvr_SimData            dvr              -      -     -   "" -

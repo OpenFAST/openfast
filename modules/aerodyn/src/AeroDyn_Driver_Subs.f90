@@ -204,7 +204,7 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, IW, errStat, errMsg )
 
    ! --- Initialize Inflow Wind 
    if (iCase==1) then
-      call ADI_InitInflowWind(dvr%out%Root, dvr%IW_InitInp, dvr%u_AD(1), ADI%OtherState%AD, dvr%ADI%m%IW, dvr%dt, InitOutData_IW, errStat2, errMsg2); if(Failed()) return
+      call ADI_InitInflowWind(dvr%out%Root, dvr%IW_InitInp, dvr%ADI%m%u_AD(1), ADI%OtherState%AD, dvr%ADI%m%IW, dvr%dt, InitOutData_IW, errStat2, errMsg2); if(Failed()) return
       ! TODO TODO TODO u(2) is never used
       !call InflowWind_CopyInput (dvr%IW%u(1),  dvr%IW%u(2),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
       ! --- Concatenate AD outputs to IW outputs
@@ -213,13 +213,13 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, IW, errStat, errMsg )
 
    ! --- Initialize meshes
    if (iCase==1) then
-      call Init_ADMeshMap(dvr, dvr%u_AD(1), errStat2, errMsg2); if(Failed()) return
+      call Init_ADMeshMap(dvr, dvr%ADI%m%u_AD(1), errStat2, errMsg2); if(Failed()) return
    endif
 
    ! Copy AD input here because tower is modified in ADMeshMap
-   call AD_CopyInput (dvr%u_AD(1),  dvr%ADI%u%AD,  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
+   call AD_CopyInput (dvr%ADI%m%u_AD(1),  dvr%ADI%u%AD,  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
    do j = 2, numInp
-      call AD_CopyInput (dvr%u_AD(1),  dvr%u_AD(j),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
+      call AD_CopyInput (dvr%ADI%m%u_AD(1),  dvr%ADI%m%u_AD(j),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
    end do
 
 
@@ -227,7 +227,7 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, IW, errStat, errMsg )
    call Set_Mesh_Motion(0,dvr,errStat2,errMsg2); if(Failed()) return
 
    ! --- Initial AD inputs
-   dvr%inputTime_AD = -999
+   dvr%ADI%m%inputTimes_AD = -999
    DO j = 1-numInp, 0
       call Set_AD_Inputs(j, dvr, ADI, dvr%ADI%m%IW,errStat2,errMsg2); if(Failed()) return
    END DO              
@@ -283,10 +283,10 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, IW, errStat, errMsg)
    ! Set AD inputs for nt (and keep values at nt-1 as well)
    ! u(1) is at nt, u(2) is at nt-1
    call Set_AD_Inputs(nt,dvr,ADI,IW,errStat2,errMsg2); if(Failed()) return
-   time = dvr%inputTime_AD(2)
+   time = dvr%ADI%m%inputTimes_AD(2)
 
    ! Calculate outputs at nt - 1
-   call AD_CalcOutput( time, dvr%u_AD(2), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
+   call AD_CalcOutput( time, dvr%ADI%m%u_AD(2), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
 
    ! Write outputs for all turbines at nt-1
    call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y%AD, IW%y, errStat2, errMsg2); if(Failed()) return
@@ -305,7 +305,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, IW, errStat, errMsg)
    endif
 
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
-   call AD_UpdateStates( time, nt-1, dvr%u_AD, dvr%inputTime_AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%m%AD, errStat2, errMsg2); if(Failed()) return
+   call AD_UpdateStates( time, nt-1, dvr%ADI%m%u_AD, dvr%ADI%m%inputTimes_AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%m%AD, errStat2, errMsg2); if(Failed()) return
 
 contains
 
@@ -375,7 +375,7 @@ subroutine Dvr_CleanUp(dvr, ADI, IW, initialized, errStat, errMsg)
    call Dvr_EndCase(dvr, ADI, IW, initialized, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    ! End modules
-   call AD_End( dvr%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+   call AD_End( dvr%ADI%m%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    call InflowWind_End( IW%u(1), IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    ! TODO TODO TODO call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
@@ -498,7 +498,7 @@ subroutine Init_AeroDyn(iCase, dvr, ADI, dt, InitOutData, errStat, errMsg)
       ! UA does not like changes of dt
       if ( .not. EqualRealNos(ADI%p%AD%DT, dt) ) then
          call WrScr('Info: dt is changing between cases, AeroDyn will be re-initialized')
-         call AD_End( dvr%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn'); if(Failed()) return
+         call AD_End( dvr%ADI%m%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn'); if(Failed()) return
          !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          needInit=.true.
       endif
@@ -534,7 +534,7 @@ subroutine Init_AeroDyn(iCase, dvr, ADI, dt, InitOutData, errStat, errMsg)
          end do
       enddo
       ! --- Call AD_init
-      call AD_Init(InitInData, dvr%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, dt, InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
+      call AD_Init(InitInData, dvr%ADI%m%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, dt, InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
 
       if (iCase==1) then
          ! Add writeoutput units and headers to driver, same for all cases and rotors!
@@ -1016,38 +1016,38 @@ subroutine Set_AD_Inputs(nt,dvr,ADI,IW,errStat,errMsg)
 
    ! --- Shift previous calculations:
    do j = numInp-1,1,-1
-      call AD_CopyInput (dvr%u_AD(j),  dvr%u_AD(j+1),  MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-      dvr%inputTime_AD(j+1) = dvr%inputTime_AD(j)
+      call AD_CopyInput (dvr%ADI%m%u_AD(j),  dvr%ADI%m%u_AD(j+1),  MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      dvr%ADI%m%inputTimes_AD(j+1) = dvr%ADI%m%inputTimes_AD(j)
    end do
-   dvr%inputTime_AD(1) = dvr%dT * nt ! time at "nt+1"
+   dvr%ADI%m%inputTimes_AD(1) = dvr%dT * nt ! time at "nt+1"
 
    ! --- Transfer motion from "ED" to AeroDyn
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)
       ! Hub 2 Hub AD 
-      call Transfer_Point_to_Point(wt%hub%ptMesh, dvr%u_AD(1)%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+      call Transfer_Point_to_Point(wt%hub%ptMesh, dvr%ADI%m%u_AD(1)%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Point(wt%bld(iB)%ptMesh, dvr%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Point(wt%bld(iB)%ptMesh, dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed()) return
       enddo
             
       ! Blade root AD to blade line AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Line2(dvr%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), dvr%u_AD(1)%rotors(iWT)%BladeMotion(iB), wt%bld(iB)%AD_P_2_AD_L_B, errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Line2(dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iB), wt%bld(iB)%AD_P_2_AD_L_B, errStat2, errMsg2); if(Failed()) return
       enddo
 
       ! Tower motion
       if (wt%hasTower) then
-         if (dvr%u_AD(1)%rotors(iWT)%TowerMotion%nNodes>0) then
+         if (dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion%nNodes>0) then
             call Transfer_Point_to_Point(wt%twr%ptMesh, wt%twr%ptMeshAD, wt%twr%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
-            call Transfer_Point_to_Line2(wt%twr%ptMeshAD, dvr%u_AD(1)%rotors(iWT)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+            call Transfer_Point_to_Line2(wt%twr%ptMeshAD, dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
          endif
       endif
    enddo ! iWT, rotors
       
    ! --- Inflow on points
-   call ADI_ADIW_Solve(dvr%inputTime_AD(1), dvr%u_AD(1), ADI%OtherState%AD, IW%u(1), IW, .true., errStat, errMsg)
+   call ADI_ADIW_Solve(dvr%ADI%m%inputTimes_AD(1), dvr%ADI%m%u_AD(1), ADI%OtherState%AD, IW%u(1), IW, .true., errStat, errMsg)
    !call ADI_Set_IW_Inputs(AD%u(1), AD%OtherState, IW%u(1), .true., errStat2, errMsg2); if(Failed()) return
    !call ADI_CalcOutput_IW(AD%inputTime(1), IW%u(1), IW, errStat2, errMsg2); if(Failed()) return
    !call ADI_AD_InputSolve_IfW(AD%u(1), IW%y, errStat2, errMsg2); if(Failed()) return
@@ -1936,12 +1936,12 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
    do iWT=1,dvr%numTurbines
       wt => dvr%wt(iWT)
       do iBld=1, wt%numBlades
-         nNodes = dvr%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%nnodes
-         BladeLength = TwoNorm(dvr%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,nNodes)-dvr%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,1))
+         nNodes = dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%nnodes
+         BladeLength = TwoNorm(dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,nNodes)-dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,1))
          MaxBladeLength = max(MaxBladeLength, BladeLength)
       enddo
       if (wt%hasTower) then
-         Mesh=>dvr%u_AD(1)%rotors(iWT)%TowerMotion
+         Mesh=>dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion
          if (Mesh%NNodes>0) then
             TwrLength = TwoNorm( Mesh%position(:,1) - Mesh%position(:,Mesh%NNodes) ) 
             MaxTwrLength = max(MaxTwrLength, TwrLength)
@@ -1991,7 +1991,7 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
       !.......................
       BaseBoxDim = minval(p_FAST%VTKNacDim(4:6))/2
       if (wt%hasTower) then
-         Mesh=>dvr%u_AD(1)%rotors(iWT)%TowerMotion
+         Mesh=>dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion
          if (Mesh%NNodes>0) then
             CALL AllocAry(p_FAST%VTK_Surface(iWT)%TowerRad, Mesh%NNodes,'VTK_Surface(iWT)%TowerRad',ErrStat2,ErrMsg2)
             topNode   = Mesh%NNodes - 1
@@ -2037,10 +2037,10 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
          print*,'>>> Profile coordinates missing, using dummy coordinates'
          rootNode = 1
          DO K=1,wt%numBlades   
-            tipNode  = dvr%u_AD(1)%rotors(iWT)%BladeMotion(K)%NNodes
-            cylNode  = min(3,dvr%u_AD(1)%rotors(iWT)%BladeMotion(K)%Nnodes)
+            tipNode  = dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(K)%NNodes
+            cylNode  = min(3,dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(K)%Nnodes)
 
-            call SetVTKDefaultBladeParams(dvr%u_AD(1)%rotors(iWT)%BladeMotion(K), p_FAST%VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+            call SetVTKDefaultBladeParams(dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(K), p_FAST%VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
          END DO                           
@@ -2079,8 +2079,8 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
 
       ! Tower motions
-      if (dvr%u_AD(2)%rotors(iWT)%TowerMotion%nNodes>0) then
-         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%u_AD(2)%rotors(iWT)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
+      if (dvr%ADI%m%u_AD(2)%rotors(iWT)%TowerMotion%nNodes>0) then
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%ADI%m%u_AD(2)%rotors(iWT)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
                                     VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface(iWT)%NumSectors, p_FAST%VTK_Surface(iWT)%TowerRad )
       endif
     
@@ -2090,7 +2090,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
          
          ! Hub
-         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, dvr%u_AD(2)%rotors(iWT)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, dvr%ADI%m%u_AD(2)%rotors(iWT)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                       NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
       endif
@@ -2099,7 +2099,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
       ! Blades
       do K=1,wt%numBlades
 
-         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%u_AD(2)%rotors(iWT)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%ADI%m%u_AD(2)%rotors(iWT)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
                                     VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface(iWT)%BladeShape(K)%AirfoilCoords &
                                     ,Sib=ADI%y%AD%rotors(iWT)%BladeLoad(k) )
       end do                  
@@ -2111,7 +2111,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                       NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
 
-         if (dvr%u_AD(2)%rotors(iWT)%TowerMotion%nNodes>0) then
+         if (dvr%ADI%m%u_AD(2)%rotors(iWT)%TowerMotion%nNodes>0) then
             call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%twr%ptMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
                                          VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                          NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
