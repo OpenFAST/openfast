@@ -59,23 +59,12 @@ typedef   ^                         ^             SiKi                   VTKHubR
 typedef   ^                         ^             ReKi                   VTKNacDim        6      -     -   "Nacelle dimensions for visualization"    m
 typedef   ^                         ^             SiKi                   VTKRefPoint      3      -     -   "RefPoint for VTK outputs"
 
-# ..... AeroDyn data .......................................................................................................
-param     ^                         -             INTEGER                numInp           -      2     -   "Determines order of interpolation for input-output extrap (2=linear;3=quadratic)"
-typedef   ^                         AeroDyn_Data  AD_ContinuousStateType x                -      -     -   "Continuous states"
-typedef   ^                         ^             AD_DiscreteStateType   xd               -      -     -   "Discrete states"
-typedef   ^                         ^             AD_ConstraintStateType z                -      -     -   "Constraint states"
-typedef   ^                         ^             AD_OtherStateType      OtherState       -      -     -   "Other states"
-typedef   ^                         ^             AD_MiscVarType         m                -      -     -   "misc/optimization variables"
-typedef   ^                         ^             AD_ParameterType       p                -      -     -   "Parameters"
-typedef   ^                         ^             AD_InputType           u              {numInp} -     -   "Array of system inputs"
-typedef   ^                         ^             AD_OutputType          y                -      -     -   "System outputs"
-typedef   ^                         ^             DbKi                   InputTime      {numInp} -     -   "Array of times associated with u array"
 
 # ..... AeroDyn_Inflow data ...................................................................................................
 typedef   ^                    ADI_Data          ADI_ContinuousStateType          x        -     -    -    "Continuous states"
 typedef   ^                         ^            ADI_DiscreteStateType            xd       -     -    -    "Discrete states"
 typedef   ^                         ^            ADI_ConstraintStateType          z        -     -    -    "Constraint states"
-typedef   ^                         ^            ADI_OtherStateType               OtherStates  - -    -    "Other states"
+typedef   ^                         ^            ADI_OtherStateType               OtherState   - -    -    "Other states"
 typedef   ^                         ^            ADI_ParameterType                p        -     -    -    "Parameters"
 typedef   ^                         ^            ADI_MiscVarType                  m        -     -    -    "Misc/optimization variables"
 typedef   ^                         ^            ADI_InputType                    u        -     -    -    "Array of inputs associated with InputTimes"
@@ -174,12 +163,12 @@ typedef   ^                         ^            IntKi                   iTimeSe
 typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
 typedef   ^                         ^            Dvr_Outputs            out               -      -     -   "data for driver output file" "-"
 typedef   ^                         ^            ADI_Data                ADI              -      -     -   "" -
-#typedef   ^                         ^            ADI_InflowWindData      IW               -      -     -   "" -
 typedef   ^                         ^            ADI_IW_InputData        IW_InitInp       -      -     -   "" -
+typedef   ^                         ^            AD_InputType            u_AD              {2} -     -   "Array of system inputs"
+typedef   ^                         ^            DbKi                    InputTime_AD      {2} -     -   "Array of times associated with u array"
 
 # ..... Data to wrap the driver ..........................................................................................................
 typedef   ^                        AllData       Dvr_SimData            dvr              -      -     -   "" -
-typedef   ^                           ^          AeroDyn_Data            AD               -      -     -   "" -
 typedef   ^                           ^          IntKi                   errStat          -      -     -   "" -
 typedef   ^                           ^          character(ErrMsgLen)    errMsg           -      -     -   "" -
 typedef   ^                           ^          logical                 initialized      -      -     -   "" -
