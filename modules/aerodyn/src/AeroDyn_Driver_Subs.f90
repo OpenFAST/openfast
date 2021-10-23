@@ -19,6 +19,9 @@
 !
 !**********************************************************************************************************************************
 module AeroDyn_Driver_Subs
+   use AeroDyn_Inflow_Types
+   use AeroDyn_Inflow, only: ADI_Init, ADI_InitInflowWind, concatOutputHeaders
+   use AeroDyn_Inflow, only: ADI_ADIW_Solve
    
    use AeroDyn_Driver_Types   
    use AeroDyn
@@ -72,7 +75,7 @@ contains
 subroutine Dvr_Init(dvr, AD, IW, errStat,errMsg )
    type(Dvr_SimData),           intent(  out) :: dvr       ! driver data
    type(AeroDyn_Data),           intent(  out) :: AD            ! AeroDyn data 
-   type(InflowWind_Data),        intent(  out) :: IW            ! AeroDyn data 
+   type(ADI_InflowWindData),     intent(  out) :: IW            ! AeroDyn data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -114,7 +117,7 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    integer(IntKi)              , intent(in   ) :: iCase
    type(Dvr_SimData),           intent(inout) :: dvr           ! driver data
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
-   type(InflowWind_Data),        intent(inout) :: IW            ! InflowWind data 
+   type(ADI_InflowWindData),     intent(inout) :: IW            ! InflowWind data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -122,6 +125,7 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
    integer(IntKi)       :: iWT, j !<
    type(AD_InitOutputType) :: InitOutData_AD    ! Output data from initialization
+   type(InflowWind_InitOutputType) :: InitOutData_IW  ! Output data from initialization
    errStat = ErrID_None
    errMsg  = ""
 
@@ -149,8 +153,10 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
       dvr%tMax = dvr%Cases(iCase)%tMax
 
       ! Set wind for this case
-      dvr%HWindSpeed = dvr%Cases(iCase)%HWindSpeed
-      dvr%PLexp  =     dvr%Cases(iCase)%PLExp
+      dvr%IW_InitInp%HWindSpeed = dvr%Cases(iCase)%HWindSpeed
+      dvr%IW_InitInp%PLexp  =     dvr%Cases(iCase)%PLExp
+      dvr%IW%HWindSpeed = dvr%Cases(iCase)%HWindSpeed ! We need to do it again since InFlow Wind is initialized only for iCase==1
+      dvr%IW%PLexp      = dvr%Cases(iCase)%PLExp
       ! Set motion for this case
       call setSimpleMotion(dvr%WT(1), dvr%Cases(iCase)%rotSpeed, dvr%Cases(iCase)%bldPitch, dvr%Cases(iCase)%nacYaw, dvr%Cases(iCase)%DOF, dvr%Cases(iCase)%amplitude, dvr%Cases(iCase)%frequency)
 
@@ -187,12 +193,21 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    endif
    dvr%out%unOutFile = -1
 
+
+   ! --- Initialize ADI
+   !print*,'>>> AD_Driver_Subs, TEMP, init ADI'
+   !call Init_ADI_ForDriver(iCase, dvr%ADI, .false., dvr, dvr%dt, errStat2, errMsg2); if(Failed()) return
+
    ! --- Initialize aerodyn 
    call Init_AeroDyn(iCase, dvr, AD, dvr%dt, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
    if (iCase==1) then
-      call Init_InflowWind(dvr, IW, AD%u(1), AD%OtherState, dvr%dt, errStat2, errMsg2); if(Failed()) return
+      call ADI_InitInflowWind(dvr%out%Root, dvr%IW_InitInp, AD%u(1), AD%OtherState, dvr%IW, dvr%dt, InitOutData_IW, errStat2, errMsg2); if(Failed()) return
+      ! TODO TODO TODO u(2) is never used
+      call InflowWind_CopyInput (dvr%IW%u(1),  dvr%IW%u(2),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
+      ! --- Concatenate AD outputs to IW outputs
+      call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOutData_IW%WriteOutputHdr, InitOutData_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
    endif
 
    ! --- Initialize meshes
@@ -212,13 +227,13 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    ! --- Initial AD inputs
    AD%inputTime = -999
    DO j = 1-numInp, 0
-      call Set_AD_Inputs(j,dvr,AD,IW,errStat2,errMsg2); if(Failed()) return
+      call Set_AD_Inputs(j,dvr,AD,dvr%IW,errStat2,errMsg2); if(Failed()) return
    END DO              
 
    ! --- Initialize outputs
    call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
 
-   call Dvr_CalcOutputDriver(dvr, IW%y, errStat2, errMsg2); if(Failed()) return
+   call Dvr_CalcOutputDriver(dvr, dvr%IW%y, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize VTK
    if (dvr%out%WrVTK>0) then
@@ -231,10 +246,11 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
 contains
    subroutine cleanUp()
       call AD_DestroyInitOutput(InitOutData_AD, errStat2, errMsg2)      
+      call InflowWind_DestroyInitOutput(InitOutData_IW, errStat2, errMsg2)
    end subroutine cleanUp
 
    logical function Failed()
-      CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitCase')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitCase')
       Failed = errStat >= AbortErrLev
       if(Failed) call cleanUp()
    end function Failed
@@ -249,7 +265,7 @@ subroutine Dvr_TimeStep(nt, dvr, AD, IW, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: nt            ! time step
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
-   type(InflowWind_Data),        intent(inout) :: IW            ! AeroDyn data 
+   type(ADI_InflowWindData),     intent(inout) :: IW            ! AeroDyn data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -292,7 +308,7 @@ subroutine Dvr_TimeStep(nt, dvr, AD, IW, errStat, errMsg)
 contains
 
    logical function Failed()
-      CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_TimeStep')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_TimeStep')
       Failed = errStat >= AbortErrLev
    end function Failed
 
@@ -301,7 +317,7 @@ end subroutine Dvr_TimeStep
 subroutine Dvr_EndCase(dvr, AD, IW, initialized, errStat, errMsg)
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
-   type(InflowWind_Data),        intent(inout) :: IW            ! AeroDyn data 
+   type(ADI_InflowWindData),     intent(inout) :: IW            ! AeroDyn data 
    logical,                      intent(inout) :: initialized   ! 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -341,7 +357,7 @@ end subroutine Dvr_EndCase
 subroutine Dvr_CleanUp(dvr, AD, IW, initialized, errStat, errMsg)
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
-   type(InflowWind_Data),        intent(inout) :: IW            ! AeroDyn data 
+   type(ADI_InflowWindData),     intent(inout) :: IW            ! AeroDyn data 
    logical,                      intent(inout) :: initialized   ! 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -361,12 +377,95 @@ subroutine Dvr_CleanUp(dvr, AD, IW, initialized, errStat, errMsg)
    call InflowWind_End( IW%u(1), IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
-   call AD_Dvr_DestroyInflowWind_Data(IW     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+   call ADI_DestroyInflowWindData(IW     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    call AD_Dvr_DestroyDvr_SimData   (dvr ,    errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
 end subroutine Dvr_CleanUp
 
+
+subroutine Init_ADI_ForDriver(iCase, ADI, ADReInit, dvr, dt, errStat, errMsg)
+   integer(IntKi)              , intent(in   ) :: iCase
+   logical                     , intent(in   ) :: ADReInit
+   type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   real(DbKi),                   intent(inout) :: dt            ! interval
+   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
+   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   ! locals
+   real(reKi)                                  :: theta(3)
+   integer(IntKi)                              :: j, k   
+   integer(IntKi)                              :: iWT
+   integer(IntKi)                              :: errStat2      ! local status of error message
+   character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
+   type(WTData), pointer :: wt ! Alias to shorten notation
+   logical :: needInit
+
+   type(ADI_InitInputType)          :: InitInp        !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
+   real(DbKi)                       :: interval       !< Coupling interval in seconds
+   type(ADI_InitOutputType)         :: InitOut        !< Output for initialization routine
+!    type(AD_InitOutputType) :: InitOutData   ! Output data for initialization
+   errStat = ErrID_None
+   errMsg  = ''
+
+   ! ----- HACK FOR ADI
+   ! Inflow Wind
+   InitInp%IW_InitInp%InputFile  = dvr%IW_InitInp%InputFile
+   InitInp%IW_InitInp%CompInflow = dvr%IW_InitInp%CompInflow
+   InitInp%IW_InitInp%HWindSpeed = dvr%IW_InitInp%HWindSpeed
+   InitInp%IW_InitInp%RefHt      = dvr%IW_InitInp%RefHt
+   InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
+   ! AeroDyn
+   InitInp%AD%Gravity   = 9.80665_ReKi
+   InitInp%AD%RootName  = dvr%out%Root ! 'C:/Work/XFlow/'
+   InitInp%AD%InputFile = dvr%AD_InputFile
+   InitInp%ADReInit   = ADReInit
+   Interval=dvr%dt
+   ! Init data per rotor
+   allocate(InitInp%AD%rotors(dvr%numTurbines), stat=errStat) 
+   if (errStat/=0) then
+      call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_AeroDyn' )
+      call Cleanup()
+      return
+   end if
+   do iWT=1,dvr%numTurbines
+      wt => dvr%WT(iWT)
+      InitInp%AD%rotors(iWT)%numBlades = wt%numBlades
+      call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
+      call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
+      if (wt%HAWTprojection) then
+         InitInp%AD%rotors(iWT)%AeroProjMod = 0 ! 0: default, for HAWT, with WithoutSweepPitchTwist
+      else
+         InitInp%AD%rotors(iWT)%AeroProjMod = 1 ! 1: for VAWT
+      endif
+      InitInp%AD%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
+      InitInp%AD%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+      do k=1,wt%numBlades
+         InitInp%AD%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
+         InitInp%AD%rotors(iWT)%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
+      end do
+   enddo
+
+   call ADI_Init(InitInp, ADI%u, ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherStates, ADI%y, ADI%m, Interval, InitOut, ErrStat, ErrMsg)
+
+   call cleanup()
+contains
+
+   subroutine cleanup()
+      call ADI_DestroyInitInput (InitInp,  errStat2, errMsg2)   
+      call ADI_DestroyInitOutput(InitOut,  errStat2, errMsg2)   
+   end subroutine cleanup
+! 
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn')
+      Failed = errStat >= AbortErrLev
+      if (Failed) then
+         call cleanup()
+      endif
+   end function Failed
+   
+end subroutine Init_ADI_ForDriver
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize aerodyn module based on driver data
@@ -437,7 +536,7 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
 
       if (iCase==1) then
          ! Add writeoutput units and headers to driver, same for all cases and rotors!
-         call concatOutputHeaders(dvr, InitOutData%rotors(1)%WriteOutputHdr, InitOutData%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+         call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOutData%rotors(1)%WriteOutputHdr, InitOutData%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
       endif
 
       dvr%out%AD_ver = InitOutData%ver
@@ -463,135 +562,6 @@ contains
    end function Failed
    
 end subroutine Init_AeroDyn
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!>
-subroutine Init_InflowWind(dvr, IW, u_AD, o_AD, dt, errStat, errMsg)
-   use InflowWind, only: InflowWind_Init
-   type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(InflowWind_Data),        intent(inout) :: IW            ! AeroDyn data 
-   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
-   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
-   real(DbKi),                   intent(inout) :: dt            ! interval
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
-   ! locals
-   real(reKi)                      :: theta(3)
-   integer(IntKi)                  :: j, k, nOut_AD, nOut_IW, nOut_Dvr
-   integer(IntKi)                  :: iWT
-   integer(IntKi)                  :: errStat2      ! local status of error message
-   character(ErrMsgLen)            :: errMsg2       ! local error message if ErrStat /= ErrID_None
-   type(InflowWind_InitInputType)  :: InitInData     ! Input data for initialization
-   type(InflowWind_InitOutputType) :: InitOutData    ! Output data from initialization
-   type(WTData), pointer :: wt ! Alias to shorten notation
-   !character(ChanLen), allocatable  ::   WriteOutputHdr(:)
-   !character(ChanLen), allocatable  ::   WriteOutputUnt(:)
-   errStat = ErrID_None
-   errMsg  = ''
-
-   ! --- Count number of points (see FAST_Subs, before InflowWind_Init)
-   InitInData%NumWindPoints = 0      
-   ! Hub windspeed for each turbine
-   InitInData%NumWindPoints = InitInData%NumWindPoints + dvr%numTurbines
-   do iWT=1,dvr%numTurbines
-      wt => dvr%wt(iWT)
-      ! Blade
-      do k=1,wt%numBlades
-         InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%BladeMotion(k)%NNodes
-      end do
-      ! Tower
-      InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%TowerMotion%NNodes
-      ! Nacelle
-      if (u_AD%rotors(1)%NacelleMotion%Committed) then
-         InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%NacelleMotion%NNodes ! 1 point
-      endif
-      ! Hub Motion
-      !InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%HubPtMotion%NNodes ! 1 point
-   enddo
-   if (allocated(o_AD%WakeLocationPoints)) then
-      InitInData%NumWindPoints = InitInData%NumWindPoints + size(o_AD%WakeLocationPoints,DIM=2)
-   end if
-
-   ! --- Init InflowWind
-   if (dvr%CompInflow==0) then
-      ! Fake "InflowWind" init
-      allocate(InitOutData%WriteOutputHdr(0))
-      allocate(InitOutData%WriteOutputUnt(0))
-      allocate(IW%y%WriteOutput(0))
-      call AllocAry(IW%u(1)%PositionXYZ, 3, InitInData%NumWindPoints, 'PositionXYZ', errStat2, errMsg2); if (Failed()) return
-      call AllocAry(IW%y%VelocityUVW   , 3, InitInData%NumWindPoints, 'VelocityUVW', errStat2, errMsg2); if (Failed()) return
-      IW%u(1)%PositionXYZ = myNaN
-      IW%y%VelocityUVW    = myNaN
-   else
-      ! Module init
-      InitInData%InputFileName    = dvr%IW_InputFile
-      InitInData%Linearize        = .false.
-      InitInData%UseInputFile     = .true.
-      InitInData%RootName         = dvr%out%Root
-      CALL InflowWind_Init( InitInData, IW%u(1), IW%p, &
-                     IW%x, IW%xd, IW%z, IW%OtherSt, &
-                     IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )
-      if(Failed()) return
-
-   endif
-
-   call InflowWind_CopyInput (IW%u(1),  IW%u(2),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
-
-   ! --- Concatenate AD outputs to IW outputs
-   call concatOutputHeaders(dvr, InitOutData%WriteOutputHdr, InitOutData%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
-
-   call cleanup()
-contains
-   subroutine cleanup()
-      call InflowWind_DestroyInitInput( InitInData, ErrStat2, ErrMsg2 )   
-      call InflowWind_DestroyInitOutput( InitOutData, ErrStat2, ErrMsg2 )      
-   end subroutine cleanup
-
-   logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Init_AeroDyn' )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed) then
-         call cleanup()
-      endif
-   end function Failed
-end subroutine Init_InflowWind
-
-!> Concatenate new output channels info to the extisting ones in the driver
-subroutine concatOutputHeaders(dvr, WriteOutputHdr, WriteOutputUnt, errStat, errMsg)
-   type(Dvr_SimData), target,   intent(inout) :: dvr       !< Input data for initialization (intent out for getting AD WriteOutput names/units)
-   character(ChanLen), dimension(:), allocatable, intent(inout) ::  WriteOutputHdr !< Channel headers
-   character(ChanLen), dimension(:), allocatable, intent(inout) ::  WriteOutputUnt !< Channel units
-   integer(IntKi)              , intent(  out) :: errStat       !< Status of error message
-   character(*)                , intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
-   ! Locals
-   character(ChanLen), allocatable :: TmpHdr(:)
-   character(ChanLen), allocatable :: TmpUnt(:)
-   integer :: nOld, nAdd
-   errStat = ErrID_None
-   errMsg  = ''
-
-
-   if (.not.allocated(dvr%out%WriteOutputHdr)) then
-      call move_alloc(WriteOutputHdr, dvr%out%WriteOutputHdr)
-      call move_alloc(WriteOutputUnt, dvr%out%WriteOutputUnt)   
-   else
-      nOld = size(dvr%out%WriteOutputHdr)
-      nAdd = size(WriteOutputHdr)
-
-      call move_alloc(dvr%out%WriteOutputHdr, TmpHdr)
-      call move_alloc(dvr%out%WriteOutputUnt, TmpUnt)   
-
-      allocate(dvr%out%WriteOutputHdr(nOld+nAdd))
-      allocate(dvr%out%WriteOutputUnt(nOld+nAdd))
-      dvr%out%WriteOutputHdr(1:nOld) = TmpHdr
-      dvr%out%WriteOutputUnt(1:nOld) = TmpUnt
-      dvr%out%WriteOutputHdr(nOld+1:nOld+nAdd) = WriteOutputHdr
-      dvr%out%WriteOutputUnt(nOld+1:nOld+nAdd) = WriteOutputUnt
-      deallocate(TmpHdr)
-      deallocate(TmpUnt)
-   endif
-end subroutine concatOutputHeaders
 !----------------------------------------------------------------------------------------------------------------------------------
 !>
 subroutine Init_Meshes(dvr,  errStat, errMsg)
@@ -852,8 +822,8 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
       ! timestate = HWindSpeed, PLExp, RotSpeed, Pitch, yaw
       call interpTimeValue(dvr%timeSeries, time, dvr%iTimeSeries, timeState)
       ! Set wind at this time
-      dvr%HWindSpeed = timeState(1)
-      dvr%PLexp      = timeState(2)
+      dvr%IW%HWindSpeed = timeState(1)
+      dvr%IW%PLexp      = timeState(2)
       !! Set motion at this time
       dvr%WT(1)%hub%rotSpeed = timeState(3)     ! rad/s
       do j=1,size(dvr%WT(1)%bld)
@@ -1026,9 +996,9 @@ end subroutine Set_Mesh_Motion
 !  - set AD input meshes and inflow
 subroutine Set_AD_Inputs(nt,dvr,AD,IW,errStat,errMsg)
    integer(IntKi)              , intent(in   ) :: nt            ! time step number
-   type(Dvr_SimData), target,   intent(in   ) :: dvr       ! Driver data 
+   type(Dvr_SimData), target,    intent(in   ) :: dvr       ! Driver data 
    type(AeroDyn_Data), target,   intent(inout) :: AD            ! AeroDyn data 
-   type(InflowWind_Data),        intent(inout) :: IW            ! InflowWind data 
+   type(ADI_InflowWindData),     intent(inout) :: IW            ! InflowWind data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -1075,18 +1045,10 @@ subroutine Set_AD_Inputs(nt,dvr,AD,IW,errStat,errMsg)
    enddo ! iWT, rotors
       
    ! --- Inflow on points
-   call Set_IW_Inputs(nt, dvr, AD%u(1), AD%OtherState, IW%u(1), errStat2, errMsg2); if(Failed()) return
-   if (dvr%CompInflow==1) then
-      call InflowWind_CalcOutput(AD%inputTime(1), IW%u(1), IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2); if (Failed()) return
-   else
-      do j=1,size(IW%u(1)%PositionXYZ,2)
-         z = IW%u(1)%PositionXYZ(3,j)
-         IW%y%VelocityUVW(1,j) = dvr%HWindSpeed*(z/dvr%RefHt)**dvr%PLExp
-         IW%y%VelocityUVW(2,j) = 0.0_ReKi !V
-         IW%y%VelocityUVW(3,j) = 0.0_ReKi !W      
-      end do 
-   endif
-   call AD_InputSolve_IfW(AD%u(1), IW%y, errStat2, errMsg2); if(Failed()) return
+   call ADI_ADIW_Solve(AD%inputTime(1), AD%u(1), AD%OtherState, IW%u(1), IW, .true., errStat, errMsg)
+   !call ADI_Set_IW_Inputs(AD%u(1), AD%OtherState, IW%u(1), .true., errStat2, errMsg2); if(Failed()) return
+   !call ADI_CalcOutput_IW(AD%inputTime(1), IW%u(1), IW, errStat2, errMsg2); if(Failed()) return
+   !call ADI_AD_InputSolve_IfW(AD%u(1), IW%y, errStat2, errMsg2); if(Failed()) return
 
 contains
    logical function Failed()
@@ -1094,133 +1056,6 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function Failed
 end subroutine Set_AD_Inputs
-
-!> Set inputs for inflow wind
-!! Similar to FAST_Solver, IfW_InputSolve
-subroutine Set_IW_Inputs(nt,dvr,u_AD,o_AD,u_IfW,errStat,errMsg)
-   integer(IntKi)              , intent(in   ) :: nt            ! time step number
-   type(Dvr_SimData), target,   intent(in   ) :: dvr       ! Driver data 
-   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
-   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
-   type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
-   integer :: k,j,node, iWT
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   Node=0
-
-
-   ! Order important!
-
-   ! Hub Height point for each turbine
-   do iWT=1,dvr%numTurbines
-      Node = Node + 1
-      u_IfW%PositionXYZ(:,Node) = dvr%wt(iWT)%hub%ptMesh%Position(:,1) + dvr%wt(iWT)%hub%ptMesh%TranslationDisp(:,1)
-   enddo
-
-   do iWT=1,dvr%numTurbines
-      ! Blade
-      do K = 1,SIZE(u_AD%rotors(iWT)%BladeMotion)
-         do J = 1,u_AD%rotors(iWT)%BladeMotion(k)%Nnodes
-            Node = Node + 1
-            u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) + u_AD%rotors(iWT)%BladeMotion(k)%Position(:,j)
-         end do !J = 1,p%BldNodes ! Loop through the blade nodes / elements
-      end do !K = 1,p%NumBl         
-      ! Tower
-      do J=1,u_AD%rotors(iWT)%TowerMotion%nnodes
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(iWT)%TowerMotion%Position(:,J)
-      end do      
-      ! Nacelle
-      if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%NacelleMotion%Position(:,1)
-      end if
-      ! Hub
-
-   enddo ! iWT
-   ! vortex points from FVW in AD15
-   if (allocated(o_AD%WakeLocationPoints)) then
-      do J=1,size(o_AD%WakeLocationPoints,DIM=2)
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = o_AD%WakeLocationPoints(:,J)
-         ! rewrite the history of this so that extrapolation doesn't make a mess of things
-!          do k=2,size(IW%u)
-!             if (allocated(IW%u(k)%PositionXYZ))   IW%u(k)%PositionXYZ(:,Node) = IW%u(1)%PositionXYZ(:,Node)
-!          end do
-      enddo !j, wake points
-   end if
-end subroutine Set_IW_Inputs
-
-!> This routine sets the AeroDyn wind inflow inputs.
-!! See similar routine in FAST_Solver
-subroutine AD_InputSolve_IfW(u_AD, y_IfW, errStat, errMsg)
-   ! Passed variables
-   TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        !< The inputs to AeroDyn
-   TYPE(InflowWind_OutputType), INTENT(IN)      :: y_IfW       !< The outputs from InflowWind
-   INTEGER(IntKi)                               :: errStat     !< Error status of the operation
-   CHARACTER(*)                                 :: errMsg      !< Error message if ErrStat /= ErrID_None
-   ! Local variables:
-   INTEGER(IntKi)                               :: J           ! Loops through nodes / elements.
-   INTEGER(IntKi)                               :: K           ! Loops through blades.
-   INTEGER(IntKi)                               :: NumBl
-   INTEGER(IntKi)                               :: NNodes
-   INTEGER(IntKi)                               :: node
-   INTEGER(IntKi)                               :: iWT
-   errStat = ErrID_None
-   errMsg  = ""
-   node = 1
-
-   ! Order important!
-
-   do iWT=1,size(u_AD%rotors)
-      node = node + 1 ! Hub velocities for each rotor
-   enddo
-
-   do iWT=1,size(u_AD%rotors)
-      NumBl  = size(u_AD%rotors(iWT)%InflowOnBlade,3)
-      Nnodes = size(u_AD%rotors(iWT)%InflowOnBlade,2)
-      ! Blades
-      do k=1,NumBl
-         do j=1,Nnodes
-            u_AD%rotors(iWT)%InflowOnBlade(:,j,k) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do
-      end do
-      ! Tower
-      if ( allocated(u_AD%rotors(iWT)%InflowOnTower) ) then
-         Nnodes = size(u_AD%rotors(iWT)%InflowOnTower,2)
-         do j=1,Nnodes
-            u_AD%rotors(iWT)%InflowOnTower(:,j) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do      
-      end if
-      ! Nacelle
-      if (u_AD%rotors(iWT)%NacelleMotion%NNodes > 0) then
-         u_AD%rotors(iWT)%InflowOnNacelle(:) = y_IfW%VelocityUVW(:,node)
-         node = node + 1
-      else
-         u_AD%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
-      end if
-      ! Hub 
-!      if (u_AD%HubMotion%NNodes > 0) then
-!         u_AD%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
-!         node = node + 1
-!      else
-!         u_AD%InflowOnHub = 0.0_ReKi
-!      end if
-   enddo ! rotors
-   ! OLAF points
-   if ( allocated(u_AD%InflowWakeVel) ) then
-      Nnodes = size(u_AD%InflowWakeVel,DIM=2)
-      do j=1,Nnodes
-         u_AD%InflowWakeVel(:,j) = y_IfW%VelocityUVW(:,node)
-         node = node + 1
-      end do !j, wake points
-   end if
-end subroutine AD_InputSolve_IfW
-
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1281,23 +1116,23 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
 
    ! --- Inflow data
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
-   call ParseVar(FileInfo_In, CurLine, "compInflow", dvr%compInflow  , errStat2, errMsg2, unEc); if (Failed()) return
-   call ParseVar(FileInfo_In, CurLine, "InflowFile", dvr%IW_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
-   if (dvr%compInflow==0) then
-      call ParseVar(FileInfo_In, CurLine, "HWindSpeed", dvr%HWindSpeed  , errStat2, errMsg2, unEc); if (Failed()) return
-      call ParseVar(FileInfo_In, CurLine, "RefHt"     , dvr%RefHt       , errStat2, errMsg2, unEc); if (Failed()) return
-      call ParseVar(FileInfo_In, CurLine, "PLExp"     , dvr%PLExp       , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "compInflow", dvr%IW_InitInp%compInflow  , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "InflowFile", dvr%IW_InitInp%InputFile, errStat2, errMsg2, unEc); if (Failed()) return
+   if (dvr%IW_InitInp%compInflow==0) then
+      call ParseVar(FileInfo_In, CurLine, "HWindSpeed", dvr%IW_InitInp%HWindSpeed  , errStat2, errMsg2, unEc); if (Failed()) return
+      call ParseVar(FileInfo_In, CurLine, "RefHt"     , dvr%IW_InitInp%RefHt       , errStat2, errMsg2, unEc); if (Failed()) return
+      call ParseVar(FileInfo_In, CurLine, "PLExp"     , dvr%IW_InitInp%PLExp       , errStat2, errMsg2, unEc); if (Failed()) return
    else
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
-      dvr%PLexp      = myNaN
-      dvr%RefHt      = myNaN
-      dvr%HWindSpeed = myNaN
+      dvr%IW_InitInp%PLexp      = myNaN
+      dvr%IW_InitInp%RefHt      = myNaN
+      dvr%IW_InitInp%HWindSpeed = myNaN
    endif
 
    if (PathIsRelative(dvr%AD_InputFile)) dvr%AD_InputFile = trim(PriPath)//trim(dvr%AD_InputFile)
-   if (PathIsRelative(dvr%IW_InputFile)) dvr%IW_InputFile = trim(PriPath)//trim(dvr%IW_InputFile)
+   if (PathIsRelative(dvr%IW_InitInp%InputFile)) dvr%IW_InitInp%InputFile = trim(PriPath)//trim(dvr%IW_InitInp%InputFile)
 
    ! --- Turbines
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
@@ -1640,12 +1475,12 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',ErrStat, ErrMsg,RoutineName)
-   if (Check(.not.(ANY((/0,1/) == dvr%compInflow) ), 'CompInflow needs to be 0 or 1')) return
+   if (Check(.not.(ANY((/0,1/) == dvr%IW_InitInp%compInflow) ), 'CompInflow needs to be 0 or 1')) return
 
    if (Check(.not.(ANY(idAnalysisVALID == dvr%analysisType    )), 'Analysis type not supported: '//trim(Num2LStr(dvr%analysisType)) )) return
    
    if (dvr%analysisType==idAnalysisTimeD .or. dvr%analysisType==idAnalysisCombi) then
-      if (Check( dvr%CompInflow/=0, 'CompInflow needs to be 0 when analysis type is '//trim(Num2LStr(dvr%analysisType)))) return
+      if (Check( dvr%IW_InitInp%CompInflow/=0, 'CompInflow needs to be 0 when analysis type is '//trim(Num2LStr(dvr%analysisType)))) return
    endif
 
 
@@ -1803,7 +1638,7 @@ subroutine Dvr_InitializeDriverOutputs(dvr, errStat, errMsg)
    dvr%out%WriteOutputUnt(j) = '(m/s)'; j=j+1
 
    dvr%out%WriteOutputHdr(j) = 'ShearExp'
-   if (dvr%CompInflow==1) then
+   if (dvr%IW%CompInflow==1) then
       dvr%out%WriteOutputUnt(j) = '(NVALID)'; j=j+1
    else
       dvr%out%WriteOutputUnt(j) = '(-)'; j=j+1
@@ -1864,7 +1699,7 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
          arr(k) = y_Ifw%VelocityUVW(1, iWT)       ; k=k+1  ! NOTE: stored at beginning of array
          arr(k) = y_Ifw%VelocityUVW(2, iWT)       ; k=k+1
          arr(k) = y_Ifw%VelocityUVW(3, iWT)       ; k=k+1 
-         arr(k) = dvr%PLExp                       ; k=k+1 ! shear exp, not set if CompInflow=1
+         arr(k) = dvr%IW%PLExp                    ; k=k+1 ! shear exp, not set if CompInflow=1
 
          ! 6 base DOF
          rotations  = EulerExtract(dvr%WT(iWT)%ptMesh%Orientation(:,:,1)); 

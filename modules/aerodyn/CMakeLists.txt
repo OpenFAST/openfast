@@ -17,6 +17,7 @@
 if (GENERATE_TYPES)
   generate_f90_types(src/AeroAcoustics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroAcoustics_Types.f90)
   generate_f90_types(src/AeroDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Types.f90)
+  generate_f90_types(src/AeroDyn_Inflow_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Inflow_Types.f90)
   generate_f90_types(src/AirfoilInfo_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AirfoilInfo_Types.f90)
   generate_f90_types(src/BEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/BEMT_Types.f90)
   generate_f90_types(src/DBEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/DBEMT_Types.f90)
@@ -94,6 +95,8 @@ target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs aeroacousti
 
 # AeroDyn driver
 set(AD_DRIVER_SOURCES
+  src/AeroDyn_Inflow.f90
+  src/AeroDyn_Inflow_Types.f90
   src/AeroDyn_Driver.f90
   src/AeroDyn_Driver_Subs.f90
   src/AeroDyn_Driver_Types.f90

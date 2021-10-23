@@ -34,17 +34,19 @@ program AeroDyn_Driver
    REAL(DbKi)                       :: TiLstPrn      ! The simulation time of the last print (to file) [(s)]
    integer :: nt !< loop counter (for time step)
    integer(IntKi) :: iCase ! loop counter (for driver case)
+
    CALL DATE_AND_TIME ( Values=StrtTime )                 ! Let's time the whole simulation
    CALL CPU_TIME ( UsrTime1 )                             ! Initial time (this zeros the start time when used as a MATLAB function)
    UsrTime1 = MAX( 0.0_ReKi, UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
 
+   ! -----
    dat%initialized=.false.
-   call dvr_Init(dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
+   call dvr_Init(dat%dvr, dat%AD, dat%dvr%IW, dat%errStat, dat%errMsg); call CheckError()
 
    do iCase= 1,dat%dvr%numCases
 
       ! Initial case
-      call dvr_InitCase(iCase, dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
+      call dvr_InitCase(iCase, dat%dvr, dat%AD, dat%dvr%IW, dat%errStat, dat%errMsg); call CheckError()
       dat%initialized=.true.
    
       ! Init of time estimator
@@ -56,7 +58,7 @@ program AeroDyn_Driver
 
       ! One time loop
       do nt = 1, dat%dvr%numSteps
-         call dvr_TimeStep(nt, dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
+         call dvr_TimeStep(nt, dat%dvr, dat%AD, dat%dvr%IW, dat%errStat, dat%errMsg); call CheckError()
          ! Time update to screen
          t_global=nt*dat%dvr%dt
          if (dat%dvr%analysisType/=idAnalysisCombi) then
@@ -69,7 +71,7 @@ program AeroDyn_Driver
          call RunTimes(StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global)
       endif
 
-      call dvr_EndCase(dat%dvr, dat%AD, dat%IW, dat%initialized, dat%errStat, dat%errMsg); call CheckError()
+      call dvr_EndCase(dat%dvr, dat%AD, dat%dvr%IW, dat%initialized, dat%errStat, dat%errMsg); call CheckError()
 
    enddo ! Loop on cases
 
@@ -89,7 +91,7 @@ contains
       integer(IntKi)       :: errStat2      ! local status of error message
       character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
 
-      call dvr_CleanUp(dat%dvr, dat%AD, dat%IW, dat%initialized, errStat2, errMsg2)
+      call dvr_CleanUp(dat%dvr, dat%AD, dat%dvr%IW, dat%initialized, errStat2, errMsg2)
       CALL SetErrStat(errStat2, errMsg2, dat%errStat, dat%errMsg, 'dvr_End')
 
       if (dat%errStat >= AbortErrLev) then      

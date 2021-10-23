@@ -1,0 +1,76 @@
+###################################################################################################################################
+# Registry for AeroDyn with InflowWind
+# This Registry file is used to create AeroDyn_Types which contains data used in the AeroDyn module.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>    <ModuleName/ModName>    <TypeName>    <FieldType>    <FieldName>    <Dims>    <IO>    <DNAME>    <DESCRIP>    <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include   Registry_NWTC_Library.txt
+usefrom   AeroDyn_Registry.txt
+usefrom   InflowWind.txt
+
+param   AeroDyn_Inflow/ADI     -       IntKi             ADI_Version  -  1   -    "" -
+
+# ..... InflowWind data .....................................................................................................
+typedef    ^      ADI_InflowWindData   InflowWind_ContinuousStateType   x                -      -     -   "Continuous states"
+typedef    ^        ^                  InflowWind_DiscreteStateType     xd               -      -     -   "Discrete states"
+typedef    ^        ^                  InflowWind_ConstraintStateType   z                -      -     -   "Constraint states"
+typedef    ^        ^                  InflowWind_OtherStateType        OtherSt          -      -     -   "Other states"
+typedef    ^        ^                  InflowWind_ParameterType         p                -      -     -   "Parameters"
+typedef    ^        ^                  InflowWind_MiscVarType           m                -      -     -   "Misc/optimization variables"
+typedef    ^        ^                  InflowWind_InputType             u                {2}    -     -   "Array of inputs associated with InputTimes"
+typedef    ^        ^                  InflowWind_OutputType            y                -      -     -   "System outputs"
+typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
+typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
+typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
+# ..... InflowWind Input data .....................................................................................................
+typedef    ^     ADI_IW_InputData      Character(1024)                  InputFile        -      -     -   "Name of InfloWind input file" -
+typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
+typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
+typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
+
+# ..... InitIn ....................................................................................................................
+typedef    ^    InitInputType          AD_InitInputType                 AD               -      -     -   "AD Init input types"
+typedef    ^        ^                  Logical                          ADReInit         -      -     -   "True if AD will be reinitialized"
+typedef    ^        ^                  ADI_IW_InputData                 IW_InitInp       -      -     -   "IW Init input types"
+typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
+
+# ..... InitOut ...................................................................................................................
+typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
+typedef    ^        ^                  AD_InitOutputType                AD               -      -     -   "AD init outputs"
+
+# ..... Continuous States .........................................................................................................
+typedef    ^    ContinuousStateType    AD_ContinuousStateType           AD               -      -     -   "AD Continuous states"
+
+# ..... DiscreteStates ............................................................................................................
+typedef    ^    DiscreteStateType      AD_DiscreteStateType             AD               -      -     -   "Discrete states"
+
+# ..... Constraints ...............................................................................................................
+typedef    ^    ConstraintStateType    AD_ConstraintStateType           AD               -      -     -   "Constraint states"
+
+# ..... OtherStates ...............................................................................................................
+typedef    ^    OtherStateType         AD_OtherStateType                AD               -      -     -   "Other states"
+
+# ..... Misc ......................................................................................................................
+typedef    ^    MiscVarType            AD_MiscVarType                   AD               -      -     -   "misc/optimization variables"
+typedef    ^        ^                  ADI_InflowWindData               IW               -      -     -   "All the necessary inflow wind data"
+typedef    ^        ^                  AD_InputType                     u_AD            {2}     -     -   "Array of system inputs"
+typedef    ^        ^                  DbKi                             inputTimes_AD   {2}     -     -   "Array of times associated with u array"
+
+# ..... Parameters ................................................................................................................
+typedef    ^    ParameterType          AD_ParameterType                 AD               -      -     -   "Parameters"
+typedef    ^        ^                  DbKi                             dt               -      -     -   "time increment" "s"
+
+# ..... Inputs ....................................................................................................................
+typedef    ^    InputType              AD_InputType                     AD               -      -     -   "Array of system inputs"
+
+# ..... Outputs ...................................................................................................................
+typedef    ^    OutputType             AD_OutputType                    AD               -      -     -   "System outputs"
+

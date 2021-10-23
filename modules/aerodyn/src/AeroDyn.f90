@@ -61,6 +61,7 @@ module AeroDyn
                                                !   states(z)
    PUBLIC :: AD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
    
+   PUBLIC :: AD_NumWindPoints                  !< Routine to return then number of windpoints required by AeroDyn
   
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -5679,4 +5680,30 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
    
 END SUBROUTINE Compute_dX
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Count number of wind points required by AeroDyn
+integer(IntKi) function AD_NumWindPoints(u_AD, o_AD) result(n)
+   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
+   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
+   ! locals
+   integer(IntKi)                  :: k
+   integer(IntKi)                  :: iWT
+   n = 0      
+   do iWT=1, size(u_AD%rotors)
+      ! Blades
+      do k=1,size(u_AD%rotors(iWT)%BladeMotion)
+         n = n + u_AD%rotors(iWT)%BladeMotion(k)%NNodes
+      end do
+      ! Tower
+      n = n + u_AD%rotors(iWT)%TowerMotion%NNodes
+      ! Nacelle
+      if (u_AD%rotors(1)%NacelleMotion%Committed) then
+         n = n + u_AD%rotors(iWT)%NacelleMotion%NNodes ! 1 point
+      endif
+      ! Hub Motion
+      !n = n + u_AD%rotors(iWT)%HubPtMotion%NNodes ! 1 point
+   enddo
+   if (allocated(o_AD%WakeLocationPoints)) then
+      n = n + size(o_AD%WakeLocationPoints, dim=2)
+   end if
+end function AD_NumWindPoints
 END MODULE AeroDyn
