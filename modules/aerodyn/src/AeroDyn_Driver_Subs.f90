@@ -155,8 +155,8 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
       ! Set wind for this case
       dvr%IW_InitInp%HWindSpeed = dvr%Cases(iCase)%HWindSpeed
       dvr%IW_InitInp%PLexp  =     dvr%Cases(iCase)%PLExp
-      dvr%IW%HWindSpeed = dvr%Cases(iCase)%HWindSpeed ! We need to do it again since InFlow Wind is initialized only for iCase==1
-      dvr%IW%PLexp      = dvr%Cases(iCase)%PLExp
+      dvr%ADI%m%IW%HWindSpeed = dvr%Cases(iCase)%HWindSpeed ! We need to do it again since InFlow Wind is initialized only for iCase==1
+      dvr%ADI%m%IW%PLexp      = dvr%Cases(iCase)%PLExp
       ! Set motion for this case
       call setSimpleMotion(dvr%WT(1), dvr%Cases(iCase)%rotSpeed, dvr%Cases(iCase)%bldPitch, dvr%Cases(iCase)%nacYaw, dvr%Cases(iCase)%DOF, dvr%Cases(iCase)%amplitude, dvr%Cases(iCase)%frequency)
 
@@ -203,9 +203,9 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
 
    ! --- Initialize Inflow Wind 
    if (iCase==1) then
-      call ADI_InitInflowWind(dvr%out%Root, dvr%IW_InitInp, AD%u(1), AD%OtherState, dvr%IW, dvr%dt, InitOutData_IW, errStat2, errMsg2); if(Failed()) return
+      call ADI_InitInflowWind(dvr%out%Root, dvr%IW_InitInp, AD%u(1), AD%OtherState, dvr%ADI%m%IW, dvr%dt, InitOutData_IW, errStat2, errMsg2); if(Failed()) return
       ! TODO TODO TODO u(2) is never used
-      call InflowWind_CopyInput (dvr%IW%u(1),  dvr%IW%u(2),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
+      !call InflowWind_CopyInput (dvr%IW%u(1),  dvr%IW%u(2),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
       ! --- Concatenate AD outputs to IW outputs
       call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOutData_IW%WriteOutputHdr, InitOutData_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
    endif
@@ -227,13 +227,13 @@ subroutine Dvr_InitCase(iCase, dvr, AD, IW, errStat, errMsg )
    ! --- Initial AD inputs
    AD%inputTime = -999
    DO j = 1-numInp, 0
-      call Set_AD_Inputs(j,dvr,AD,dvr%IW,errStat2,errMsg2); if(Failed()) return
+      call Set_AD_Inputs(j,dvr,AD,dvr%ADI%m%IW,errStat2,errMsg2); if(Failed()) return
    END DO              
 
    ! --- Initialize outputs
    call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
 
-   call Dvr_CalcOutputDriver(dvr, dvr%IW%y, errStat2, errMsg2); if(Failed()) return
+   call Dvr_CalcOutputDriver(dvr, dvr%ADI%m%IW%y, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize VTK
    if (dvr%out%WrVTK>0) then
@@ -822,8 +822,8 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
       ! timestate = HWindSpeed, PLExp, RotSpeed, Pitch, yaw
       call interpTimeValue(dvr%timeSeries, time, dvr%iTimeSeries, timeState)
       ! Set wind at this time
-      dvr%IW%HWindSpeed = timeState(1)
-      dvr%IW%PLexp      = timeState(2)
+      dvr%ADI%m%IW%HWindSpeed = timeState(1)
+      dvr%ADI%m%IW%PLexp      = timeState(2)
       !! Set motion at this time
       dvr%WT(1)%hub%rotSpeed = timeState(3)     ! rad/s
       do j=1,size(dvr%WT(1)%bld)
@@ -1638,7 +1638,7 @@ subroutine Dvr_InitializeDriverOutputs(dvr, errStat, errMsg)
    dvr%out%WriteOutputUnt(j) = '(m/s)'; j=j+1
 
    dvr%out%WriteOutputHdr(j) = 'ShearExp'
-   if (dvr%IW%CompInflow==1) then
+   if (dvr%ADI%m%IW%CompInflow==1) then
       dvr%out%WriteOutputUnt(j) = '(NVALID)'; j=j+1
    else
       dvr%out%WriteOutputUnt(j) = '(-)'; j=j+1
@@ -1699,7 +1699,7 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
          arr(k) = y_Ifw%VelocityUVW(1, iWT)       ; k=k+1  ! NOTE: stored at beginning of array
          arr(k) = y_Ifw%VelocityUVW(2, iWT)       ; k=k+1
          arr(k) = y_Ifw%VelocityUVW(3, iWT)       ; k=k+1 
-         arr(k) = dvr%IW%PLExp                    ; k=k+1 ! shear exp, not set if CompInflow=1
+         arr(k) = dvr%ADI%m%IW%PLExp              ; k=k+1 ! shear exp, not set if CompInflow=1
 
          ! 6 base DOF
          rotations  = EulerExtract(dvr%WT(iWT)%ptMesh%Orientation(:,:,1)); 
