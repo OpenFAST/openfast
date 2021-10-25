@@ -3364,10 +3364,10 @@ END SUBROUTINE CheckR16Var
       endif
       write(U,*)  '        %NumLines           (integer): ',FileInfo%NumLines
       write(U,*)  '        %NumFiles           (integer): ',FileInfo%NumFiles
-      write(U,*)  '        %FileList  (array of strings): ',size(FileInfo%FileList)
-      write(U,*)  '        %FileIndx  (array of integer): ',size(FileInfo%FileIndx)
-      write(U,*)  '        %FileLine  (array of integer): ',size(FileInfo%FileLine)
-      write(U,*)  '        %Lines     (array of strings): ',size(FileInfo%Lines   )
+      write(U,*)  '        %FileList  (array of strings): ',size(FileInfo%FileList) ! SIZE(array) will produce an error on some compilers if array not allocated
+      write(U,*)  '        %FileIndx  (array of integer): ',size(FileInfo%FileIndx) ! SIZE(array) will produce an error on some compilers if array not allocated
+      write(U,*)  '        %FileLine  (array of integer): ',size(FileInfo%FileLine) ! SIZE(array) will produce an error on some compilers if array not allocated
+      write(U,*)  '        %Lines     (array of strings): ',size(FileInfo%Lines   ) ! SIZE(array) will produce an error on some compilers if array not allocated
       if (allocated(FileInfo%FileList)) then
          write(U,*)  '  list of files read:'
          write(U,*)  '     FileIdx     FileName'
@@ -3884,7 +3884,7 @@ END SUBROUTINE CheckR16Var
 
          IF ( DashLoc > 0 )  THEN                                             ! Must be in the form of "<num1>-<num2>".
 
-            READ (Words(1)(:DashLoc-1),*,IOSTAT=ErrStatLcl)  RangeBeg         ! Parse the first number as the beginning fo the range.
+            READ (Words(1)(:DashLoc-1),*,IOSTAT=ErrStatLcl)  RangeBeg         ! Parse the first number as the beginning of the range.
             IF ( ErrStatLcl /= 0 )  THEN
                CALL SetErrStat(ErrID_Fatal,'Fatal error for an incorrectly formatted include-file line range.',ErrStat,ErrMsg,RoutineName)
                RETURN
@@ -4670,13 +4670,13 @@ END SUBROUTINE CheckR16Var
 
          ! Local declarations.
 
-      INTEGER(IntKi)                               :: AryInd    = 0           ! The index into the FileInfo arrays.  There is no data in the arrays at the start.
-      INTEGER(IntKi)                               :: ErrStatLcl              ! Error status local to this routine.
-      INTEGER(IntKi)                               :: FileIndx  = 1           ! The index into the FileInfo%FileList array.  Start with the first file in the list.
-      INTEGER(IntKi)                               :: RangeBeg  = 1           ! The first line in a range of lines to be included from a file.
-      INTEGER(IntKi)                               :: RangeEnd  = 0           ! The last line in a range of lines to be included from a file.  Zero to read to the end of the file.
+      INTEGER(IntKi)                               :: AryInd                 ! The index into the FileInfo arrays.  There is no data in the arrays at the start.
+      INTEGER(IntKi)                               :: ErrStatLcl             ! Error status local to this routine.
+      INTEGER(IntKi)                               :: FileIndx               ! The index into the FileInfo%FileList array.  Start with the first file in the list.
+      INTEGER(IntKi)                               :: RangeBeg               ! The first line in a range of lines to be included from a file.
+      INTEGER(IntKi)                               :: RangeEnd               ! The last line in a range of lines to be included from a file.  Zero to read to the end of the file.
 
-      INTEGER                                      :: File      = 0           ! Index into the arrays.
+      INTEGER                                      :: File                   ! Index into the arrays.
       
       CHARACTER(ErrMsgLen)                         :: ErrMsg2
       CHARACTER(*),       PARAMETER                :: RoutineName = 'ProcessComFile'
@@ -4684,6 +4684,7 @@ END SUBROUTINE CheckR16Var
       TYPE (FNlist_Type), POINTER                  :: FirstFile               ! The first file in the linked list (TopFile).
       TYPE (FNlist_Type), POINTER                  :: LastFile                ! The last file in the linked list.
 
+      
 
          ! Scan the file, and it's included files, to determine how many lines will be kept and generate
          ! a linked list of the different files.
@@ -4691,6 +4692,7 @@ END SUBROUTINE CheckR16Var
 
       ErrStat = ErrID_None
       ErrMsg  = ""
+
       
       ALLOCATE ( FirstFile ) !bjj: fix me , IOStat=ErrStatLcl2
       LastFile => FirstFile
@@ -4725,7 +4727,6 @@ END SUBROUTINE CheckR16Var
             CALL Cleanup()
             RETURN
          ENDIF
-
 
          ! Copy the linked list of file names into the FileList array.
          ! This MUST be done before calling ReadComFile.
@@ -4765,9 +4766,21 @@ END SUBROUTINE CheckR16Var
          ENDIF
 
 
+      if ( FileInfo%NumLines < 1) then
+         CALL SetErrStat( ErrID_Fatal, 'No data found in '//trim(TopFileName)//'.' , ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      end if
+      
+      ! initialize this, just in case
+      FileInfo%FileIndx = 1
+      
          ! Read the file and save all but the comments.
 
       AryInd = 0
+      FileIndx  = 1           ! The index into the FileInfo%FileList array.  Start with the first file in the list.
+      RangeBeg  = 1           ! The first line in a range of lines to be included from a file.
+      RangeEnd  = 0           ! The last line in a range of lines to be included from a file.  Zero to read to the end of the file.
       CALL ReadComFile ( FileInfo, FileIndx, AryInd, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg2 )
          CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStatLcl >= AbortErrLev )  THEN
@@ -4775,7 +4788,13 @@ END SUBROUTINE CheckR16Var
             RETURN
          ENDIF
 
-      CALL Cleanup()         
+      IF ( AryInd /= FileInfo%NumLines ) THEN ! This would happen if there is a mis-match between ScanComFile and ReadComFile
+         CALL SetErrStat( ErrID_Fatal, "Error processing files: number of lines read does not match array size.", ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      CALL Cleanup()
       RETURN
 
    !=======================================================================
@@ -5216,17 +5235,18 @@ END SUBROUTINE CheckR16Var
    ErrMsg  = ""
    
       ! Open the input file.
-
+   IF ( FileIndx > SIZE(FileInfo%FileList ) ) THEN
+      CALL SetErrStat( ErrID_Fatal, "Error processing file: Invalid FileIndx.", ErrStat, ErrMsg, RoutineName )
+      CALL Cleanup()
+      RETURN
+   END IF
+   
    CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL OpenFInpFile ( UnIn, FileInfo%FileList(FileIndx), ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev )  THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
+      IF ( ErrStat >= AbortErrLev )  RETURN
 
 
       ! Skip the beginning of the file, if requested.
@@ -5285,7 +5305,7 @@ END SUBROUTINE CheckR16Var
                ErrStatLcl = 0
 
                ! Which file in the prestored list is the new one?
-
+            NewIndx = 0
             DO File=1,FileInfo%NumFiles
                IF ( TRIM( FileInfo%FileList(File) ) == TRIM( IncFileName ) )  THEN
                   NewIndx = File
@@ -5293,6 +5313,11 @@ END SUBROUTINE CheckR16Var
                ENDIF ! ( TRIM( FileInfo%FileList(File) ) == TRIM( Line(2:) ) )
             ENDDO ! File
 
+            IF (NewIndx < 1) THEN ! This would happen if there is a mis-match between ScanComFile and ReadComFile
+               CALL SetErrStat( ErrID_Fatal, "Error processing file: "//TRIM(IncFileName)//"is not in the pre-stored list.", ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
+            END IF
 
                ! Let's recursively process this new file.
 
@@ -5308,6 +5333,16 @@ END SUBROUTINE CheckR16Var
 
 
                ! Not a file name.  Add this line to stack.
+         
+            IF ( AryInd >= FileInfo%NumLines ) THEN ! This would happen if there is a mis-match between ScanComFile and ReadComFile
+               CALL SetErrStat( ErrID_Fatal, "Error processing file: Too many data lines.", ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
+            ELSE IF (AryInd < 0) THEN
+               CALL SetErrStat( ErrID_Fatal, "Error processing file: Invalid AryInd.", ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
+            END IF
 
             AryInd                    = AryInd + 1
             FileInfo%FileLine(AryInd) = FileLine

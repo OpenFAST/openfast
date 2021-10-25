@@ -38,6 +38,7 @@ program AeroDyn_Driver
    CALL CPU_TIME ( UsrTime1 )                             ! Initial time (this zeros the start time when used as a MATLAB function)
    UsrTime1 = MAX( 0.0_ReKi, UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
 
+   dat%initialized=.false.
    call dvr_Init(dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
 
    do iCase= 1,dat%dvr%numCases
