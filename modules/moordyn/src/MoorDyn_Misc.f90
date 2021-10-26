@@ -772,7 +772,7 @@ CONTAINS
 
    ! :::::::::::::::::::::::::: bathymetry subroutines :::::::::::::::::::::::::::::::
    
-   
+   ! interpolates local seabed depth and normal vector
    SUBROUTINE getDepthFromBathymetry(BathymetryGrid, BathGrid_Xs, BathGrid_Ys, LineX, LineY, depth)
 
       REAL(DbKi),      INTENT(IN   )       :: BathymetryGrid(:,:) ! need colons or some sort of dimension setting
@@ -780,15 +780,66 @@ CONTAINS
       REAL(DbKi),      INTENT(IN   )       :: BathGrid_Ys(:)
       REAL(DbKi),      INTENT(IN   )       :: LineX
       REAL(DbKi),      INTENT(IN   )       :: LineY 
-      REAL(DbKi),      INTENT(  OUT)       :: depth 
+      REAL(DbKi),      INTENT(  OUT)       :: depth      ! local seabed depth (positive down) [m]
+      ! >>> to be added >>> REAL(DbKi),      INTENT(  OUT)       :: nvec(3)    ! local seabed surface normal vector (positive out) 
 
-      INTEGER(IntKi)                       :: ix, iy         ! indeces for interpolation      
-      Real(DbKi)                           :: fx, fy         ! interpolation fractions
+      INTEGER(IntKi)                       :: ix0, iy0             ! indeces for interpolation   
+      INTEGER(IntKi)                       :: ix1, iy1             ! second indices   
+      Real(DbKi)                           :: fx, fy               ! interpolation fractions
+      REAL(DbKi)                           :: c00, c01, c10, c11, cx0, cx1, c0y, c1y  ! temporary depth values
+      Real(DbKi)                           :: dx, dy               ! x and y spacing of local grid panel [m]
+      Real(DbKi)                           :: dc_dx, dc_dy         ! local slope
+      Real(DbKi)                           :: tempVector(3)        ! normal vector before scaling to unit
 
-      CALL getInterpNums(BathGrid_Xs, LineX, 1, ix, fx)
-      CALL getInterpNums(BathGrid_Ys, LineY, 1, iy, fy)
+      ! get interpolation indices and fractions for the relevant grid panel
+      CALL getInterpNums(BathGrid_Xs, LineX, 1, ix0, fx)
+      CALL getInterpNums(BathGrid_Ys, LineY, 1, iy0, fy)
 
-      CALL calculate2Dinterpolation(BathymetryGrid, ix, iy, fx, fy, depth)
+      !CALL calculate2Dinterpolation(BathymetryGrid, ix, iy, fx, fy, depth)
+      
+      ! handle end case conditions
+      IF (fx == 0) THEN
+         ix1 = ix0
+      ELSE
+         ix1 = min(ix0+1,size(BathymetryGrid,2))  ! don't overstep bounds
+      END IF
+      IF (fy == 0) THEN
+         iy1 = iy0
+      ELSE
+         iy1 = min(iy0+1,size(BathymetryGrid,1))  ! don't overstep bounds
+      END IF
+      
+      ! get corner points of the panel
+      c00 = BathymetryGrid(iy0, ix0)
+      c01 = BathymetryGrid(iy1, ix0)
+      c10 = BathymetryGrid(iy0, ix1)
+      c11 = BathymetryGrid(iy1, ix1)
+      
+      ! get interpolated points and local value
+      cx0    = c00 *(1.0-fx) + c10 *fx
+      cx1    = c01 *(1.0-fx) + c11 *fx
+      c0y    = c00 *(1.0-fy) + c01 *fx
+      c1y    = c10 *(1.0-fy) + c11 *fx
+      depth  = cx0 *(1.0-fy) + cx1 *fy
+      
+      ! get local slope
+      dx = BathGrid_Xs(ix1) - BathGrid_Xs(ix0)
+      dy = BathGrid_Ys(iy1) - BathGrid_Ys(iy0)
+      if ( dx > 0.0 ) then
+         dc_dx = (c1y-c0y)/dx
+      else
+         dc_dx = 0.0_DbKi   ! maybe this should raise an error
+      end if
+      if ( dx > 0.0 ) then
+         dc_dy = (cx1-cx0)/dy
+      else
+         dc_dy = 0.0_DbKi   ! maybe this should raise an error
+      end if
+      
+      tempVector = -dc_dx
+      tempVector = -dc_dy
+      tempVector = 1.0_DbKi
+      ! ScaleVector( tempVector, 1.0_DbKi, nvec ) <<< ! compute unit vector      
 
    END SUBROUTINE getDepthFromBathymetry
    
