@@ -373,7 +373,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! WtrDens - Water density.
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Waves%WtrDens, 'WtrDens', 'Water density', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVarWDefault ( UnIn, FileName, InitInp%Waves%WtrDens, 'WtrDens', 'Water density', real(InitInp%defWtrDens,SiKi), ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -383,7 +383,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! WtrDpth - Water depth
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Morison%WtrDpth, 'WtrDpth', 'Water depth', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVarWDefault ( UnIn, FileName, InitInp%Morison%WtrDpth, 'WtrDpth', 'Water depth', InitInp%defWtrDpth, ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -393,7 +393,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! MSL2SWL
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Morison%MSL2SWL, 'MSL2SWL', 'MSL to SWL offset', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVarWDefault ( UnIn, FileName, InitInp%Morison%MSL2SWL, 'MSL2SWL', 'MSL to SWL offset', InitInp%defMSL2SWL, ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
