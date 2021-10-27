@@ -267,6 +267,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: ld      !< segment unstretched length rate of change (used in active tensioning) [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: lstr      !< segment stretched length [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: lstrd      !< segment change in stretched length [[m/s]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: Kurv      !< curvature at each node point [[1/m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: dl_1      !< segment stretch attributed to static stiffness portion [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: V      !< segment volume [[m^3]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: U      !< water velocity at node [[m/s]]
@@ -281,6 +282,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Ap      !< node added mass forcing (transverse) [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Aq      !< node added mass forcing (axial) [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< node bottom contact force [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Bs      !< node force due to bending moments [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Fnet      !< total force on node [[N]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: S      !< node inverse mass matrix [[kg]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
@@ -4492,6 +4494,18 @@ IF (ALLOCATED(SrcLineData%lstrd)) THEN
   END IF
     DstLineData%lstrd = SrcLineData%lstrd
 ENDIF
+IF (ALLOCATED(SrcLineData%Kurv)) THEN
+  i1_l = LBOUND(SrcLineData%Kurv,1)
+  i1_u = UBOUND(SrcLineData%Kurv,1)
+  IF (.NOT. ALLOCATED(DstLineData%Kurv)) THEN 
+    ALLOCATE(DstLineData%Kurv(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Kurv.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstLineData%Kurv = SrcLineData%Kurv
+ENDIF
 IF (ALLOCATED(SrcLineData%dl_1)) THEN
   i1_l = LBOUND(SrcLineData%dl_1,1)
   i1_u = UBOUND(SrcLineData%dl_1,1)
@@ -4680,6 +4694,20 @@ IF (ALLOCATED(SrcLineData%B)) THEN
   END IF
     DstLineData%B = SrcLineData%B
 ENDIF
+IF (ALLOCATED(SrcLineData%Bs)) THEN
+  i1_l = LBOUND(SrcLineData%Bs,1)
+  i1_u = UBOUND(SrcLineData%Bs,1)
+  i2_l = LBOUND(SrcLineData%Bs,2)
+  i2_u = UBOUND(SrcLineData%Bs,2)
+  IF (.NOT. ALLOCATED(DstLineData%Bs)) THEN 
+    ALLOCATE(DstLineData%Bs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Bs.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstLineData%Bs = SrcLineData%Bs
+ENDIF
 IF (ALLOCATED(SrcLineData%Fnet)) THEN
   i1_l = LBOUND(SrcLineData%Fnet,1)
   i1_u = UBOUND(SrcLineData%Fnet,1)
@@ -4776,6 +4804,9 @@ ENDIF
 IF (ALLOCATED(LineData%lstrd)) THEN
   DEALLOCATE(LineData%lstrd)
 ENDIF
+IF (ALLOCATED(LineData%Kurv)) THEN
+  DEALLOCATE(LineData%Kurv)
+ENDIF
 IF (ALLOCATED(LineData%dl_1)) THEN
   DEALLOCATE(LineData%dl_1)
 ENDIF
@@ -4817,6 +4848,9 @@ IF (ALLOCATED(LineData%Aq)) THEN
 ENDIF
 IF (ALLOCATED(LineData%B)) THEN
   DEALLOCATE(LineData%B)
+ENDIF
+IF (ALLOCATED(LineData%Bs)) THEN
+  DEALLOCATE(LineData%Bs)
 ENDIF
 IF (ALLOCATED(LineData%Fnet)) THEN
   DEALLOCATE(LineData%Fnet)
@@ -4939,6 +4973,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! lstrd upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%lstrd)  ! lstrd
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Kurv allocated yes/no
+  IF ( ALLOCATED(InData%Kurv) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Kurv upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Kurv)  ! Kurv
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! dl_1 allocated yes/no
   IF ( ALLOCATED(InData%dl_1) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! dl_1 upper/lower bounds for each dimension
@@ -5008,6 +5047,11 @@ ENDIF
   IF ( ALLOCATED(InData%B) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! B upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%B)  ! B
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Bs allocated yes/no
+  IF ( ALLOCATED(InData%Bs) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Bs upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Bs)  ! Bs
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Fnet allocated yes/no
   IF ( ALLOCATED(InData%Fnet) ) THEN
@@ -5277,6 +5321,21 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%Kurv) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Kurv,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Kurv,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Kurv,1), UBOUND(InData%Kurv,1)
+        DbKiBuf(Db_Xferred) = InData%Kurv(i1)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%dl_1) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -5533,6 +5592,26 @@ ENDIF
       DO i2 = LBOUND(InData%B,2), UBOUND(InData%B,2)
         DO i1 = LBOUND(InData%B,1), UBOUND(InData%B,1)
           DbKiBuf(Db_Xferred) = InData%B(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Bs) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Bs,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Bs,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Bs,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Bs,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%Bs,2), UBOUND(InData%Bs,2)
+        DO i1 = LBOUND(InData%Bs,1), UBOUND(InData%Bs,1)
+          DbKiBuf(Db_Xferred) = InData%Bs(i1,i2)
           Db_Xferred = Db_Xferred + 1
         END DO
       END DO
@@ -5919,6 +5998,24 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Kurv not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Kurv)) DEALLOCATE(OutData%Kurv)
+    ALLOCATE(OutData%Kurv(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Kurv.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Kurv,1), UBOUND(OutData%Kurv,1)
+        OutData%Kurv(i1) = DbKiBuf(Db_Xferred)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dl_1 not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -6217,6 +6314,29 @@ ENDIF
       DO i2 = LBOUND(OutData%B,2), UBOUND(OutData%B,2)
         DO i1 = LBOUND(OutData%B,1), UBOUND(OutData%B,1)
           OutData%B(i1,i2) = DbKiBuf(Db_Xferred)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Bs not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Bs)) DEALLOCATE(OutData%Bs)
+    ALLOCATE(OutData%Bs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Bs.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%Bs,2), UBOUND(OutData%Bs,2)
+        DO i1 = LBOUND(OutData%Bs,1), UBOUND(OutData%Bs,1)
+          OutData%Bs(i1,i2) = DbKiBuf(Db_Xferred)
           Db_Xferred = Db_Xferred + 1
         END DO
       END DO

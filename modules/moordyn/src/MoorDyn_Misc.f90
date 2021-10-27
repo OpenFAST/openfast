@@ -32,6 +32,7 @@ MODULE MoorDyn_Misc
 
    PUBLIC :: UnitVector
    PUBLIC :: ScaleVector
+   PUBLIC :: GetCurvature
    PUBLIC :: GetOrientationAngles
    PUBLIC :: TransformKinematics
    PUBLIC :: TransformKinematicsA
@@ -110,6 +111,34 @@ CONTAINS
    END SUBROUTINE ScaleVector
    !-----------------------------------------------------------------------
 
+
+   ! convenience function to calculate curvature based on adjacent segments' direction vectors and their combined length
+   function GetCurvature(length, q1, q2)
+   
+      real(DbKi),   intent(in   ) :: length
+      real(DbKi),   intent(in   ) :: q1(3)
+      real(DbKi),   intent(in   ) :: q2(3)
+      real(DbKi)                  :: GetCurvature
+      
+      
+      real(DbKi)                  :: q1_dot_q2
+      
+      ! note "length" here is combined from both segments
+      
+      q1_dot_q2 = dot_product( q1, q2 )
+      
+      if (q1_dot_q2 > 1.0) then           ! this is just a small numerical error, so set q1_dot_q2 to 1
+         GetCurvature = 0.0_DbKi          ! this occurs when there's no curvature, so return zero curvature
+         
+      !else if (q1_dot_q2 < 0)   ! this is a bend of more than 90 degrees, too much, call an error!
+
+      else                                                        ! normal case
+         GetCurvature = 4.0/length * sqrt(0.5*(1.0 - q1_dot_q2))    ! this is the normal curvature calculation
+      end if
+      
+      return
+   end function GetCurvature
+   
 
    ! calculate orientation angles of a cylindrical object
    !-----------------------------------------------------------------------

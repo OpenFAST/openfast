@@ -58,7 +58,7 @@ CONTAINS
       INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(4)                         :: J             ! Generic index
+      INTEGER(4)                         :: i             ! Generic index
       INTEGER(4)                         :: K             ! Generic index
       INTEGER(IntKi)                     :: N
 
@@ -82,7 +82,11 @@ CONTAINS
       IF ( ErrStat /= ErrID_None ) print *, "Alloc error 1 in MoorDyn" 
      
       ! allocate segment scalar quantities
-      ALLOCATE ( Rod%l(N), Rod%V(N), STAT = ErrStat )
+      if (Rod%N == 0) then                                ! special case of zero-length Rod
+         ALLOCATE ( Rod%l(1), Rod%V(N), STAT = ErrStat )
+      else                                                ! normal case
+         ALLOCATE ( Rod%l(N), Rod%V(N), STAT = ErrStat )
+      end if
       IF ( ErrStat /= ErrID_None ) print *, "Alloc error 2 in MoorDyn"
 
       ! allocate water related vectors
@@ -118,7 +122,6 @@ CONTAINS
          Rod%r6(4:6) = Rod%q               ! (Rod direction unit vector)
          Rod%v6(4:6) = 0.0_DbKi            ! (rotational velocities about unrotated axes) 
 
-
       else if (abs(Rod%typeNum)==1) then    ! for a pinned rod, just set the orientation (position will be set later by parent object)
 
          Rod%r6(4:6) = Rod%q               ! (Rod direction unit vector)
@@ -128,29 +131,26 @@ CONTAINS
       ! otherwise (for a fixed rod) the positions will be set by the parent body or via coupling
 
 
-
       ! save mass for future calculations >>>> should calculate I_l and I_r here in future <<<<
       Rod%mass  = Rod%UnstrLen*RodProp%w
 
 
       ! assign values for l and V
-      DO J=1,N
-         Rod%l(J) = Rod%UnstrLen/REAL(N, DbKi)
-         Rod%V(J) = Rod%l(J)*0.25*Pi*RodProp%d*RodProp%d
-      END DO
-      
+      if (Rod%N == 0) then
+         Rod%l(1) = 0.0_DbKi
+         Rod%V(1) = 0.0_DbKi
+      else
+         DO i=1,N
+            Rod%l(i) = Rod%UnstrLen/REAL(N, DbKi)
+            Rod%V(i) = Rod%l(i)*0.25*Pi*RodProp%d*RodProp%d
+         END DO
+      end if
       
 
       ! set gravity and bottom contact forces to zero initially (because the horizontal components should remain at zero)
-      DO J = 0,N
-         DO K = 1,3
-            Rod%W(K,J) = 0.0_DbKi
-            Rod%B(K,J) = 0.0_DbKi
-         END DO
-      END DO
-      
-      ! >>> why are the above assignments making l V W and B appear as "undefined pointer/array"s??? <<<
-      
+      Rod%W = 0.0_DbKi
+      Rod%B = 0.0_DbKi
+            
       IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
 
       ! need to add cleanup sub <<<

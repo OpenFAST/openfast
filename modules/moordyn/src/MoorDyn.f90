@@ -558,7 +558,7 @@ CONTAINS
                    !read into a line
                    Line = NextLine(i)
 
-                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp >>EI(new)<<  Can  Cat Cdn  Cdt 
+                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp >>EI(new)<<  Cdn  Can  Cdt  Cat
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
                       m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
                       m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat
@@ -1526,7 +1526,9 @@ CONTAINS
         !CALL CleanUp()
         RETURN
       END IF
-
+      x%states        = 0.0_DbKi
+      m%xTemp%states  = 0.0_DbKi
+      m%xdTemp%states = 0.0_DbKi
 
 
 
