@@ -66,7 +66,8 @@ ElastoDyn                                     7    N/A             -------------
 ElastoDyn                                     8    Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
-- The AeroDyn driver input file was completely rewritten. You may consult the following examples for a :download:`single rotor <./aerodyn/examples/ad_driver_example.dvr>`: and :download:`multiple rotors <./aerodyn/examples/ad_driver_multiple.dvr>`: in addition to the :ref:`AeroDyn driver documentation<ad_driver>`.
+- The AeroDyn driver input file was completely rewritten. You may consult the following examples for a :download:`single rotor <./aerodyn/examples/ad_driver_example.dvr>` and :download:`multiple rotors <./aerodyn/examples/ad_driver_multiple.dvr>` in addition to the :ref:`AeroDyn driver documentation<ad_driver>`.
+
 
 -  SubDyn  
 
