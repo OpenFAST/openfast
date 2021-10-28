@@ -1878,7 +1878,7 @@ CONTAINS
       end if
    
       ! Integrate force/moments over blades by performing mesh transfer to blade root points:
-      do k=1,min(p%NumBlades,4)
+      do k=1,min(p%NumBlades,4) ! Temporary hack for at least one more blae outputs
          call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
          ! Transform force vector to blade root coordinate system
          tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
@@ -1973,7 +1973,7 @@ CONTAINS
             m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
             m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
 
-            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%Chord(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
+            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%chord_LL(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
          end do ! nodes
       end do ! blades
 
@@ -2073,7 +2073,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
 
    TYPE(AD_InputFile),      INTENT(INOUT) :: InputFileData   ! Data stored in the module's input file
-   INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
+   INTEGER(IntKi),          INTENT(INOUT) :: UnEcho          ! Unit number for the echo file
 
    INTEGER(IntKi),          INTENT(IN)    :: NumBlades(:)    ! Number of blades per rotor 
    INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
@@ -2095,7 +2095,6 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   UnEcho  = -1
    InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 
 
@@ -2320,6 +2319,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
    call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%FLookup, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+      
+      ! UAStartRad - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
+   call ParseVar( FileInfo_In, CurLine, "UAStartRad", InputFileData%UAStartRad, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2>= AbortErrLev) InputFileData%UAStartRad = 0.0_ReKi
+   
+      ! UAEndRad - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
+   call ParseVar( FileInfo_In, CurLine, "UAEndRad", InputFileData%UAEndRad, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2>= AbortErrLev) InputFileData%UAEndRad = 1.0_ReKi
 
    !======  Airfoil Information =========================================================================
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
@@ -2426,6 +2433,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    endif
       ! BlOutNd - Blade nodes whose values will be output (-):
    call ParseAry( FileInfo_In, CurLine, "BlOutNd", InputFileData%BlOutNd, InputFileData%NBlOuts, ErrStat2, ErrMsg2, UnEc)
+      if (Failed()) return
 
       ! NTwOuts - Number of blade node outputs [0 - 9] (-)
    call ParseVar( FileInfo_In, CurLine, "NTwOuts", InputFileData%NTwOuts, ErrStat2, ErrMsg2, UnEc )
@@ -2438,6 +2446,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    endif
       ! TwOutNd - Tower nodes whose values will be output (-):
    call ParseAry( FileInfo_In, CurLine, "TwOutNd", InputFileData%TwOutNd, InputFileData%NTwOuts, ErrStat2, ErrMsg2, UnEc)
+      if (Failed()) return
 
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
@@ -2480,18 +2489,17 @@ CONTAINS
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ParsePrimaryFileInfo' )
       Failed = ErrStat >= AbortErrLev
-      if (Failed) then
-         if (UnEc  > -1_IntKi)      CLOSE( UnEc )
-      endif
+      !if (Failed) then
+      !endif
    end function Failed
    logical function FailedNodal()
       ErrMsg_NoAllBldNdOuts='AD15 Nodal Outputs: Nodal output section of AeroDyn input file not found or improperly formatted. Skipping nodal outputs.'
-      if (ErrStat2 >= AbortErrLev ) then
+      FailedNodal = ErrStat2 >= AbortErrLev
+      if ( FailedNodal ) then
          InputFileData%BldNd_BladesOut = 0
          InputFileData%BldNd_NumOuts = 0
          call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       endif
-      FailedNodal = ErrStat2 >= AbortErrLev
    end function FailedNodal
    !-------------------------------------------------------------------------------------------------
 END SUBROUTINE ParsePrimaryFileInfo
@@ -2522,11 +2530,6 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
    ErrStat = ErrID_None
    ErrMsg  = ""
    UnIn = -1
-      
-   ! Allocate space for these variables
-   
-   
-   
    
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2556,7 +2559,10 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
       ! NumBlNds - Number of blade nodes used in the analysis (-):
    CALL ReadVar( UnIn, ADBlFile, BladeKInputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat>= AbortErrLev ) THEN 
+         CALL Cleanup()
+         RETURN
+      END IF
 
    CALL ReadCom ( UnIn, ADBlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2787,7 +2793,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       else
          Msg = 'No'
       end if   
-      WRITE (UnSu,Ec_LgFrmt) InputFileData%AIDrag, 'AIDrag', "Include the drag term in the tangential-induction calculation? "//TRIM(Msg)      
+      WRITE (UnSu,Ec_LgFrmt) InputFileData%TIDrag, 'TIDrag', "Include the drag term in the tangential-induction calculation? "//TRIM(Msg)      
       
       ! IndToler
       WRITE (UnSu,Ec_ReFrmt) InputFileData%IndToler, 'IndToler', "Convergence tolerance for BEM induction factors (radians)"     
@@ -2821,14 +2827,18 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       
       ! UAMod
       select case (InputFileData%UAMod)
-         case (1)
+         case (UA_Baseline)
             Msg = 'baseline model (original)'
-         case (2)
+         case (UA_Gonzalez)
             Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
-         case (3)
+         case (UA_MinnemaPierce)
             Msg = 'Minnema/Pierce variant (changes in Cc and Cm)'      
          !case (4)
          !   Msg = 'DYSTOOL'      
+         case (UA_HGM)
+            Msg = 'HGM (continuous state)'
+         case (UA_HGMV)
+            Msg = 'HGMV (continuous state + vortex)'
          case default      
             Msg = 'unknown'      
       end select

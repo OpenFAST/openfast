@@ -370,6 +370,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity      !< Gravity (scalar, positive-valued) [m/s^2]
     REAL(ReKi)  :: WtrDens      !< Water density [kg/m^3]
     REAL(ReKi)  :: WtrDpth      !< Water depth (positive-valued) [m]
+    REAL(ReKi)  :: MSL2SWL      !< Mean Sea Level to Still Water Level offset [m]
     INTEGER(IntKi)  :: NMembers      !< number of members [-]
     TYPE(Morison_MemberType) , DIMENSION(:), ALLOCATABLE  :: Members      !< Array of Morison members used during simulation [-]
     INTEGER(IntKi)  :: NNodes      !<  [-]
@@ -9899,6 +9900,7 @@ ENDIF
     DstParamData%Gravity = SrcParamData%Gravity
     DstParamData%WtrDens = SrcParamData%WtrDens
     DstParamData%WtrDpth = SrcParamData%WtrDpth
+    DstParamData%MSL2SWL = SrcParamData%MSL2SWL
     DstParamData%NMembers = SrcParamData%NMembers
 IF (ALLOCATED(SrcParamData%Members)) THEN
   i1_l = LBOUND(SrcParamData%Members,1)
@@ -10258,6 +10260,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Re_BufSz   = Re_BufSz   + 1  ! WtrDens
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! NMembers
   Int_BufSz   = Int_BufSz   + 1     ! Members allocated yes/no
   IF ( ALLOCATED(InData%Members) ) THEN
@@ -10458,6 +10461,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%WtrDens
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NMembers
     Int_Xferred = Int_Xferred + 1
@@ -10938,6 +10943,8 @@ ENDIF
     OutData%WtrDens = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%NMembers = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

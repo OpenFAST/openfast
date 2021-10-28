@@ -41,15 +41,9 @@ private
    public :: UA_ReInit
    public :: UA_InitStates_AllNodes ! used for AD linearization initialization
 
-   integer(intki), parameter         :: UA_Baseline      = 1   ! UAMod = 1 [Baseline model (Original)]
-   integer(intki), parameter         :: UA_Gonzalez      = 2   ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]
-   integer(intki), parameter         :: UA_MinnemaPierce = 3   ! UAMod = 3 [Minnema/Pierce variant (changes in Cc and Cm)]
-   integer(intki), parameter, public :: UA_HGM           = 4   ! UAMod = 4 [continuous variant of HGM (Hansen) model]
-   integer(intki), parameter, public :: UA_OYE           = 5   ! UAMod = 5 [continuous Oye model]
-   
-   real(ReKi),     parameter :: Gonzalez_factor = 0.2_ReKi   ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
-
-   real(ReKi),     parameter, public :: UA_u_min = 0.01_ReKi   ! m/s; used to provide a minimum value so UA equations don't blow up (this should be much lower than range where UA is turned off)
+   real(ReKi), parameter         :: Gonzalez_factor = 0.2_ReKi     ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
+   real(ReKi), parameter, public :: UA_u_min = 0.01_ReKi           ! m/s; used to provide a minimum value so UA equations don't blow up (this should be much lower than range where UA is turned off)
+   real(ReKi), parameter         :: K1pos=1.0_ReKi, K1neg=0.5_ReKi ! K1 coefficients for BV model
 
    contains
    
@@ -152,10 +146,8 @@ subroutine Get_f_from_Lookup( UAMod, Re, UserProp, alpha_in, alpha0, C_nalpha_ci
       ! ensure that these angles are in appropriate ranges
    alpha  = alpha_in
    
-   call MPi2Pi(alpha)
-
+   call AddOrSub2Pi( alpha0, alpha )
    alpha_minus_alpha0 = alpha - alpha0
-   call MPi2Pi(alpha_minus_alpha0)
 
    call AFI_ComputeAirfoilCoefs( alpha, Re, UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg )
       if (ErrStat >= AbortErrLev ) return
@@ -269,7 +261,7 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, UserProp, alpha_in, alpha0_i
    
       Cc =  AFI_interp%Cl*sin(alpha) - (AFI_interp%Cd-AFI_interp%Cd0)*cos(alpha)
    
-
+      call AddOrSub2Pi( alpha0, alpha )
       if (UAMod == UA_Gonzalez) then
          denom = eta_e*c_nalpha_circ*( alpha-alpha0 )*(alpha)    !NOTE: Added back (alpha) because idling cases with alpha 90-degrees show problems with tan(alpha), the code should match steady state if the formulation in the calculation of Cc is in agreement with this formulation
       else
@@ -412,11 +404,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    ! This filter is a Simple Infinite Impulse Response Filter
    ! See https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
    
-   dynamicFilterCutoffHz = max( 1.0_ReKi, u%U ) * BL_p%filtCutOff / PI / p%C(i,j)
+   dynamicFilterCutoffHz = max( 1.0_ReKi, u%U ) * BL_p%filtCutOff / PI / p%c(i,j)
    LowPassConst  =  exp(-2.0_ReKi*PI*p%dt*dynamicFilterCutoffHz) ! from Eqn 1.8 [7]
    
    KC%alpha_filt_cur = LowPassConst*alpha_filt_minus1 + (1.0_ReKi-LowPassConst)*u%alpha ! from eq 1.8 [1: typo in documentation, though]
-   
    
    KC%dalpha0  = KC%alpha_filt_cur - BL_p%alpha0
    
@@ -699,20 +690,26 @@ end subroutine ComputeKelvinChain
       
 
 !==============================================================================
-subroutine UA_SetParameters( dt, InitInp, p, ErrStat, ErrMsg )
+subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
 ! 
 ! Called by : UA_Init
 ! Calls  to : NONE
 !..............................................................................
    
    real(DbKi),                   intent(in   )  :: dt          ! time step length (s)
-   type(UA_InitInputType),       intent(inout)  :: InitInp     ! input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
+   type(UA_InitInputType),       intent(inout)  :: InitInp     ! input data for initialization routine ; we're moving allocated data from InitInp to p so must also be intent(out)
    type(UA_ParameterType),       intent(inout)  :: p           ! parameters
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
+   integer(IntKi),               intent(in   )  :: AFIndx(:,:)
    integer(IntKi),               intent(  out)  :: ErrStat     ! error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! error message if ErrStat /= ErrID_None
 
-   integer(IntKi)            :: ErrStat2
-   character(*), parameter   :: RoutineName = 'UA_SetParameters'
+   character(ErrMsgLen)                         :: ErrMsg2
+   integer(IntKi)                               :: ErrStat2
+   character(*), parameter                      :: RoutineName = 'UA_SetParameters'
+   logical                                      :: IsUsed(size(AFInfo))
+   
+   INTEGER(IntKi)                               :: i, j
    
    
    
@@ -721,39 +718,84 @@ subroutine UA_SetParameters( dt, InitInp, p, ErrStat, ErrMsg )
    ErrMsg  = ""
    p%dt         = dt
    
-   allocate(p%c(InitInp%nNodesPerBlade,InitInp%numBlades), stat = ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat( ErrID_Fatal, 'Error allocating p%c.', ErrStat, ErrMsg, RoutineName )
-      ! Set errmessage and return
-      return
-   end if
+   call AllocAry(p%UA_off_forGood,InitInp%nNodesPerBlade,InitInp%numBlades,'p%UA_off_forGood',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(p%c,             InitInp%nNodesPerBlade,InitInp%numBlades,'p%c',             ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
    
    p%c          = InitInp%c         ! this can't be 0
    p%numBlades  = InitInp%numBlades
    p%nNodesPerBlade  = InitInp%nNodesPerBlade
-   p%UAMod      = InitInp%UAMod    
-   p%a_s        = InitInp%a_s ! this can't be 0
+   p%UAMod      = InitInp%UAMod
+   p%a_s        = InitInp%a_s       ! this can't be 0
    p%Flookup    = InitInp%Flookup
    p%ShedEffect = InitInp%ShedEffect
    
    if (p%UAMod==UA_HGM) then
-      p%lin_nx = p%numBlades*p%nNodesPerBlade*4
+      p%lin_nx = p%numBlades*p%nNodesPerBlade*4 ! 4 continuous states per node per blade (5th state isn't currently linearizable)
    else
       p%lin_nx = 0
    end if
    
+   p%UA_off_forGood = .false. ! flag that determines if UA should be turned off for the whole simulation
+   if (allocated(InitInp%UAOff_innerNode)) then
+      do j=1,min(size(p%UA_off_forGood,2), size(InitInp%UAOff_innerNode)) !blade
+         do i=1,min(InitInp%UAOff_innerNode(j),size(p%UA_off_forGood,1)) !node
+!            call WrScr( 'Warning: Turning off Unsteady Aerodynamics on inner node (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
+            p%UA_off_forGood(i,j) = .true.
+         end do
+      end do
+   end if
+   
+   if (allocated(InitInp%UAOff_outerNode)) then
+      do j=1,min(size(p%UA_off_forGood,2), size(InitInp%UAOff_outerNode)) !blade
+         do i=InitInp%UAOff_outerNode(j), size(p%UA_off_forGood,1) !node
+!            call WrScr( 'Warning: Turning off Unsteady Aerodynamics on outer node (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
+            p%UA_off_forGood(i,j) = .true.
+         end do
+      end do
+   end if
+   
+   do j=1,size(p%UA_off_forGood,2) !blade
+      do i=1,size(p%UA_off_forGood,1) !node
+      
+         if (.not. p%UA_off_forGood(i,j)) then
+            call UA_TurnOff_param(p, AFInfo(AFIndx(i,j)), ErrStat2, ErrMsg2)
+            if (ErrStat2 > ErrID_None) then
+               call WrScr( 'Warning: Turning off Unsteady Aerodynamics because '//trim(ErrMsg2)//' (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
+               p%UA_off_forGood(i,j) = .true.
+            end if
+         end if
+         
+      end do
+   end do
+   
+      ! check that the airfoils have appropriate data for UA
+   IsUsed = .false.
+   do j=1,size(p%UA_off_forGood,2) !blade
+      do i=1,size(p%UA_off_forGood,1) !node
+         if (.not. p%UA_off_forGood(i,j)) then
+            IsUsed(AFIndx(i,j)) = .true.
+         end if
+      end do
+   end do
+   
+   do i=1,size(AFInfo,1)
+      if (IsUsed(i)) then
+         call UA_ValidateAFI(InitInp%UAMod, AFInfo(i), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+   end do
+
 end subroutine UA_SetParameters
 !==============================================================================   
 
 !==============================================================================
-subroutine UA_InitStates_Misc( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat, ErrMsg )  
+subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )  
 ! Called by : UA_Init
 ! Calls  to : NONE
 !..............................................................................
 
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
-   type(AFI_ParameterType),      intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
-   integer(IntKi),               intent(in   )  :: AFIndx(:,:)
    type(UA_ContinuousStateType), intent(inout)  :: x           ! Initial continuous states
    type(UA_DiscreteStateType),   intent(inout)  :: xd          ! Initial discrete states
    type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Initial other states
@@ -770,7 +812,7 @@ subroutine UA_InitStates_Misc( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat,
    
    
       ! allocate all the state arrays
-   if (p%UAMod == UA_HGM) then
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
    
       allocate( x%element( p%nNodesPerBlade, p%numBlades ), stat=ErrStat2 )
       if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,"Cannot allocate x%x.",ErrStat,ErrMsg,RoutineName)
@@ -778,6 +820,29 @@ subroutine UA_InitStates_Misc( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat,
       allocate( OtherState%n(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
          if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%n.", ErrStat, ErrMsg, RoutineName)
       
+      if (p%UAMod == UA_HGMV) then
+         allocate( OtherState%t_vortexBegin(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%t_vortexBegin.", ErrStat, ErrMsg, RoutineName)
+
+         allocate( OtherState%SignOfOmega(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%SignOfOmega.", ErrStat, ErrMsg, RoutineName)
+         
+         allocate( OtherState%PositivePressure(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%PositivePressure.", ErrStat, ErrMsg, RoutineName)
+
+         allocate( OtherState%vortexOn(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%vortexOn.", ErrStat, ErrMsg, RoutineName)
+
+         allocate( OtherState%BelowThreshold(p%nNodesPerBlade, p%numBlades), stat=ErrStat2)
+            if (ErrStat2 /= 0 ) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%BelowThreshold.", ErrStat, ErrMsg, RoutineName)
+      end if
+   elseif (p%UAMod == UA_BV) then
+      call AllocAry( xd%alpha_minus1     ,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1',      ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry( xd%alpha_filt_minus1,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_filt_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry( xd%alpha_dot        ,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_dot',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry( xd%alpha_dot_minus1 ,   p%nNodesPerBlade,p%numBlades, 'xd%alpha_dot_minus1',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      allocate     ( OtherState%activeL     (p%nNodesPerBlade,p%numBlades), stat=ErrStat2); if(ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%activeL.", ErrStat, ErrMsg, RoutineName)
+      allocate     ( OtherState%activeD     (p%nNodesPerBlade,p%numBlades), stat=ErrStat2); if(ErrStat2 /= 0) call SetErrStat( ErrID_Fatal, " Error allocating OtherState%activeD.", ErrStat, ErrMsg, RoutineName)
       
    else
       call AllocAry( xd%alpha_minus1,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -831,20 +896,17 @@ subroutine UA_InitStates_Misc( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat,
    call AllocAry(m%weight     ,p%nNodesPerBlade,p%numBlades,'m%weight',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    call AllocAry(OtherState%FirstPass,p%nNodesPerBlade,p%numBlades,'OtherState%FirstPass',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry(OtherState%UA_off_forGood,p%nNodesPerBlade,p%numBlades,'OtherState%UA_off_forGood',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
    if (ErrStat >= AbortErrLev) return
 
    
-   call UA_ReInit( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat2,ErrMsg2 )   ! initializes values of states and misc vars
+   call UA_ReInit( p, x, xd, OtherState, m, ErrStat2,ErrMsg2 )   ! initializes values of states and misc vars
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
 end subroutine UA_InitStates_Misc 
 !==============================================================================   
-subroutine UA_ReInit( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat, ErrMsg )  
+subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )  
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
-   type(AFI_ParameterType),      intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
-   integer(IntKi),               intent(in   )  :: AFIndx(:,:)
    type(UA_ContinuousStateType), intent(inout)  :: x           ! Initial continuous states
    type(UA_DiscreteStateType),   intent(inout)  :: xd          ! Initial discrete states
    type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Initial other states
@@ -869,22 +931,17 @@ subroutine UA_ReInit( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat, ErrMsg )
    
    OtherState%FirstPass = .true.
    
-   OtherState%UA_off_forGood = .false. ! flag that determines if UA parameters are invalid and should be turned off for the whole simulation
-   do j=1,size(OtherState%UA_off_forGood,2)
-      do i=1,size(OtherState%UA_off_forGood,1)
-      
-         call UA_TurnOff_param(p, AFInfo(AFIndx(i,j)), ErrStat2, ErrMsg2)
-         if (ErrStat2 > ErrID_None) then
-            call WrScr( 'Warning: Turning off Unsteady Aerodynamics because '//trim(ErrMsg2)//' (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
-            OtherState%UA_off_forGood(i,j) = .true.
+   do j=1,size(p%UA_off_forGood,2) !blade
+      do i=1,size(p%UA_off_forGood,1) !node
+
+         if (p%UA_off_forGood(i,j)) then
             m%weight(i,j) = 0.0_ReKi
          end if
          
       end do
-   end do
+   end do   
    
-   
-   if ( p%UAMod == UA_HGM ) then
+   if ( p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
    
       OtherState%n   = -1  ! we haven't updated OtherState%xdot, yet
       
@@ -899,6 +956,23 @@ subroutine UA_ReInit( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat, ErrMsg )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       end do
    
+      if (p%UAMod == UA_HGMV) then
+         OtherState%t_vortexBegin = 0.0_ReKi
+         OtherState%SignOfOmega = 1.0_ReKi
+         OtherState%PositivePressure = .true.
+         OtherState%vortexOn = .false.
+         OtherState%BelowThreshold = .true.
+      end if
+
+   elseif (p%UAMod == UA_BV) then
+
+      xd%alpha_minus1         = 0.0_ReKi
+      xd%alpha_filt_minus1    = 0.0_ReKi
+      xd%alpha_dot            = 0.0_ReKi
+      xd%alpha_dot_minus1     = 0.0_ReKi
+      OtherState%activeL      = .False.
+      OtherState%activeD      = .False.
+      
    else
       OtherState%sigma1    = 1.0_ReKi
       OtherState%sigma1c   = 1.0_ReKi
@@ -957,7 +1031,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
 ! Calls  to : NWTC_Init, UA_SetParameters, UA_InitStates
 !..............................................................................
 
-   type(UA_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
+   type(UA_InitInputType),       intent(inout)  :: InitInp     ! input data for initialization routine ; we're moving allocated data from InitInp to p so must also be intent(out)
    type(UA_InputType),           intent(in   )  :: u           ! An initial guess for the input; input mesh must be defined
    type(UA_ParameterType),       intent(  out)  :: p           ! Parameters
    type(UA_ContinuousStateType), intent(  out)  :: x           ! Initial continuous states
@@ -985,6 +1059,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    character(*), parameter                      :: RoutineName = 'UA_Init'
    
 #ifdef UA_OUTS
+   CHARACTER(6)                                 :: TmpChar                          ! Temporary char array to hold the node digits (3 places only!!!!)
    integer(IntKi)                               :: i,j, iNode, iOffset
    character(64)                                :: chanPrefix
 #endif   
@@ -997,17 +1072,23 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
       ! Initialize the NWTC Subroutine Library
    call NWTC_Init( EchoLibVer=.FALSE. )
 
-   call UA_ValidateInput(InitInp, AFInfo, ErrStat2, ErrMsg2)
+   if (InitInp%WrSum) then
+      call UA_WriteAFIParamsToFile(InitInp, AFInfo, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+   end if
+
+   call UA_ValidateInput(InitInp, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    
       ! Allocate and set parameter data structure using initialization data
-   call UA_SetParameters( interval, InitInp, p, ErrStat2, ErrMsg2 )
+   call UA_SetParameters( interval, InitInp, p, AFInfo, AFIndx, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return    
    
       ! initialize the discrete states, other states, and misc variables
-   call UA_InitStates_Misc( p, AFInfo, AFIndx, x, xd, OtherState, m, ErrStat2, ErrMsg2 )     ! initialize the continuous states
+   call UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat2, ErrMsg2 )     ! initialize the continuous states
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return    
       
@@ -1015,8 +1096,12 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
 #ifdef UA_OUTS
 
       ! Allocate and set the InitOut data
-   if (p%UAMod == UA_HGM) then
-      p%NumOuts = 19
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
+      p%NumOuts = 20
+   elseif(p%UAMod == UA_HGMV) then
+      p%NumOuts = 21
+   elseif(p%UAMod == UA_BV) then
+      p%NumOuts = 26
    else
       p%NumOuts = 45
    end if
@@ -1036,10 +1121,12 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          
          iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts 
                   
-         chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))
+         !chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))
+         write (TmpChar,'(I3.3)') i          ! 3 digit number
+         chanPrefix = 'AB' // TRIM(Num2LStr(j)) // 'N' // TRIM(TmpChar) 
          
-         InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'ALPHA'
-         InitOut%WriteOutputHdr(iOffset+ 2)  = trim(chanPrefix)//'VREL'
+         InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'Alpha'
+         InitOut%WriteOutputHdr(iOffset+ 2)  = trim(chanPrefix)//'Vrel'
          InitOut%WriteOutputHdr(iOffset+ 3)  = trim(chanPrefix)//'Cn'
          InitOut%WriteOutputHdr(iOffset+ 4)  = trim(chanPrefix)//'Cc'
          InitOut%WriteOutputHdr(iOffset+ 5)  = trim(chanPrefix)//'Cl'
@@ -1054,7 +1141,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          InitOut%WriteOutputUnt(iOffset+ 6)  ='(-)'
          InitOut%WriteOutputUnt(iOffset+ 7)  ='(-)'
          
-         if (p%UAmod == UA_HGM) then
+         if (p%UAmod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
             
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
@@ -1069,7 +1156,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputHdr(iOffset+17)  = trim(chanPrefix)//'x4'
             InitOut%WriteOutputHdr(iOffset+18)  = trim(chanPrefix)//'k'
             InitOut%WriteOutputHdr(iOffset+19)  = trim(chanPrefix)//'weight'
-            
+            InitOut%WriteOutputHdr(iOffset+20)  = trim(chanPrefix)//'cl_fa'
 
             InitOut%WriteOutputUnt(iOffset+ 8)  = '(deg/sec)'
             InitOut%WriteOutputUnt(iOffset+ 9)  = '(deg)'
@@ -1084,8 +1171,57 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputUnt(iOffset+17)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+18)  = '(-)'
             InitOut%WriteOutputUnt(iOffset+19)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+20)  = '(-)'
 
+            
+            if (p%UAmod == UA_HGMV) then
+               InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'x5'
+               InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
+            end if
+
+         elseif(p%UAMod == UA_BV) then
+            InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
+            InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
+            InitOut%WriteOutputHdr(iOffset+10)  = trim(chanPrefix)//'alphaED'
+            InitOut%WriteOutputHdr(iOffset+11)  = trim(chanPrefix)//'Tu'
+            InitOut%WriteOutputHdr(iOffset+12)  = trim(chanPrefix)//'alpha_34'
+            InitOut%WriteOutputHdr(iOffset+13)  = trim(chanPrefix)//'alphaDot'
+            InitOut%WriteOutputHdr(iOffset+14)  = trim(chanPrefix)//'adotnorm'
+            InitOut%WriteOutputHdr(iOffset+15)  = trim(chanPrefix)//'dalphaL'
+            InitOut%WriteOutputHdr(iOffset+16)  = trim(chanPrefix)//'dalphaD'
+            InitOut%WriteOutputHdr(iOffset+17)  = trim(chanPrefix)//'activeL'
+            InitOut%WriteOutputHdr(iOffset+18)  = trim(chanPrefix)//'activeD'
+            InitOut%WriteOutputHdr(iOffset+19)  = trim(chanPrefix)//'alphaLagD'
+            InitOut%WriteOutputHdr(iOffset+20)  = trim(chanPrefix)//'gammaL'
+            InitOut%WriteOutputHdr(iOffset+21)  = trim(chanPrefix)//'gammaD'
+            InitOut%WriteOutputHdr(iOffset+22)  = trim(chanPrefix)//'transA'
+            InitOut%WriteOutputHdr(iOffset+23)  = trim(chanPrefix)//'delP'
+            InitOut%WriteOutputHdr(iOffset+24)  = trim(chanPrefix)//'delN'
+            InitOut%WriteOutputHdr(iOffset+25)  = trim(chanPrefix)//'Vx'
+            InitOut%WriteOutputHdr(iOffset+26)  = trim(chanPrefix)//'Vy'
+
+            InitOut%WriteOutputUnt(iOffset+ 8)  = '(rad/s)'
+            InitOut%WriteOutputUnt(iOffset+ 9)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+10)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+11)  = '(s)'
+            InitOut%WriteOutputUnt(iOffset+12)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+13)  = '(deg/s)'
+            InitOut%WriteOutputUnt(iOffset+14)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+15)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+16)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+17)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+18)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+19)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+20)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+21)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+22)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+23)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+24)  = '(-)'
+            InitOut%WriteOutputUnt(iOffset+25)  = '(m/s)'
+            InitOut%WriteOutputUnt(iOffset+26)  = '(m/s)'
+            
          else
+
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'Cn_aq_circ'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'Cn_aq_nc'
             InitOut%WriteOutputHdr(iOffset+10)  = trim(chanPrefix)//'Cn_pot'
@@ -1122,8 +1258,8 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputHdr(iOffset+41)  = trim(chanPrefix)//'sigma3'
             InitOut%WriteOutputHdr(iOffset+42)  = trim(chanPrefix)//'T_sh'
             InitOut%WriteOutputHdr(iOffset+43)  = trim(chanPrefix)//'k'
-            InitOut%WriteOutputHdr(iOffset+44)  = trim(chanPrefix)//'ALPHA_filt'
             InitOut%WriteOutputHdr(iOffset+44)  = trim(chanPrefix)//'weight'
+            InitOut%WriteOutputHdr(iOffset+45)  = trim(chanPrefix)//'ALPHA_filt'
 
             
             InitOut%WriteOutputUnt(iOffset+8)  ='(-)'
@@ -1162,8 +1298,9 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
             InitOut%WriteOutputUnt(iOffset+41) ='(-)'
             InitOut%WriteOutputUnt(iOffset+42) ='(-)'
             InitOut%WriteOutputUnt(iOffset+43) ='(-)'
-            InitOut%WriteOutputUnt(iOffset+44)  ='(deg)'
+            InitOut%WriteOutputUnt(iOffset+44) ='(deg)'
             InitOut%WriteOutputUnt(iOffset+45) ='(-)'
+
          end if
          
       end do
@@ -1176,8 +1313,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    if (p%NumOuts > 0) then
       CALL GetNewUnit( p%unOutFile, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) RETURN
-
-      CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.out', ErrStat2, ErrMsg2 )
+      CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.UA.out', ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
 
@@ -1213,41 +1349,24 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    
 end subroutine UA_Init
 !==============================================================================     
-subroutine UA_ValidateInput(InitInp, AFInfo, ErrStat, ErrMsg)
-   type(UA_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
-   type(AFI_ParameterType),      intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
+subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
+   type(UA_InitInputType),       intent(in   )  :: InitInp     ! Input data for initialization routine
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-   integer(IntKi)                               :: ErrStat2     ! Error status of the operation
-   character(ErrMsgLen)                         :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
    character(*), parameter                      :: RoutineName = 'UA_ValidateInput'
-
-   integer(IntKi)                               :: i             ! loop counter
    
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   !>>> remove after this feature gets tested better:
-   if (InitInp%UAMod == UA_HGM ) then
-      call SetErrStat( ErrID_Warn, "UAMod 4 (continuous HGM model) is in beta for this version of OpenFAST.", ErrStat, ErrMsg, RoutineName )
-   end if
-   !<<<
-
-   if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_HGM ) call SetErrStat( ErrID_Fatal, &
-      "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), or 4 (continuous HGM model).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
+   if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_BV ) call SetErrStat( ErrID_Fatal, &
+      "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex)&
+      &6 (Oye), 7 (Boing-Vertol)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       
    if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    
    if (InitInp%a_s <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
 
-   ! check that the airfoils have appropriate data for UA
-   do i=1,size(AFInfo,1)
-      call UA_ValidateAFI(InitInp%UAMod, AFInfo(i), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end do
-
-   
    
 end subroutine UA_ValidateInput
 !==============================================================================     
@@ -1258,6 +1377,8 @@ subroutine UA_ValidateAFI(UAMod, AFInfo, ErrStat, ErrMsg)
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    integer(IntKi)                               :: j
+   integer(IntKi)                               :: indx
+   real(ReKi)                                   :: cl_fs
    character(*), parameter                      :: RoutineName = 'UA_ValidateAFI'
    
    ErrStat = ErrID_None
@@ -1268,56 +1389,96 @@ subroutine UA_ValidateAFI(UAMod, AFInfo, ErrStat, ErrMsg)
    else
 
       do j=1, AFInfo%NumTabs
-         if ( .not. AFInfo%Table(j)%InclUAdata ) then
-            call SetErrStat(ErrID_Fatal, 'Airfoil file "'//trim(AFInfo%FileName)//'", table #'//trim(num2lstr(j))// &
-                            ' does not contain parameters for UA data.', ErrStat, ErrMsg, RoutineName )
-         else
+
+         if ( AFInfo%Table(j)%InclUAdata ) then
             ! parameters used only for UAMod/=UA_HGM)
-            if (UAMod /= UA_HGM) then
-               if ( EqualRealNos(AFInfo%Table(j)%UA_BL%St_sh, 0.0_ReKi) ) then
-                  call SetErrStat(ErrID_Fatal, 'UA St_sh parameter must not be 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
-               end if
+            if (UAMod == UA_Baseline .or. UAMod == UA_Gonzalez .or. UAMod == UA_MinnemaPierce .or. UAMod == UA_HGMV) then
+            
+               if (UAMod /= UA_HGMV) then
+                  if ( EqualRealNos(AFInfo%Table(j)%UA_BL%St_sh, 0.0_ReKi) ) then
+                     call SetErrStat(ErrID_Fatal, 'UA St_sh parameter must not be 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  end if
 
-               if ( AFInfo%Table(j)%UA_BL%alpha1 > pi .or. AFInfo%Table(j)%UA_BL%alpha1 < -pi ) then
-                  call SetErrStat(ErrID_Fatal, 'UA alpha1 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
-               end if
+                  if ( AFInfo%Table(j)%UA_BL%alpha1 > pi .or. AFInfo%Table(j)%UA_BL%alpha1 < -pi ) then
+                     call SetErrStat(ErrID_Fatal, 'UA alpha1 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  end if
 
-               if ( AFInfo%Table(j)%UA_BL%alpha2 > pi .or. AFInfo%Table(j)%UA_BL%alpha2 < -pi ) then
-                  call SetErrStat(ErrID_Fatal, 'UA alpha2 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  if ( AFInfo%Table(j)%UA_BL%alpha2 > pi .or. AFInfo%Table(j)%UA_BL%alpha2 < -pi ) then
+                     call SetErrStat(ErrID_Fatal, 'UA alpha2 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  end if
+
+                  if ( AFInfo%Table(j)%UA_BL%alpha1 < AFInfo%Table(j)%UA_BL%alpha2 ) then
+                     call SetErrStat(ErrID_Fatal, 'UA alpha2 parameter must be less than alpha1 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  end if
+               
+                  if ( AFInfo%Table(j)%UA_BL%alpha0 > AFInfo%Table(j)%UA_BL%alpha1 ) then
+                     call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be less than alpha1 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  end if
+               
+                  if ( AFInfo%Table(j)%UA_BL%alpha2 > AFInfo%Table(j)%UA_BL%alpha0 ) then
+                     call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be greater than alpha2 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  end if
+               
+                  if ( AFInfo%Table(j)%UA_BL%filtCutOff < 0.0_ReKi ) then
+                     call SetErrStat(ErrID_Fatal, 'UA filtCutOff parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+                  end if
+               end if ! not UA_HGMV
+               
+               if ( AFInfo%Table(j)%UA_BL%T_VL <= 0.0_ReKi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA T_VL parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
                end if
                
-               if ( AFInfo%Table(j)%UA_BL%filtCutOff < 0.0_ReKi ) then
-                  call SetErrStat(ErrID_Fatal, 'UA filtCutOff parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+               if ( AFInfo%Table(j)%UA_BL%T_V0 <= 0.0_ReKi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA T_V0 parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
                end if
+            
+               if (AFInfo%Table(j)%UA_BL%Cn2 >= AFInfo%Table(j)%UA_BL%Cn1) call SetErrStat(ErrID_Fatal, 'Cn2 must be less than Cn1 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+               
+            end if
+            
+            if (UAMod /= UA_HGMV) then
+               if ( AFInfo%Table(j)%UA_BL%alpha0 > pi .or. AFInfo%Table(j)%UA_BL%alpha0 < -pi ) then
+                  call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+               end if
+            end if ! Not UA_HGM
 
+            if (UAMod == UA_HGM .or. UAMod == UA_HGMV .or. UAMod == UA_OYE) then
+               cl_fs = InterpStp( AFInfo%Table(j)%UA_BL%UACutout, AFInfo%Table(j)%alpha, AFInfo%Table(j)%Coefs(:,AFInfo%ColUAf), indx, AFInfo%Table(j)%NumAlf )
+               if (.not. EqualRealNos( cl_fs, 0.0_ReKi ) ) then
+                  call SetErrStat(ErrID_Severe, 'UA cutout parameter should be at a value where the separation function is 0 in "'//trim(AFInfo%FileName)//'".'// &
+                                 " Separation function is "//trim(num2lstr(cl_fs)), ErrStat, ErrMsg, RoutineName )
+               end if
             end if
 
+            if (UAMod == UA_BV) then
+               ! TODO
+            endif
+            
                ! variables used in all UA models:
-            if ( AFInfo%Table(j)%UA_BL%alpha0 > pi .or. AFInfo%Table(j)%UA_BL%alpha0 < -pi ) then
-               call SetErrStat(ErrID_Fatal, 'UA alpha0 parameter must be between -180 and 180 degrees in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
-            end if
-
-            if ( AFInfo%Table(j)%UA_BL%T_f0 < 0.0_ReKi ) then
+            if ( AFInfo%Table(j)%UA_BL%T_f0 <= 0.0_ReKi ) then
                call SetErrStat(ErrID_Fatal, 'UA T_f0 parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
             end if
             
-            if ( AFInfo%Table(j)%UA_BL%T_p < 0.0_ReKi ) then
+            if ( AFInfo%Table(j)%UA_BL%T_p <= 0.0_ReKi ) then
                call SetErrStat(ErrID_Fatal, 'UA T_p parameter must be greater than 0 in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
             end if
             
-         end if
+         end if ! UAtable included
             
          if ( AFInfo%Table(j)%UA_BL%UACutout < 0.0_ReKi ) then
             call SetErrStat(ErrID_Fatal, 'UA UACutout parameter must not be negative in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
          end if
             
-            
-
+            ! this should never occur (if it does, check how it is set in AirfoilInfo)
+         if ( AFInfo%Table(j)%UA_BL%UACutout_blend > AFInfo%Table(j)%UA_BL%UACutout ) then
+            call SetErrStat(ErrID_Fatal, 'UA UACutout parameter must not be smaller than than UACutout_blend in "'//trim(AFInfo%FileName)//'".', ErrStat, ErrMsg, RoutineName )
+         end if
+         
       end do
 
       if (ErrStat >= AbortErrLev) return
 
-      if (UAMod /= UA_HGM) then
+      if (UAMod == UA_Baseline .or. UAMod == UA_Gonzalez .or. UAMod == UA_MinnemaPierce) then
          ! check interpolated values:
       
          do j=2, AFInfo%NumTabs
@@ -1347,8 +1508,17 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if (p%UAMod == UA_HGM) then
-         ! unsteady aerodynamics will be turned off
+   do j=1, AFInfo%NumTabs
+      if ( .not. AFInfo%Table(j)%InclUAdata ) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'UA parameters are not included in airfoil (airfoil has likely has constant polars).'
+         return
+      end if
+   end do
+      
+   
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
+      ! unsteady aerodynamics will be turned off if Cl,alpha = 0
       do j=1, AFInfo%NumTabs
          if ( EqualRealNos(AFInfo%Table(j)%UA_BL%C_lalpha, 0.0_ReKi) ) then
             ErrStat = ErrID_Fatal
@@ -1366,9 +1536,12 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
             return
          end if
       end do
+
+   elseif (p%UAMod == UA_HGMV) then
+      ! pass
       
-   else
-         ! unsteady aerodynamics will be turned off
+   elseif (p%UAMod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
+         ! unsteady aerodynamics will be turned off is Cn,alpha =0
       do j=1, AFInfo%NumTabs
          if ( EqualRealNos(AFInfo%Table(j)%UA_BL%C_nalpha, 0.0_ReKi) ) then
             ErrStat = ErrID_Fatal
@@ -1387,15 +1560,309 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
          end if
       end do
       
+   elseif (p%UAMod == UA_BV) then
+      ! pass
+
    end if
-   
 
 end subroutine UA_TurnOff_param
 !============================================================================== 
-subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
-! Routine for updating discrete states and other states (note it breaks the framework)
-!..............................................................................
+!> Update discrete states for Boieng Vertol model
+subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
+   integer   ,                   intent(in   )  :: i           !< node index within a blade
+   integer   ,                   intent(in   )  :: j           !< blade index    
+   type(UA_InputType),           intent(in   )  :: u           !< Inputs at Time                       
+   type(UA_ParameterType),       intent(in   )  :: p           !< Parameters                                 
+   type(UA_DiscreteStateType),   intent(inout)  :: xd          !< In: Discrete states at Time; Out: Discrete states at Time + Interval
+   type(UA_OtherStateType),      intent(inout)  :: OtherState  !< Other states  
+   type(UA_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      !< The airfoil parameter data
+   integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   real(ReKi), parameter :: filtCutOff = 0.5_ReKi                        !< CutOff used to filter angle of attack. Alternative, use BL_p (see KelvinChain)
+   logical,  parameter   :: filterAlpha =.False.                         !< Parameter to filter the angle of attack before computing finite differences
+   real(ReKi)            :: alpha_34                                     !< angle of attack at 3/4 point
+   real(ReKi)            :: alpha_minus1                                 !< 3/4 chord angle of attack at
+   real(ReKi)            :: alpha_filt_cur                               !< 
+   real(ReKi)            :: alpha_filt_minus1                            !< 
+   real(ReKi)            :: Tu                                           !< Time constant based on u=Vrel and chord
+   real(ReKi)            :: dynamicFilterCutoffHz                        !< find frequency based on reduced frequency of k = BL_p%filtCutOff
+   real(ReKi)            :: LowPassConst                                 !< 
+   !
+   type(AFI_UA_BL_Type) :: BL_p       !< Unsteady airfoil parameters
+   real(ReKi)           :: adotnorm   !< alphadot * Tu
+   real(ReKi)           :: alphaLag_D !< lagged angle of attack for drag calculation
+   real(ReKi)           :: alphaE_L   !< effective angle of attack for lift and drag
+   real(ReKi)           :: alpha_dot  !< rate of change of angle of attack
+   integer(IntKi)       :: ErrStat2
+   character(ErrMsgLen) :: ErrMsg2
    
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   ! --- Filter angle of attack
+   ! Using angle of attack at AC or 3/4 point
+   alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+   ! Angle of attack at previous time
+   if (OtherState%FirstPass(i,j)) then
+      alpha_minus1      = alpha_34
+      alpha_filt_minus1 = alpha_34
+   else
+      alpha_minus1      = xd%alpha_minus1(i,j)
+      alpha_filt_minus1 = xd%alpha_filt_minus1(i,j)
+   end if
+   if (filterAlpha) then
+      ! Using a simple Infinite Impulse Response Filter (same a K_alpha in UnsteadyAero manual)
+      dynamicFilterCutoffHz = max( 1.0_ReKi, u%U ) * filtCutOff / PI / p%c(i,j)
+      LowPassConst          = exp(-2.0_ReKi*PI*p%dt*dynamicFilterCutoffHz)
+      alpha_filt_cur        = LowPassConst*alpha_filt_minus1 + (1.0_ReKi-LowPassConst)*alpha_34 
+   else
+      alpha_filt_cur        = alpha_34 ! #noFilter 
+   endif
+
+   ! --- Update states to t+dt
+   alpha_dot = ( alpha_filt_cur - alpha_filt_minus1 ) / p%dt
+   if (abs(alpha_dot*p%dt)>PI*0.8) then 
+      ! Sudden jump of alpha happens for vertical axes turbines, e.g. for lambda<=1, jumps from -90 to +90 or -180 to +180
+      ! In that case we keep the alpha_dot from previous time step and we don't filter
+      alpha_dot       = xd%alpha_dot(i,j) ! using previous alpha_dot
+      alpha_filt_cur  = alpha_34 ! #noFilter 
+   endif
+   xd%alpha_minus1(i,j)      = alpha_34
+   xd%alpha_filt_minus1(i,j) = alpha_filt_cur
+   xd%alpha_dot_minus1(i,j)  = xd%alpha_dot(i,j)
+   xd%alpha_dot              = alpha_dot
+
+   ! --- Compute Unsteady aero params for this airfoil (alpha0, alpha1, alpha2)
+   call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, BL_p, ErrMsg2, ErrStat2); if(Failed()) return
+
+   ! --- Compute effective angle of attack and lagged angle of attack (needed to update active states)
+   call BV_getAlphas(i, j, u, p, xd, BL_p, AFInfo%RelThickness, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+
+   ! --- Update dynamic stall activation states
+   call BV_UpdateActiveStates(adotnorm, alpha_34, alphaLag_D, alphaE_L, BL_p, OtherState%activeL(i,j), OtherState%activeD(i,j))
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_UpdateDiscOtherState_BV')
+      Failed = ErrStat>=ErrID_Fatal
+   end function Failed
+end subroutine UA_UpdateDiscOtherState_BV
+
+!==============================================================================   
+!> Calculate angle of attacks using Boeing-Vertol model
+!! Drag effective angle of attack needs extra computation
+subroutine BV_getAlphas(i, j, u, p, xd, BL_p, tc, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+   integer,                    intent(in   ) :: i          !< node index within a blade
+   integer,                    intent(in   ) :: j          !< blade index
+   type(UA_InputType),         intent(in   ) :: u          !< Inputs at t
+   type(UA_ParameterType),     intent(in   ) :: p          !< Parameters
+   type(UA_DiscreteStateType), intent(in   ) :: xd         !< Discrete states at t 
+   type(AFI_UA_BL_Type),       intent(in   ) :: BL_p       !< 
+   real(ReKi),                 intent(in   ) :: tc         !< Thickness ratio of airfoil
+   real(ReKi),                 intent(out  ) :: alpha_34   !< alpha at 3/4 chord point
+   real(ReKi),                 intent(out  ) :: alphaE_L   !< effective angle of attack for lift
+   real(ReKi),                 intent(out  ) :: alphaLag_D !< Lagged angle of attack for drag
+   real(ReKi),                 intent(out  ) :: adotnorm   !< alphadot * Tu
+   real(ReKi)            :: gammaL, gammaD   !< gamma coefficients for lift and drag respectively
+   real(ReKi)            :: dalphaMax        !< Maximum change of angle of attack
+   real(ReKi)            :: dalphaL, dalphaD
+   real(ReKi)            :: isgn                                         !< sign of alphadot Norm
+   real(ReKi), parameter :: umach = 0.0_ReKi !< Mach number umach=Urel*Minf, Minf (freestrem Mach) for incompressible
+
+   ! Angle of attack at 3/4 chord point 
+   alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+
+   ! --- Intermediate variables, using CACTUS notations
+   adotnorm = xd%alpha_dot(i,j) * Get_Tu(u%u, p%c(i,j))
+
+   ! --- Limits
+   ! Limit reference dalpha to a maximum to keep sign of CL the same for
+   ! alpha and lagged alpha (considered a reasonable lag...). Note:
+   ! magnitude increasing and decreasing effect ratios are maintained.
+   dalphaMax = 2._ReKi * BV_TransA(BL_p) ! TODO TODO
+
+   ! --- Calculate gamma for lift and drag based rel thickness
+   call BV_getGammas(tc, umach, gammaL, gammaD) !NOTE: only function of tc 
+
+   ! --- Delta alpha
+   !dalpha = - K1 * Gamma * sqrt( abs(xd%alpha_dot(i,j) * Tu) ) ! Formula from paper
+   dalphaL = gammaL * sqrt(abs(adotnorm))
+   dalphaD = gammaD * sqrt(abs(adotnorm))
+   !print*,'dalpha         ', dalphaL,dalphaD
+   ! Plateau 
+   dalphaL = min(dalphaL, dalphaMax)
+   dalphaD = min(dalphaD, dalphaMax)
+   !print*,'dalpha         ', dalphaL,dalphaD, dalphaMax
+   if ((adotnorm*(alpha_34-BL_p%alpha0)) < 0.0_ReKi) then
+       dalphaL = dalphaL*K1neg
+       dalphaD = dalphaD*K1neg
+   else
+       dalphaL = dalphaL*K1pos
+       dalphaD = dalphaD*K1pos
+   endif
+   !print*,'dalpha         ', dalphaL,dalphaD
+
+   ! --- Alpha dynamic
+   isgn       = sign(1.0,adotnorm)
+   alphaE_L   = alpha_34 - dalphaL*isgn
+   alphaLag_D = alpha_34 - dalphaD*isgn ! NOTE: not effective alpha yet for drag
+end subroutine BV_getAlphas
+!==============================================================================   
+!> Calculate gamma for lift and drag based rel thickness. See CACTUS BV_DynStall.f95
+subroutine BV_getGammas(tc, umach, gammaL, gammaD)
+   real(ReKi), intent(in)  :: tc     !< Relative thickness of airfoil
+   real(ReKi), intent(in)  :: umach  !< Mach number of Urel, = Urel*MinfMinf (freestrem Mach), 0 for incompressible
+   real(ReKi), intent(out) :: gammaL !< gamma coefficient
+   real(ReKi), intent(out) :: gammaD !< gamma coefficient
+   real(ReKi) :: smachL, hmachL , smachD, hmachD, diff
+   real(ReKi) :: gammaxL, gammaxD, dgammaL, dgammaD  ! intermediate variables for gamma
+   diff    = 0.06-tc ! tc: thickness to chord ratio
+   smachL  = 0.4+5.0*diff
+   hmachL  = 0.9+2.5*diff
+   smachD  = 0.2
+   hmachD  = 0.7+2.5*diff
+   gammaxL = 1.4-6.0*diff
+   gammaxD = 1.0-2.5*diff
+   dgammaL = gammaxL/(hmachL-smachL)
+   dgammaD = gammaxD/(hmachD-smachD)
+   gammaL  = gammaxL-(umach-smachL)*dgammaL  ! For lift
+   gammaD  = gammaxD-(umach-smachD)*dgammaD  ! For drag
+   if (umach < smachD) then
+      gammaD=gammaxD
+   end if
+end subroutine BV_getGammas
+!==============================================================================   
+!> Compute Transition region length
+!! Note from CACTUS: 
+!! Limit reference dalpha to a maximum to keep sign of CL the same for
+!! alpha and lagged alpha (considered a reasonable lag...)
+!! NOTE: magnitude increasing and decreasing effect ratios are maintained.
+real(ReKi) function BV_TransA(BL_p)
+   type(AFI_UA_BL_Type), intent(in) :: BL_p
+   real(ReKi), parameter :: Fac= .9_ReKi  !< Margin to ensure that dalphaRef is never large enough to make alrefL    =  = AOA0 (blows up linear expansion model)
+   real(ReKi) :: AOA0      !< angle of attack of zero lift
+   real(ReKi) :: alssP     !< Static Stall angle positive
+   real(ReKi) :: alssN     !< Static Stall angle negative
+   real(ReKi) :: dalphaMax !< Maximum change of angle of attack
+   AOA0     = BL_p%alpha0
+   alssP    = BL_p%alpha1
+   alssN    = BL_p%alpha2
+   dalphaMax = Fac*min(abs(alssP-AOA0),abs(alssN-AOA0))/max(K1pos,K1neg)
+   BV_TransA = .5_ReKi*dalphaMax ! transition region for fairing lagged AOA in pure lag model
+end function BV_TransA
+!==============================================================================   
+!> Calculate deltas to negative and postivive stall angle
+subroutine BV_delNP(adotnorm, alpha, alphaLag_D, BL_p, activeD, delN, delP)
+   real(ReKi),           intent(in)  :: adotnorm   !< alphadot * Tu
+   real(ReKi),           intent(in)  :: alpha      !< alpha (3/4)
+   real(ReKi),           intent(in)  :: alphaLag_D !< lagged alpha for drag
+   type(AFI_UA_BL_Type), intent(in)  :: BL_p       !< 
+   logical,              intent(in)  :: activeD    !< flag to activate drag
+   real(ReKi),           intent(out) :: delN   !< Difference between lagged alpha and negative stall
+   real(ReKi),           intent(out) :: delP   !< Difference between lagged alpha and positive stall
+   real(ReKi) :: AOA0      !< angle of attack of zero lift
+   real(ReKi) :: alssP     !< Static Stall angle positive
+   real(ReKi) :: alssN     !< Static Stall angle negative
+   ! Cactus notations
+   AOA0     = BL_p%alpha0
+   alssP    = BL_p%alpha1
+   alssN    = BL_p%alpha2
+   if ((adotnorm*(alpha-AOA0)) < 0.0) then
+       ! Only switch DS off using lagged alpha
+       if (activeD) then
+           delN = alssN      - alphaLag_D
+           delP = alphaLag_D - alssP
+       else
+           delN = 0.0_ReKi
+           delP = 0.0_ReKi
+       end if
+   else
+       ! switch DS on or off using alpha
+       delN = alssN - alpha
+       delP = alpha - alssP
+   end if
+end subroutine BV_delNP
+!==============================================================================   
+!> Calculate effective angle of attack for drag coefficient, based on lagged angle of attack
+real(ReKi) function BV_alphaE_D(adotnorm, alpha, alphaLag_D, BL_p, activeD)
+   real(ReKi),           intent(in) :: adotnorm   !< alphadot * Tu
+   real(ReKi),           intent(in) :: alpha      !< alpha (3/4)
+   real(ReKi),           intent(in) :: alphaLag_D !< lagged alpha for drag
+   type(AFI_UA_BL_Type), intent(in) :: BL_p       !< 
+   logical,              intent(in) :: activeD    !< flag to activate drag
+   real(ReKi) :: TransA !< Transition region for fairing lagged AOA in pure lag model
+   real(ReKi) :: delN   !< Difference between lagged alpha and negative stall
+   real(ReKi) :: delP   !< Difference between lagged alpha and positive stall
+
+   ! Calculate deltas to negative and postivive stall angle (delN, and delP)
+   call BV_delNP(adotnorm, alpha, alphaLag_D, BL_p, activeD, delN, delP)
+
+   ! --- Alpha dyn for drag and flag
+   TransA = BV_TransA(BL_p)
+   if (delN > TransA .OR. delP > TransA) then
+       BV_alphaE_D  = alphaLag_D
+   elseif (delN > 0 .AND. delN < TransA) then
+       ! Transition region (fairing effect...)
+       BV_alphaE_D  = alpha+(alphaLag_D-alpha)*delN/TransA
+   elseif (delP > 0 .AND. delP < TransA) then
+       ! Transition region (fairing effect...)
+       BV_alphaE_D  = alpha+(alphaLag_D-alpha)*delP/TransA
+   else
+       BV_alphaE_D = alpha ! 3/4
+   end if
+end function BV_alphaE_D
+!============================================================================== 
+!> Activate dynamic stall for lift or drag
+subroutine BV_UpdateActiveStates(adotnorm, alpha, alphaLag_D, alphaE_L, BL_p, activeL, activeD)
+   real(ReKi),           intent(in)    :: adotnorm   !< alphadot * Tu
+   real(ReKi),           intent(in)    :: alpha      !< alpha (3/4)
+   real(ReKi),           intent(in)    :: alphaLag_D !< lagged alpha for drag
+   real(ReKi),           intent(in)    :: alphaE_L   !< Effective angle of attack for lifr
+   type(AFI_UA_BL_Type), intent(in)    :: BL_p       !< 
+   logical,              intent(inout) :: activeL    !< flag to activate lift
+   logical,              intent(inout) :: activeD    !< flag to activate drag
+   real(ReKi) :: TransA     !< Transition region for fairing lagged AOA in pure lag model
+   real(ReKi) :: delN   !< Difference between lagged alpha and negative stall
+   real(ReKi) :: delP   !< Difference between lagged alpha and positive stall
+   real(ReKi) :: AOA0      !< angle of attack of zero lift
+   real(ReKi) :: alssP     !< Static Stall angle positive
+   real(ReKi) :: alssN     !< Static Stall angle negative
+   ! Cactus notations
+   AOA0     = BL_p%alpha0
+   alssP    = BL_p%alpha1
+   alssN    = BL_p%alpha2
+   
+   ! --- Activate lift dynamic stall
+   if ((adotnorm*(alpha-AOA0)) < 0.0) then
+       ! Only switch DS off using lagged alpha
+       if (activeL .and. (alphaE_L > alssN .AND. alphaE_L < alssP)) then
+           activeL=.false.
+       end if
+   else
+       ! switch DS on or off using alpha
+       activeL =  (alpha <= alssN .OR. alpha >= alssP)
+   end if
+
+   ! --- Activate drag dynamic stall
+   ! Calculate deltas to negative and postivive stall angle (delN, and delP)
+   call BV_delNP(adotnorm, alpha, alphaLag_D, BL_p, activeD, delN, delP)
+   TransA = BV_TransA(BL_p)
+   if (delN > TransA .OR. delP > TransA) then
+       activeD = .true.
+   elseif (delN > 0 .AND. delN < TransA) then
+       ! Transition region (fairing effect...)
+       activeD = .true.
+   elseif (delP > 0 .AND. delP < TransA) then
+       ! Transition region (fairing effect...)
+       activeD = .true.
+   else
+       activeD = .false.
+   end if
+end subroutine BV_UpdateActiveStates
+!============================================================================== 
+!> Routine for updating discrete states and other states for Beddoes-Leishman types models (note it breaks the framework)
+subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
    integer   ,                   intent(in   )  :: i           ! node index within a blade
    integer   ,                   intent(in   )  :: j           ! blade index    
    type(UA_InputType),           intent(in   )  :: u           ! Inputs at Time                       
@@ -1695,6 +2162,8 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
    character(*), parameter                      :: RoutineName = 'UA_UpdateStates'
    type(UA_InputType)                           :: u_interp_raw    ! Input at current timestep, t and t+dt
    type(UA_InputType)                           :: u_interp        ! Input at current timestep, t and t+dt
+   type(AFI_UA_BL_Type)                         :: BL_p  ! airfoil UA parameters retrieved in Kelvin Chain
+   real(ReKi)                                   :: Tu
 
       ! Initialize variables
 
@@ -1704,27 +2173,42 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
    !BJJ: u%u == 0 seems to be the root cause of all sorts of numerical problems....
 
       
-   if (OtherState%UA_off_forGood(i,j)) return   ! we don't have any states to update here
+   if (p%UA_off_forGood(i,j)) return   ! we don't have any states to update here
    
-   if (p%UAMod == UA_HGM) then
-      
+   CALL UA_Input_ExtrapInterp( u, utimes, u_interp_raw, t, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+      ! make sure that u%u is not zero (this previously turned off UA for the entire simulation. 
+      ! Now, we keep it on, but we don't want the math to blow up when we divide by u%u)
+   call UA_fixInputs(u_interp_raw, u_interp, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
+   if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV) then
+   
+               
          ! initialize states to steady-state values:
       if (OtherState%FirstPass(i,j)) then
-         CALL UA_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
-
          call HGM_Steady( i, j, u_interp, p, x%element(i,j), AFInfo, ErrStat2, ErrMsg2 )
       end if
 
-      
       call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+      if (.not. p%ShedEffect) then
+         ! Safety
+         x%element(i,j)%x(1) = 0.0_R8Ki
+         x%element(i,j)%x(2) = 0.0_R8Ki
+      endif
+
       x%element(i,j)%x(4) = max( min( x%element(i,j)%x(4), 1.0_R8Ki ), 0.0_R8Ki )
       
+          ! let's make sure the states aren't getting out of control when we are supposed to be turning off UA anyway.
+      call UA_BlendSteadyStates( i, j, u_interp, p, AFInfo, x%element(i,j), m%FirstWarn_UA_off, m%weight(i,j), ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
          ! these are angles that should not get too large, so I am fixing them here (should turn off UA if this exceeds reasonable numbers)
-      if (abs(x%element(i,j)%x(1)) > pi .or. abs(x%element(i,j)%x(2)) > pi) then
+      if (abs(x%element(i,j)%x(1)) > TwoPi .or. abs(x%element(i,j)%x(2)) > TwoPi) then
          if (m%FirstWarn_UA) then
             call SetErrStat(ErrID_Severe, "Divergent states in UA HGM model", ErrStat, ErrMsg, RoutineName )
             m%FirstWarn_UA = .false.
@@ -1734,18 +2218,80 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
          call Mpi2pi(x%element(i,j)%x(2))
       end if
       
-   else
+      
+      if (p%UAMod == UA_HGMV) then
+
+         ! Lookup values using Airfoil Info module
+         call AFI_ComputeUACoefs( AFInfo, u_interp%Re, u_interp%UserProp, BL_p, ErrMsg2, ErrStat2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) return
+            
+         call Get_HGM_constants(i, j, p, u_interp, x%element(i,j), BL_p, Tu)
+            
+         if (OtherState%VortexOn(i,j)) then
+         
+            ! check if the vortex ceases to accumulate:
+            if ( (t - OtherState%t_vortexBegin(i,j) > BL_p%T_VL*Tu) .or. &
+                  (u_interp%omega * OtherState%SignOfOmega(i,j) < 0.0_ReKi)  ) then
+                  
+               OtherState%VortexOn(i,j) = .false.
+               
+            end if
+            
+         else
+         
+            ! we aren't going to turn on a vortex when turning UA is not fully on
+            if (EqualRealNos(m%weight(i,j),1.0_ReKi) ) then
+            
+               if (OtherState%BelowThreshold(i,j) .and. &
+                 (x%element(i,j)%x(3) > BL_p%Cn1 .or. x%element(i,j)%x(3) < BL_p%Cn2) ) then
+                  OtherState%BelowThreshold(i,j) = .false.
+                  OtherState%VortexOn(i,j)       = .true.
+                  OtherState%t_vortexBegin(i,j) = t
+                  OtherState%PositivePressure(i,j) = x%element(i,j)%x(3) > BL_p%Cn1 ! whether we have the Cn1 (positive) or Cn2 (negative) condition to check
+
+                  if (u_interp%omega < 0 ) then
+                     OtherState%SignOfOmega(i,j) = -1.0
+                  else
+                     OtherState%SignOfOmega(i,j) = 1.0
+                  end if
+                  
+               else
+                  if (.not. OtherState%BelowThreshold(i,j)) then
+                     if (OtherState%PositivePressure(i,j)) then
+                        OtherState%BelowThreshold(i,j) = x%element(i,j)%x(3) < BL_p%Cn1
+                     else
+                        OtherState%BelowThreshold(i,j) = x%element(i,j)%x(3) > BL_p%Cn2
+                     end if
+                  end if
+               
+               end if ! Below/above threshold
+               
+            end if ! UA is fully on
+            
+         end if ! Vortex on/off
+         
+      end if ! p%UAMod == UA_HGMV
+
+   elseif (p%UAMod == UA_OYE) then
+
+      ! First time, initialize states to steady-state values:
+      if (OtherState%FirstPass(i,j)) then
+         call HGM_Steady( i, j, u_interp, p, x%element(i,j), AFInfo, ErrStat2, ErrMsg2 )
+      end if
+      ! Time integrate
+      call UA_ABM4(i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! Make sure the states aren't getting out of control
+      x%element(i,j)%x(4) = max( min( x%element(i,j)%x(4), 1.0_R8Ki ), 0.0_R8Ki )
+      call UA_BlendSteadyStates(i, j, u_interp, p, AFInfo, x%element(i,j), m%FirstWarn_UA_off, m%weight(i,j), ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   elseif (p%UAMod == UA_BV) then
+      ! Integrate discrete states (alpha_dot, alpha_filt_minus1)
+      call UA_UpdateDiscOtherState_BV( i, j, u_interp, p, xd, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+
+   elseif (p%UAMod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
       if (n<=0) return ! previous logic (before adding UA_HGM required n > 0 before UA_UpdateStates was called)
       
-      CALL UA_Input_ExtrapInterp( u, utimes, u_interp_raw, t, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-         ! make sure that u%u is not zero (this previously turned off UA for the entire simulation. 
-         ! Now, we keep it on, but we don't want the math to blow up when we divide by u%u)
-      call UA_fixInputs(u_interp_raw, u_interp, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-
          ! Update discrete states:
 #     ifdef DEBUG_v14
          call UA_UpdateDiscOtherState2( i, j, u_interp, p, xd, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
@@ -1781,13 +2327,13 @@ subroutine UA_InitStates_AllNodes( u, p, x, OtherState, AFInfo, AFIndx )
       !...............................................................................................................................
       !  compute UA states at t=0 (with known inputs)
       !...............................................................................................................................
-      if (p%UAMod == UA_HGM) then
+      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
       
-         do j = 1,size(OtherState%UA_off_forGood,2) ! blades
-            do i = 1,size(OtherState%UA_off_forGood,1) ! nodes
+         do j = 1,size(p%UA_off_forGood,2) ! blades
+            do i = 1,size(p%UA_off_forGood,1) ! nodes
 
                ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node
-               if ( .not. OtherState%UA_off_forGood(i,j) .and. OtherState%FirstPass(i,j) ) then
+               if ( .not. p%UA_off_forGood(i,j) .and. OtherState%FirstPass(i,j) ) then
                
                   ! initialize states to steady-state values:
                   call HGM_Steady( i, j, u(i,j), p, x%element(i,j), AFInfo(AFIndx(i,j)), ErrStat2, ErrMsg2 )
@@ -1851,17 +2397,50 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
 
 
    ! Steady states
-   x%x(1)     = BL_p%A1 * alpha_34
-   x%x(2)     = BL_p%A2 * alpha_34
+   if (p%UAMod==UA_OYE .or. (.not.p%ShedEffect)) then
+      x%x(1)     = 0.0_R8Ki
+      x%x(2)     = 0.0_R8Ki
+   else
+      x%x(1)     = BL_p%A1 * alpha_34
+      x%x(2)     = BL_p%A2 * alpha_34
+   endif
     
    alphaE   = alpha_34                                                    ! Eq. 12 (after substitute of x1 and x2 initializations)
-   x%x(3)   = BL_p%c_lalpha * (alphaE-BL_p%alpha0)
-    
-      ! calculate x%x(4) = fs_aF = f_st(alphaF):
-   alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
-    
-   call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
+   alphaF   = alphaE
+   call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   if (p%UAMod==UA_OYE) then
+      x%x(3)   = AFI_interp%Cl ! Not used
+
+   elseif (p%UAMod==UA_HGM) then
+      x%x(3)   = BL_p%c_lalpha * (alphaE-BL_p%alpha0)
+      
+         ! calculate x%x(4) = fs_aF = f_st(alphaF):
+      !alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
+      !this simplifies to alphaF = alphaE
+      
+      !call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
+      !x%x(4) = AFI_interp%f_st
+      
+   elseif (p%UAMod==UA_HGMV) then
+      !call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
+      x%x(3)   = AFI_interp%FullyAttached ! ~ (alpha-alphaLower)*c_Rate + c_alphaLower
+      
+          ! find alphaF where cn_FullyAttached(alphaF) = x(3)
+          ! and note that we just set x(3) = cn_FullyAttached(alphaE)
+      ! alphaF   = alphaE
+      
+         ! calculate x%x(4) = fs_aF = f_st(alphaF):
+      !call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg)
+      !x%x(4) = AFI_interp%f_st
+   else 
+      print*,'HGM_steady, should never happen'
+      STOP
+   end if
+   
    x%x(4) = AFI_interp%f_st
+   x%x(5) = 0.0_R8Ki
    
 end subroutine HGM_Steady
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1885,7 +2464,8 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       ! Local variables  
       
    type(AFI_UA_BL_Type)                         :: BL_p        ! potentially interpolated UA parameters
-   type(AFI_OutputType)                         :: AFI_Interp
+   type(AFI_OutputType)                         :: AFI_AlphaE  ! interploated values at alphaE
+   type(AFI_OutputType)                         :: AFI_AlphaF  ! interpolated values at alphaF
    character(ErrMsgLen)                         :: errMsg2
    integer(IntKi)                               :: errStat2
    character(*), parameter                      :: RoutineName = 'UA_CalcContStateDeriv'
@@ -1894,18 +2474,19 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    real(ReKi)                                   :: alphaE
    real(ReKi)                                   :: alphaF
    real(ReKi)                                   :: Clp
+   real(ReKi)                                   :: cRate ! slope of the piecewise linear region of fully attached polar
    real(R8Ki)                                   :: x4
    real(ReKi)                                   :: alpha_34
    real(ReKi), parameter                        :: U_dot = 0.0_ReKi ! at some point we may add this term
    TYPE(UA_InputType)                           :: u        ! Inputs at t
-  
+   real(R8Ki)                                   :: CnC_dot, One_Plus_Sqrt_x4, cv_dot, CnC
 
       ! Initialize ErrStat
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if (OtherState%UA_off_forGood(i,j)) then
+   if (p%UA_off_forGood(i,j)) then
       dxdt%x = 0.0_R8Ki
       return
    end if
@@ -1924,40 +2505,108 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       
    call Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
     
-   Clp = BL_p%c_lalpha * (alphaE - BL_p%alpha0) + pi * Tu * u%omega   ! Eq. 13
-   
       ! fix definitions of T_f0 and T_p (based on email from Emmanuel 12-28-20 regarding HAWC2 default values)
-   BL_p%T_f0 = BL_p%T_f0 * 2.0_ReKi * Tu
+   BL_p%T_f0 = BL_p%T_f0 * Tu ! Emmanuel wants a factor of 2 here to match HAWC2, but we don't want that factor for Bladed comparisons
    BL_p%T_p  = BL_p%T_p  * Tu
-      
 
       ! calculate fs_aF (stored in AFI_interp%f_st):
-    
-   !note: BL_p%c_lalpha cannot be zero. UA is turned off at initialization if this occurs.
-   alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
-   call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2)
+    ! find alphaF where FullyAttached(alphaF) = x(3)
+   if (p%UAMod == UA_HGM) then
+      !note: BL_p%c_lalpha cannot be zero. UA is turned off at initialization if this occurs.
+      alphaF  = x%x(3)/BL_p%c_lalpha + BL_p%alpha0                           ! p. 13
+
+   else if (p%UAMod == UA_OYE) then
+      alphaF = alpha_34
+
+   else if (p%UAMod == UA_HGMV) then
+      if (x%x(3) < BL_p%c_alphaLowerWrap) then
+         alphaF  = (x%x(3) - BL_p%c_alphaLowerWrap) / BL_p%c_RateWrap + BL_p%alphaLowerWrap
+      elseif (x%x(3) < BL_p%c_alphaLower) then
+         alphaF  = (x%x(3) - BL_p%c_alphaLower) / BL_p%c_RateLower + BL_p%alphaLower
+      elseif(x%x(3) < BL_p%c_alphaUpper) then
+         ! this alphaF might be slightly different for alphaLower < x(3) < alphaUpper (it's not quite linear there)
+         ! however, the separation function is 1 there, so it doesn't matter if we're off a little bit
+         alphaF  = (x%x(3) - BL_p%c_alphaLower) / BL_p%c_Rate + BL_p%alphaLower
+      elseif(x%x(3) < BL_p%c_alphaUpperWrap) then
+         alphaF  = (x%x(3) - BL_p%c_alphaUpper) / BL_p%c_RateUpper + BL_p%alphaUpper
+      else
+         alphaF  = (x%x(3) - BL_p%c_alphaUpperWrap) / BL_p%c_RateWrap + BL_p%alphaUpperWrap
+      end if
+   end if
+   
+   call AFI_ComputeAirfoilCoefs( alphaF, u%Re, u%UserProp, AFInfo, AFI_AlphaF, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
    
-    ! States
-    !x1: Downwash memory term 1 (rad)
-    !x2: Downwash memory term 2 (rad)
-    !x3: Clp', Lift coefficient with a time lag to the attached lift coeff
-    !x4: f'' , Final separation point function
-    
-       ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
-    x4 = max( min( x%x(4), 1.0_R8Ki ), 0.0_R8Ki )
-    
-if (p%ShedEffect) then
-    dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34
-    dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34
-else
-    dxdt%x(1) = 0.0_ReKi
-    dxdt%x(2) = 0.0_ReKi
-endif
-    dxdt%x(3) = -1.0_R8Ki / BL_p%T_p                                     * x%x(3) +         1.0_ReKi / BL_p%T_p  * Clp
-    dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                    *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_interp%f_st
+      
+   ! States
+   !x1: Downwash memory term 1 (rad)
+   !x2: Downwash memory term 2 (rad)
+   !x3: Clp', Lift coefficient with a time lag to the attached lift coeff
+   !x4: f'' , Final separation point function
+   
+      ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
+   x4 = max( min( x%x(4), 1.0_R8Ki ), 0.0_R8Ki )
+   
+   call AddOrSub2Pi(real(x%x(1),ReKi), alpha_34) ! make sure we use the same alpha_34 for both x1 and x2 equations.
+   if (p%ShedEffect) then
+       dxdt%x(1) = -1.0_R8Ki / Tu * (BL_p%b1 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(1) + BL_p%b1 * BL_p%A1 / Tu * alpha_34
+       dxdt%x(2) = -1.0_R8Ki / Tu * (BL_p%b2 + p%c(i,j) * U_dot/(2*u%u**2)) * x%x(2) + BL_p%b2 * BL_p%A2 / Tu * alpha_34
+   else
+       dxdt%x(1) = 0.0_ReKi
+       dxdt%x(2) = 0.0_ReKi
+   endif
+   
+   if (p%UAMod == UA_HGM) then
+      call AddOrSub2Pi(BL_p%alpha0, alphaE)
+      Clp = BL_p%c_lalpha * (alphaE - BL_p%alpha0) + pi * Tu * u%omega   ! Eq. 13
+      dxdt%x(3) = -1.0_R8Ki / BL_p%T_p                                  * x%x(3) +         1.0_ReKi / BL_p%T_p  * Clp
+      dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st
+      dxdt%x(5) = 0.0_R8Ki
 
+   elseif (p%UAMod == UA_OYE) then
+      dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st
+      dxdt%x(1) = 0.0_R8Ki
+      dxdt%x(2) = 0.0_R8Ki
+      dxdt%x(3) = 0.0_R8Ki
+      dxdt%x(5) = 0.0_R8Ki
+
+   elseif (p%UAMod == UA_HGMV) then
+
+      call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_AlphaE, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= AbortErrLev) return
+
+      Clp = AFI_AlphaE%FullyAttached + pi * Tu * u%omega                                       ! Eq. 13 (this is really Cnp)
+      dxdt%x(3) = -1.0_R8Ki / BL_p%T_p                                  * x%x(3) +         1.0_ReKi / BL_p%T_p  * Clp
+         
+      dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st
+      
+      if (OtherState%VortexOn(i,j)) then
+         One_Plus_Sqrt_x4 =1.0_R8Ki + sqrt(x4)
+         
+         if (alphaE < BL_p%alphaLower) then
+            cRate = BL_p%c_RateLower
+         elseif(alphaE < BL_p%alphaUpper) then
+            cRate = BL_p%c_Rate
+         else
+            cRate = BL_p%c_RateUpper
+         end if
+         CnC_dot = cRate * u%omega * (1.0_R8Ki - BL_p%A1 - BL_p%A2) + dxdt%x(1) + dxdt%x(2)
+         cv_dot = CnC_dot*(1.0_R8Ki - 0.25_R8Ki*(One_Plus_Sqrt_x4)**2)
+      
+         CnC    = AFI_AlphaE%FullyAttached
+         cv_dot = cv_dot - CnC*0.25_R8Ki*One_Plus_Sqrt_x4/sqrt(max(0.0001_R8Ki,x4))*dxdt%x(4)
+      else
+         cv_dot = 0.0_R8Ki
+      end if
+      
+      dxdt%x(5) = cv_dot - x%x(5)/(BL_p%T_V0 * Tu)
+   else
+      print*,'>>> UA_CalcContStateDeriv, should never happen.'
+      STOP ! should never happen
+   end if
+   
 END SUBROUTINE UA_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
@@ -1968,33 +2617,61 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
    TYPE(UA_ElementContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
    TYPE(AFI_UA_BL_Type),                INTENT(IN   )  :: BL_p        ! potentially interpolated UA parameters
    
-   REAL(ReKi),                          INTENT(  OUT)  :: alpha_34
+   REAL(ReKi), optional,                INTENT(  OUT)  :: alpha_34
    REAL(ReKi),                          INTENT(  OUT)  :: Tu
-   REAL(ReKi),                          INTENT(  OUT)  :: alphaE
+   REAL(ReKi), optional,                INTENT(  OUT)  :: alphaE
 
       ! Local variables  
    real(ReKi)                                   :: vx_34
 
    
-    ! Variables derived from inputs
-    !u%u = U_ac = TwoNorm(u%v_ac)                                                 ! page 4 definitions
-    
-    Tu     = p%c(i,j) / (2.0_ReKi* max(u%u, UA_u_min))                            ! Eq. 23
-    Tu     = min(Tu, 50.0_ReKi)   ! ensure the time constant doesn't exceed 50 s.
-    Tu     = max(Tu,  0.001_ReKi) ! ensure the time constant doesn't get too small, either.
+   ! Variables derived from inputs
+   !u%u = U_ac = TwoNorm(u%v_ac)                                                 ! page 4 definitions
+   Tu = Get_Tu(u%u, p%c(i,j))
 
-    vx_34 = u%v_ac(1) - u%omega * 0.5_ReKi*p%c(i,j)                        ! Eq. 1
-    alpha_34 = atan2(vx_34, u%v_ac(2) )                                    ! page 5 definitions
+   if (present(alpha_34)) then
+      alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
     
-    ! Variables derived from states
-if (p%ShedEffect) then
-    alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
-else
-    alphaE  = alpha_34
-endif
-    call MPi2Pi(alphaE)
+      if (present(alphaE)) then
+         ! Variables derived from states
+         if (p%UAMod == UA_OYE .or. .not. p%ShedEffect) then
+            alphaE  = alpha_34
+         else
+            alphaE  = alpha_34*(1.0_ReKi - BL_p%A1 - BL_p%A2) + x%x(1) + x%x(2)    ! Eq. 12
+         endif
+         call MPi2Pi(alphaE)
+      end if
+   end if
 
 END SUBROUTINE Get_HGM_constants
+
+!> Compute angle of attack at 3/4 chord point based on values at Aerodynamic center
+real(ReKi) function Get_Alpha34(v_ac, omega, d_ac_to_34)
+   real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center
+   real(ReKi), intent(in) :: omega      !< pitching rate of airfoil
+   real(ReKi), intent(in) :: d_ac_to_34 !< distance from aerodynamic center to 3/4 chord point
+   Get_Alpha34 = atan2(v_ac(1) + omega * d_ac_to_34, v_ac(2) )  ! Uaero - Uelast
+end function Get_Alpha34
+
+!> Compute angle of attack at 2/4 chord point based on values at Aerodynamic center
+real(ReKi) function Get_Alpha24(v_ac, omega, d_ac_to_24)
+   real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center
+   real(ReKi), intent(in) :: omega      !< pitching rate of airfoil
+   real(ReKi), intent(in) :: d_ac_to_24 !< distance from aerodynamic center to 2/4 chord point
+   Get_Alpha24 = atan2(v_ac(1) + omega * d_ac_to_24, v_ac(2) )  ! Uaero - Uelast
+end function Get_Alpha24
+
+!> Compute time constant based on relative velocity u_rel
+real(ReKi) function Get_Tu(u_rel, chord)
+   real(ReKi), intent(in) :: u_rel !< relative velocity of airfoil
+   real(ReKi), intent(in) :: chord !< airfoil chord
+   Get_Tu = chord / (2.0_ReKi* max(u_rel, UA_u_min)) 
+   Get_Tu = min(Get_Tu, 50.0_ReKi)  ! ensure the time constant doesn't exceed 50 s.
+   Get_Tu = max(Get_Tu, 0.001_ReKi) ! ensure the time constant doesn't get too small, either.
+end function Get_Tu
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
 !!
@@ -2280,12 +2957,13 @@ END SUBROUTINE UA_ABM4
 
 
 !============================================================================== 
-subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg )   
+subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg )   
 ! Routine for computing outputs, used in both loose and tight coupling.
 !..............................................................................
    
    integer(IntKi),               intent(in   )  :: i           ! node index within a blade
    integer(IntKi),               intent(in   )  :: j           ! blade index 
+   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
    type(UA_InputType),           intent(in   )  :: u_in        ! Inputs at Time
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UA_ContinuousStateType), intent(in   )  :: x           ! Continuous states at Time
@@ -2311,6 +2989,7 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
    
    real(ReKi)                                   :: Cm_FS
    real(ReKi)                                   :: Cc_FS
+   real(ReKi)                                   :: Cl_FA
    real(ReKi)                                   :: Cm_alpha_nc
    real(ReKi)                                   :: M, f, k2_hat
    real(ReKi)                                   :: Cm_v, alpha_prime_f
@@ -2325,10 +3004,22 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
    real(ReKi)                                   :: fs_aE
    real(ReKi)                                   :: cl_fs
    real(ReKi)                                   :: x4
+   real(ReKi)                                   :: x5
+   real(ReKi)                                   :: cn_circ, tau_vl, tV_ratio
    real(ReKi)                                   :: delta_c_df_primeprime
    real(ReKi), parameter                        :: delta_c_mf_primeprime = 0.0_ReKi
    TYPE(UA_ElementContinuousStateType)          :: x_in        ! Continuous states at t
-   
+   ! for BV
+   real(ReKi)                                   :: alphaE_L, alphaE_D  ! effective angle of attack for lift and drag
+   real(ReKi)                                   :: alphaLag_D          ! lagged angle of attack for drag calculation
+   real(ReKi)                                   :: adotnorm
+#ifdef UA_OUTS
+   real(ReKi)                                   :: delN
+   real(ReKi)                                   :: delP
+   real(ReKi)                                   :: gammaL
+   real(ReKi)                                   :: gammaD
+   real(ReKi)                                   :: TransA
+#endif   
 
    type(AFI_OutputType)                         :: AFI_interp
    
@@ -2350,7 +3041,7 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
    k = abs(u%omega * p%c(i, j) / (2.0_ReKi* u%u))
    
-   if (  OtherState%UA_off_forGood(i,j) .or. (OtherState%FirstPass(i, j) .and. p%UAMod /= UA_HGM) ) then ! note: if u%U isn't zero because we've called UA_fixInputs
+   if (  p%UA_off_forGood(i,j) .or. (OtherState%FirstPass(i, j) .and. p%UAMod < UA_HGM) ) then ! note: if u%U isn't zero because we've called UA_fixInputs
         
       misc%weight(i,j) = 0.0
       
@@ -2382,13 +3073,28 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
       KC%alpha_filt_cur    = u%alpha
       KC%ds                = 2.0_ReKi*u%U*p%dt/p%c(i, j)
       
-      alphaE   = 0.0
+      alphaE   = u%alpha ! NOTE: no omega for UA<UA_HGM
       Tu       = 0.0
-      alpha_34 = 0.0
-      cl_fs    = 0.0
-      fs_aE    = 0.0
-      
-   elseif (p%UAMod == UA_HGM) then
+      alpha_34 = u%alpha ! NOTE: no omega for UA<UA_HGM
+      cl_fs    = AFI_interp%FullySeparate
+      cl_fa    = AFI_interp%FullyAttached
+      fs_aE    = AFI_interp%f_st
+
+      x_in%x = 0.0_R8Ki
+
+   elseif (p%UAMod == UA_BV) then
+      ! --- CalcOutput Boeing-Vertol
+      if (AFInfo%RelThickness<0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = 'Relative thickness should be provided in the profile file to use the Boeing-Vertol model.'
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         return
+      endif
+      call BV_CalcOutput()
+      if (ErrStat >= AbortErrLev) return
+
+   elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
+      ! --- CalcOutput State Space models
       x_in = x%element(i,j)
       
       if (OtherState%FirstPass(i,j)) then
@@ -2401,37 +3107,90 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
          if (ErrStat >= AbortErrLev) return
       
       call Get_HGM_constants(i, j, p, u, x_in, BL_p, Tu, alpha_34, alphaE) ! compute Tu, alpha_34, and alphaE
-   
-      call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-      
-         ! calculate fs_aE and cl_fs:
-      cl_fs = AFI_interp%cl_fs
-      fs_aE = AFI_interp%f_st
-    
+
+      call AFI_ComputeAirfoilCoefs( alphaE,   u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
        ! Constraining x4 between 0 and 1 increases numerical stability (should be done elsewhere, but we'll double check here in case there were perturbations on the state value)
       x4 = max( min( x_in%x(4), 1.0_R8Ki ), 0.0_R8Ki )
-    
-      delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)
-      
-! bjj: do we need to check that u%alpha is between -pi and + pi?
-      ! y%Cl = AFI_interp%Cl < TODO consider using this in front of x4 for "true" Cl
-      y%Cl = x4 * (alphaE - BL_p%alpha0) * BL_p%c_lalpha  + (1.0_ReKi - x4) * cl_fs  + pi * Tu * u%omega       ! Eq. 78
-      y%Cd = AFI_interp%Cd + (u%alpha - alphaE) * y%Cl + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime    ! Eq. 79
-      
-      if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
-         y%Cm          = 0.0_ReKi
-      else
-         y%Cm = AFI_interp%Cm + y%Cl * delta_c_mf_primeprime - piBy2 * Tu * u%omega                            ! Eq. 80
-      end if
 
-      y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
-      y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+         ! calculate values for output:
+      cl_fs = AFI_interp%FullySeparate
+      cl_fa = AFI_interp%FullyAttached
+      fs_aE = AFI_interp%f_st
+
+      if (p%UAMod == UA_OYE) then
+         ! calculate fully attached value:
+         call AddOrSub2Pi(BL_p%alpha0, alphaE)
+         cl_fa = (alphaE - BL_p%alpha0) * BL_p%c_lalpha ! Cl fully attached
+         y%Cl = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs   ! TODO consider adding simple corrections + pi * Tu * u%omega
+         y%Cd = AFI_interp%Cd                           ! TODO consider adding simple corrections 
+         if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
+            y%Cm = 0.0_ReKi
+         else
+            y%Cm = AFI_interp%Cm                        ! TODO consider adding simple corrections + y%Cl * delta_c_mf_primeprime - piBy2 * Tu * u%omega  
+         endif
+         y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
+         y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+      
+      elseif (p%UAMod == UA_HGM) then
+            ! calculate fully attached value:
+         call AddOrSub2Pi(BL_p%alpha0, alphaE)
+         cl_fa = (alphaE - BL_p%alpha0) * BL_p%c_lalpha
+    
+         delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)                   ! Eq. 81
+      
+   ! bjj: do we need to check that u%alpha is between -pi and + pi?
+         y%Cl = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs  + pi * Tu * u%omega                                        ! Eq. 78
+
+         call AddOrSub2Pi(u%alpha, alphaE)
+         y%Cd = AFI_interp%Cd + (u%alpha - alphaE) * y%Cl + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime    ! Eq. 79
+      
+         if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
+            y%Cm          = 0.0_ReKi
+         else
+            y%Cm = AFI_interp%Cm + y%Cl * delta_c_mf_primeprime - piBy2 * Tu * u%omega                            ! Eq. 80
+         end if
+
+         y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
+         y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+      else
+      
+         ! limit x5?:
+         x5 = x_in%x(5)
+            
+         cn_circ = x4 * AFI_interp%FullyAttached  + (1.0_ReKi - x4) * AFI_interp%FullySeparate + x5
+         y%Cn = cn_circ  + pi * Tu * u%omega
+         y%Cc = AFI_interp%Cl*sin(alphaE) - AFI_interp%Cd*cos(alphaE) ! static value at alphaE
+         
+         y%Cl = y%Cn*cos(u%alpha) + y%Cc*sin(u%alpha)
+
+         ! for cm:
+         tau_vl = t - OtherState%t_vortexBegin(i,j)
+         tau_vl = tau_vl / Tu ! make this non-dimensional (to compare with T_VL)
+         tV_ratio = min(1.5_ReKi, tau_vl/BL_p%T_VL)
+            
+         delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)                   ! Eq. 81
+         
+         call AddOrSub2Pi(u%alpha, alphaE)
+         y%Cd = AFI_interp%Cd + (u%alpha - alphaE) * y%Cn + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime    ! Eq. 79
+         
+         
+         if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
+            y%Cm          = 0.0_ReKi
+         else
+!            alphaF = x_in%x(3) / BL_p%c_lalpha + BL_p%alpha0
+            y%Cm = AFI_interp%Cm + cn_circ * delta_c_mf_primeprime - 0.0_ReKi * piBy2 * Tu * u%omega - 0.25_ReKi*(1.0_ReKi - cos(pi * tV_ratio ))*x5
+         end if
+      
+      end if
       
          ! now check if we should have turned off UA, and modify outputs accordingly (with linear combination of steady outputs)
-      call UA_BlendSteady(k, u, p, AFInfo, y, misc%FirstWarn_UA_off, misc%weight(i,j), ErrStat2, ErrMsg2)
+      call UA_BlendSteady(u, p, AFInfo, y, misc%FirstWarn_UA_off, misc%weight(i,j), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
    else
+      ! --- CalcOutput Beddoes-Leishman type models
       
       M           = u%U / p%a_s
       
@@ -2575,10 +3334,10 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
       end if
       
          ! now check if we should have turned off UA, and modify outputs accordingly (with linear combination of steady outputs)
-      call UA_BlendSteady(k, u, p, AFInfo, y, misc%FirstWarn_UA_off, misc%weight(i,j), ErrStat2, ErrMsg2)
+      call UA_BlendSteady(u, p, AFInfo, y, misc%FirstWarn_UA_off, misc%weight(i,j), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   end if
+   end if ! Switch on UAMod
    
 #ifdef UA_OUTS
    iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts
@@ -2592,8 +3351,7 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
       y%WriteOutput(iOffset+ 6)    = y%Cd
       y%WriteOutput(iOffset+ 7)    = y%Cm
    
-      if (p%UAMod == UA_HGM) then
-
+      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
          y%WriteOutput(iOffset+ 8)    = u%omega*R2D
          y%WriteOutput(iOffset+ 9)    = alphaE*R2D
          y%WriteOutput(iOffset+10)    = Tu
@@ -2601,14 +3359,41 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
          y%WriteOutput(iOffset+12)    = cl_fs
          y%WriteOutput(iOffset+13)    = fs_aE
          
-         y%WriteOutput(iOffset+14)    = x%element(i,j)%x(1)
-         y%WriteOutput(iOffset+15)    = x%element(i,j)%x(2)
-         y%WriteOutput(iOffset+16)    = x%element(i,j)%x(3)
-         y%WriteOutput(iOffset+17)    = x%element(i,j)%x(4)
+         y%WriteOutput(iOffset+14)    = x_in%x(1) !x%element(i,j)%x(1)
+         y%WriteOutput(iOffset+15)    = x_in%x(2) !x%element(i,j)%x(2)
+         y%WriteOutput(iOffset+16)    = x_in%x(3) !x%element(i,j)%x(3)
+         y%WriteOutput(iOffset+17)    = x_in%x(4) !x%element(i,j)%x(4)
          y%WriteOutput(iOffset+18)    = k
          y%WriteOutput(iOffset+19)    = misc%weight(i,j)
+         y%WriteOutput(iOffset+20)    = cl_fa
 
+         if (p%UAMod == UA_HGMV) then
+            y%WriteOutput(iOffset+21)    = x_in%x(5) !x%element(i,j)%x(5)
+         end if
+
+      elseif(p%UAMod == UA_BV) then
+         y%WriteOutput(iOffset+ 8)    = u%omega 
+         y%WriteOutput(iOffset+ 9)    = alphaE_L*R2D
+         y%WriteOutput(iOffset+10)    = alphaE_D*R2D
+         y%WriteOutput(iOffset+11)    = Get_Tu(u%u, p%c(i,j))
+         y%WriteOutput(iOffset+12)    = alpha_34*R2D
+         y%WriteOutput(iOffset+13)    = xd%alpha_dot(i,j)*R2D*p%dt
+         y%WriteOutput(iOffset+14)    = adotnorm
+         y%WriteOutput(iOffset+15)    = (alpha_34-alphaE_L)*R2D
+         y%WriteOutput(iOffset+16)    = (alpha_34-alphaE_D)*R2D
+         y%WriteOutput(iOffset+17)    = transfer(OtherState%activeL(i,j), ReKi) ! logical to float
+         y%WriteOutput(iOffset+18)    = transfer(OtherState%activeD(i,j), ReKi)
+         y%WriteOutput(iOffset+19)    = alphaLag_D*R2D
+         y%WriteOutput(iOffset+20)    = gammaL
+         y%WriteOutput(iOffset+21)    = gammaD
+         y%WriteOutput(iOffset+22)    = TransA
+         y%WriteOutput(iOffset+23)    = delP
+         y%WriteOutput(iOffset+24)    = delN
+         y%WriteOutput(iOffset+25)    = u%v_ac(1)
+         y%WriteOutput(iOffset+26)    = u%v_ac(2)
+         
       else
+         ! Baseline, Gonzales, MinnemaPierce
          y%WriteOutput(iOffset+ 8)    = KC%Cn_alpha_q_circ               ! CNCP in ADv14
          y%WriteOutput(iOffset+ 9)    = KC%Cn_alpha_q_nc                 ! CNIQ in ADv14
          y%WriteOutput(iOffset+10)    = KC%Cn_pot
@@ -2659,13 +3444,86 @@ subroutine UA_CalcOutput( i, j, u_in, p, x, xd, OtherState, AFInfo, y, misc, Err
          y%WriteOutput(iOffset+41)    = OtherState%sigma3(i, j)
          y%WriteOutput(iOffset+42)    = misc%T_sh(i, j)
          y%WriteOutput(iOffset+43)    = k
-         y%WriteOutput(iOffset+44)    = KC%alpha_filt_cur*R2D
-         y%WriteOutput(iOffset+45)    = misc%weight(i,j)
+         y%WriteOutput(iOffset+44)    = misc%weight(i,j)
+         y%WriteOutput(iOffset+45)    = KC%alpha_filt_cur*R2D
+         
       end if
    end if
 #endif
+
+contains 
+   !> Calc Outputs for Boieng-Vertol dynamic stall
+   !! See BV_DynStall.f95 of CACTUS, notations kept more or less consistent
+   subroutine BV_CalcOutput()
+      real(ReKi) :: alpha_50
+      real(ReKi) :: Cm25_stat
+      real(ReKi) :: Cl75_stat
+      real(ReKi) :: Cl50_stat
+
+      ! --- Compute Unsteady aero params (BL_p) for this airfoil (alpha0, alpha1, alpha2)
+      call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, BL_p, ErrMsg2, ErrStat2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
+      ! --- Compute effective angle of attack and lagged angle of attack (needed to update active states)
+      call BV_getAlphas(i, j, u, p, xd, BL_p, AFInfo%RelThickness, alpha_34, alphaE_L, alphaLag_D, adotnorm)
+      alphaE_D = BV_alphaE_D(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j))
+
+#ifdef UA_OUTS
+      ! --- Recompute variables, for temporary output to file only
+      ! Calculate deltas to negative and positive stall angle (delN, and delP)
+      call BV_delNP(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j), delN, delP)
+      call BV_getGammas(tc=AFInfo%RelThickness, umach=0.0_ReKi, gammaL=gammaL, gammaD=gammaD)
+      TransA = BV_TransA(BL_p)
+#endif 
+
+
+
+      ! --- Cl, _,  at effective angle of attack alphaE
+      if (OtherState%activeL(i,j)) then
+         ! Dynamic Cl (scaled)
+         call AFI_ComputeAirfoilCoefs(alphaE_L, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         y%Cl = AFI_interp%Cl/(alphaE_L-BL_P%alpha0) * (alpha_34-BL_p%alpha0)
+      else
+         ! Static Cl
+         call AFI_ComputeAirfoilCoefs(alpha_34, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         y%Cl = AFI_interp%Cl
+      endif
+
+      ! --- Cd at effective angle of attack alphaE (alphaE might be alpha34 if no drag model)
+      call AFI_ComputeAirfoilCoefs(alphaE_D, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      y%Cd = AFI_interp%Cd
+
+      ! --- Cm using pitch rate effects by analogy to pitching flat plate potential flow theory (SAND report)
+      ! As Done in CACTUS
+      ! Static coeffs at 1/4 chord
+      if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
+         Cm25_stat = 0.0_ReKi
+      else
+         ! Static coeffs at 1/4 chord (u%Alpha)
+         call AFI_ComputeAirfoilCoefs(u%Alpha, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         Cm25_stat = AFI_interp%Cm
+      endif
+      ! Static coeffs at 1/2 chord (alpha_50)
+      alpha_50 = Get_Alpha24(u%v_ac, u%omega, 0.25_ReKi*p%c(i,j))
+      call AFI_ComputeAirfoilCoefs(alpha_50, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Cl50_stat = AFI_interp%Cl
+      ! Static coeffs at 3/4 chord (alpha_34)
+      call AFI_ComputeAirfoilCoefs(alpha_34, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Cl75_stat = AFI_interp%Cl
+      y%Cm = Cm25_stat + cos(alpha_50) * (Cl75_stat - Cl50_stat)*0.25_ReKi
+
+      ! TODO projection using alpha 5 and back for added mass
+      !y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
+      !y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+      y%Cn = y%Cl*cos(alpha_50) + y%Cd*sin(alpha_50)
+      y%Cc = y%Cl*sin(alpha_50) - y%Cd*cos(alpha_50)
+
+   end subroutine BV_CalcOutput
    
 end subroutine UA_CalcOutput
+
+
+
 !==============================================================================   
 subroutine UA_WriteOutputToFile(t, p, y)
    real(DbKi),                   intent(in   )  :: t           ! current time (s)
@@ -2696,6 +3554,183 @@ subroutine UA_WriteOutputToFile(t, p, y)
 #endif
 
 end subroutine UA_WriteOutputToFile
+!==============================================================================   
+subroutine UA_WriteAFIParamsToFile(InitInp, AFInfo, ErrStat, ErrMsg)
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo(:)   ! The airfoil parameter data (for all airfoils)
+   type(UA_InitInputType),       intent(in   )  :: InitInp     ! input data for initialization routine
+
+   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   integer                                      :: k
+   integer(IntKi)                               :: i
+   integer(IntKi)                               :: unOutFile
+   integer(IntKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   character(*), parameter                      :: RoutineName = 'UA_WriteAFIParamsToFile'
+   character(*), parameter                      :: delim = ' '
+   
+   integer, parameter                           :: MaxLen = 16
+   integer, parameter                           :: NumChans = 49
+   character(MaxLen)                            :: ChanName( NumChans)
+   character(MaxLen)                            :: ChanUnit( NumChans)
+   real(ReKi)                                   :: TmpValues(NumChans)
+   character(3)                                 :: MaxLenStr
+   character(80)                                :: Fmt
+   
+   MaxLenStr = trim(num2lstr(MaxLen))
+   
+   i=1
+   ChanName(i) = 'AirfoilNumber';    ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'TableNumber';      ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'alpha0';           ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alpha1';           ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alpha2';           ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'eta_e';            ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'C_nalpha';         ChanUnit(i) = '(-/rad)';    i = i+1;
+   ChanName(i) = 'C_lalpha';         ChanUnit(i) = '(-/rad)';    i = i+1;
+   ChanName(i) = 'T_f0';             ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'T_V0';             ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'T_p';              ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'T_VL';             ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'b1';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'b2';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'b5';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'A1';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'A2';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'A5';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'S1';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'S2';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'S3';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'S4';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Cn1';              ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Cn2';              ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'St_sh';            ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Cd0';              ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'Cm0';              ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k0';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k1';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k2';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k3';               ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'k1_hat';           ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'x_cp_bar';         ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'UACutout';         ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'UACutout_delta';   ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'UACutout_blend';   ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'filtCutOff';       ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'alphaLowerWrap';   ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alphaLower';       ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alphaUpper';       ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'alphaUpperWrap';   ChanUnit(i) = '(deg)';      i = i+1;
+   ChanName(i) = 'c_alphaLowerWrap'; ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'c_alphaLower';     ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'c_alphaUpper';     ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'c_alphaUpperWrap'; ChanUnit(i) = '(-)';        i = i+1;
+   ChanName(i) = 'c_RateWrap';       ChanUnit(i) = '(-/rad)';    i = i+1;
+   ChanName(i) = 'c_RateLower';      ChanUnit(i) = '(-/rad)';    i = i+1;
+   ChanName(i) = 'c_Rate';           ChanUnit(i) = '(-/rad)';    i = i+1;
+   ChanName(i) = 'c_RateUpper';      ChanUnit(i) = '(-/rad)';    i = i+1;
+      
+   CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
+   IF ( ErrStat /= ErrID_None ) RETURN
+
+   CALL OpenFOutFile ( unOutFile, trim(InitInp%OutRootName)//'.UA.sum', ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      
+         
+   ! Generate file outputs
+
+   write (unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime() !//' using '//trim(GetNVD(version))
+   write (unOutFile,'(1X,A)') trim(ProgName)
+   write (unOutFile,'()' )    !print a blank line
+   write (unOutFile,'()' )    !print a blank line
+   write (unOutFile,'()' )    !print a blank line
+              
+
+      !......................................................
+      ! Write the names of the output parameters on one line:
+      !......................................................
+   call WrFileNR ( unOutFile, ChanName(1) )
+   do i=2,size(ChanName)
+      call WrFileNR ( unOutFile, delim//ChanName(i) )
+   end do
+   write (unOutFile,'()')
+
+      !......................................................
+      ! Write the units of the output parameters on one line:
+      !......................................................
+   call WrFileNR ( unOutFile, ChanUnit(1) )
+   do i=2,size(ChanName)
+      call WrFileNR ( unOutFile, delim//ChanUnit(i) )
+   end do
+   write (unOutFile,'()')
+
+   TmpValues = 0.0_ReKi ! initialize in case UAdata is not included in the airfoil table
+      !......................................................
+      ! Write the data for each table in each file
+      !......................................................
+   Fmt = '(I'//MaxLenStr//',"'//delim//'",I'//MaxLenStr//','//trim(num2lstr(NumChans))//'("'//delim//'",F'//MaxLenStr//'.5))'
+   do k=1,size(AFInfo)
+      do i=1,size(AFInfo(k)%Table)
+         IF (AFInfo(k)%Table(i)%InclUAdata) then
+            WRITE(unOutFile, Fmt) k, i, &
+                                       AFInfo(k)%Table(i)%UA_BL%alpha0*R2D        , &
+                                       AFInfo(k)%Table(i)%UA_BL%alpha1*R2D        , &
+                                       AFInfo(k)%Table(i)%UA_BL%alpha2*R2D        , &
+                                       AFInfo(k)%Table(i)%UA_BL%eta_e             , &
+                                       AFInfo(k)%Table(i)%UA_BL%C_nalpha          , &
+                                       AFInfo(k)%Table(i)%UA_BL%C_lalpha          , &
+                                       AFInfo(k)%Table(i)%UA_BL%T_f0              , &
+                                       AFInfo(k)%Table(i)%UA_BL%T_V0              , &
+                                       AFInfo(k)%Table(i)%UA_BL%T_p               , &
+                                       AFInfo(k)%Table(i)%UA_BL%T_VL              , &
+                                       AFInfo(k)%Table(i)%UA_BL%b1                , &
+                                       AFInfo(k)%Table(i)%UA_BL%b2                , &
+                                       AFInfo(k)%Table(i)%UA_BL%b5                , &
+                                       AFInfo(k)%Table(i)%UA_BL%A1                , &
+                                       AFInfo(k)%Table(i)%UA_BL%A2                , &
+                                       AFInfo(k)%Table(i)%UA_BL%A5                , &
+                                       AFInfo(k)%Table(i)%UA_BL%S1                , &
+                                       AFInfo(k)%Table(i)%UA_BL%S2                , &
+                                       AFInfo(k)%Table(i)%UA_BL%S3                , &
+                                       AFInfo(k)%Table(i)%UA_BL%S4                , &
+                                       AFInfo(k)%Table(i)%UA_BL%Cn1               , &
+                                       AFInfo(k)%Table(i)%UA_BL%Cn2               , &
+                                       AFInfo(k)%Table(i)%UA_BL%St_sh             , &
+                                       AFInfo(k)%Table(i)%UA_BL%Cd0               , &
+                                       AFInfo(k)%Table(i)%UA_BL%Cm0               , &
+                                       AFInfo(k)%Table(i)%UA_BL%k0                , &
+                                       AFInfo(k)%Table(i)%UA_BL%k1                , &
+                                       AFInfo(k)%Table(i)%UA_BL%k2                , &
+                                       AFInfo(k)%Table(i)%UA_BL%k3                , &
+                                       AFInfo(k)%Table(i)%UA_BL%k1_hat            , &
+                                       AFInfo(k)%Table(i)%UA_BL%x_cp_bar          , &
+                                       AFInfo(k)%Table(i)%UA_BL%UACutout*R2D      , &
+                                       AFInfo(k)%Table(i)%UA_BL%UACutout_delta*R2D, &
+                                       AFInfo(k)%Table(i)%UA_BL%UACutout_blend*R2D, &
+                                       AFInfo(k)%Table(i)%UA_BL%filtCutOff        , &
+                                       AFInfo(k)%Table(i)%UA_BL%alphaLowerWrap*R2D, &
+                                       AFInfo(k)%Table(i)%UA_BL%alphaLower*R2D    , &
+                                       AFInfo(k)%Table(i)%UA_BL%alphaUpper*R2D    , &
+                                       AFInfo(k)%Table(i)%UA_BL%alphaUpperWrap*R2D, &
+                                       AFInfo(k)%Table(i)%UA_BL%c_alphaLowerWrap  , &
+                                       AFInfo(k)%Table(i)%UA_BL%c_alphaLower      , &
+                                       AFInfo(k)%Table(i)%UA_BL%c_alphaUpper      , &
+                                       AFInfo(k)%Table(i)%UA_BL%c_alphaUpperWrap  , &
+                                       AFInfo(k)%Table(i)%UA_BL%c_RateWrap        , &
+                                       AFInfo(k)%Table(i)%UA_BL%c_RateLower       , &
+                                       AFInfo(k)%Table(i)%UA_BL%c_Rate            , &
+                                       AFInfo(k)%Table(i)%UA_BL%c_RateUpper
+         ELSE
+            WRITE(unOutFile, Fmt) k, i, TmpValues(3:)
+         END IF
+      end do
+   end do
+
+   close(unOutFile)
+      
+end subroutine UA_WriteAFIParamsToFile
 !==============================================================================
 subroutine UA_End(p)
    type(UA_ParameterType),       intent(inout)  :: p           ! Parameters
@@ -2715,8 +3750,7 @@ end subroutine UA_End
 !==============================================================================   
 !>This subroutine blends the steady outputs with the unsteady-outputs so that
 !! UA can turn back on if the angle of attack goes back into a reasonable range.
-subroutine UA_BlendSteady(k, u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat, ErrMsg)
-   REAL(ReKi),                   intent(in   )  :: k           ! reduced frequency
+subroutine UA_BlendSteady(u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat, ErrMsg)
    type(UA_InputType),           intent(in   )  :: u           ! "Fixed" Inputs at Time
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data
@@ -2727,7 +3761,7 @@ subroutine UA_BlendSteady(k, u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat,
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    type(AFI_OutputType)                         :: AFI_steady
-   REAL(ReKi)                                   :: W1,W2,W3      ! Weights for turning off UA temporarily
+   REAL(ReKi)                                   :: W1,W2         ! Weights for turning off UA temporarily
    REAL(ReKi)                                   :: AFI_steady_Cn ! Cn from steady coefficients
    REAL(ReKi)                                   :: AFI_steady_Cc ! Cc from steady coefficients
    TYPE(AFI_UA_BL_Type)                         :: UA_BL         ! The tables of Leishman-Beddoes unsteady-aero data for given Re and control setting [-]
@@ -2748,9 +3782,7 @@ subroutine UA_BlendSteady(k, u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat,
    
    W1 = 1.0_ReKi - BlendCosine( abs(u%alpha), UA_BL%UACutout_blend, UA_BL%UACutout ) ! shut off when AoA reaches UACutout, but blend it off 5 degrees before (5 degrees is set in AFI to avoid that math each time)
    W2 =            BlendCosine( abs(u%U),                 UA_u_min, 1.0_ReKi       ) ! turn off UA when inflow velocity is 0 m/s, but start blend it off 1 m/s before (make sure it is greater than u_min)
-  !W3 =            BlendCosine( k,   0.0_ReKi, 0.02_ReKi       ) ! turn off UA when reduced frequency is 0, but start blend it off at k=0.02 (this is a quasi-static state)
-   W3 = 1.0_ReKi
-   weight = W1*W2*W3
+   weight = W1*W2
 
    if (weight < 1.0_ReKi) then
    
@@ -2758,7 +3790,7 @@ subroutine UA_BlendSteady(k, u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat,
          CALL SetErrStat(ErrID_Warn,"Temporarily turning off UA due to high angle of attack or low relative velocity. This warning will not be repeated though the condition may persist.", ErrStat, ErrMsg, RoutineName)
          FirstWarn_UA_off = .false.
       end if
-   
+
       ! calculate the steady coefficients
       call AFI_ComputeAirfoilCoefs( u%alpha, u%Re, u%UserProp, AFInfo, AFI_steady, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2777,6 +3809,59 @@ subroutine UA_BlendSteady(k, u, p, AFInfo, y, FirstWarn_UA_off, weight, ErrStat,
 
 
 end subroutine UA_BlendSteady
+!==============================================================================   
+!>This subroutine blends the steady outputs with the unsteady-states so that
+!! UA can turn back on if the angle of attack goes back into a reasonable range.
+subroutine UA_BlendSteadyStates(i, j, u, p, AFInfo, x, FirstWarn_UA_off, weight, ErrStat, ErrMsg)
+   integer(IntKi),               intent(in   )  :: i           ! node index within a blade
+   integer(IntKi),               intent(in   )  :: j           ! blade index 
+   type(UA_InputType),           intent(in   )  :: u           ! "Fixed" Inputs at Time
+   type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data
+   TYPE(UA_ElementContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
+   LOGICAL,                      intent(inout)  :: FirstWarn_UA_off      ! flag to determine if warning message should be displayed
+   REAL(ReKi),                   intent(inout)  :: weight      ! scaling weight for UA vs steady outputs
+   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   type(UA_ElementContinuousStateType)          :: x_steady
+   REAL(ReKi)                                   :: W1,W2         ! Weights for turning off UA temporarily
+   TYPE(AFI_UA_BL_Type)                         :: UA_BL         ! The tables of Leishman-Beddoes unsteady-aero data for given Re and control setting [-]
+   INTEGER(IntKi)                               :: ErrStat2
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'UA_BlendSteadyStates'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   weight = 1.0_ReKi ! default in case of error
+   
+      ! Determine what the cutout angle of attack is
+   call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, UA_BL, ErrMsg, ErrStat )
+   if (ErrStat >= AbortErrLev) return ! would only have error if there is a memory problem
+      
+      ! put alpha in [-pi,pi] before checking its value
+
+   W1 = 1.0_ReKi - BlendCosine( abs(u%alpha), UA_BL%UACutout_blend, UA_BL%UACutout ) ! shut off when AoA reaches UACutout, but blend it off 5 degrees before (5 degrees is set in AFI to avoid that math each time)
+   W2 =            BlendCosine( abs(u%U),                 UA_u_min, 1.0_ReKi       ) ! turn off UA when inflow velocity is 0 m/s, but start blend it off 1 m/s before (make sure it is greater than u_min)
+   weight = W1*W2
+
+   if (weight < 1.0_ReKi) then
+   
+      if (FirstWarn_UA_off) then
+         CALL SetErrStat(ErrID_Warn,"Temporarily turning off UA due to high angle of attack or low relative velocity. This warning will not be repeated though the condition may persist.", ErrStat, ErrMsg, RoutineName)
+         FirstWarn_UA_off = .false.
+      end if
+
+      ! calculate the states when at steady state
+      call HGM_Steady( i, j, u, p, x_steady, AFInfo, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
+      x%x = weight * x%x + (1.0_ReKi - weight) * x_steady%x
+   end if
+
+
+end subroutine UA_BlendSteadyStates
 !==============================================================================   
 !> This subroutine checks that the Mach number is valid. If M > 0.3, the theory 
 !! is invalid. If M > 1, numerical issues result in the code.

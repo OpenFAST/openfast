@@ -3119,7 +3119,7 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    
       ! local variables:
    INTEGER(IntKi)                :: i, j, k, l, spdof, indx
-   CHARACTER(10)                 :: modLabels(2), dofLabels(6)
+   CHARACTER(10)                 :: dofLabels(6)
    ErrStat = ErrID_None
    ErrMsg  = ""
    indx = 1
@@ -3158,36 +3158,53 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
          k=k+1
       end do
    end do
-   
-   modLabels = (/'Exctn     ','Rdtn      '/)
+
+   !----------------
+   ! SS_Exctn states
+
    dofLabels = (/'PtfmSg    ','PtfmSw    ','PtfmHv    ','PtfmR     ','PtfmP     ','PtfmY     '/)
-   do k = 1, 2   ! 1 = Excitation,  2 = Radiation
+   if (p%totalExctnStates>0) then
       do l=1,p%nWAMITObj
-         
          ! set linearization state names:   
          do j = 1, 6
-         
-            if (k == 1) then
-               spdof = p%WAMIT(l)%SS_Exctn%spdof(j)
-            else 
-               spdof = p%WAMIT(l)%SS_Rdtn%spdof(j)
-            end if
-         
+            spdof = p%WAMIT(l)%SS_Exctn%spdof(j)
             if ( p%NBodyMod == 1 ) then
                do i = 1,spdof
-                  InitOut%LinNames_x(indx) = trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
+                  InitOut%LinNames_x(indx) = 'Exctn'//trim(dofLabels(j))//trim(num2lstr(i))
                   indx = indx + 1
                end do
             else  
                do i = 1,spdof
-                  InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
+                  InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//'Exctn'//trim(dofLabels(j))//trim(num2lstr(i))
                   indx = indx + 1
                end do
             end if
-            
          end do
       end do
-   end do
+   endif
+
+   !----------------
+   ! SS_Rdtn states
+
+   if (p%totalRdtnStates>0) then
+      do l=1,p%nWAMITObj
+         ! set linearization state names:   
+         do j = 1, 6
+            spdof = p%WAMIT(l)%SS_Rdtn%spdof(j)
+            if ( p%NBodyMod == 1 ) then
+               do i = 1,spdof
+                  InitOut%LinNames_x(indx) = 'Rdtn'//trim(dofLabels(j))//trim(num2lstr(i))
+                  indx = indx + 1
+               end do
+            else  
+               do i = 1,spdof
+                  InitOut%LinNames_x(indx) = 'B'//trim(num2lstr(l))//'Rdtn'//trim(dofLabels(j))//trim(num2lstr(i))
+                  indx = indx + 1
+               end do
+            end if
+         end do
+      end do
+   endif
 END SUBROUTINE HD_Init_Jacobian_x
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
@@ -3576,7 +3593,7 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
    else
       offset1 = p%totalExctnStates + 1
       ! Find body index for rdtn states
-      do i=1,p%nWAMITObj 
+      do i=1,p%nWAMITObj
          offset2 = offset1 + p%WAMIT(i)%SS_Exctn%numStates
          if ( n >= offset1 .and. n < offset2) then
             n2 = n - offset1 + 1
