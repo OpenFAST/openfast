@@ -18,7 +18,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    character(*),                 intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
    character(1024)      :: PriPath                         ! the path to the primary input file
-   character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line 
+   character(1024)      :: sDummy, sLine, Key, Val         ! string to temporarially hold value of read line 
    integer(IntKi)       :: UnIn, i
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
@@ -101,6 +101,39 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
          if (Check(m%GridOutputs(i)%nz<1, 'Grid output nz needs to be >=1')) return
       enddo
    endif
+
+   ! --- Advanced Options
+   ! NOTE: no error handling since this is for debug
+   ! Default options are typically "true"
+   p%InductionAtCP = .true.  ! Compute the induced velocities at Control Points, otherwise, at nodes
+   p%WakeAtTE      = .true.  ! The wake starts at the trailing edge, otherwise, directly at the lifting line
+   p%Induction     = .true.  ! Compute induced velocities, otherwise 0 induced velocities on the lifting line!
+   p%DStallOnWake  = .false.
+   CALL ReadCom(UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); 
+   CALL ReadCom(UnIn,FileName,                  '--- Advanced options header'        ,ErrStat2,ErrMsg2);
+   if(ErrStat2==ErrID_None) then
+      call WrScr(' - Reading advanced options for OLAF:')
+      do while(ErrStat2==ErrID_None)
+         read(UnIn, '(A)',iostat=ErrStat2) sDummy
+         call Conv2UC(sDummy)  ! to uppercase
+         if (index(sDummy, 'INDUCTIONATCP')>1) then
+            read(sDummy, '(L1)') p%InductionAtCP
+            print*,'   >>> InductionAtCP',p%InductionAtCP
+         elseif (index(sDummy, 'WAKEATTE')>1) then
+            read(sDummy, '(L1)') p%WakeAtTE
+            print*,'   >>> WakeAtTE     ',p%WakeAtTE
+         elseif (index(sDummy, 'DSTALLONWAKE')>1) then
+            read(sDummy, '(L1)') p%DStallOnWake
+            print*,'   >>> DStallOnWake ',p%DStallOnWake
+         elseif (index(sDummy, 'INDUCTION')>1) then
+            read(sDummy, '(L1)') p%Induction
+            print*,'   >>> Induction    ',p%Induction
+         else
+            print*,'   >>> Line ignored, starting with'//trim(sDummy)
+         endif
+      enddo
+   endif
+
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
@@ -358,13 +391,13 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'BldPointCP.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if ( vtk_new_ascii_file(trim(filename),Label,mvtk) ) then
-         call vtk_dataset_polydata(m%W(iW)%CP_LL(1:3,1:p%W(iW)%nSpan),mvtk,bladeFrame)
+         call vtk_dataset_polydata(m%W(iW)%CP(1:3,1:p%W(iW)%nSpan),mvtk,bladeFrame)
          call vtk_point_data_init(mvtk)
-         call vtk_point_data_scalar(z%W(iW)%Gamma_ll(    1:p%W(iW)%nSpan),'Gamma_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Vind_ll (1:3,1:p%W(iW)%nSpan),'Vind_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Vtot_ll (1:3,1:p%W(iW)%nSpan),'Vtot_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Vstr_ll (1:3,1:p%W(iW)%nSpan),'Vstr_ll',mvtk)
-         call vtk_point_data_vector(m%W(iW)%Vwnd_ll (1:3,1:p%W(iW)%nSpan),'Vwnd_ll',mvtk)
+         call vtk_point_data_scalar(z%W(iW)%Gamma_LL(    1:p%W(iW)%nSpan),'Gamma_LL',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vind_CP (1:3,1:p%W(iW)%nSpan),'Vind_CP',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vtot_CP (1:3,1:p%W(iW)%nSpan),'Vtot_CP',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vstr_CP (1:3,1:p%W(iW)%nSpan),'Vstr_CP',mvtk)
+         call vtk_point_data_vector(m%W(iW)%Vwnd_CP (1:3,1:p%W(iW)%nSpan),'Vwnd_CP',mvtk)
          call vtk_point_data_vector(m%W(iW)%Tang    (1:3,1:p%W(iW)%nSpan),'Tangent',mvtk)
          call vtk_point_data_vector(m%W(iW)%Norm    (1:3,1:p%W(iW)%nSpan),'Normal',mvtk)
          call vtk_point_data_vector(m%W(iW)%Orth    (1:3,1:p%W(iW)%nSpan),'Orth',mvtk)
@@ -386,8 +419,8 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
-         allocate(Arr3D(3, size(m%dxdt%W(iW)%r_NW,2) , m%nNW+1)); Arr3D=0.0_ReKi ! Convection velocity
-         allocate(Arr2D(size(z%W(iW)%Gamma_LL), 1) )            ; Arr2D=0.0_ReKi
+         allocate(Arr3D(3, size(m%dxdt%W(iW)%r_NW,2) ,2)); Arr3D=0.0_ReKi ! Convection velocity
+         allocate(Arr2D(size(z%W(iW)%Gamma_LL), 1) )     ; Arr2D=0.0_ReKi ! Gamma
          Arr2D(:,1)=z%W(iW)%Gamma_LL(:)
          call WrVTK_Lattice(FileName, mvtk, m%W(iW)%r_LL(1:3,:,1:2), Arr2D(:,1:1), Arr3D, bladeFrame=bladeFrame)
          deallocate(Arr3D)

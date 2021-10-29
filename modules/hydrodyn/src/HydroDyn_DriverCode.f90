@@ -179,6 +179,9 @@ PROGRAM HydroDynDriver
       STOP
    END IF
    InitInData%Gravity      = drvrInitInp%Gravity
+   InitInData%defWtrDens   = drvrInitInp%WtrDens
+   InitInData%defWtrDpth   = drvrInitInp%WtrDpth
+   InitInData%defMSL2SWL   = drvrInitInp%MSL2SWL
    InitInData%UseInputFile = .TRUE. 
    InitInData%InputFile    = drvrInitInp%HDInputFile
    InitInData%OutRootName  = drvrInitInp%OutRootName
@@ -302,7 +305,7 @@ PROGRAM HydroDynDriver
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
-   CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, drvrInitInp%WtrDens, drvrInitInp%WtrDpth, drvrInitInp%MSL2SWL, InitOutData, ErrStat, ErrMsg )
+   CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
       call HD_DvrCleanup()
