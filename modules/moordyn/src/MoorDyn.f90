@@ -123,7 +123,8 @@ CONTAINS
       CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
       CHARACTER(1024)              :: FileName             !
 
-      REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid
+      REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid [m]
+      Real(DbKi)                   :: nvec(3)              ! local seabed surface normal vector (positive out)
       
       
       CHARACTER(25)                 :: let1                ! strings used for splitting and parsing identifiers
@@ -183,11 +184,15 @@ CONTAINS
       InputFileDat%TMaxIC    = 60.0_DbKi
       InputFileDat%CdScaleIC = 4.0_ReKi
       InputFileDat%threshIC  = 0.01_ReKi
-      p%WaveKin             = 0_IntKi
-      p%Current             = 0_IntKi
+      p%WaveKin              = 0_IntKi
+      p%Current              = 0_IntKi
       p%dtOut                = 0.0_DbKi
+      p%mu_kT                = 0.0_DbKi
+      p%mu_kA                = 0.0_DbKi
+      p%mc                   = 1.0_DbKi
+      p%cv                   = 200.0_DbKi
       DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
-                       ! DepthValue and InitInp%WtrDepth are processed later by getBathymetry.
+                       ! DepthValue and InitInp%WtrDepth are processed later by setupBathymetry.
       WaterKinValue = ""
       
       m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
@@ -410,7 +415,7 @@ CONTAINS
                   else if ( OptString == 'RHOW') then
                      read (OptValue,*) p%rhoW
                   else if ( OptString == 'WTRDPTH') then
-                     read (OptValue,*) DepthValue    ! water depth input read in as a string to be processed by getBathymetry
+                     read (OptValue,*) DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
                   else if ( OptString == 'KBOT')  then
                      read (OptValue,*) p%kBot
                   else if ( OptString == 'CBOT')  then
@@ -427,6 +432,14 @@ CONTAINS
                      read (OptValue,*) WaterKinValue
                   else if ( OptString == 'DTOUT')  then
                      read (OptValue,*) p%dtOut
+                  else if ( OptString == 'MU_KT')  then
+                     read (OptValue,*) p%mu_kT
+                  else if ( OptString == 'MU_KA')  then
+                     read (OptValue,*) p%mu_kT
+                  else if ( OptString == 'MC')  then
+                     read (OptValue,*) p%mc
+                  else if ( OptString == 'CV')  then
+                     read (OptValue,*) p%cv
                   else
                      CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
                   end if
@@ -466,7 +479,7 @@ CONTAINS
 
       ! set up seabed bathymetry
       CALL setupBathymetry(DepthValue, InitInp%WtrDepth, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, ErrStat2, ErrMsg2)
-      CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, 0.0_DbKi, 0.0_DbKi, p%WtrDpth)  ! set depth at 0,0 as nominal for waves etc
+      CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, 0.0_DbKi, 0.0_DbKi, p%WtrDpth, nvec)  ! set depth at 0,0 as nominal for waves etc
       
       
       ! set up wave and current kinematics 
@@ -959,7 +972,7 @@ CONTAINS
                      ELSE ! otherwise interpret the anchor depth value as a 'seabed' input, meaning the anchor should be on the seabed wherever the bathymetry says it should be
                         PRINT *, "Anchor depth set for seabed; Finding the right seabed depth based on bathymetry"
 
-                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth)
+                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth, nvec)
                         tempArray(3) = -depth
                      
                      END IF
