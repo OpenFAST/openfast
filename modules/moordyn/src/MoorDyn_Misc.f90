@@ -836,9 +836,9 @@ CONTAINS
          dc_dy = 0.0_DbKi   ! maybe this should raise an error
       end if
       
-      tempVector = -dc_dx
-      tempVector = -dc_dy
-      tempVector = 1.0_DbKi
+      tempVector(1) = dc_dx
+      tempVector(2) = dc_dy
+      tempVector(3) = 1.0_DbKi
       CALL ScaleVector( tempVector, 1.0_DbKi, nvec ) ! compute unit vector      
 
    END SUBROUTINE getDepthFromBathymetry

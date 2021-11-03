@@ -1250,47 +1250,57 @@ CONTAINS
             ELSE
                Fn = ( (-depth - Line%r(3,I))*nvec(2)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) )
             END IF
+         
+            ! calculate the axial and transverse components of the total node velocity vector (q can now have a z-component from seabed slope)
+            DO J = 1, 3
+               Va(J) = DOT_PRODUCT( Line%rd(:,I) , Line%q(:,I) ) * Line%q(J,I)
+               Vt(J) = Line%rd(J,I) - Va(J)
+            END DO
+            ! calculate the magnitudes of each velocity
+            VaMag = SQRT(Va(1)**2+Va(2)**2+Va(3)**2)
+            VtMag = SQRT(Vt(1)**2+Vt(2)**2+Vt(3)**2)
+
+            ! find the maximum possible kinetic friction force using transverse and axial kinetic friction coefficients
+            FkTmax = p%mu_kT*SQRT(Fn(1)**2+Fn(2)**2+Fn(3)**2)
+            FkAmax = p%mu_kA*SQRT(Fn(1)**2+Fn(2)**2+Fn(3)**2)
+            ! turn the maximum kinetic friction forces into vectors in the direction of their velocities
+            DO J = 1, 3
+               IF (VtMag==0) THEN
+                  FkT(J) = 0.0_DbKi
+               ELSE
+                  FkT(J) = FkTmax*Vt(J)/VtMag
+               END IF
+               IF (VaMag==0) THEN
+                  FkA(J) = 0.0_DbKi
+               ELSE
+                  FkA(J) = FkAmax*Va(J)/VaMag
+               END IF
+            END DO
+            ! calculate the ratio between the static and kinetic coefficients of friction
+            !mc_T = p%mu_sT/p%mu_kT
+            !mc_A = p%mu_sA/p%mu_kA
+            
+            ! calculate the transverse friction force
+            IF (p%mu_kT*p%cv*VtMag > p%mc*FkTmax) THEN   ! if the friction force of the linear curve is greater than the maximum friction force allowed adjusted for static friction,
+               FfT = -FkT                                ! then the friction force is the maximum kinetic friction force vector (constant part of the curve)
+            ELSE                                         ! if the friction force of the linear curve is less than the maximum friction force allowed adjusted for static friction,
+               FfT = -p%mu_kT*p%cv*Vt                    ! then the friction force is the calculated value of the linear line
+            END IF
+            ! calculate the axial friction force
+            IF (p%mu_kA*p%cv*VaMag > p%mc*FkAmax) THEN   ! if the friction force of the linear curve is greater than the maximum friction force allowed adjusted for static friction,
+               FfA = -FkA                                ! then the friction force is the maximum kinetic friction force vector (constant part of the curve)
+            ELSE                                         ! if the friction force of the linear curve is less than the maximum friction force allowed adjusted for static friction,
+               FfA = -p%mu_kA*p%cv*Va                    ! then the friction force is the calculated value of the linear line
+            END IF
+            ! NOTE: these friction forces have a negative sign here to indicate a force in the opposite direction of motion
+
+            ! the total friction force is along the plane of the seabed slope, which is just the vector sum of the transverse and axial components
+            Ff = FfT + FfA
+         
          ELSE
             Fn = 0.0_DbKi
+            Ff = 0.0_DbKi
          END IF
-
-         ! calculate the axial and transverse components of the total node velocity vector (q can now have a z-component from seabed slope)
-         DO J = 1, 3
-            Va(J) = DOT_PRODUCT( Line%rd(:,I) , Line%q(:,I) ) * Line%q(J,I)
-            Vt(J) = Line%rd(J,I) - Va(J)
-         END DO
-         ! calculate the magnitudes of each velocity
-         VaMag = SQRT(Va(1)**2+Va(2)**2+Va(3)**2)
-         VtMag = SQRT(Vt(1)**2+Vt(2)**2+Vt(3)**2)
-
-         ! find the maximum possible kinetic friction force using transverse and axial kinetic friction coefficients
-         FkTmax = p%mu_kT*SQRT(Fn(1)**2+Fn(2)**2+Fn(3)**2)
-         FkAmax = p%mu_kA*SQRT(Fn(1)**2+Fn(2)**2+Fn(3)**2)
-         ! turn the maximum kinetic friction forces into vectors in the direction of their velocities
-         DO J = 1, 3
-            FkT(J) = FkTmax*Vt(J)/VtMag
-            FkA(J) = FkAmax*Va(J)/VaMag
-         END DO
-         ! calculate the ratio between the static and kinetic coefficients of friction
-         !mc_T = p%mu_sT/p%mu_kT
-         !mc_A = p%mu_sA/p%mu_kA
-         
-         ! calculate the transverse friction force
-         IF (p%mu_kT*p%cv*VtMag > p%mc*FkTmax) THEN   ! if the friction force of the linear curve is greater than the maximum friction force allowed adjusted for static friction,
-            FfT = -FkT                                ! then the friction force is the maximum kinetic friction force vector (constant part of the curve)
-         ELSE                                         ! if the friction force of the linear curve is less than the maximum friction force allowed adjusted for static friction,
-            FfT = -p%mu_kT*p%cv*Vt                    ! then the friction force is the calculated value of the linear line
-         END IF
-         ! calculate the axial friction force
-         IF (p%mu_kA*p%cv*VaMag > p%mc*FkAmax) THEN   ! if the friction force of the linear curve is greater than the maximum friction force allowed adjusted for static friction,
-            FfA = -FkA                                ! then the friction force is the maximum kinetic friction force vector (constant part of the curve)
-         ELSE                                         ! if the friction force of the linear curve is less than the maximum friction force allowed adjusted for static friction,
-            FfA = -p%mu_kA*p%cv*Va                    ! then the friction force is the calculated value of the linear line
-         END IF
-         ! NOTE: these friction forces have a negative sign here to indicate a force in the opposite direction of motion
-
-         ! the total friction force is along the plane of the seabed slope, which is just the vector sum of the transverse and axial components
-         Ff = FfT + FfA
 
          ! the total force from bottom contact on the line node is the sum of the normal contact force and the friction force
          Line%B(:,I) = Fn + Ff
