@@ -1244,11 +1244,11 @@ CONTAINS
             END DO
             ! calculate the normal contact force on the line node
             IF (I==0) THEN
-               Fn = ( (-depth - Line%r(3,I))*nvec(2)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(            Line%l(I+1) )
+               Fn = ( (-depth - Line%r(3,I))*nvec(3)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(            Line%l(I+1) )
             ELSE IF (I==N) THEN
-               Fn = ( (-depth - Line%r(3,I))*nvec(2)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(Line%l(I)               )
+               Fn = ( (-depth - Line%r(3,I))*nvec(3)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(Line%l(I)               )
             ELSE
-               Fn = ( (-depth - Line%r(3,I))*nvec(2)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) )
+               Fn = ( (-depth - Line%r(3,I))*nvec(3)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) )
             END IF
          
             ! calculate the axial and transverse components of the total node velocity vector (q can now have a z-component from seabed slope)
@@ -1304,7 +1304,6 @@ CONTAINS
 
          ! the total force from bottom contact on the line node is the sum of the normal contact force and the friction force
          Line%B(:,I) = Fn + Ff
-
 
          ! total forces
          IF (I==0)  THEN
