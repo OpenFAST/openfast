@@ -55,6 +55,18 @@ MODULE NWTC_Num
    REAL(ReKi)                                :: TwoByPi                       !< 2/Pi
    REAL(ReKi)                                :: TwoPi                         !< 2*Pi
 
+   REAL(SiKi)                                :: D2R_S                         !< Factor to convert degrees to radians in single precision
+   REAL(SiKi)                                :: Inf_S                         !< IEEE value for NaN (not-a-number) in single precision
+   REAL(SiKi)                                :: Inv2Pi_S                      !< 0.5/Pi (1/(2*Pi)) in single precision
+   REAL(SiKi)                                :: NaN_S                         !< IEEE value for Inf (infinity) in single precision
+   REAL(SiKi)                                :: Pi_S                          !< Ratio of a circle's circumference to its diameter in single precision
+   REAL(SiKi)                                :: PiBy2_S                       !< Pi/2 in single precision
+   REAL(SiKi)                                :: R2D_S                         !< Factor to convert radians to degrees in single precision
+   REAL(SiKi)                                :: RPM2RPS_S                     !< Factor to convert revolutions per minute to radians per second in single precision
+   REAL(SiKi)                                :: RPS2RPM_S                     !< Factor to convert radians per second to revolutions per minute in single precision
+   REAL(SiKi)                                :: TwoByPi_S                     !< 2/Pi in single precision
+   REAL(SiKi)                                :: TwoPi_S                       !< 2*Pi in single precision
+
    REAL(SiKi)                                :: Pi_R4                         !< Ratio of a circle's circumference to its diameter in 4-byte precision
    REAL(R8Ki)                                :: Pi_R8                         !< Ratio of a circle's circumference to its diameter in 8-byte precision
    REAL(QuKi)                                :: Pi_R16                        !< Ratio of a circle's circumference to its diameter in 16-byte precision
@@ -62,6 +74,20 @@ MODULE NWTC_Num
    REAL(SiKi)                                :: TwoPi_R4                      !< 2*pi in 4-byte precision
    REAL(R8Ki)                                :: TwoPi_R8                      !< 2*pi in 8-byte precision
    REAL(QuKi)                                :: TwoPi_R16                     !< 2*pi in 16-byte precision
+   
+   ! constants for kernel smoothing
+   INTEGER, PARAMETER :: kernelType_EPANECHINIKOV = 1
+   INTEGER, PARAMETER :: kernelType_QUARTIC       = 2
+   INTEGER, PARAMETER :: kernelType_BIWEIGHT      = 3
+   INTEGER, PARAMETER :: kernelType_TRIWEIGHT     = 4
+   INTEGER, PARAMETER :: kernelType_TRICUBE       = 5
+   INTEGER, PARAMETER :: kernelType_GAUSSIAN      = 6
+
+   
+      ! constants for output formats
+   INTEGER, PARAMETER                        :: Output_in_Native_Units = 0
+   INTEGER, PARAMETER                        :: Output_in_SI_Units     = 1
+   INTEGER, PARAMETER                        :: Output_in_Engr_Units   = 2
 !=======================================================================
 
       ! Create interfaces for generic routines that use specific routines.
@@ -85,6 +111,20 @@ MODULE NWTC_Num
       MODULE PROCEDURE EulerExtractR4
       MODULE PROCEDURE EulerExtractR8
       MODULE PROCEDURE EulerExtractR16
+   END INTERFACE
+
+      !> \copydoc nwtc_num::taitbryanyxzextractr4()
+      !! See nwtc_num::taitbryanyxzextractr4() for details on the algorithm
+   INTERFACE TaitBryanYXZExtract
+      MODULE PROCEDURE TaitBryanYXZExtractR4
+      MODULE PROCEDURE TaitBryanYXZExtractR8
+      MODULE PROCEDURE TaitBryanYXZExtractR16
+   END INTERFACE
+   
+   INTERFACE TaitBryanYXZConstruct
+      MODULE PROCEDURE TaitBryanYXZConstructR4
+      MODULE PROCEDURE TaitBryanYXZConstructR8
+      MODULE PROCEDURE TaitBryanYXZConstructR16
    END INTERFACE
 
       !> \copydoc nwtc_num::outerproductr4
@@ -402,6 +442,96 @@ CONTAINS
 
    RETURN
    END SUBROUTINE BSortReal ! ( RealAry, NumPts )
+!=======================================================================
+!> This subroutine takes an "oldUnits" array, compares the strings
+!! to a list of units that will be converted to SI, and returns two arrays
+!! that give the new units and the multiplicative scaling factor to convert 
+!! the old units to the new ones. The three arrays must be the same size.
+   SUBROUTINE ConvertUnitsToSI(Units,ScaleFactor)
+      CHARACTER(*), INTENT(INOUT)   :: Units(:)          !< in: the old units; out: the new units
+      REAL(ReKi),   INTENT(  OUT)   :: ScaleFactor(:)    !< scaling factor to convert old to new units (old*SF = new)
+
+      
+      ! local variables
+      INTEGER                       :: i
+
+      DO i=1,SIZE(Units)
+
+         SELECT CASE( TRIM(Units(i)) )  ! Note that this IS case sensitive!
+
+         CASE ('(kN)','kN')
+            Units(i)    = '(N)'
+            ScaleFactor(i) = 1000.0_ReKi
+         CASE ('(kN-m)','kN-m')
+            Units(i)    = '(N-m)'
+            ScaleFactor(i) = 1000.0_ReKi
+         CASE ('(deg)','deg')
+            Units(i)    = '(rad)'
+            ScaleFactor(i) = D2R
+         CASE ('(deg/s)','deg/s')
+            Units(i)    = '(rad/s)'
+            ScaleFactor(i) = D2R
+         CASE ('(deg/s^2)','deg/s^2')
+            Units(i)    = '(rad/s^2)'
+            ScaleFactor(i) = D2R
+         CASE ('(rpm)','rpm')
+            Units(i)    = '(rad/s)'
+            ScaleFactor(i) = RPM2RPS
+         CASE ('(kW)','kW')
+            Units(i)    = '(W)'
+            ScaleFactor(i) = 1000.0_ReKi
+         CASE DEFAULT
+            ScaleFactor(i) = 1.0_ReKi
+         END SELECT
+
+      END DO
+
+   END SUBROUTINE ConvertUnitsToSI
+!=======================================================================
+!> This subroutine takes an "oldUnits" array, compares the strings
+!! to a list of units that will be converted to engineering units (kN and deg), and returns two arrays
+!! that give the new units and the multiplicative scaling factor to convert 
+!! the old units to the new ones. The three arrays must be the same size.
+   SUBROUTINE ConvertUnitsToEngr(Units,ScaleFactor)
+      CHARACTER(*), INTENT(INOUT)   :: Units(:)          !< in: the old units; out: the new units
+      REAL(ReKi),   INTENT(  OUT)   :: ScaleFactor(:)    !< scaling factor to convert old to new units (old*SF = new)
+
+      
+      ! local variables
+      INTEGER                       :: i
+
+      DO i=1,SIZE(Units)
+
+         SELECT CASE( TRIM(Units(i)) )  ! Note that this IS case sensitive!
+
+         CASE ('(N)','N')
+            Units(i)    = '(kN)'
+            ScaleFactor(i) = 0.001_ReKi
+         CASE ('(N-m)','N-m', '(Nm)', 'Nm')
+            Units(i)    = '(kN-m)'
+            ScaleFactor(i) = 0.001_ReKi
+         CASE ('(rad)','rad')
+            Units(i)    = '(deg)'
+            ScaleFactor(i) = R2D
+         CASE ('(rad/s)','rad/s')
+            Units(i)    = '(deg/s)'
+            ScaleFactor(i) = R2D
+         CASE ('(rad/s^2)','rad/s^2')
+            Units(i)    = '(deg/s^2)'
+            ScaleFactor(i) = R2D
+         CASE ('(rps)','rps')
+            Units(i)    = '(rpm)'
+            ScaleFactor(i) = 60.0_ReKi
+         CASE ('(W)','W')
+            Units(i)    = '(kW)'
+            ScaleFactor(i) = 0.001_ReKi
+         CASE DEFAULT
+            ScaleFactor(i) = 1.0_ReKi
+         END SELECT
+
+      END DO
+
+   END SUBROUTINE ConvertUnitsToEngr
 !=======================================================================
 !> This function computes the cross product of two 3-element arrays (resulting in a vector): \n
 !! cross_product = Vector1 \f$\times\f$ Vector2 \n
@@ -962,7 +1092,6 @@ CONTAINS
 
    NumPts  = SIZE( XAry )
    NumCrvs = SIZE( YAry, 2 )
-   !NumCrvs = SIZE( YAry, 2 )
 
    ALLOCATE ( Res( NumCrvs ) , STAT=ErrStatLcl )
    IF ( ErrStatLcl /= 0 )  THEN
@@ -3938,6 +4067,105 @@ CONTAINS
 
    END FUNCTION IsSymmetric
 !=======================================================================
+!> KERNELSMOOTHING Kernel smoothing of vector data
+!!
+!!   fNew = kernelSmoothing( x, f, KERNELTYPE, RADIUS ) generates a smoothed
+!!   version of the data f(x) in fNew.  Supported KERNELTYPE values are
+!!   'EPANECHINIKOV', 'QUARTIC' or 'BIWEIGHT', 'TRIWEIGHT', 'TRICUBE' and
+!!   'GAUSSIAN'.  RADIUS controls the width of the kernel relative to the
+!!   vector x.
+!!
+!!   See also: https://en.wikipedia.org/wiki/Kernel_(statistics)#Kernel_functions_in_common_use
+subroutine kernelSmoothing(x, f, kernelType, radius, fNew)
+
+   REAL(ReKi),             INTENT(in   ) :: x(:)         !> independent axis
+   REAL(ReKi),             INTENT(in   ) :: f(:)         !> function values, f(x), to be smoothed
+   INTEGER,                INTENT(in   ) :: kernelType   !> what kind of smoothing function to use
+   REAL(ReKi),             INTENT(in   ) :: radius       !> width of the "window", in the units of x
+   REAL(ReKi),             INTENT(  out) :: fNew(:)      !> smoothed function values
+   
+   REAL(ReKi)                            :: k
+   REAL(ReKi)                            :: k_sum
+   REAL(ReKi)                            :: w
+   INTEGER(IntKi)                        :: Exp1
+   INTEGER(IntKi)                        :: Exp2
+   REAL(ReKi)                            :: u(size(x))
+   INTEGER                               :: i, j
+   INTEGER                               :: n
+   
+   ! check that radius > 0
+   ! check that size(x) = size(f)=size(fNew)
+   ! check that kernelType is a valid number
+   
+   n = size(x)
+   
+   
+   ! make sure that the value of u is in [-1 and 1] for these kernels:
+   if (kernelType /= kernelType_GAUSSIAN) then
+
+      select case ( kernelType )
+         case (kernelType_EPANECHINIKOV)
+            w = 3.0_ReKi/4.0_ReKi
+            Exp1 = 2
+            Exp2 = 1
+         case (kernelType_QUARTIC, kernelType_BIWEIGHT)
+            w = 15.0_ReKi/16.0_ReKi
+            Exp1 = 2
+            Exp2 = 2
+         case (kernelType_TRIWEIGHT)
+            w = 35.0_ReKi/32.0_ReKi
+            Exp1 = 2
+            Exp2 = 3
+         case (kernelType_TRICUBE)
+            w = 70.0_ReKi/81.0_ReKi
+            Exp1 = 3
+            Exp2 = 3
+      end select
+         
+      fNew = 0.0_ReKi ! whole array operation
+      do j=1,n ! for each value in f:
+      
+         u = (x - x(j)) / radius ! whole array operation
+         do i=1,n
+            u(i) = min( 1.0_ReKi, max( -1.0_ReKi, u(i) ) )
+         end do
+         
+         k_sum   = 0.0_ReKi
+         do i=1,n
+            k = w*(1.0_ReKi-abs(u(i))**Exp1)**Exp2;
+            k_sum = k_sum + k
+            fNew(j) = fNew(j) + k*f(i)
+         end do
+         if (k_sum > 0.0_ReKi) then
+            fNew(j) = fNew(j) / k_sum
+         end if
+         
+      end do ! j (each output value)
+      
+   else ! kernelType_GAUSSIAN
+      w = 1.0_ReKi/sqrt(TwoPi)
+      
+      fNew = 0.0_ReKi ! whole array operation
+      do j=1,n ! for each value in f:
+      
+         u = (x - x(j)) / radius ! whole array operation
+      
+         k_sum   = 0.0_ReKi
+         do i=1,n
+            k = w*exp(-0.5*u(i)**2);
+            k_sum = k_sum + k
+            fNew(j) = fNew(j) + k*f(i)
+         end do
+         if (k_sum > 0.0_ReKi) then
+            fNew(j) = fNew(j) / k_sum
+         end if
+         
+      end do ! j (each output value)
+      
+   end if
+
+end subroutine kernelSmoothing
+!=======================================================================
 !> This subroutine finds the lower-bound index of an input x-value located in an array.
 !! On return, Ind has a value such that
 !!           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
@@ -4353,10 +4581,11 @@ end function Rad2M180to180Deg
 !> This subroutine perturbs an orientation matrix by a small angle, using 
 !! a logarithmic map. For small angles, the change in angle is equivalent to 
 !! a change in log map parameters.
-   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim )
-      REAL(R8Ki), INTENT(INOUT)  :: Orientation(3,3)
-      REAL(R8Ki), INTENT(IN)     :: Perturbation ! angle (radians) of the perturbation
-      INTEGER,    INTENT(IN)     :: AngleDim
+   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim, Perturbations )
+      REAL(R8Ki),           INTENT(INOUT)  :: Orientation(3,3)
+      REAL(R8Ki), OPTIONAL, INTENT(IN)     :: Perturbation ! angle (radians) of the perturbation
+      INTEGER,    OPTIONAL, INTENT(IN)     :: AngleDim
+      REAL(R8Ki), OPTIONAL, INTENT(IN)     :: Perturbations(3) ! angles (radians) of the perturbations
    
            ! Local variables
       REAL(R8Ki)                 :: angles(3)
@@ -4365,7 +4594,11 @@ end function Rad2M180to180Deg
       
       CALL DCM_LogMap( Orientation, angles, ErrStat2, ErrMsg2 )
       
-      angles(AngleDim) = angles(AngleDim) + Perturbation
+      IF (PRESENT(Perturbations)) THEN
+         angles = angles + Perturbations
+      ELSE
+         angles(AngleDim) = angles(AngleDim) + Perturbation
+      END IF
       
       Orientation = DCM_exp( angles )
 
@@ -5357,6 +5590,15 @@ end function Rad2M180to180Deg
       TwoPi   =  2.0_ReKi*Pi
       Inv2Pi  =  0.5_ReKi/Pi        ! 1.0/TwoPi
 
+      Pi_S      = ACOS( -1.0_SiKi )
+      D2R_S     = Pi_S/180.0_SiKi
+      R2D_S     = 180.0_SiKi/Pi_S
+      PiBy2_S   = Pi_S/2.0_SiKi
+      RPM2RPS_S = Pi_S/30.0_SiKi
+      RPS2RPM_S = 30.0_SiKi/Pi_S
+      TwoByPi_S =  2.0_SiKi/Pi_S
+      TwoPi_S   =  2.0_SiKi*Pi_S
+      Inv2Pi_S  =  0.5_SiKi/Pi_S    ! 1.0_SiKi/TwoPi_S
       Pi_R4   = ACOS( -1.0_SiKi )
       Pi_R8   = ACOS( -1.0_R8Ki )
       Pi_R16  = ACOS( -1.0_QuKi )
@@ -5366,7 +5608,7 @@ end function Rad2M180to180Deg
       TwoPi_R16 = Pi_R16*2.0_QuKi
       
          ! IEEE constants:
-      CALL Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )
+      CALL Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
       
 
    RETURN
@@ -6067,6 +6309,516 @@ end function Rad2M180to180Deg
    
    RETURN
    END FUNCTION SkewSymMatR16
+
+!=======================================================================
+!> If M is a rotation matrix from a 1-2-3 rotation sequence about Y-X-Z, this function returns 
+!! the 3 sequential angles, \f$\theta_y\f$, \f$\theta_x\f$, and \f$\theta_z\f$ (in radians), that formed 
+!! the matrix. M represents a change of basis (from global to local coordinates; 
+!! not a physical rotation of the body; passive rotation).
+!!
+!! See Tait-Bryan angle \f$ Y_1 X_2 Z_3 \f$ at https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+!! Note that what we are using here is the passive rotation, which is the transpose of what appears in the
+!! wikipedia article.
+!! 
+!!
+!! \f{eqnarray*}{   
+!! M & = & R(\theta_z) R(\theta_x) R(\theta_y)
+!!   & = & R(\theta_3) R(\theta_2) R(\theta_1) \\
+!!   & = & \begin{bmatrix}    \cos(\theta_z)    & \sin(\theta_z)     & 0                  \\
+!!                            -\sin(\theta_z)   & \cos(\theta_z)     & 0                  \\
+!!                            0                 &  0                 & 1                  \end{bmatrix}
+!!         \begin{bmatrix}    1                 &  0                 & 0                  \\
+!!                            0                 &  \cos(\theta_x)    & \sin(\theta_x)     \\
+!!                            0                 & -\sin(\theta_x)    & \cos(\theta_x)     \end{bmatrix}
+!!         \begin{bmatrix}    \cos(\theta_y)    & 0                  & -\sin(\theta_y)    \\
+!!                            0                 & 1                  & 0                  \\
+!!                            \sin(\theta_y)    & 0                  & \cos(\theta_y)     \end{bmatrix}
+!!   & = & \begin{bmatrix}    C_3               & S_3                & 0                  \\
+!!                            -S_3              & C_3                & 0                  \\
+!!                            0                 & 0                  & 1                  \end{bmatrix}
+!!         \begin{bmatrix}    1                 & 0                  & 0                  \\
+!!                            0                 & C_2                & S_2                \\
+!!                            0                 & -S_2               & C_2                \end{bmatrix}
+!!         \begin{bmatrix}    C_1               & 0                  & -S_1               \\
+!!                            0                 & 1                  & 0                  \\
+!!                            S_1               & 0                  & C_1                \end{bmatrix}  \\
+!!   & = & \begin{bmatrix}  
+!!             \cos(\theta_y) \cos(\theta_z) + \sin(\theta_y) \sin(\theta_x) \sin(\theta_z)     &  \cos(\theta_x) \sin(\theta_z)    &  \cos(\theta_y) \sin(\theta_x) \sin(\theta_z) - \sin(\theta_y) \cos(\theta_z)  \\
+!!             \sin(\theta_y) \sin(\theta_x) \cos(\theta_z) - \cos(\theta_y) \sin(\theta_z)     &  \cos(\theta_x) \cos(\theta_z)    &  \cos(\theta_y) \sin(\theta_x) \cos(\theta_z) + \sin(\theta_y) \sin(\theta_z)  \\
+!!             \sin(\theta_y) \cos(\theta_x)                                                    &  -\sin(\theta_x)                  &  \cos(\theta_y) \cos(\theta_x)                                                 \\
+!!         \end{bmatrix}   
+!!   & = & \begin{bmatrix}  
+!!             C_1 C_3 + S_1 S_2 S_3   &  C_2 S_3     &  C_1 S_2 S_3 - S_1 C_3   \\
+!!             S_1 S_2 C_3 - C_1 S_3   &  C_2 C_3     &  C_1 S_2 C_3 + S_1 S_3   \\
+!!             S_1 C_2                 &  -S_2        &  C_1 C_2                 \\
+!!         \end{bmatrix}   
+!! \f}
+!! returned angles are in the range \f$\theta_y,\theta_x, \theta_z \in \left[ \pi, -\pi \right]\f$ \n
+!! Use TaitBryanYXZExtract (nwtc_num::taitbryanyxzextract)  instead of directly calling a specific routine in the generic interface. 
+   FUNCTION TaitBryanYXZExtractR4(M) result(theta)
+   
+   
+      REAL(SiKi), INTENT(IN) :: M(3,3)    !< rotation matrix, M 
+      REAL(SiKi)             :: theta(3)  !< the 3 rotation angles, \f$(\theta_y, \theta_x, \theta_z)\f$, corresponding to the Tait-Bryan rotation angle corresponding to cant-toe-twist
+     
+      REAL(SiKi)              :: C_1       ! C_1 > cos(theta_y) 
+      REAL(SiKi)              :: S_1       ! S_1 > sin(theta_y) 
+      REAL(SiKi)              :: C_2       ! C_2 > cos(theta_x) 
+      REAL(SiKi)              :: C_3       ! C_3 > cos(theta_z) 
+      REAL(SiKi)              :: S_3       ! S_3 > sin(theta_z)
+
+         !> # Algorithm
+
+         !> Starting with the trig identity of \f$ \sin(\theta_3)^2 + \cos(\theta_3)^2 = S_3^2 + C_3^2 \equiv 1\f$, we can find \f$ \cos(\theta_2) \f$
+         !! from matrix elements \f$M(1,2)\f$ and \f$M(2,2)\f$ by 
+         !! \f{equation}{
+         !!    \cos(\theta_2) = C_2 = \sqrt{ M(1,2)^2 + M(2,2)^2} = \sqrt{ C_2^2 S_3^2 + C_2^2 C_3^2 } = \sqrt{ C_2^2 ( S_3^2 + C_3^2 ) }.
+         !! \f}
+
+         ! use trig identity S_3**2 + C_3**2 = 1 to get abs( C_2 )
+      C_2 = sqrt( m(1,2)**2 + m(2,2)**2 )
+
+      if ( EqualRealNos( C_2, 0.0_SiKi ) ) then
+
+         !> ## If \f$ \cos(\theta_2) = C_2 = 0\f$:
+         !! If \f$\cos(\theta_2) = C_2 = 0\f$, then \f$ \theta_2 \f$ is \f$ \pm\pi/2 \f$ and \f$ S_2 = \pm 1\f$.  We can solve for the sign of \f$\theta_2\f$ by using 
+         !! \f{equation}{
+         !!    \theta_2 = \arctan{\left( \frac{-M(3,2)}{C_2} \right)} = \arctan{\left( \frac{S_2}{C_2} \right)}
+         !! \f}
+         !! (but using the _atan2_ function in the complex plane instead of \f$ \arctan \f$).
+
+         theta(2) = atan2( -m(3,2), C_2 )     ! theta_2 -> theta_x
+
+
+         !> Considering \f$ C_2 = 0 \f$ and \f$ S_2 = \pm 1\f$, the matrix \f$ M \f$ reduces to
+         !! \f{equation}
+         !!    M =  \begin{bmatrix}  
+         !!             C_1 C_3 \pm S_1 S_3     &  0        &  \pm C_1 S_3 - S_1 C_3   \\
+         !!             \pm S_1 C_3 - C_1 S_3   &  0        &  \pm C_1 C_3 + S_1 S_3   \\
+         !!             0                       &  \mp 1    &  0                       \\
+         !!         \end{bmatrix}
+         !! \f}
+         !!
+         !! At this point we can choose \f$ \theta_3 = 0 \f$ due to gimbal lock giving \f$ \sin(\theta_3) = 0 \f$, \f$ \cos(\theta_3) = 1\f$.
+
+         theta(3) = 0.0_SiKi                          ! theta_z = theta_3
+
+         !> This further reduces \f$ M \f$ to 
+         !! \f{equation}
+         !!    M =  \begin{bmatrix}  
+         !!             C_1      &  0        &  - S_1    \\
+         !!             \pm S_1  &  0        &  \pm C_1  \\
+         !!             0        &  \mp 1    &  0        \\
+         !!         \end{bmatrix},
+         !! \f}
+         !! allowing us to solve for \f$ \theta_1 \f$ by \f$ \theta_1 = \arctan{\left( \frac{-M(1,3)}{M(1,1)} \right)} = \arctan{\left( \frac{S_1}{C_1} \right)}\f$.
+
+         theta(1) = atan2( -m(1,3), m(1,1) )
+
+      else
+         !> ## Else \f$ \cos(\theta_2) = C_2 \neq 0\f$:
+         !!
+         !! First, start by finding \f$ \theta(1) \f$ from \f$ M(3,1) \f$ and \f$ M(3,3) \f$ using
+         !! \f{equation}{
+         !!    \theta_1 = \arctan{\left( \frac{M(3,1)}{M(3,3)} \right)} = \arctan{\left( \frac{S_1 C_2}{C_1 C_2} \right)}.
+         !! \f}
+         !! With this we calculate values for \f$S_1\f$ and \f$C_1\f$.
+
+         theta(1) = atan2( m(3,1), m(3,3) )     ! theta_1 -> theta_y
+         C_1   = cos( theta(1) )
+         S_1   = sin( theta(1) )
+
+         !> We already know \f$ \text{abs}( C_2 ) \f$, but need the sign of it.  This can be found by comparing the
+         !! \f$ S_1 C_2 \f$ and \f$ C_1 C_2 \f$ terms with the \f$ C_1 \f$ and \f$ S_1 \f$ terms we just found.
+         !! If \f$ C_1 = 0 \f$, then we use 
+         !! \f{equation}{
+         !!    C_2 = C_2 \cdot \text{sgn}{\left( \frac{M(3,1)}{S_1} \right)} = C_2 \cdot \text{sgn}{( C_2 )},
+         !! \f}
+         !! otherwise
+         !! \f{equation}{
+         !!    C_2 = C_2 \cdot \text{sgn}{\left( \frac{M(3,3)}{C_1} \right)} = C_2 \cdot \text{sgn}{( C_2 )}
+         !! \f}
+         !!
+         if ( EqualRealNos( C_1, 0.0_SiKi ) ) then
+            C_2 = sign( C_2, m(3,1) / S_1 )
+         else
+            C_2 = sign( C_2, m(3,3) / C_1 )
+         endif
+
+         !> Now can calculate \f$ \theta_2 \f$ from
+         !! \f{equation}{
+         !!    \theta_2 = \arctan{\left( \frac{-M(3,2)}{C_2} \right)} = \arctan{\left( \frac{S_2}{C_2} \right)}
+         !! \f}
+         theta(2) = atan2( -m(3,2), C_2 )
+        
+
+         !> For numerical reasons, we're going to get \f$ \theta_3 \f$ (\f$\theta_z\f$) using
+         !! \f{eqnarray*}{
+         !!    M' &=& M \cdot (R(\theta_2) \cdot R(\theta_1))^\text{T} = M \cdot R(\theta_1)^\text{T} \cdot R(\theta_2)^\text{T} & = & R(\theta_3) \\
+         !!       &=& R(\theta_3) R(\theta_2) R(\theta_1) R(\theta_1)^T R(\theta_2)^T  &=& R(\theta_3) \\
+         !!       &=&   M \cdot
+         !!             \begin{bmatrix}
+         !!                C_1   &  0     &  S_1   \\
+         !!                0     &  1     &  0     \\
+         !!                -S_1  &  0     &  C_1
+         !!             \end{bmatrix}
+         !!                \cdot
+         !!             \begin{bmatrix}
+         !!                1     &  0     &  0     \\
+         !!                0     &  C_2   & -S_2   \\
+         !!                0     &  S_2   &  C_2
+         !!             \end{bmatrix}
+         !!       &=&  
+         !!             \begin{bmatrix}
+         !!                C_3   &  S_3   &  0     \\
+         !!                -S_3  &  C_3   &  0     \\
+         !!                0     &  0     &  1
+         !!             \end{bmatrix}  \\
+         !!       &=&   M \cdot
+         !!             \begin{bmatrix}
+         !!                C_1   &  S_1 S_2  &  S_1 C_2  \\
+         !!                0     &  C_2      &  -S_2     \\
+         !!                -S_1  &  C_1 S_2  &  C_1 C_2
+         !!             \end{bmatrix}
+         !!       &=&   \begin{bmatrix}
+         !!                C_3   &  S_3   &  0     \\
+         !!                -S_3  &  C_3   &  0     \\
+         !!                0     &  0     &  1
+         !!             \end{bmatrix}  \\
+         !! \f}
+         !!
+         !! From this we can find \f$ -S_3 \f$ and \f$ C_3 \f$ as
+         !! \f{eqnarray}{
+         !!    -S_3  &=&   M(2,1) C_1 + M(2,3) (- S_1 )  &=&   ( S_1 S_2 C_3 - C_1 S_3 ) C_1 + ( C_1 S_2 C_3 + S_1 S_3 ) ( - S_1 )  \\
+         !!          &&                                  &=&   S_1 C_1 S_2 C_3 - C_1^2 S_3 - S_1^2 S_3 - S_1 C_1 S_2 C_3            \\
+         !!          &&                                  &=&   -( C_1^2 + S_1^2 ) S_3                                               \\
+         !!          &&                                  &=&   -S_3
+         !! \f}
+         !! and
+         !! \f{eqnarray}{
+         !!    C_3   &=&   M(1,1) C_1 + M(1,3) (- S_1 )  &=&   ( C_1 C_3 + S_1 S_2 S_3 ) C_1 + ( C_1 S_2 S_3 - S_1 C_3 ) (- S_1 )   \\
+         !!          &&                                  &=&   C_1^2 C_3 + S_1 C_1 S_2 S_3 - S_1 C_1 S_2 S_3 + S_1^2 C_3            \\
+         !!          &&                                  &=&   ( C_1^2 + S_1^2 ) C_3                                                \\
+         !!          &&                                  &=&   C_3
+         !! \f}
+         !!
+         !! \f$\theta_3\f$ is then found as \f$\theta_3 = \arctan{\left( \frac{S_3}{C_3} \right)}\f$.
+
+
+         S_3 =    -( m(2,1) * C_1   + m(2,3) * (- S_1)   )
+         C_3 =       m(1,1) * C_1   + m(1,3) * (- S_1)
+
+         theta(3) = atan2( S_3, C_3)
+
+      endif
+
+      
+   END FUNCTION TaitBryanYXZExtractR4
+
+!> See nwtc_num::taitbryanyxzextractr4 for detailed explanation of algorithm
+   FUNCTION TaitBryanYXZExtractR8(M) result(theta)
+   
+   
+      REAL(R8Ki), INTENT(IN) :: M(3,3)    !< rotation matrix, M 
+      REAL(R8Ki)             :: theta(3)  !< the 3 rotation angles, \f$(\theta_y, \theta_x, \theta_z)\f$, corresponding to the Tait-Bryan rotation angle corresponding to cant-toe-twist
+     
+      REAL(R8Ki)              :: C_1       ! C_1 > cos(theta_y) 
+      REAL(R8Ki)              :: S_1       ! S_1 > sin(theta_y) 
+      REAL(R8Ki)              :: C_2       ! C_2 > cos(theta_x) 
+      REAL(R8Ki)              :: C_3       ! C_3 > cos(theta_z) 
+      REAL(R8Ki)              :: S_3       ! S_3 > sin(theta_z)
+
+         !> See nwtc_num::taitbryanyxzextractr4 for detailed description of how this works.
+
+         ! use trig identity S_3**2 + C_3**2 = 1 to get abs( C_2 )
+      C_2 = sqrt( m(1,2)**2 + m(2,2)**2 )
+
+         ! If C_2 is zero, we can simplifiy some things since theta(2) is +/- pi/2
+      if ( EqualRealNos( C_2, 0.0_R8Ki ) ) then
+
+         ! find sign of theta(2) based on sin(theta_2)
+         theta(2) = atan2( -m(3,2), C_2 )     ! theta_2 -> theta_x
+
+         ! Considering C_2 = 0  and  S_2 = \pm 1, the matrix M reduces to
+         !     M =  [   C_1 C_3 \pm S_1 S_3        0           \pm C_1 S_3 - S_1 C_3  |
+         !          |   \pm S_1 C_3 - C_1 S_3      0           \pm C_1 C_3 + S_1 S_3  |
+         !          |   0                          0  \mp 1    0                      ]
+         ! 
+         !  At this point we can choose \theta_3 = 0 due to gimbal lock giving sin(theta(3)) = 0, cos(theta(3)) = 1.
+
+         theta(3) = 0.0_R8Ki                          ! theta_z = theta_3
+
+         ! This further reduces M to 
+         !     M =  [   C_1         0           - S_1    |
+         !          |   \pm S_1     0           \pm C_1  |
+         !          |   0           \mp 1       0        ]
+         !
+         !
+         ! allowing us to solve for theta_1  by  theta_1 = atan2( -M(1,3), M(1,1) ) = atan2( S_1, C_1).
+
+         theta(1) = atan2( -m(1,3), m(1,1) )
+
+      else
+         ! First, start by finding \f$ \theta(1) \f$ from \f$ M(3,1) \f$ and \f$ M(3,3) \f$ using
+         !
+         !    theta(1) = atan2( M(3,1), M(3,3) ) = atan2( S_1 * C_2, C_1 * C_2 ).
+         ! With this we calculate values for S_1 and C_1.
+
+         theta(1) = atan2( m(3,1), m(3,3) )     ! theta_1 -> theta_y
+         C_1   = cos( theta(1) )
+         S_1   = sin( theta(1) )
+
+         !  We already know abs( C_2 ), but need the sign of it.  This can be found by comparing the
+         !  S_1 * C_2 and C_1 * C_2 terms with the C_1 and S_1 terms we just found.
+          
+         if ( EqualRealNos( C_1, 0.0_R8Ki ) ) then
+            C_2 = sign( C_2, m(3,1) / S_1 )
+         else
+            C_2 = sign( C_2, m(3,3) / C_1 )
+         endif
+
+         ! Now can calculate theta(2)
+         theta(2) = atan2( -m(3,2), C_2 )
+        
+
+         ! For numerical reasons, we're going to get theta(3) using some matrix math and identities about M.
+         !  See nwtc_num::taitbryanyxzextractr4 for complete documentation on the matrix math used here
+
+         S_3 =    -( m(2,1) * C_1   + m(2,3) * (- S_1)   )
+         C_3 =       m(1,1) * C_1   + m(1,3) * (- S_1)
+
+         theta(3) = atan2( S_3, C_3)
+
+      endif
+
+      
+   END FUNCTION TaitBryanYXZExtractR8
+
+!> See nwtc_num::taitbryanyxzextractr4 for detailed explanation of algorithm
+   FUNCTION TaitBryanYXZExtractR16(M) result(theta)
+   
+   
+      REAL(QuKi), INTENT(IN) :: M(3,3)    !< rotation matrix, M 
+      REAL(QuKi)             :: theta(3)  !< the 3 rotation angles, \f$(\theta_y, \theta_x, \theta_z)\f$, corresponding to the Tait-Bryan rotation angle corresponding to cant-toe-twist
+     
+      REAL(QuKi)              :: C_1       ! C_1 > cos(theta_y) 
+      REAL(QuKi)              :: S_1       ! S_1 > sin(theta_y) 
+      REAL(QuKi)              :: C_2       ! C_2 > cos(theta_x) 
+      REAL(QuKi)              :: C_3       ! C_3 > cos(theta_z) 
+      REAL(QuKi)              :: S_3       ! S_3 > sin(theta_z)
+
+         !> See nwtc_num::taitbryanyxzextractr4 for detailed description of how this works.
+
+         ! use trig identity S_3**2 + C_3**2 = 1 to get abs( C_2 )
+      C_2 = sqrt( m(1,2)**2 + m(2,2)**2 )
+
+         ! If C_2 is zero, we can simplifiy some things since theta(2) is +/- pi/2
+      if ( EqualRealNos( C_2, 0.0_QuKi ) ) then
+
+         ! find sign of theta(2) based on sin(theta_2)
+         theta(2) = atan2( -m(3,2), C_2 )     ! theta_2 -> theta_x
+
+         ! Considering C_2 = 0  and  S_2 = \pm 1, the matrix M reduces to
+         !     M =  [   C_1 C_3 \pm S_1 S_3        0           \pm C_1 S_3 - S_1 C_3  |
+         !          |   \pm S_1 C_3 - C_1 S_3      0           \pm C_1 C_3 + S_1 S_3  |
+         !          |   0                          0  \mp 1    0                      ]
+         ! 
+         !  At this point we can choose \theta_3 = 0 due to gimbal lock giving sin(theta(3)) = 0, cos(theta(3)) = 1.
+
+         theta(3) = 0.0_QuKi                          ! theta_z = theta_3
+
+         ! This further reduces M to 
+         !     M =  [   C_1         0           - S_1    |
+         !          |   \pm S_1     0           \pm C_1  |
+         !          |   0           \mp 1       0        ]
+         !
+         !
+         ! allowing us to solve for theta_1  by  theta_1 = atan2( -M(1,3), M(1,1) ) = atan2( S_1, C_1).
+
+         theta(1) = atan2( -m(1,3), m(1,1) )
+
+      else
+         ! First, start by finding \f$ \theta(1) \f$ from \f$ M(3,1) \f$ and \f$ M(3,3) \f$ using
+         !
+         !    theta(1) = atan2( M(3,1), M(3,3) ) = atan2( S_1 * C_2, C_1 * C_2 ).
+         ! With this we calculate values for S_1 and C_1.
+
+         theta(1) = atan2( m(3,1), m(3,3) )     ! theta_1 -> theta_y
+         C_1   = cos( theta(1) )
+         S_1   = sin( theta(1) )
+
+         !  We already know abs( C_2 ), but need the sign of it.  This can be found by comparing the
+         !  S_1 * C_2 and C_1 * C_2 terms with the C_1 and S_1 terms we just found.
+          
+         if ( EqualRealNos( C_1, 0.0_QuKi ) ) then
+            C_2 = sign( C_2, m(3,1) / S_1 )
+         else
+            C_2 = sign( C_2, m(3,3) / C_1 )
+         endif
+
+         ! Now can calculate theta(2)
+         theta(2) = atan2( -m(3,2), C_2 )
+        
+
+         ! For numerical reasons, we're going to get theta(3) using some matrix math and identities about M.
+         !  See nwtc_num::taitbryanyxzextractr4 for complete documentation on the matrix math used here
+
+         S_3 =    -( m(2,1) * C_1   + m(2,3) * (- S_1)   )
+         C_3 =       m(1,1) * C_1   + m(1,3) * (- S_1)
+
+         theta(3) = atan2( S_3, C_3)
+
+      endif
+
+      
+   END FUNCTION TaitBryanYXZExtractR16
+   
+      FUNCTION TaitBryanYXZConstructR4(theta) result(M)
+            ! this function creates a rotation matrix, M, from a 1-2-3 rotation
+      ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
+      ! 
+      ! M = R(theta_z) * R(theta_x) * R(theta_y)
+      !   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
+      !     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
+      !     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
+      !   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
+      !     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
+      !     |cx*sy           -sx             cx*cy    ]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   
+      REAL(SiKi)             :: M(3,3)    !< rotation matrix, M 
+      REAL(SiKi), INTENT(IN) :: theta(3)  !< the 3 rotation angles: \f$\theta_x, \theta_y, \theta_z\f$
+      
+      REAL(SiKi)             :: cx        ! cos(theta_x)
+      REAL(SiKi)             :: sx        ! sin(theta_x)
+      REAL(SiKi)             :: cy        ! cos(theta_y)
+      REAL(SiKi)             :: sy        ! sin(theta_y)
+      REAL(SiKi)             :: cz        ! cos(theta_z)
+      REAL(SiKi)             :: sz        ! sin(theta_z)
+   
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz+sy*sx*sz            
+      M(1,2) =  cx*sz            
+      M(1,3) =  cy*sx*sz-cz*sy    
+      
+      M(2,1) =  cz*sy*sx-cy*sz            
+      M(2,2) =  cx*cz            
+      M(2,3) =  cy*cz*sx+sy*sz     
+      
+      M(3,1) =   cx*sy            
+      M(3,2) =  -sx            
+      M(3,3) =   cy*cx   
+
+   END FUNCTION TaitBryanYXZConstructR4
+   
+   FUNCTION TaitBryanYXZConstructR8(theta) result(M)
+   
+     ! this function creates a rotation matrix, M, from a 1-2-3 rotation
+      ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
+      ! 
+      ! M = R(theta_z) * R(theta_x) * R(theta_y)
+      !   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
+      !     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
+      !     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
+      !   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
+      !     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
+      !     |cx*sy           -sx             cx*cy    ]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   
+      REAL(R8Ki)             :: M(3,3)    ! rotation matrix M 
+      REAL(R8Ki), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(R8Ki)             :: cx        ! cos(theta_x)
+      REAL(R8Ki)             :: sx        ! sin(theta_x)
+      REAL(R8Ki)             :: cy        ! cos(theta_y)
+      REAL(R8Ki)             :: sy        ! sin(theta_y)
+      REAL(R8Ki)             :: cz        ! cos(theta_z)
+      REAL(R8Ki)             :: sz        ! sin(theta_z)
+   
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz+sy*sx*sz            
+      M(1,2) =  cx*sz            
+      M(1,3) =  cy*sx*sz-cz*sy    
+      
+      M(2,1) =  cz*sy*sx-cy*sz            
+      M(2,2) =  cx*cz            
+      M(2,3) =  cy*cz*sx+sy*sz     
+      
+      M(3,1) =   cx*sy            
+      M(3,2) =  -sx            
+      M(3,3) =   cy*cx               
+   
+   END FUNCTION TaitBryanYXZConstructR8
+   
+  FUNCTION TaitBryanYXZConstructR16(theta) result(M)
+   
+      ! this function creates a rotation matrix, M, from a 1-2-3 rotation
+      ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
+      ! 
+      ! M = R(theta_z) * R(theta_x) * R(theta_y)
+      !   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
+      !     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
+      !     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
+      !   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
+      !     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
+      !     |cx*sy           -sx             cx*cy    ]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   
+      REAL(QuKi)             :: M(3,3)    ! rotation matrix M 
+      REAL(QuKi), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(QuKi)             :: cx        ! cos(theta_x)
+      REAL(QuKi)             :: sx        ! sin(theta_x)
+      REAL(QuKi)             :: cy       ! cos(theta_y)
+      REAL(QuKi)             :: sy        ! sin(theta_y)
+      REAL(QuKi)             :: cz        ! cos(theta_z)
+      REAL(QuKi)             :: sz        ! sin(theta_z)
+   
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz+sy*sx*sz            
+      M(1,2) =  cx*sz            
+      M(1,3) =  cy*sx*sz-cz*sy    
+      
+      M(2,1) =  cz*sy*sx-cy*sz            
+      M(2,2) =  cx*cz            
+      M(2,3) =  cy*cz*sx+sy*sz     
+      
+      M(3,1) =   cx*sy            
+      M(3,2) =  -sx            
+      M(3,3) =   cy*cx      
+   
+   END FUNCTION TaitBryanYXZConstructR16
+
 
 !=======================================================================
 !> This routine takes an array of time values such as that returned from

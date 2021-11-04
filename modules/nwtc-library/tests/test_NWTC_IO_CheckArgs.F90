@@ -2,12 +2,9 @@ module test_NWTC_IO_CheckArgs
 
     use pFUnit_mod
     use NWTC_IO
+    use nwtc_library_test_tools
     
     implicit none
-
-    integer, parameter :: stdout=6
-    character(9), parameter :: nullfile="/dev/null"
-    character(11), parameter :: terminal="/dev/stdout"
 
 contains
 
@@ -31,9 +28,9 @@ contains
         argument_array = (/      &
             "first_arg.txt   "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -52,9 +49,9 @@ contains
 
         filename = "default.txt"
         allocate(argument_array(0))
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "default.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -74,9 +71,9 @@ contains
         argument_array = (/      &
             "first_arg.txt   "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -105,9 +102,9 @@ contains
             "first_arg.txt   ",  &
             "second_arg      "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "second_arg", second_argument )
@@ -131,9 +128,9 @@ contains
             "-restart        ",  &
             "second_arg      "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "second_arg", second_argument )
@@ -156,9 +153,9 @@ contains
             "-restart        ",  &
             "first_arg.txt   "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "first_arg.txt", second_argument )
@@ -185,9 +182,9 @@ contains
             "first_arg.txt   ",  &
             "second_arg      "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "second_arg", second_argument )
@@ -214,9 +211,9 @@ contains
             "-h              ",  &
             "first_arg.txt   "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -239,9 +236,9 @@ contains
             "first_arg.txt   ",  &
             "-h              "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -268,9 +265,9 @@ contains
             "-v              ",  &
             "first_arg.txt   "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -293,9 +290,9 @@ contains
             "first_arg.txt   ",  &
             "-VERSION        "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 0, error_status )
         @assertEqual( "", second_argument )
@@ -317,9 +314,9 @@ contains
 
         filename = ""
         allocate(argument_array(0))
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "", filename )
         @assertEqual( 4, error_status )
         @assertEqual( "", second_argument )
@@ -343,9 +340,9 @@ contains
             "first_arg.txt   ",  &
             "-flag           "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "first_arg.txt", filename )
         @assertEqual( 4, error_status )
         @assertEqual( "", second_argument )
@@ -368,9 +365,9 @@ contains
         argument_array = (/      &
             "-restart        "   &
         /)
-        open(unit=stdout, file=nullfile, status="old")
+        call hide_terminal_output()
         call CheckArgs( filename, error_status, second_argument, flag, argument_array )
-        open(unit=stdout, file=terminal, status="old")
+        call show_terminal_output()
         @assertEqual( "", filename )
         @assertEqual( 4, error_status )
         @assertEqual( "", second_argument )

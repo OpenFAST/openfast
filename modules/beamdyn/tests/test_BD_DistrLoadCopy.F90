@@ -30,7 +30,7 @@ subroutine test_BD_DistrLoadCopy()
     
     ! build the parametertype, inputtype, and miscvartype
     parametertype = simpleParameterType(1,16,16,0,1)
-    miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
+    miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%dof_node, parametertype%elem_total, parametertype%nodes_per_elem)
     inputtype = simpleInputType(parametertype%nqp, parametertype%elem_total)
     
     call BD_DistrLoadCopy(parametertype, inputtype, miscvartype)

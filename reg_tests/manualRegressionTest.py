@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import subprocess
@@ -65,14 +65,20 @@ if case != "":
 else:
     with open(os.path.join("r-test", "glue-codes", "openfast", "CaseList.md")) as listfile:
         caselist = listfile.readlines()
+# allow comments with '#'
 casenames = [c.rstrip("\n\r").strip() for c in caselist if "#" not in c]
+# allow empty lines
+casenames = [c for c in casenames if len(c.strip()) > 0]
 
 results = []
 prefix, passString, failString = "executing", "PASS", "FAIL"
 longestName = max(casenames, key=len)
 for case in casenames:
     print(strFormat(prefix).format(prefix), strFormat(longestName+" ").format(case), end="", flush=True)
-    command = "\"{}\" executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
+    if "linear" in case.lower():
+        command = "\"{}\" executeOpenfastLinearRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
+    else:
+        command = "\"{}\" executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
     returnCode = subprocess.call(command, stdout=outstd, shell=True)
     resultString = passString if returnCode == 0 else failString
     results.append((case, resultString))

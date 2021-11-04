@@ -466,7 +466,7 @@ flatback and truncated airfoils far outboard along the blade may strengthen this
 noise source. When this noise source is activated, the user is asked to provide
 the distribution along the blade span of the blunt thickness of the trailing
 edge, :math:`h`, and the solid angle between the suction and pressure sides of
-the airfoil, :math:`\Psi` (see :numref:`aa-sec-TEgeom`). :math:`h` and
+the airfoil, :math:`\Psi` (see :numref:`aa-turb-TE`). :math:`h` and
 :math:`\Psi` are inputs to the equation:
 
 .. math::
@@ -519,10 +519,10 @@ OpenFAST the local airfoil-oriented reference system is used, and a rotation is
 applied.
 
 Given the angles :math:`\Theta_{e}` and :math:`\Phi_{e}`, at high frequency,
-:math:`\overline{D}` takes the expression:
+:math:`\overline{D}` for the trailing edge takes the expression:
 
 .. math::
-   {\overline{D}}_{h}\left( \Theta_{e},\Phi_{e} \right) = \frac{
+   {\overline{D}}_{h-TE}\left( \Theta_{e},\Phi_{e} \right) = \frac{
       2\sin^{2}\left( \frac{\Theta_{e}}{2} \right)\sin^{2}\Phi_{e}}
       {\left( 1 + M\cos\Theta_{e} \right)
          \left( 1 + \left( M - M_{c} \right)
@@ -530,14 +530,26 @@ Given the angles :math:`\Theta_{e}` and :math:`\Phi_{e}`, at high frequency,
    :label:  aa-eq:32
 
 where :math:`M_{c}` represents the Mach number past the trailing edge
-and that is here for simplicity assumed equal to 80% of free-stream M. At low
-frequency, the equation becomes:
+and that is here for simplicity assumed equal to 80% of free-stream M. 
+
+For the leading edge, and therefore for the turbulent inflow noise model,
+at high frequency, :math:`\overline{D}` is:
+
+.. math::
+   {\overline{D}}_{h-LE}\left( \Theta_{e},\Phi_{e} \right) = \frac{
+      2\cos^{2}\left( \frac{\Theta_{e}}{2} \right)\sin^{2}\Phi_{e}}
+      {\left( 1 + M\cos\Theta_{e} \right)^{3}}
+   :label:  aa-eq:33
+
+Note that this equation was not reported in the NREL Tech Report NREL/TP-5000-75731!
+
+At low frequency, the equation is identical for both leading and trailing edges:
 
 .. math::
    {\overline{D}}_{l}\left( \Theta_{e},\Phi_{e} \right) =
       \frac{\sin^{2}\left. \ \Theta_{e} \right.\ \sin^{2}\Phi_{e}}
       {\left( 1 + M\cos\Theta_{e} \right)^{4}}.
-   :label:  aa-eq:33
+   :label:  aa-eq:34
 
 Each model distinguishes a different value between low and high
 frequency. For the TI noise model, the shift between low and high
@@ -565,12 +577,12 @@ The A-weight, :math:`A_{w}`, is computed as:
          {\left( f^{2} + {20.598997}^{2} \right)^{2}
             \left( f^{2} + {12194.22}^{2} \right)^{2}} \right)}
          {\log 10}
-   :label:  aa-eq:34
+   :label:  aa-eq:35
 
 The A-weighting is a function of frequency and is added to the values of
 sound pressure levels:
 
 .. math::
    SPL_{A_{w}} = SPL + A_{w} 
-   :label:  aa-eq:35
+   :label:  aa-eq:36
 

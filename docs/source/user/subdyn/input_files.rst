@@ -42,17 +42,26 @@ for debugging errors in the driver file). The echo file has the naming
 convention of **OutRootName.dvr.ech**. **OutRootName** is specified
 in the SUBDYN section of the driver input file (see below).
 
+Environmental conditions
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 Set the gravity constant using the **Gravity** parameter. SubDyn
 expects a magnitude, so in SI units this would be set to 9.80665
 :math:`\frac{m}{s^{2}}` for standard gravity. **WtrDpth** specifies
 the water depth (depth of the seabed), based on the reference MSL, and
 must be a value greater than zero.
 
+
+SubDyn module inputs
+~~~~~~~~~~~~~~~~~~~~
+
 **SDInputFile** is the file name of the primary SubDyn input file.
 This name should be in quotations and can contain an absolute path or a
 relative path. All SubDyn-generated output files will be prefixed with
 **OutRootName**. If this parameter includes a file path, the output
-will be generated in that folder. **NSteps** specifies the number of
+will be generated in that folder. If this output is left empty,
+the driver filename is used (without the extension) is used.
+**NSteps** specifies the number of
 simulation time steps, and **TimeStep** specifies the time between
 steps. Next, the user must specify the location of the TP reference
 point **TP\_RefPoint** (in the global reference system). This is
@@ -66,6 +75,10 @@ allowing for different substructure orientations about the vertical, the
 user can set **SubRotateZ** to a prescribed angle in degrees with
 respect to the global *Z*-axis. The entire substructure will be rotated
 by that angle. (This feature is only available in stand-alone mode.)
+
+
+Input motion 
+~~~~~~~~~~~~
 
 Setting **InputsMod** = 0 sets all TP reference-point input motions to
 zero for all time steps. Setting **InputsMod** = 1 allows the user to
@@ -104,6 +117,45 @@ Table 1. TP Reference Point Inputs Time-Series Data File Contents
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
 | 17-19           | TP reference point rotational accelerations about *X*, *Y*, and *Z*                                   | `rad/s^2`                                |
 +-----------------+-------------------------------------------------------------------------------------------------------+------------------------------------------+
+
+
+Applied loads
+~~~~~~~~~~~~~
+The next section of the input file provides options to apply loads at given joints of the structure.
+**nAppliedLoads** [-] specifies the number of applied loads listed in the subsequent table.
+The user can specify a combination of steady loads and unsteady loads (both are added together).
+The loads are in the global coordinate sytem.
+The steady loads are given as columns of the table
+(Fx, Fy, Fz, Mx, My, Mz), whereas the unsteady loads are provided in a CSV file.
+The CSV filename is provided in the last entry of the table. 
+If the filename is empty, the unsteady loads are not read.
+An example of applied loads table is given below:
+
+.. code::
+
+   ---------------------- LOADS --------------------------------------------------------------------
+   1    nAppliedLoads  - Number of applied loads at given nodes
+   ALJointID    Fx     Fy    Fz     Mx     My     Mz   UnsteadyFile
+      (-)       (N)    (N)   (N)   (Nm)   (Nm)   (Nm)     (-)
+      15       100      0     0     0       0      0      ""
+      23        0       0     0     0       0      0      "Force_TS.csv"
+
+In the above example, a steady applied force of 100N is applied at the joint with ID=15 of the structure,
+and an unsteady load is applied to joint 23. The time series of unsteady loads is a CSV file with
+7 columns (Time, Fx, Fy, Fz, Mx, My, Mz) and one line of header. The time vector needs to be increasing, 
+but does not need to be linear or cover the full range of the simulation. Interpolation is done in between
+time stamps, and the first are last values are used for times smaller and larger than the simulation time range respectively.
+An example of time series is shown below:
+
+.. code::
+
+   #Time_[s] , Fx_[N] , Fy_[N] , Fz_[N] , Mx_[Nm] , My_[Nm] , Mz_[Nm]
+   0.0       , 0.0    , 0.0    , 0.0    , 0.0     , 0.0     , 0.0
+   10.0      , 100.0  , 0.0    , 0.0    , 0.0     , 0.0     , 0.0
+   11.0      , 0.0    , 0.0    , 0.0    , 0.0     , 0.0     , 0.0
+
+
+
 
 .. _sd_main-input-file:
 
@@ -168,17 +220,21 @@ Adams-Bashforth-Moulton 4\ :sup:`th`-order explicit predictor-corrector
 (ABM4); 4) Adams-Moulton implicit 2\ :sup:`nd`-order (AM2). See Section
 on how to properly select this and the previous parameter values.
 
-**SttcSolve** is a flag that specifies whether SIM (see Sections 5 and
-6) shall be employed. Through this method, all (higher frequency) modes
+**SttcSolve** is a flag that specifies whether the static improvement method 
+(SIM, see :numref:`SD_SIM`)
+shall be employed. Through this method, all (higher frequency) modes
 that are not considered by the C-B reduction are treated
-quasi-statically (see Section for more details). This treatment helps
+quasi-statically. This treatment helps
 minimize the number of retained modes needed to capture effects such as
 static gravity and buoyancy loads, and high-frequency loads transferred
-from the turbine.
+from the turbine. Recommended to set to True.
 
 
-**ExtraMoment** is a flag to specify whether the extra moment due to 
-the interface lever arm is to be included in the interface reactions.
+**GuyanLoadCorrection** is a flag to specify whether the extra moment due to 
+the lever arm from the Guyan deflection of the structure is to be added to the loads
+passed to SubDyn, and, whether the FEM representation should be expressed in the rotating 
+frame in the floating case (the rotation is induced by the rigid body Guyan modes).
+See section :numref:`SD_Loads` for details. Recommended to set to True.
 
 
 FEA and Craig-Bampton Parameters
@@ -205,23 +261,26 @@ finite-element model is retained and **Nmodes** is ignored.
 **Nmodes** sets the number of internal C-B modal DOFs to retain in the
 C-B reduction. **Nmodes** = 0 corresponds to a Guyan (static)
 reduction. **Nmodes** is ignored if **CBMod** is set to FALSE,
-meaning the full finite-element model is retained by keeping all modes.
+meaning the full finite-element model is retained by keeping all modes
+(i.e. a modal analysis is still done, and all the modes are used as DOFs)  .
+
 
 **JDampings** specifies value(s) of damping coefficients as a
 percentage of critical damping for the retained C-B modes. Distinct
 damping coefficients for each retained mode should be listed on the same
 line, separated by white space. If the number of **JDampings** is less
 than the number of retained modes, the last value will be replicated for
-all the remaining modes.
+all the remaining modes. (see :numref:`SD_DampingSpecifications`)
 
+**GuyanDampMod** Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix] (see :numref:`SD_DampingSpecifications`)
 
-**GuyanDampMod** Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix]
 
 **RayleighDamp** Mass and stiffness proportional damping  coefficients (:math:`(\alpha,\beta)` Rayleigh damping) [only if GuyanDampMod=1]
-Guyan damping matrix (6x6) [only if GuyanDamgMod=2]
+Guyan damping matrix (6x6) [only if GuyanDamgMod=2] (see :numref:`SD_DampingSpecifications`)
 
-**Guyan damping matrix**: The 6 lines following this input line consits of the
-  6x6 coefficients of the damping matrix to be applied at the interface.
+
+**Guyan damping matrix**:
+The 6 lines following this input line consits of the 6x6 coefficients of the damping matrix to be applied at the interface. (see :numref:`SD_DampingSpecifications`)
 
 
 For more information on these parameters and guidelines on how to set
@@ -245,6 +304,19 @@ does not consider overlap when multiple members meet at a common joint,
 therefore, it tends to overestimate the total substructure mass. Member
 overlap and node offset calculations will be considered in a future
 release of SubDyn.
+The fifth column specifies the **JointType** (see :numref:`SD_FEM`):
+
+- Cantilever joints (*JointType=1*)
+
+- Universal joint (*JointType=2*)
+
+- Pin joint (*JointType=3*)
+
+- Ball joint (*JointType=4*)
+
+The three following columns specify the vector coordinates of the direction around which rotation is free for a pin joints.
+The last column, **JointStiff** specify a value of additional stiffness to be added to the "free" rotational DOFs of Ball, Pin and Universal joints.
+
 
 Note for HydroDyn coupling: modeling a fixed-bottom substructure
 embedded into the seabed (e.g., through piles or suction buckets)
@@ -256,6 +328,19 @@ HydroDyn and SubDyn—FAST’s mesh-mapping utility handles transfer of
 motion and loads across meshes in a physically relevant manner (Sprague
 et al. 2014), but consistency between the joints and members in HydroDyn
 and SubDyn is advised.   
+
+
+An example of joint table is given below
+
+.. code::
+
+    3   NJoints  - Number of joints (-)
+    JointID JointXss JointYss  JointZss JointType JointDirX JointDirY JointDirZ JointStiff 
+      (-)      (m)      (m)       (m)     (-)        (-)       (-)       (-)     (Nm/rad) 
+      101      0.0      0.0      50.0      1         0.0       0.0       0.0       0.0    
+      111      0.0      0.0      10.0      2         0.0       1.0       0.0     100.0    
+      102      0.0      0.0     -45.0      1         0.0       0.0       0.0       0.0    
+
 
 Base Reaction Joints
 ~~~~~~~~~~~~~~~~~~~~~
@@ -279,6 +364,22 @@ stiffness and mass matrix elements for that DOF via the **SSIfile**.
 If a DOF flag is set to 1, then the node DOF is considered restrained
 and the associated matrix elements potentially provided in the
 **SSIfile** will be ignored.
+
+
+An example of base reaction and interface table is given below
+
+.. code::
+
+    ------------------- BASE REACTION JOINTS
+      1   NReact      - Number of Joints with reaction forces
+    RJointID RctTDXss RctTDYss RctTDZss RctRDXss RctRDYss RctRDZss  SSIfile
+      (-)     (flag)   (flag)   (flag)   (flag)   (flag)   (flag)   (string)
+      61         1        1        1        1        1        1	    "SSI.txt"
+    ------------------- INTERFACE JOINTS
+      1   NInterf     - Number of interface joints locked to the Transition Piece (TP)
+    IJointID ItfTDXss ItfTDYss ItfTDZss ItfRDXss ItfRDYss ItfRDZss 
+      (-)     (flag)   (flag)   (flag)   (flag)   (flag)   (flag)
+      24         1        1        1        1        1        1
 
 
 Interface Joints
@@ -317,8 +418,31 @@ specifies the ending joint, corresponding to an identifier
 MEMBER X-SECTION PROPERTY table (discussed next) for starting
 cross-section properties and **MPropSetID2** specifies the identifier
 for ending cross-section properties, allowing for tapered members.
+The sixth column specify the member type  **MType**.
+A member is one of the three following types (see :numref:`SD_FEM`):
+
+- Beams (*MType=1*), Euler-Bernoulli (*FEMMod=1*) or Timoshenko (*FEMMod=3*)
+
+- Pretension cables (*MType=2*)
+
+- Rigid link (*MType=3*)
+
 **COSMID** refers to the IDs of the members’ cosine matrices for
 noncircular members; the current release ignores this column.
+
+
+An example of member table is given below
+
+.. code::
+
+     2   NMembers    - Number of frame members
+  MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2  MType   COSMID
+    (-)         (-)         (-)          (-)           (-)        (-)      (-)
+     10        101         102            2             2          1
+     11        102         103            2             2          1
+
+
+
 
 Member Cross-Section Properties
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -353,6 +477,70 @@ moment of inertia (**XsecJ0**). The member cosine matrix section (see
 Section ) will help determine the correct orientation of the members
 within the assembly.
 
+
+
+
+
+Cable Properties
+~~~~~~~~~~~~~~~~
+
+
+Members that are specified as pretension cables (**MType=2**), 
+have their properties defined in the cable properties table. 
+The table lists for each cable property: the property ID (**PropSetID**), the cable tension stiffness (**EA**), 
+the material density (**MatDens**), the pretension force (**T0**), and the control channel (**CtrlChannel**).
+The control channel is only used if ServoDyn provides dedicated control signal, in which case
+the cable tension (given in terms of a length change :math:`\Delta l`) 
+is dynamically changed (see :numref:`SD_ControlCable`).
+The FEM representation of pretension cable is given in :numref:`SD_PretensionCable`.
+
+An example of cable properties table is given below:
+
+.. code::
+
+    -------------------------- CABLE PROPERTIES  -------------------------------------
+                 2   NCablePropSets   - Number of cable cable properties
+    PropSetID   EA     MatDens    T0    CtrlChannel
+      (-)      (N)     (kg/m)    (N)      (-)
+       11      210E7   7850.0    2E7       1 
+       10      210E7   7850.0    1E7       0 
+
+
+Rigid link Properties
+~~~~~~~~~~~~~~~~~~~~~
+
+Members that are specified as rigid links (**MType=3**), 
+have their properties defined in the rigid link properties table. 
+The table lists the material density (**MatDens**) for each rigid link property.
+The FEM representation of rigid links is given in :numref:`SD_RigidLinks`.
+
+An example of rigid link properties table is given below
+
+.. code::
+
+   ----------------------- RIGID LINK PROPERTIES ------------------------------------
+                1   NRigidPropSets - Number of rigid link properties
+   PropSetID   MatDens   
+     (-)       (kg/m)    
+      12       7850.0
+       3       7000.0
+       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Member Cosine Matrices COSM (i,j)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 This table is not currently used by SubDyn, but in future releases it
@@ -376,7 +564,38 @@ each joint distinguished by **CMJointID** (corresponding to an
 identifier, **JointID**, from the STRUCTURE JOINTS table), **JMass**
 specifies the lumped mass value, and **JMXX**, **JMYY**, **JMZZ**
 specify the mass second moments of inertia with respect to the SS
-coordinate system.
+coordinate system (not the element system).
+Latest version of SubDyn accept 6 additional columns 
+(**JMXY**, **JMXZ**, **JMYZ**, **MCGX**, **MCGY**, **MCGZ**) 
+to specify off-diagonal terms.
+
+The additional mass matrix added to the node is computed in the SS system as follows:
+
+.. math::
+
+      M_\text{add}=
+      \begin{bmatrix}
+      m    & 0    & 0    & 0                    & z m                    & -y m          \\
+      0    & m    & 0    & -z m                 & 0                      & x m           \\
+      0    & 0    & m    & y m                  & -x m                   & 0             \\
+      0    & -z m & y m  & J_{xx} + m (y^2+z^2) & J_{xy} - m x y         & J_{xz}  - m x z  \\
+      z m  & 0    & -x m & J_{xy} - m x y       & J_{yy} + m (x^2+z^2)   & J_{yz}  - m y z  \\
+      -y m & x m  & 0    & J_{xz} - m x z       & J_{yz} - m y z         & J_{zz}  + m (x^2+y^2)\\
+      \end{bmatrix}
+
+with :math:`m` the parameter **JMass**, and :math:`x,y,z`, the CG offsets.
+
+
+An example of concentrated mass table is given below:
+
+.. code::
+
+         2  NCmass - Number of joints with concentrated masses; (SS coord system)
+    CMJointID  JMass    JMXX    JMYY    JMZZ   JMXY     JMXZ   JMYZ   MCGX  MCGY MCGZ   
+      (-)       (kg)  (kgm^2) (kgm^2) (kgm^2) (kgm^2) (kgm^2) (kgm^2)  (m)  (m)  (m)
+       1        4090     0       0       0       0        0       0      0    0    0
+       3        4.2e6    0       0     3.3e9     0        0       0      0    0    0
+
 
 Output: Summary and Outfile
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -389,10 +608,25 @@ specified in the SUBDYN section of the driver input file when running
 SubDyn in stand-alone mode, or in the FAST input file when running a
 coupled simulation. See Section 4.2 for summary file details.
 
-In this release, **OutCOSM** is ignored. In future releases,
+Currently, **OutCOSM** is ignored. In future releases,
 specifying **OutCOSM** = TRUE will cause SubDyn to include direction
 cosine matrices (undeflected) in the summary file for only those members
 requested in the list of output channels.
+
+The following two inputs specified whether mode shapes should be written
+to disk.  **OutCBModes** is a flag that controls the output of the Guyan
+and Craig-Bampton modes. Similarly, **OutFEMModes**, controls the output
+of the FEM modes (full sytem with constraints prior to the CB-reduction).
+For now, only the first 30 FEM modes are written to disk, but all CB modes
+selected by the users are written. 
+For both inputs, the following options are available: 0, no ouput, 1, outputs
+in JSON format. The JSON files contain nodes coordinates, connectivity between the nodes, 
+displacements for each modes and nodes, and frequencies for each modes.
+The reading of these files should be straightforward using Matlab or Python using a JSON format parser. 
+The files can be opened to visualize the modes using the tool viz3danim
+(see the `live version <https://ebranlard.github.io/viz3Danim/>`_
+, or its `github repository <https://github.com/ebranlard/viz3danim>`_).
+
 
 Specifying **OutAll** = TRUE causes SubDyn to output forces and
 moments at all of the joints (not internal nodes). That is, the static
@@ -427,6 +661,9 @@ to align properly, the width specification should match. For example:
 
 | "ES11.4" OutFmt
 | "A11" OutSFmt.
+
+
+.. _SD_Member_Output:
 
 Member Output List
 ~~~~~~~~~~~~~~~~~~

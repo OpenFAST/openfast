@@ -18,4 +18,9 @@ TRUE           Echo           - Echo the input file data (flag)
 3.821E-02  1.656E-03  -4.325E-02 -1.339E-04  7.266E-02 -2.411E-03   uTPInSteady     - input displacements and rotations ( m, rads )
 1.02   2.03   5.03   0.03   0.03   0.03   uDotTPInSteady     - input translational and rotational velocities ( m/s, rads/s)
 2.02   3.03   -9.03   0.3   0.03   0.3    uDotDotTPInSteady  - input translational and rotational accelerations( m/s^2, rads/s^2)
+---------------------- LOADS --------------------------------------------------------------------
+1    nAppliedLoads  - Number of applied loads at given nodes
+ALJointID    Fx     Fy    Fz     Mx     My     Mz   UnsteadyFile
+   (-)       (N)    (N)   (N)   (Nm)   (Nm)   (Nm)     (-)
+   13        0       0     0     0       0      0      "Force_TS.csv"
 END of driver input file

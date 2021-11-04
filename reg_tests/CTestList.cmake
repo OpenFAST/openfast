@@ -36,6 +36,12 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
     set(PLOT_FLAG "-p")
   endif()
 
+  set(RUN_VERBOSE_FLAG "")
+  if(CTEST_RUN_VERBOSE_FLAG)
+     set(RUN_VERBOSE_FLAG "-v")
+  endif()
+
+
   add_test(
     ${TESTNAME} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
@@ -47,6 +53,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
        ${PLOT_FLAG}                     # empty or "-p"
+       ${RUN_VERBOSE_FLAG}              # empty or "-v"
   )
   # limit each test to 90 minutes: 5400s
   set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
@@ -74,7 +81,15 @@ function(of_regression_aeroacoustic TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression_aeroacoustic)
 
-# beamdyn
+# FAST Farm
+function(ff_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeFASTFarmRegressionCase.py")
+  set(FASTFARM_EXECUTABLE "${CTEST_FASTFARM_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/fast-farm")
+  regression(${TEST_SCRIPT} ${FASTFARM_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(ff_regression)
+
 # openfast linearized
 function(of_regression_linear TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastLinearRegressionCase.py")
@@ -83,6 +98,15 @@ function(of_regression_linear TESTNAME LABEL)
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression_linear)
+
+# openfast c-interface
+function(of_regression_cpp TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastCppRegressionCase.py")
+  set(OPENFAST_CPP_EXECUTABLE "${CTEST_OPENFASTCPP_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast-cpp")
+  regression(${TEST_SCRIPT} ${OPENFAST_CPP_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(of_regression_cpp)
 
 # aerodyn
 function(ad_regression TESTNAME LABEL)
@@ -110,6 +134,33 @@ function(hd_regression TESTNAME LABEL)
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
   regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(hd_regression)
+
+# subdyn
+function(sd_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSubdynRegressionCase.py")
+  set(SUBDYN_EXECUTABLE "${CTEST_SUBDYN_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/subdyn")
+  regression(${TEST_SCRIPT} ${SUBDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(sd_regression)
+
+# inflowwind
+function(ifw_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeInflowwindRegressionCase.py")
+  set(INFLOWWIND_EXECUTABLE "${CTEST_INFLOWWIND_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
+  regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(ifw_regression)
+
+# inflowwind-Py
+function(ifw_py_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeInflowwindPyRegressionCase.py")
+  set(INFLOWWIND_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
+  regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(ifw_py_regression)
 
 #===============================================================================
 # Regression tests
@@ -144,6 +195,12 @@ of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn
 of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm")
 of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf")
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
+of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore")
+
+# OpenFAST C++ API test
+if(BUILD_OPENFAST_CPP_API)
+  of_regression_cpp("5MW_Land_DLL_WTurb_cpp" "openfast;cpp")
+endif()
 
 # AeroAcoustic regression test
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
@@ -155,8 +212,24 @@ of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
 of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;servodyn")
 of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;servodyn")
 
+# FAST Farm regression tests
+if(BUILD_FASTFARM)
+  ff_regression("TSinflow"  "fastfarm")
+  ff_regression("LESinflow"  "fastfarm")
+endif()
+
 # AeroDyn regression tests
 ad_regression("ad_timeseries_shutdown"      "aerodyn;bem")
+ad_regression("ad_EllipticalWingInf_OLAF"   "aerodyn;bem")
+ad_regression("ad_HelicalWakeInf_OLAF"      "aerodyn;bem")
+ad_regression("ad_Kite_OLAF"                "aerodyn;bem")
+ad_regression("ad_MultipleHAWT"             "aerodyn;bem")
+ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
+ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
+ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
+ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
+ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
+ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")
@@ -173,3 +246,21 @@ hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
 hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
+hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
+
+# SubDyn regression tests
+sd_regression("SD_Cable_5Joints"                              "subdyn;offshore")
+sd_regression("SD_PendulumDamp"                               "subdyn;offshore")
+sd_regression("SD_Rigid"                                      "subdyn;offshore")
+sd_regression("SD_SparHanging"                                "subdyn;offshore")
+sd_regression("SD_AnsysComp1_PinBeam"                         "subdyn;offshore") # TODO Issue #855
+sd_regression("SD_AnsysComp2_Cable"                           "subdyn;offshore") 
+sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore") # TODO Issue #855
+# TODO test below are bugs, should be added when fixed
+# sd_regression("SD_Force"                                      "subdyn;offshore")
+# sd_regression("SD_AnsysComp4_UniversalCableRigid"             "subdyn;offshore")
+# sd_regression("SD_Rigid2Interf_Cables"                        "subdyn;offshore")
+
+# InflowWind regression tests
+ifw_regression("ifw_turbsimff"                                "inflowwind")
+ifw_py_regression("ifw_py_turbsimff"                          "inflowwind;python")

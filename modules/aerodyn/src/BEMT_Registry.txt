@@ -54,6 +54,10 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             IntKi                    DBEMT_Mod                       -          -         -        "DBEMT model.  1 = constant tau1, 2 = time dependent tau1" -
 typedef   ^                            ^                             ReKi                     tau1_const                      -          -         -        "DBEMT time constant (when DBEMT_Mod=1)"        s
 typedef   ^                            ^                             ReKi                     yawCorrFactor                   -          -         -        "constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
+typedef   ^                            ^                             INTEGER                  UAOff_innerNode                 {:}        -         -        "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
+typedef   ^                            ^                             INTEGER                  UAOff_outerNode                 {:}        -         -        "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
+typedef   ^                            ^                             CHARACTER(1024)          RootName                         -         -         -        "RootName for writing output files" -
+typedef   ^                            ^                             LOGICAL                  SumPrint                         -         -         -        "logical flag indicating whether to use UnsteadyAero"        -
 #
 #
 # Define outputs from the initialization routine here:
@@ -82,7 +86,6 @@ typedef   ^                            ConstraintStateType           ReKi       
 #
 typedef   ^                            OtherStateType                UA_OtherStateType        UA                                  -           -         -        "other states for UnsteadyAero"        -
 typedef   ^                            OtherStateType                DBEMT_OtherStateType     DBEMT                             -             -         -        "other states for DBEMT"        -
-typedef   ^                            ^                             LOGICAL                  UA_Flag                         {:}{:}          -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  ValidPhi                        {:}{:}          -         -        "set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false)" -
 typedef   ^                            OtherStateType                Logical                  nodesInitialized                -               -         -        "the node states have been initialized properly" -
 

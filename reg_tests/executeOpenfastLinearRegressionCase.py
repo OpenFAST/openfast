@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
@@ -164,6 +164,9 @@ if not noExec:
 
 ### Get a list of all the files in the baseline directory
 baselineOutFiles = os.listdir(targetOutputDirectory)
+# Drop the log file, if its listed
+if caseName + '.log' in baselineOutFiles:
+    baselineOutFiles.remove(caseName + '.log')
 
 # these should all exist in the local outputs directory
 localFiles = os.listdir(testBuildDirectory)

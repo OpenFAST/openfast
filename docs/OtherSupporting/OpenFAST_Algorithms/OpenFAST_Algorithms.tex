@@ -18,12 +18,13 @@
 %\newtheorem{definition}{Definition}
 %\newtheorem{remark}{Remark}
 %\numberwithin{equation}{section}
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
 %-----------------------------------------------------------
 \begin{document}
-\title{Algorithms in OpenFAST v2}
+\title{Solve Algorithms in OpenFAST}
 \author{Bonnie Jonkman}
 %\begin{abstract}
-%This document is used to describe the algorithms implemented in FAST v8.
+%This document is used to describe the algorithms implemented in OpenFAST v3.x
 %\end{abstract}
 \maketitle
 
@@ -55,7 +56,7 @@
       IceDyn             & IceD                  & IceD      \\   
       SoilDyn            & SlD                   & SlD       \\
       \end{tabular}
-   \caption{Abbreviations for modules in FAST v8}
+   \caption{Abbreviations for modules in OpenFAST v3.0.x}
    \label{tab:Abbrev}
 \end{table}
 
@@ -86,19 +87,19 @@ inputs and outputs are neither set nor used.
 \State
 % SolveOption2a_Inp2BD
    \State $\mathit{y\_ED} \gets \Call{ED\_CalcOutput}{\mathit{p\_ED},\mathit{u\_ED},\mathit{x\_ED},\mathit{xd\_ED},\mathit{z\_ED}}$
-   \State $\mathit{u\_BD}  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
+   \State $\mathit{u\_BD}  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED,y\_SrvD}}$
 
 \State
 % SolveOption2b_Inp2IfW
    \State $\mathit{y\_BD} \gets \Call{BD\_CalcOutput}{\mathit{p\_BD},\mathit{u\_BD},\mathit{x\_BD},\mathit{xd\_BD},\mathit{z\_BD}}$
-   \State $\mathit{u\_AD}($no IfW$)  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
+   \State $\mathit{u\_AD}($no IfW$)  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED,y\_BD}}$
    \State $\mathit{u\_IfW} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED} at \mathit{u\_AD} nodes}$
 
 \State
 % SolveOption2c_Inp2AD_SrvD
    \State $\mathit{y\_IfW} \gets \Call{IfW\_CalcOutput}{\mathit{u\_IfW} and other \mathit{IfW} data structures}$
    \State $\mathit{u\_AD}($InflowWind only$) \gets \Call{TransferOutputsToInputs}{\mathit{y\_IfW}}$
-   \State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_IfW}}$
+   \State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_IfW},\mathit{y\_BD}}$
 
 \State
 % main
@@ -109,7 +110,7 @@ inputs and outputs are neither set nor used.
                                & \mathit{x\_SrvD},\mathit{xd\_SrvD},\mathit{z\_SrvD}) \\
             \end{aligned}$
    \State $\mathit{u\_ED} \gets \Call{TransferOutputsToInputs}{\mathit{y\_AD},\mathit{y\_SrvD}}$
-   \State $\mathit{u\_BD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_AD}}$
+   \State $\mathit{u\_BD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_AD,y\_SrvD}}$
 % \end SolveOption2
 %%%%
 
@@ -130,6 +131,7 @@ inputs and outputs are neither set nor used.
 \State
    \State $\mathit{y\_SD} \gets \Call{SD\_CalcOutput}{\mathit{p\_SD},\mathit{u\_SD},\mathit{x\_SD},\mathit{xd\_SD},\mathit{z\_SD}}$
    \State $\mathit{u\_SlD}  \gets \Call{TransferMeshPosition}{\mathit{y\_SD}}$
+   \State $\mathit{u\_SrvD\%PtfmStC} \gets \Call{TransferMeshMotions}{\mathit{y\_ED}}$\footnote{Only if using ServoDyn Structural control with platform TMD.}
 % \end Transfer_ED_to_HD_SD_BD_Mooring
 %%%%
 
@@ -138,7 +140,7 @@ inputs and outputs are neither set nor used.
 \State
    \State $\mathit{u\_IfW}  \gets \Call{TransferOutputsToInputs}{\mathit{u\_AD},\mathit{y\_ED}}$
    \State $\mathit{u\_AD}   \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
-   \State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_AD}}$
+   \State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_AD},\mathit{y\_BD},\mathit{y\_SD}}$
 
 \EndProcedure
 \end{algorithmic}
@@ -175,8 +177,9 @@ The other input-output relationships for these modules are solved using Solve Op
    \State $\mathit{y\_IceF}    \gets \Call{CalcOutput}{\mathit{p\_IceF},\mathit{u\_IceF},\mathit{x\_IceF},\mathit{xd\_IceF},\mathit{z\_IceF}}$
    \State $\mathit{y\_IceD(:)} \gets \Call{CalcOutput}{\mathit{p\_IceD(:)},\mathit{u\_IceD(:)},\mathit{x\_IceD(:)},\mathit{xd\_IceD(:)},\mathit{z\_IceD(:)}}$
    \State $\mathit{y\_SlD}     \gets \Call{CalcOutput}{\mathit{p\_SlD},\mathit{u\_SlD},\mathit{x\_SlD},\mathit{xd\_SlD},\mathit{z\_SlD}}$ 
+   \State $\mathit{y\_SrvD}    \gets \Call{CalcOutput}{\mathit{p\_SrvD},\mathit{u\_SrvD},\mathit{x\_SrvD},\mathit{xd\_SrvD},\mathit{z\_SrvD}}$\footnote{Only if using ServoDyn Structural control with platform TMD.}
    \State
-   \State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_BD}$,  $\mathit{u\_SD}$, $\mathit{u\_Orca}$, $\mathit{u\_ExtPtfm}$, and platform reference input from $\mathit{u\_ED}$}
+   \State\Comment{Form $u$ vector using loads and accelerations from $\mathit{u\_HD}$, $\mathit{u\_BD}$,  $\mathit{u\_SD}$, $\mathit{u\_Orca}$, $\mathit{u\_ExtPtfm}$, $\mathit{u\_SrvD}$\footnote{Only if using ServoDyn Structural control with platform TMD and SubDyn.} and platform reference input from $\mathit{u\_ED}$}
    \State
    \State $u \gets \Call{u\_vec}{\mathit{u\_HD},\mathit{u\_SD},\mathit{u\_ED},\mathit{u\_BD},\mathit{u\_Orca},\mathit{u\_ExtPtfm}}$
    \State $k \gets 0$
@@ -201,6 +204,7 @@ The other input-output relationships for these modules are solved using Solve Op
       \State$\mathit{u\_IceD\_tmp(:)} \gets \Call{TransferMeshMotions}{y\_SD}$
       \State$\mathit{u\_SlD\_tmp}     \gets \Call{TransferMeshMotions}{y\_SD}$
       \State$\mathit{u\_HD\_tmp}      \gets \Call{TransferMeshMotions}{y\_ED,y\_SD}$
+      \State$\mathit{u\_SrvD\_tmp}    \gets \Call{TransferMeshMotions}{y\_ED,y\_SD}$\footnote{Only if using ServoDyn Structural control with platform TMD.}
       \State$\mathit{u\_SD\_tmp}      \gets \!
             \begin{aligned}[t]
            & \Call{TransferMeshMotions}{\mathit{y\_ED}}  \\
@@ -218,11 +222,19 @@ The other input-output relationships for these modules are solved using Solve Op
                                       & \mathit{y\_HD},  \mathit{u\_HD\_tmp},  \\
                                       & \mathit{y\_SD},  \mathit{u\_SD\_tmp},  \\  
                                       & \mathit{y\_MAP}, \mathit{u\_MAP\_tmp}, \\ 
-                                      & \mathit{y\_FEAM},\mathit{u\_FEAM\_tmp} )
+                                      & \mathit{y\_FEAM},\mathit{u\_FEAM\_tmp},\\
+                                      & \mathit{y\_SrvD},\mathit{u\_SrvD\_tmp}\footnote{Only if using ServoDyn Structural control with platform TMD.} )    % SrvD%PtfmStC only
                      \end{aligned}$
 
       \State
-      \State$\mathit{U\_Residual} \gets u - \Call{u\_vec}{\mathit{u\_HD\_tmp},\mathit{u\_SD\_tmp},\mathit{u\_ED\_tmp},\mathit{u\_BD\_tmp},\mathit{u\_Orca\_tmp},\mathit{u\_ExtPtfm\_tmp}}$
+      \State$\mathit{U\_Residual} \gets u - \Call{u\_vec}{}( \!
+                 \begin{aligned}[t]   & \mathit{u\_HD\_tmp}, \\
+                                      & \mathit{u\_SD\_tmp}, \\
+                                      & \mathit{u\_ED\_tmp}, \\
+                                      & \mathit{u\_BD\_tmp}, \\
+                                      & \mathit{u\_Orca\_tmp},\\
+                                      & \mathit{u\_ExtPtfm\_tmp})
+                     \end{aligned}$
       \State
       
       \If{ last Jacobian was calculated at least $\mathit{DT\_UJac}$ seconds ago }
@@ -264,6 +276,7 @@ The other input-output relationships for these modules are solved using Solve Op
    \State $\mathit{u\_IceF}    \gets \Call{TransferMeshMotions}{\mathit{y\_SD}}$
    \State $\mathit{u\_IceD(:)} \gets \Call{TransferMeshMotions}{\mathit{y\_SD}}$
    \State $\mathit{u\_SlD}     \gets \Call{TransferMeshPosition}{\mathit{y\_SD}}$
+   \State $\mathit{u\_SrvD}    \gets \Call{TransferMeshMotions}{\mathit{y\_ED,y\_SD}}$\footnote{Only if using ServoDyn Structural control with platform TMD.}    % For SrvD%PtfmStC
          
 \EndProcedure
 \end{algorithmic}

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{F47C7C94-2A7F-4CBE-B834-1BC7DD3FE692}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin\" TargetName="FAST.Farm_$(PlatformName)_Debug">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnInterfaces="true" Traceback="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin\" TargetName="FAST.Farm_$(PlatformName)" WholeProgramOptimization="true">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" OptDiagFile="farm-opt.txt" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Debug|x64" OutputDirectory="..\..\build\bin\" TargetName="FAST.Farm_$(PlatformName)_Debug">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin\" TargetName="FAST.Farm_$(PlatformName)" WholeProgramOptimization="true">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release_OpenMP|Win32" OutputDirectory="..\..\build\bin\" TargetName="FAST.Farm_$(PlatformName)_OMP">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" OptDiagFile="farm-opt.txt" RuntimeLibrary="rtMultiThreadedDLL" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release_OpenMP|x64" OutputDirectory="..\..\build\bin\" TargetName="FAST.Farm_$(PlatformName)_OMP">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" RuntimeLibrary="rtMultiThreadedDLL" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
+		<File RelativePath="..\RunRegistry.bat"/></Filter>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="AmbientWind_ArrayEffects">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\AWAE\src\AWAE_Registry.txt">
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AWAE" Description="Running Registry for AWAE" Outputs="..\..\modules\AWAE\src\AWAE_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\AWAE\src\AWAE_Types.f90"/></Filter>
+		<File RelativePath="..\..\modules\AWAE\src\AWAE.f90"/>
+		<File RelativePath="..\..\modules\AWAE\src\AWAE_IO.f90"/></Filter>
+		<Filter Name="Driver">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Registry.txt">
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FarmDriver" Description="Running Registry for FAST.Farm Driver" Outputs="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></Filter>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm.f90"/>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_IO.f90"/>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Subs.f90"/></Filter>
+		<Filter Name="FASTWrapper">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper_Registry.txt">
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FASTWrapper" Description="Running Registry for FASTWrapper" Outputs="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/></Filter>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper.f90"/></Filter>
+		<Filter Name="SuperController">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\supercontroller\src\SuperController_Registry.txt">
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\modules\supercontroller\src\SuperController_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\supercontroller\src\SuperController_Types.f90"/></Filter>
+		<File RelativePath="..\..\modules\supercontroller\src\SuperController.f90"/></Filter>
+		<Filter Name="WakeDynamics">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\WakeDynamics\src\WakeDynamics_Registry.txt">
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WakeDynamics" Description="Running Registry for WakeDynamics" Outputs="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\WakeDynamics\src\WakeDynamics_Types.f90"/></Filter>
+		<File RelativePath="..\..\modules\WakeDynamics\src\WakeDynamics.f90"/></Filter></Filter></Files>
+	<Globals/></VisualStudioProject>

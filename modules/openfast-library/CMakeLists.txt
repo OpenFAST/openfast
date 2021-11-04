@@ -38,7 +38,7 @@ target_link_libraries(openfast_prelib
   orcaflexlib
   extptfm_mckflib
   openfoamtypeslib
-  sctypeslib
+  scdataextypeslib
   feamlib
   moordynlib
   icedynlib
@@ -52,12 +52,14 @@ add_library(openfast_postlib
   src/FAST_Subs.f90
   src/FAST_Solver.f90
   )
-target_link_libraries(openfast_postlib openfast_prelib scfastlib foamfastlib versioninfolib)
+target_link_libraries(openfast_postlib openfast_prelib scdataexlib foamfastlib versioninfolib)
 
 add_library(openfastlib src/FAST_Library.f90)
-target_link_libraries(openfastlib openfast_postlib openfast_prelib scfastlib foamfastlib)
+target_link_libraries(openfastlib openfast_postlib openfast_prelib scdataexlib foamfastlib)
 
-if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU" AND ${CMAKE_Fortran_COMPILER_ID} STREQUAL "RELEASE")
+string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
+string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
+if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
   # With variable tracking enabled, the compile step frequently aborts on large modules and
   # restarts with this option off. Disabling in Release mode avoids this problem when compiling with
   # full optimizations, but leaves it enabled for RelWithDebInfo which adds both -O2 and -g flags.

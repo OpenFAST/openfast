@@ -55,7 +55,62 @@ typedef   ^                     ^                ReKi                k3         
 typedef   ^                     ^                ReKi                k1_hat       -        -   -   "Constant in the expression of Cc due to leading edge vortex effects.  [ignored if UAMod<>1]" -
 typedef   ^                     ^                ReKi                x_cp_bar     -        -   -   "Constant in the expression of \hat(x)_cp^v [ignored if UAMod<>1, default = 0.2]" -
 typedef   ^                     ^                ReKi                UACutout     -        -   -   "Angle of attack above which unsteady aerodynamics are disabled" "input in degrees; stored as radians"
+typedef   ^                     ^                ReKi                UACutout_delta -      -   -   "Number of angles-of-attack below UACutout where unsteady aerodynamics begin to be disabled" "input in degrees; stored as radians"
+typedef   ^                     ^                ReKi                UACutout_blend -      -   -   "Angle of attack above which unsteady aerodynamics begins to be disabled" "stored as radians"
 typedef   ^                     ^                ReKi                filtCutOff   -        -   -   "Reduced frequency cutoff used to calculate the dynamic low pass filter cut-off frequency for the pitching rate and accelerations [default = 0.5]"       -
+
+typedef   ^                     ^                ReKi                alphaUpper   -        -  2pi  "(input) upper angle of attack defining fully attached region" "input in degrees; stored as radians"
+typedef   ^                     ^                ReKi                alphaLower   -        -  2pi  "(input) lower angle of attack defining fully attached region" "input in degrees; stored as radians"
+typedef   ^                     ^                ReKi                c_Rate       -        -  -    "(calculated) linear slope in the fully attached region of cn or cl" "1/rad"
+typedef   ^                     ^                ReKi                c_RateUpper  -        -  -    "(calculated) linear slope in the upper fully attached region of cn or cl" "1/rad"
+typedef   ^                     ^                ReKi                c_RateLower  -        -  -    "(calculated) linear slope in the lower fully attached region of cn or cl" "1/rad"
+typedef   ^                     ^                ReKi                c_alphaLower -        -  -    "(calculated) value of cn or cl at alphaLower" "-"
+typedef   ^                     ^                ReKi                c_alphaUpper -        -  -    "(calculated) value of cn or cl at alphaUpper" "-"
+typedef   ^                     ^                ReKi                alphaUpperWrap -      -  2pi  "(calculated) upper angle of attack defining fully attached wrap-around region" "stored as radians"
+typedef   ^                     ^                ReKi                alphaLowerWrap -      -  2pi  "(calculated) lower angle of attack defining fully attached wrap-around region" "stored as radians"
+typedef   ^                     ^                ReKi                c_RateWrap     -      -  -    "(calculated) linear slope in the fully attached wrap-around region of cn or cl (will be negative)" "1/rad"
+typedef   ^                     ^                ReKi                c_alphaLowerWrap -    -  -    "(calculated) value of cn or cl at alphaLowerWrap" "-"
+typedef   ^                     ^                ReKi                c_alphaUpperWrap -    -  -    "(calculated) value of cn or cl at alphaUpperWrap" "-"
+
+
+typedef   AirfoilInfo/AFI AFI_UA_BL_Default_Type LOGICAL             alpha0       -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             alpha1       -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             alpha2       -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             eta_e        -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             C_nalpha     -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             C_lalpha     -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             T_f0         -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             T_V0         -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             T_p          -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             T_VL         -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             b1           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             b2           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             b5           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             A1           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             A2           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             A5           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             S1           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             S2           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             S3           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             S4           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             Cn1          -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             Cn2          -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             St_sh        -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             Cd0          -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             Cm0          -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             k0           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             k1           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             k2           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             k3           -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             k1_hat       -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             x_cp_bar     -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             UACutout     -        .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             UACutout_delta -      .true.   -   "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             filtCutOff   -        .true.   -   "Calculate value for this input?" -
+
+typedef   ^                     ^                LOGICAL             alphaUpper   -        .true.   -  "Calculate value for this input?" -
+typedef   ^                     ^                LOGICAL             alphaLower   -        .true.   -  "Calculate value for this input?" -
+
 
 # The following derived type stores data for an airfoil at a single combination of Re and control setting.
 typedef   ^                     AFI_Table_Type   ReKi                Alpha       {:}       -   -   "Angle-of-attack vector that matches the Coefs matrix" rad
@@ -77,6 +132,7 @@ typedef   ^                     ^                INTEGER             InCol_Cl   
 typedef   ^                     ^                INTEGER             InCol_Cd     -        -   -   "The column of the coefficient tables that holds the minimum pressure coefficient"  -
 typedef   ^                     ^                INTEGER             InCol_Cm     -        -   -   "The column of the coefficient tables that holds the pitching-moment coefficient"   -
 typedef   ^                     ^                INTEGER             InCol_Cpmin  -        -   -   "The column of the coefficient tables that holds the minimum pressure coefficient"  -
+typedef   ^                     ^                LOGICAL             UA_f_cn      -        -   -   "Whether any UA separation functions should be calculated on cn (true) or cl (false)"  -
 
 # Define outputs from the initialization routine here:
 typedef   ^                     InitOutputType   ProgDesc            Ver          -        -   -   "This module's name, version, and date" -
@@ -88,10 +144,11 @@ typedef   ^                     ParameterType    INTEGER             ColCd      
 typedef   ^                     ^                INTEGER             ColCl        -        -   -   "The column in the p%Coefs arrays that contains Cl data"    -
 typedef   ^                     ^                INTEGER             ColCm        -        -   -   "The column in the p%Coefs arrays that contains Cm data"    -
 typedef   ^                     ^                INTEGER             ColCpmin     -        -   -   "The column in the p%Coefs arrays that contains Cpmin data" -
-typedef   ^                     ^                INTEGER             ColUAf       -        -   -   "The column in the p%Coefs arrays that contains f_st data for UA" -
+typedef   ^                     ^                INTEGER             ColUAf       -        -   -   "The column in the p%Coefs arrays that contains f_st data (on cl or cn) for UA" -
 typedef   ^                     ^                INTEGER             AFTabMod     -        -   -   "Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp}" -
 typedef   ^                     ^                ReKi                secondVals  {:}       -   -   "The values of the 2nd dependent variable when using multiple airfoil tables (Re or UserProp, saved in an array so that the logic in the interpolation scheme is cleaner)" -
 typedef   ^                     ^                IntKi               InterpOrd    -        -   -   "Interpolation order"   -
+typedef   ^                     ^                ReKi                RelThickness -        -   -   "Relative thickness of airfoil thickness/chord"   -
 typedef   ^                     ^                ReKi                NonDimArea   -        -   -   "The non-dimensional area of the airfoil (area/chord^2) [unused]" -
 typedef   ^                     ^                IntKi               NumCoords    -        -   -   "The number of coordinates which define the airfoil shape" -
 typedef   ^                     ^                ReKi                X_Coord     {:}       -   -   "X-coordinate for the airfoil shape [unused]" -
@@ -99,6 +156,7 @@ typedef   ^                     ^                ReKi                Y_Coord    
 typedef   ^                     ^                INTEGER             NumTabs      -        -   -   "The number of airfoil tables in the airfoil file" -
 typedef   ^                     ^                AFI_Table_Type      Table       {:}       -   -   "The tables of airfoil data for given Re and control setting" -
 typedef   ^                     ^                CHARACTER(1024)     BL_file      -        -   -   "The name of the file with the boundary layer data" 
+typedef   ^                     ^                CHARACTER(1024)     FileName     -        -   -   "The name of the file that stored this information."    -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -108,13 +166,14 @@ typedef   ^                     ^                ReKi                Re         
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are not contained on the mesh here:
-typedef   ^                     OutputType       ReKi                Cl           -        0.  -   "Dimensionless coefficient of lift" -
-typedef   ^                     ^                ReKi                Cd           -        0.  -   "Dimensionless coefficient of drag" -
-typedef   ^                     ^                ReKi                Cm           -        0.  -   "Dimensionless coefficient of pitching moment" -
-typedef   ^                     ^                ReKi                Cpmin        -        0.  -   "Dimensionless coefficient of minimum pressure" -
-typedef   ^                     ^                ReKi                Cd0          -        0.  -   "Minimum Cd value (used for Beddoes-Leishman unsteady aero)"   -
-typedef   ^                     ^                ReKi                Cm0          -        0.  -   "2D pitching moment coefficient at zero lift, positive if nose is up"   -
-typedef   ^                     ^                ReKi                f_st         -        0.  -   "separation function (used for UA HGM model)" -
-typedef   ^                     ^                ReKi                cl_fs        -        0.  -   "fully separated polar function (used for UA HGM model)" -
+typedef   ^                     OutputType       ReKi                Cl            -        0.  -   "Dimensionless coefficient of lift" -
+typedef   ^                     ^                ReKi                Cd            -        0.  -   "Dimensionless coefficient of drag" -
+typedef   ^                     ^                ReKi                Cm            -        0.  -   "Dimensionless coefficient of pitching moment" -
+typedef   ^                     ^                ReKi                Cpmin         -        0.  -   "Dimensionless coefficient of minimum pressure" -
+typedef   ^                     ^                ReKi                Cd0           -        0.  -   "Minimum Cd value (used for Beddoes-Leishman unsteady aero)"   -
+typedef   ^                     ^                ReKi                Cm0           -        0.  -   "2D pitching moment coefficient at zero lift, positive if nose is up"   -
+typedef   ^                     ^                ReKi                f_st          -        0.  -   "separation function based on cl or cn (used for UA models)" -
+typedef   ^                     ^                ReKi                FullySeparate -        0.  -   "fully separated cn or cl polar function (used for UA models)" -
+typedef   ^                     ^                ReKi                FullyAttached -        0.  -   "fully attached cn or cl polar function (used for UA models)" -
 
 

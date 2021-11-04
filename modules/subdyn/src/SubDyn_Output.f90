@@ -251,7 +251,10 @@ CONTAINS
       CALL ElemM(p%ElemProps(iElem),         pLst%Me(:,:,iiNode,iStore))
       CALL ElemK(p%ElemProps(iElem),         pLst%Ke(:,:,iiNode,iStore))
       CALL ElemF(p%ElemProps(iElem), Init%g, pLst%Fg(:,iiNode,iStore), FCe)
-      pLst%Fg(:,iiNode,iStore) = pLst%Fg(:,iiNode,iStore) + FCe(1:12) ! Adding cable element force 
+      ! NOTE: Removing this force contribution for now 
+      ! The output of subdyn will just be the "Kx" part for now
+      !pLst%Fg(:,iiNode,iStore) = pLst%Fg(:,iiNode,iStore) + FCe(1:12) ! Adding cable element force 
+      pLst%Fg(:,iiNode,iStore) = FCe(1:12) ! Adding cable element force 
    END SUBROUTINE ConfigOutputNode_MKF_ID
 
 
@@ -431,8 +434,8 @@ contains
       FirstOrSecond = pLst%ElmNds(iiNode,JJ)             ! first or second node of the element to be considered
       sgn           = NodeNumber_To_Sign(FirstOrSecond) ! Assign sign depending if it's the 1st or second node
       ElemNodes     = p%Elems(iElem,2:3)                ! first and second node ID associated with element iElem
-      X_e(1:6)      = m%U_full       (p%NodesDOF(ElemNodes(1))%List(1:6)) 
-      X_e(7:12)     = m%U_full       (p%NodesDOF(ElemNodes(2))%List(1:6)) 
+      X_e(1:6)      = m%U_full_elast (p%NodesDOF(ElemNodes(1))%List(1:6)) 
+      X_e(7:12)     = m%U_full_elast (p%NodesDOF(ElemNodes(2))%List(1:6)) 
       Xdd_e(1:6)    = m%U_full_dotdot(p%NodesDOF(ElemNodes(1))%List(1:6)) 
       Xdd_e(7:12)   = m%U_full_dotdot(p%NodesDOF(ElemNodes(2))%List(1:6)) 
       if (.not. bUseInputDirCos) then
@@ -459,7 +462,7 @@ contains
 
       FM_glb = matmul(Me,Udotdot)   ! GLOBAL REFERENCE
       FF_glb = matmul(Ke,Y2)        ! GLOBAL REFERENCE
-      FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE
+      FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE ! NOTE: Fg is now 0, only the "Kx" part in Fk
       DO L=1,4 ! Transforming coordinates 3 at a time
          FM_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FM_glb( (L-1)*3+1:L*3 ) )
          FF_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FF_glb( (L-1)*3+1:L*3 ) ) 
@@ -848,6 +851,7 @@ contains
       ! Number of outputs
       p%Jac_ny = y%Y1Mesh%nNodes * 6     & ! 3 forces + 3 moments at each node
                + y%Y2Mesh%nNodes * 18    & ! 6 displacements + 6 velocities + 6 accelerations at each node
+               + y%Y3Mesh%nNodes * 18    & ! 6 displacements + 6 velocities + 6 accelerations at each node
                + p%NumOuts                 ! WriteOutput values 
       ! Storage info for each output (names, rotframe)
       call AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
@@ -855,7 +859,8 @@ contains
       ! Names
       index_next = 1
       call PackLoadMesh_Names(  y%Y1Mesh, 'Interface displacement', InitOut%LinNames_y, index_next)
-      call PackMotionMesh_Names(y%Y2Mesh, 'Nodes motion'          , InitOut%LinNames_y, index_next)
+      call PackMotionMesh_Names(y%Y2Mesh, 'Nodes motion mixed'    , InitOut%LinNames_y, index_next)
+      call PackMotionMesh_Names(y%Y3Mesh, 'Nodes motion full'     , InitOut%LinNames_y, index_next)
       do i=1,p%NumOuts
          InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
       end do
@@ -1003,6 +1008,7 @@ SUBROUTINE SD_Compute_dY(p, y_p, y_m, delta, dY)
    indx_first = 1
    call PackLoadMesh_dY(  y_p%Y1Mesh, y_m%Y1Mesh, dY, indx_first)
    call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first) ! all 6 motion fields
+   call PackMotionMesh_dY(y_p%Y3Mesh, y_m%Y3Mesh, dY, indx_first) ! all 6 motion fields
    do i=1,p%NumOuts
       dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
    end do

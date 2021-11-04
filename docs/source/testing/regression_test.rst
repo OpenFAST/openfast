@@ -17,14 +17,14 @@ results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
 compiler type to the appropriate solution set from these combinations:
 
-================== ========== ============================
- Operating System   Compiler   Hardware
-================== ========== ============================
- **macOS**          **GNU**    **2017 MacbookPro**
- CentOS 7           Intel      NREL Eagle - Intel Skylake
- CentOS 7           GNU        NREL Eagle - Intel Skylake
- Windows 10         Intel      Dell Precision 3530
-================== ========== ============================
+================== ============== ============================
+ Operating System   Compiler       Hardware
+================== ============== ============================
+ macOS 10.15        GNU 10.2       2020 MacbookPro
+ Ubuntu 20.04       Intel oneAPI   Docker
+ Ubuntu 20.04       GNU 10.2       Docker
+ Windows 10         Intel oneAPI   Dell Precision 3530
+================== ============== ============================
 
 The compiler versions, specific math libraries, and more info on hardware used
 to generate the baseline solutions are documented in the
@@ -262,7 +262,7 @@ suite.
 .. code-block:: bash
 
     # Download the source code from GitHub
-    #    Note: The default branch is 'master'
+    #    Note: The default branch is 'main'
     git clone --recursive https://github.com/openfast/openfast.git
     cd openfast
 
@@ -298,7 +298,7 @@ with CMake for use with the CTest command.
 .. code-block:: bash
 
     # Download the source code from GitHub
-    #    Note: The default branch is 'master'
+    #    Note: The default branch is 'main'
     git clone --recursive https://github.com/openfast/openfast.git
     cd openfast
 
@@ -339,7 +339,7 @@ included Python driver.
 .. code-block:: bash
 
     # Download the source code from GitHub
-    #    Note: The default branch is 'master'
+    #    Note: The default branch is 'main'
     git clone --recursive https://github.com/openfast/openfast.git
     cd openfast
 
@@ -392,3 +392,53 @@ description is given in :ref:`regression_test_windows`.
    :hidden:
 
    regression_test_windows.rst
+
+.. _new_regression_test_case:
+
+Adding test cases
+-----------------
+In all modes of execution, the regression tests are ultimately driven by a
+series of Python scripts located in the ``openfast/reg_tests`` directory
+with the naming scheme ``execute<Module>RegressionTest.py``.
+The first step to adding a new regression test case is to verify that
+a script exists for the target module. If it does not, an issue
+should be opened in `OpenFAST Issues <https://github.com/openfast/openfast/issues>`_
+to coordinate with the NREL team on creating this script.
+
+The next step is to add the test case in the appropriate location in
+the `r-test` submodule. The directory structure in r-test mirrors the
+directory structure in OpenFAST, so module-level tests should be placed
+in their respective module directories and glue-code tests go in
+``r-test/glue-codes/openfast``. Note the naming scheme of files for
+existing tests and adapt the new test case files accordingly. Specifically,
+the main input file and output file names may be expected in a particular
+convention by the Python scripts. Also, consider that any relative paths
+within the input deck for the new test case must work within the r-test
+directory structure.
+
+Once the test directory exists, the test case must be registered with
+the appropriate drivers. For OpenFAST glue-code tests, this happens both in
+CMake and a standalone list of test cases. For CMake, edit the file
+``openfast/reg_tests/CTestList.cmake``. The additional test should be
+added in the section corresponding to the module or driver at the
+bottom of that file. For the Python driver, the new test case must
+be added to ``openfast/reg_tests/r-test/glue-codes/openfast/CaseList.md``.
+At this point, the registration with CTest can be verified:
+
+.. code-block:: bash
+
+    # Move into the build directory
+    cd openfast/build
+
+    # Run CMake to take the new changes to the test list
+    cmake .. -DBUILD_TESTING=ON  # If the BUILD_TESTING flag was previously enabled, this can be left off
+
+    # List the registered tests, but don't run them
+    ctest -N
+
+For module regression tests, the only option for execution is with the
+CMake driver, so follow the instructions above to edit ``CTestList.cmake``.
+
+Finally, the new test cases in the r-test submodule must be added to the
+r-test repository. To do this, open a new issue in `r-test Issues <https://github.com/openfast/r-test/issues>`_
+requesting for support from the NREL team to commit your test.

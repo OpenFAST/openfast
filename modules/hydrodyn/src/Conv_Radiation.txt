@@ -20,11 +20,12 @@ include   Registry_NWTC_Library.txt
 #
 typedef   Conv_Radiation/Conv_Rdtn     InitInputType                 DbKi             RdtnDT                   -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(80)    RdtnDTChr
+typedef   ^                            ^                             INTEGER          NBody                    -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
 typedef   ^                            ^                             ReKi             HighFreq                 -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)  WAMITFile                -          -        -         ""    -
-typedef   ^                            ^                             SiKi             HdroAddMs                {:}{:}     -        -         ""    -
+typedef   ^                            ^                             SiKi             HdroAddMs                {:}{:}{:}   -        -         ""    -
 typedef   ^                            ^                             SiKi             HdroFreq                 {:}        -        -         ""    -
-typedef   ^                            ^                             SiKi             HdroDmpng                {:}{:}     -        -         ""    -
+typedef   ^                            ^                             SiKi             HdroDmpng                {:}{:}{:}  -        -         ""    -
 typedef   ^                            ^                             INTEGER          NInpFreq                 -          -        -         ""    -
 typedef   ^                            ^                             DbKi             RdtnTMax                 -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          UnSum                    -          -        -         ""    -
@@ -67,6 +68,7 @@ typedef   ^                            MiscVarType                   INTEGER    
 #
 typedef   ^                            ParameterType                 DbKi             DT                       -          -         -         "Time step for continuous state integration & discrete state update"  seconds
 typedef   ^                            ^                             DbKi             RdtnDT                   -          -         -         ""        -
+typedef   ^                            ^                             INTEGER          NBody                    -          -         -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
 typedef   ^                            ^                             SiKi             RdtnKrnl                {:}{:}{:}   -         -         ""        -
 typedef   ^                            ^                             INTEGER          NStepRdtn                -          -         -         ""        -
 typedef   ^                            ^                             INTEGER          NStepRdtn1               -          -         -         ""        -
@@ -77,11 +79,11 @@ typedef   ^                            ^                             INTEGER    
 #
 #typedef^            InputType           MeshType  MeshedInput         -         -         -         "Meshed input data" -
 # Define inputs that are not on this mesh here:
-typedef   ^                            InputType                     ReKi             Velocity                {6}         -         -         ""     -
+typedef   ^                            InputType                     ReKi             Velocity                {:}         -         -         ""     -
 #
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 #typedef^           OutputType                    MeshType  MeshedOutput        -         -         -         "Meshed output data"          -
 # Define outputs that are not on this mesh here:
-typedef   ^                            OutputType                    ReKi             F_Rdtn                  {6}        -         -         ""    -
+typedef   ^                            OutputType                    ReKi             F_Rdtn                  {:}        -         -         ""    -

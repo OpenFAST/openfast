@@ -24,6 +24,12 @@ MODULE FEM
 
   INTEGER, PARAMETER  :: FEKi = R8Ki  ! Define the kind to be used for FEM
   INTEGER, PARAMETER  :: LaKi = R8Ki  ! Define the kind to be used for LaPack
+
+  INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
+     MODULE PROCEDURE FINDLOCI_ReKi
+     MODULE PROCEDURE FINDLOCI_IntKi
+  END INTERFACE
+
  
 CONTAINS
 !------------------------------------------------------------------------------------------------------
@@ -403,6 +409,7 @@ END SUBROUTINE BreakSysMtrx
 !!
 !! NOTE: generic code
 SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg, FG, FGR, FGL, FGB, FGM, CC, CBB, CBM, CMM) 
+   use NWTC_LAPACK, only: LAPACK_GEMV
    REAL(FEKi),             INTENT(IN   ) :: MM(:, :) !< Mass matrix
    REAL(FEKi),             INTENT(IN   ) :: KK(:, :) !< Stiffness matrix
    INTEGER(IntKi),         INTENT(IN   ) :: nR
@@ -461,14 +468,22 @@ SUBROUTINE CraigBamptonReduction(MM, KK, IDR, nR, IDL, nL, nM, nM_Out, MBB, MBM,
                               CBB=CBB, CBM=CBM, CMM=CMM)  !< Optional Outputs
    if(Failed()) return
 
-
    ! --- Reduction of force if provided
    if (present(FG).and.present(FGR).and.present(FGL)) then
-      if (present(FGM)) then
-         FGB = FGR + matmul( transpose(PhiR), FGL)
-      endif
       if (present(FGB)) then
-         FGM = matmul( FGL, PhiL(:,1:nM) ) != matmul( transpose(PhiM), FGL ) because FGL is 1-D
+         !FGB = FGR + matmul( transpose(PhiR), FGL)
+         if (nL>0) then
+            CALL LAPACK_GEMV('t', nL  , nR,  1.0_FeKi, PhiR, nL, FGL, 1, 0.0_FeKi, FGB, 1 )
+            FGB = FGR + FGB
+         else
+            FGB = FGR 
+         endif
+      endif
+      if (present(FGM)) then
+         !FGM = matmul( FGL, PhiL(:,1:nM) ) != matmul( transpose(PhiM), FGL ) because FGL is 1-D
+         if (nM>0) then
+            CALL LAPACK_GEMV('t', nL  , nM,  1.0_FeKi, PhiL(:,1:nM), nL, FGL, 1, 0.0_FeKi, FGM, 1 )
+         endif
       endif
    endif
    call CleanUp()
@@ -547,7 +562,7 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       if(Failed()) return;
    endif
    if (nM_out<nM) then
-      ErrMsg2='Cannot request output modes than modes.'; ErrStat2=ErrID_Fatal; 
+      ErrMsg2='Cannot request more output modes than modes.'; ErrStat2=ErrID_Fatal; 
       if(Failed()) return;
    endif
    
@@ -556,31 +571,22 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       ! bCheckSingularity = True
       CALL EigenSolveWrap(KLL, MLL, nL, nM_out, .True., PhiL(:,1:nM_out), OmegaL(1:nM_out),  ErrStat2, ErrMsg2); if(Failed()) return
       ! --- Normalize PhiL
-      ! bjj: break up this equation to avoid as many temporary variables on the stack
       ! MU = MATMUL ( MATMUL( TRANSPOSE(PhiL), MLL ), PhiL )
-      CALL AllocAry( Temp , nL    , nL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
-      CALL AllocAry( MU   , nM_out, nL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
-      MU   = TRANSPOSE(PhiL)
-      !Temp = MATMUL( MU, MLL )
-      CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, MU, MLL, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
-      !MU(1:nM_Out,1:nM_Out) = MATMUL( Temp, PhiL )
+      CALL AllocAry( Temp , nM_out, nL     , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
+      CALL AllocAry( MU   , nM_out, nM_out , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
+      CALL LAPACK_gemm( 'T', 'N', 1.0_FeKi, PhiL, MLL, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
       CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, Temp, PhiL, 0.0_FeKi, MU  , ErrStat2, ErrMsg2); if(Failed()) return
       DEALLOCATE(Temp)
-      ! PhiL = MATMUL( PhiL, MU2 )  !this is the nondimensionalization (MU2 is diagonal)   
+      ! PhiL = MATMUL( PhiL, MU ) ! this is the normalization (MU is diagonal)   
       DO I = 1, nM_out
          PhiL(:,I) = PhiL(:,I) / SQRT( MU(I, I) )
       ENDDO    
       DEALLOCATE(MU)
       if (present(CRR)) then
          ! CB damping CMM = PhiL^T  CLL PhiL
-         CALL AllocAry( Temp , nM, nL , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
-         CALL AllocAry( MU   , nM, nL , 'Mu'   , ErrStat2 , ErrMsg2); if(Failed()) return
-         MU  = TRANSPOSE(PhiL(1:nL, 1:nM))
-         !Temp = MATMUL( MU, CLL )
-         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, MU, CLL, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
-         !   CMM = MATMUL( Temp, PhiL(1:nL, 1:nM) )
-         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, Temp, PhiL, 0.0_FeKi, CMM  , ErrStat2, ErrMsg2); if(Failed()) return
-         DEALLOCATE(MU)
+         CALL AllocAry( Temp , nM, nL    , 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
+         CALL LAPACK_gemm( 'T', 'N', 1.0_FeKi, PhiL(1:nL, 1:nM), CLL,  0.0_FeKi, Temp , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, Temp, PhiL(1:nL, 1:nM), 0.0_FeKi, CMM  , ErrStat2, ErrMsg2); if(Failed()) return
          DEALLOCATE(Temp)
       endif
    else
@@ -600,19 +606,27 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
       
       ! --- Set MBB, MBM, and KBB from Eq. 4:
       CALL AllocAry( PhiR_T_MLL,  nR, nL, 'PhiR_T_MLL', ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry( Temp , nR, nR, 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
          
-      PhiR_T_MLL = TRANSPOSE(PhiR)
-      PhiR_T_MLL = MATMUL(PhiR_T_MLL, MLL)
-      !CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, PhiR_T_MLL, MLL, 0.0_FeKi, PhiR_T_MLL  , ErrStat2, ErrMsg2); if(Failed()) return
-      MBB = MATMUL(MRL, PhiR)
+      ! PhiR_T_MLL = TRANSPOSE(PhiR) * MLL
+      CALL LAPACK_gemm( 'T', 'N', 1.0_FeKi, PhiR, MLL, 0.0_FeKi, PhiR_T_MLL  , ErrStat2, ErrMsg2); if(Failed()) return
+      ! MBB1 = MATMUL(MRL, PhiR)
       CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, MRL, PhiR, 0.0_FeKi, MBB  , ErrStat2, ErrMsg2); if(Failed()) return
-      MBB = MRR + MBB + TRANSPOSE( MBB ) + MATMUL( PhiR_T_MLL, PhiR )
+      ! MBB2 = MATMUL( PhiR_T_MLL, PhiR )
+      CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, PhiR_T_MLL, PhiR, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
+      MBB = MRR + MBB + TRANSPOSE( MBB ) + Temp
+      DEALLOCATE(Temp)
          
       IF ( nM == 0) THEN
          MBM = 0.0_FEKi
       ELSE
-         MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
-         MBM = MATMUL( MRL, PhiL(:,1:nM) ) + MBM    !This had PhiM      
+         CALL AllocAry( Temp , nR, nM, 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
+         !MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:nM))  ! last half of operation
+         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, PhiR_T_MLL, PhiL(:,1:nM), 0.0_FeKi, MBM  , ErrStat2, ErrMsg2); if(Failed()) return
+         ! Temp = MATMUL( MRL, PhiL(:,1:nM) )
+         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, MRL, PhiL(:,1:nM), 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
+         MBM = Temp + MBM    !This had PhiM      
+         DEALLOCATE(Temp)
       ENDIF
       
       !KBB = MATMUL(KRL, PhiR)   
@@ -621,10 +635,15 @@ SUBROUTINE CraigBamptonReduction_FromPartition( MRR, MLL, MRL, KRR, KLL, KRL, nR
 
       if (present(CRR)) then
          ! Guyan damping CBB = CRR + (CRL*PhiR) + (CRL*PhiR)^T + PhiR^T*CLL*PhiR
-         PhiR_T_MLL = TRANSPOSE(PhiR)
-         PhiR_T_MLL = MATMUL(PhiR_T_MLL, CLL)
-         CBB = MATMUL(CRL, PhiR)
-         CBB = CRR + CBB + TRANSPOSE( CBB ) + MATMUL( PhiR_T_MLL, PhiR )
+         ! PhiR_T_CLL = TRANSPOSE(PhiR) * CLL
+         CALL AllocAry( Temp , nR, nR, 'Temp' , ErrStat2 , ErrMsg2); if(Failed()) return
+         CALL LAPACK_gemm( 'T', 'N', 1.0_FeKi, PhiR, MLL, 0.0_FeKi, PhiR_T_MLL  , ErrStat2, ErrMsg2); if(Failed()) return
+         ! CBB = MATMUL(CRL, PhiR)
+         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, CRL, PhiR, 0.0_FeKi, CBB  , ErrStat2, ErrMsg2); if(Failed()) return
+         ! CBB2 = MATMUL( PhiR_T_CLL, PhiR )
+         CALL LAPACK_gemm( 'N', 'N', 1.0_FeKi, PhiR_T_MLL, PhiR, 0.0_FeKi, Temp  , ErrStat2, ErrMsg2); if(Failed()) return
+         CBB = CRR + CBB + TRANSPOSE( CBB ) + Temp
+         DEALLOCATE(Temp)
          ! Cross coupling CMB = PhiM^T*CLR + PhiM^T CLL PhiR
          !                CBM = CRL*PhiM + PhiR^T CLL^T PhiM (NOTE: assuming CLL symmetric)
          IF ( nM == 0) THEN
@@ -1380,6 +1399,7 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    end do
    ! Compute Ainv = 1.0*V^t * U^t + 0.0*Ainv     V*(inv(S))*U' 
    !call DGEMM( 'T', 'T', N, M, K, 1.0, V, K, U, M, 0.0, Ainv, N)
+   print*,'8'
    call LAPACK_GEMM( 'T', 'T', 1.0_FEKi, Vt, U, 0.0_FEKi, Ainv, ErrStat, ErrMsg)
    ! --- Compute rank
    !tol=maxval(shape(A))*epsilon(maxval(S))

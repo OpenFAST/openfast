@@ -15,204 +15,223 @@
 include   Registry_NWTC_Library.txt
 #
 #
-param     Morison/Morison              unused                        INTEGER          MaxMrsnOutputs               -       4032    -         ""    -
-typedef   Morison/Morison              Morison_JointType             INTEGER          JointID                  -          -        -         ""    -
-typedef   ^                            ^                             ReKi             JointPos                 {3}        -        -         ""    -
-typedef   ^                            ^                             INTEGER          JointAxID                -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          JointAxIDIndx                -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          JointOvrlp               -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          NConnections             -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          ConnectionList           {10}       -        -         ""    -
-typedef   Morison/Morison              Morison_MemberPropType        INTEGER          PropSetID                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             PropD                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             PropThck                 -          -        -         ""    -
-typedef   Morison/Morison              Morison_FilledGroupType       INTEGER          FillNumM                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          FillMList                {:}        -        -         ""    -
-typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         ""    -
-typedef   ^                            ^                             CHARACTER(80)    FillDensChr              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             FillDens                 -          -        -         ""    -
-typedef   Morison/Morison              Morison_CoefDpths             ReKi             Dpth                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthCd                   -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthCdMG                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthCa                   -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthCaMG                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthCp                   -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthCpMG                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthAxCa                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthAxCaMG               -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthAxCp                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             DpthAxCpMG               -          -        -         ""    -
-typedef   Morison/Morison              Morison_AxialCoefType         INTEGER          AxCoefID                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCd                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCa                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCp                     -          -        -         ""    -
-typedef   Morison/Morison              Morison_MemberInputType       INTEGER          MemberID                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MJointID1                -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MJointID2                -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MJointID1Indx            -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MJointID2Indx            -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MPropSetID1              -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MPropSetID2              -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MPropSetID1Indx          -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MPropSetID2Indx          -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MDivSize                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         ""    -
-typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         ""    -
-#typedef   ^                            ^                             INTEGER          MGSplitState             -          -        -         ""    -
-#typedef   ^                            ^                             INTEGER          WtrSplitState            -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          NumSplits                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Splits                   {5}        -        -         ""    -
-typedef   ^                            ^                             ReKi             R_LToG                   {3}{3}     -        -         ""    -
-typedef   Morison/Morison              Morison_NodeType              INTEGER          NodeType                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          JointIndx                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             JointPos                 {3}        -        -         ""    -
+param     Morison/Morison              unused                        INTEGER          MaxMrsnOutputs           -       4599        -         "Total number of possible Morison module output channels"    -
+typedef   ^                            Morison_JointType             INTEGER          JointID                  -          -        -         "User-specified integer ID for the given joint"    -
+typedef   ^                            ^                             ReKi             Position                {3}         -        -         "Undisplaced location of the joint in the platform coordinate system"    m
+typedef   ^                            ^                             INTEGER          JointAxID                -          -        -         "Axial ID (found in the user-supplied Axial Coefficients Table) for this joint: used to determine axial coefs"    -
+typedef   ^                            ^                             INTEGER          JointAxIDIndx            -          -        -         "The index into the Axial Coefs arrays corresponding to the above Axial ID"    -
+typedef   ^                            ^                             INTEGER          JointOvrlp               -          -        -         "Joint overlap code [Unused"    -
+typedef   ^                            ^                             INTEGER          NConnections             -          -        -         "Number of members connecting to this joint"    -
+typedef   ^                            ^                             INTEGER          ConnectionList           {10}       -        -         "List of Members connected to this joint.  The member index is what is stored, not the Member ID"    -
+typedef   ^                            Morison_MemberPropType        INTEGER          PropSetID                -          -        -         "User-specified integer ID for this group of properties"    -
+typedef   ^                            ^                             ReKi             PropD                    -          -        -         "Diameter"    m
+typedef   ^                            ^                             ReKi             PropThck                 -          -        -         "Wall thickness"    m
+typedef   ^                            Morison_FilledGroupType       INTEGER          FillNumM                 -          -        -         "Number of members in the Fill Group"    -
+typedef   ^                            ^                             INTEGER          FillMList                {:}        -        -         "List of Member IDs for the members in this fill group"    -
+typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         "The free-surface location (in Z) for this fill group"    m
+typedef   ^                            ^                             CHARACTER(80)    FillDensChr              -          -        -         "String version of the Fill density [can be DEFAULT which sets the fill density to WtrDens]"   kg/m^3
+typedef   ^                            ^                             ReKi             FillDens                 -          -        -         "Numerical fill density"    kg/m^3
+typedef   ^                            Morison_CoefDpths             ReKi             Dpth                     -          -        -         "Depth location for these depth-based hydrodynamic coefs"    m
+typedef   ^                            ^                             ReKi             DpthCd                   -          -        -         "Depth-based drag coef"    -
+typedef   ^                            ^                             ReKi             DpthCdMG                 -          -        -         "Depth-based drag coef for marine growth"    -
+typedef   ^                            ^                             ReKi             DpthCa                   -          -        -         "Depth-based Ca"    -
+typedef   ^                            ^                             ReKi             DpthCaMG                 -          -        -         "Depth-based Ca for marine growth"    -
+typedef   ^                            ^                             ReKi             DpthCp                   -          -        -         "Depth-based Cp"    -
+typedef   ^                            ^                             ReKi             DpthCpMG                 -          -        -         "Depth-based Cp for marine growth"    -
+typedef   ^                            ^                             ReKi             DpthAxCd                 -          -        -         "Depth-based Axial Cd"    -
+typedef   ^                            ^                             ReKi             DpthAxCdMG               -          -        -         "Depth-based Axial Cd for marine growth"    -
+typedef   ^                            ^                             ReKi             DpthAxCa                 -          -        -         "Depth-based Axial Ca"    -
+typedef   ^                            ^                             ReKi             DpthAxCaMG               -          -        -         "Depth-based Axial Ca for marine growth"    -
+typedef   ^                            ^                             ReKi             DpthAxCp                 -          -        -         "Depth-based Axial Cp"    -
+typedef   ^                            ^                             ReKi             DpthAxCpMG               -          -        -         "Depth-based Axial Cp for marine growth"    -
+typedef   ^                            Morison_AxialCoefType         INTEGER          AxCoefID                 -          -        -         "User-supplied integer ID for this set of Axial coefs"    -
+typedef   ^                            ^                             ReKi             AxCd                     -          -        -         "Axial Cd"    -
+typedef   ^                            ^                             ReKi             AxCa                     -          -        -         "Axial Ca"    -
+typedef   ^                            ^                             ReKi             AxCp                     -          -        -         "Axial Cp"    -
+#
+typedef   ^                            Morison_MemberInputType       INTEGER          MemberID                 -          -        -         "User-supplied integer ID for this member"    -
+typedef   ^                            ^                             INTEGER          NodeIndx                 {:}        -        -         "Index of each of the member's nodes in the master node list"    -
+typedef   ^                            ^                             INTEGER          MJointID1                -          -        -         "Joint ID for start of member"    -
+typedef   ^                            ^                             INTEGER          MJointID2                -          -        -         "Joint ID for end of member"    -
+typedef   ^                            ^                             INTEGER          MJointID1Indx            -          -        -         "Index into the joint table for the start of this member"    -
+typedef   ^                            ^                             INTEGER          MJointID2Indx            -          -        -         "Index into the joint table for the end of this member"    -
+typedef   ^                            ^                             INTEGER          MPropSetID1              -          -        -         "Property set ID for the start of this member"    -
+typedef   ^                            ^                             INTEGER          MPropSetID2              -          -        -         "Property set ID for the end of this member"    -
+typedef   ^                            ^                             INTEGER          MPropSetID1Indx          -          -        -         "Index into the Property table for the start of this member"    -
+typedef   ^                            ^                             INTEGER          MPropSetID2Indx          -          -        -         "Index into the Property table for the end of this member"    -
+typedef   ^                            ^                             ReKi             MDivSize                 -          -        -         "User-specified desired member discretization size for the final element"    m
+typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         "Which coef. model is being used for this member [1=simple, 2=depth-based, 3=member-based]"    -
+typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         "Index into the appropriate coefs table for this member's properties"    -
+typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         "Index into the filled group table if this is a filled member"    -
+typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Flag T/F for whether the member is modeled with potential flow theory"    -
+typedef   ^                            ^                             INTEGER          NElements                -          -        -         "number of elements in this member"    -
+typedef   ^                            ^                             ReKi             RefLength                -          -        -         "the reference total length for this member"    m
+typedef   ^                            ^                             ReKi             dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
+#
+typedef   ^                            Morison_NodeType              INTEGER          JointIndx                -          -        -         "Joint index from the user joint table that this node corresponds to.  If the software created this node, index is set to -1"    -
+typedef   ^                            ^                             ReKi             Position                 {3}        -        -         "Position of the node in global coordinates"    m
 typedef   ^                            ^                             INTEGER          JointOvrlp               -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          JointAxIDIndx            -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          NConnections             -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          ConnectionList           {10}       -        -         ""    -
-typedef   ^                            ^                             INTEGER          NConnectPreSplit         -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Cd                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CdMG                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Ca                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CaMG                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Cp                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CpMG                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             JAxCd                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             JAxCa                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             JAxCp                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCa                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCp                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCaMG                   -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCpMG                   -          -        -         ""    -
-typedef   ^                            ^                             ReKi             R                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi             t                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi             tMG                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi             dRdz                     -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MGdensity                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         ""    -
-typedef   ^                            ^                             LOGICAL          FillFlag                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             FillDensity              -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          InpMbrIndx               -          -        -         ""    -
-typedef   ^                            ^                             ReKi             InpMbrDist               -          -        -         ""    -
-typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         ""    -
-typedef   ^                            ^                             ReKi             R_LToG                   {3}{3}     -        -         ""    -
-typedef   Morison/Morison              Morison_MemberType            INTEGER          Node1Indx                -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          Node2Indx                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             R1                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi             t1                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi             R2                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi             t2                       -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Cd1                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CdMG1                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Ca1                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CaMG1                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Cp1                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CpMG1                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCa1                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCaMG1                  -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCp1                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCpMG1                  -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Cd2                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CdMG2                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Ca2                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CaMG2                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Cp2                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi             CpMG2                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCa2                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCaMG2                  -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCp2                    -          -        -         ""    -
-typedef   ^                            ^                             ReKi             AxCpMG2                  -          -        -         ""    -
-typedef   ^                            ^                             ReKi             InpMbrDist1              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             InpMbrDist2              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             InpMbrLen                -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          InpMbrIndx               -          -        -         ""    -
-typedef   ^                            ^                             ReKi             R_LToG                   {3}{3}     -        -         ""    -
-#typedef   ^                            ^                            INTEGER          MGSplitState             -          -        -         ""    -
-#typedef   ^                            ^                            INTEGER          WtrSplitState            -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          NumSplits                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             Splits                   {5}        -        -         ""    -
-typedef   ^                            ^                             ReKi             MGvolume                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MDivSize                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         ""    -
-typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             FillDens                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             F_Bouy                   {6}        -        -         ""    -
-typedef   ^                            ^                             ReKi             F_DP                     {6}        -        -         ""    -
-typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         ""    -
-typedef   Morison/Morison              Morison_CoefMembers           INTEGER          MemberID                 -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCd1                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCd2                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCdMG1              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCdMG2              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCa1                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCa2                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCaMG1              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCaMG2              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCp1                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCp2                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCpMG1              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberCpMG2              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberAxCa1              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberAxCa2              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberAxCaMG1            -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberAxCaMG2            -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberAxCp1              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberAxCp2              -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberAxCpMG1            -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MemberAxCpMG2            -          -        -         ""    -
-typedef   Morison/Morison              Morison_MGDepthsType          ReKi             MGDpth                   -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MGThck                   -          -        -         ""    -
-typedef   ^                            ^                             ReKi             MGDens                   -          -        -         ""    -
-typedef   Morison/Morison              Morison_MOutput               INTEGER          MemberID                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          NOutLoc                  -          -        -         ""    -
-typedef   ^                            ^                             ReKi             NodeLocs                 {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER          MemberIDIndx             -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          Marker1                  {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER          Marker2                  {:}        -        -         ""    -
-typedef   ^                            ^                             ReKi             s                        {:}        -        -         ""    -
-typedef   Morison/Morison              Morison_JOutput               INTEGER          JointID                  -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          JointIDIndx              -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          NumMarkers               -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          Markers                  {10}       -        -         ""    -
+typedef   ^                            ^                             INTEGER          NConnections             -          -        -         "Number of elements connecting to this node"    -
+typedef   ^                            ^                             INTEGER          ConnectionList           {10}       -        -         "Indices of all the members connected to this node (positive if end 1, negative if end 2)"    -
+typedef   ^                            ^                             ReKi             JAxCd                    -          -        -         "Nodal lumped (joint) axial Cd"    -
+typedef   ^                            ^                             ReKi             JAxCa                    -          -        -         "Nodal lumped (joint) axial Cp"    -
+typedef   ^                            ^                             ReKi             JAxCp                    -          -        -         "Nodal lumped (joint) axial Ca"    -
+typedef   ^                            ^                             ReKi             FillDensity              -          -        -         "Fill fluid density"   kg/m^3
+typedef   ^                            ^                             ReKi             tMG                      -          -        -         "Nodal thickness with marine growth "    m
+typedef   ^                            ^                             ReKi             MGdensity                -          -        -         "Nodal density of marine growth"    kg/m^3
+#
+typedef   ^                            Morison_MemberType            INTEGER        NodeIndx                 {:}        -        -         "Index of each of the member's nodes in the master node list"    -
+typedef   ^                            ^                             INTEGER        MemberID                 -          -        -         "User-supplied integer ID for this member"    -
+typedef   ^                            ^                             INTEGER        NElements                -          -        -         "number of elements in this member"    -
+typedef   ^                            ^                             ReKi           RefLength                  -          -        -         "the reference total length for this member"    m
+typedef   ^                            ^                             ReKi           cosPhi_ref                 -          -        -         "the reference cosine of the inclination angle of the member" -
+typedef   ^                            ^                             ReKi           dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
+typedef   ^                            ^                             ReKi           k                        {3}        -        -         "unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn)"    m
+typedef   ^                            ^                             ReKi           kkt                      {3}{3}     -        -         "matrix of matmul(k_hat, transpose(k_hat)" -
+typedef   ^                            ^                             ReKi           Ak                       {3}{3}     -        -         "matrix of I - kkt"   -
+typedef   ^                            ^                             ReKi           R                        {:}        -        -         "outer member radius at each node"    m
+typedef   ^                            ^                             ReKi           RMG                      {:}        -        -         "radius at each node including marine growth"   m
+typedef   ^                            ^                             ReKi           Rin                      {:}        -        -         "inner member radius at node, equivalent to radius of water ballast at this node if filled"    m
+typedef   ^                            ^                             ReKi           tMG                      {:}        -        -         "Nodal thickness with marine growth (of member at node location)"    m
+typedef   ^                            ^                             ReKi           MGdensity                {:}        -        -         "Nodal density of marine growth"    kg/m^3
+typedef   ^                            ^                             ReKi           dRdl_mg                  {:}        -        -         "taper dr/dl of outer surface including marine growth of each element"    -
+typedef   ^                            ^                             ReKi           dRdl_in                  {:}        -        -         "taper dr/dl of interior surface of each element"    -
+typedef   ^                            ^                             ReKi           Vinner                   -          -        -         "Member volume without marine growth"   m^3
+typedef   ^                            ^                             ReKi           Vouter                   -          -        -         "Member volume including marine growth"   m^3
+typedef   ^                            ^                             ReKi           Vballast                 -          -        -         "Member ballast volume"   m^3
+typedef   ^                            ^                             ReKi           Vsubmerged               -          -        -         "Submerged volume corresponding to portion of Member in the water"   m^3
+typedef   ^                            ^                             ReKi           l_fill                   -          -        -         "fill length along member axis from start node 1"   m
+typedef   ^                            ^                             ReKi           h_fill                   -          -        -         "fill length of partially flooded element"   m
+typedef   ^                            ^                             ReKi           z_overfill               -          -        -         "if member is fully filled, the head height of the fill pressure at the end node N+1. Zero if member is partially filled."   m
+typedef   ^                            ^                             ReKi           h_floor                  -          -        -         "the distance from the node to the seabed along the member axis (negative value)"   m
+typedef   ^                            ^                             INTEGER        i_floor                  -          -        -         "the number of the element that pierces the seabed (zero if the member doesn't pierce it)"   -
+typedef   ^                            ^                             LOGICAL        doEndBuoyancy            -          -        -         "compute the end plate effect for the hightest node of this member" -
+typedef   ^                            ^                             INTEGER        memfloodstatus           -          -        -         "Member-level flooded status for each elemen: 0 unflooded or fully below seabed, 2 partially flooded, 1 fully flooded "    -
+typedef   ^                            ^                             INTEGER        floodstatus              {:}        -        -         "flooded status for each element: 0 unflooded or fully below seabed, 1 fully flooded, 2 partially flooded"    -
+typedef   ^                            ^                             ReKi           alpha                    {:}        -        -         "relative volume centroid of each element including marine growth, from node i to node i+1"    -
+typedef   ^                            ^                             ReKi           alpha_fb                 {:}        -        -         "relative volume centroid of each element's flooded ballast, from node i to node i+1"    -
+typedef   ^                            ^                             ReKi           alpha_fb_star            {:}        -        -         "load distribution factor for each element after adjusting alpha_fb for node reference depths"    -
+typedef   ^                            ^                             ReKi           Cd                       {:}        -        -         "Member Cd at each node"    -
+typedef   ^                            ^                             ReKi           Ca                       {:}        -        -         "Member Ca at each node"    -
+typedef   ^                            ^                             ReKi           Cp                       {:}        -        -         "Member Cp at each node"    -
+typedef   ^                            ^                             ReKi           AxCd                     {:}        -        -         "Member axial Cd at each node"    -
+typedef   ^                            ^                             ReKi           AxCa                     {:}        -        -         "Member axial Ca at each node"    -
+typedef   ^                            ^                             ReKi           AxCp                     {:}        -        -         "Member axial Cp at each node"    -
+typedef   ^                            ^                             ReKi           m_fb_l                   {:}        -        -         "mass of flooded ballast in lower portion of each element"    kg
+typedef   ^                            ^                             ReKi           m_fb_u                   {:}        -        -         "mass of flooded ballast in upper portion of each element"    kg
+typedef   ^                            ^                             ReKi           h_cfb_l                  {:}        -        -         "distance to flooded ballast centroid from node point in lower portion of each element"    m
+typedef   ^                            ^                             ReKi           h_cfb_u                  {:}        -        -         "distance to flooded ballast centroid from node point in upper portion of each element"    m
+typedef   ^                            ^                             ReKi           I_lfb_l                  {:}        -        -         "axial moment of inertia of flooded ballast in lower portion of each element"    kg-m^2
+typedef   ^                            ^                             ReKi           I_lfb_u                  {:}        -        -         "axial moment of inertia of flooded ballast in upper portion of each element"    kg-m^2
+typedef   ^                            ^                             ReKi           I_rfb_l                  {:}        -        -         "radial moment of inertia of flooded ballast in lower portion of each element"    kg-m^2
+typedef   ^                            ^                             ReKi           I_rfb_u                  {:}        -        -         "radial moment of inertia of flooded ballast in upper portion of each element"    kg-m^2
+typedef   ^                            ^                             ReKi           m_mg_l                   {:}        -        -         "mass of marine growth in lower portion of each element"    kg
+typedef   ^                            ^                             ReKi           m_mg_u                   {:}        -        -         "mass of marine growth in upper portion of each element"    kg
+typedef   ^                            ^                             ReKi           h_cmg_l                  {:}        -        -         "distance to marine growth centroid from node point in lower portion of each element"    m
+typedef   ^                            ^                             ReKi           h_cmg_u                  {:}        -        -         "distance to marine growth centroid from node point in upper portion of each element"    m
+typedef   ^                            ^                             ReKi           I_lmg_l                  {:}        -        -         "axial moment of inertia of marine growth in lower portion of each element"    kg-m^2
+typedef   ^                            ^                             ReKi           I_lmg_u                  {:}        -        -         "axial moment of inertia of marine growth in upper portion of each element"    kg-m^2
+typedef   ^                            ^                             ReKi           I_rmg_l                  {:}        -        -         "radial moment of inertia of marine growth in lower portion of each element"    kg-m^2
+typedef   ^                            ^                             ReKi           I_rmg_u                  {:}        -        -         "radial moment of inertia of flooded ballast in upper portion of each element"    kg-m^2
+typedef   ^                            ^                             ReKi           Cfl_fb                   {:}        -        -         "axial force constant due to flooded ballast, for each element"    N
+typedef   ^                            ^                             ReKi           Cfr_fb                   {:}        -        -         "radial force constant due to flooded ballast, for each element"    N
+typedef   ^                            ^                             ReKi           CM0_fb                   {:}        -        -         "moment constant due to flooded ballast, for each element about lower node"    Nm
+typedef   ^                            ^                             ReKi             MGvolume                 -          -        -         "Volume of marine growth material for this member/element"    m^3
+typedef   ^                            ^                             ReKi             MDivSize                 -          -        -         "User-requested final element length (actual length may vary from this request)"   m
+typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         "Coefs model for member: 1 = simple, 2 =depth, 3 = member-based "    -
+typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         "If MCoefMod=3, then this is the index for the member's coefs in the master Member Coefs Table"    -
+typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         "If this member is part of a fill group, this is the index into the master fill group table, if not = -1"    -
+typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         "Z-location of the filled free-surface"    m
+typedef   ^                            ^                             ReKi             FillDens                 -          -        -         "Filled fluid density"    kg/m^3
+typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Is this element/member modeled with potential flow theory T/F"    -
+typedef   ^                            ^                             LOGICAL        Flipped                    -          -        -         "Was the member flipped in a reordering event?  Need to know this to get the correct normal vector to the ends" -
+#
+typedef   ^                            Morison_MemberLoads           ReKi                     F_D                           {:}{:}         -         -         "Member-based (side-effects) Nodal viscous drag loads at time t"   -
+typedef   ^                            ^                             ReKi                     F_I                           {:}{:}         -         -         "Member-based (side-effects) Nodal inertial loads at time t"   -
+typedef   ^                            ^                             ReKi                     F_A                           {:}{:}         -         -         "Member-based (side-effects) Nodal added mass loads at time t"   -
+typedef   ^                            ^                             ReKi                     F_B                           {:}{:}         -         -         "Member-based (side-effects) Nodal buoyancy loads"   -
+typedef   ^                            ^                             ReKi                     F_BF                          {:}{:}         -         -         "Member-based (side-effects) Nodal flooded ballast weight/buoyancy loads"   -
+typedef   ^                            ^                             ReKi                     F_If                          {:}{:}         -         -         "Member-based (side-effects) Nodal flooded ballast inertia loads"   -
+typedef   ^                            ^                             ReKi                     F_WMG                         {:}{:}         -         -         "Member-based (side-effects) Nodal marine growth weight loads"   -
+typedef   ^                            ^                             ReKi                     F_IMG                         {:}{:}         -         -         "Member-based (side-effects) Nodal marine growth inertia loads"   -
+typedef   ^                            ^                             ReKi                     FV                            {:}{:}         -         -         "Fluid velocity at line element node at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     FA                            {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads at time t, which may not correspond to the WaveTime array of times"   -
+#
+typedef   ^                            Morison_CoefMembers           INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
+typedef   ^                            ^                             ReKi             MemberCd1                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCd2                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCdMG1              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCdMG2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCa1                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCa2                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCaMG1              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCaMG2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCp1                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCp2                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCpMG1              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCpMG2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCd1              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCd2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCdMG1            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCdMG2            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCa1              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCa2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCaMG1            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCaMG2            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCp1              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCp2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCpMG1            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberAxCpMG2            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            Morison_MGDepthsType          ReKi             MGDpth                   -          -        -         "Marine growth depth location for these properties" m
+typedef   ^                            ^                             ReKi             MGThck                   -          -        -         "Marine growth thickness"    m
+typedef   ^                            ^                             ReKi             MGDens                   -          -        -         "Marine growth density"    kg/m^3
+typedef   ^                            Morison_MOutput               INTEGER          MemberID                 -          -        -         "Member ID for requested output"    -
+typedef   ^                            ^                             INTEGER          NOutLoc                  -          -        -         "The number of requested output locations"    -
+typedef   ^                            ^                             ReKi             NodeLocs                 {:}        -        -         "Normalized locations along user-specified member for the outputs"    -
+typedef   ^                            ^                             INTEGER          MemberIDIndx             -          -        -         "Index for member in the master list"    -
+typedef   ^                            ^                             INTEGER          MeshIndx1                  {:}        -        -         "Index of node in Mesh for the start of the member element"    -
+typedef   ^                            ^                             INTEGER          MeshIndx2                  {:}        -        -         "Index of node in Mesh for the end of the member element"    -
+typedef   ^                            ^                             INTEGER          MemberIndx1                  {:}        -        -         "Index of Member nodes for the start of the member element"    -
+typedef   ^                            ^                             INTEGER          MemberIndx2                  {:}        -        -         "Index of Member nodes for the end of the member element"    -
+typedef   ^                            ^                             ReKi             s                        {:}        -        -         "Linear interpolation factor between node1 and node2 for the output location"    -
+typedef   ^                            Morison_JOutput               INTEGER          JointID                  -          -        -         "Joint ID for the requested output"    -
+typedef   ^                            ^                             INTEGER          JointIDIndx              -          -        -         "Joint index in the master list"    -
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
-typedef   Morison/Morison              InitInputType                 ReKi                     Gravity                          -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NNodes                           -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  TotalPossibleSuperMembers        -          -        -         ""    -
-typedef   ^                            ^                             Morison_JointType        InpJoints                        {:}        -        -         ""    -
-typedef   ^                            ^                             Morison_NodeType         Nodes                            {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NElements                        -          -        -         ""    -
-typedef   ^                            ^                             Morison_MemberType       Elements                         {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NAxCoefs                          -          -        -         ""    -
-typedef   ^                            ^                             Morison_AxialCoefType    AxialCoefs                       {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NPropSets                        -          -        -         ""    -
-typedef   ^                            ^                             Morison_MemberPropType   MPropSets                        {:}        -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplCd                          -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplCdMG                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplCa                          -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplCaMG                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplCp                          -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplCpMG                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplAxCa                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplAxCaMG                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplAxCp                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     SimplAxCpMG                      -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         ""    -
+typedef   ^                            InitInputType                 ReKi                     Gravity                          -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
+typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
+typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
+typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
+typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
+typedef   ^                            ^                             INTEGER                  NNodes                           -          -        -         "Total number of nodes in the final software model"    -
+typedef   ^                            ^                             Morison_JointType        InpJoints                        {:}        -        -         "Array of user-specified joints"    -
+typedef   ^                            ^                             Morison_NodeType         Nodes                            {:}        -        -         "Array of simulation node (some correspond to user-specified joints, others are created by software)"    -
+typedef   ^                            ^                             INTEGER                  NAxCoefs                         -          -        -         "Number of axial Coefs entries in input file table"    -
+typedef   ^                            ^                             Morison_AxialCoefType    AxialCoefs                       {:}        -        -         "List of axial coefs"    -
+typedef   ^                            ^                             INTEGER                  NPropSets                        -          -        -         "Number of member property sets"    -
+typedef   ^                            ^                             Morison_MemberPropType   MPropSets                        {:}        -        -         "List of Member property sets"    -
+typedef   ^                            ^                             ReKi                     SimplCd                          -          -        -         "Simple model drag coef"    -
+typedef   ^                            ^                             ReKi                     SimplCdMG                        -          -        -         "Simple model drag coef for marine growth"    -
+typedef   ^                            ^                             ReKi                     SimplCa                          -          -        -         "Simple model Ca"    -
+typedef   ^                            ^                             ReKi                     SimplCaMG                        -          -        -         "Simple model Ca for marine growth"    -
+typedef   ^                            ^                             ReKi                     SimplCp                          -          -        -         "Simple model Cp"    -
+typedef   ^                            ^                             ReKi                     SimplCpMG                        -          -        -         "Simple model Cp for marine growth"    -
+typedef   ^                            ^                             ReKi                     SimplAxCd                        -          -        -         "Simple model Axial Cd"    -
+typedef   ^                            ^                             ReKi                     SimplAxCdMG                      -          -        -         "Simple model Axial Cd for marine growth"    -
+typedef   ^                            ^                             ReKi                     SimplAxCa                        -          -        -         "Simple model Axial Ca"    -
+typedef   ^                            ^                             ReKi                     SimplAxCaMG                      -          -        -         "Simple model Axial Ca for marine growth"    -
+typedef   ^                            ^                             ReKi                     SimplAxCp                        -          -        -         "Simple model Axial Cp"    -
+typedef   ^                            ^                             ReKi                     SimplAxCpMG                      -          -        -         "Simple model Axial Cp for marine growth"    -
+typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         "" -
 typedef   ^                            ^                             Morison_CoefDpths        CoefDpths                        {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NCoefMembers                     -          -        -         ""    -
 typedef   ^                            ^                             Morison_CoefMembers      CoefMembers                      {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NMembers                         -          -        -         ""    -
-typedef   ^                            ^                             Morison_MemberInputType  InpMembers                       {:}        -        -         ""    -
+typedef   ^                            ^                             INTEGER                  NMembers                       -          -        -         "Number of user-specified members in the input file"    -
+typedef   ^                            ^                             Morison_MemberInputType  InpMembers                       {:}        -        -         "Array of user-specified members"    -
 typedef   ^                            ^                             INTEGER                  NFillGroups                      -          -        -         ""    -
 typedef   ^                            ^                             Morison_FilledGroupType  FilledGroups                     {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NMGDepths                        -          -        -         ""    -
@@ -241,11 +260,10 @@ typedef   ^                            ^                             INTEGER    
 #
 # Define outputs from the initialization routine here:
 #
-typedef   ^                            InitOutputType                MeshType                 DistribMesh                      -          -        -         ""  -
-typedef   ^                            ^                             MeshType                 LumpedMesh                       -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     Morison_Rad                      {:}         -        -         "radius of node (for FAST visualization)" (m)
-typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputHdr                   {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                   {:}        -        -         ""    -
+#typedef   ^                            InitOutputType                MeshType                 Mesh                              -          -        -         "Unused?"    -
+#typedef   ^                            ^                             SiKi                     Morison_Rad                      {:}         -        -         "radius of node (for FAST visualization)" (m)
+typedef   ^                            InitOutputType                CHARACTER(ChanLen)        WriteOutputHdr                   {:}        -        -         "User-requested Output channel names"    -
+typedef   ^                            ^                             CHARACTER(ChanLen)        WriteOutputUnt                   {:}        -        -         ""    -
 #
 #
 # ..... States ....................................................................................................................
@@ -256,7 +274,7 @@ typedef   ^                            ContinuousStateType           SiKi       
 #
 # Define discrete (nondifferentiable) states here:
 #
-typedef   ^                            DiscreteStateType             SiKi                     DummyDiscState           -          -         -         ""        -
+typedef   ^                            DiscreteStateType             SiKi                     DummyDiscState           -          -         -         "Remove this variable if you have discrete states"        -
 #
 #
 # Define constraint states here:
@@ -270,25 +288,27 @@ typedef   ^                            OtherStateType                IntKi      
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^                            MiscVarType                   ReKi                     D_F_D                           {:}{:}         -         -         "Distributed viscous drag loads"   -
-typedef   ^                            ^                             ReKi                     D_F_I                           {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     D_F_B                           {:}{:}         -         -         "Distributed bounancy loads"   -
-#typedef   ^                            ^                             ReKi                     D_F_DP                          {:}{:}         -         -         "Distributed dynamic pressure loads"   -
-typedef   ^                            ^                             ReKi                     D_F_AM                          {:}{:}         -         -         "Distributed total added mass loads"   -
-typedef   ^                            ^                             ReKi                     D_F_AM_M                        {:}{:}         -         -         "Distributed member added mass loads"   -
-typedef   ^                            ^                             ReKi                     D_F_AM_MG                       {:}{:}         -         -         "Distributed marine growth added mass (weight) loads"   -
-typedef   ^                            ^                             ReKi                     D_F_AM_F                        {:}{:}         -         -         "Distributed added mass loads due to flooding/filled fluid"   -
-typedef   ^                            ^                             ReKi                     D_FV                            {:}{:}         -         -         "Fluid velocity at line element node"   -
-typedef   ^                            ^                             ReKi                     D_FA                            {:}{:}         -         -         "Fluid acceleration at line element node"   -
-typedef   ^                            ^                             ReKi                     D_FDynP                         {:}            -         -         "Fluid dynamic pressure at line element node"   -
-typedef   ^                            ^                             ReKi                     L_F_B                           {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     L_F_D                           {:}{:}         -         -         "Lumped viscous drag loads"   -
-typedef   ^                            ^                             ReKi                     L_F_I                           {:}{:}         -         -         "Lumped intertia loads"   -
-typedef   ^                            ^                             ReKi                     L_F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads"   -
-typedef   ^                            ^                             ReKi                     L_F_AM                          {:}{:}         -         -         "Lumped added mass loads"   -
-typedef   ^                            ^                             ReKi                     L_FV                            {:}{:}         -         -         "Fluid velocity at point element node"   -
-typedef   ^                            ^                             ReKi                     L_FA                            {:}{:}         -         -         "Fluid acceleration at point element node"   -
-typedef   ^                            ^                             ReKi                     L_FDynP                         {:}            -         -         "Fluid dynamic pressure at point element node"   -
+#typedef   ^                            MiscVarType                   ReKi                     F_D                           {:}{:}         -         -         "Member-based (side-effects) Nodal viscous drag loads at time t"   -
+#typedef   ^                            ^                             ReKi                     F_I                           {:}{:}         -         -         "Member-based (side-effects) Nodal inertial loads at time t"   -
+#typedef   ^                            ^                             ReKi                     F_A                           {:}{:}         -         -         "Member-based (side-effects) Nodal added mass loads at time t"   -
+#typedef   ^                            ^                             ReKi                     F_B                           {:}{:}         -         -         "Member-based (side-effects) Nodal buoyancy loads"   -
+#typedef   ^                            ^                             ReKi                     F_BF                          {:}{:}         -         -         "Member-based (side-effects) Nodal flooded ballast weight/buoyancy loads"   -
+#typedef   ^                            ^                             ReKi                     F_If                          {:}{:}         -         -         "Member-based (side-effects) Nodal flooded ballast inertia loads"   -
+#typedef   ^                            ^                             ReKi                     F_WMG                          {:}{:}         -         -         "Member-based (side-effects) Nodal marine growth weight loads"   -
+#typedef   ^                            ^                             ReKi                     F_IMG                         {:}{:}         -         -         "Member-based (side-effects) Nodal marine growth inertia loads"   -
+#typedef   ^                            ^                             ReKi                     F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            MiscVarType                   ReKi                     FV                            {:}{:}         -         -         "Fluid velocity at line element node at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     FA                            {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     FDynP                         {:}            -         -         "Fluid dynamic pressure at line element node at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     vrel                          {:}{:}         -         -         "velocity of structural node relative to the water" m/s^2
+typedef   ^                            ^                             INTEGER                  nodeInWater                    {:}           -         -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
+typedef   ^                            ^                             Morison_MemberLoads      memberLoads                    {:}           -         -          "Array (NMembers long) of member-based side-effects load contributions" -
+typedef   ^                            ^                             ReKi                     F_B_End                       {:}{:}		   -         -         ""        -
+typedef   ^                            ^                             ReKi                     F_D_End                       {:}{:}         -         -         "Lumped viscous drag loads at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     F_I_End                       {:}{:}         -         -         "Lumped intertia loads at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     F_IMG_End                     {:}{:}         -         -         "Joint marine growth intertia loads at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     F_A_End                      {:}{:}         -         -         "Lumped added mass loads at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}     -         -         ""        -
 typedef   ^                            ^                             INTEGER                  LastIndWave                     -              -         -         "Last time index used in the wave kinematics arrays"   -
 
 # ..... Parameters ................................................................................................................
@@ -296,37 +316,26 @@ typedef   ^                            ^                             INTEGER    
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef   ^                            ParameterType                 DbKi                     DT                              -          -         -         "Time step for continuous state integration & discrete state update"  (sec)
-typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     Gravity                          -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
+typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
+typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
+typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
+typedef   ^                            ^                             INTEGER                  NMembers                        -          -         -         "number of members"        -
+typedef   ^                            ^                             Morison_MemberType       Members                         {:}             -        -         "Array of Morison members used during simulation"    -
 typedef   ^                            ^                             INTEGER                  NNodes                          -          -         -         ""        -
-typedef   ^                            ^                             Morison_NodeType         Nodes                           {:}        -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_F_I                           {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_F_DP                          {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_dragConst                     {:}        -         -         ""        -
-typedef   ^                            ^                             ReKi                     L_An                            {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     L_F_B                           {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     L_F_I                           {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     L_F_DP                          {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     L_F_BF                          {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     L_AM_M                          {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     L_dragConst                     {:}        -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NDistribMarkers                 -          -         -         ""        -
-#typedef   ^                            ^                             Morison_NodeType        DistribMarkers                  {:}        -         -         ""        -
-typedef   ^                            ^                             INTEGER                  distribToNodeIndx               {:}        -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NLumpedMarkers                  -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  lumpedToNodeIndx                {:}        -         -         ""        -
+typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
+typedef   ^                            ^                             ReKi                     I_MG_End                      {:}{:}{:}  -         -         "Inertial matrix associated with marine growth mass at joint"        -
+typedef   ^                            ^                             ReKi                     An_End                            {:}{:}     -         -         "directional area vector of each joint"        m^2
+typedef   ^                            ^                             ReKi                     DragConst_End                     {:}        -         -         ""        -
+typedef   ^                            ^                             ReKi                     F_WMG_End                      {:}{:}         -         -         "Joint marine growth weight loads, constant for all t"   N
+typedef   ^                            ^                             ReKi                     DP_Const_End                   {:}{:}         -         -         "Constant part of Joint dynamic pressure term"   N
+typedef   ^                            ^                             ReKi                     Mass_MG_End                    {:}         -         -         "Joint marine growth mass"   kg
+typedef   ^                            ^                             ReKi                     AM_End                         {:}{:}{:}         -         -         "3x3 Joint added mass matrix, constant for all t"   N
 typedef   ^                            ^                             SiKi                     WaveVel                         {:}{:}{:}  -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveAcc                         {:}{:}{:}  -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveDynP                        {:}{:}     -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveTime                        {:}        -         -         ""        -
-typedef   ^                            ^                             INTEGER                  elementWaterState               {:}{:}     -         -         "State indicating if the element a node is attached to at the given time step is in the water [0], above the water [1], or in the seabed [2]" -
-typedef   ^                            ^                             INTEGER                  elementFillState                {:}        -         -         "State indicating if the element a node is attached to is in the filled fluid [0], above the fluid [1], or in the seabed [2]" -
+typedef   ^                            ^                             SiKi                     WaveTime                        {:}        -         -         "Times for which the wave kinematics are pre-computed"  s
 typedef   ^                            ^                             INTEGER                  nodeInWater                     {:}{:}     -        -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
-typedef   ^                            ^                             ReKi                     D_F_B                           {:}{:}     -         -         "Distributed buoyancy loads"   -
-typedef   ^                            ^                             ReKi                     D_F_BF                          {:}{:}     -         -         "Distributed filled buoyancy loads"   -
-typedef   ^                            ^                             ReKi                     D_F_MG                          {:}{:}     -         -         "Distributed marine growth loads"   -
-typedef   ^                            ^                             ReKi                     D_AM_M                          {:}{:}{:}  -         -         "Distributed member added mass matrix"   -
-typedef   ^                            ^                             ReKi                     D_AM_MG                         {:}  -         -         "Distributed marine growth added mass matrix (weight)"   -
-typedef   ^                            ^                             ReKi                     D_AM_F                          {:}  -         -         "Distributed added mass matrix due to flooding/filled fluid"   -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NMOutputs                       -          -         -         ""        -
 typedef   ^                            ^                             Morison_MOutput          MOutLst                         {:}        -         -         ""        -
@@ -345,12 +354,10 @@ typedef   ^                            ^                             CHARACTER(C
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
-typedef   ^                            InputType                     MeshType                 DistribMesh                     -         -         -         "Distributed Loads Meshed input data" -
-typedef   ^                            ^                             MeshType                 LumpedMesh                      -         -         -         "Lumped Loads Meshed input data"      -
+typedef   ^                            InputType                     MeshType                 Mesh                     -         -         -         "Kinematics of each node input mesh" -
 #
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef   ^                            OutputType                   MeshType                 DistribMesh                     -         -         -         "Distributed Loads Meshed output data" -
-typedef   ^                            ^                            MeshType                 LumpedMesh                      -         -         -         "Lumped Loads Meshed output data"      -
+typedef   ^                            OutputType                   MeshType                 Mesh                     -         -         -         "Loads on each node output mesh" -
 typedef   ^                            ^                            ReKi                     WriteOutput                     {:}       -         -         ""  -

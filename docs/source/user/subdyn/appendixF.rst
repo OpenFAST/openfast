@@ -12,8 +12,25 @@ notice, but for more information, refer to the *changelog.txt* text file
 within the official archive and the GitHub log.
 
 
+
+V1.05.00 (October 2021)
+-----------------------
+
+- Version 1.05.00 integrates with OpenFAST version 3.1+
+
+- SubDyn driver supports loads at given nodes
+  
+- Outputs of Craig-Bampton/Guyan and FEM Modes to JSON format for visualization
+
+- Streamlined yaml file output, with rigid body mass matrix at different points
+
+- Bug fix for rigid assemblies.
+
+- Bug fix for mass reported in summary file
+
+
 V1.04.00 (September 2020)
-------------------------------
+-------------------------
 
 - Version 1.04.00 integrates with OpenFAST version 2.4
 
@@ -30,6 +47,8 @@ V1.04.00 (September 2020)
 - Coupling sith SoilDyn
 
 - Inclusion of soil-structure interaction (SSI) via flexible degrees of fixity at the restrained nodes and a new input file that allows for 6x6 stiffness and mass matrices that simulate boundary conditions at those nodes.
+
+- Controllable pretension cable elements
 
 
 V1.03.00a-rrd (September 2017)

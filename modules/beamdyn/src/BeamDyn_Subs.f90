@@ -973,7 +973,11 @@ SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
 
    INTEGER(IntKi)                 :: ErrStat2      ! Temporary Error status
    CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Temporary Error message
+   character(*), parameter        :: RoutineName = 'BD_Interp_Pos_CRV'
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
    ! find element in which eta resides 
    eta_right = 0._BDKi
    found = 0
@@ -993,37 +997,46 @@ SUBROUTINE BD_Interp_Pos_CRV(p, eta, POS, CRV, ErrStat, ErrMsg)
    eta_local(1) = 2._BDKi * (eta - eta_left)/p%member_eta(element) - 1._BDKi
 
    call AllocAry(gll, p%nodes_per_elem, "local GLL nodes",ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AllocAry(shp, p%nodes_per_elem, 1,"local shape function",ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AllocAry(shpder, p%nodes_per_elem, 1,"local shape deriv function",ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   call BD_GenerateGLL(p%nodes_per_elem,gll,ErrStat2,ErrMsg2)
-   call bd_diffmtc(p%nodes_per_elem, gll, eta_local, 1, shp, shpder) ! evaluate shp and shpder at single point
+   if (ErrStat < AbortErrLev) then
+      call BD_GenerateGLL(p%nodes_per_elem,gll,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
+      call bd_diffmtc(p%nodes_per_elem, gll, eta_local, 1, shp, shpder) ! evaluate shp and shpder at single point
 
-   pos = 0._BDki
-   crv = 0._BDki
-   do i = 1, p%nodes_per_elem
-      do j = 1, 3
-         pos(j) = pos(j) + p%uuN0(j,  i,element)  *shp(i,1)
-         CRV(j) = CRV(j) + p%uuN0(j+3,i,element)*shp(i,1)
-      enddo 
-   enddo
+      pos = 0._BDki
+      crv = 0._BDki
+      do i = 1, p%nodes_per_elem
+         do j = 1, 3
+            pos(j) = pos(j) + p%uuN0(j,  i,element)  *shp(i,1)
+            CRV(j) = CRV(j) + p%uuN0(j+3,i,element)*shp(i,1)
+         enddo 
+      enddo
 
-   deallocate(gll)
-   deallocate(shp)
-   deallocate(shpder)
+   end if
+   
+   if (allocated(gll)) deallocate(gll)
+   if (allocated(shp)) deallocate(shp)
+   if (allocated(shpder)) deallocate(shpder)
 
 END SUBROUTINE BD_Interp_Pos_CRV
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial CRV parameters
 !! given geometry information
-SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
+SUBROUTINE BD_ComputeIniNodalCrv(e3, phi, cc, ErrStat, ErrMsg)
 
-   REAL(BDKi),     INTENT(IN   )  :: e1(:)         !< Tangent unit vector
+   REAL(BDKi),     INTENT(IN   )  :: e3(3)         !< Tangent unit vector
    REAL(BDKi),     INTENT(IN   )  :: phi           !< Initial twist angle, in degrees
    REAL(BDKi),     INTENT(  OUT)  :: cc(:)         !< Initial Crv Parameter
    INTEGER(IntKi), INTENT(  OUT)  :: ErrStat       !< Error status of the operation
    CHARACTER(*),   INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
+   REAL(BDKi)                     :: e1(3)         !< Unit normal vector
    REAL(BDKi)                     :: e2(3)         !< Unit normal vector
    REAL(BDKi)                     :: Rr(3,3)       !< Initial rotation matrix
    REAL(BDKi)                     :: PhiRad        !< Phi in radians
@@ -1033,22 +1046,49 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Temporary Error message
    CHARACTER(*), PARAMETER        :: RoutineName = 'BD_ComputeIniNodalCrv'
 
+   INTEGER(IntKi)                 :: i,j
+   REAL(BDKi)                     :: rtwist(3,3),q0,q1,q2,q3,identity(3,3),qt(3,3)
+
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    PhiRad = phi*D2R_D  ! convert to radians
 
-      ! Note that e1 corresponds with the Z-axis direction in our formulation.  For Beam theory, this would be the x-axis.
-   Rr(:,3)  =  e1(:)
+   ! e3 defines tangent
+   Rr(:,3) = e3(:)
+ 
+   ! define e1 initially as normal to e3 with zero component in the 2 direction 
+   e1(3) = -e3(1) / sqrt( e3(1)**2 + e3(3)**2 )
+   e1(1) = sqrt( 1.0_BDKi - e1(3)**2 )
+   e1(2) = 0.
 
-   e2(3)    = -(e1(1)*COS(PhiRad) + e1(2)*SIN(PhiRad))/e1(3)
-   Delta    = SQRT(1.0_BDKi + e2(3)*e2(3))
-   e2(1)    = COS(PhiRad)
-   e2(2)    = SIN(PhiRad)
-   e2       = e2 / Delta
-   Rr(:,1)  = e2
-   Rr(:,2)  = Cross_Product(e1,e2)
+   ! e2 comes from cross product e3 x e1
+   Rr(:,2) = Cross_Product(e3,e1)
+   Rr(:,1) = e1(:)
+ 
+   identity = 0.
+   do i = 1,3
+     identity(i,i) = 1.0_BDKi
+   enddo
+ 
+   q0=cos(phirad/2.0_BDKi) 
+   q1=e3(1) * sin(phirad/2.0_BDKi) 
+   q2=e3(2) * sin(phirad/2.0_BDKi) 
+   q3=e3(3) * sin(phirad/2.0_BDKi) 
+
+   qt = 0.0_BDKi
+   qt(1,2) = -q3
+   qt(1,3) =  q2
+   qt(2,1) =  q3
+   qt(2,3) = -q1
+   qt(3,1) = -q2
+   qt(3,2) =  q1
+
+   ! Rotation matrix for rotating Rr Phi degress about e3
+   Rtwist = identity + 2.0_BDKi*q0*qt + 2.0_BDKi*matmul(qt,qt)
+
+   Rr = matmul(Rtwist,Rr)
 
    CALL BD_CrvExtractCrv(Rr, cc, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

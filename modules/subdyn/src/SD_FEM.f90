@@ -23,7 +23,7 @@ MODULE SD_FEM
   IMPLICIT NONE
 
  
-  INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 10                    ! Maximum number of members at one joint
+  INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 20                    ! Maximum number of members at one joint
   INTEGER(IntKi),   PARAMETER  :: MaxOutChs       = 2000                  ! Max number of Output Channels to be read in
   INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
    
@@ -60,33 +60,33 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
 
   ! Types of Boundary Conditions
-  INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11
-  INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12
+  INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11 ! Fixed BC
+  INTEGER(IntKi),   PARAMETER  :: idBC_Internal = 12 ! Free BC
   INTEGER(IntKi),   PARAMETER  :: idBC_Leader   = 13 ! TODO, and maybe "BC" not appropriate here
 
   ! Types of Static Improvement Methods
   INTEGER(IntKi),   PARAMETER  :: idSIM_None     = 0
   INTEGER(IntKi),   PARAMETER  :: idSIM_Full     = 1
-  INTEGER(IntKi),   PARAMETER  :: idSIM_GravOnly = 2 
-  INTEGER(IntKi)               :: idSIM_Valid(3)  = (/idSIM_None, idSIM_Full, idSIM_GravOnly /)
+  INTEGER(IntKi)               :: idSIM_Valid(2)  = (/idSIM_None, idSIM_Full/)
 
   ! Types of Guyan Damping
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Rayleigh = 1
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
-  INTEGER(IntKi)               :: idGuyanDamp_Valid(3)  = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
+  INTEGER(IntKi)               :: idGuyanDamp_Valid(3) = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
+
+  ! Output Formats
+  INTEGER(IntKi),   PARAMETER  :: idOutputFormatNone  = 0
+  INTEGER(IntKi),   PARAMETER  :: idOutputFormatJSON  = 1
+
 
   ! Implementation Flags
   LOGICAL, PARAMETER :: DEV_VERSION    = .false.
   LOGICAL, PARAMETER :: BC_Before_CB   = .true.
   LOGICAL, PARAMETER :: ANALYTICAL_LIN = .true.
-
-  INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
-     MODULE PROCEDURE FINDLOCI_ReKi
-     MODULE PROCEDURE FINDLOCI_IntKi
-  END INTERFACE
+  LOGICAL, PARAMETER :: GUYAN_RIGID_FLOATING = .true.
 
 
 CONTAINS
@@ -116,8 +116,11 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
       DO J = 1, Init%NElem                          !This should be vectorized                                                                      
          IF ( ( NINT(Init%Nodes(I, 1))==p%Elems(J, 2)) .OR. (NINT(Init%Nodes(I, 1))==p%Elems(J, 3) ) ) THEN   !If i-th nodeID matches 1st node or 2nd of j-th element                                                                   
             k = k + 1                                                                                                     
-            if (k > MaxMemJnt+1) then 
-               CALL SetErrStat(ErrID_Fatal, 'Maximum number of members reached on node'//trim(Num2LStr(NINT(Init%Nodes(I,1)))), ErrStat, ErrMsg, 'NodeCon');
+            if (k+1 > MaxMemJnt+1) then 
+               CALL SetErrStat(ErrID_Fatal, 'Maximum number of members reached on node number '//trim(Num2LStr(NINT(Init%Nodes(I,1))))//&
+                  &' (index in Joint list, not JointID)). The maximum number of member per node is hardcoded to MaxMemJnt='//trim(num2lstr(MaxMemJnt))//&
+                  &'. Recompile the code by changing `MaxMemJnt` in SD_FEM.f90.', ErrStat, ErrMsg, 'NodeCon');
+               return
             endif
             Init%NodesConnE(I, k + 1) = p%Elems(J, 1)                                                                  
          ENDIF                                                                                                            
@@ -277,7 +280,7 @@ END SUBROUTINE RigidTrnsf
 !------------------------------------------------------------------------------------------------------
 ! --- Main routines, more or less listed in order in which they are called
 !------------------------------------------------------------------------------------------------------
-!>
+!> Reindexing 
 ! - Removes the notion of "ID" and use Index instead
 ! - Creates Nodes (use indices instead of ID), similar to Joints array
 ! - Creates Elems (use indices instead of ID)  similar to Members array
@@ -289,7 +292,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variable
-   INTEGER                       :: I, n, iMem, iNode, JointID   
+   INTEGER                       :: I, n, iMem, iNode, JointID, mID, jType, iJoint, iInterf
    INTEGER(IntKi)                :: mType !< Member Type
    CHARACTER(1255)               :: sType !< String for element type
    INTEGER(IntKi)                :: ErrStat2
@@ -298,15 +301,17 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    ErrMsg  = ""
 
    ! TODO See if Elems is actually used elsewhere
-
-   CALL AllocAry(p%Elems,         Init%NElem,    MembersCol, 'p%Elems',         ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(Init%Nodes,      p%nNodes,    JointsCol,  'Init%Nodes',      ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(p%Elems         ,Init%NElem,MembersCol        ,'p%Elems'         ,ErrStat2,ErrMsg2); if(Failed())return
+   CALL AllocAry(Init%Nodes      ,p%nNodes  ,JointsCol         ,'Init%Nodes'      ,ErrStat2,ErrMsg2); if(Failed())return
+   CALL AllocAry(p%NodeID2JointID,p%nNodes                     ,'p%NodeID2JointID',ErrStat2,ErrMsg2); if(Failed())return
 
    ! --- Initialize Nodes
-   Init%Nodes = -999999 ! Init to unphysical values
+   Init%Nodes       = -999999 ! Init to unphysical values
+   p%NodeID2JointID = -999999
    do I = 1,Init%NJoints
       Init%Nodes(I, 1) = I                                     ! JointID replaced by index I
       Init%Nodes(I, 2:JointsCol) = Init%Joints(I, 2:JointsCol) ! All the rest is copied
+      p%NodeID2JointID(I) = Init%Joints(I,1)                   ! JointID
    enddo
 
    ! --- Re-Initialize Reactions, pointing to index instead of JointID
@@ -339,21 +344,36 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
       endif
    enddo
 
-
    ! --- Initialize Elems, starting with each member as an element (we'll take NDiv into account later)
    p%Elems = 0
    ! --- Replacing "MemberID"  "JointID", and "PropSetID" by simple index in this tables
    DO iMem = 1, p%NMembers
+      mID = Init%Members(iMem, 1)
       ! Column 1  : member index (instead of MemberID)
       p%Elems(iMem,     1)  = iMem
       mType =  Init%Members(iMem, iMType) ! 
       ! Column 2-3: Joint index (instead of JointIDs)
       p%Elems(iMem,     1)  = iMem  ! NOTE: element/member number (not MemberID)
       do iNode=2,3
-         p%Elems(iMem,iNode) = FINDLOCI(Init%Joints(:,1), Init%Members(iMem, iNode) ) 
+         JointID = Init%Members(iMem, iNode)
+         iJoint = FINDLOCI(Init%Joints(:,1), JointID ) 
+         p%Elems(iMem,iNode) = iJoint
          if (p%Elems(iMem,iNode)<=0) then
-            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(Init%Members(iMem, iNode)))//' which is not in the joint list!')
+            CALL Fatal(' MemberID '//TRIM(Num2LStr(mID))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(JointID))//' which is not in the joint list!')
             return
+         endif
+         if (mType==idMemberRigid) then
+            ! Check that rigid link are not connected to ball/pin/universal joints
+            jType = int(Init%Nodes(iJoint, iJointType))
+            if (jType /= idJointCantilever) then
+               CALL Fatal('All joints of a rigid link should be cantilever (not ball/pin/universal). The problematic member is MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is not a cantilever joint).')
+               return
+            endif
+            ! Check that rigid links are not connected to the interface
+            iInterf = FINDLOCI(Init%Joints(:,1), JointID )
+            if (iInterf>=1) then
+               CALL WrScr('[WARNING] There might be a bug when rigid links are connected to the interface nodes (mostly if cables are involved). The problematic member is MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is in an interface joint).')
+            endif
          endif
       enddo
       ! Column 4-5: PropIndex 1-2 (instead of PropSetID1&2)
@@ -405,6 +425,7 @@ CONTAINS
 END SUBROUTINE SD_ReIndex_CreateNodesAndElems
 
 !----------------------------------------------------------------------------
+!> Divide (split) members into nDIV element. Only beams are split.
 SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    TYPE(SD_InitType),            INTENT(INOUT)  ::Init
    TYPE(SD_ParameterType),       INTENT(INOUT)  ::p
@@ -457,6 +478,30 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    ! NOTE: need NNode and NElem 
    CALL SD_ReIndex_CreateNodesAndElems(Init, p, ErrStat2, ErrMsg2);  if(Failed()) return
    
+   ! --- Perform some sanity checks (irrespectively of NDiv) Would be better to do that before Reindexing...
+    do I = 1, p%NMembers !the first p%NMembers rows of p%Elems contain the element information
+       ! Member data
+       Node1 = p%Elems(I, 2)
+       Node2 = p%Elems(I, 3)
+       Prop1 = p%Elems(I, iMProp  )
+       Prop2 = p%Elems(I, iMProp+1)
+       eType = p%Elems(I, iMType  )
+
+       if ( Node1==Node2 ) THEN
+          CALL Fatal(' Same starting and ending node in the member. (See member at position '//trim(num2lstr(I))//' in member list)')
+          return
+       endif
+
+       if (eType==idMemberBeam) then
+          if  ( ( .not. EqualRealNos(Init%PropSetsB(Prop1, 2),Init%PropSetsB(Prop2, 2) ) ) &
+           .or. ( .not. EqualRealNos(Init%PropSetsB(Prop1, 3),Init%PropSetsB(Prop2, 3) ) ) &
+           .or. ( .not. EqualRealNos(Init%PropSetsB(Prop1, 4),Init%PropSetsB(Prop2, 4) ) ) ) then
+             call Fatal(' Material E, G and rho in a member must be the same (See member at position '//trim(num2lstr(I))//' in member list)')
+             return
+          endif
+       endif ! is beam
+    enddo
+
   
     Init%MemberNodes = 0
     ! --- Setting up MemberNodes (And Elems, Props, Nodes if divisions)
@@ -493,11 +538,6 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           Prop2 = TempMembers(I, iMProp+1)
           eType = TempMembers(I, iMType  )
           
-          IF ( Node1==Node2 ) THEN
-             CALL Fatal(' Same starting and ending node in the member.')
-             RETURN
-          ENDIF
-          
           if (eType/=idMemberBeam) then
              ! --- Cables and rigid links are not subdivided and have same prop at nodes
              ! No need to create new properties or new nodes
@@ -511,14 +551,6 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           ! --- Subdivision of beams
           Init%MemberNodes(I,           1) = Node1
           Init%MemberNodes(I, Init%NDiv+1) = Node2
-
-          IF  ( ( .not. EqualRealNos(TempProps(Prop1, 2),TempProps(Prop2, 2) ) ) &
-           .OR. ( .not. EqualRealNos(TempProps(Prop1, 3),TempProps(Prop2, 3) ) ) &
-           .OR. ( .not. EqualRealNos(TempProps(Prop1, 4),TempProps(Prop2, 4) ) ) )  THEN
-          
-             CALL Fatal(' Material E,G and rho in a member must be the same')
-             RETURN
-          ENDIF
 
           x1 = Init%Nodes(Node1, 2)
           y1 = Init%Nodes(Node1, 3)
@@ -551,8 +583,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           
           IF ( CreateNewProp ) THEN   
                ! create a new property set 
-               ! k, E, G, rho, d, t, Init
                kprop = kprop + 1
+               !                  k,  E1,                  G1,                  rho1,                d,     t,    
                CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), TempProps(Prop1, 4), d1+dd, t1+dt, TempProps)           
                kelem = kelem + 1
                CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p); if (ErrStat>ErrID_None) return;
@@ -572,8 +604,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              
              IF ( CreateNewProp ) THEN   
                   ! create a new property set 
-                  ! k, E, G, rho, d, t, Init                
                   kprop = kprop + 1
+                  !                  k,  E1,                  G1,                  rho1,                     d,          t
                   CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), Init%PropSetsB(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempProps)           
                   kelem = kelem + 1
                   CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p); if (ErrStat>ErrID_None) return;
@@ -696,6 +728,37 @@ CONTAINS
 
 END SUBROUTINE SD_Discrt
 
+
+!> Store relative vector between nodes and TP point, to later compute Guyan rigid body motion
+subroutine StoreNodesRelPos(Init, p, ErrStat, ErrMsg)
+   type(SD_InitType),      intent(in   ) :: Init
+   type(SD_ParameterType), intent(inout) :: p
+   integer(IntKi),         intent(out)   :: ErrStat     ! Error status of the operation
+   character(*),           intent(out)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   integer(Intki)       :: i
+   integer(IntKi)       :: ErrStat2
+   character(ErrMsgLen) :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! NOTE: using efficient memory order
+   call AllocAry(p%DP0, 3, size(Init%Nodes,1), 'DP0', ErrStat2, ErrMsg2); if(Failed()) return
+
+   do i = 1, size(Init%Nodes,1)
+      p%DP0(1, i) = Init%Nodes(i, 2) - Init%TP_RefPoint(1)
+      p%DP0(2, i) = Init%Nodes(i, 3) - Init%TP_RefPoint(2)
+      p%DP0(3, i) = Init%Nodes(i, 4) - Init%TP_RefPoint(3)
+   enddo
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, Errstat, ErrMsg, 'StoreNodesRelPos') 
+      failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine StoreNodesRelPos
+
+
+
 !------------------------------------------------------------------------------------------------------
 !> Set Element properties p%ElemProps, different properties are set depening on element type..
 SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
@@ -752,9 +815,9 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
 
       ! --- Properties that are specific to some elements
       if (eType==idMemberBeam) then
-         E   = Init%PropsB(P1, 2)
-         G   = Init%PropsB(P1, 3)
-         rho = Init%PropsB(P1, 4)
+         E   = Init%PropsB(P1, 2) ! TODO E2 
+         G   = Init%PropsB(P1, 3) ! TODO G2
+         rho = Init%PropsB(P1, 4) ! TODO rho2
          D1  = Init%PropsB(P1, 5)
          t1  = Init%PropsB(P1, 6)
          D2  = Init%PropsB(P2, 5)
@@ -795,6 +858,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%ShearG = G
          p%ElemProps(i)%Area   = A
          p%ElemProps(i)%Rho    = rho
+         p%ElemProps(i)%D      = (/D1, D2/)
 
       else if (eType==idMemberCable) then
          if (DEV_VERSION) then
@@ -804,6 +868,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
          p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
          p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
+         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05) ! For plotting only
 
       else if (eType==idMemberRigid) then
          if (DEV_VERSION) then
@@ -811,6 +876,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          endif
          p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
          p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
+         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05) ! For plotting only
 
       else
          ! Should not happen
@@ -884,12 +950,6 @@ SUBROUTINE DistributeDOF(Init, p, ErrStat, ErrMsg)
       iPrev = iPrev + len(p%NodesDOF(iNode))
    enddo ! iNode, loop on joints
 
-   ! --- Initialize boundary constraint vector - NOTE: Needs Reindexing first
-   CALL InitBCs(Init, p)
-      
-   ! --- Initialize interface constraint vector - NOTE: Needs Reindexing first
-   CALL InitIntFc(Init, p)
-
    ! --- Safety check
    if (any(p%ElemsDOF<0)) then
       ErrStat=ErrID_Fatal
@@ -917,57 +977,61 @@ CONTAINS
         Failed =  ErrStat >= AbortErrLev
    END FUNCTION Failed
 
-   !> Sets a list of DOF indices corresponding to the BC, and the value these DOF should have
-   !! NOTE: need p%Nodes_C to have an updated first column that uses indices and not JointIDs
-   !! Note: try to remove me and merge me with ApplyConstr, but used by "SelectNonBCConstraintsDOF" and "UnReduceVRdofs"
-   SUBROUTINE InitBCs(Init, p)
-      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(INOUT) :: p
-      INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, p%nNodes_C
-         iNode = p%Nodes_C(I,1) ! Node index
-         DO J = 1, 6
-            if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
-               p%Nodes_C(I, J+1)       = idBC_Fixed
-            else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
-               p%Nodes_C(I, J+1)       = idBC_Internal
-            else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
-               p%Nodes_C(I, J+1)       = idBC_Leader
-               print*,'BC 2 not allowed for now, node',iNode
-               STOP
-            else
-               print*,'Wrong boundary condition input for reaction node',iNode
-               STOP
-            endif
-         ENDDO
-      ENDDO
-   END SUBROUTINE InitBCs
-
-   !> Sets a list of DOF indices and the value these DOF should have
-   !! NOTE: need Init%Interf to have been reindexed so that first column uses indices and not JointIDs
-   !! TODO remove me and merge me with CraigBampton
-   SUBROUTINE InitIntFc(Init, p)
-      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-      TYPE(SD_ParameterType),INTENT(INOUT) :: p
-      INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, p%nNodes_I
-         iNode = p%Nodes_I(I,1) ! Node index
-         DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
-            if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
-               p%Nodes_I(I,J+1)          = idBC_Leader
-            elseif (p%Nodes_I(I,J+1)==1) then ! User input 0=Fixed DOF
-               p%Nodes_I(I,J+1)          = idBC_Fixed
-               print*,'Fixed boundary condition not yet supported for interface nodes, node:',iNode
-               STOP
-            else
-               print*,'Wrong boundary condition input for interface node',iNode
-               STOP
-            endif
-         ENDDO
-      ENDDO
-   END SUBROUTINE InitIntFc
-
 END SUBROUTINE DistributeDOF
+
+
+!> Checks reaction BC, adn remap 0s and 1s 
+SUBROUTINE CheckBCs(p, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),INTENT(INOUT) :: p
+   INTEGER(IntKi),        INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),          INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi) :: I, J, iNode
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   DO I = 1, p%nNodes_C
+      iNode = p%Nodes_C(I,1) ! Node index
+      DO J = 1, 6
+         if (p%Nodes_C(I,J+1)==1) then ! User input 1=Constrained/Fixed (should be eliminated)
+            p%Nodes_C(I, J+1)       = idBC_Fixed
+         else if (p%Nodes_C(I,J+1)==0) then ! User input 0=Free, fill be part of Internal DOF
+            p%Nodes_C(I, J+1)       = idBC_Internal
+         else if (p%Nodes_C(I,J+1)==2) then ! User input 2=Leader DOF
+            p%Nodes_C(I, J+1)       = idBC_Leader
+            ErrStat=ErrID_Fatal
+            ErrMsg='BC 2 not allowed for now, node '//trim(Num2LStr(iNode))
+         else
+            ErrStat=ErrID_Fatal
+            ErrMsg='Wrong boundary condition input for reaction node '//trim(Num2LStr(iNode))
+         endif
+      ENDDO
+   ENDDO
+END SUBROUTINE CheckBCs
+
+!> Check interface inputs, and remap 0s and 1s 
+SUBROUTINE CheckIntf(p, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),INTENT(INOUT) :: p
+   INTEGER(IntKi),        INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),          INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi) :: I, J, iNode
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   DO I = 1, p%nNodes_I
+      iNode = p%Nodes_I(I,1) ! Node index
+      DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
+         if     (p%Nodes_I(I,J+1)==1) then ! User input 1=Leader DOF
+            p%Nodes_I(I,J+1)          = idBC_Leader
+         elseif (p%Nodes_I(I,J+1)==0) then ! User input 0=Fixed DOF
+            p%Nodes_I(I,J+1)          = idBC_Fixed
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'Fixed boundary condition not yet supported for interface nodes, node:'//trim(Num2LStr(iNode))
+         else
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'Wrong boundary condition input for interface node'//trim(Num2LStr(iNode))
+         endif
+      ENDDO
+   ENDDO
+END SUBROUTINE CheckIntf
+
 
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector
@@ -999,11 +1063,10 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( Init%FG,p%nDOF,          'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-   CALL AllocAry( p%FG_full, p%nDOF,     'p%FG_full', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( p%FG,   p%nDOF,          'p%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
    Init%K  = 0.0_FEKi
    Init%M  = 0.0_FEKi
-   Init%FG = 0.0_FEKi
+   p%FG    = 0.0_FEKi
 
    ! loop over all elements, compute element matrices and assemble into global matrices
    DO i = 1, Init%NElem
@@ -1014,12 +1077,10 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
       ! --- Assembly in global unconstrained system
       IDOF = p%ElemsDOF(1:12, i)
-      Init%FG( IDOF )    = Init%FG( IDOF )     + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
+      p%FG     ( IDOF )  = p%FG( IDOF )   + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO
-   ! Copy FG to FG_full since FG will be reduced later
-   p%FG_full(1:p%nDOF) = Init%FG(1:p%nDOF)
       
    ! Add concentrated mass to mass matrix
    DO I = 1, Init%nCMass
@@ -1035,12 +1096,7 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
       Jxx = Init%CMass(I,3 ); Jxy = Init%CMass(I,6 ); x = Init%CMass(I,9 );
       Jyy = Init%CMass(I,4 ); Jxz = Init%CMass(I,7 ); y = Init%CMass(I,10);
       Jzz = Init%CMass(I,5 ); Jyz = Init%CMass(I,8 ); z = Init%CMass(I,11);
-      M66(1 , :)=(/ m       , 0._ReKi , 0._ReKi , 0._ReKi             ,  z*m                , -y*m                 /)
-      M66(2 , :)=(/ 0._ReKi , m       , 0._ReKi , -z*m                , 0._ReKi             ,  x*m                 /)
-      M66(3 , :)=(/ 0._ReKi , 0._ReKi , m       ,  y*m                , -x*m                , 0._ReKi              /)
-      M66(4 , :)=(/ 0._ReKi , -z*m    ,  y*m    , Jxx + m*(y**2+z**2) , Jxy - m*x*y         , Jxz  - m*x*z         /)
-      M66(5 , :)=(/  z*m    , 0._ReKi , -x*m    , Jxy - m*x*y         , Jyy + m*(x**2+z**2) , Jyz  - m*y*z         /)
-      M66(6 , :)=(/ -y*m    , x*m     , 0._ReKi , Jxz - m*x*z         , Jyz - m*y*z         , Jzz  + m*(x**2+y**2) /)
+      call rigidBodyMassMatrix(m, Jxx, Jyy, Jzz, Jxy, Jxz, Jyz, x, y, z, M66)
       ! Adding
       DO J = 1, 6
          jGlob = p%NodesDOF(iNode)%List(J)
@@ -1055,9 +1111,9 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
    DO I = 1, Init%nCMass
        iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
        iGlob = p%NodesDOF(iNode)%List(3) ! uz
-       Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
+       p%FG(iGlob) = p%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO
-   
+
    CALL CleanUp_AssembleKM()
    
 CONTAINS
@@ -1094,13 +1150,14 @@ CONTAINS
 END SUBROUTINE AssembleKM
 
 !> Map control cable index to control channel index
-subroutine ControlCableMapping(Init, p, ErrStat, ErrMsg)
+subroutine ControlCableMapping(Init, uInit, p, ErrStat, ErrMsg)
    type(SD_InitType),            intent(in   ) :: Init        !< init
+   type(SD_InputType),           intent(inout) :: uInit       !< init input guess
    type(SD_ParameterType),       intent(inout) :: p           !< param
    integer(IntKi),               intent(  out) :: ErrStat     !< Error status of the operation
    character(*),                 intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)           :: i, nCC, idCProp !< index, number of controlable cables, id of Cable Prop
+   integer(IntKi)           :: i, nCC, idCProp, iElem !< index, number of controlable cables, id of Cable Prop
    integer(IntKi)           :: ErrStat2
    character(ErrMsgLen)     :: ErrMsg2
    ErrMsg  = ""
@@ -1134,6 +1191,16 @@ subroutine ControlCableMapping(Init, p, ErrStat, ErrMsg)
          endif
       endif
    enddo
+
+   ! --- DeltaL Guess for inputs
+   if (allocated(uInit%CableDeltaL)) deallocate(uInit%CableDeltaL)
+   call AllocAry(uInit%CableDeltaL, nCC, 'uInit%CableDeltaL', ErrStat2, ErrMsg2); if(Failed()) return;
+   do i = 1, nCC
+       iElem    = p%CtrlElem2Channel(i,1)
+       ! DeltaL 0 = - Le T0 / (EA + T0) = - Le eps0 / (1+eps0)
+       uInit%CableDeltaL(i) = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
+   enddo
+
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ControlCableMapping') 
@@ -1311,16 +1378,25 @@ END SUBROUTINE FindClosestNodes
 
 !------------------------------------------------------------------------------------------------------
 !> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF
-SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
+!! Variables set by this routine
+!! - p%NodesDOFred(iNode)=[list of DOF]: Created for each node, the list of DOF of this node in the 
+!!         reduced system. 
+!!         NOTE: follower nodes in rigid assembly have no DOFred (convention)
+!! - p%nDOF_red: number of DOF in reduced system (<= nDOF)
+!! - p%reduced: true if a reduction is needed, i.e. a T matrix is needed, and nDOF_red<nDOF
+!!
+!! Variables returned:
+!! - T_red: retuction matrix such that x= T_red.x~ where x~ is the reduced vector of DOF
+SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, T_red, ErrStat, ErrMsg)
    use IntegerList, only: init_list, find, pop, destroy_list, len
    use IntegerList, only: print_list
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_InitType),            INTENT(IN   ) :: Init
    TYPE(SD_ParameterType),target,INTENT(INOUT) :: p
    type(IList), dimension(:),    INTENT(IN   ) :: RA   !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), INTENT(IN   ) :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   real(FEKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
+   real(FEKi), dimension(:,:), allocatable :: T_red !< Transformation matrix for DOF elimination
    ! Local  
    real(ReKi), dimension(:,:), allocatable   :: Tc
    integer(IntKi), dimension(:), allocatable :: INodesID !< List of unique nodes involved in Elements
@@ -1330,7 +1406,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    integer(IntKi) :: iPrev
    type(IList) :: IRA !< list of rigid assembly indices to process
    integer(IntKi) :: aID, ia ! assembly ID, and index in IRA
-   integer(IntKi) :: iNode
+   integer(IntKi) :: iNode, iNodeSel, iNodeRemaining, iiNodeRemaining
    integer(IntKi) :: er !< Index of one rigid element belong to a rigid assembly
    integer(IntKi) :: JType
    integer(IntKi) :: I
@@ -1355,8 +1431,8 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    if (DEV_VERSION) then
       print*,'nDOF constraint elim', p%nDOF_red , '/' , p%nDOF
    endif
-   CALL AllocAry( Tred, p%nDOF, p%nDOF_red, 'p%T_red',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-   Tred=0
+   CALL AllocAry( T_red, p%nDOF, p%nDOF_red, 'p%T_red',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   T_red=0.0_FeKi
    call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2); if(Failed()) return;
    IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
    if (DEV_VERSION) then
@@ -1369,45 +1445,64 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
    !  - increment iPrev by the number of DOF of Itilde
    iPrev =0 
    do iNode = 1, p%nNodes
-      if (allocated(Tc)) deallocate(Tc)
+      iNodeSel = iNode ! Unless changed by Rigid assembly, using this index
+      if (allocated(Tc))      deallocate(Tc)
       if (allocated(IDOFOld)) deallocate(IDOFOld)
-      JType = int(Init%Nodes(iNode,iJointType))
+      JType = int(Init%Nodes(iNodeSel,iJointType))
       if(JType == idJointCantilever ) then
-         if ( NodeHasRigidElem(iNode, Init, p, er)) then
-            ! --- Joint involved in a rigid link assembly
-            aID = RAm1(er)
+         if ( NodeHasRigidElem(iNodeSel, Init, p, er)) then ! return True and element index "er" if element is rigid
+            ! --- The joint is involved in a rigid link assembly
+            aID = RAm1(er) ! ID of rigid assembly for element er
             if (aID<0) then
-               call Fatal('No rigid assembly attributed to node'//trim(Num2LStr(iNode))//'. RAm1 wrong'); return
+               call Fatal('No rigid assembly attributed to node'//trim(Num2LStr(iNodeSel))//'. RAm1 wrong'); return
             endif
-            ia  = find(IRA, aID, ErrStat2, ErrMsg2); if(Failed()) return
+            ia  = find(IRA, aID, ErrStat2, ErrMsg2); if(Failed()) return ! We "pop" IRA, so index and ID are different
             if (DEV_VERSION) then
-               print*,'Node',iNode, 'is involved in RA:', aID, '. Index in list of RA to process', ia
+               print'(4X,A,I5,A,I5,A,I5)','Node',iNodeSel, ' is involved in RA:', aID, '. Current index in list of RA', ia
             endif
             if ( ia <= 0) then
-               ! This rigid assembly has already been processed
+               ! --- This rigid assembly has already been processed, simple triggers below
                ! OLD: The DOF list is taken from the stored RA DOF list
-               ! call init_list(p%NodesDOFred(iNode), RA_DOFred(aID)%List, ErrStat2, ErrMsg2)
-               ! NEW: this node has no DOFs
-               call init_list(p%NodesDOFred(iNode), 0, 0, ErrStat2, ErrMsg2)
+               ! call init_list(p%NodesDOFred(iNodeSel), RA_DOFred(aID)%List, ErrStat2, ErrMsg2)
+               ! NEW: this node has no DOFs, so we set an empty list of DOFred for this node
+               !call init_list(p%NodesDOFred(iNodeSel), 0, 0, ErrStat2, ErrMsg2)
                if (DEV_VERSION) then
-                  print*,'The RA',aID,', has already been processed!'
-                  print*,'N',iNode,'I ',p%NodesDOF(iNode)%List(1:6)
-                  print*,'N',iNode,'It',RA_DOFred(aID)%List
+                  print*,'   The RA',aID,', has already been processed!'! The following node has no reduced DOF'
+                  !print*,'   but based on its RA, we can list its Itilde DOF:'
+                  !print*,'   N',iNodeSel,'I ',p%NodesDOF(iNodeSel)%List(1:6)
+                  !print*,'   N',iNodeSel,'It',RA_DOFred(aID)%List
                endif
-               cycle ! We pass to the next joint
+               cycle ! We pass to the next joint, important so that:
+               !     - we don't increase iPrev
+               !     - we don't set Tc
+               !     - p%NodesDOFred is not set (assuming it has already been done)
             else
+               ! --- Proceeding the rigid assembly
+               ! Returns TC and INodesID, do not change other variables
                call RAElimination( RA(aID)%List, Tc, INodesID, Init, p, ErrStat2, ErrMsg2); if(Failed()) return;
-               aID = pop(IRA, ia, ErrStat2, ErrMsg2) ! this assembly has been processed 
-               nj = size(INodesID)
+               aID = pop(IRA, ia, ErrStat2, ErrMsg2) ! this assembly has been processed, remove it from IRA list
+               nj = size(INodesID) ! Number of nodes in this rigid assembly
                allocate(IDOFOld(1:6*nj))
                do I=1, nj
                   IDOFOld( (I-1)*6+1 : I*6 ) = p%NodesDOF(INodesID(I))%List(1:6)
                enddo
 
-               ! Storing DOF list for this RA (Note: same as NodesDOFred below)
-               nc=size(Tc,2) 
+               ! Storing DOF list for this RA (Note: same as NodesDOFred below, only for debug)
+               nc=size(Tc,2) ! Should be 6 
                call init_list(RA_DOFred(aID), (/ (iprev + i, i=1,nc) /), ErrStat2, ErrMsg2);
 
+               ! --- Processing trigger for leader/follower Nodes
+               iNodeSel = INodesID(1)  ! The first index returned is the leader of the assembly, we use this from now on
+               do iiNodeRemaining=2,size(INodesID) ! start at 2 because 1 is always the leader
+                  iNodeRemaining = INodesID(iiNodeRemaining)
+                  ! OLD: The DOF list is taken from the stored RA DOF list
+                  ! call init_list(p%NodesDOFred(iNode), RA_DOFred(aID)%List, ErrStat2, ErrMsg2)
+                  ! NEW: this node has no DOFs, so we set an empty list of DOFred for this node
+                  call init_list(p%NodesDOFred(iNodeRemaining), 0, 0, ErrStat2, ErrMsg2)
+                  if (DEV_VERSION) then
+                     print'(4X,A,I5,A,I5,I5)','Node',iNodeRemaining,' has no reduced DOF since its the follower of leader node ',INodesID(1),iNodeSel
+                  endif
+               enddo
             endif
          else
             ! --- Regular cantilever joint
@@ -1416,24 +1511,39 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, Tred, ErrStat, ErrMsg)
             allocate(Tc(1:6,1:6))
             allocate(IDOFOld(1:6))
             Tc=I6
-            IDOFOld = p%NodesDOF(iNode)%List(1:6)
+            IDOFOld = p%NodesDOF(iNodeSel)%List(1:6)
          endif
       else
          ! --- Ball/Pin/Universal joint
-         allocate(IDOFOld(1:len(p%NodesDOF(iNode))))
-         IDOFOld(:) = p%NodesDOF(iNode)%List(:)
-         phat = Init%Nodes(iNode, iJointDir:iJointDir+2)
-         call JointElimination(Init%NodesConnE(iNode,:), JType, phat, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
-      endif
+         allocate(IDOFOld(1:len(p%NodesDOF(iNodeSel))))
+         IDOFOld(:) = p%NodesDOF(iNodeSel)%List(:)
+         phat = Init%Nodes(iNodeSel, iJointDir:iJointDir+2)
+         ! Return Tc, do not change other variable
+         call JointElimination(Init%NodesConnE(iNodeSel,:), JType, phat, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
+      endif ! Cantilever or Special Joint
       nc=size(Tc,2) 
-      call init_list(p%NodesDOFred(iNode), nc, 0, ErrStat2, ErrMsg2)
-      p%NodesDOFred(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
-      IDOFNew => p%NodesDOFred(iNode)%List(1:nc) ! alias to shorten notations
-      !print*,'N',iNode,'I ',IDOFOld
-      !print*,'N',iNode,'It',IDOFNew
-      Tred(IDOFOld, IDOFNew) = Tc
+      call init_list(p%NodesDOFred(iNodeSel), nc, 0, ErrStat2, ErrMsg2)
+      p%NodesDOFred(iNodeSel)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
+      IDOFNew => p%NodesDOFred(iNodeSel)%List(1:nc) ! alias to shorten notations
+      if (DEV_VERSION) then
+         ! KEEP ME, VERY USEFUL
+         print*,'N',iNodeSel,'I ',IDOFOld
+         print*,'N',iNodeSel,'It',IDOFNew
+      endif
+      T_red(IDOFOld, IDOFNew) = Tc
       iPrev = iPrev + nc
    enddo
+   if (DEV_VERSION) then
+      print'(A)','--- End of BuildTMatrix'
+      print*,'   - T_red set'
+      print*,'   - p%nDOF_red', p%nDOF_red
+      print*,'   - p%reduced ', p%reduced
+      print*,'   - p%NodesDOFred: (list of reduced DOF indices per node) '
+      do iNode = 1, p%nNodes
+         print*,'N',iNode, 'It', p%NodesDOFred(iNode)%List(:)
+      enddo
+   endif
+
    ! --- Safety checks
    if (len(IRA)>0) then 
       call Fatal('Not all rigid assemblies were processed'); return
@@ -1481,20 +1591,20 @@ contains
 
          if    (NodeType == idJointPin ) then
             nDOF_ConstraintReduced = nDOF_ConstraintReduced + 5 + 1*m
-            print*,'Node',iNode, 'is a pin joint, number of members involved: ', m
+            print'(4X,A,I5,A,I5)','Node',iNode, ' is a pin joint, number of members involved: ',m
 
          elseif(NodeType == idJointUniversal ) then
             nDOF_ConstraintReduced = nDOF_ConstraintReduced + 4 + 2*m
-            print*,'Node',iNode, 'is an universal joint, number of members involved: ', m
+            print'(4X,A,I5,A,I5)','Node',iNode, ' is an universal joint, number of members involved: ',m
 
          elseif(NodeType == idJointBall ) then
             nDOF_ConstraintReduced = nDOF_ConstraintReduced + 3 + 3*m
-            print*,'Node',iNode, 'is a ball joint, number of members involved: ', m
+            print'(4X,A,I5,A,I5)','Node',iNode, ' is a ball joint, number of members involved: ',m
 
          elseif(NodeType == idJointCantilever ) then
             if ( NodeHasRigidElem(iNode, Init, p, er)) then
                ! This joint is involved in a rigid link assembly, we skip it (accounted for above)
-               print*,'Node',iNode, 'is involved in a Rigid assembly'
+               print'(4X,A,I5,A,I5)','Node',iNode, ' is involved in a Rigid assembly'
             else
                ! That's a regular Cantilever joint
                nDOF_ConstraintReduced = nDOF_ConstraintReduced + 6
@@ -1546,7 +1656,6 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    real(FEKi), dimension(:,:), allocatable :: MM, KK
-   real(FEKi), dimension(:),   allocatable :: FF
    real(FEKi), dimension(:,:), allocatable :: Temp
    integer(IntKi) :: nDOF, iDOF, nDOFPerNode, iNode, iiDOF, i,j
    ErrStat = ErrID_None
@@ -1564,11 +1673,9 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
       ! Temporary backup of M and K of full system
       call move_alloc(Init%M,  MM)
       call move_alloc(Init%K,  KK)
-      call move_alloc(Init%FG, FF)
       !  Reallocating
       CALL AllocAry( Init%K,      nDOF, nDOF,       'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
       CALL AllocAry( Init%M,      nDOF, nDOF,       'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-      CALL AllocAry( Init%FG,     nDOF,             'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
       CALL AllocAry( Temp   ,size(MM,1), nDOF,      'Temp'     ,  ErrStat2, ErrMsg2); if(Failed()) return; 
       CALL AllocAry( p%T_red_T,nDOF   , size(MM,1), 'T_red_T' ,  ErrStat2, ErrMsg2); if(Failed()) return; 
       ! --- Elimination (stack expensive)
@@ -1589,7 +1696,6 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
       !Init%K  = matmul(p%T_red_T, Temp)
       CALL LAPACK_gemm( 'T', 'N', 1.0_FeKi, p%T_red, Temp   , 0.0_FeKi, Init%K, ErrStat2, ErrMsg2); if(Failed()) return
       if (allocated(Temp))    deallocate(Temp)
-      Init%FG = matmul(p%T_red_T, FF)
    endif
    !CALL AllocAry( Init%D,      nDOF, nDOF,  'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
    !Init%D = 0 !< Used for additional damping 
@@ -1619,7 +1725,6 @@ CONTAINS
       ! Cleaning up memory
       if (allocated(MM  )) deallocate(MM  )
       if (allocated(KK  )) deallocate(KK  )
-      if (allocated(FF  )) deallocate(FF  )
       if (allocated(RA  )) deallocate(RA  )
       if (allocated(RAm1)) deallocate(RAm1)
       if (allocated(Temp)) deallocate(Temp)
@@ -1660,11 +1765,12 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
    ! --- List of nodes stored first in LINodes than moved to INodes
    LNodesID = NodesList(p, Elements)
    if (DEV_VERSION) then
-      print*,'Nodes involved in assembly (bfr1) ',LNodesID%List
+      print*,'   --- RAElimination, Processing a rigid assembly'
+      print*,'   Nodes involved in assembly (before any manip) ',LNodesID%List
    endif
    call unique(LNodesID, ErrStat2, ErrMsg2);
    if (DEV_VERSION) then
-      print*,'Nodes involved in assembly (bfr2) ',LNodesID%List
+      print*,'   Nodes involved in assembly (selecting unique) ',LNodesID%List
    endif
 
    !--- Look for potential interface node
@@ -1675,7 +1781,7 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
       if (iFound>0) then
          call append(LNodesInterf, NodeID, ErrStat2, ErrMsg2)
          ! This node is an interface node
-         print*,'Node',NodeID, 'is an interface node, selecting it for the rigid assembly'
+         print'(4X,A,I5,A)','Node',NodeID, ' is an interface node, selecting it for the rigid assembly'
       endif
    enddo
 
@@ -1692,6 +1798,10 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
       return
    endif
    call destroy_list(LNodesInterf, ErrStat2, ErrMsg2)
+   if (DEV_VERSION) then
+      print'(4X,A,I5)','We will select the node at position ',iiMainNode
+      print*,'   in the following list of nodes:               ',LNodesID%List
+   endif
 
    ! --- Extracting index array from list
    if (allocated(INodesID)) deallocate(INodesID)
@@ -1702,15 +1812,13 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
    iTmp                 = INodesID(1)
    INodesID(1)          = INodesID(iiMainNode)
    INodesID(iiMainNode) = iTmp
-   if (DEV_VERSION) then
-      print*,'Nodes involved in assembly (after)',INodesID
-   endif
+   print*,'   Nodes involved in assembly:',INodesID
 
    ! --- Building Transformation matrix
    nNodes =size(INodesID)
-   allocate(Tc(6*nNodes,6))
+   allocate(Tc(6*nNodes,6)) ! NOTE: do not deallocate, this is an ouput of this function
    Tc(:,:)=0
-   ! I6 for first node
+   ! I6 for first node since it's the "leader"
    do i = 1,6 ; Tc(i,i)=1_ReKi; enddo ! I6 =  eye(6)
    ! Rigid transformation matrix for the other nodes 
    P1 = Init%Nodes(INodesID(1), 2:4) ! reference node coordinates
@@ -1718,6 +1826,9 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
       Pi = Init%Nodes(INodesID(i), 2:4) ! follower node coordinates
       call GetRigidTransformation(P1, Pi, TRigid, ErrStat2, ErrMsg2)
       Tc( ((i-1)*6)+1:6*i, 1:6) = TRigid(1:6,1:6)
+      if (DEV_VERSION) then
+         print'(4X,A,3(F6.1),A,3(F6.1))','Rigid transformation from ref point',P1,' to ',Pi
+      endif
    enddo
 END SUBROUTINE RAElimination
 !------------------------------------------------------------------------------------------------------
@@ -1835,7 +1946,12 @@ END SUBROUTINE JointElimination
 
 !------------------------------------------------------------------------------------------------------
 !> Setup a list of rigid link assemblies (RA)
-!! RA(a) = [e1,..,en] : list of elements that form the rigid assembly of index "a"
+!! Variables created by this routine:
+!! - RA(ia)= [e1,..,en]  list of elements forming each rigid link assembly "ia".
+!!                       Needed for BuildTMatrix
+!! - RAm1(e)=(RA^-1(e)= a) : for a given element give the index of a rigid assembly. 
+!!                       Needed for BuildTMatrix
+!!
 SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
@@ -1855,7 +1971,7 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
-   allocate(RAm1(1:Init%NElem))
+   allocate(RAm1(1:Init%NElem)) ! NOTE: do not deallocate, this is an "output" of this function
    RAm1(1:Init%NElem) = -1
 
    ! --- Establish a list of rigid link elements
@@ -1869,7 +1985,7 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
       call append(Ea, e0, ErrStat2, ErrMsg2);
       call AddNeighbors(e0, Er, Ea)
       if (DEV_VERSION) then
-         call print_list(Ea,'Rigid assembly (loop 1)')
+         call print_list(Ea,'Rigid assembly (loop 1) element list')
       endif
       do ie = 1, len(Ea)
          e0 = get(Ea, ie, ErrStat2, ErrMsg2)
@@ -1881,7 +1997,7 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
 
    ! --- Creating RA, array of lists of assembly elements.
    ! Note: exactly the same as all the Ea created above, but we didn't know the total number of RA
-   allocate(RA(1:nRA))
+   allocate(RA(1:nRA)) ! NOTE: do not deallocate, this is an "output" of this function
    do ia = 1, nRA
       call init_list(RA(ia), 0, 0, ErrStat2, ErrMsg2)
    enddo
@@ -1893,7 +2009,7 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
    enddo
    if (DEV_VERSION) then
       do ia = 1, nRA
-         call print_list(RA(ia),'Rigid assembly (loop 2)')
+         call print_list(RA(ia),'Rigid assembly (loop 2) element list')
       enddo
    endif
 CONTAINS
@@ -1991,27 +2107,38 @@ SUBROUTINE InsertJointStiffDamp(p, Init, ErrStat, ErrMsg)
 END SUBROUTINE InsertJointStiffDamp
 
 !> Returns true if the substructure can be considered "fixed bottom"
-!! This is relevant for the ExtraMoment calculation where different reference positions 
-!! are used depending if translation is fixed of free.
-!! As defined in the documentation:
-!! The structure is considered “fixed” at the sea bed if at least one reaction node has:
-!!  - the 4 degrees of freedom accounting for the x-y translation and rotation are fixed 
-!!  OR
-!!  -  an additional stiffness matrix via an SSI input file
-LOGICAL FUNCTION isFixedBottom(Init, p) result(bFixed)
+LOGICAL FUNCTION isFixedBottom(Init, p)
    TYPE(SD_InitType),  INTENT(IN   ) :: Init
    TYPE(SD_ParameterType),INTENT(IN   ) :: p
-   INTEGER(IntKi) :: i, nFixed
-   nFixed=0
+   isFixedBottom=.not.isFloating(Init,p)
+   !INTEGER(IntKi) :: i, nFixed
+   !nFixed=0
+   !do i =1,size(p%Nodes_C,1)
+   !   if (ALL(p%Nodes_C(I,2:7)==idBC_Fixed)) then
+   !      nFixed=nFixed+1
+   !   elseif (Init%SSIfile(I)/='') then
+   !      nFixed=nFixed+1
+   !   endif
+   !enddo
+   !bFixed = nFixed >=1
+END FUNCTION isFixedBottom
+
+!> True if a structure is floating, no fixed BC at the bottom
+logical function isFloating(Init, p) 
+   type(SD_InitType),     intent(in   ):: Init
+   type(SD_ParameterType),intent(in   ) :: p
+   integer(IntKi) :: i
+   !isFloating=size(p%Nodes_C)>0
+   isFloating=.True.
    do i =1,size(p%Nodes_C,1)
-      if (ALL(p%Nodes_C(I,2:5)==idBC_Fixed)) then
-         nFixed=nFixed+1
-      elseif (Init%SSIfile(I)/='') then
-         nFixed=nFixed+1
+      if ((all(p%Nodes_C(I,2:7)==idBC_Internal)) .and. (Init%SSIfile(i)=='')) then
+         continue
+      else
+         isFloating=.False.
+         return
       endif
    enddo
-   bFixed = nFixed >=1
-END FUNCTION isFixedBottom
+end function isFloating
 
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
@@ -2065,5 +2192,86 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    endif
    CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
 END SUBROUTINE ElemF
+
+!> Return skew symmetric matrix
+SUBROUTINE skew(x,M33)
+   real(ReKi), intent(in   ) :: x(3)
+   real(ReKi), intent(  out) :: M33(3,3)
+   M33(1 , :)=(/0.0_ReKi , -x(3)        , x (2)   /)
+   M33(2 , :)=(/  x(3 )  , 0.0_ReKi     , -x(1)   /)
+   M33(3 , :)=(/ -x(2 )  , x(1)        , 0.0_ReKi /)
+END SUBROUTINE
+
+!>Transform inertia matrix with respect to point P to the inertia matrix with respect to the COG
+!!NOTE: the vectors and the inertia matrix needs to be expressed in the same coordinate system.
+SUBROUTINE translateInertiaMatrixToCOG(I_P, Mass, r_PG, I_G)
+   real(ReKi), intent(in   ) :: I_P(3,3) !< Inertia matrix 3x3 with respect to point P
+   real(ReKi), intent(in   ) :: Mass     !< Mass of the body
+   real(ReKi), intent(in   ) :: r_PG(3)  !< vector from P to COG 
+   real(ReKi), intent(  out) :: I_G(3,3) !< Inertia matrix (3x3) with respect to COG
+   real(ReKi) :: S1(3,3) 
+   call skew(r_PG, S1) 
+   I_G = I_P + Mass * MATMUL(S1, S1)
+END SUBROUTINE
+
+!>Transform mass matrix with respect to point P to the mass matrix with respect to the COG
+SUBROUTINE translateMassMatrixToCOG(MM, MM_G)
+   real(ReKi), intent(in   ) :: MM(6,6)   !< Mass matrix (6x6) with respect to point P
+   real(ReKi), intent(  out) :: MM_G(6,6) !< Mass matrix with respect to COG
+   real(ReKi) :: m        ! Mass of the body
+   real(ReKi) :: r_PG(3)  ! Vector from point P to G
+   real(ReKi) :: J_P(3,3),  J_G(3,3) 
+   ! Distance from refpoint to COG
+   call rigidBodyMassMatrixCOG(MM, r_PG)
+   ! Inertia at ref point
+   J_P = MM(4:6,4:6)
+   ! Inertia at COG
+   call translateInertiaMatrixToCOG(J_P, MM(1,1), r_PG, J_G) 
+   ! Rigid body mass matrix at COG
+   call rigidBodyMassMatrix(MM(1,1), J_G(1,1), J_G(2,2), J_G(3,3), J_G(1,2), J_G(1,3), J_G(2,3), 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, MM_G)
+END SUBROUTINE
+
+!>Transform mass matrix with respect to point P1 to the mass matrix with respect to point P2
+SUBROUTINE translateMassMatrixToP(MM1, r_P1P2, MM2)
+   real(ReKi), intent(in   ) :: MM1(6,6) !< Mass matrix (6x6) with respect to point P1
+   real(ReKi), intent(in   ) :: r_P1P2(3)!< vector from P1 to P2
+   real(ReKi), intent(  out) :: MM2(6,6) !< Mass matrix with respect to point P2
+   real(ReKi) :: MM_G(6,6) !< Mass matrix with respect to COG
+   real(ReKi) :: m        ! Mass of the body
+   real(ReKi) :: r_P1G(3), r_P2G(3)  ! vector from P to COG 
+   real(ReKi) :: J_G(3,3) 
+   ! Rigid body mass matrix at COG to get inertia at COG
+   call translateMassMatrixToCOG(MM1, MM_G)
+   J_G = MM_G(4:6,4:6)
+   ! Distance from refpoint to COG
+   call rigidBodyMassMatrixCOG(MM1, r_P1G)
+   r_P2G=-r_P1P2+r_P1G
+   ! Rigid body mass matrix at Point P2
+   call rigidBodyMassMatrix(MM1(1,1), J_G(1,1), J_G(2,2), J_G(3,3), J_G(1,2), J_G(1,3), J_G(2,3), r_P2G(1), r_P2G(2), r_P2G(3), MM2)
+END SUBROUTINE
+
+!> Return Center of gravity location from a 6x6 mass matrix
+SUBROUTINE rigidBodyMassMatrixCOG(MM, r_PG)
+   real(ReKi), intent(in   ) :: MM(6,6) !< Mass matrix (6x6) with respect to point P
+   real(ReKi), intent(  out) :: r_PG(3) !< vector from P to G (center of mass)
+   r_PG = (/ 0.5_ReKi*( MM(2,6)-MM(3,5)), & ! Using average of Coeffs
+             0.5_ReKi*(-MM(1,6)+MM(3,4)), &
+             0.5_ReKi*( MM(1,5)-MM(2,4)) /)
+   r_PG = r_PG/MM(1,1)
+END SUBROUTINE
+
+!> Rigid body mass matrix (6x6) at a given reference point P
+SUBROUTINE rigidBodyMassMatrix(m, Jxx, Jyy, Jzz, Jxy, Jxz, Jyz, x, y, z, M66)
+   real(ReKi), intent(in   ) :: m             !< Mass of body
+   real(ReKi), intent(in   ) :: Jxx, Jyy, Jzz, Jxy, Jxz, Jyz !< Inertia of body at COG
+   real(ReKi), intent(in   ) :: x, y, z       !< x,y,z position of center of gravity (COG) with respect to the reference point
+   real(ReKi), intent(  out) :: M66(6,6)      !< Mass matrix (6x6) with respect to point P
+   M66(1 , :)=(/ m       , 0._ReKi , 0._ReKi , 0._ReKi             ,  z*m                , -y*m                 /)
+   M66(2 , :)=(/ 0._ReKi , m       , 0._ReKi , -z*m                , 0._ReKi             ,  x*m                 /)
+   M66(3 , :)=(/ 0._ReKi , 0._ReKi , m       ,  y*m                , -x*m                , 0._ReKi              /)
+   M66(4 , :)=(/ 0._ReKi , -z*m    ,  y*m    , Jxx + m*(y**2+z**2) , Jxy - m*x*y         , Jxz  - m*x*z         /)
+   M66(5 , :)=(/  z*m    , 0._ReKi , -x*m    , Jxy - m*x*y         , Jyy + m*(x**2+z**2) , Jyz  - m*y*z         /)
+   M66(6 , :)=(/ -y*m    , x*m     , 0._ReKi , Jxz - m*x*z         , Jyz - m*y*z         , Jzz  + m*(x**2+y**2) /)
+END SUBROUTINE
 
 END MODULE SD_FEM

@@ -41,6 +41,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: ADInputFile      !< Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info [-]
     LOGICAL  :: CompElast      !< flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
   END TYPE ED_InitInputType
 ! =======================
 ! =========  ED_InitOutputType  =======
@@ -49,7 +50,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
-    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Initial blade pitch angles [radians]
     REAL(ReKi)  :: BladeLength      !< Blade length (for AeroDyn) [meters]
     REAL(ReKi)  :: TowerHeight      !< Tower Height [meters]
@@ -59,6 +59,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrHNodes      !< Location of variable-spaced tower nodes (relative to the tower rigid base height [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos      !< Initial platform position (6 DOFs) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TwrBasePos      !< initial position of the tower base (for SrvD) [m]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: TwrBaseOrient      !< initial orientation of the tower base (for SrvD) [-]
     REAL(ReKi)  :: HubRad      !< Preconed hub radius (distance from the rotor apex to the blade root) [m]
     REAL(ReKi)  :: RotSpeed      !< Initial or fixed rotor speed [rad/s]
     LOGICAL  :: isFixed_GenDOF      !< whether the generator is fixed or free [-]
@@ -111,7 +112,6 @@ IMPLICIT NONE
 ! =========  ED_InputFile  =======
   TYPE, PUBLIC :: ED_InputFile
     REAL(DbKi)  :: DT      !< Requested integration time for ElastoDyn [seconds]
-    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     LOGICAL  :: FlapDOF1      !< First flapwise blade mode DOF [-]
     LOGICAL  :: FlapDOF2      !< Second flapwise blade mode DOF [-]
     LOGICAL  :: EdgeDOF      !< Edgewise blade mode DOF [-]
@@ -438,9 +438,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: AngAccEXt      !< Portion of the angular acceleration of the platform (body X) in the inertia frame (body E for earth) associated with everything but the QD2T()s [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AngAccEFt      !< Portion of the angular acceleration of tower element J (body F) in the inertia frame (body E for earth) associated with everything but the QD2T()s [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AngVelEF      !< Angular velocity of the current point on the tower (body F) in the inertia frame (body E for earth) [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AngVelHM      !< Angular velocity of the current point on the blade in the inertia frame  [-]
     REAL(ReKi) , DIMENSION(1:3)  :: AngAccEAt      !< Portion of the angular acceleration of the tail (body A) in the inertia frame (body E for earth) associated with everything but the QD2T()'s [-]
     REAL(ReKi) , DIMENSION(1:3)  :: AngAccEGt      !< Portion of the angular acceleration of the generator (body G) in the inertia frame (body E for earth) associated with everything but the QD2T()'s [-]
     REAL(ReKi) , DIMENSION(1:3)  :: AngAccEHt      !< Portion of the angular acceleration of the hub (body H) in the inertia frame (body E for earth) associated with everything but the QD2T()'s [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AngAccEKt      !< Portion of the angular acceleration of the blade in the inertia frame associated with everything but the QD2T()'s [-]
     REAL(ReKi) , DIMENSION(1:3)  :: AngAccENt      !< Portion of the angular acceleration of the nacelle (body N) in the inertia frame (body E for earth) associated with everything but the QD2T()'s [-]
     REAL(ReKi) , DIMENSION(1:3)  :: LinAccECt      !< Portion of the linear acceleration of the hub center of mass (point C) in the inertia frame (body E for earth) associated with everything but the QD2T()'s [-]
     REAL(ReKi) , DIMENSION(1:3)  :: LinAccEDt      !< Portion of the linear acceleration of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame (body E for earth) associated with everything but the QD2T()'s [-]
@@ -896,6 +898,7 @@ CONTAINS
     DstInitInputData%ADInputFile = SrcInitInputData%ADInputFile
     DstInitInputData%CompElast = SrcInitInputData%CompElast
     DstInitInputData%RootName = SrcInitInputData%RootName
+    DstInitInputData%Gravity = SrcInitInputData%Gravity
  END SUBROUTINE ED_CopyInitInput
 
  SUBROUTINE ED_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -949,6 +952,7 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%ADInputFile)  ! ADInputFile
       Int_BufSz  = Int_BufSz  + 1  ! CompElast
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
+      Re_BufSz   = Re_BufSz   + 1  ! Gravity
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -992,6 +996,8 @@ CONTAINS
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    ReKiBuf(Re_Xferred) = InData%Gravity
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_PackInitInput
 
  SUBROUTINE ED_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1041,6 +1047,8 @@ CONTAINS
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%Gravity = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_UnPackInitInput
 
  SUBROUTINE ED_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -1052,6 +1060,7 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'ED_CopyInitOutput'
@@ -1086,7 +1095,6 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitOutputData%NumBl = SrcInitOutputData%NumBl
-    DstInitOutputData%Gravity = SrcInitOutputData%Gravity
 IF (ALLOCATED(SrcInitOutputData%BlPitch)) THEN
   i1_l = LBOUND(SrcInitOutputData%BlPitch,1)
   i1_u = UBOUND(SrcInitOutputData%BlPitch,1)
@@ -1129,6 +1137,7 @@ IF (ALLOCATED(SrcInitOutputData%TwrHNodes)) THEN
 ENDIF
     DstInitOutputData%PlatformPos = SrcInitOutputData%PlatformPos
     DstInitOutputData%TwrBasePos = SrcInitOutputData%TwrBasePos
+    DstInitOutputData%TwrBaseOrient = SrcInitOutputData%TwrBaseOrient
     DstInitOutputData%HubRad = SrcInitOutputData%HubRad
     DstInitOutputData%RotSpeed = SrcInitOutputData%RotSpeed
     DstInitOutputData%isFixed_GenDOF = SrcInitOutputData%isFixed_GenDOF
@@ -1345,7 +1354,6 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumBl
-      Re_BufSz   = Re_BufSz   + 1  ! Gravity
   Int_BufSz   = Int_BufSz   + 1     ! BlPitch allocated yes/no
   IF ( ALLOCATED(InData%BlPitch) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BlPitch upper/lower bounds for each dimension
@@ -1367,6 +1375,7 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%PlatformPos)  ! PlatformPos
       Re_BufSz   = Re_BufSz   + SIZE(InData%TwrBasePos)  ! TwrBasePos
+      Db_BufSz   = Db_BufSz   + SIZE(InData%TwrBaseOrient)  ! TwrBaseOrient
       Re_BufSz   = Re_BufSz   + 1  ! HubRad
       Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
       Int_BufSz  = Int_BufSz  + 1  ! isFixed_GenDOF
@@ -1501,8 +1510,6 @@ ENDIF
       ENDIF
     IntKiBuf(Int_Xferred) = InData%NumBl
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Gravity
-    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%BlPitch) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1563,6 +1570,12 @@ ENDIF
     DO i1 = LBOUND(InData%TwrBasePos,1), UBOUND(InData%TwrBasePos,1)
       ReKiBuf(Re_Xferred) = InData%TwrBasePos(i1)
       Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i2 = LBOUND(InData%TwrBaseOrient,2), UBOUND(InData%TwrBaseOrient,2)
+      DO i1 = LBOUND(InData%TwrBaseOrient,1), UBOUND(InData%TwrBaseOrient,1)
+        DbKiBuf(Db_Xferred) = InData%TwrBaseOrient(i1,i2)
+        Db_Xferred = Db_Xferred + 1
+      END DO
     END DO
     ReKiBuf(Re_Xferred) = InData%HubRad
     Re_Xferred = Re_Xferred + 1
@@ -1712,6 +1725,7 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'ED_UnPackInitOutput'
@@ -1807,8 +1821,6 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%NumBl = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%Gravity = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlPitch not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1882,6 +1894,16 @@ ENDIF
     DO i1 = LBOUND(OutData%TwrBasePos,1), UBOUND(OutData%TwrBasePos,1)
       OutData%TwrBasePos(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%TwrBaseOrient,1)
+    i1_u = UBOUND(OutData%TwrBaseOrient,1)
+    i2_l = LBOUND(OutData%TwrBaseOrient,2)
+    i2_u = UBOUND(OutData%TwrBaseOrient,2)
+    DO i2 = LBOUND(OutData%TwrBaseOrient,2), UBOUND(OutData%TwrBaseOrient,2)
+      DO i1 = LBOUND(OutData%TwrBaseOrient,1), UBOUND(OutData%TwrBaseOrient,1)
+        OutData%TwrBaseOrient(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
     END DO
     OutData%HubRad = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -3566,7 +3588,6 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstInputFileData%DT = SrcInputFileData%DT
-    DstInputFileData%Gravity = SrcInputFileData%Gravity
     DstInputFileData%FlapDOF1 = SrcInputFileData%FlapDOF1
     DstInputFileData%FlapDOF2 = SrcInputFileData%FlapDOF2
     DstInputFileData%EdgeDOF = SrcInputFileData%EdgeDOF
@@ -4104,7 +4125,6 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Db_BufSz   = Db_BufSz   + 1  ! DT
-      Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! FlapDOF1
       Int_BufSz  = Int_BufSz  + 1  ! FlapDOF2
       Int_BufSz  = Int_BufSz  + 1  ! EdgeDOF
@@ -4435,8 +4455,6 @@ ENDIF
 
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Gravity
-    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FlapDOF1, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FlapDOF2, IntKiBuf(1))
@@ -5173,8 +5191,6 @@ ENDIF
   Int_Xferred  = 1
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%Gravity = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%FlapDOF1 = TRANSFER(IntKiBuf(Int_Xferred), OutData%FlapDOF1)
     Int_Xferred = Int_Xferred + 1
     OutData%FlapDOF2 = TRANSFER(IntKiBuf(Int_Xferred), OutData%FlapDOF2)
@@ -9206,9 +9222,41 @@ IF (ALLOCATED(SrcRtHndSideData%AngVelEF)) THEN
   END IF
     DstRtHndSideData%AngVelEF = SrcRtHndSideData%AngVelEF
 ENDIF
+IF (ALLOCATED(SrcRtHndSideData%AngVelHM)) THEN
+  i1_l = LBOUND(SrcRtHndSideData%AngVelHM,1)
+  i1_u = UBOUND(SrcRtHndSideData%AngVelHM,1)
+  i2_l = LBOUND(SrcRtHndSideData%AngVelHM,2)
+  i2_u = UBOUND(SrcRtHndSideData%AngVelHM,2)
+  i3_l = LBOUND(SrcRtHndSideData%AngVelHM,3)
+  i3_u = UBOUND(SrcRtHndSideData%AngVelHM,3)
+  IF (.NOT. ALLOCATED(DstRtHndSideData%AngVelHM)) THEN 
+    ALLOCATE(DstRtHndSideData%AngVelHM(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRtHndSideData%AngVelHM.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstRtHndSideData%AngVelHM = SrcRtHndSideData%AngVelHM
+ENDIF
     DstRtHndSideData%AngAccEAt = SrcRtHndSideData%AngAccEAt
     DstRtHndSideData%AngAccEGt = SrcRtHndSideData%AngAccEGt
     DstRtHndSideData%AngAccEHt = SrcRtHndSideData%AngAccEHt
+IF (ALLOCATED(SrcRtHndSideData%AngAccEKt)) THEN
+  i1_l = LBOUND(SrcRtHndSideData%AngAccEKt,1)
+  i1_u = UBOUND(SrcRtHndSideData%AngAccEKt,1)
+  i2_l = LBOUND(SrcRtHndSideData%AngAccEKt,2)
+  i2_u = UBOUND(SrcRtHndSideData%AngAccEKt,2)
+  i3_l = LBOUND(SrcRtHndSideData%AngAccEKt,3)
+  i3_u = UBOUND(SrcRtHndSideData%AngAccEKt,3)
+  IF (.NOT. ALLOCATED(DstRtHndSideData%AngAccEKt)) THEN 
+    ALLOCATE(DstRtHndSideData%AngAccEKt(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRtHndSideData%AngAccEKt.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstRtHndSideData%AngAccEKt = SrcRtHndSideData%AngAccEKt
+ENDIF
     DstRtHndSideData%AngAccENt = SrcRtHndSideData%AngAccENt
     DstRtHndSideData%LinAccECt = SrcRtHndSideData%LinAccECt
     DstRtHndSideData%LinAccEDt = SrcRtHndSideData%LinAccEDt
@@ -10008,6 +10056,12 @@ ENDIF
 IF (ALLOCATED(RtHndSideData%AngVelEF)) THEN
   DEALLOCATE(RtHndSideData%AngVelEF)
 ENDIF
+IF (ALLOCATED(RtHndSideData%AngVelHM)) THEN
+  DEALLOCATE(RtHndSideData%AngVelHM)
+ENDIF
+IF (ALLOCATED(RtHndSideData%AngAccEKt)) THEN
+  DEALLOCATE(RtHndSideData%AngAccEKt)
+ENDIF
 IF (ALLOCATED(RtHndSideData%LinVelES)) THEN
   DEALLOCATE(RtHndSideData%LinVelES)
 ENDIF
@@ -10330,9 +10384,19 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! AngVelEF upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AngVelEF)  ! AngVelEF
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! AngVelHM allocated yes/no
+  IF ( ALLOCATED(InData%AngVelHM) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! AngVelHM upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AngVelHM)  ! AngVelHM
+  END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%AngAccEAt)  ! AngAccEAt
       Re_BufSz   = Re_BufSz   + SIZE(InData%AngAccEGt)  ! AngAccEGt
       Re_BufSz   = Re_BufSz   + SIZE(InData%AngAccEHt)  ! AngAccEHt
+  Int_BufSz   = Int_BufSz   + 1     ! AngAccEKt allocated yes/no
+  IF ( ALLOCATED(InData%AngAccEKt) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! AngAccEKt upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AngAccEKt)  ! AngAccEKt
+  END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%AngAccENt)  ! AngAccENt
       Re_BufSz   = Re_BufSz   + SIZE(InData%LinAccECt)  ! LinAccECt
       Re_BufSz   = Re_BufSz   + SIZE(InData%LinAccEDt)  ! LinAccEDt
@@ -11308,6 +11372,31 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%AngVelHM) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngVelHM,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngVelHM,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngVelHM,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngVelHM,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngVelHM,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngVelHM,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%AngVelHM,3), UBOUND(InData%AngVelHM,3)
+        DO i2 = LBOUND(InData%AngVelHM,2), UBOUND(InData%AngVelHM,2)
+          DO i1 = LBOUND(InData%AngVelHM,1), UBOUND(InData%AngVelHM,1)
+            ReKiBuf(Re_Xferred) = InData%AngVelHM(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
     DO i1 = LBOUND(InData%AngAccEAt,1), UBOUND(InData%AngAccEAt,1)
       ReKiBuf(Re_Xferred) = InData%AngAccEAt(i1)
       Re_Xferred = Re_Xferred + 1
@@ -11320,6 +11409,31 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%AngAccEHt(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+  IF ( .NOT. ALLOCATED(InData%AngAccEKt) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngAccEKt,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngAccEKt,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngAccEKt,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngAccEKt,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngAccEKt,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngAccEKt,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%AngAccEKt,3), UBOUND(InData%AngAccEKt,3)
+        DO i2 = LBOUND(InData%AngAccEKt,2), UBOUND(InData%AngAccEKt,2)
+          DO i1 = LBOUND(InData%AngAccEKt,1), UBOUND(InData%AngAccEKt,1)
+            ReKiBuf(Re_Xferred) = InData%AngAccEKt(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
     DO i1 = LBOUND(InData%AngAccENt,1), UBOUND(InData%AngAccENt,1)
       ReKiBuf(Re_Xferred) = InData%AngAccENt(i1)
       Re_Xferred = Re_Xferred + 1
@@ -13347,6 +13461,34 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngVelHM not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AngVelHM)) DEALLOCATE(OutData%AngVelHM)
+    ALLOCATE(OutData%AngVelHM(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngVelHM.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%AngVelHM,3), UBOUND(OutData%AngVelHM,3)
+        DO i2 = LBOUND(OutData%AngVelHM,2), UBOUND(OutData%AngVelHM,2)
+          DO i1 = LBOUND(OutData%AngVelHM,1), UBOUND(OutData%AngVelHM,1)
+            OutData%AngVelHM(i1,i2,i3) = ReKiBuf(Re_Xferred)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
     i1_l = LBOUND(OutData%AngAccEAt,1)
     i1_u = UBOUND(OutData%AngAccEAt,1)
     DO i1 = LBOUND(OutData%AngAccEAt,1), UBOUND(OutData%AngAccEAt,1)
@@ -13365,6 +13507,34 @@ ENDIF
       OutData%AngAccEHt(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngAccEKt not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AngAccEKt)) DEALLOCATE(OutData%AngAccEKt)
+    ALLOCATE(OutData%AngAccEKt(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngAccEKt.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%AngAccEKt,3), UBOUND(OutData%AngAccEKt,3)
+        DO i2 = LBOUND(OutData%AngAccEKt,2), UBOUND(OutData%AngAccEKt,2)
+          DO i1 = LBOUND(OutData%AngAccEKt,1), UBOUND(OutData%AngAccEKt,1)
+            OutData%AngAccEKt(i1,i2,i3) = ReKiBuf(Re_Xferred)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
     i1_l = LBOUND(OutData%AngAccENt,1)
     i1_u = UBOUND(OutData%AngAccENt,1)
     DO i1 = LBOUND(OutData%AngAccENt,1), UBOUND(OutData%AngAccENt,1)

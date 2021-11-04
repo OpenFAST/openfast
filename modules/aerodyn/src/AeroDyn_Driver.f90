@@ -18,163 +18,88 @@
 !
 !**********************************************************************************************************************************
 program AeroDyn_Driver
-
-   use AeroDyn_Driver_Subs   
-    
+   use AeroDyn_Driver_Subs, only: dat, dvr_Init, dvr_InitCase, dvr_TimeStep, dvr_CleanUp, dvr_EndCase
+   use AeroDyn_Driver_Subs, only: idAnalysisRegular, idAnalysisTimeD, idAnalysisCombi
+   use NWTC_IO
+   use NWTC_Num, only: RunTimes, SimStatus, SimStatus_FirstTime
    implicit none   
-   
-      ! Program variables
+   ! Program variables
+   REAL(ReKi)                       :: PrevClockTime ! Clock time at start of simulation in seconds [(s)]
+   REAL(ReKi)                       :: UsrTime1      ! User CPU time for simulation initialization [(s)]
+   REAL(ReKi)                       :: UsrTime2      ! User CPU time for simulation (without intialization) [(s)]
+   INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime      ! Start time of simulation (including intialization) [-]
+   INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime   ! Start time of simulation (after initialization) [-]
+   REAL(DbKi)                       :: t_global         ! global-loop time marker
+   REAL(DbKi)                       :: t_final         ! global-loop time marker
+   REAL(DbKi)                       :: TiLstPrn      ! The simulation time of the last print (to file) [(s)]
+   integer :: nt !< loop counter (for time step)
+   integer(IntKi) :: iCase ! loop counter (for driver case)
+   CALL DATE_AND_TIME ( Values=StrtTime )                 ! Let's time the whole simulation
+   CALL CPU_TIME ( UsrTime1 )                             ! Initial time (this zeros the start time when used as a MATLAB function)
+   UsrTime1 = MAX( 0.0_ReKi, UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
 
-   real(DbKi)                                     :: time                 !< Variable for storing time, in seconds 
-   real(DbKi)                                     :: dT_Dvr               !< copy of DT, to make sure AD didn't change it
-                                                    
-   type(Dvr_SimData)                              :: DvrData              ! The data required for running the AD driver
-   type(AeroDyn_Data)                             :: AD                   ! AeroDyn data 
-                                                  
-   integer(IntKi)                                 :: iCase                ! loop counter (for driver case)
-   integer(IntKi)                                 :: nt                   ! loop counter (for time step)
-   integer(IntKi)                                 :: j                    ! loop counter (for array of inputs)
-   integer(IntKi)                                 :: errStat              ! Status of error message
-   character(ErrMsgLen)                           :: errMsg               ! Error message if ErrStat /= ErrID_None
+   dat%initialized=.false.
+   call dvr_Init(dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
 
-   !integer                                        :: StrtTime (8)                            ! Start time of simulation (including intialization)
-   !integer                                        :: SimStrtTime (8)                         ! Start time of simulation (after initialization)
-   !real(ReKi)                                     :: PrevClockTime                           ! Clock time at start of simulation in seconds
-   !real                                           :: UsrTime1                                ! User CPU time for simulation initialization
-   !real                                           :: UsrTime2                                ! User CPU time for simulation (without intialization)
-   !real                                           :: UsrTimeDiff                             ! Difference in CPU time from start to finish of program execution
-   !real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
-   !real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
-   !integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
-   logical                                        :: AD_Initialized
+   do iCase= 1,dat%dvr%numCases
 
-   real(ReKi)                                      :: RotAzimuth                             ! Rotor Azimuth (aligned with blade 1)
-   !real(ReKi)                                      :: TeetAng                                ! Teeter angle
-   !real(ReKi)                                      :: TeetAngVel                             ! Teeter angular velocity
-
-                            
-
-   errStat     = ErrID_None
-   errMsg      = ''
-   AD_Initialized = .false.
+      ! Initial case
+      call dvr_InitCase(iCase, dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
+      dat%initialized=.true.
    
-   time        = 0.0 ! seconds
-      
-            
-      ! Get the current time
-   !call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
-   !call cpu_time ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
-   
-   
-      ! initialize this driver:
-   call Dvr_Init( DvrData, ErrStat, ErrMsg)
-      call CheckError()
-   
-   
-   do iCase = 1, DvrData%NumCases
-   
-!      call WrScr( NewLine//'Running case '//trim(num2lstr(iCase))//' of '//trim(num2lstr(DvrData%NumCases))//'.' )
-   
-         ! Set the Initialization input data for AeroDyn based on the Driver input file data, and initialize AD
-         ! (this also initializes inputs to AD for first time step)
-      dT_Dvr   = DvrData%Cases(iCase)%dT
-      call Init_AeroDyn(iCase, DvrData, AD, dT_Dvr, errStat, errMsg)
-         call CheckError()
-         AD_Initialized = .true.
-         
-         if (.not. EqualRealNos( dT_Dvr, DvrData%Cases(iCase)%dT ) ) then
-            ErrStat = ErrID_Fatal
-            ErrMsg = 'AeroDyn changed the time step for case '//trim(num2lstr(iCase))//'. Change DTAero to "default".'
-            call CheckError()
-         end if
-                                    
-      if (iCase.eq.1) then
-         call Dvr_InitializeOutputFile(DvrData%numBlades, iCase, DvrData%Cases(iCase), DvrData%OutFileData, errStat, errMsg)
-            call CheckError()
+      ! Init of time estimator
+      t_global=0.0_DbKi
+      t_final=dat%dvr%numSteps*dat%dvr%dt
+      if (dat%dvr%analysisType/=idAnalysisCombi) then
+         call SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, t_final )
       endif
-      
-      RotAzimuth = 0.0_ReKi
-      do nt = 1, DvrData%Cases(iCase)%numSteps
-         
-         !...............................
-         ! set AD inputs for nt (and keep values at nt-1 as well)
-         !...............................
-         
-         call Set_AD_Inputs(iCase,nt,RotAzimuth,DvrData,AD,errStat,errMsg) ! u(1) is at nt+1, u(2) is at nt
-            call CheckError()
-   
-         time = AD%InputTime(2)
-            
-            ! Calculate outputs at nt - 1
 
-         call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat, errMsg )
-            call CheckError()
-  
-
-
-
-         call Dvr_WriteOutputLine(DvrData%OutFileData, nt, RotAzimuth, AD%y%WriteOutput, DvrData%Cases(iCase), iCase, errStat, errMsg)
-            call CheckError()
-
-
-            
-            
-            ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
-
-         call AD_UpdateStates( time, nt-1, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%m, errStat, errMsg )
-            call CheckError()
-      
-                  
+      ! One time loop
+      do nt = 1, dat%dvr%numSteps
+         call dvr_TimeStep(nt, dat%dvr, dat%AD, dat%IW, dat%errStat, dat%errMsg); call CheckError()
+         ! Time update to screen
+         t_global=nt*dat%dvr%dt
+         if (dat%dvr%analysisType/=idAnalysisCombi) then
+            if (mod( nt + 1, 10 )==0) call SimStatus(TiLstPrn, PrevClockTime, t_global, t_final)
+         endif
       end do !nt=1,numSteps
-      
-   end do !iCase = 1, DvrData%NumCases
-   
-   call Dvr_End()
-   
+
+      if (dat%dvr%analysisType/=idAnalysisCombi) then
+         ! display runtime to screen
+         call RunTimes(StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global)
+      endif
+
+      call dvr_EndCase(dat%dvr, dat%AD, dat%IW, dat%initialized, dat%errStat, dat%errMsg); call CheckError()
+
+   enddo ! Loop on cases
+
+   call dvr_End()
 contains
 !................................   
    subroutine CheckError()
-   
-      if (ErrStat /= ErrID_None) then
-         call WrScr(TRIM(ErrMsg))
-         
-         if (ErrStat >= AbortErrLev) then
-            call Dvr_End()
+      if (dat%ErrStat /= ErrID_None) then
+         call WrScr(TRIM(dat%errMsg))
+         if (dat%errStat >= AbortErrLev) then
+            call dvr_End()
          end if
       end if
-         
    end subroutine CheckError
 !................................   
-   subroutine Dvr_End()
-   
-         ! Local variables
-      character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
-      integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
-      
-      character(*), parameter                       :: RoutineName = 'Dvr_End'
-         ! Close the output file
-      if (DvrData%OutFileData%unOutFile > 0) close(DvrData%OutFileData%unOutFile)
-            
-      if ( AD_Initialized ) then
-         call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      end if
-           
-      call AD_Dvr_DestroyDvr_SimData( DvrData, ErrStat2, ErrMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   subroutine dvr_End()
+      integer(IntKi)       :: errStat2      ! local status of error message
+      character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
 
-      call AD_Dvr_DestroyAeroDyn_Data( AD, ErrStat2, ErrMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-               
-      if (ErrStat >= AbortErrLev) then      
+      call dvr_CleanUp(dat%dvr, dat%AD, dat%IW, dat%initialized, errStat2, errMsg2)
+      CALL SetErrStat(errStat2, errMsg2, dat%errStat, dat%errMsg, 'dvr_End')
+
+      if (dat%errStat >= AbortErrLev) then      
+         call WrScr('')
          CALL ProgAbort( 'AeroDyn Driver encountered simulation error level: '&
-             //TRIM(GetErrStr(ErrStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+             //TRIM(GetErrStr(dat%errStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
       else
          call NormStop()
       end if
-      
-      
-   end subroutine Dvr_End
+   end subroutine dvr_End
 !................................   
 end program AeroDyn_Driver
    

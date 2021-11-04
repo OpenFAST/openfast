@@ -4,9 +4,9 @@ Developing Documentation
 ========================
 OpenFAST documentation is hosted on
 `readthedocs <http://openfast.readthedocs.io/>`_. It is automatically generated
-through the ``readthedocs`` build system from both the ``master`` and ``dev``
+through the ``readthedocs`` build system from both the ``main`` and ``dev``
 branches whenever new commits are added. This documentation uses the
-`restructured text <http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_
+`restructured text <http://www.sphinx-doc.org/en/main/usage/restructuredtext/basics.html>`_
 markup language.
 
 Building this documentation locally
