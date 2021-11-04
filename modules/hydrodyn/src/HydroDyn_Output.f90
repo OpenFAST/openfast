@@ -1279,7 +1279,7 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
 END SUBROUTINE HDOut_WriteOutputs
 
 !====================================================================================================
-SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, ErrMsg )
+SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, InitOut, ErrStat, ErrMsg )
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 ! NOTE: This routine must be called only after any sub-modules OUT_Init() subroutines have been called.
@@ -1290,7 +1290,8 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
       ! Passed variables
 
    TYPE(ProgDesc),                INTENT( IN    ) :: HydroDyn_ProgDesc    ! 
-   TYPE(HydroDyn_InitInputType ), INTENT( IN    ) :: InitInp              ! data needed to initialize the output module     
+   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! The name of the output file 
+   TYPE(HydroDyn_InputFile ),     INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
    TYPE(HydroDyn_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p 
    TYPE(HydroDyn_MiscVarType),    INTENT( INOUT ) :: m
@@ -1339,7 +1340,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
    !-------------------------------------------------------------------------------------------------      
       
    
-   CALL HDOUT_ChkOutLst( InitInp%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
+   CALL HDOUT_ChkOutLst( InputFileData%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
    IF ( ErrStat /= 0 ) RETURN
 
          ! Aggregate the sub-module initialization outputs for the glue code
@@ -1414,7 +1415,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
          END IF
 
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
-         CALL HDOut_OpenOutput( HydroDyn_ProgDesc, InitInp%OutRootName, p, InitOut, ErrStat, ErrMsg )
+         CALL HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName, p, InitOut, ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev ) RETURN
       END IF
       

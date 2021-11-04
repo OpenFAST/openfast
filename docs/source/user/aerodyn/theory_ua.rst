@@ -233,7 +233,9 @@ with:
 
 Beddoes-Leishman 5-states model (UAMod=5)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The 5-states (incompressible) dynamic stall model is described in the Bladed Theory Manual :cite:`ad-Bladed:manual` and enabled using ``UAMod=5``. The model uses :math:`C_n` and :math:`C_c` as main physical quantities.  
+The 5-states (incompressible) dynamic stall model is similar to the Beddoes-Leishman 4-states model (UAMod=4), but 
+adds a 5th state to represent vortex generation. 
+It is enabled using ``UAMod=5``. The model uses :math:`C_n` and :math:`C_c` as main physical quantities.  
 Linearization of the model will be available in the future.
 
 
