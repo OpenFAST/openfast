@@ -441,11 +441,11 @@ subroutine Init_ADI_ForDriver(iCase, ADI, ADReInit, dvr, dt, errStat, errMsg)
       else
          InitInp%AD%rotors(iWT)%AeroProjMod = 1 ! 1: for VAWT
       endif
-      InitInp%AD%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
-      InitInp%AD%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+      InitInp%AD%rotors(iWT)%HubPosition    = wt%y_ED%HubPtMotion%Position(:,1)
+      InitInp%AD%rotors(iWT)%HubOrientation = wt%y_ED%HubPtMotion%RefOrientation(:,:,1)
       do k=1,wt%numBlades
-         InitInp%AD%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
-         InitInp%AD%rotors(iWT)%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
+         InitInp%AD%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%y_ED%BladeRootMotion(k)%RefOrientation(:,:,1)
+         InitInp%AD%rotors(iWT)%BladeRootPosition(:,k)      = wt%y_ED%BladeRootMotion(k)%Position(:,1)
       end do
    enddo
 
@@ -526,11 +526,11 @@ subroutine Init_AeroDyn(iCase, dvr, ADI, dt, InitOutData, errStat, errMsg)
          else
             InitInData%rotors(iWT)%AeroProjMod = 1
          endif
-         InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
-         InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+         InitInData%rotors(iWT)%HubPosition    = wt%y_ED%HubPtMotion%Position(:,1)
+         InitInData%rotors(iWT)%HubOrientation = wt%y_ED%HubPtMotion%RefOrientation(:,:,1)
          do k=1,wt%numBlades
-            InitInData%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
-            InitInData%rotors(iWT)%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
+            InitInData%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%y_ED%BladeRootMotion(k)%RefOrientation(:,:,1)
+            InitInData%rotors(iWT)%BladeRootPosition(:,k)      = wt%y_ED%BladeRootMotion(k)%Position(:,1)
          end do
       enddo
       ! --- Call AD_init
@@ -596,27 +596,27 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
       orientation = R_gl2wt
       
       !bjj: Inspector consistently gives "Invalid Memory Access" errors here on the allocation of wt%ptMesh%RotationVel in MeshCreate. I haven't yet figured out why.
-      call CreatePointMesh(wt%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
+      call CreatePointMesh(wt%PlatformPtMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
 
       ! Tower
       if (wt%hasTower) then
-         pos         = wt%ptMesh%Position(:,1) + matmul(transpose(R_gl2wt),  wt%twr%origin_t)
+         pos         = wt%PlatformPtMesh%Position(:,1) + matmul(transpose(R_gl2wt),  wt%twr%origin_t)
          orientation = R_gl2wt
-         call CreatePointMesh(wt%twr%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
+         call CreatePointMesh(wt%y_ED%TwrPtMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
       endif
 
       ! Nacelle
-      pos           = wt%ptMesh%Position(:,1) +  matmul(transpose(R_gl2wt),  wt%nac%origin_t)
+      pos           = wt%PlatformPtMesh%Position(:,1) +  matmul(transpose(R_gl2wt),  wt%nac%origin_t)
       orientation   = R_gl2wt ! Yaw?
-      call CreatePointMesh(wt%nac%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
+      call CreatePointMesh(wt%y_ED%NacelleMotion, pos, orientation, errStat2, errMsg2); if(Failed()) return
 
       ! Hub
-      R_nac2gl  = transpose(wt%nac%ptMesh%RefOrientation(:,:,1))
+      R_nac2gl  = transpose(wt%y_ED%NacelleMotion%RefOrientation(:,:,1))
       R_nac2hub = EulerConstruct( wt%hub%orientation_n ) ! nacelle 2 hub (constant)
-      pos         = wt%nac%ptMesh%Position(:,1) + matmul(R_nac2gl,wt%hub%origin_n)
-      orientation = matmul(R_nac2hub, wt%nac%ptMesh%RefOrientation(:,:,1))   ! Global 2 hub at t=0
+      pos         = wt%y_ED%NacelleMotion%Position(:,1) + matmul(R_nac2gl,wt%hub%origin_n)
+      orientation = matmul(R_nac2hub, wt%y_ED%NacelleMotion%RefOrientation(:,:,1))   ! Global 2 hub at t=0
 
-      call CreatePointMesh(wt%hub%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+      call CreatePointMesh(wt%y_ED%HubPtMotion, pos, orientation, errStat2, errMsg2); if(Failed())return
 
       ! Blades
 !       wt%Rg2b0 = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
@@ -624,39 +624,40 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
 !       InitInData%HubPosition = wt%originInit + wt%nac%origin_t  + matmul( transpose(wt%Rg2b0), wt%hub%origin_n)
 !       InitInData%HubOrientation = matmul(wt%Rb2h0, wt%Rg2b0) ! Global 2 hub = base2hub x global2base
 
-      R_hub2gl  = transpose(wt%hub%ptMesh%RefOrientation(:,:,1))
+      R_hub2gl  = transpose(wt%y_ED%HubPtMotion%RefOrientation(:,:,1))
+      allocate(wt%y_ED%BladeRootMotion(wt%numBlades))
       do iB=1,wt%numBlades
          R_hub2bl = EulerConstruct( wt%bld(iB)%orientation_h ) ! Rotation matrix hub 2 blade (constant)
-         orientation = matmul(R_hub2bl,  wt%hub%ptMesh%RefOrientation(:,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
-         pos         = wt%hub%ptMesh%Position(:,1) + matmul(R_hub2gl, wt%bld(iB)%origin_h) +  wt%bld(iB)%hubRad_bl*orientation(3,:) 
-         call CreatePointMesh(wt%bld(iB)%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+         orientation = matmul(R_hub2bl,  wt%y_ED%HubPtMotion%RefOrientation(:,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
+         pos         = wt%y_ED%HubPtMotion%Position(:,1) + matmul(R_hub2gl, wt%bld(iB)%origin_h) +  wt%bld(iB)%hubRad_bl*orientation(3,:) 
+         call CreatePointMesh(wt%y_ED%BladeRootMotion(iB), pos, orientation, errStat2, errMsg2); if(Failed())return
       end do
 
       ! --- Mapping
       ! Base 2 twr
       if (wt%hasTower) then
-         call MeshMapCreate(wt%ptMesh, wt%twr%ptMesh, wt%map2twrPt, errStat2, errMsg2); if(Failed())return
+         call MeshMapCreate(wt%PlatformPtMesh, wt%y_ED%TwrPtMesh, wt%map2twrPt, errStat2, errMsg2); if(Failed())return
       endif
       ! Base 2 nac
-      call MeshMapCreate(wt%ptMesh, wt%nac%ptMesh, wt%map2nacPt, errStat2, errMsg2); if(Failed())return
+      call MeshMapCreate(wt%PlatformPtMesh, wt%y_ED%NacelleMotion, wt%map2nacPt, errStat2, errMsg2); if(Failed())return
       ! nac 2 hub
-      call MeshMapCreate(wt%nac%ptMesh, wt%hub%ptMesh, wt%nac%map2hubPt, errStat2, errMsg2); if(Failed())return
+      call MeshMapCreate(wt%y_ED%NacelleMotion, wt%y_ED%HubPtMotion, wt%map2hubPt, errStat2, errMsg2); if(Failed())return
       ! hub 2 bld
-      allocate(wt%hub%map2bldPt(wt%numBlades))
+      allocate(wt%map2bldPt(wt%numBlades))
       do iB=1,wt%numBlades
-         call MeshMapCreate(wt%hub%ptMesh, wt%bld(iB)%ptMesh, wt%hub%map2bldPt(iB), errStat2, errMsg2); if(Failed())return
+         call MeshMapCreate(wt%y_ED%HubPtMotion, wt%y_ED%BladeRootMotion(iB), wt%map2bldPt(iB), errStat2, errMsg2); if(Failed())return
       enddo
       ! 
       ! --- NOTE: KEEP ME, this information would go well in a summary file...
       print*,'Nodes positions for turbine '//trim(num2lstr(iWT))//', (at t=0, without base or RNA motion)'
-      print*,'Bse: ',wt%ptMesh%Position + wt%ptMesh%TranslationDisp
+      print*,'Bse: ',wt%PlatformPtMesh%Position + wt%PlatformPtMesh%TranslationDisp
       if (wt%hasTower) then
-         print*,'Twr: ',wt%twr%ptMesh%Position + wt%twr%ptMesh%TranslationDisp
+         print*,'Twr: ',wt%y_ED%TwrPtMesh%Position + wt%y_ED%TwrPtMesh%TranslationDisp
       endif
-      print*,'Nac: ',wt%nac%ptMesh%Position + wt%nac%ptMesh%TranslationDisp
-      print*,'Hub: ',wt%hub%ptMesh%Position + wt%hub%ptMesh%TranslationDisp
+      print*,'Nac: ',wt%y_ED%NacelleMotion%Position + wt%y_ED%NacelleMotion%TranslationDisp
+      print*,'Hub: ',wt%y_ED%HubPtMotion%Position + wt%y_ED%HubPtMotion%TranslationDisp
       do iB=1,wt%numBlades
-         print*,'Bld: ',wt%bld(iB)%ptMesh%Position + wt%bld(iB)%ptMesh%TranslationDisp
+         print*,'Bld: ',wt%y_ED%BladeRootMotion(iB)%Position + wt%y_ED%BladeRootMotion(iB)%TranslationDisp
       enddo
    enddo
 
@@ -691,16 +692,18 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)
       ! hub 2 hubAD
-      call MeshMapCreate(wt%hub%ptMesh, uAD%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
+      call MeshMapCreate(wt%y_ED%HubPtMotion, uAD%rotors(iWT)%hubMotion, wt%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
 
       ! bldroot 2 bldroot AD
+      allocate(wt%ED_P_2_AD_P_R(wt%numBlades))
       do iB = 1, wt%numBlades
-         call MeshMapCreate(wt%bld(iB)%ptMesh, uAD%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed())return
+         call MeshMapCreate(wt%y_ED%BladeRootMotion(iB), uAD%rotors(iWT)%BladeRootMotion(iB), wt%ED_P_2_AD_P_R(iB), errStat2, errMsg2); if(Failed())return
       enddo
 
       ! AD bld root 2 AD blade line
+      allocate(wt%AD_P_2_AD_L_B(wt%numBlades))
       do iB = 1, wt%numBlades
-         call MeshMapCreate(uAD%rotors(iWT)%BladeRootMotion(iB), uAD%rotors(iWT)%BladeMotion(iB), wt%bld(iB)%AD_P_2_AD_L_B, errStat2, errMsg2); if(Failed())return
+         call MeshMapCreate(uAD%rotors(iWT)%BladeRootMotion(iB), uAD%rotors(iWT)%BladeMotion(iB), wt%AD_P_2_AD_L_B(iB), errStat2, errMsg2); if(Failed())return
       enddo
 
       if (uAD%rotors(iWT)%TowerMotion%nNodes>0) then
@@ -714,7 +717,7 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
 
             twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes) ! NOTE: assuming start a z=0
 
-            twrHeight=TwoNorm(wt%nac%ptMesh%Position(:,1) - wt%twr%ptMesh%Position(:,1)  )
+            twrHeight=TwoNorm(wt%y_ED%NacelleMotion%Position(:,1) - wt%y_ED%TwrPtMesh%Position(:,1)  )
             ! KEEP ME, in summary file
             !print*,'Tower Height',twrHeight, twrHeightAD
             if (abs(twrHeightAD-twrHeight)> twrHeight*0.1) then
@@ -724,25 +727,25 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
             endif
 
             ! Adjust tower position (AeroDyn return values assuming (0,0,0) for tower base
-            Pbase = wt%twr%ptMesh%Position(:,1)
-            Ptop = wt%nac%ptMesh%Position(:,1)
+            Pbase = wt%y_ED%TwrPtMesh%Position(:,1)
+            Ptop = wt%y_ED%NacelleMotion%Position(:,1)
             DeltaP = Ptop-Pbase
             do i = 1, uAD%rotors(iWT)%TowerMotion%nNodes
                zBar = uAD%rotors(iWT)%TowerMotion%Position(3,i)/twrHeight
                uAD%rotors(iWT)%TowerMotion%Position(:,i)= Pbase+ zBar * DeltaP
-               uAD%rotors(iWT)%TowerMotion%RefOrientation(:,:,i)= wt%twr%ptMesh%RefOrientation(:,:,1)
+               uAD%rotors(iWT)%TowerMotion%RefOrientation(:,:,i)= wt%y_ED%TwrPtMesh%RefOrientation(:,:,1)
             enddo
             ! Create AD tower base point mesh
-            pos         = wt%twr%ptMesh%Position(:,1)
-            orientation = wt%twr%ptMesh%RefOrientation(:,:,1)
+            pos         = wt%y_ED%TwrPtMesh%Position(:,1)
+            orientation = wt%y_ED%TwrPtMesh%RefOrientation(:,:,1)
             call Eye(orientation, errStat2, errMsg2)
-            call CreatePointMesh(wt%twr%ptMeshAD, pos, orientation, errStat2, errMsg2); if(Failed())return
+            call CreatePointMesh(wt%TwrPtMeshAD, pos, orientation, errStat2, errMsg2); if(Failed())return
 
             ! TowerBase to AD tower base
-            call MeshMapCreate(wt%twr%ptMesh, wt%twr%ptMeshAD, wt%twr%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
+            call MeshMapCreate(wt%y_ED%TwrPtMesh, wt%TwrPtMeshAD, wt%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
 
             ! AD TowerBase to AD tower line
-            call MeshMapCreate(wt%twr%ptMeshAD, uAD%rotors(iWT)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+            call MeshMapCreate(wt%TwrPtMeshAD, uAD%rotors(iWT)%TowerMotion, wt%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
          endif
       else
          print*,'>>> NO AD Tower'
@@ -853,39 +856,39 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
       if (wt%motionType == idBaseMotionGeneral) then
          orientation_loc = EulerConstruct( theta )
          call interpTimeValue(wt%motion, time, wt%iMotion, basMotion)
-         wt%ptMesh%TranslationDisp(1:3,1) = basMotion(1:3)
-         wt%ptMesh%TranslationVel (1:3,1) = basMotion(7:9)
-         wt%ptMesh%RotationVel    (1:3,1) = basMotion(10:12)
-         wt%ptMesh%TranslationAcc (1:3,1) = basMotion(13:15)
-         wt%ptMesh%RotationAcc    (1:3,1) = basMotion(16:18)
+         wt%PlatformPtMesh%TranslationDisp(1:3,1) = basMotion(1:3)
+         wt%PlatformPtMesh%TranslationVel (1:3,1) = basMotion(7:9)
+         wt%PlatformPtMesh%RotationVel    (1:3,1) = basMotion(10:12)
+         wt%PlatformPtMesh%TranslationAcc (1:3,1) = basMotion(13:15)
+         wt%PlatformPtMesh%RotationAcc    (1:3,1) = basMotion(16:18)
          theta = basMotion(4:6)
          orientation_loc = EulerConstruct( theta )
          orientation = matmul(orientation_loc, orientation)
       elseif (wt%motionType == idBaseMotionSine) then
          if (any(wt%degreeOfFreedom==(/1,2,3/))) then
-            wt%ptMesh%TranslationDisp(wt%degreeofFreedom,1) =                      wt%amplitude * sin(time * wt%frequency)
-            wt%ptMesh%TranslationVel (wt%degreeofFreedom,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
-            wt%ptMesh%TranslationAcc (wt%degreeofFreedom,1) = -(wt%frequency)**2 * wt%amplitude * sin(time * wt%frequency)
+            wt%PlatformPtMesh%TranslationDisp(wt%degreeofFreedom,1) =                      wt%amplitude * sin(time * wt%frequency)
+            wt%PlatformPtMesh%TranslationVel (wt%degreeofFreedom,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
+            wt%PlatformPtMesh%TranslationAcc (wt%degreeofFreedom,1) = -(wt%frequency)**2 * wt%amplitude * sin(time * wt%frequency)
          elseif (any(wt%degreeOfFreedom==(/4,5,5/))) then
             theta(1:3) = 0.0_ReKi
             theta(wt%degreeofFreedom-3) = wt%amplitude * sin(time * wt%frequency)
-            wt%ptMesh%RotationVel (wt%degreeofFreedom-3,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
-            wt%ptMesh%RotationAcc (wt%degreeofFreedom-3,1) = -(wt%frequency)**2 * wt%amplitude * sin(time * wt%frequency)
+            wt%PlatformPtMesh%RotationVel (wt%degreeofFreedom-3,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
+            wt%PlatformPtMesh%RotationAcc (wt%degreeofFreedom-3,1) = -(wt%frequency)**2 * wt%amplitude * sin(time * wt%frequency)
             orientation_loc = EulerConstruct( theta )
             orientation = matmul(orientation_loc, orientation)
          endif
       endif
-      wt%ptMesh%Orientation(:,:,1) = orientation
+      wt%PlatformPtMesh%Orientation(:,:,1) = orientation
 
       ! --- Tower motion (none)
       ! Base to Tower 
       if (wt%hasTower) then
-         call Transfer_Point_to_Point(wt%ptMesh, wt%twr%ptMesh, wt%map2twrPt, errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Point(wt%PlatformPtMesh, wt%y_ED%TwrPtMesh, wt%map2twrPt, errStat2, errMsg2); if(Failed()) return
       endif
        
       ! --- Nacelle Motion
       ! Base to Nac
-      call Transfer_Point_to_Point(wt%ptMesh, wt%nac%ptMesh, wt%map2nacPt, errStat2, errMsg2); if(Failed()) return
+      call Transfer_Point_to_Point(wt%PlatformPtMesh, wt%y_ED%NacelleMotion, wt%map2nacPt, errStat2, errMsg2); if(Failed()) return
       ! Nacelle yaw motion (along nac z)
       theta =0.0_ReKi
       if (wt%nac%motionType==idNacMotionConstant) then
@@ -903,13 +906,13 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
       endif
       theta(3) = wt%nac%yaw
       orientation_loc = EulerConstruct(theta)
-      wt%nac%ptMesh%Orientation(:,:,1) = matmul(orientation_loc, wt%nac%ptMesh%Orientation(:,:,1))
-      wt%nac%ptMesh%RotationVel(  :,1) = wt%nac%ptMesh%RotationVel(:,1) + wt%nac%ptMesh%Orientation(3,:,1) * wt%nac%yawSpeed
-      wt%nac%ptMesh%RotationAcc(  :,1) = wt%nac%ptMesh%RotationAcc(:,1) + wt%nac%ptMesh%Orientation(3,:,1) * wt%nac%yawAcc
+      wt%y_ED%NacelleMotion%Orientation(:,:,1) = matmul(orientation_loc, wt%y_ED%NacelleMotion%Orientation(:,:,1))
+      wt%y_ED%NacelleMotion%RotationVel(  :,1) = wt%y_ED%NacelleMotion%RotationVel(:,1) + wt%y_ED%NacelleMotion%Orientation(3,:,1) * wt%nac%yawSpeed
+      wt%y_ED%NacelleMotion%RotationAcc(  :,1) = wt%y_ED%NacelleMotion%RotationAcc(:,1) + wt%y_ED%NacelleMotion%Orientation(3,:,1) * wt%nac%yawAcc
 
       ! --- Hub Motion
       ! Nac 2 hub (rigid body)
-      call Transfer_Point_to_Point(wt%nac%ptMesh, wt%hub%ptMesh, wt%nac%map2hubPt, errStat2, errMsg2); if(Failed()) return
+      call Transfer_Point_to_Point(wt%y_ED%NacelleMotion, wt%y_ED%HubPtMotion, wt%map2hubPt, errStat2, errMsg2); if(Failed()) return
       ! Hub rotation around x
       if (wt%hub%motionType == idHubMotionConstant) then
          ! save the azimuth at t (not t+dt) for output to file:
@@ -948,14 +951,14 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
       theta(2) = 0.0_ReKi
       theta(3) = 0.0_ReKi
       orientation_loc = EulerConstruct( theta )
-      wt%hub%ptMesh%Orientation(:,:,1) = matmul(orientation_loc, wt%hub%ptMesh%Orientation(:,:,1))
-      wt%hub%ptMesh%RotationVel(  :,1) = wt%hub%ptMesh%RotationVel(:,1) + wt%hub%ptMesh%Orientation(1,:,1) * wt%hub%rotSpeed
-      wt%hub%ptMesh%RotationAcc(  :,1) = wt%hub%ptMesh%RotationAcc(:,1) + wt%hub%ptMesh%Orientation(1,:,1) * wt%hub%rotAcc
+      wt%y_ED%HubPtMotion%Orientation(:,:,1) = matmul(orientation_loc, wt%y_ED%HubPtMotion%Orientation(:,:,1))
+      wt%y_ED%HubPtMotion%RotationVel(  :,1) = wt%y_ED%HubPtMotion%RotationVel(:,1) + wt%y_ED%HubPtMotion%Orientation(1,:,1) * wt%hub%rotSpeed
+      wt%y_ED%HubPtMotion%RotationAcc(  :,1) = wt%y_ED%HubPtMotion%RotationAcc(:,1) + wt%y_ED%HubPtMotion%Orientation(1,:,1) * wt%hub%rotAcc
 
       ! --- Blade motion
       ! Hub 2 blade root
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Point(wt%hub%ptMesh, wt%bld(iB)%ptMesh, wt%hub%map2bldPt(iB), errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Point(wt%y_ED%HubPtMotion, wt%y_ED%BladeRootMotion(iB), wt%map2bldPt(iB), errStat2, errMsg2); if(Failed()) return
          ! Pitch motion aong z
          theta =0.0_ReKi
          if (wt%bld(iB)%motionType==idBldMotionConstant) then
@@ -963,25 +966,25 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
          elseif (wt%bld(iB)%motionType==idBldMotionVariable) then
             call interpTimeValue(wt%bld(iB)%motion, time, wt%bld(iB)%iMotion, bldMotion)
             wt%bld(iB)%pitch =bldMotion(1)
-            wt%bld(iB)%ptMesh%RotationVel(:,1) = wt%bld(iB)%ptMesh%RotationVel(:,1) + wt%bld(iB)%ptMesh%Orientation(3,:,1)* (-bldMotion(2))
-            wt%bld(iB)%ptMesh%RotationAcc(:,1) = wt%bld(iB)%ptMesh%RotationAcc(:,1) + wt%bld(iB)%ptMesh%Orientation(3,:,1)* (-bldMotion(3))
+            wt%y_ED%BladeRootMotion(iB)%RotationVel(:,1) = wt%y_ED%BladeRootMotion(iB)%RotationVel(:,1) + wt%y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-bldMotion(2))
+            wt%y_ED%BladeRootMotion(iB)%RotationAcc(:,1) = wt%y_ED%BladeRootMotion(iB)%RotationAcc(:,1) + wt%y_ED%BladeRootMotion(iB)%Orientation(3,:,1)* (-bldMotion(3))
          else
             print*,'Unknown blade motion type, should never happen'
             STOP
          endif
          theta(3) = - wt%bld(iB)%pitch ! NOTE: sign, wind turbine convention ...
          orientation_loc = EulerConstruct(theta)
-         wt%bld(iB)%ptMesh%Orientation(:,:,1) = matmul(orientation_loc, wt%bld(iB)%ptMesh%Orientation(:,:,1))
+         wt%y_ED%BladeRootMotion(iB)%Orientation(:,:,1) = matmul(orientation_loc, wt%y_ED%BladeRootMotion(iB)%Orientation(:,:,1))
       enddo
 
-      !print*,'Bse: ',wt%ptMesh%Position + wt%ptMesh%TranslationDisp
+      !print*,'Bse: ',wt%PlatformPtMesh%Position + wt%PlatformPtMesh%TranslationDisp
       !if (wt%hasTower) then
       !   print*,'Twr: ',wt%twr%ptMesh%Position + wt%twr%ptMesh%TranslationDisp
       !endif
       !print*,'Nac: ',wt%nac%ptMesh%Position + wt%nac%ptMesh%TranslationDisp
       !print*,'Hub: ',wt%hub%ptMesh%Position + wt%hub%ptMesh%TranslationDisp
       !do iB=1,wt%numBlades
-      !   print*,'Bld: ',wt%bld(iB)%ptMesh%Position + wt%bld(iB)%ptMesh%TranslationDisp
+      !   print*,'Bld: ',wt%y_ED%BladeRootMotion(iB)%Position + wt%y_ED%BladeRootMotion(iB)%TranslationDisp
       !enddo
    enddo ! Loop on wind turbines
 
@@ -1025,23 +1028,23 @@ subroutine Set_AD_Inputs(nt,dvr,ADI,IW,errStat,errMsg)
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)
       ! Hub 2 Hub AD 
-      call Transfer_Point_to_Point(wt%hub%ptMesh, dvr%ADI%m%u_AD(1)%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+      call Transfer_Point_to_Point(wt%y_ED%HubPtMotion, dvr%ADI%m%u_AD(1)%rotors(iWT)%hubMotion, wt%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Point(wt%bld(iB)%ptMesh, dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Point(wt%y_ED%BladeRootMotion(iB), dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), wt%ED_P_2_AD_P_R(iB), errStat2, errMsg2); if(Failed()) return
       enddo
             
       ! Blade root AD to blade line AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Line2(dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iB), wt%bld(iB)%AD_P_2_AD_L_B, errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Line2(dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iB), wt%AD_P_2_AD_L_B(iB), errStat2, errMsg2); if(Failed()) return
       enddo
 
       ! Tower motion
       if (wt%hasTower) then
          if (dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion%nNodes>0) then
-            call Transfer_Point_to_Point(wt%twr%ptMesh, wt%twr%ptMeshAD, wt%twr%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
-            call Transfer_Point_to_Line2(wt%twr%ptMeshAD, dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion, wt%twr%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+            call Transfer_Point_to_Point(wt%y_ED%TwrPtMesh,  wt%TwrPtMeshAD, wt%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
+            call Transfer_Point_to_Line2(wt%TwrPtMeshAD, dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion, wt%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
          endif
       endif
    enddo ! iWT, rotors
@@ -1704,10 +1707,10 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
          arr(k) = dvr%ADI%m%IW%PLExp                    ; k=k+1 ! shear exp, not set if CompInflow=1
 
          ! 6 base DOF
-         rotations  = EulerExtract(dvr%WT(iWT)%ptMesh%Orientation(:,:,1)); 
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(1,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(1,1); k=k+1 ! surge
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(2,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(2,1); k=k+1 ! sway
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(3,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(3,1); k=k+1 ! heave
+         rotations  = EulerExtract(dvr%WT(iWT)%PlatformPtMesh%Orientation(:,:,1)); 
+         arr(k) = dvr%WT(iWT)%PlatformPtMesh%Position(1,1)+dvr%WT(iWT)%PlatformPtMesh%TranslationDisp(1,1); k=k+1 ! surge
+         arr(k) = dvr%WT(iWT)%PlatformPtMesh%Position(2,1)+dvr%WT(iWT)%PlatformPtMesh%TranslationDisp(2,1); k=k+1 ! sway
+         arr(k) = dvr%WT(iWT)%PlatformPtMesh%Position(3,1)+dvr%WT(iWT)%PlatformPtMesh%TranslationDisp(3,1); k=k+1 ! heave
          arr(k) = rotations(1) * R2D                                                      ; k=k+1 ! roll
          arr(k) = rotations(2) * R2D                                                      ; k=k+1 ! pitch
          arr(k) = rotations(3) * R2D                                                      ; k=k+1 ! yaw
@@ -2075,7 +2078,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
       wt=>dvr%WT(iWT)
 
       ! Base 
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
+      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%PlatformPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
 
       ! Tower motions
@@ -2086,7 +2089,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
     
       if (wt%numBlades>0) then
          ! Nacelle 
-         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%nac%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', &
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%y_ED%NacelleMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', &
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
          
          ! Hub
@@ -2107,12 +2110,12 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
       if (p_FAST%WrVTK>1) then
          ! --- Debug outputs
          ! Tower base
-         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%twr%ptMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurface', &
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%y_ED%TwrPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurface', &
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                       NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
 
          if (dvr%ADI%m%u_AD(2)%rotors(iWT)%TowerMotion%nNodes>0) then
-            call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%twr%ptMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
+            call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%TwrPtMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
                                          VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                          NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
         endif
