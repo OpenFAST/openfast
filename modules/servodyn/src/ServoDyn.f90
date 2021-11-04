@@ -702,10 +702,15 @@ subroutine StC_Nacelle_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,Srv
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Nacelle
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
 
-         CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
-         CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
-         StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%NacPosition
-         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%NacOrientation
+         CALL AllocAry( StC_InitInp%InitRefPos,       3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitRefPos',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitTransDisp,    3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitTransDisp',  errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitRefOrient, 3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitRefOrient',  errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitOrient,    3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrient',     errStat2, ErrMsg2);  if (Failed())  return;
+         StC_InitInp%InitRefPos(1:3,1)        = SrvD_InitInp%NacRefPos(1:3)
+         StC_InitInp%InitTransDisp(1:3,1)     = SrvD_InitInp%NacTransDisp(1:3)
+         StC_InitInp%InitRefOrient(1:3,1:3,1) = SrvD_InitInp%NacRefOrient(1:3,1:3)
+         StC_InitInp%InitOrient(1:3,1:3,1)    = SrvD_InitInp%NacOrient(1:3,1:3)
+
 
          CALL StC_Init( StC_InitInp, u(1,j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;
@@ -825,10 +830,14 @@ subroutine StC_Tower_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Tower
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
 
-         CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
-         CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
-         StC_InitInp%InitPosition(:,1)      = SrvD_InitInp%TwrBasePos
-         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%TwrBaseOrient
+         CALL AllocAry( StC_InitInp%InitRefPos,       3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitRefPos',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitTransDisp,    3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitTransDisp',  errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitRefOrient, 3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitRefOrient',  errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitOrient,    3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrient',     errStat2, ErrMsg2);  if (Failed())  return;
+         StC_InitInp%InitRefPos(1:3,1)        = SrvD_InitInp%TwrBaseRefPos(1:3)
+         StC_InitInp%InitTransDisp(1:3,1)     = SrvD_InitInp%TwrBaseTransDisp(1:3)
+         StC_InitInp%InitRefOrient(1:3,1:3,1) = SrvD_InitInp%TwrBaseRefOrient(1:3,1:3)
+         StC_InitInp%InitOrient(1:3,1:3,1)    = SrvD_InitInp%TwrBaseOrient(1:3,1:3)
 
          CALL StC_Init( StC_InitInp, u(1,j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;
@@ -947,11 +956,15 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
          StC_InitInp%NumMeshPts     =  SrvD_p%NumBl        ! p%NumBl points for blades
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
 
-         CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
-         CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitRefPos,       3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitRefPos',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitTransDisp,    3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitTransDisp',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitRefOrient, 3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitRefOrient',  errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitOrient,    3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrient',  errStat2, ErrMsg2);  if (Failed())  return;
          do k=1,StC_InitInp%NumMeshPts
-            StC_InitInp%InitPosition(:,k)      = SrvD_InitInp%BladeRootPosition(:,k)
-            StC_InitInp%InitOrientation(:,:,k) = SrvD_InitInp%BladeRootOrientation(:,:,k)
+            StC_InitInp%InitRefPos(1:3,k)        = SrvD_InitInp%BladeRootRefPos(1:3,k)
+            StC_InitInp%InitTransDisp(1:3,k)     = SrvD_InitInp%BladeRootTransDisp(1:3,k)
+            StC_InitInp%InitRefOrient(1:3,1:3,k) = SrvD_InitInp%BladeRootRefOrient(1:3,1:3,k)
+            StC_InitInp%InitOrient(1:3,1:3,k)    = SrvD_InitInp%BladeRootOrient(1:3,1:3,k)
          enddo
 
          CALL StC_Init( StC_InitInp, u(1,j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
@@ -1076,10 +1089,14 @@ subroutine StC_Substruc_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,Sr
          StC_InitInp%NumMeshPts     =  1_IntKi        ! single point mesh for Platform
          Interval                   =  SrvD_p%DT      ! Pass the ServoDyn DT
 
-         CALL AllocAry( StC_InitInp%InitPosition,      3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitPosition',     errStat2, ErrMsg2);  if (Failed())  return;
-         CALL AllocAry( StC_InitInp%InitOrientation,3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrientation',  errStat2, ErrMsg2);  if (Failed())  return;
-         StC_InitInp%InitPosition(1:3,1)    = SrvD_InitInp%PlatformPos(1:3)
-         StC_InitInp%InitOrientation(:,:,1) = SrvD_InitInp%PlatformOrient
+         CALL AllocAry( StC_InitInp%InitRefPos,       3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitRefPos',     errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitTransDisp,    3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitTransDisp',  errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitRefOrient, 3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitRefOrient',  errStat2, ErrMsg2);  if (Failed())  return;
+         CALL AllocAry( StC_InitInp%InitOrient,    3, 3, StC_InitInp%NumMeshPts, 'StC_InitInp%InitOrient',     errStat2, ErrMsg2);  if (Failed())  return;
+         StC_InitInp%InitRefPos(1:3,1)        = SrvD_InitInp%PtfmRefPos(1:3)
+         StC_InitInp%InitTransDisp(1:3,1)     = SrvD_InitInp%PtfmTransDisp(1:3)
+         StC_InitInp%InitRefOrient(1:3,1:3,1) = SrvD_InitInp%PtfmRefOrient
+         StC_InitInp%InitOrient(1:3,1:3,1)    = SrvD_InitInp%PtfmOrient
 
          CALL StC_Init( StC_InitInp, u(1,j), p(j), x(j), xd(j), z(j), OtherState(j), y(j), m(j), Interval, StC_InitOut, ErrStat2, ErrMsg2 )
          if (Failed())  return;

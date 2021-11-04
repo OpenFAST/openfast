@@ -22,12 +22,18 @@ typedef	^	InitInputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	InitInputType	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch"	-
 typedef	^	InitInputType	ReKi	Gravity	{3}	-	-	"Gravitational acceleration vector"	m/s^2
-typedef	^	InitInputType	ReKi	NacPosition	{3}	-	-	"nacelle origin for setting up mesh"	m
-typedef	^	InitInputType	R8Ki	NacOrientation	{3}{3}	-	-	"nacelle orientation for setting up mesh"	-
-typedef	^	InitInputType	ReKi	TwrBasePos	{3}	-	-	"tower base origin for setting up mesh"	m
+typedef	^	InitInputType	ReKi	NacRefPos	{3}	-	-	"nacelle origin for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	NacTransDisp	{3}	-	-	"nacelle displacement from origin at init for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	NacOrient	{3}{3}	-	-	"nacelle orientation for setting up mesh"	-
+typedef	^	InitInputType	R8Ki	NacRefOrient	{3}{3}	-	-	"nacelle reference orientation for setting up mesh"	-
+typedef	^	InitInputType	ReKi	TwrBaseRefPos	{3}	-	-	"tower base origin for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	TwrBaseTransDisp	{3}	-	-	"tower base translation from origin at init for setting up mesh"	m
 typedef	^	InitInputType	R8Ki	TwrBaseOrient	{3}{3}	-	-	"tower base orientation for setting up mesh"	m
-typedef	^	InitInputType	ReKi	PlatformPos	{3}	-	-	"platform origin for setting up mesh"	m
-typedef	^	InitInputType	R8Ki	PlatformOrient	{3}{3}	-	-	"platform orientation for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	TwrBaseRefOrient	{3}{3}	-	-	"tower reference orientation for setting up mesh"	m
+typedef	^	InitInputType	ReKi	PtfmRefPos	{3}	-	-	"platform origin for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	PtfmTransDisp	{3}	-	-	"platform displacement from origin for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	PtfmOrient	{3}{3}	-	-	"platform orientation for setting up mesh"	m
+typedef	^	InitInputType	R8Ki	PtfmRefOrient	{3}{3}	-	-	"platform reference orientation for setting up mesh"	m
 typedef	^	InitInputType	DbKi	Tmax	-	-	-	"max time from glue code"	s
 typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
@@ -37,8 +43,10 @@ typedef	^	InitInputType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to
 typedef	^	InitInputType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True]"	-
 typedef	^	InitInputType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
 typedef	^	InitInputType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
-typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
-typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
+typedef	^	InitInputType	ReKi	BladeRootRefPos	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	BladeRootTransDisp	{:}{:}	-	-	"X-Y-Z translation from reference position at init of each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	BladeRootOrient	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
+typedef	^	InitInputType	R8Ki	BladeRootRefOrient	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 typedef	^	InitInputType	LOGICAL	UseInputFile	-	.TRUE.	-	"read input from input file"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
 #ADD in the TMD submodule input file passing here

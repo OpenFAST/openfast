@@ -98,8 +98,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       TYPE(StC_InputFile)                           :: InputFileData ! Data stored in the module's input file
       INTEGER(IntKi)                                :: i_pt          ! Generic counter for mesh point
       INTEGER(IntKi)                                :: i             ! Generic counter for mesh point
-      REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
-      REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
+      REAL(ReKi), allocatable, dimension(:,:)       :: RefPosGlobal
 
       type(FileInfoType)                            :: FileInfo_In               !< The derived type for holding the full input file for parsing -- we may pass this in the future
       type(FileInfoType)                            :: FileInfo_In_PrescribeFrc  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
@@ -204,15 +203,13 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
    ! set positions and orientations for tuned mass dampers's
-   call AllocAry(InitOut%RelPosition,  3, p%NumMeshPts, 'RelPosition',    ErrStat2,ErrMsg2);  if (Failed())  return;
-   call AllocAry(PositionGlobal,       3, p%NumMeshPts, 'PositionGlobal', ErrStat2,ErrMsg2);  if (Failed())  return;
-   call AllocAry(OrientationP,      3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(InitOut%RelPosition,  3, p%NumMeshPts, 'RelPosition',     ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(RefPosGlobal,         3, p%NumMeshPts, 'RefPosGlobal',    ErrStat2,ErrMsg2);  if (Failed())  return;
 
-   ! Set the initial positions and orietantions for each point
+   ! Set the initial positions and orientations for each point (Ref coords)
    do i_pt = 1,p%NumMeshPts
       InitOut%RelPosition(:,i_pt)   = (/ InputFileData%StC_P_X, InputFileData%StC_P_Y, InputFileData%StC_P_Z /)
-      OrientationP(:,:,i_pt)        = InitInp%InitOrientation(:,:,i_pt)
-      PositionGlobal(:,i_pt)        = InitInp%InitPosition(:,i_pt) + real( matmul(InitOut%RelPosition(:,i_pt),OrientationP(:,:,i_pt)), ReKi)
+      RefPosGlobal(:,i_pt)          = InitInp%InitRefPos(:,i_pt) + real( matmul(InitOut%RelPosition(:,i_pt),InitInp%InitRefOrient(:,:,i_pt)), ReKi)
    enddo
 
     ! Define system output initializations (set up mesh) here:
@@ -249,8 +246,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
          ! Create the node on the mesh
-         ! make position node at point P (rest position of tuned mass dampers, somewhere above the yaw bearing)
-      CALL MeshPositionNode ( u%Mesh(i_pt),1, PositionGlobal(:,i_pt), ErrStat2, ErrMsg2, OrientationP(:,:,i_pt) )
+      CALL MeshPositionNode ( u%Mesh(i_pt),1, RefPosGlobal(:,i_pt), ErrStat2, ErrMsg2, InitInp%InitRefOrient(:,:,i_pt) )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! Create the mesh element
@@ -278,6 +274,10 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       u%Mesh(i_pt)%RemapFlag  = .TRUE.
       y%Mesh(i_pt)%RemapFlag  = .TRUE.
+
+      ! Set initial displacements
+      u%Mesh(i_pt)%Orientation(1:3,1:3,1) = InitInp%InitOrient(:,:,i_pt)
+      u%Mesh(i_pt)%TranslationDisp(1:3,1) = InitInp%InitTransDisp(:,i_pt)
    enddo
 
 
@@ -409,9 +409,8 @@ CONTAINS
    end function Failed
    !.........................................
    SUBROUTINE cleanup()
-      if (UnEcho > 0)                  close(UnEcho)                    ! Close echo file
-      if (allocated(PositionGlobal))   deallocate(PositionGlobal)
-      if (allocated(OrientationP  ))   deallocate(OrientationP  )
+      if (UnEcho > 0)                     close(UnEcho)                    ! Close echo file
+      if (allocated(RefPosGlobal    ))    deallocate(RefPosGlobal    )
       CALL StC_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)      ! Ignore warnings here.
    END SUBROUTINE cleanup
 !.........................................

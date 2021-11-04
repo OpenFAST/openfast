@@ -108,8 +108,10 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity      !< Gravitational acceleration vector [m/s^2]
     INTEGER(IntKi)  :: NumMeshPts      !< Number of mesh points [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InitPosition      !< X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades) [m]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: InitOrientation      !< DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InitRefPos      !< X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades) [m]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: InitTransDisp      !< X-Y-Z displacement from position of point at init: i.e. each blade root (3 x NumBlades) [m]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: InitOrient      !< DCM orientation of point at init: i.e. each blade root (3x3 x NumBlades) [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: InitRefOrient      !< DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades) [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Read from the input file.  If false, must parse the string info passed [-]
     TYPE(FileInfoType)  :: PassedPrimaryInputData      !< Primary input file as FileInfoType (set by driver/glue code) [-]
     LOGICAL  :: UseInputFile_PrescribeFrc = .TRUE.      !< Read from the input file.  If false, must parse the string info passed [-]
@@ -958,35 +960,65 @@ ENDIF
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%NumMeshPts = SrcInitInputData%NumMeshPts
-IF (ALLOCATED(SrcInitInputData%InitPosition)) THEN
-  i1_l = LBOUND(SrcInitInputData%InitPosition,1)
-  i1_u = UBOUND(SrcInitInputData%InitPosition,1)
-  i2_l = LBOUND(SrcInitInputData%InitPosition,2)
-  i2_u = UBOUND(SrcInitInputData%InitPosition,2)
-  IF (.NOT. ALLOCATED(DstInitInputData%InitPosition)) THEN 
-    ALLOCATE(DstInitInputData%InitPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInitInputData%InitRefPos)) THEN
+  i1_l = LBOUND(SrcInitInputData%InitRefPos,1)
+  i1_u = UBOUND(SrcInitInputData%InitRefPos,1)
+  i2_l = LBOUND(SrcInitInputData%InitRefPos,2)
+  i2_u = UBOUND(SrcInitInputData%InitRefPos,2)
+  IF (.NOT. ALLOCATED(DstInitInputData%InitRefPos)) THEN 
+    ALLOCATE(DstInitInputData%InitRefPos(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitPosition.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitRefPos.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInitInputData%InitPosition = SrcInitInputData%InitPosition
+    DstInitInputData%InitRefPos = SrcInitInputData%InitRefPos
 ENDIF
-IF (ALLOCATED(SrcInitInputData%InitOrientation)) THEN
-  i1_l = LBOUND(SrcInitInputData%InitOrientation,1)
-  i1_u = UBOUND(SrcInitInputData%InitOrientation,1)
-  i2_l = LBOUND(SrcInitInputData%InitOrientation,2)
-  i2_u = UBOUND(SrcInitInputData%InitOrientation,2)
-  i3_l = LBOUND(SrcInitInputData%InitOrientation,3)
-  i3_u = UBOUND(SrcInitInputData%InitOrientation,3)
-  IF (.NOT. ALLOCATED(DstInitInputData%InitOrientation)) THEN 
-    ALLOCATE(DstInitInputData%InitOrientation(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInitInputData%InitTransDisp)) THEN
+  i1_l = LBOUND(SrcInitInputData%InitTransDisp,1)
+  i1_u = UBOUND(SrcInitInputData%InitTransDisp,1)
+  i2_l = LBOUND(SrcInitInputData%InitTransDisp,2)
+  i2_u = UBOUND(SrcInitInputData%InitTransDisp,2)
+  IF (.NOT. ALLOCATED(DstInitInputData%InitTransDisp)) THEN 
+    ALLOCATE(DstInitInputData%InitTransDisp(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitOrientation.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitTransDisp.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInitInputData%InitOrientation = SrcInitInputData%InitOrientation
+    DstInitInputData%InitTransDisp = SrcInitInputData%InitTransDisp
+ENDIF
+IF (ALLOCATED(SrcInitInputData%InitOrient)) THEN
+  i1_l = LBOUND(SrcInitInputData%InitOrient,1)
+  i1_u = UBOUND(SrcInitInputData%InitOrient,1)
+  i2_l = LBOUND(SrcInitInputData%InitOrient,2)
+  i2_u = UBOUND(SrcInitInputData%InitOrient,2)
+  i3_l = LBOUND(SrcInitInputData%InitOrient,3)
+  i3_u = UBOUND(SrcInitInputData%InitOrient,3)
+  IF (.NOT. ALLOCATED(DstInitInputData%InitOrient)) THEN 
+    ALLOCATE(DstInitInputData%InitOrient(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitOrient.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%InitOrient = SrcInitInputData%InitOrient
+ENDIF
+IF (ALLOCATED(SrcInitInputData%InitRefOrient)) THEN
+  i1_l = LBOUND(SrcInitInputData%InitRefOrient,1)
+  i1_u = UBOUND(SrcInitInputData%InitRefOrient,1)
+  i2_l = LBOUND(SrcInitInputData%InitRefOrient,2)
+  i2_u = UBOUND(SrcInitInputData%InitRefOrient,2)
+  i3_l = LBOUND(SrcInitInputData%InitRefOrient,3)
+  i3_u = UBOUND(SrcInitInputData%InitRefOrient,3)
+  IF (.NOT. ALLOCATED(DstInitInputData%InitRefOrient)) THEN 
+    ALLOCATE(DstInitInputData%InitRefOrient(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%InitRefOrient.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%InitRefOrient = SrcInitInputData%InitRefOrient
 ENDIF
     DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
       CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedPrimaryInputData, DstInitInputData%PassedPrimaryInputData, CtrlCode, ErrStat2, ErrMsg2 )
@@ -1007,11 +1039,17 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(InitInputData%InitPosition)) THEN
-  DEALLOCATE(InitInputData%InitPosition)
+IF (ALLOCATED(InitInputData%InitRefPos)) THEN
+  DEALLOCATE(InitInputData%InitRefPos)
 ENDIF
-IF (ALLOCATED(InitInputData%InitOrientation)) THEN
-  DEALLOCATE(InitInputData%InitOrientation)
+IF (ALLOCATED(InitInputData%InitTransDisp)) THEN
+  DEALLOCATE(InitInputData%InitTransDisp)
+ENDIF
+IF (ALLOCATED(InitInputData%InitOrient)) THEN
+  DEALLOCATE(InitInputData%InitOrient)
+ENDIF
+IF (ALLOCATED(InitInputData%InitRefOrient)) THEN
+  DEALLOCATE(InitInputData%InitRefOrient)
 ENDIF
   CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat, ErrMsg )
   CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrescribeFrcData, ErrStat, ErrMsg )
@@ -1056,15 +1094,25 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Re_BufSz   = Re_BufSz   + SIZE(InData%Gravity)  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! NumMeshPts
-  Int_BufSz   = Int_BufSz   + 1     ! InitPosition allocated yes/no
-  IF ( ALLOCATED(InData%InitPosition) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! InitPosition upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%InitPosition)  ! InitPosition
+  Int_BufSz   = Int_BufSz   + 1     ! InitRefPos allocated yes/no
+  IF ( ALLOCATED(InData%InitRefPos) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! InitRefPos upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%InitRefPos)  ! InitRefPos
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! InitOrientation allocated yes/no
-  IF ( ALLOCATED(InData%InitOrientation) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! InitOrientation upper/lower bounds for each dimension
-      Db_BufSz   = Db_BufSz   + SIZE(InData%InitOrientation)  ! InitOrientation
+  Int_BufSz   = Int_BufSz   + 1     ! InitTransDisp allocated yes/no
+  IF ( ALLOCATED(InData%InitTransDisp) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! InitTransDisp upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%InitTransDisp)  ! InitTransDisp
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! InitOrient allocated yes/no
+  IF ( ALLOCATED(InData%InitOrient) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! InitOrient upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%InitOrient)  ! InitOrient
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! InitRefOrient allocated yes/no
+  IF ( ALLOCATED(InData%InitRefOrient) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! InitRefOrient upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%InitRefOrient)  ! InitRefOrient
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! UseInputFile
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
@@ -1144,46 +1192,91 @@ ENDIF
     END DO
     IntKiBuf(Int_Xferred) = InData%NumMeshPts
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%InitPosition) ) THEN
+  IF ( .NOT. ALLOCATED(InData%InitRefPos) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitPosition,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitPosition,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitRefPos,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitRefPos,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitPosition,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitPosition,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitRefPos,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitRefPos,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%InitPosition,2), UBOUND(InData%InitPosition,2)
-        DO i1 = LBOUND(InData%InitPosition,1), UBOUND(InData%InitPosition,1)
-          ReKiBuf(Re_Xferred) = InData%InitPosition(i1,i2)
+      DO i2 = LBOUND(InData%InitRefPos,2), UBOUND(InData%InitRefPos,2)
+        DO i1 = LBOUND(InData%InitRefPos,1), UBOUND(InData%InitRefPos,1)
+          ReKiBuf(Re_Xferred) = InData%InitRefPos(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%InitOrientation) ) THEN
+  IF ( .NOT. ALLOCATED(InData%InitTransDisp) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrientation,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrientation,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitTransDisp,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitTransDisp,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrientation,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrientation,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrientation,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrientation,3)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitTransDisp,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitTransDisp,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i3 = LBOUND(InData%InitOrientation,3), UBOUND(InData%InitOrientation,3)
-        DO i2 = LBOUND(InData%InitOrientation,2), UBOUND(InData%InitOrientation,2)
-          DO i1 = LBOUND(InData%InitOrientation,1), UBOUND(InData%InitOrientation,1)
-            DbKiBuf(Db_Xferred) = InData%InitOrientation(i1,i2,i3)
+      DO i2 = LBOUND(InData%InitTransDisp,2), UBOUND(InData%InitTransDisp,2)
+        DO i1 = LBOUND(InData%InitTransDisp,1), UBOUND(InData%InitTransDisp,1)
+          DbKiBuf(Db_Xferred) = InData%InitTransDisp(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%InitOrient) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrient,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrient,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrient,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrient,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitOrient,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitOrient,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%InitOrient,3), UBOUND(InData%InitOrient,3)
+        DO i2 = LBOUND(InData%InitOrient,2), UBOUND(InData%InitOrient,2)
+          DO i1 = LBOUND(InData%InitOrient,1), UBOUND(InData%InitOrient,1)
+            DbKiBuf(Db_Xferred) = InData%InitOrient(i1,i2,i3)
+            Db_Xferred = Db_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%InitRefOrient) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitRefOrient,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitRefOrient,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitRefOrient,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitRefOrient,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%InitRefOrient,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%InitRefOrient,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%InitRefOrient,3), UBOUND(InData%InitRefOrient,3)
+        DO i2 = LBOUND(InData%InitRefOrient,2), UBOUND(InData%InitRefOrient,2)
+          DO i1 = LBOUND(InData%InitRefOrient,1), UBOUND(InData%InitRefOrient,1)
+            DbKiBuf(Db_Xferred) = InData%InitRefOrient(i1,i2,i3)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
@@ -1296,7 +1389,7 @@ ENDIF
     END DO
     OutData%NumMeshPts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitPosition not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitRefPos not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -1306,20 +1399,43 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%InitPosition)) DEALLOCATE(OutData%InitPosition)
-    ALLOCATE(OutData%InitPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%InitRefPos)) DEALLOCATE(OutData%InitRefPos)
+    ALLOCATE(OutData%InitRefPos(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitPosition.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitRefPos.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%InitPosition,2), UBOUND(OutData%InitPosition,2)
-        DO i1 = LBOUND(OutData%InitPosition,1), UBOUND(OutData%InitPosition,1)
-          OutData%InitPosition(i1,i2) = ReKiBuf(Re_Xferred)
+      DO i2 = LBOUND(OutData%InitRefPos,2), UBOUND(OutData%InitRefPos,2)
+        DO i1 = LBOUND(OutData%InitRefPos,1), UBOUND(OutData%InitRefPos,1)
+          OutData%InitRefPos(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitOrientation not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitTransDisp not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%InitTransDisp)) DEALLOCATE(OutData%InitTransDisp)
+    ALLOCATE(OutData%InitTransDisp(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitTransDisp.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%InitTransDisp,2), UBOUND(OutData%InitTransDisp,2)
+        DO i1 = LBOUND(OutData%InitTransDisp,1), UBOUND(OutData%InitTransDisp,1)
+          OutData%InitTransDisp(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitOrient not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -1332,16 +1448,44 @@ ENDIF
     i3_l = IntKiBuf( Int_Xferred    )
     i3_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%InitOrientation)) DEALLOCATE(OutData%InitOrientation)
-    ALLOCATE(OutData%InitOrientation(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%InitOrient)) DEALLOCATE(OutData%InitOrient)
+    ALLOCATE(OutData%InitOrient(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitOrientation.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitOrient.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i3 = LBOUND(OutData%InitOrientation,3), UBOUND(OutData%InitOrientation,3)
-        DO i2 = LBOUND(OutData%InitOrientation,2), UBOUND(OutData%InitOrientation,2)
-          DO i1 = LBOUND(OutData%InitOrientation,1), UBOUND(OutData%InitOrientation,1)
-            OutData%InitOrientation(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      DO i3 = LBOUND(OutData%InitOrient,3), UBOUND(OutData%InitOrient,3)
+        DO i2 = LBOUND(OutData%InitOrient,2), UBOUND(OutData%InitOrient,2)
+          DO i1 = LBOUND(OutData%InitOrient,1), UBOUND(OutData%InitOrient,1)
+            OutData%InitOrient(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+            Db_Xferred = Db_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InitRefOrient not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%InitRefOrient)) DEALLOCATE(OutData%InitRefOrient)
+    ALLOCATE(OutData%InitRefOrient(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitRefOrient.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%InitRefOrient,3), UBOUND(OutData%InitRefOrient,3)
+        DO i2 = LBOUND(OutData%InitRefOrient,2), UBOUND(OutData%InitRefOrient,2)
+          DO i1 = LBOUND(OutData%InitRefOrient,1), UBOUND(OutData%InitRefOrient,1)
+            OutData%InitRefOrient(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO

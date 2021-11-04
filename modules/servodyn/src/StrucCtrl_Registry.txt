@@ -82,8 +82,10 @@ typedef   StrucCtrl/StC   InitInputType   CHARACTER(1024)   InputFile   -   -   
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^		^				ReKi			Gravity	{3}	-	-	"Gravitational acceleration vector"	"m/s^2"
 typedef	^	InitInputType	IntKi			NumMeshPts	-	-	-	"Number of mesh points"	-
-typedef	^	InitInputType	ReKi	InitPosition	{:}{:}	-	-	"X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades)"	m
-typedef	^	InitInputType	R8Ki	InitOrientation	{:}{:}{:}	-	-	"DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades)"	-
+typedef	^	InitInputType	ReKi	InitRefPos	{:}{:}	-	-	"X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	InitTransDisp	{:}{:}	-	-	"X-Y-Z displacement from position of point at init: i.e. each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	InitOrient	{:}{:}{:}	-	-	"DCM orientation of point at init: i.e. each blade root (3x3 x NumBlades)"	-
+typedef	^	InitInputType	R8Ki	InitRefOrient	{:}{:}{:}	-	-	"DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades)"	-
 typedef	^	InitInputType	LOGICAL	UseInputFile	-	.TRUE.	-	"Read from the input file.  If false, must parse the string info passed"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
 typedef	^	InitInputType	LOGICAL	UseInputFile_PrescribeFrc	-	.TRUE.	-	"Read from the input file.  If false, must parse the string info passed"	-

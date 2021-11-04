@@ -172,13 +172,16 @@ contains
                TranslationAcc =.TRUE., RotationAcc=.TRUE.)
          if (Failed())  return;
       ! Create the node on the mesh
-      CALL MeshPositionNode ( u%PtfmMotionMesh,1, InitInp%PlatformPos(1:3), ErrStat2, ErrMsg2, InitInp%PlatformOrient )
+      CALL MeshPositionNode ( u%PtfmMotionMesh,1, InitInp%PtfmRefPos(1:3), ErrStat2, ErrMsg2, InitInp%PtfmRefOrient )
          if (Failed())  return;
       ! Create the mesh element
       CALL MeshConstructElement ( u%PtfmMotionMesh, ELEMENT_POINT, ErrStat2, ErrMsg2, 1 )
          if (Failed())  return;
       CALL MeshCommit ( u%PtfmMotionMesh, ErrStat2, ErrMsg2 )
          if (Failed())  return;
+      ! Set any initial offsets
+      u%PtfmMotionMesh%TranslationDisp(1:3,1) = InitInp%PtfmRefPos(1:3)
+      u%PtfmMotionMesh%Orientation(1:3,1:3,1) = InitInp%PtfmOrient(1:3,1:3)
       ! Writing out info on channels
       if (UnSum > 0) then
          call WrSumInfoSend(1001, 'General channel group -- Platform motion -- Displacement TDX (m)')
