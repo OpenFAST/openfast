@@ -1127,25 +1127,25 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, NWaveElev, Wa
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by HydroDyn_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
-   REAL(DbKi),                         INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
-   TYPE(HydroDyn_ParameterType),       INTENT( IN    )  :: p              ! HydroDyn's parameter data
-   TYPE(HydroDyn_OutputType),          INTENT( INOUT )  :: y              ! HydroDyn's output data
-   type(WAMIT_MiscVarType),            intent( in    )  :: m_WAMIT(:)     ! WAMIT object's MiscVar data
-   type(WAMIT2_MiscVarType),           intent( in    )  :: m_WAMIT2(:)    ! WAMIT2 object's MiscVar data
-   INTEGER,                            INTENT( IN    )  :: NWaveElev      ! Number of wave elevation locations to output
-   REAL(ReKi),                         INTENT( IN    )  :: WaveElev(:)    ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(ReKi),                         INTENT( IN    )  :: WaveElev1(:)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(ReKi),                         INTENT( IN    )  :: WaveElev2(:)    ! Instantaneous second order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(ReKi),                         INTENT( IN    )  :: F_Add(:)
-   REAL(ReKi),                         INTENT( IN    )  :: F_Waves(:)
-   REAL(ReKi),                         INTENT( IN    )  :: F_Hydro(:)     ! All hydrodynamic loads integrated at (0,0,0) in the global coordinate system
-   type(MeshType),                     INTENT( IN    )  :: PRPmesh        ! the PRP mesh -- for motions output
-   REAL(ReKi),                         INTENT( IN    )  :: q(:)           ! WAMIT body translations and rotations
-   REAL(ReKi),                         INTENT( IN    )  :: qdot(:)        ! WAMIT body translational and rotational velocities
-   REAL(ReKi),                         INTENT( IN    )  :: qdotdot(:)     ! WAMIT body translational and rotational accelerations
-   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxHDOutputs)
-   INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat        ! Error status of the operation
-   CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                            INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
+   TYPE(HydroDyn_ParameterType),          INTENT( IN    )  :: p              ! HydroDyn's parameter data
+   TYPE(HydroDyn_OutputType),             INTENT( INOUT )  :: y              ! HydroDyn's output data
+   type(WAMIT_MiscVarType),  ALLOCATABLE, intent( in    )  :: m_WAMIT(:)     ! WAMIT object's MiscVar data
+   type(WAMIT2_MiscVarType), ALLOCATABLE, intent( in    )  :: m_WAMIT2(:)    ! WAMIT2 object's MiscVar data
+   INTEGER,                               INTENT( IN    )  :: NWaveElev      ! Number of wave elevation locations to output
+   REAL(ReKi),                            INTENT( IN    )  :: WaveElev(:)    ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(ReKi),                            INTENT( IN    )  :: WaveElev1(:)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(ReKi),                            INTENT( IN    )  :: WaveElev2(:)    ! Instantaneous second order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(ReKi),               ALLOCATABLE, INTENT( IN    )  :: F_Add(:)
+   REAL(ReKi),               ALLOCATABLE, INTENT( IN    )  :: F_Waves(:)
+   REAL(ReKi),                            INTENT( IN    )  :: F_Hydro(:)     ! All hydrodynamic loads integrated at (0,0,0) in the global coordinate system
+   type(MeshType),                        INTENT( IN    )  :: PRPmesh        ! the PRP mesh -- for motions output
+   REAL(ReKi),                            INTENT( IN    )  :: q(:)           ! WAMIT body translations and rotations
+   REAL(ReKi),                            INTENT( IN    )  :: qdot(:)        ! WAMIT body translational and rotational velocities
+   REAL(ReKi),                            INTENT( IN    )  :: qdotdot(:)     ! WAMIT body translational and rotational accelerations
+   REAL(ReKi),                            INTENT(   OUT )  :: AllOuts(MaxHDOutputs)
+   INTEGER(IntKi),                        INTENT(   OUT )  :: ErrStat        ! Error status of the operation
+   CHARACTER(*),                          INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
    INTEGER                                              :: I, iBody, startIndx, endIndx
    integer(IntKi)                                       :: ErrStat2
