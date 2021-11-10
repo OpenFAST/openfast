@@ -3008,10 +3008,8 @@ CONTAINS
             
          ! Transfer BD loads to ED hub input:
          ! we're mapping loads, so we also need the sibling meshes' displacements:
-         if ( p_FAST%CompAero /= Module_AD ) then
-            MeshMapData%u_ED_HubPtLoad%Force  = 0.0_ReKi
-            MeshMapData%u_ED_HubPtLoad%Moment = 0.0_ReKi
-         end if
+         MeshMapData%u_ED_HubPtLoad%Force  = 0.0_ReKi
+         MeshMapData%u_ED_HubPtLoad%Moment = 0.0_ReKi
          do i=1,p_FAST%nBeams            
             CALL Transfer_Point_to_Point( y_BD2(i)%ReactionForce, MeshMapData%u_ED_HubPtLoad_2, MeshMapData%BD_P_2_ED_P(i), ErrStat2, ErrMsg2, MeshMapData%u_BD_RootMotion(i), y_ED2%HubPtMotion) !u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
