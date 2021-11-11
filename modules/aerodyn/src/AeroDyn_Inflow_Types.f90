@@ -66,6 +66,7 @@ IMPLICIT NONE
     TYPE(AD_InitInputType)  :: AD      !< AD Init input types [-]
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !< IW Init input types [-]
     Character(1024)  :: RootName      !< RootName for writing output files [-]
+    LOGICAL  :: StoreHHVel      !< If True, hub height velocity will be computed by infow wind [-]
   END TYPE ADI_InitInputType
 ! =======================
 ! =========  ADI_InitOutputType  =======
@@ -106,6 +107,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ADI_ParameterType
     TYPE(AD_ParameterType)  :: AD      !< Parameters [-]
     REAL(DbKi)  :: dt      !< time increment [s]
+    LOGICAL  :: StoreHHVel      !< If True, hub height velocity will be computed by infow wind [-]
   END TYPE ADI_ParameterType
 ! =======================
 ! =========  ADI_InputType  =======
@@ -116,6 +118,8 @@ IMPLICIT NONE
 ! =========  ADI_OutputType  =======
   TYPE, PUBLIC :: ADI_OutputType
     TYPE(AD_OutputType)  :: AD      !< System outputs [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: HHVel      !< Hub Height velocities for each rotors [-]
+    REAL(ReKi)  :: PLExp      !< Power law exponents (for outputs only) [-]
   END TYPE ADI_OutputType
 ! =======================
 CONTAINS
@@ -128,6 +132,7 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'ADI_CopyInflowWindData'
@@ -642,6 +647,7 @@ ENDDO
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'ADI_UnPackInflowWindData'
@@ -1163,6 +1169,7 @@ ENDDO
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%RootName = SrcInitInputData%RootName
+    DstInitInputData%StoreHHVel = SrcInitInputData%StoreHHVel
  END SUBROUTINE ADI_CopyInitInput
 
  SUBROUTINE ADI_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1249,6 +1256,7 @@ ENDDO
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
+      Int_BufSz  = Int_BufSz  + 1  ! StoreHHVel
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1336,6 +1344,8 @@ ENDDO
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%StoreHHVel, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_PackInitInput
 
  SUBROUTINE ADI_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1448,6 +1458,8 @@ ENDDO
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%StoreHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%StoreHHVel)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_UnPackInitInput
 
  SUBROUTINE ADI_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -3016,6 +3028,7 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstParamData%dt = SrcParamData%dt
+    DstParamData%StoreHHVel = SrcParamData%StoreHHVel
  END SUBROUTINE ADI_CopyParam
 
  SUBROUTINE ADI_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -3084,6 +3097,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Db_BufSz   = Db_BufSz   + 1  ! dt
+      Int_BufSz  = Int_BufSz  + 1  ! StoreHHVel
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3141,6 +3155,8 @@ ENDIF
       ENDIF
     DbKiBuf(Db_Xferred) = InData%dt
     Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%StoreHHVel, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_PackParam
 
  SUBROUTINE ADI_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3211,6 +3227,8 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%dt = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
+    OutData%StoreHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%StoreHHVel)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_UnPackParam
 
  SUBROUTINE ADI_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -3430,6 +3448,8 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'ADI_CopyOutput'
@@ -3439,6 +3459,21 @@ ENDIF
       CALL AD_CopyOutput( SrcOutputData%AD, DstOutputData%AD, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcOutputData%HHVel)) THEN
+  i1_l = LBOUND(SrcOutputData%HHVel,1)
+  i1_u = UBOUND(SrcOutputData%HHVel,1)
+  i2_l = LBOUND(SrcOutputData%HHVel,2)
+  i2_u = UBOUND(SrcOutputData%HHVel,2)
+  IF (.NOT. ALLOCATED(DstOutputData%HHVel)) THEN 
+    ALLOCATE(DstOutputData%HHVel(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%HHVel.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%HHVel = SrcOutputData%HHVel
+ENDIF
+    DstOutputData%PLExp = SrcOutputData%PLExp
  END SUBROUTINE ADI_CopyOutput
 
  SUBROUTINE ADI_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -3451,6 +3486,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL AD_DestroyOutput( OutputData%AD, ErrStat, ErrMsg )
+IF (ALLOCATED(OutputData%HHVel)) THEN
+  DEALLOCATE(OutputData%HHVel)
+ENDIF
  END SUBROUTINE ADI_DestroyOutput
 
  SUBROUTINE ADI_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3506,6 +3544,12 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! HHVel allocated yes/no
+  IF ( ALLOCATED(InData%HHVel) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! HHVel upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%HHVel)  ! HHVel
+  END IF
+      Re_BufSz   = Re_BufSz   + 1  ! PLExp
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3561,6 +3605,28 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%HHVel) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%HHVel,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%HHVel,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%HHVel,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%HHVel,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%HHVel,2), UBOUND(InData%HHVel,2)
+        DO i1 = LBOUND(InData%HHVel,1), UBOUND(InData%HHVel,1)
+          ReKiBuf(Re_Xferred) = InData%HHVel(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+    ReKiBuf(Re_Xferred) = InData%PLExp
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ADI_PackOutput
 
  SUBROUTINE ADI_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3576,6 +3642,8 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'ADI_UnPackOutput'
@@ -3629,6 +3697,31 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! HHVel not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%HHVel)) DEALLOCATE(OutData%HHVel)
+    ALLOCATE(OutData%HHVel(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%HHVel.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%HHVel,2), UBOUND(OutData%HHVel,2)
+        DO i1 = LBOUND(OutData%HHVel,1), UBOUND(OutData%HHVel,1)
+          OutData%HHVel(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+    OutData%PLExp = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ADI_UnPackOutput
 
 
@@ -3864,6 +3957,10 @@ ENDIF
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+ INTEGER                                    :: i2    ! dim2 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -3880,6 +3977,16 @@ ENDIF
    ScaleFactor = t_out / t(2)
       CALL AD_Output_ExtrapInterp1( y1%AD, y2%AD, tin, y_out%AD, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+IF (ALLOCATED(y_out%HHVel) .AND. ALLOCATED(y1%HHVel)) THEN
+  DO i2 = LBOUND(y_out%HHVel,2),UBOUND(y_out%HHVel,2)
+    DO i1 = LBOUND(y_out%HHVel,1),UBOUND(y_out%HHVel,1)
+      b = -(y1%HHVel(i1,i2) - y2%HHVel(i1,i2))
+      y_out%HHVel(i1,i2) = y1%HHVel(i1,i2) + b * ScaleFactor
+    END DO
+  END DO
+END IF ! check if allocated
+  b = -(y1%PLExp - y2%PLExp)
+  y_out%PLExp = y1%PLExp + b * ScaleFactor
  END SUBROUTINE ADI_Output_ExtrapInterp1
 
 
@@ -3915,6 +4022,10 @@ ENDIF
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'ADI_Output_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+ INTEGER                                    :: i2    ! dim2 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -3937,6 +4048,18 @@ ENDIF
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
       CALL AD_Output_ExtrapInterp2( y1%AD, y2%AD, y3%AD, tin, y_out%AD, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+IF (ALLOCATED(y_out%HHVel) .AND. ALLOCATED(y1%HHVel)) THEN
+  DO i2 = LBOUND(y_out%HHVel,2),UBOUND(y_out%HHVel,2)
+    DO i1 = LBOUND(y_out%HHVel,1),UBOUND(y_out%HHVel,1)
+      b = (t(3)**2*(y1%HHVel(i1,i2) - y2%HHVel(i1,i2)) + t(2)**2*(-y1%HHVel(i1,i2) + y3%HHVel(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*y1%HHVel(i1,i2) + t(3)*y2%HHVel(i1,i2) - t(2)*y3%HHVel(i1,i2) ) * scaleFactor
+      y_out%HHVel(i1,i2) = y1%HHVel(i1,i2) + b  + c * t_out
+    END DO
+  END DO
+END IF ! check if allocated
+  b = (t(3)**2*(y1%PLExp - y2%PLExp) + t(2)**2*(-y1%PLExp + y3%PLExp))* scaleFactor
+  c = ( (t(2)-t(3))*y1%PLExp + t(3)*y2%PLExp - t(2)*y3%PLExp ) * scaleFactor
+  y_out%PLExp = y1%PLExp + b  + c * t_out
  END SUBROUTINE ADI_Output_ExtrapInterp2
 
 END MODULE AeroDyn_Inflow_Types

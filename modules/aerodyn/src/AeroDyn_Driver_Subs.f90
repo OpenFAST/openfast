@@ -74,10 +74,9 @@ contains
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_Init(dvr, ADI, IW, errStat,errMsg )
+subroutine Dvr_Init(dvr, ADI, errStat,errMsg )
    type(Dvr_SimData),           intent(  out) :: dvr       ! driver data
    type(ADI_Data),              intent(  out) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(ADI_InflowWindData),     intent(  out) :: IW            ! AeroDyn data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -115,11 +114,10 @@ end subroutine Dvr_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_InitCase(iCase, dvr, ADI, IW, errStat, errMsg )
+subroutine Dvr_InitCase(iCase, dvr, ADI, errStat, errMsg )
    integer(IntKi)              , intent(in   ) :: iCase
    type(Dvr_SimData),           intent(inout) :: dvr           ! driver data
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(ADI_InflowWindData),     intent(inout) :: IW            ! InflowWind data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -216,8 +214,10 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, IW, errStat, errMsg )
    ! --- Initial AD inputs
    dvr%ADI%inputTimes = -999
    DO j = 1-numInp, 0
-      call Set_AD_Inputs(j, dvr, ADI, dvr%ADI%m%IW,errStat2,errMsg2); if(Failed()) return
+      call Set_AD_Inputs(j, dvr, ADI, errStat2,errMsg2); if(Failed()) return
    END DO              
+   ! --- Inflow on points
+   call ADI_ADIW_Solve(dvr%ADI%inputTimes(1), dvr%ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u(1), ADI%m%IW, .true., errStat, errMsg)
 
    ! --- Initialize outputs
    call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
@@ -250,11 +250,10 @@ end subroutine Dvr_InitCase
 
 
 !> Perform one time step
-subroutine Dvr_TimeStep(nt, dvr, ADI, IW, errStat, errMsg)
+subroutine Dvr_TimeStep(nt, dvr, ADI, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: nt            ! time step
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(ADI_InflowWindData),     intent(inout) :: IW            ! AeroDyn data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -274,17 +273,18 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, IW, errStat, errMsg)
 
    ! Set AD inputs for nt (and keep values at nt-1 as well)
    ! u(1) is at nt, u(2) is at nt-1
-   call Set_AD_Inputs(nt,dvr,ADI,IW,errStat2,errMsg2); if(Failed()) return
-   time = dvr%ADI%inputTimes(2)
+   call Set_AD_Inputs(nt,dvr,ADI,errStat2,errMsg2); if(Failed()) return
+   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u(1), ADI%m%IW, .true., errStat, errMsg)
+   time = ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1
-   call AD_CalcOutput( time, dvr%ADI%u(2)%AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
+   call AD_CalcOutput( time, ADI%u(2)%AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
 
    ! Write outputs for all turbines at nt-1
-   call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y%AD, IW%y, errStat2, errMsg2); if(Failed()) return
+   call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y%AD, ADI%m%IW%y, errStat2, errMsg2); if(Failed()) return
 
    ! We store the "driver-level" outputs only now,  above, the old outputs are used
-   call Dvr_CalcOutputDriver(dvr, IW%y, errStat, errMsg)
+   call Dvr_CalcOutputDriver(dvr, ADI%m%IW%y, errStat, errMsg)
 
 
    ! VTK outputs
@@ -299,7 +299,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, IW, errStat, errMsg)
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
    u_AD(1) = ADI%u(1)%AD
    u_AD(2) = ADI%u(2)%AD
-   call AD_UpdateStates( time, nt-1, u_AD, dvr%ADI%inputTimes, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%m%AD, errStat2, errMsg2); if(Failed()) return
+   call AD_UpdateStates( time, nt-1, u_AD, ADI%inputTimes, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%m%AD, errStat2, errMsg2); if(Failed()) return
 
 contains
 
@@ -310,10 +310,9 @@ contains
 
 end subroutine Dvr_TimeStep
 
-subroutine Dvr_EndCase(dvr, ADI, IW, initialized, errStat, errMsg)
+subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(ADI_InflowWindData),     intent(inout) :: IW            ! AeroDyn data 
    logical,                      intent(inout) :: initialized   ! 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -350,10 +349,9 @@ subroutine Dvr_EndCase(dvr, ADI, IW, initialized, errStat, errMsg)
 end subroutine Dvr_EndCase
 
 !> End current case if not already closed, and destroy data
-subroutine Dvr_CleanUp(dvr, ADI, IW, initialized, errStat, errMsg)
+subroutine Dvr_CleanUp(dvr, ADI, initialized, errStat, errMsg)
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(ADI_InflowWindData),     intent(inout) :: IW            ! AeroDyn data 
    logical,                      intent(inout) :: initialized   ! 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -366,7 +364,7 @@ subroutine Dvr_CleanUp(dvr, ADI, IW, initialized, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
-   call Dvr_EndCase(dvr, ADI, IW, initialized, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+   call Dvr_EndCase(dvr, ADI, initialized, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    ! End modules
    call ADI_End( ADI%u(:), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName); 
@@ -405,7 +403,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
       ! UA does not like changes of dt between cases
       if ( .not. EqualRealNos(ADI%p%AD%DT, dt) ) then
          call WrScr('Info: dt is changing between cases, AeroDyn will be re-initialized')
-         call ADI_End( ADI%u(1:1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn'); if(Failed()) return
+         call ADI_End( ADI%u(1:1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver'); if(Failed()) return
          !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          needInit=.true.
       endif
@@ -425,7 +423,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
       ! Init data per rotor
       allocate(InitInp%AD%rotors(dvr%numTurbines), stat=errStat) 
       if (errStat/=0) then
-         call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_AeroDyn' )
+         call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_ADI_ForDriver' )
          call Cleanup()
          return
       end if
@@ -468,7 +466,7 @@ contains
    end subroutine cleanup
 ! 
    logical function Failed()
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver')
       Failed = errStat >= AbortErrLev
       if (Failed) then
          call cleanup()
@@ -911,11 +909,10 @@ end subroutine Set_Mesh_Motion
 !> Set aerodyn inputs
 !  - cycle values in the input array AD%InputTime and AD%u.
 !  - set AD input meshes and inflow
-subroutine Set_AD_Inputs(nt,dvr,ADI,IW,errStat,errMsg)
+subroutine Set_AD_Inputs(nt,dvr,ADI,errStat,errMsg)
    integer(IntKi)              , intent(in   ) :: nt            ! time step number
    type(Dvr_SimData), target,    intent(inout) :: dvr       ! Driver data 
    type(ADI_Data),               intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(ADI_InflowWindData),     intent(inout) :: IW            ! InflowWind data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -931,41 +928,35 @@ subroutine Set_AD_Inputs(nt,dvr,ADI,IW,errStat,errMsg)
 
    ! --- Shift previous calculations:
    do j = numInp-1,1,-1
-      call AD_CopyInput (dvr%ADI%u(j)%AD,  dvr%ADI%u(j+1)%AD,  MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-      dvr%ADI%inputTimes(j+1) = dvr%ADI%inputTimes(j)
+      call AD_CopyInput (ADI%u(j)%AD,  ADI%u(j+1)%AD,  MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      ADI%inputTimes(j+1) = ADI%inputTimes(j)
    end do
-   dvr%ADI%inputTimes(1) = dvr%dT * nt ! time at "nt+1"
+   ADI%inputTimes(1) = dvr%dT * nt ! time at "nt+1"
 
    ! --- Transfer motion from "ED" to AeroDyn
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)
       ! Hub 2 Hub AD 
-      call Transfer_Point_to_Point(wt%y_ED%HubPtMotion, dvr%ADI%u(1)%AD%rotors(iWT)%hubMotion, wt%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+      call Transfer_Point_to_Point(wt%y_ED%HubPtMotion, ADI%u(1)%AD%rotors(iWT)%hubMotion, wt%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Point(wt%y_ED%BladeRootMotion(iB), dvr%ADI%u(1)%AD%rotors(iWT)%BladeRootMotion(iB), wt%ED_P_2_AD_P_R(iB), errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Point(wt%y_ED%BladeRootMotion(iB), ADI%u(1)%AD%rotors(iWT)%BladeRootMotion(iB), wt%ED_P_2_AD_P_R(iB), errStat2, errMsg2); if(Failed()) return
       enddo
             
       ! Blade root AD to blade line AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Line2(dvr%ADI%u(1)%AD%rotors(iWT)%BladeRootMotion(iB), dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(iB), wt%AD_P_2_AD_L_B(iB), errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Line2(ADI%u(1)%AD%rotors(iWT)%BladeRootMotion(iB), ADI%u(1)%AD%rotors(iWT)%BladeMotion(iB), wt%AD_P_2_AD_L_B(iB), errStat2, errMsg2); if(Failed()) return
       enddo
 
       ! Tower motion
       if (wt%hasTower) then
-         if (dvr%ADI%u(1)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
+         if (ADI%u(1)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
             call Transfer_Point_to_Point(wt%y_ED%TwrPtMesh,  wt%TwrPtMeshAD, wt%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
-            call Transfer_Point_to_Line2(wt%TwrPtMeshAD, dvr%ADI%u(1)%AD%rotors(iWT)%TowerMotion, wt%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+            call Transfer_Point_to_Line2(wt%TwrPtMeshAD, ADI%u(1)%AD%rotors(iWT)%TowerMotion, wt%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
          endif
       endif
    enddo ! iWT, rotors
-      
-   ! --- Inflow on points
-   call ADI_ADIW_Solve(dvr%ADI%inputTimes(1), dvr%ADI%u(1)%AD, ADI%OtherState%AD, IW%u(1), IW, .true., errStat, errMsg)
-   !call ADI_Set_IW_Inputs(AD%u(1), AD%OtherState, IW%u(1), .true., errStat2, errMsg2); if(Failed()) return
-   !call ADI_CalcOutput_IW(AD%inputTime(1), IW%u(1), IW, errStat2, errMsg2); if(Failed()) return
-   !call ADI_AD_InputSolve_IfW(AD%u(1), IW%y, errStat2, errMsg2); if(Failed()) return
 
 contains
    logical function Failed()
@@ -1668,11 +1659,11 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yAD, yIW, errStat, errMsg)
    do iWT = 1, dvr%numTurbines
       if (dvr%wt(iWT)%numBlades >0 ) then ! TODO, export for tower only
 
-         out%outLine(1:nDV)         = dvr%wt(iWT)%WriteOutput(1:nDV)
+         out%outLine(1:nDV)         = dvr%wt(iWT)%WriteOutput(1:nDV)  ! Driver Write Outputs
          ! out%outLine(11)            = dvr%WT(iWT)%hub%azimuth       ! azimuth already stored a nt-1
 
-         out%outLine(nDV+1:nDV+nAD) = yAD%rotors(iWT)%WriteOutput
-         out%outLine(nDV+nAD+1:)    = yIW%WriteOutput
+         out%outLine(nDV+1:nDV+nAD) = yAD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
+         out%outLine(nDV+nAD+1:)    = yIW%WriteOutput                 ! InflowWind WriteOutputs
 
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
             ! ASCII

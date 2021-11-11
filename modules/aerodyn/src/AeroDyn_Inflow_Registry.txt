@@ -40,6 +40,7 @@ typedef    ^        ^                  ReKi                             PLExp   
 typedef    ^    InitInputType          AD_InitInputType                 AD               -      -     -   "AD Init input types"
 typedef    ^        ^                  ADI_IW_InputData                 IW_InitInp       -      -     -   "IW Init input types"
 typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
+typedef    ^        ^                  Logical                          StoreHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
 
 # ..... InitOut ...................................................................................................................
 typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
@@ -66,10 +67,17 @@ typedef    ^        ^                  ADI_InflowWindData               IW      
 # ..... Parameters ................................................................................................................
 typedef    ^    ParameterType          AD_ParameterType                 AD               -      -     -   "Parameters"
 typedef    ^        ^                  DbKi                             dt               -      -     -   "time increment" "s"
+typedef    ^        ^                  Logical                          StoreHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
 
 # ..... Inputs ....................................................................................................................
 typedef    ^    InputType              AD_InputType                     AD               -      -     -   "Array of system inputs"
 
 # ..... Outputs ...................................................................................................................
+#typedef    ^    ADI_RotOutputType      ReKi                             WriteOutput     {:}     -     -   "WriteOutputs for a given rotor" -
+
 typedef    ^    OutputType             AD_OutputType                    AD               -      -     -   "System outputs"
+#typedef    ^        ^                  InflowWind_OutputType            IW               -      -     -   "System outputs"
+typedef    ^        ^                  ReKi                             HHVel            {:}{:} -     -   "Hub Height velocities for each rotors"
+typedef    ^        ^                  ReKi                             PLExp            -      -     -   "Power law exponents (for outputs only)"
+#typedef    ^        ^                  ADI_RotOutputType               rotors           :      -     -   "WriteOutputs of the driver only"
 

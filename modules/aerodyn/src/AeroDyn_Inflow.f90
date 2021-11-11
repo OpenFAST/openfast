@@ -21,9 +21,6 @@ module AeroDyn_Inflow
 
    ! Convenient routines for driver
    public   :: ADI_ADIW_Solve
-   public   :: ADI_InitInflowWind    ! TODO comment
-   public   :: ADI_AD_InputSolve_IfW ! TODO comment
-   public   :: ADI_Set_IW_Inputs     ! TODO comment
    public   :: concatOutputHeaders
 
    real(ReKi), parameter :: myNaN = -99.9_ReKi
@@ -66,7 +63,8 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    call DispNVD( ADI_Ver )
 
    ! Set parameters
-   p%dt = interval
+   p%dt         = interval
+   p%StoreHHVel = InitInp%StoreHHVel
 
    ! --- Initialize AeroDyn
    print*,'>>>>>>>>>>> ADI_AeroDynInit'
@@ -88,32 +86,15 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    ! --- Concatenate AD outputs to IW outputs
    call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOutData_IW%WriteOutputHdr, InitOutData_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
-! 
-!    ! --- Initialize meshes
-!    if (iCase==1) then
-!       call Init_ADMeshMap(dvr, AD%u(1), errStat2, errMsg2); if(Failed()) return
-!    endif
-! 
-!    ! Copy AD input here because tower is modified in ADMeshMap
-!    do j = 2, numInp
-!       call AD_CopyInput (AD%u(1),  AD%u(j),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
-!    end do
-! 
-! 
-!    ! Compute driver outputs at t=0 
-!    call Set_Mesh_Motion(0,dvr,errStat2,errMsg2); if(Failed()) return
-! 
-!    ! --- Initial AD inputs
-!    AD%inputTime = -999
-!    DO j = 1-numInp, 0
-!       call Set_AD_Inputs(j,dvr,AD,IW,errStat2,errMsg2); if(Failed()) return
-!    END DO              
-! 
-!    ! --- Initialize outputs
-!    call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
-! 
-!    call Dvr_CalcOutputDriver(dvr, IW%y, errStat2, errMsg2); if(Failed()) return
-! 
+
+   ! --- Initialize outputs
+   if (p%StoreHHVel) then
+      allocate(y%HHVel(3, size(InitInp%AD%rotors)))
+      y%HHVel=12
+   else
+      allocate(y%HHVel(0, 0))
+   endif
+
 !    ! --- Initialize VTK
 !    if (dvr%out%WrVTK>0) then
 !       dvr%out%n_VTKTime = 1
@@ -244,7 +225,7 @@ subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    do it=1,size(utimes)
       print*,'>>> TODO compute IW inputs, use m%IW%u(it)????'
       u_AD(it) = u(it)%AD
-      call ADI_ADIW_Solve(utimes(it), u(it)%AD, OtherState%AD, m%IW%u(it), m%IW, .false., errStat2, errMsg2)
+      call ADI_ADIW_Solve(utimes(it), u(it)%AD, OtherState%AD, m%IW%u(it), m%IW, p%StoreHHVel, errStat2, errMsg2)
    enddo
 
    ! --- Inputs at t - Index 1
@@ -298,6 +279,7 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'ADI_CalcOutput'
+   integer :: iWT
    ErrStat = ErrID_None
    ErrMsg  = ""
    !call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -305,20 +287,20 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    ! Calculate outputs at t
    call AD_CalcOutput(t, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, errStat2, errMsg2); if(Failed()) return
 
-   ! Write outputs for all turbines at nt-1
-   !call Dvr_WriteOutputs(nt, time, dvr, dvr%out, AD%y, IW%y, errStat2, errMsg2); if(Failed()) return
+   ! --- Outputs for driver
+   ! Hub Height velocity outputs
+   if (p%StoreHHVel) then
+      do iWT = 1, size(p%AD%rotors)
+         if (p%AD%rotors(iWT)%numBlades >0 ) then 
+            ! Environment
+            y%HHVel(1, iWT) = m%IW%y%VelocityUVW(1, iWT)
+            y%HHVel(1, iWT) = m%IW%y%VelocityUVW(2, iWT)
+            y%HHVel(1, iWT) = m%IW%y%VelocityUVW(3, iWT)
+         endif
+      enddo
+   endif
+   y%PLExp = m%IW%PLExp
 
-   ! We store the "driver-level" outputs only now,  above, the old outputs are used
-   !call Dvr_CalcOutputDriver(dvr, IW%y, errStat, errMsg)
-
-   !! VTK outputs
-   !if (dvr%out%WrVTK==1 .and. nt==1) then
-   !   ! Init only
-   !   call WrVTK_Surfaces(time, dvr, dvr%out, nt-1, AD)
-   !else if (dvr%out%WrVTK==2) then
-   !   ! Animation
-   !   call WrVTK_Surfaces(time, dvr, dvr%out, nt-1, AD)
-   !endif
 contains
 
    subroutine CleanUp()
