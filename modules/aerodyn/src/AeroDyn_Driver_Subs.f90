@@ -78,10 +78,10 @@ subroutine Dvr_Init(dvr, ADI, errStat,errMsg )
    type(Dvr_SimData),           intent(  out) :: dvr       ! driver data
    type(ADI_Data),              intent(  out) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
-   character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
    CHARACTER(1000)      :: inputFile     ! String to hold the file name.
    CHARACTER(200)       :: git_commit    ! String containing the current git commit hash
    CHARACTER(20)        :: FlagArg       ! flag argument from command line
@@ -119,10 +119,10 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, errStat, errMsg )
    type(Dvr_SimData),           intent(inout) :: dvr           ! driver data
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
-   character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
    integer(IntKi)       :: iWT, j !<
    type(AD_InitOutputType) :: InitOutData_AD    ! Output data from initialization
    type(InflowWind_InitOutputType) :: InitOutData_IW  ! Output data from initialization
@@ -256,16 +256,12 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, errStat, errMsg)
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
    integer(IntKi)                              :: errStat2      ! local status of error message
-   character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)                        :: errMsg2       ! local error message if errStat /= ErrID_None
    real(DbKi) :: time             !< Variable for storing time, in seconds
    type(AD_InputType)  ::  u_AD(2)
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   ! Compute InflowWind inputs for each time
    errStat = ErrID_None
    errMsg  = ''
 
@@ -275,12 +271,13 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, errStat, errMsg)
    ! Set AD inputs for nt (and keep values at nt-1 as well)
    ! u(1) is at nt, u(2) is at nt-1
    call Set_AD_Inputs(nt,dvr,ADI,errStat2,errMsg2); if(Failed()) return
+   ! TODO TODO TODO REMOVE ME
    call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
+
    time = ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1
-   !call AD_CalcOutput( time, ADI%u(2)%AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
-   call ADI_CalcOutput(time, ADI%u(2), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
+   call ADI_CalcOutput(ADI%inputTimes(2), ADI%u(2), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
 
    ! Write outputs for all turbines at nt-1
    call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y%AD, ADI%m%IW%y, errStat2, errMsg2); if(Failed()) return
@@ -299,9 +296,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, errStat, errMsg)
    endif
 
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
-   u_AD(1) = ADI%u(1)%AD
-   u_AD(2) = ADI%u(2)%AD
-   call AD_UpdateStates( time, nt-1, u_AD, ADI%inputTimes, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%m%AD, errStat2, errMsg2); if(Failed()) return
+   call ADI_UpdateStates( time, nt-1, ADI%u(:), ADI%inputTimes, ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%m, errStat2, errMsg2); if(Failed()) return
 
 contains
 
@@ -317,9 +312,9 @@ subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    logical,                      intent(inout) :: initialized   ! 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
-   character(ErrMsgLen)    :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)    :: errMsg2                 ! temporary Error message if errStat /= ErrID_None
    integer(IntKi)          :: errStat2                ! temporary Error status of the operation
    integer(IntKi)          :: iWT
    character(*), parameter :: RoutineName = 'Dvr_EndCase'
@@ -356,9 +351,9 @@ subroutine Dvr_CleanUp(dvr, ADI, initialized, errStat, errMsg)
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    logical,                      intent(inout) :: initialized   ! 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
-   character(ErrMsgLen)    :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)    :: errMsg2                 ! temporary Error message if errStat /= ErrID_None
    integer(IntKi)          :: errStat2                ! temporary Error status of the operation
    integer(IntKi)          :: iWT
    character(*), parameter :: RoutineName = 'Dvr_CleanUp'
@@ -382,13 +377,13 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
    type(Dvr_SimData), target,    intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    real(DbKi),                   intent(inout) :: dt            ! interval
    integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
-   character(*)                , intent(out)   :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(out)   :: errMsg        ! Error message if errStat /= ErrID_None
    ! locals
    real(reKi)               :: theta(3)
    integer(IntKi)           :: j, k
    integer(IntKi)           :: iWT
    integer(IntKi)           :: errStat2      ! local status of error message
-   character(ErrMsgLen)     :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)     :: errMsg2       ! local error message if errStat /= ErrID_None
    type(AD_InitInputType)   :: InitInData     ! Input data for initialization
    type(WTData), pointer    :: wt ! Alias to shorten notation
    logical                  :: needInit
@@ -413,7 +408,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
 
    if (needInit) then
       ! ADI
-      InitInp%StoreHHVel = .true.
+      InitInp%storeHHVel = .true.
       ! Inflow Wind
       InitInp%IW_InitInp%InputFile  = dvr%IW_InitInp%InputFile
       InitInp%IW_InitInp%CompInflow = dvr%IW_InitInp%CompInflow
@@ -434,8 +429,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
       do iWT=1,dvr%numTurbines
          wt => dvr%WT(iWT)
          InitInp%AD%rotors(iWT)%numBlades = wt%numBlades
-         call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
-         call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
+         call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, errMsg2 ); if (Failed()) return
+         call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, errMsg2 ); if (Failed()) return
          if (wt%HAWTprojection) then
             InitInp%AD%rotors(iWT)%AeroProjMod = 0 ! 0: default, for HAWT, with WithoutSweepPitchTwist
          else
@@ -449,7 +444,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
          end do
       enddo
 
-      call ADI_Init(InitInp, ADI%u(1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, dt, InitOut, ErrStat, ErrMsg)
+      call ADI_Init(InitInp, ADI%u(1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, dt, InitOut, errStat, errMsg)
 
       ! Set output headers
       if (iCase==1) then
@@ -483,7 +478,7 @@ end subroutine Init_ADI_ForDriver
 subroutine Init_Meshes(dvr,  errStat, errMsg)
    type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! locals
    real(reKi)            :: pos(3)
    real(R8Ki)            :: orientation(3,3)
@@ -494,7 +489,7 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
    real(R8Ki)            :: R_gl2wt(3,3)
    integer(IntKi)        :: iWT, iB
    integer(IntKi)        :: errStat2      ! local status of error message
-   character(ErrMsgLen)  :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)  :: errMsg2       ! local error message if errStat /= ErrID_None
    type(WTData), pointer :: wt ! Alias to shorten notation
    errStat = ErrID_None
    errMsg  = ''
@@ -579,7 +574,7 @@ contains
 
    logical function Failed()
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_Meshes')
-      Failed = ErrStat >= AbortErrLev
+      Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine Init_Meshes
 
@@ -589,7 +584,7 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
    type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(AD_InputType),           intent(inout) :: uAD           ! AeroDyn input data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! locals
    real(ReKi)            :: pos(3), Pbase(3), Ptop(3), Pmid(3), DeltaP(3)
    real(R8Ki)            :: orientation(3,3)
@@ -597,7 +592,7 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
    real(ReKi)            :: zBar ! dimensionsless tower height
    integer(IntKi)        :: iWT, iB, i
    integer(IntKi)        :: errStat2      ! local status of error message
-   character(ErrMsgLen)  :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)  :: errMsg2       ! local error message if errStat /= ErrID_None
    type(WTData), pointer :: wt ! Alias to shorten notation
    errStat = ErrID_None
    errMsg  = ''
@@ -672,7 +667,7 @@ contains
 
    logical function Failed()
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADMeshMap')
-      Failed = ErrStat >= AbortErrLev
+      Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine Init_ADMeshMap
 
@@ -683,15 +678,15 @@ subroutine CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg)
    real(ReKi),                   intent(in   ) :: PosInit(3)                                             !< Xi,Yi,Zi, coordinates of node
    real(R8Ki),                   intent(in   ) :: orientInit(3,3)                                        !< Orientation (direction cosine matrix) of node; identity by default
    integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
-   character(*)                , intent(out)   :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(out)   :: errMsg        ! Error message if errStat /= ErrID_None
    integer(IntKi)       :: errStat2      ! local status of error message
-   character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
    errStat = ErrID_None
    errMsg  = ''
 
    call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2, Orientation=.true., TranslationDisp=.true., TranslationVel=.true., RotationVel=.true., TranslationAcc=.true., RotationAcc=.true.)
    call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-   if (ErrStat >= AbortErrLev) return
+   if (errStat >= AbortErrLev) return
 
    call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
    call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
@@ -711,14 +706,14 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
    integer(IntKi)              , intent(in   ) :: nt       !< time step number
    type(Dvr_SimData), target,   intent(inout) :: dvr      !< Driver data 
    integer(IntKi)              , intent(  out) :: errStat  !< Status of error message
-   character(*)                , intent(  out) :: errMsg   !< Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg   !< Error message if errStat /= ErrID_None
    ! local variables
    integer(intKi)          :: j             ! loop counter for nodes
    integer(intKi)          :: k             ! loop counter for blades
    integer(intKi)          :: iWT ! loop counter for rotors
    integer(intKi)          :: iB ! loop counter for blades
    integer(IntKi)          :: errStat2      ! local status of error message
-   character(ErrMsgLen)    :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)    :: errMsg2       ! local error message if errStat /= ErrID_None
    real(R8Ki)              :: theta(3)
    real(ReKi) :: hubMotion(3)  ! Azimuth, Speed, Acceleration
    real(ReKi) :: nacMotion(3)  ! Yaw, yaw speed, yaw acc
@@ -814,8 +809,8 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
          wt%nac%yawSpeed = nacMotion(2)
          wt%nac%yawAcc   = nacMotion(3)
       else
-         ErrMsg2='Unknown nac motion type; should never happen.'
-         ErrStat2 = ErrID_FATAL
+         errMsg2='Unknown nac motion type; should never happen.'
+         errStat2 = ErrID_FATAL
          if(Failed()) return
       endif
       theta(3) = wt%nac%yaw
@@ -905,7 +900,7 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
 contains
    logical function Failed()
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Set_Mesh_Motion')
-      Failed = ErrStat >= AbortErrLev
+      Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine Set_Mesh_Motion
 
@@ -918,13 +913,13 @@ subroutine Set_AD_Inputs(nt,dvr,ADI,errStat,errMsg)
    type(Dvr_SimData), target,    intent(inout) :: dvr       ! Driver data 
    type(ADI_Data),               intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
    integer(intKi)          :: j   ! loop index
    integer(intKi)          :: iWT ! loop counter for rotors
    integer(intKi)          :: iB ! loop counter for blades
    integer(IntKi)          :: errStat2      ! local status of error message
-   character(ErrMsgLen)    :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)    :: errMsg2       ! local error message if errStat /= ErrID_None
    type(WTData), pointer :: wt ! Alias to shorten notation
    real(ReKi) :: z
    errStat = ErrID_None
@@ -932,9 +927,10 @@ subroutine Set_AD_Inputs(nt,dvr,ADI,errStat,errMsg)
 
    ! --- Shift previous calculations:
    do j = numInp-1,1,-1
-      call AD_CopyInput (ADI%u(j)%AD,  ADI%u(j+1)%AD,  MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      call AD_CopyInput (ADI%u(j)%AD,  ADI%u(j+1)%AD,  MESH_UPDATECOPY, errStat2, ErrMsg2); if (Failed()) return
       ADI%inputTimes(j+1) = ADI%inputTimes(j)
    end do
+
    ADI%inputTimes(1) = dvr%dT * nt ! time at "nt+1"
 
    ! --- Transfer motion from "ED" to AeroDyn
@@ -965,7 +961,7 @@ subroutine Set_AD_Inputs(nt,dvr,ADI,errStat,errMsg)
 contains
    logical function Failed()
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Set_AD_Inputs')
-      Failed = ErrStat >= AbortErrLev
+      Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine Set_AD_Inputs
 
@@ -996,8 +992,8 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    ! Basic inputs
    real(ReKi) :: hubRad, hubHt, overhang, shftTilt, precone ! Basic inputs when basicHAWTFormat is true
    real(ReKi) :: nacYaw, bldPitch, rotSpeed
-   ErrStat = ErrID_None
-   ErrMsg  = ''
+   errStat = ErrID_None
+   errMsg  = ''
    UnIn = -1
    UnEc = -1
 
@@ -1049,9 +1045,9 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    ! --- Turbines
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "numTurbines", dvr%numTurbines, errStat2, errMsg2, unEc); if (Failed()) return
-   allocate(dvr%WT(dvr%numTurbines), stat=ErrStat2)
-      if (ErrStat2 /=0) then
-         ErrStat2=ErrID_Fatal
+   allocate(dvr%WT(dvr%numTurbines), stat=errStat2)
+      if (errStat2 /=0) then
+         errStat2=ErrID_Fatal
          ErrMsg2="Error allocating dvr%WT."
          if(Failed()) return
       end if
@@ -1116,10 +1112,10 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          ! Blades
          call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT , wt%numBlades, errStat2, errMsg2, unEc); if(Failed()) return
-         allocate(wt%bld(wt%numBlades), stat=ErrStat2)
+         allocate(wt%bld(wt%numBlades), stat=errStat2)
          if (errStat2 /= 0) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2 = "Error allocating wt%bld"
+            errStat2=ErrID_Fatal
+            errMsg2 = "Error allocating wt%bld"
             if(Failed()) return
          end if
 
@@ -1322,14 +1318,14 @@ contains
       character(len=*), intent(in) :: ErrMsg_in
       Check=Condition
       if (Check) then
-         call SetErrStat(ErrID_Fatal, trim(ErrMsg_in), ErrStat, ErrMsg, 'Dvr_ReadInputFile');
+         call SetErrStat(ErrID_Fatal, trim(ErrMsg_in), errStat, errMsg, 'Dvr_ReadInputFile');
       endif
    end function Check
 
    subroutine CleanUp()
       if (UnIn>0) close(UnIn)
       if (UnEc>0) close(UnEc)
-      CALL NWTC_Library_Destroyfileinfotype(FileInfo_In, ErrStat2, ErrMsg2)
+      CALL NWTC_Library_Destroyfileinfotype(FileInfo_In, errStat2, errMsg2)
    end subroutine cleanup
 
    logical function Failed()
@@ -1375,18 +1371,18 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! local variables:
    integer(intKi)                               :: i
    integer(intKi)                               :: FmtWidth          ! number of characters in string produced by dvr%OutFmt
-   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   integer(intKi)                               :: errStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'ValidateInputs'
    integer    :: iWT, iB
    type(WTData), pointer :: wt ! Alias to shorten notation
 
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
    ! Turbine Data:
-   !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
+   !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", errStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',ErrStat, ErrMsg,RoutineName)
+   if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',errStat, errMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%IW_InitInp%compInflow) ), 'CompInflow needs to be 0 or 1')) return
 
    if (Check(.not.(ANY(idAnalysisVALID == dvr%analysisType    )), 'Analysis type not supported: '//trim(Num2LStr(dvr%analysisType)) )) return
@@ -1413,10 +1409,10 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
 
    ! --- I-O Settings:
    if (Check(.not.(ANY(idFmtVALID == dvr%out%fileFmt)),    'fileFmt not supported: '//trim(Num2LStr(dvr%out%fileFmt)) )) return
-   call ChkRealFmtStr( dvr%out%OutFmt, 'OutFmt', FmtWidth, ErrStat2, ErrMsg2 )
-   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ChkRealFmtStr( dvr%out%OutFmt, 'OutFmt', FmtWidth, errStat2, errMsg2 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    !if ( FmtWidth < MinChanLen ) call SetErrStat( ErrID_Warn, 'OutFmt produces a column less than '//trim(num2lstr(MinChanLen))//' characters wide ('// &
-   !   TRIM(Num2LStr(FmtWidth))//'), which may be too small.', ErrStat, ErrMsg, RoutineName )
+   !   TRIM(Num2LStr(FmtWidth))//'), which may be too small.', errStat, errMsg, RoutineName )
 
 contains
 
@@ -1425,7 +1421,7 @@ contains
       character(len=*), intent(in) :: ErrMsg_in
       Check=Condition
       if (Check) then
-         call SetErrStat(ErrID_Fatal, trim(ErrMsg_in), ErrStat, ErrMsg, 'ValidateInputs');
+         call SetErrStat(ErrID_Fatal, trim(ErrMsg_in), errStat, errMsg, 'ValidateInputs');
       endif
    end function Check
 
@@ -1437,7 +1433,7 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
       type(Dvr_Outputs),       intent(inout)   :: out 
       integer(IntKi)         ,  intent(in   )   :: numSteps             ! Number of time steps
       integer(IntKi)         ,  intent(  out)   :: errStat              ! Status of error message
-      character(*)           ,  intent(  out)   :: errMsg               ! Error message if ErrStat /= ErrID_None
+      character(*)           ,  intent(  out)   :: errMsg               ! Error message if errStat /= ErrID_None
       ! locals
       integer(IntKi)     :: i
       integer(IntKi)     :: numSpaces
@@ -1478,13 +1474,13 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
             else
                sWT = ''
             endif
-            call GetNewUnit(out%unOutFile(iWT), ErrStat, ErrMsg)
-            if ( ErrStat >= AbortErrLev ) then
+            call GetNewUnit(out%unOutFile(iWT), errStat, errMsg)
+            if ( errStat >= AbortErrLev ) then
                out%unOutFile(iWT) = -1
                return
             end if
-            call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', ErrStat, ErrMsg )
-            if ( ErrStat >= AbortErrLev ) return
+            call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', errStat, errMsg )
+            if ( errStat >= AbortErrLev ) return
             write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
             write (out%unOutFile(iWT),'(1X,A)') trim(GetNVD(out%AD_ver))
             write (out%unOutFile(iWT),'()' )    !print a blank line
@@ -1518,7 +1514,7 @@ end subroutine Dvr_InitializeOutputs
 subroutine Dvr_InitializeDriverOutputs(dvr, errStat, errMsg)
    type(Dvr_SimData),       intent(inout)   :: dvr              ! driver data
    integer(IntKi)         ,  intent(  out)   :: errStat              ! Status of error message
-   character(*)           ,  intent(  out)   :: errMsg               ! Error message if ErrStat /= ErrID_None
+   character(*)           ,  intent(  out)   :: errMsg               ! Error message if errStat /= ErrID_None
    integer :: maxNumBlades, k, j, iWT
    errStat = ErrID_None
    errMsg  = ''
@@ -1588,7 +1584,7 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, y_ADI, errStat, errMsg)
    type(InflowWind_OutputType), intent(in   ) :: y_Ifw           ! driver data
    type(ADI_OutputType),        intent(in   ) :: y_ADI           ! ADI output data
    integer(IntKi)           ,   intent(  out) :: errStat         ! Status of error message
-   character(*)             ,   intent(  out) :: errMsg          ! Error message if ErrStat /= ErrID_None
+   character(*)             ,   intent(  out) :: errMsg          ! Error message if errStat /= ErrID_None
    integer              :: maxNumBlades, k, j, iWT
    real(ReKi)           :: rotations(3)
    integer(IntKi)       :: errStat2        ! Status of error message
@@ -1647,7 +1643,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yAD, yIW, errStat, errMsg)
    type(AD_OutputType)    ,  intent(in   )   :: yAD                  ! aerodyn outputs
    type(InflowWind_OutputType),intent(in )   :: yIW                  ! inflowwind outputs
    integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
-   character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
+   character(*)           ,  intent(inout)   :: errMsg               ! Error message if errStat /= ErrID_None
    ! Local variables.
    character(ChanLen) :: tmpStr         ! temporary string to print the time output as text
    integer :: nDV , nAD, nIW, iWT, k, j
@@ -1693,7 +1689,7 @@ subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, p
    integer,                                 intent(in)  :: nCol
    real(ReKi), dimension(:,:), allocatable, intent(out) :: Array
    integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
-   character(*)           ,                 intent(out) :: errMsg  ! Error message if ErrStat /= ErrID_None
+   character(*)           ,                 intent(out) :: errMsg  ! Error message if errStat /= ErrID_None
    integer(IntKi), optional,                intent(in ) :: nHeaderLines
    character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
    integer              :: UnIn, i, j, nLine, nHead
@@ -1701,8 +1697,8 @@ subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, p
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! temporary Error message
    character(len=2048) :: Filename_Loc   ! filename local to this function
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
 
    Filename_Loc = Filename
    if (present(priPath)) then
@@ -1799,13 +1795,13 @@ end subroutine interpTimeValue
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
-SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
+SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, errStat, errMsg)
    TYPE(Dvr_Outputs),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
    type(Dvr_SimData), target,    intent(inout) :: dvr           ! intent(out) only so that we can save FmtWidth in dvr%out%ActualChanLen
    TYPE(AD_InitOutputType),      INTENT(INOUT) :: InitOutData_AD   !< The initialization output from AeroDyn
    type(ADI_Data),     target,   intent(in   ) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),               INTENT(  OUT) :: errStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: errMsg           !< Error message if errStat /= ErrID_None
    REAL(SiKi)                              :: RefPoint(3), RefLengths(2)               
    REAL(SiKi)                              :: x, y                
    REAL(SiKi)                              :: TwrDiam_top, TwrDiam_base, TwrRatio, TwrLength
@@ -1813,16 +1809,16 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
    INTEGER(IntKi)                          :: NumBl, k, iRot, iBld, nNodes
    CHARACTER(1024)                         :: vtkroot
    INTEGER(IntKi)                          :: iWT
-   INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   INTEGER(IntKi)                          :: errStat2
+   CHARACTER(ErrMsgLen)                    :: errMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters'
    real(SiKi) :: BladeLength, MaxBladeLength, MaxTwrLength, GroundRad
    real(SiKi) :: WorldBoxMax(3), WorldBoxMin(3) ! Extent of the turbines
    real(SiKi) :: BaseBoxDim
    type(MeshType), pointer :: Mesh
    type(WTData), pointer :: wt ! Alias to shorten notation
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
    
    ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
    ! create the VTK directory if it does not exist
@@ -1880,7 +1876,7 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
    
    RefPoint(3) = 0.0_ReKi
    RefLengths  = GroundRad  + sqrt((WorldBoxMax(1)-WorldBoxMin(1))**2 + (WorldBoxMax(2)-WorldBoxMin(2))**2)
-   call WrVTK_Ground (RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.GroundSurface', ErrStat2, ErrMsg2 )         
+   call WrVTK_Ground (RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.GroundSurface', errStat2, errMsg2 )         
 
    ! --- Create surfaces for Nacelle, Base, Tower, Blades
    do iWT=1,dvr%numTurbines
@@ -1904,7 +1900,7 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
       if (wt%hasTower) then
          Mesh=>dvr%ADI%u(1)%AD%rotors(iWT)%TowerMotion
          if (Mesh%NNodes>0) then
-            CALL AllocAry(p_FAST%VTK_Surface(iWT)%TowerRad, Mesh%NNodes,'VTK_Surface(iWT)%TowerRad',ErrStat2,ErrMsg2)
+            CALL AllocAry(p_FAST%VTK_Surface(iWT)%TowerRad, Mesh%NNodes,'VTK_Surface(iWT)%TowerRad',errStat2,errMsg2)
             topNode   = Mesh%NNodes - 1
             !baseNode  = Mesh%refNode
             baseNode  = 1 ! TODO TODO
@@ -1921,7 +1917,7 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
             BaseBoxDim = TwrDiam_Base/2
          else
             print*,'>>>> TOWER HAS NO NODES'
-            !CALL AllocAry(p_FAST%VTK_Surface(iWT)%TowerRad, 2, 'VTK_Surface(iWT)%TowerRad',ErrStat2,ErrMsg2)
+            !CALL AllocAry(p_FAST%VTK_Surface(iWT)%TowerRad, 2, 'VTK_Surface(iWT)%TowerRad',errStat2,errMsg2)
             ! TODO create a fake tower
          endif
       endif
@@ -1939,7 +1935,7 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
       !.......................
       ! blade surfaces
       !.......................
-      allocate(p_FAST%VTK_Surface(iWT)%BladeShape(wt%numBlades),stat=ErrStat2)
+      allocate(p_FAST%VTK_Surface(iWT)%BladeShape(wt%numBlades),stat=errStat2)
       IF (ALLOCATED(InitOutData_AD%rotors(iWT)%BladeShape)) THEN
          do k=1,wt%numBlades   
             call move_alloc( InitOutData_AD%rotors(iWT)%BladeShape(k)%AirfoilCoords, p_FAST%VTK_Surface(iWT)%BladeShape(k)%AirfoilCoords )
@@ -1951,9 +1947,9 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
             tipNode  = dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(K)%NNodes
             cylNode  = min(3,dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(K)%Nnodes)
 
-            call SetVTKDefaultBladeParams(dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(K), p_FAST%VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
+            call SetVTKDefaultBladeParams(dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(K), p_FAST%VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, errStat2, errMsg2)
+            CALL SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
+            IF (errStat >= AbortErrLev) RETURN
          END DO                           
       endif
    enddo ! iWT, turbines
@@ -1972,8 +1968,8 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
    type(ADI_Data),           intent(in   ) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    logical, parameter                      :: OutputFields = .FALSE. ! due to confusion about what fields mean on a surface, we are going to just output the basic meshes if people ask for fields
    INTEGER(IntKi)                          :: k
-   INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(ErrMsgLen)                    :: ErrMSg2
+   INTEGER(IntKi)                          :: errStat2
+   CHARACTER(ErrMsgLen)                    :: errMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_Surfaces'
    integer(IntKi)                              :: iWT
    type(WTData), pointer :: wt ! Alias to shorten notation
@@ -1987,22 +1983,22 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
 
       ! Base 
       call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%PlatformPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
-                                   VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
+                                   VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
 
       ! Tower motions
       if (dvr%ADI%u(2)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
          call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%ADI%u(2)%AD%rotors(iWT)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
-                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface(iWT)%NumSectors, p_FAST%VTK_Surface(iWT)%TowerRad )
+                                    VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface(iWT)%NumSectors, p_FAST%VTK_Surface(iWT)%TowerRad )
       endif
     
       if (wt%numBlades>0) then
          ! Nacelle 
          call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%y_ED%NacelleMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', &
-                                      VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
+                                      VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
          
          ! Hub
          call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, dvr%ADI%u(2)%AD%rotors(iWT)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
-                                      VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                      VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , &
                                       NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
       endif
       
@@ -2011,7 +2007,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
       do K=1,wt%numBlades
 
          call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%ADI%u(2)%AD%rotors(iWT)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
-                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface(iWT)%BladeShape(K)%AirfoilCoords &
+                                    VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface(iWT)%BladeShape(K)%AirfoilCoords &
                                     ,Sib=ADI%y%AD%rotors(iWT)%BladeLoad(k) )
       end do                  
       
@@ -2019,12 +2015,12 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
          ! --- Debug outputs
          ! Tower base
          call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%y_ED%TwrPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurface', &
-                                      VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                      VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , &
                                       NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
 
          if (dvr%ADI%u(2)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
             call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%TwrPtMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
-                                         VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
+                                         VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , &
                                          NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
         endif
 
@@ -2042,12 +2038,12 @@ END SUBROUTINE WrVTK_Surfaces
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the ground or seabed reference surface information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
-SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
+SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, errStat, errMsg )
    REAL(SiKi),      INTENT(IN)           :: RefPoint(3)     !< reference point (plane will be created around it)
    REAL(SiKi),      INTENT(IN)           :: HalfLengths(2)  !< half of the X-Y lengths of plane surrounding RefPoint
    CHARACTER(*),    INTENT(IN)           :: FileRootName    !< Name of the file to write the output in (excluding extension)
-   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat         !< Indicates whether an error occurred (see NWTC_Library)
-   CHARACTER(*),    INTENT(OUT)          :: ErrMsg          !< Error message associated with the ErrStat
+   INTEGER(IntKi),  INTENT(OUT)          :: errStat         !< Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: errMsg          !< Error message associated with the errStat
    ! local variables
    INTEGER(IntKi)                        :: Un            ! fortran unit number
    INTEGER(IntKi)                        :: ix            ! loop counters
@@ -2056,19 +2052,19 @@ SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
    INTEGER(IntKi), parameter             :: NumberOfLines = 0
    INTEGER(IntKi), parameter             :: NumberOfPolys = 1
         
-   INTEGER(IntKi)                        :: ErrStat2 
-   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   INTEGER(IntKi)                        :: errStat2 
+   CHARACTER(ErrMsgLen)                  :: errMsg2
    CHARACTER(*),PARAMETER                :: RoutineName = 'WrVTK_Ground'
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
    !.................................................................
    ! write the data that potentially changes each time step:
    !.................................................................
    ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
    FileName = TRIM(FileRootName)//'.vtp'
-   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev) return
+   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, errStat2, errMsg2 )    
+      call SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
+      if (errStat >= AbortErrLev) return
 ! points (nodes, augmented with NumSegments):   
       WRITE(Un,'(A)')         '      <Points>'
       WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
@@ -2091,28 +2087,28 @@ SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
 END SUBROUTINE WrVTK_Ground
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine comes up with some default airfoils for blade surfaces for a given blade mesh, M.
-SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, ErrStat, ErrMsg)
+SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, errStat, errMsg)
    TYPE(MeshType),               INTENT(IN   ) :: M                !< The Mesh the defaults should be calculated for
    TYPE(DvrVTK_BLSurfaceType), INTENT(INOUT) :: BladeShape       !< BladeShape to set to default values
    INTEGER(IntKi),               INTENT(IN   ) :: rootNode         !< Index of root node (innermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: tipNode          !< Index of tip node (outermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: cylNode          !< Index of last node to have a cylinder shape
-   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),               INTENT(  OUT) :: errStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: errMsg           !< Error message if errStat /= ErrID_None
    REAL(SiKi)                                  :: bladeLength, chord, pitchAxis
    REAL(SiKi)                                  :: bladeLengthFract, bladeLengthFract2, ratio, posLength ! temporary quantities               
    REAL(SiKi)                                  :: cylinderLength, x, y, angle               
    INTEGER(IntKi)                              :: i, j
-   INTEGER(IntKi)                              :: ErrStat2
-   CHARACTER(ErrMsgLen)                        :: ErrMsg2
+   INTEGER(IntKi)                              :: errStat2
+   CHARACTER(ErrMsgLen)                        :: errMsg2
    CHARACTER(*), PARAMETER                     :: RoutineName = 'SetVTKDefaultBladeParams'
    integer, parameter :: N = 66
    ! default airfoil shape coordinates; uses S809 values from http://wind.nrel.gov/airfoils/Shapes/S809_Shape.html:   
    real, parameter, dimension(N) :: xc=(/ 1.0,0.996203,0.98519,0.967844,0.945073,0.917488,0.885293,0.848455,0.80747,0.763042,0.715952,0.667064,0.617331,0.56783,0.519832,0.474243,0.428461,0.382612,0.33726,0.29297,0.250247,0.209576,0.171409,0.136174,0.104263,0.076035,0.051823,0.03191,0.01659,0.006026,0.000658,0.000204,0.0,0.000213,0.001045,0.001208,0.002398,0.009313,0.02323,0.04232,0.065877,0.093426,0.124111,0.157653,0.193738,0.231914,0.271438,0.311968,0.35337,0.395329,0.438273,0.48192,0.527928,0.576211,0.626092,0.676744,0.727211,0.776432,0.823285,0.86663,0.905365,0.938474,0.965086,0.984478,0.996141,1.0 /)
    real, parameter, dimension(N) :: yc=(/ 0.0,0.000487,0.002373,0.00596,0.011024,0.017033,0.023458,0.03028,0.037766,0.045974,0.054872,0.064353,0.074214,0.084095,0.093268,0.099392,0.10176,0.10184,0.10007,0.096703,0.091908,0.085851,0.078687,0.07058,0.061697,0.052224,0.042352,0.032299,0.02229,0.012615,0.003723,0.001942,-0.00002,-0.001794,-0.003477,-0.003724,-0.005266,-0.011499,-0.020399,-0.030269,-0.040821,-0.051923,-0.063082,-0.07373,-0.083567,-0.092442,-0.099905,-0.105281,-0.108181,-0.108011,-0.104552,-0.097347,-0.086571,-0.073979,-0.060644,-0.047441,-0.0351,-0.024204,-0.015163,-0.008204,-0.003363,-0.000487,0.000743,0.000775,0.00029,0.0 /)
-   call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) RETURN
+   call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', errStat2, errMsg2)
+      CALL SetErrStat(errStat2,errMsg2,errStat,errMsg,RoutineName)
+      IF (errStat >= AbortErrLev) RETURN
    ! Chord length and pitch axis location are given by scaling law
    bladeLength       = TwoNorm( M%position(:,tipNode) - M%Position(:,rootNode) )
    cylinderLength    = TwoNorm( M%Position(:,cylNode) - M%Position(:,rootNode) )

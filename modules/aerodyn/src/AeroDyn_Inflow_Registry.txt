@@ -40,7 +40,7 @@ typedef    ^        ^                  ReKi                             PLExp   
 typedef    ^    InitInputType          AD_InitInputType                 AD               -      -     -   "AD Init input types"
 typedef    ^        ^                  ADI_IW_InputData                 IW_InitInp       -      -     -   "IW Init input types"
 typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
-typedef    ^        ^                  Logical                          StoreHHVel       -      - .false. "If True, hub height velocity will be computed by infow wind"	-
+typedef    ^        ^                  Logical                          storeHHVel       -      - .false. "If True, hub height velocity will be computed by infow wind"	-
 
 # ..... InitOut ...................................................................................................................
 typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
@@ -66,7 +66,7 @@ typedef    ^        ^                  ADI_InflowWindData               IW      
 # ..... Parameters ................................................................................................................
 typedef    ^    ParameterType          AD_ParameterType                 AD               -      -     -   "Parameters"
 typedef    ^        ^                  DbKi                             dt               -      -     -   "time increment" "s"
-typedef    ^        ^                  Logical                          StoreHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
+typedef    ^        ^                  Logical                          storeHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
 
 # ..... Inputs ....................................................................................................................
 typedef    ^    InputType              AD_InputType                     AD               -      -     -   "Array of system inputs"

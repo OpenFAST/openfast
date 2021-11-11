@@ -30,7 +30,7 @@ contains
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg)
+subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, errStat, errMsg)
    type(ADI_InitInputType),         intent(inout)  :: InitInp        !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
    type(ADI_InputType),             intent(  out)  :: u              !< An initial guess for the input; input mesh must be defined
    type(ADI_ParameterType),         intent(  out)  :: p              !< Parameters
@@ -42,20 +42,20 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(ADI_MiscVarType),           intent(  out)  :: m              !< Initial misc/optimization variables
    real(DbKi),                      intent(inout)  :: interval       !< Coupling interval in seconds
    type(ADI_InitOutputType),        intent(inout)  :: InitOut        !< Output for initialization routine. NOTE: inout to allow for reinit?
-   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                  intent(  out)  :: errStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: errMsg         !< Error message if errStat /= ErrID_None
    ! Local variables
    type(InflowWind_InitOutputType) :: InitOut_IW  ! Output data from initialization
    type(AD_InitOutputType) :: InitOut_AD  ! Output data from initialization
-   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+   integer(IntKi)          :: errStat2       ! temporary error status of the operation
+   character(errMsgLen)    :: errMsg2        ! temporary error message
    integer(IntKi)          :: UnEcho         ! Unit number for the echo file
    character(len=1054) :: DirName
    integer :: iW
 
    ! Initialize variables for this routine
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
 
    ! Initialize the NWTC Subroutine Library
    call NWTC_Init( EchoLibVer=.FALSE. )
@@ -65,7 +65,7 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    ! Set parameters
    p%dt         = interval
-   p%StoreHHVel = InitInp%StoreHHVel
+   p%storeHHVel = InitInp%storeHHVel
 
    ! --- Initialize AeroDyn
    print*,'>>>>>>>>>>> ADI_AeroDynInit'
@@ -89,7 +89,7 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize outputs
-   if (p%StoreHHVel) then
+   if (p%storeHHVel) then
       allocate(y%HHVel(3, size(InitInp%AD%rotors)))
       y%HHVel=12
    else
@@ -114,15 +114,15 @@ contains
    end subroutine cleanup
 
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ADI_Init') 
-        Failed =  ErrStat >= AbortErrLev
+        call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_Init') 
+        Failed =  errStat >= AbortErrLev
          if (Failed) call cleanup()
    end function Failed
 
 end subroutine ADI_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 !> ReInit
-subroutine ADI_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg)
+subroutine ADI_ReInit(p, x, xd, z, OtherState, m, Interval, errStat, errMsg)
    type(ADI_ParameterType),         intent(in   )  :: p              !< Parameters
    type(ADI_ContinuousStateType),   intent(inout)  :: x              !< Initial continuous states
    type(ADI_DiscreteStateType),     intent(inout)  :: xd             !< Initial discrete states
@@ -130,15 +130,15 @@ subroutine ADI_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg)
    type(ADI_OtherStateType),        intent(inout)  :: OtherState     !< Initial other states
    type(ADI_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
    real(DbKi),                      intent(inout)  :: interval       !< Coupling interval in seconds
-   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                  intent(  out)  :: errStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: errMsg         !< Error message if errStat /= ErrID_None
    ! Local variables
-   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+   integer(IntKi)          :: errStat2       ! temporary error status of the operation
+   character(errMsgLen)    :: errMsg2        ! temporary error message
 
    ! Initialize variables for this routine
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
 
    ! Reinitialize AeroDyn without reopening input file
    call AD_ReInit(p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, Interval, errStat2, errMsg2); if(Failed()) return
@@ -147,8 +147,8 @@ subroutine ADI_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg)
 contains
 
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ADI_ReInit') 
-        Failed =  ErrStat >= AbortErrLev
+        call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_ReInit') 
+        Failed =  errStat >= AbortErrLev
    end function Failed
 
 end subroutine ADI_ReInit
@@ -156,7 +156,7 @@ end subroutine ADI_ReInit
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
-subroutine ADI_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+subroutine ADI_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    type(ADI_InputType),             intent(inout)  :: u(:)        !< System inputs NOTE: used to be allocatable
    type(ADI_ParameterType),         intent(inout)  :: p           !< Parameters
    type(ADI_ContinuousStateType),   intent(inout)  :: x           !< Continuous states
@@ -165,41 +165,41 @@ subroutine ADI_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    type(ADI_OtherStateType),        intent(inout)  :: OtherState  !< Other states
    type(ADI_OutputType),            intent(inout)  :: y           !< System outputs
    type(ADI_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
-   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
 
    integer(IntKi) :: i
    real(DbKi) :: t
 
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   ! Initialize errStat
+   errStat = ErrID_None
+   errMsg  = ""
 
    ! Destroy the input data:
    !if (allocated(u)) then
       do i=1,size(u)
-         call ADI_DestroyInput( u(i), ErrStat, ErrMsg )
+         call ADI_DestroyInput( u(i), errStat, errMsg )
       enddo
    !endif
 
    ! Destroy the parameter data:
-   call ADI_DestroyParam( p, ErrStat, ErrMsg )
+   call ADI_DestroyParam( p, errStat, errMsg )
 
    ! Destroy the state data:
-   call ADI_DestroyContState(   x,           ErrStat, ErrMsg )
-   call ADI_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-   call ADI_DestroyConstrState( z,           ErrStat, ErrMsg )
-   call ADI_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-   call ADI_DestroyMisc(        m,           ErrStat, ErrMsg )
+   call ADI_DestroyContState(   x,           errStat, errMsg )
+   call ADI_DestroyDiscState(   xd,          errStat, errMsg )
+   call ADI_DestroyConstrState( z,           errStat, errMsg )
+   call ADI_DestroyOtherState(  OtherState,  errStat, errMsg )
+   call ADI_DestroyMisc(        m,           errStat, errMsg )
 
    ! Destroy the output data:
-   call ADI_DestroyOutput( y, ErrStat, ErrMsg )
+   call ADI_DestroyOutput( y, errStat, errMsg )
 
 end subroutine ADI_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
-subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
+subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg)
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    integer(IntKi),                  intent(in   )  :: n           !< Current simulation time step n = 0,1,...
    type(ADI_InputType),             intent(inout)  :: u(:)        !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
@@ -209,60 +209,43 @@ subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    type(ADI_DiscreteStateType),     intent(inout)  :: xd          !< Input: Discrete states at t;   Output: at t+DTaero
    type(ADI_ConstraintStateType),   intent(inout)  :: z           !< Input: Constraint states at t; Output: at t+DTaero
    type(ADI_OtherStateType),        intent(inout)  :: OtherState  !< Input: Other states at t;      Output: at t+DTaero
-   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    type(ADI_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
-   character(*),                    intent(  out)  :: errMsg      !< Error message if ErrStat /= ErrID_None
+   character(*),                    intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
    ! local variables
    integer :: it ! Index on times
    type(AD_InputType)  ::  u_AD(size(utimes))
-   integer(IntKi)                :: ErrStat2                                                           ! temporary Error status
-   character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
+   integer(IntKi)                :: errStat2                                                           ! temporary Error status
+   character(errMsgLen)          :: errMsg2                                                            ! temporary Error message
    !type(ADI_InputType)           :: uInterp     ! Interpolated/Extrapolated input
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
 
    ! Compute InflowWind inputs for each time
    do it=1,size(utimes)
-      print*,'>>> TODO compute IW inputs, use m%IW%u(it)????'
+      call ADI_ADIW_Solve(utimes(it), u(it)%AD, OtherState%AD, m%IW%u, m%IW, p%storeHHVel, errStat2, errMsg2)
       u_AD(it) = u(it)%AD
-      call ADI_ADIW_Solve(utimes(it), u(it)%AD, OtherState%AD, m%IW%u, m%IW, p%StoreHHVel, errStat2, errMsg2)
    enddo
 
-   ! --- Inputs at t - Index 1
-   !call ADI_CopyInput( u(1), uInterp, MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return  ! Allocate uInterp
-   !call ADI_Input_ExtrapInterp(u(1:size(utimes)), utimes(:), uInterp, t, errStat2, errMsg2); if(Failed()) return
-   !call AD_CopyInput( uInterp%AD, m%u_AD(1), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return ! Copy uInterp to AD
-   !m%inputTimes_AD(1) = t
-   !! Inflow on points
-   !call ADI_ADIW_Solve(m%inputTimes_AD(1), m%u_AD(1), OtherState%AD, m%IW%u(1), m%IW, .false., errStat2, errMsg2)
-
-   !! Inputs at t+dt - Index 2
-   !call ADI_Input_ExtrapInterp(u(1:size(utimes)), utimes, uInterp, t+p%dt, errStat2, errMsg2); if(Failed()) return
-   !call AD_CopyInput( uInterp%AD, m%u_AD(2), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return ! Copy uInterp to AD
-   !m%inputTimes_AD(2) = t+p%dt
-   !! Inflow on points
-   !call ADI_ADIW_Solve(m%inputTimes_AD(2), m%u_AD(2), OtherState%AD, m%IW%u(2), m%IW, .false., errStat2, errMsg2)
-
-   !! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
-   call AD_UpdateStates( t, n-1, u_AD(:), utimes(:), p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, errStat2, errMsg2); if(Failed()) return
+   ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
+   call AD_UpdateStates(t, n, u_AD(:), utimes(:), p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, errStat2, errMsg2); if(Failed()) return
 
 contains
 
    subroutine CleanUp()
-      !call ADI_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
+      !call ADI_DestroyConstrState(z_guess, errStat2, errMsg2); if(Failed()) return
    end subroutine
 
    logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ADI_UpdateStates') 
-      Failed =  ErrStat >= AbortErrLev
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_UpdateStates') 
+      Failed =  errStat >= AbortErrLev
       if (Failed) call CleanUp()
    end function Failed
 
 end subroutine ADI_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
+subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(ADI_InputType),             intent(inout)  :: u           !< Inputs at Time t  ! NOTE: set as in-out since "Inflow" needs to be set
    type(ADI_ParameterType),         intent(in   )  :: p           !< Parameters
@@ -273,27 +256,27 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    type(ADI_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                   !!   nectivity information does not have to be recalculated)
    type(ADI_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
-   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
    ! Local variables
-   integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: errStat2
+   character(errMsgLen)          :: errMsg2
    character(*), parameter       :: RoutineName = 'ADI_CalcOutput'
    integer :: iWT
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   !call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   errStat = ErrID_None
+   errMsg  = ""
+   !call SeterrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    ! CalcOutputs for IW (Sets u_AD%rotors(:)%InflowOnBlade, etc,  and m%IW%y)
    ! TODO TODO TODO Uncomment
-   !call ADI_ADIW_Solve(t, u%AD, OtherState%AD, m%IW%u, m%IW, p%StoreHHVel, errStat2, errMsg2)
+   !call ADI_ADIW_Solve(t, u%AD, OtherState%AD, m%IW%u, m%IW, p%storeHHVel, errStat2, errMsg2)
 
    ! Calculate outputs at t
    call AD_CalcOutput(t, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, errStat2, errMsg2); if(Failed()) return
 
    ! --- Outputs for driver
    ! Hub Height velocity outputs
-   if (p%StoreHHVel) then
+   if (p%storeHHVel) then
       do iWT = 1, size(p%AD%rotors)
          y%HHVel(1, iWT) = m%IW%y%VelocityUVW(1, iWT)
          y%HHVel(2, iWT) = m%IW%y%VelocityUVW(2, iWT)
@@ -305,12 +288,12 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
 contains
 
    subroutine CleanUp()
-      !call ADI_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
+      !call ADI_DestroyConstrState(z_guess, errStat2, errMsg2); if(Failed()) return
    end subroutine
 
    logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ADI_CalcOutput') 
-      Failed =  ErrStat >= AbortErrLev
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_CalcOutput') 
+      Failed =  errStat >= AbortErrLev
       if (Failed) call CleanUp()
    end function Failed
 end subroutine ADI_CalcOutput
@@ -327,13 +310,13 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
    real(DbKi),                   intent(inout) :: dt            ! interval
    type(InflowWind_InitOutputType), intent(out) :: InitOutData  ! Output data from initialization
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! locals
    real(reKi)                      :: theta(3)
    integer(IntKi)                  :: j, k, nOut_AD, nOut_IW, nOut_Dvr
    integer(IntKi)                  :: iWT
    integer(IntKi)                  :: errStat2      ! local status of error message
-   character(ErrMsgLen)            :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   character(errMsgLen)            :: errMsg2       ! local error message if errStat /= ErrID_None
    type(InflowWind_InitInputType)  :: InitInData     ! Input data for initialization
    !character(ChanLen), allocatable  ::   WriteOutputHdr(:)
    !character(ChanLen), allocatable  ::   WriteOutputUnt(:)
@@ -376,12 +359,12 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
    call cleanup()
 contains
    subroutine cleanup()
-      call InflowWind_DestroyInitInput( InitInData, ErrStat2, ErrMsg2 )   
+      call InflowWind_DestroyInitInput( InitInData, errStat2, errMsg2 )   
    end subroutine cleanup
 
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ADI_InitInflowWind' )
-      Failed = ErrStat >= AbortErrLev
+      CALL SetErrStat( errStat2, errMsg2, errStat, errMsg, 'ADI_InitInflowWind' )
+      Failed = errStat >= AbortErrLev
       if (Failed) then
          call cleanup()
       endif
@@ -395,7 +378,7 @@ subroutine concatOutputHeaders(WriteOutputHdr0, WriteOutputUnt0, WriteOutputHdr,
    character(ChanLen), dimension(:), allocatable, intent(inout) ::  WriteOutputHdr !< Channel headers
    character(ChanLen), dimension(:), allocatable, intent(inout) ::  WriteOutputUnt !< Channel units
    integer(IntKi)              , intent(  out) :: errStat       !< Status of error message
-   character(*)                , intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        !< Error message if errStat /= ErrID_None
    ! Locals
    character(ChanLen), allocatable :: TmpHdr(:)
    character(ChanLen), allocatable :: TmpUnt(:)
@@ -432,9 +415,9 @@ subroutine ADI_ADIW_Solve(t, u_AD, o_AD, u_IfW, IW, hubHeightFirst, errStat, err
    type(ADI_InflowWindData),     intent(inout) :: IW            ! InflowWind data 
    logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    integer(IntKi)       :: errStat2      ! Status of error message
-   character(ErrMsgLen) :: errMsg2       ! Error message if ErrStat /= ErrID_None
+   character(errMsgLen) :: errMsg2       ! Error message if errStat /= ErrID_None
    errStat = ErrID_None
    errMsg  = ''
 
@@ -448,7 +431,7 @@ subroutine ADI_ADIW_Solve(t, u_AD, o_AD, u_IfW, IW, hubHeightFirst, errStat, err
 contains
    logical function Failed()
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_ADIW_Solve')
-      Failed = ErrStat >= AbortErrLev
+      Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine ADI_ADIW_Solve
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -461,7 +444,7 @@ subroutine ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
    type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
    logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    integer :: K, J, Node, iWT
    errStat = ErrID_None
    errMsg  = ''
@@ -518,11 +501,11 @@ subroutine ADI_CalcOutput_IW(t, u_IfW, IW, errStat, errMsg)
    type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
    type(ADI_InflowWindData),     intent(inout) :: IW            ! InflowWind data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    integer              :: j
    real(ReKi)           :: z
    integer(IntKi)       :: errStat2      ! Status of error message
-   character(ErrMsgLen) :: errMsg2       ! Error message if ErrStat /= ErrID_None
+   character(errMsgLen) :: errMsg2       ! Error message if errStat /= ErrID_None
    errStat = ErrID_None
    errMsg  = ''
    if (IW%CompInflow==1) then
@@ -546,7 +529,7 @@ subroutine ADI_AD_InputSolve_IfW(u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
    TYPE(InflowWind_OutputType), INTENT(IN)      :: y_IfW       !< The outputs from InflowWind
    logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
    INTEGER(IntKi)                               :: errStat     !< Error status of the operation
-   CHARACTER(*)                                 :: errMsg      !< Error message if ErrStat /= ErrID_None
+   CHARACTER(*)                                 :: errMsg      !< Error message if errStat /= ErrID_None
    ! Local variables:
    INTEGER(IntKi)                               :: J           ! Loops through nodes / elements.
    INTEGER(IntKi)                               :: K           ! Loops through blades.

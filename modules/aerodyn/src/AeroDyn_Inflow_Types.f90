@@ -66,7 +66,7 @@ IMPLICIT NONE
     TYPE(AD_InitInputType)  :: AD      !< AD Init input types [-]
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !< IW Init input types [-]
     Character(1024)  :: RootName      !< RootName for writing output files [-]
-    LOGICAL  :: StoreHHVel      !< If True, hub height velocity will be computed by infow wind [-]
+    LOGICAL  :: storeHHVel      !< If True, hub height velocity will be computed by infow wind [-]
   END TYPE ADI_InitInputType
 ! =======================
 ! =========  ADI_InitOutputType  =======
@@ -106,7 +106,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ADI_ParameterType
     TYPE(AD_ParameterType)  :: AD      !< Parameters [-]
     REAL(DbKi)  :: dt      !< time increment [s]
-    LOGICAL  :: StoreHHVel      !< If True, hub height velocity will be computed by infow wind [-]
+    LOGICAL  :: storeHHVel      !< If True, hub height velocity will be computed by infow wind [-]
   END TYPE ADI_ParameterType
 ! =======================
 ! =========  ADI_InputType  =======
@@ -1156,7 +1156,7 @@ CONTAINS
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%RootName = SrcInitInputData%RootName
-    DstInitInputData%StoreHHVel = SrcInitInputData%StoreHHVel
+    DstInitInputData%storeHHVel = SrcInitInputData%storeHHVel
  END SUBROUTINE ADI_CopyInitInput
 
  SUBROUTINE ADI_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1243,7 +1243,7 @@ CONTAINS
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
-      Int_BufSz  = Int_BufSz  + 1  ! StoreHHVel
+      Int_BufSz  = Int_BufSz  + 1  ! storeHHVel
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1331,7 +1331,7 @@ CONTAINS
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%StoreHHVel, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%storeHHVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_PackInitInput
 
@@ -1445,7 +1445,7 @@ CONTAINS
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    OutData%StoreHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%StoreHHVel)
+    OutData%storeHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%storeHHVel)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_UnPackInitInput
 
@@ -2926,7 +2926,7 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstParamData%dt = SrcParamData%dt
-    DstParamData%StoreHHVel = SrcParamData%StoreHHVel
+    DstParamData%storeHHVel = SrcParamData%storeHHVel
  END SUBROUTINE ADI_CopyParam
 
  SUBROUTINE ADI_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -2995,7 +2995,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Db_BufSz   = Db_BufSz   + 1  ! dt
-      Int_BufSz  = Int_BufSz  + 1  ! StoreHHVel
+      Int_BufSz  = Int_BufSz  + 1  ! storeHHVel
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3053,7 +3053,7 @@ ENDIF
       ENDIF
     DbKiBuf(Db_Xferred) = InData%dt
     Db_Xferred = Db_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%StoreHHVel, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%storeHHVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_PackParam
 
@@ -3125,7 +3125,7 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%dt = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%StoreHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%StoreHHVel)
+    OutData%storeHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%storeHHVel)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_UnPackParam
 
