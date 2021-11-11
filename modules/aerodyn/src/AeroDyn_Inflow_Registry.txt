@@ -16,6 +16,7 @@ usefrom   InflowWind.txt
 
 param   AeroDyn_Inflow/ADI     -       IntKi             ADI_Version  -  1   -    "" -
 
+
 # ..... InflowWind data .....................................................................................................
 typedef    ^      ADI_InflowWindData   InflowWind_ContinuousStateType   x                -      -     -   "Continuous states"
 typedef    ^        ^                  InflowWind_DiscreteStateType     xd               -      -     -   "Discrete states"
@@ -78,5 +79,6 @@ typedef    ^    OutputType             AD_OutputType                    AD      
 #typedef    ^        ^                  InflowWind_OutputType            IW               -      -     -   "System outputs"
 typedef    ^        ^                  ReKi                             HHVel            {:}{:} -     -   "Hub Height velocities for each rotors"
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "Power law exponents (for outputs only)"
+typedef    ^        ^                  ReKi                             IW_WriteOutput  {:}     -     -   "WriteOutputs for inflow wind" -
 #typedef    ^        ^                  ADI_RotOutputType               rotors           :      -     -   "WriteOutputs of the driver only"
 
