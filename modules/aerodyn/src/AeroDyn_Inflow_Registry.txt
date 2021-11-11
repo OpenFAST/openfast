@@ -23,7 +23,7 @@ typedef    ^        ^                  InflowWind_ConstraintStateType   z       
 typedef    ^        ^                  InflowWind_OtherStateType        OtherSt          -      -     -   "Other states"
 typedef    ^        ^                  InflowWind_ParameterType         p                -      -     -   "Parameters"
 typedef    ^        ^                  InflowWind_MiscVarType           m                -      -     -   "Misc/optimization variables"
-typedef    ^        ^                  InflowWind_InputType             u                {2}    -     -   "Array of inputs associated with InputTimes"
+typedef    ^        ^                  InflowWind_InputType             u                -      -     -   "Array of inputs associated with InputTimes"
 typedef    ^        ^                  InflowWind_OutputType            y                -      -     -   "System outputs"
 typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
 typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
@@ -40,11 +40,10 @@ typedef    ^        ^                  ReKi                             PLExp   
 typedef    ^    InitInputType          AD_InitInputType                 AD               -      -     -   "AD Init input types"
 typedef    ^        ^                  ADI_IW_InputData                 IW_InitInp       -      -     -   "IW Init input types"
 typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
-typedef    ^        ^                  Logical                          StoreHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
+typedef    ^        ^                  Logical                          StoreHHVel       -      - .false. "If True, hub height velocity will be computed by infow wind"	-
 
 # ..... InitOut ...................................................................................................................
 typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
-typedef    ^        ^                  AD_InitOutputType                AD               -      -     -   "AD init outputs"
 typedef    ^        ^                  character(ChanLen)               WriteOutputHdr  {:}     -     -   "Channel headers" "-"
 typedef    ^        ^                  character(ChanLen)               WriteOutputUnt  {:}     -     -   "Channel units" "-"
 

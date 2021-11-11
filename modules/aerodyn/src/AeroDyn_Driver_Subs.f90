@@ -20,7 +20,7 @@
 !**********************************************************************************************************************************
 module AeroDyn_Driver_Subs
    use AeroDyn_Inflow_Types
-   use AeroDyn_Inflow, only: ADI_Init, ADI_ReInit, ADI_End 
+   use AeroDyn_Inflow, only: ADI_Init, ADI_ReInit, ADI_End, ADI_CalcOutput, ADI_UpdateStates 
    use AeroDyn_Inflow, only: concatOutputHeaders
    use AeroDyn_Inflow, only: ADI_ADIW_Solve
    
@@ -212,17 +212,18 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, errStat, errMsg )
    call Set_Mesh_Motion(0,dvr,errStat2,errMsg2); if(Failed()) return
 
    ! --- Initial AD inputs
-   dvr%ADI%inputTimes = -999
+   dvr%ADI%inputTimes = -999 ! TODO use something better?
    DO j = 1-numInp, 0
       call Set_AD_Inputs(j, dvr, ADI, errStat2,errMsg2); if(Failed()) return
    END DO              
-   ! --- Inflow on points
-   call ADI_ADIW_Solve(dvr%ADI%inputTimes(1), dvr%ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u(1), ADI%m%IW, .true., errStat, errMsg)
+   ! --- Inflow on points at t=0
+   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
+   call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize outputs
    call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
 
-   call Dvr_CalcOutputDriver(dvr, dvr%ADI%m%IW%y, errStat2, errMsg2); if(Failed()) return
+   call Dvr_CalcOutputDriver(dvr, dvr%ADI%m%IW%y, dvr%ADI%y, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize VTK
    if (dvr%out%WrVTK>0) then
@@ -274,17 +275,18 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, errStat, errMsg)
    ! Set AD inputs for nt (and keep values at nt-1 as well)
    ! u(1) is at nt, u(2) is at nt-1
    call Set_AD_Inputs(nt,dvr,ADI,errStat2,errMsg2); if(Failed()) return
-   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u(1), ADI%m%IW, .true., errStat, errMsg)
+   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
    time = ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1
-   call AD_CalcOutput( time, ADI%u(2)%AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
+   !call AD_CalcOutput( time, ADI%u(2)%AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
+   call ADI_CalcOutput(time, ADI%u(2), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
 
    ! Write outputs for all turbines at nt-1
    call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y%AD, ADI%m%IW%y, errStat2, errMsg2); if(Failed()) return
 
    ! We store the "driver-level" outputs only now,  above, the old outputs are used
-   call Dvr_CalcOutputDriver(dvr, ADI%m%IW%y, errStat, errMsg)
+   call Dvr_CalcOutputDriver(dvr, ADI%m%IW%y, ADI%y, errStat, errMsg)
 
 
    ! VTK outputs
@@ -410,6 +412,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
    endif
 
    if (needInit) then
+      ! ADI
+      InitInp%StoreHHVel = .true.
       ! Inflow Wind
       InitInp%IW_InitInp%InputFile  = dvr%IW_InitInp%InputFile
       InitInp%IW_InitInp%CompInflow = dvr%IW_InitInp%CompInflow
@@ -1579,11 +1583,12 @@ subroutine Dvr_InitializeDriverOutputs(dvr, errStat, errMsg)
 end subroutine Dvr_InitializeDriverOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Store driver data
-subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
+subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, y_ADI, errStat, errMsg)
    type(Dvr_SimData), target,  intent(inout) :: dvr              ! driver data
-   type(InflowWind_OutputType), intent(in   ) :: y_Ifw              ! driver data
-   integer(IntKi)           ,   intent(  out) :: errStat              ! Status of error message
-   character(*)             ,   intent(  out) :: errMsg               ! Error message if ErrStat /= ErrID_None
+   type(InflowWind_OutputType), intent(in   ) :: y_Ifw           ! driver data
+   type(ADI_OutputType),        intent(in   ) :: y_ADI           ! ADI output data
+   integer(IntKi)           ,   intent(  out) :: errStat         ! Status of error message
+   character(*)             ,   intent(  out) :: errMsg          ! Error message if ErrStat /= ErrID_None
    integer              :: maxNumBlades, k, j, iWT
    real(ReKi)           :: rotations(3)
    integer(IntKi)       :: errStat2        ! Status of error message
@@ -1604,10 +1609,10 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
          ! NOTE: to do this properly we would need to store at the previous time step and perform a rotation
          arr(k) = dvr%iCase                       ; k=k+1
          ! Environment
-         arr(k) = y_Ifw%VelocityUVW(1, iWT)       ; k=k+1  ! NOTE: stored at beginning of array
-         arr(k) = y_Ifw%VelocityUVW(2, iWT)       ; k=k+1
-         arr(k) = y_Ifw%VelocityUVW(3, iWT)       ; k=k+1 
-         arr(k) = dvr%ADI%m%IW%PLExp                    ; k=k+1 ! shear exp, not set if CompInflow=1
+         arr(k) = y_ADI%HHVel(1, iWT)       ; k=k+1  ! NOTE: stored at beginning of array
+         arr(k) = y_ADI%HHVel(2, iWT)       ; k=k+1
+         arr(k) = y_ADI%HHVel(3, iWT)       ; k=k+1 
+         arr(k) = y_ADI%PLExp                    ; k=k+1 ! shear exp, not set if CompInflow=1
 
          ! 6 base DOF
          rotations  = EulerExtract(dvr%WT(iWT)%PlatformPtMesh%Orientation(:,:,1)); 

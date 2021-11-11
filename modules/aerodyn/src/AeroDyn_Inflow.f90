@@ -45,7 +45,8 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   type(InflowWind_InitOutputType) :: InitOutData_IW  ! Output data from initialization
+   type(InflowWind_InitOutputType) :: InitOut_IW  ! Output data from initialization
+   type(AD_InitOutputType) :: InitOut_AD  ! Output data from initialization
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    integer(IntKi)          :: UnEcho         ! Unit number for the echo file
@@ -69,23 +70,23 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    ! --- Initialize AeroDyn
    print*,'>>>>>>>>>>> ADI_AeroDynInit'
    print*,'>>>> TODO Remove AD from InitOut'
-   call AD_Init(InitInp%AD, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, Interval, InitOut%AD, errStat2, errMsg2); if (Failed()) return
+   call AD_Init(InitInp%AD, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, Interval, InitOut_AD, errStat2, errMsg2); if (Failed()) return
 
-   InitOut%Ver = InitOut%AD%ver
+   InitOut%Ver = InitOut_AD%ver
 
    ! Add writeoutput units and headers to driver, same for all cases and rotors!
    if (allocated(InitOut%WriteOutputHdr)) then
       print*,'>>>> TODO WriteOutputHdr'
       STOP
    endif
-   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut%AD%rotors(1)%WriteOutputHdr, InitOut%AD%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_AD%rotors(1)%WriteOutputHdr, InitOut_AD%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
    print*,'>>>>>>>>>>> ADI_InflowWindInit'
-   call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOutData_IW, errStat2, errMsg2); if (Failed()) return
+   call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
 
    ! --- Concatenate AD outputs to IW outputs
-   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOutData_IW%WriteOutputHdr, InitOutData_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize outputs
    if (p%StoreHHVel) then
@@ -99,7 +100,7 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 !    if (dvr%out%WrVTK>0) then
 !       dvr%out%n_VTKTime = 1
 !       dvr%out%VTKRefPoint = (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /)
-!       call SetVTKParameters(dvr%out, dvr, InitOutData_AD, AD, errStat2, errMsg2); if(Failed()) return
+!       call SetVTKParameters(dvr%out, dvr, InitOut_AD, AD, errStat2, errMsg2); if(Failed()) return
 !    endif
 
     call cleanup()
@@ -108,8 +109,8 @@ contains
 
    subroutine cleanup()
       !call AD_DestroyInitInput (InitIn_ADData,  errStat2, errMsg2)   
-      !call AD_DestroyInitOutput(InitOutData_AD, errStat2, errMsg2)      
-      call InflowWind_DestroyInitOutput(InitOutData_IW, errStat2, errMsg2)
+      !call AD_DestroyInitOutput(InitOut_AD, errStat2, errMsg2)      
+      call InflowWind_DestroyInitOutput(InitOut_IW, errStat2, errMsg2)
    end subroutine cleanup
 
    logical function Failed()
@@ -225,7 +226,7 @@ subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    do it=1,size(utimes)
       print*,'>>> TODO compute IW inputs, use m%IW%u(it)????'
       u_AD(it) = u(it)%AD
-      call ADI_ADIW_Solve(utimes(it), u(it)%AD, OtherState%AD, m%IW%u(it), m%IW, p%StoreHHVel, errStat2, errMsg2)
+      call ADI_ADIW_Solve(utimes(it), u(it)%AD, OtherState%AD, m%IW%u, m%IW, p%StoreHHVel, errStat2, errMsg2)
    enddo
 
    ! --- Inputs at t - Index 1
@@ -246,7 +247,6 @@ subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    !! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
    call AD_UpdateStates( t, n-1, u_AD(:), utimes(:), p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, errStat2, errMsg2); if(Failed()) return
 
-
 contains
 
    subroutine CleanUp()
@@ -264,7 +264,7 @@ end subroutine ADI_UpdateStates
 !> Routine for computing outputs, used in both loose and tight coupling.
 subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
-   type(ADI_InputType),             intent(in   )  :: u           !< Inputs at Time t
+   type(ADI_InputType),             intent(inout)  :: u           !< Inputs at Time t  ! NOTE: set as in-out since "Inflow" needs to be set
    type(ADI_ParameterType),         intent(in   )  :: p           !< Parameters
    type(ADI_ContinuousStateType),   intent(in   )  :: x           !< Continuous states at t
    type(ADI_DiscreteStateType),     intent(in   )  :: xd          !< Discrete states at t
@@ -284,6 +284,10 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    !call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+   ! CalcOutputs for IW (Sets u_AD%rotors(:)%InflowOnBlade, etc,  and m%IW%y)
+   ! TODO TODO TODO Uncomment
+   !call ADI_ADIW_Solve(t, u%AD, OtherState%AD, m%IW%u, m%IW, p%StoreHHVel, errStat2, errMsg2)
+
    ! Calculate outputs at t
    call AD_CalcOutput(t, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, errStat2, errMsg2); if(Failed()) return
 
@@ -291,12 +295,9 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    ! Hub Height velocity outputs
    if (p%StoreHHVel) then
       do iWT = 1, size(p%AD%rotors)
-         if (p%AD%rotors(iWT)%numBlades >0 ) then 
-            ! Environment
-            y%HHVel(1, iWT) = m%IW%y%VelocityUVW(1, iWT)
-            y%HHVel(1, iWT) = m%IW%y%VelocityUVW(2, iWT)
-            y%HHVel(1, iWT) = m%IW%y%VelocityUVW(3, iWT)
-         endif
+         y%HHVel(1, iWT) = m%IW%y%VelocityUVW(1, iWT)
+         y%HHVel(2, iWT) = m%IW%y%VelocityUVW(2, iWT)
+         y%HHVel(3, iWT) = m%IW%y%VelocityUVW(3, iWT)
       enddo
    endif
    y%PLExp = m%IW%PLExp
@@ -350,17 +351,17 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       allocate(InitOutData%WriteOutputHdr(0))
       allocate(InitOutData%WriteOutputUnt(0))
       allocate(IW%y%WriteOutput(0))
-      call AllocAry(IW%u(1)%PositionXYZ, 3, InitInData%NumWindPoints, 'PositionXYZ', errStat2, errMsg2); if (Failed()) return
-      call AllocAry(IW%y%VelocityUVW   , 3, InitInData%NumWindPoints, 'VelocityUVW', errStat2, errMsg2); if (Failed()) return
-      IW%u(1)%PositionXYZ = myNaN
-      IW%y%VelocityUVW    = myNaN
+      call AllocAry(IW%u%PositionXYZ, 3, InitInData%NumWindPoints, 'PositionXYZ', errStat2, errMsg2); if (Failed()) return
+      call AllocAry(IW%y%VelocityUVW, 3, InitInData%NumWindPoints, 'VelocityUVW', errStat2, errMsg2); if (Failed()) return
+      IW%u%PositionXYZ = myNaN
+      IW%y%VelocityUVW = myNaN
    else
       ! Module init
       InitInData%InputFileName    = i_IW%InputFile
       InitInData%Linearize        = .false.
       InitInData%UseInputFile     = .true.
       InitInData%RootName         = Root
-      CALL InflowWind_Init( InitInData, IW%u(1), IW%p, &
+      CALL InflowWind_Init( InitInData, IW%u, IW%p, &
                      IW%x, IW%xd, IW%z, IW%OtherSt, &
                      IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )
       if(Failed()) return
@@ -528,8 +529,8 @@ subroutine ADI_CalcOutput_IW(t, u_IfW, IW, errStat, errMsg)
       call InflowWind_CalcOutput(t, u_IfW, IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_CalcOutput_IW') 
    else
-      do j=1,size(IW%u(1)%PositionXYZ,2)
-         z = IW%u(1)%PositionXYZ(3,j)
+      do j=1,size(u_IfW%PositionXYZ,2)
+         z = u_IfW%PositionXYZ(3,j)
          IW%y%VelocityUVW(1,j) = IW%HWindSpeed*(z/IW%RefHt)**IW%PLExp
          IW%y%VelocityUVW(2,j) = 0.0_ReKi !V
          IW%y%VelocityUVW(3,j) = 0.0_ReKi !W      
