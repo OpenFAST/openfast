@@ -818,8 +818,8 @@ CONTAINS
       ! get interpolated points and local value
       cx0    = c00 *(1.0-fx) + c10 *fx
       cx1    = c01 *(1.0-fx) + c11 *fx
-      c0y    = c00 *(1.0-fy) + c01 *fx
-      c1y    = c10 *(1.0-fy) + c11 *fx
+      c0y    = c00 *(1.0-fy) + c01 *fy
+      c1y    = c10 *(1.0-fy) + c11 *fy
       depth  = cx0 *(1.0-fy) + cx1 *fy
       
       ! get local slope
