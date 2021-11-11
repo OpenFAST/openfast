@@ -20,7 +20,8 @@
 !**********************************************************************************************************************************
 module AeroDyn_Driver_Subs
    use AeroDyn_Inflow_Types
-   use AeroDyn_Inflow, only: ADI_Init, ADI_InitInflowWind, concatOutputHeaders
+   use AeroDyn_Inflow, only: ADI_Init, ADI_ReInit, ADI_End 
+   use AeroDyn_Inflow, only: concatOutputHeaders
    use AeroDyn_Inflow, only: ADI_ADIW_Solve
    
    use AeroDyn_Driver_Types   
@@ -155,9 +156,9 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, IW, errStat, errMsg )
 
       ! Set wind for this case
       dvr%IW_InitInp%HWindSpeed = dvr%Cases(iCase)%HWindSpeed
-      dvr%IW_InitInp%PLexp  =     dvr%Cases(iCase)%PLExp
-      dvr%ADI%m%IW%HWindSpeed = dvr%Cases(iCase)%HWindSpeed ! We need to do it again since InFlow Wind is initialized only for iCase==1
-      dvr%ADI%m%IW%PLexp      = dvr%Cases(iCase)%PLExp
+      dvr%IW_InitInp%PLexp      = dvr%Cases(iCase)%PLExp
+      dvr%ADI%m%IW%HWindSpeed   = dvr%Cases(iCase)%HWindSpeed ! We need to do it again since InFlow Wind is initialized only for iCase==1
+      dvr%ADI%m%IW%PLexp        = dvr%Cases(iCase)%PLExp
       ! Set motion for this case
       call setSimpleMotion(dvr%WT(1), dvr%Cases(iCase)%rotSpeed, dvr%Cases(iCase)%bldPitch, dvr%Cases(iCase)%nacYaw, dvr%Cases(iCase)%DOF, dvr%Cases(iCase)%amplitude, dvr%Cases(iCase)%frequency)
 
@@ -196,38 +197,24 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, IW, errStat, errMsg )
 
 
    ! --- Initialize ADI
-   !print*,'>>> AD_Driver_Subs, TEMP, init ADI'
-   !call Init_ADI_ForDriver(iCase, dvr%ADI, .false., dvr, dvr%dt, errStat2, errMsg2); if(Failed()) return
-
-   ! --- Initialize aerodyn 
-   call Init_AeroDyn(iCase, dvr, ADI, dvr%dt, InitOutData_AD, errStat2, errMsg2); if(Failed()) return
-
-   ! --- Initialize Inflow Wind 
-   if (iCase==1) then
-      call ADI_InitInflowWind(dvr%out%Root, dvr%IW_InitInp, dvr%ADI%m%u_AD(1), ADI%OtherState%AD, dvr%ADI%m%IW, dvr%dt, InitOutData_IW, errStat2, errMsg2); if(Failed()) return
-      ! TODO TODO TODO u(2) is never used
-      !call InflowWind_CopyInput (dvr%IW%u(1),  dvr%IW%u(2),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
-      ! --- Concatenate AD outputs to IW outputs
-      call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOutData_IW%WriteOutputHdr, InitOutData_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
-   endif
+   print*,'>>> AD_Driver_Subs, TEMP, init ADI'
+   call Init_ADI_ForDriver(iCase, dvr%ADI, dvr, dvr%dt, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize meshes
    if (iCase==1) then
-      call Init_ADMeshMap(dvr, dvr%ADI%m%u_AD(1), errStat2, errMsg2); if(Failed()) return
+      call Init_ADMeshMap(dvr, dvr%ADI%u(1)%AD, errStat2, errMsg2); if(Failed()) return
    endif
 
    ! Copy AD input here because tower is modified in ADMeshMap
-   call AD_CopyInput (dvr%ADI%m%u_AD(1),  dvr%ADI%u%AD,  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
    do j = 2, numInp
-      call AD_CopyInput (dvr%ADI%m%u_AD(1),  dvr%ADI%m%u_AD(j),  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
+      call AD_CopyInput (dvr%ADI%u(1)%AD,  dvr%ADI%u(j)%AD,  MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
    end do
-
 
    ! Compute driver outputs at t=0 
    call Set_Mesh_Motion(0,dvr,errStat2,errMsg2); if(Failed()) return
 
    ! --- Initial AD inputs
-   dvr%ADI%m%inputTimes_AD = -999
+   dvr%ADI%inputTimes = -999
    DO j = 1-numInp, 0
       call Set_AD_Inputs(j, dvr, ADI, dvr%ADI%m%IW,errStat2,errMsg2); if(Failed()) return
    END DO              
@@ -274,6 +261,11 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, IW, errStat, errMsg)
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    real(DbKi) :: time             !< Variable for storing time, in seconds
+   type(AD_InputType)  ::  u_AD(2)
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Compute InflowWind inputs for each time
    errStat = ErrID_None
    errMsg  = ''
 
@@ -283,10 +275,10 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, IW, errStat, errMsg)
    ! Set AD inputs for nt (and keep values at nt-1 as well)
    ! u(1) is at nt, u(2) is at nt-1
    call Set_AD_Inputs(nt,dvr,ADI,IW,errStat2,errMsg2); if(Failed()) return
-   time = dvr%ADI%m%inputTimes_AD(2)
+   time = dvr%ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1
-   call AD_CalcOutput( time, dvr%ADI%m%u_AD(2), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
+   call AD_CalcOutput( time, dvr%ADI%u(2)%AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2 ); if(Failed()) return
 
    ! Write outputs for all turbines at nt-1
    call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y%AD, IW%y, errStat2, errMsg2); if(Failed()) return
@@ -305,7 +297,9 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, IW, errStat, errMsg)
    endif
 
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
-   call AD_UpdateStates( time, nt-1, dvr%ADI%m%u_AD, dvr%ADI%m%inputTimes_AD, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%m%AD, errStat2, errMsg2); if(Failed()) return
+   u_AD(1) = ADI%u(1)%AD
+   u_AD(2) = ADI%u(2)%AD
+   call AD_UpdateStates( time, nt-1, u_AD, dvr%ADI%inputTimes, ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%m%AD, errStat2, errMsg2); if(Failed()) return
 
 contains
 
@@ -375,81 +369,95 @@ subroutine Dvr_CleanUp(dvr, ADI, IW, initialized, errStat, errMsg)
    call Dvr_EndCase(dvr, ADI, IW, initialized, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    ! End modules
-   call AD_End( dvr%ADI%m%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
-   call InflowWind_End( IW%u(1), IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
-
-   ! TODO TODO TODO call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
-   call ADI_DestroyInflowWindData(IW     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+   call ADI_End( ADI%u(:), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName); 
 
    call AD_Dvr_DestroyDvr_SimData   (dvr ,    errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
 end subroutine Dvr_CleanUp
 
 
-subroutine Init_ADI_ForDriver(iCase, ADI, ADReInit, dvr, dt, errStat, errMsg)
+subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: iCase
-   logical                     , intent(in   ) :: ADReInit
-   type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(ADI_Data),               intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(Dvr_SimData), target,    intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    real(DbKi),                   intent(inout) :: dt            ! interval
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
+   character(*)                , intent(out)   :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! locals
-   real(reKi)                                  :: theta(3)
-   integer(IntKi)                              :: j, k   
-   integer(IntKi)                              :: iWT
-   integer(IntKi)                              :: errStat2      ! local status of error message
-   character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
-   type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
-   type(WTData), pointer :: wt ! Alias to shorten notation
-   logical :: needInit
-
-   type(ADI_InitInputType)          :: InitInp        !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
-   real(DbKi)                       :: interval       !< Coupling interval in seconds
-   type(ADI_InitOutputType)         :: InitOut        !< Output for initialization routine
+   real(reKi)               :: theta(3)
+   integer(IntKi)           :: j, k
+   integer(IntKi)           :: iWT
+   integer(IntKi)           :: errStat2      ! local status of error message
+   character(ErrMsgLen)     :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   type(AD_InitInputType)   :: InitInData     ! Input data for initialization
+   type(WTData), pointer    :: wt ! Alias to shorten notation
+   logical                  :: needInit
+   type(ADI_InitInputType)  :: InitInp                                                      !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
+   type(ADI_InitOutputType) :: InitOut                                                      !< Output for initialization routine
 !    type(AD_InitOutputType) :: InitOutData   ! Output data for initialization
    errStat = ErrID_None
    errMsg  = ''
 
-   ! ----- HACK FOR ADI
-   ! Inflow Wind
-   InitInp%IW_InitInp%InputFile  = dvr%IW_InitInp%InputFile
-   InitInp%IW_InitInp%CompInflow = dvr%IW_InitInp%CompInflow
-   InitInp%IW_InitInp%HWindSpeed = dvr%IW_InitInp%HWindSpeed
-   InitInp%IW_InitInp%RefHt      = dvr%IW_InitInp%RefHt
-   InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
-   ! AeroDyn
-   InitInp%AD%Gravity   = 9.80665_ReKi
-   InitInp%AD%RootName  = dvr%out%Root ! 'C:/Work/XFlow/'
-   InitInp%AD%InputFile = dvr%AD_InputFile
-   InitInp%ADReInit   = ADReInit
-   Interval=dvr%dt
-   ! Init data per rotor
-   allocate(InitInp%AD%rotors(dvr%numTurbines), stat=errStat) 
-   if (errStat/=0) then
-      call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_AeroDyn' )
-      call Cleanup()
-      return
-   end if
-   do iWT=1,dvr%numTurbines
-      wt => dvr%WT(iWT)
-      InitInp%AD%rotors(iWT)%numBlades = wt%numBlades
-      call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
-      call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
-      if (wt%HAWTprojection) then
-         InitInp%AD%rotors(iWT)%AeroProjMod = 0 ! 0: default, for HAWT, with WithoutSweepPitchTwist
-      else
-         InitInp%AD%rotors(iWT)%AeroProjMod = 1 ! 1: for VAWT
+   needInit=.False.
+   if (iCase==1) then
+      needInit=.True.
+   else
+      ! UA does not like changes of dt between cases
+      if ( .not. EqualRealNos(ADI%p%AD%DT, dt) ) then
+         call WrScr('Info: dt is changing between cases, AeroDyn will be re-initialized')
+         call ADI_End( ADI%u(1:1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn'); if(Failed()) return
+         !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         needInit=.true.
       endif
-      InitInp%AD%rotors(iWT)%HubPosition    = wt%y_ED%HubPtMotion%Position(:,1)
-      InitInp%AD%rotors(iWT)%HubOrientation = wt%y_ED%HubPtMotion%RefOrientation(:,:,1)
-      do k=1,wt%numBlades
-         InitInp%AD%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%y_ED%BladeRootMotion(k)%RefOrientation(:,:,1)
-         InitInp%AD%rotors(iWT)%BladeRootPosition(:,k)      = wt%y_ED%BladeRootMotion(k)%Position(:,1)
-      end do
-   enddo
+   endif
 
-   call ADI_Init(InitInp, ADI%u, ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, Interval, InitOut, ErrStat, ErrMsg)
+   if (needInit) then
+      ! Inflow Wind
+      InitInp%IW_InitInp%InputFile  = dvr%IW_InitInp%InputFile
+      InitInp%IW_InitInp%CompInflow = dvr%IW_InitInp%CompInflow
+      InitInp%IW_InitInp%HWindSpeed = dvr%IW_InitInp%HWindSpeed
+      InitInp%IW_InitInp%RefHt      = dvr%IW_InitInp%RefHt
+      InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
+      ! AeroDyn
+      InitInp%AD%Gravity   = 9.80665_ReKi
+      InitInp%AD%RootName  = dvr%out%Root ! 'C:/Work/XFlow/'
+      InitInp%AD%InputFile = dvr%AD_InputFile
+      ! Init data per rotor
+      allocate(InitInp%AD%rotors(dvr%numTurbines), stat=errStat) 
+      if (errStat/=0) then
+         call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_AeroDyn' )
+         call Cleanup()
+         return
+      end if
+      do iWT=1,dvr%numTurbines
+         wt => dvr%WT(iWT)
+         InitInp%AD%rotors(iWT)%numBlades = wt%numBlades
+         call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
+         call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
+         if (wt%HAWTprojection) then
+            InitInp%AD%rotors(iWT)%AeroProjMod = 0 ! 0: default, for HAWT, with WithoutSweepPitchTwist
+         else
+            InitInp%AD%rotors(iWT)%AeroProjMod = 1 ! 1: for VAWT
+         endif
+         InitInp%AD%rotors(iWT)%HubPosition    = wt%y_ED%HubPtMotion%Position(:,1)
+         InitInp%AD%rotors(iWT)%HubOrientation = wt%y_ED%HubPtMotion%RefOrientation(:,:,1)
+         do k=1,wt%numBlades
+            InitInp%AD%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%y_ED%BladeRootMotion(k)%RefOrientation(:,:,1)
+            InitInp%AD%rotors(iWT)%BladeRootPosition(:,k)      = wt%y_ED%BladeRootMotion(k)%Position(:,1)
+         end do
+      enddo
+
+      call ADI_Init(InitInp, ADI%u(1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, dt, InitOut, ErrStat, ErrMsg)
+
+      ! Set output headers
+      if (iCase==1) then
+         call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+      endif
+   else
+      ! --- Reinit
+      call ADI_ReInit(ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%m, dt, errStat2, errMsg2); if(Failed()) return
+   endif
+
 
    call cleanup()
 contains
@@ -468,102 +476,6 @@ contains
    end function Failed
    
 end subroutine Init_ADI_ForDriver
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Initialize aerodyn module based on driver data
-subroutine Init_AeroDyn(iCase, dvr, ADI, dt, InitOutData, errStat, errMsg)
-   integer(IntKi)              , intent(in   ) :: iCase
-   type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(ADI_Data),               intent(inout) :: ADI           ! AeroDyn data 
-   real(DbKi),                   intent(inout) :: dt            ! interval
-   type(AD_InitOutputType),      intent(  out) :: InitOutData   ! Output data for initialization
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
-   ! locals
-   real(reKi)                                  :: theta(3)
-   integer(IntKi)                              :: j, k   
-   integer(IntKi)                              :: iWT
-   integer(IntKi)                              :: errStat2      ! local status of error message
-   character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
-   type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
-   type(WTData), pointer :: wt ! Alias to shorten notation
-   logical :: needInit
-   errStat = ErrID_None
-   errMsg  = ''
-
-   needInit=.False.
-   if (iCase==1) then
-      needInit=.True.
-   else
-      ! UA does not like changes of dt
-      if ( .not. EqualRealNos(ADI%p%AD%DT, dt) ) then
-         call WrScr('Info: dt is changing between cases, AeroDyn will be re-initialized')
-         call AD_End( dvr%ADI%m%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn'); if(Failed()) return
-         !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
-         needInit=.true.
-      endif
-   endif
-
-   if (needInit) then
-      ! --- Set init data
-      allocate(InitInData%rotors(dvr%numTurbines), stat=errStat) 
-      if (errStat/=0) then
-         call SetErrStat( ErrID_Fatal, 'Allocating rotors', errStat, errMsg, 'Init_AeroDyn' )
-         call Cleanup()
-         return
-      end if
-      InitInData%InputFile = dvr%AD_InputFile
-      InitInData%RootName  = dvr%out%Root
-      InitInData%Gravity   = 9.80665_ReKi
-      ! Init data per rotor
-      do iWT=1,dvr%numTurbines
-         wt => dvr%WT(iWT)
-         InitInData%rotors(iWT)%numBlades = wt%numBlades
-         call AllocAry(InitInData%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
-         call AllocAry(InitInData%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
-         if (wt%HAWTprojection) then
-            InitInData%rotors(iWT)%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
-         else
-            InitInData%rotors(iWT)%AeroProjMod = 1
-         endif
-         InitInData%rotors(iWT)%HubPosition    = wt%y_ED%HubPtMotion%Position(:,1)
-         InitInData%rotors(iWT)%HubOrientation = wt%y_ED%HubPtMotion%RefOrientation(:,:,1)
-         do k=1,wt%numBlades
-            InitInData%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%y_ED%BladeRootMotion(k)%RefOrientation(:,:,1)
-            InitInData%rotors(iWT)%BladeRootPosition(:,k)      = wt%y_ED%BladeRootMotion(k)%Position(:,1)
-         end do
-      enddo
-      ! --- Call AD_init
-      call AD_Init(InitInData, dvr%ADI%m%u_AD(1), ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%y%AD, ADI%m%AD, dt, InitOutData, ErrStat2, ErrMsg2 ); if (Failed()) return
-
-      if (iCase==1) then
-         ! Add writeoutput units and headers to driver, same for all cases and rotors!
-         call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOutData%rotors(1)%WriteOutputHdr, InitOutData%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
-      endif
-
-      dvr%out%AD_ver = InitOutData%ver
-
-   else
-      ! --- Reinit
-      call AD_ReInit(ADI%p%AD, ADI%x%AD, ADI%xd%AD, ADI%z%AD, ADI%OtherState%AD, ADI%m%AD, dt, errStat2, errMsg2); if(Failed()) return
-   endif
-
-   call cleanup()
-contains
-
-   subroutine cleanup()
-      call AD_DestroyInitInput (InitInData,  errStat2, errMsg2)   
-   end subroutine cleanup
-
-   logical function Failed()
-      CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_AeroDyn')
-      Failed = errStat >= AbortErrLev
-      if (Failed) then
-         call cleanup()
-      endif
-   end function Failed
-   
-end subroutine Init_AeroDyn
 !----------------------------------------------------------------------------------------------------------------------------------
 !>
 subroutine Init_Meshes(dvr,  errStat, errMsg)
@@ -1019,38 +931,38 @@ subroutine Set_AD_Inputs(nt,dvr,ADI,IW,errStat,errMsg)
 
    ! --- Shift previous calculations:
    do j = numInp-1,1,-1
-      call AD_CopyInput (dvr%ADI%m%u_AD(j),  dvr%ADI%m%u_AD(j+1),  MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-      dvr%ADI%m%inputTimes_AD(j+1) = dvr%ADI%m%inputTimes_AD(j)
+      call AD_CopyInput (dvr%ADI%u(j)%AD,  dvr%ADI%u(j+1)%AD,  MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      dvr%ADI%inputTimes(j+1) = dvr%ADI%inputTimes(j)
    end do
-   dvr%ADI%m%inputTimes_AD(1) = dvr%dT * nt ! time at "nt+1"
+   dvr%ADI%inputTimes(1) = dvr%dT * nt ! time at "nt+1"
 
    ! --- Transfer motion from "ED" to AeroDyn
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)
       ! Hub 2 Hub AD 
-      call Transfer_Point_to_Point(wt%y_ED%HubPtMotion, dvr%ADI%m%u_AD(1)%rotors(iWT)%hubMotion, wt%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+      call Transfer_Point_to_Point(wt%y_ED%HubPtMotion, dvr%ADI%u(1)%AD%rotors(iWT)%hubMotion, wt%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Point(wt%y_ED%BladeRootMotion(iB), dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), wt%ED_P_2_AD_P_R(iB), errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Point(wt%y_ED%BladeRootMotion(iB), dvr%ADI%u(1)%AD%rotors(iWT)%BladeRootMotion(iB), wt%ED_P_2_AD_P_R(iB), errStat2, errMsg2); if(Failed()) return
       enddo
             
       ! Blade root AD to blade line AD
       do iB = 1,wt%numBlades
-         call Transfer_Point_to_Line2(dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeRootMotion(iB), dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iB), wt%AD_P_2_AD_L_B(iB), errStat2, errMsg2); if(Failed()) return
+         call Transfer_Point_to_Line2(dvr%ADI%u(1)%AD%rotors(iWT)%BladeRootMotion(iB), dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(iB), wt%AD_P_2_AD_L_B(iB), errStat2, errMsg2); if(Failed()) return
       enddo
 
       ! Tower motion
       if (wt%hasTower) then
-         if (dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion%nNodes>0) then
+         if (dvr%ADI%u(1)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
             call Transfer_Point_to_Point(wt%y_ED%TwrPtMesh,  wt%TwrPtMeshAD, wt%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
-            call Transfer_Point_to_Line2(wt%TwrPtMeshAD, dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion, wt%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+            call Transfer_Point_to_Line2(wt%TwrPtMeshAD, dvr%ADI%u(1)%AD%rotors(iWT)%TowerMotion, wt%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
          endif
       endif
    enddo ! iWT, rotors
       
    ! --- Inflow on points
-   call ADI_ADIW_Solve(dvr%ADI%m%inputTimes_AD(1), dvr%ADI%m%u_AD(1), ADI%OtherState%AD, IW%u(1), IW, .true., errStat, errMsg)
+   call ADI_ADIW_Solve(dvr%ADI%inputTimes(1), dvr%ADI%u(1)%AD, ADI%OtherState%AD, IW%u(1), IW, .true., errStat, errMsg)
    !call ADI_Set_IW_Inputs(AD%u(1), AD%OtherState, IW%u(1), .true., errStat2, errMsg2); if(Failed()) return
    !call ADI_CalcOutput_IW(AD%inputTime(1), IW%u(1), IW, errStat2, errMsg2); if(Failed()) return
    !call ADI_AD_InputSolve_IfW(AD%u(1), IW%y, errStat2, errMsg2); if(Failed()) return
@@ -1939,12 +1851,12 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
    do iWT=1,dvr%numTurbines
       wt => dvr%wt(iWT)
       do iBld=1, wt%numBlades
-         nNodes = dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%nnodes
-         BladeLength = TwoNorm(dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,nNodes)-dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(iBld)%Position(:,1))
+         nNodes = dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBld)%nnodes
+         BladeLength = TwoNorm(dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBld)%Position(:,nNodes)-dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBld)%Position(:,1))
          MaxBladeLength = max(MaxBladeLength, BladeLength)
       enddo
       if (wt%hasTower) then
-         Mesh=>dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion
+         Mesh=>dvr%ADI%u(1)%AD%rotors(iWT)%TowerMotion
          if (Mesh%NNodes>0) then
             TwrLength = TwoNorm( Mesh%position(:,1) - Mesh%position(:,Mesh%NNodes) ) 
             MaxTwrLength = max(MaxTwrLength, TwrLength)
@@ -1994,7 +1906,7 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
       !.......................
       BaseBoxDim = minval(p_FAST%VTKNacDim(4:6))/2
       if (wt%hasTower) then
-         Mesh=>dvr%ADI%m%u_AD(1)%rotors(iWT)%TowerMotion
+         Mesh=>dvr%ADI%u(1)%AD%rotors(iWT)%TowerMotion
          if (Mesh%NNodes>0) then
             CALL AllocAry(p_FAST%VTK_Surface(iWT)%TowerRad, Mesh%NNodes,'VTK_Surface(iWT)%TowerRad',ErrStat2,ErrMsg2)
             topNode   = Mesh%NNodes - 1
@@ -2040,10 +1952,10 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, ADI, ErrStat, ErrMsg)
          print*,'>>> Profile coordinates missing, using dummy coordinates'
          rootNode = 1
          DO K=1,wt%numBlades   
-            tipNode  = dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(K)%NNodes
-            cylNode  = min(3,dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(K)%Nnodes)
+            tipNode  = dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(K)%NNodes
+            cylNode  = min(3,dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(K)%Nnodes)
 
-            call SetVTKDefaultBladeParams(dvr%ADI%m%u_AD(1)%rotors(iWT)%BladeMotion(K), p_FAST%VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+            call SetVTKDefaultBladeParams(dvr%ADI%u(1)%AD%rotors(iWT)%BladeMotion(K), p_FAST%VTK_Surface(iWT)%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
          END DO                           
@@ -2082,8 +1994,8 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
                                    VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
 
       ! Tower motions
-      if (dvr%ADI%m%u_AD(2)%rotors(iWT)%TowerMotion%nNodes>0) then
-         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%ADI%m%u_AD(2)%rotors(iWT)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
+      if (dvr%ADI%u(2)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%ADI%u(2)%AD%rotors(iWT)%TowerMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
                                     VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, p_FAST%VTK_Surface(iWT)%NumSectors, p_FAST%VTK_Surface(iWT)%TowerRad )
       endif
     
@@ -2093,7 +2005,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
          
          ! Hub
-         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, dvr%ADI%m%u_AD(2)%rotors(iWT)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, dvr%ADI%u(2)%AD%rotors(iWT)%HubMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                       NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
       endif
@@ -2102,7 +2014,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
       ! Blades
       do K=1,wt%numBlades
 
-         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%ADI%m%u_AD(2)%rotors(iWT)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
+         call MeshWrVTK_Ln2Surface (p_FAST%VTKRefPoint, dvr%ADI%u(2)%AD%rotors(iWT)%BladeMotion(K), trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
                                     VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , verts=p_FAST%VTK_Surface(iWT)%BladeShape(K)%AirfoilCoords &
                                     ,Sib=ADI%y%AD%rotors(iWT)%BladeLoad(k) )
       end do                  
@@ -2114,7 +2026,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
                                       VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                       NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
 
-         if (dvr%ADI%m%u_AD(2)%rotors(iWT)%TowerMotion%nNodes>0) then
+         if (dvr%ADI%u(2)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
             call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, wt%TwrPtMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
                                          VTK_count, OutputFields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth , &
                                          NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)

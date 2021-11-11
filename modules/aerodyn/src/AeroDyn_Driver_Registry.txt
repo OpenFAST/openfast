@@ -67,8 +67,9 @@ typedef   ^                         ^            ADI_ConstraintStateType        
 typedef   ^                         ^            ADI_OtherStateType               OtherState   - -    -    "Other states"
 typedef   ^                         ^            ADI_ParameterType                p        -     -    -    "Parameters"
 typedef   ^                         ^            ADI_MiscVarType                  m        -     -    -    "Misc/optimization variables"
-typedef   ^                         ^            ADI_InputType                    u        -     -    -    "Array of inputs associated with InputTimes"
+typedef   ^                         ^            ADI_InputType                    u        {2}   -    -    "Array of inputs associated with InputTimes"
 typedef   ^                         ^            ADI_OutputType                   y        -     -    -    "System outputs"
+typedef   ^                         ^            DbKi                             inputTimes {2} -    -    "Array of times associated with u array"
 
 # ..... Blade data ...........................................................................................................
 typedef   ^                        BladeData     ReKi                    pitch            -      -     -   "rad" -

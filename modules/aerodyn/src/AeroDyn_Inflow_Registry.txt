@@ -38,13 +38,14 @@ typedef    ^        ^                  ReKi                             PLExp   
 
 # ..... InitIn ....................................................................................................................
 typedef    ^    InitInputType          AD_InitInputType                 AD               -      -     -   "AD Init input types"
-typedef    ^        ^                  Logical                          ADReInit         -      -     -   "True if AD will be reinitialized"
 typedef    ^        ^                  ADI_IW_InputData                 IW_InitInp       -      -     -   "IW Init input types"
 typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
 
 # ..... InitOut ...................................................................................................................
 typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
 typedef    ^        ^                  AD_InitOutputType                AD               -      -     -   "AD init outputs"
+typedef    ^        ^                  character(ChanLen)               WriteOutputHdr  {:}     -     -   "Channel headers" "-"
+typedef    ^        ^                  character(ChanLen)               WriteOutputUnt  {:}     -     -   "Channel units" "-"
 
 # ..... Continuous States .........................................................................................................
 typedef    ^    ContinuousStateType    AD_ContinuousStateType           AD               -      -     -   "AD Continuous states"
@@ -61,8 +62,6 @@ typedef    ^    OtherStateType         AD_OtherStateType                AD      
 # ..... Misc ......................................................................................................................
 typedef    ^    MiscVarType            AD_MiscVarType                   AD               -      -     -   "misc/optimization variables"
 typedef    ^        ^                  ADI_InflowWindData               IW               -      -     -   "All the necessary inflow wind data"
-typedef    ^        ^                  AD_InputType                     u_AD            {2}     -     -   "Array of system inputs"
-typedef    ^        ^                  DbKi                             inputTimes_AD   {2}     -     -   "Array of times associated with u array"
 
 # ..... Parameters ................................................................................................................
 typedef    ^    ParameterType          AD_ParameterType                 AD               -      -     -   "Parameters"

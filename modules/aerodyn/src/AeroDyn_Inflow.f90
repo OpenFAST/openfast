@@ -14,6 +14,7 @@ module AeroDyn_Inflow
    type(ProgDesc), parameter  :: ADI_Ver = ProgDesc( 'ADI', '', '' )
 
    public   :: ADI_Init 
+   public   :: ADI_ReInit 
    public   :: ADI_End
    public   :: ADI_CalcOutput
    public   :: ADI_UpdateStates
@@ -43,7 +44,7 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(ADI_OutputType),            intent(  out)  :: y              !< Initial system outputs (outputs are not calculated;
    type(ADI_MiscVarType),           intent(  out)  :: m              !< Initial misc/optimization variables
    real(DbKi),                      intent(inout)  :: interval       !< Coupling interval in seconds
-   type(ADI_InitOutputType),        intent(  out)  :: InitOut        !< Output for initialization routine
+   type(ADI_InitOutputType),        intent(inout)  :: InitOut        !< Output for initialization routine. NOTE: inout to allow for reinit?
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    ! Local variables
@@ -68,17 +69,25 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%dt = interval
 
    ! --- Initialize AeroDyn
-   if (InitInp%ADReInit) then
-      ! --- Reinit
-      call AD_ReInit(p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, Interval, errStat2, errMsg2); if(Failed()) return
-   else
-      print*,'>>>>>>>>>>> ADI_AeroDynInit'
-      call AD_Init(InitInp%AD, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, Interval, InitOut%AD, errStat2, errMsg2); if (Failed()) return
+   print*,'>>>>>>>>>>> ADI_AeroDynInit'
+   print*,'>>>> TODO Remove AD from InitOut'
+   call AD_Init(InitInp%AD, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, Interval, InitOut%AD, errStat2, errMsg2); if (Failed()) return
+
+   InitOut%Ver = InitOut%AD%ver
+
+   ! Add writeoutput units and headers to driver, same for all cases and rotors!
+   if (allocated(InitOut%WriteOutputHdr)) then
+      print*,'>>>> TODO WriteOutputHdr'
+      STOP
    endif
+   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut%AD%rotors(1)%WriteOutputHdr, InitOut%AD%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
    print*,'>>>>>>>>>>> ADI_InflowWindInit'
    call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOutData_IW, errStat2, errMsg2); if (Failed()) return
+
+   ! --- Concatenate AD outputs to IW outputs
+   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOutData_IW%WriteOutputHdr, InitOutData_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 ! 
 !    ! --- Initialize meshes
 !    if (iCase==1) then
@@ -112,18 +121,61 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 !       call SetVTKParameters(dvr%out, dvr, InitOutData_AD, AD, errStat2, errMsg2); if(Failed()) return
 !    endif
 
+    call cleanup()
+
 contains
+
+   subroutine cleanup()
+      !call AD_DestroyInitInput (InitIn_ADData,  errStat2, errMsg2)   
+      !call AD_DestroyInitOutput(InitOutData_AD, errStat2, errMsg2)      
+      call InflowWind_DestroyInitOutput(InitOutData_IW, errStat2, errMsg2)
+   end subroutine cleanup
 
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ADI_Init') 
         Failed =  ErrStat >= AbortErrLev
+         if (Failed) call cleanup()
    end function Failed
 
 end subroutine ADI_Init
 !----------------------------------------------------------------------------------------------------------------------------------
+!> ReInit
+subroutine ADI_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg)
+   type(ADI_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(ADI_ContinuousStateType),   intent(inout)  :: x              !< Initial continuous states
+   type(ADI_DiscreteStateType),     intent(inout)  :: xd             !< Initial discrete states
+   type(ADI_ConstraintStateType),   intent(inout)  :: z              !< Initial guess of the constraint states
+   type(ADI_OtherStateType),        intent(inout)  :: OtherState     !< Initial other states
+   type(ADI_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
+   real(DbKi),                      intent(inout)  :: interval       !< Coupling interval in seconds
+   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+
+   ! Initialize variables for this routine
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Reinitialize AeroDyn without reopening input file
+   call AD_ReInit(p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, Interval, errStat2, errMsg2); if(Failed()) return
+   ! Set parameters
+   !p%dt = interval ! dt shouldn't change
+contains
+
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ADI_ReInit') 
+        Failed =  ErrStat >= AbortErrLev
+   end function Failed
+
+end subroutine ADI_ReInit
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine ADI_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-   type(ADI_InputType),allocatable, intent(inout)  :: u(:)        !< System inputs
+   type(ADI_InputType),             intent(inout)  :: u(:)        !< System inputs NOTE: used to be allocatable
    type(ADI_ParameterType),         intent(inout)  :: p           !< Parameters
    type(ADI_ContinuousStateType),   intent(inout)  :: x           !< Continuous states
    type(ADI_DiscreteStateType),     intent(inout)  :: xd          !< Discrete states
@@ -142,11 +194,11 @@ subroutine ADI_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    ! Destroy the input data:
-   if (allocated(u)) then
+   !if (allocated(u)) then
       do i=1,size(u)
          call ADI_DestroyInput( u(i), ErrStat, ErrMsg )
       enddo
-   endif
+   !endif
 
    ! Destroy the parameter data:
    call ADI_DestroyParam( p, ErrStat, ErrMsg )
@@ -180,29 +232,38 @@ subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
    character(*),                    intent(  out)  :: errMsg      !< Error message if ErrStat /= ErrID_None
    ! local variables
+   integer :: it ! Index on times
+   type(AD_InputType)  ::  u_AD(size(utimes))
    integer(IntKi)                :: ErrStat2                                                           ! temporary Error status
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
-   type(ADI_InputType)           :: uInterp     ! Interpolated/Extrapolated input
+   !type(ADI_InputType)           :: uInterp     ! Interpolated/Extrapolated input
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! Compute InflowWind inputs for each time
+   do it=1,size(utimes)
+      print*,'>>> TODO compute IW inputs, use m%IW%u(it)????'
+      u_AD(it) = u(it)%AD
+      call ADI_ADIW_Solve(utimes(it), u(it)%AD, OtherState%AD, m%IW%u(it), m%IW, .false., errStat2, errMsg2)
+   enddo
+
    ! --- Inputs at t - Index 1
-   call ADI_CopyInput( u(1), uInterp, MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return  ! Allocate uInterp
-   call ADI_Input_ExtrapInterp(u(1:size(utimes)), utimes(:), uInterp, t, errStat2, errMsg2); if(Failed()) return
-   call AD_CopyInput( uInterp%AD, m%u_AD(1), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return ! Copy uInterp to AD
-   m%inputTimes_AD(1) = t
-   ! Inflow on points
-   call ADI_ADIW_Solve(m%inputTimes_AD(1), m%u_AD(1), OtherState%AD, m%IW%u(1), m%IW, .false., errStat2, errMsg2)
+   !call ADI_CopyInput( u(1), uInterp, MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return  ! Allocate uInterp
+   !call ADI_Input_ExtrapInterp(u(1:size(utimes)), utimes(:), uInterp, t, errStat2, errMsg2); if(Failed()) return
+   !call AD_CopyInput( uInterp%AD, m%u_AD(1), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return ! Copy uInterp to AD
+   !m%inputTimes_AD(1) = t
+   !! Inflow on points
+   !call ADI_ADIW_Solve(m%inputTimes_AD(1), m%u_AD(1), OtherState%AD, m%IW%u(1), m%IW, .false., errStat2, errMsg2)
 
-   ! Inputs at t+dt - Index 2
-   call ADI_Input_ExtrapInterp(u(1:size(utimes)), utimes, uInterp, t+p%dt, errStat2, errMsg2); if(Failed()) return
-   call AD_CopyInput( uInterp%AD, m%u_AD(2), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return ! Copy uInterp to AD
-   m%inputTimes_AD(2) = t+p%dt
-   ! Inflow on points
-   call ADI_ADIW_Solve(m%inputTimes_AD(2), m%u_AD(2), OtherState%AD, m%IW%u(2), m%IW, .false., errStat2, errMsg2)
+   !! Inputs at t+dt - Index 2
+   !call ADI_Input_ExtrapInterp(u(1:size(utimes)), utimes, uInterp, t+p%dt, errStat2, errMsg2); if(Failed()) return
+   !call AD_CopyInput( uInterp%AD, m%u_AD(2), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return ! Copy uInterp to AD
+   !m%inputTimes_AD(2) = t+p%dt
+   !! Inflow on points
+   !call ADI_ADIW_Solve(m%inputTimes_AD(2), m%u_AD(2), OtherState%AD, m%IW%u(2), m%IW, .false., errStat2, errMsg2)
 
-   ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
-   call AD_UpdateStates( t, n-1, m%u_AD(:), m%inputTimes_AD(:), p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, errStat2, errMsg2); if(Failed()) return
+   !! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
+   call AD_UpdateStates( t, n-1, u_AD(:), utimes(:), p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, errStat2, errMsg2); if(Failed()) return
 
 
 contains

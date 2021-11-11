@@ -97,8 +97,9 @@ IMPLICIT NONE
     TYPE(ADI_OtherStateType)  :: OtherState      !< Other states [-]
     TYPE(ADI_ParameterType)  :: p      !< Parameters [-]
     TYPE(ADI_MiscVarType)  :: m      !< Misc/optimization variables [-]
-    TYPE(ADI_InputType)  :: u      !< Array of inputs associated with InputTimes [-]
+    TYPE(ADI_InputType) , DIMENSION(1:2)  :: u      !< Array of inputs associated with InputTimes [-]
     TYPE(ADI_OutputType)  :: y      !< System outputs [-]
+    REAL(DbKi) , DIMENSION(1:2)  :: inputTimes      !< Array of times associated with u array [-]
   END TYPE ADI_Data
 ! =======================
 ! =========  BladeData  =======
@@ -1760,6 +1761,7 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyADI_Data'
@@ -1784,12 +1786,15 @@ ENDIF
       CALL ADI_CopyMisc( SrcADI_DataData%m, DstADI_DataData%m, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL ADI_CopyInput( SrcADI_DataData%u, DstADI_DataData%u, CtrlCode, ErrStat2, ErrMsg2 )
+    DO i1 = LBOUND(SrcADI_DataData%u,1), UBOUND(SrcADI_DataData%u,1)
+      CALL ADI_CopyInput( SrcADI_DataData%u(i1), DstADI_DataData%u(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
       CALL ADI_CopyOutput( SrcADI_DataData%y, DstADI_DataData%y, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstADI_DataData%inputTimes = SrcADI_DataData%inputTimes
  END SUBROUTINE AD_Dvr_CopyADI_Data
 
  SUBROUTINE AD_Dvr_DestroyADI_Data( ADI_DataData, ErrStat, ErrMsg )
@@ -1807,7 +1812,9 @@ ENDIF
   CALL ADI_DestroyOtherState( ADI_DataData%OtherState, ErrStat, ErrMsg )
   CALL ADI_DestroyParam( ADI_DataData%p, ErrStat, ErrMsg )
   CALL ADI_DestroyMisc( ADI_DataData%m, ErrStat, ErrMsg )
-  CALL ADI_DestroyInput( ADI_DataData%u, ErrStat, ErrMsg )
+DO i1 = LBOUND(ADI_DataData%u,1), UBOUND(ADI_DataData%u,1)
+  CALL ADI_DestroyInput( ADI_DataData%u(i1), ErrStat, ErrMsg )
+ENDDO
   CALL ADI_DestroyOutput( ADI_DataData%y, ErrStat, ErrMsg )
  END SUBROUTINE AD_Dvr_DestroyADI_Data
 
@@ -1949,8 +1956,9 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    DO i1 = LBOUND(InData%u,1), UBOUND(InData%u,1)
       Int_BufSz   = Int_BufSz + 3  ! u: size of buffers for each call to pack subtype
-      CALL ADI_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u, ErrStat2, ErrMsg2, .TRUE. ) ! u 
+      CALL ADI_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u(i1), ErrStat2, ErrMsg2, .TRUE. ) ! u 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1966,6 +1974,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+    END DO
       Int_BufSz   = Int_BufSz + 3  ! y: size of buffers for each call to pack subtype
       CALL ADI_PackOutput( Re_Buf, Db_Buf, Int_Buf, InData%y, ErrStat2, ErrMsg2, .TRUE. ) ! y 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1983,6 +1992,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Db_BufSz   = Db_BufSz   + SIZE(InData%inputTimes)  ! inputTimes
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2178,7 +2188,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL ADI_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u, ErrStat2, ErrMsg2, OnlySize ) ! u 
+    DO i1 = LBOUND(InData%u,1), UBOUND(InData%u,1)
+      CALL ADI_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u(i1), ErrStat2, ErrMsg2, OnlySize ) ! u 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2206,6 +2217,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    END DO
       CALL ADI_PackOutput( Re_Buf, Db_Buf, Int_Buf, InData%y, ErrStat2, ErrMsg2, OnlySize ) ! y 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -2234,6 +2246,10 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    DO i1 = LBOUND(InData%inputTimes,1), UBOUND(InData%inputTimes,1)
+      DbKiBuf(Db_Xferred) = InData%inputTimes(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
  END SUBROUTINE AD_Dvr_PackADI_Data
 
  SUBROUTINE AD_Dvr_UnPackADI_Data( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2249,6 +2265,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_UnPackADI_Data'
@@ -2502,6 +2519,9 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    i1_l = LBOUND(OutData%u,1)
+    i1_u = UBOUND(OutData%u,1)
+    DO i1 = LBOUND(OutData%u,1), UBOUND(OutData%u,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -2535,13 +2555,14 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL ADI_UnpackInput( Re_Buf, Db_Buf, Int_Buf, OutData%u, ErrStat2, ErrMsg2 ) ! u 
+      CALL ADI_UnpackInput( Re_Buf, Db_Buf, Int_Buf, OutData%u(i1), ErrStat2, ErrMsg2 ) ! u 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -2582,6 +2603,12 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    i1_l = LBOUND(OutData%inputTimes,1)
+    i1_u = UBOUND(OutData%inputTimes,1)
+    DO i1 = LBOUND(OutData%inputTimes,1), UBOUND(OutData%inputTimes,1)
+      OutData%inputTimes(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
  END SUBROUTINE AD_Dvr_UnPackADI_Data
 
  SUBROUTINE AD_Dvr_CopyBladeData( SrcBladeDataData, DstBladeDataData, CtrlCode, ErrStat, ErrMsg )
