@@ -72,9 +72,6 @@ typedef	^	AD_BladePropsType	ReKi	BlCrvAng	{:}	-	-	"Curve angle at blade node"	ra
 typedef	^	AD_BladePropsType	ReKi	BlTwist	{:}	-	-	"Twist at blade node"	radians
 typedef	^	AD_BladePropsType	ReKi	BlChord	{:}	-	-	"Chord at blade node"	m
 typedef	^	AD_BladePropsType	IntKi	BlAFID	{:}	-	-	"ID of Airfoil at blade node"	-
-typedef ^   AD_BladePropsType   ReKi    BlCax   {:} -   -   "X-direction added mass coefficient at blade node"   -
-typedef ^   AD_BladePropsType   ReKi    BlCay   {:} -   -   "Y-direction added mass coefficient at blade node"   -
-typedef ^   AD_BladePropsType   ReKi    BlCaz   {:} -   -   "Z-direction added mass coefficient at blade node"   -
 typedef ^   AD_BladePropsType   ReKi    BlCb    {:} -   -   "Coefficient of buoyancy at blade node"   -
 typedef ^   AD_BladePropsType   ReKi    BlCenBn {:} -   -   "Center of buoyancy normal offset at blade node"   m
 typedef ^   AD_BladePropsType   ReKi    BlCenBt {:} -   -   "Center of buoyancy tangential offset at blade node"   m
@@ -112,27 +109,14 @@ typedef	^	RotInputFile	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	RotInputFile	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	RotInputFile	ReKi	TwrTI	{:}	-	-	"Turbulence intensity for tower shadow at tower node"	-
 typedef	^	RotInputFile	ReKi	TwrCb	{:}	-	-	"Coefficient of buoyancy at tower node"	-
-typedef ^   RotInputFile    ReKi    TwrCax  {:} -   -   "X-direction added mass coefficient at tower node"   -
-typedef ^   RotInputFile    ReKi    TwrCay  {:} -   -   "Y-direction added mass coefficient at tower node"   -
-typedef ^   RotInputFile    ReKi    TwrCaz  {:} -   -   "Z-direction added mass coefficient at tower node"   -
 
 typedef	^	RotInputFile	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotInputFile	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
-typedef	^	RotInputFile	ReKi	HubCenAx    -	-	-	"Hub center of added mass x direction offset w.r.t. the blade coord. system (offsets in y and z direction are assumed as zero)" m 
-typedef	^	RotInputFile	ReKi	HubCax	    -	-	-	"X-direction added mass coefficient at hub node" -
-typedef	^	RotInputFile	ReKi	HubCay	    -	-	-	"Y-direction added mass coefficient at hub node" -
-typedef	^	RotInputFile	ReKi	HubCaz	    -	-	-	"Z-direction added mass coefficient at hub node" -
 
 typedef	^	RotInputFile	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotInputFile	ReKi	NacCenBx    -	-	-	"Nacelle center of buoyancy x direction offset" m
 typedef	^	RotInputFile	ReKi	NacCenBy    -	-	-	"Nacelle center of buoyancy y direction offset" m
 typedef	^	RotInputFile	ReKi	NacCenBz    -	-	-	"Nacelle center of buoyancy z direction offset" m
-typedef	^	RotInputFile	ReKi	NacCenAx    -	-	-	"Nacelle center of added mass x direction offset w.r.t. the tower top coord. system" m
-typedef	^	RotInputFile	ReKi	NacCenAy    -	-	-	"Nacelle center of added mass y direction offset w.r.t. the tower top coord. system" m
-typedef	^	RotInputFile	ReKi	NacCenAz    -	-	-	"Nacelle center of added mass z direction offset w.r.t. the tower top coord. system" m
-typedef	^	RotInputFile	ReKi	NacCax	    -	-	-	"X-direction added mass coefficient at nacelle node" -
-typedef	^	RotInputFile	ReKi	NacCay	    -	-	-	"Y-direction added mass coefficient at nacelle node" -
-typedef	^	RotInputFile	ReKi	NacCaz	    -	-	-	"Z-direction added mass coefficient at nacelle node" -
 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
@@ -143,7 +127,6 @@ typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Calculate tower influence on wind 
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
-typedef ^   AD_InputFile    Logical AddedMass   -   -   -   "Include added mass effects?" flag
 typedef ^   AD_InputFile    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef	^	AD_InputFile	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	AD_InputFile	CHARACTER(1024)	AA_InputFile	-	-	-	"AeroAcoustics input file name"	"quoted strings"
@@ -280,27 +263,14 @@ typedef	^	RotParameterType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	RotParameterType	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	RotParameterType	ReKi	TwrTI	{:}	-	-	"Turbulence intensity for tower shadow at tower node"	-
 typedef	^	RotParameterType	ReKi	TwrCb	{:}	-	-	"Coefficient of buoyancy at tower node"	-
-typedef ^   RotParameterType    ReKi    TwrCax  {:} -   -   "X-direction added mass coefficient at tower node"   -
-typedef ^   RotParameterType    ReKi    TwrCay  {:} -   -   "Y-direction added mass coefficient at tower node"   -
-typedef ^   RotParameterType    ReKi    TwrCaz  {:} -   -   "Z-direction added mass coefficient at tower node"   -
 typedef	^	RotParameterType	ReKi	BlCenBn	{:}{:}	-	-	"Normal offset between aerodynamic center and center of buoyancy at blade node"	m
 typedef	^	RotParameterType	ReKi	BlCenBt	{:}{:}	-	-	"Tangential offset between aerodynamic center and center of buoyancy at blade node"	m
 typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
-typedef	^	RotParameterType	ReKi	HubCenAx    -	-	-	"Hub center of added mass x direction offset w.r.t. the blade coord. system (offsets in y and z direction are assumed as zero)" m 
-typedef	^	RotParameterType	ReKi	HubCax	    -	-	-	"X-direction added mass coefficient at hub node" -
-typedef	^	RotParameterType	ReKi	HubCay	    -	-	-	"Y-direction added mass coefficient at hub node" -
-typedef	^	RotParameterType	ReKi	HubCaz	    -	-	-	"Z-direction added mass coefficient at hub node" -
 typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotParameterType	ReKi	NacCenBx    -	-	-	"Nacelle center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	NacCenBy    -	-	-	"Nacelle center of buoyancy y direction offset" m
 typedef	^	RotParameterType	ReKi	NacCenBz    -	-	-	"Nacelle center of buoyancy z direction offset" m
-typedef	^	RotParameterType	ReKi	NacCenAx    -	-	-	"Nacelle center of added mass x direction offset w.r.t. the tower top coord. system" m
-typedef	^	RotParameterType	ReKi	NacCenAy    -	-	-	"Nacelle center of added mass y direction offset w.r.t. the tower top coord. system" m
-typedef	^	RotParameterType	ReKi	NacCenAz    -	-	-	"Nacelle center of added mass z direction offset w.r.t. the tower top coord. system" m
-typedef	^	RotParameterType	ReKi	NacCax	    -	-	-	"X-direction added mass coefficient at nacelle node" -
-typedef	^	RotParameterType	ReKi	NacCay	    -	-	-	"Y-direction added mass coefficient at nacelle node" -
-typedef	^	RotParameterType	ReKi	NacCaz	    -	-	-	"Z-direction added mass coefficient at nacelle node" -
 typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlTaper   {:}{:}	-	-	"Matrix of blade element taper, used in buoyancy calculation" -
@@ -321,7 +291,6 @@ typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Calculate tower influence on w
 typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	RotParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	RotParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
-typedef ^   RotParameterType    Logical AddedMass   -   -   -   "Include added mass effects?" flag
 typedef ^   RotParameterType    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef	^	RotParameterType	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	RotParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3

@@ -704,7 +704,7 @@ subroutine Init_y(y, u, p, errStat, errMsg)
    errMsg  = ""
    
          
-   if (p%TwrAero .or. p%Buoyancy .and. p%NumTwrNds > 0 .or. p%AddedMass .and. p%NumTwrNds > 0) then
+   if (p%TwrAero .or. p%Buoyancy .and. p%NumTwrNds > 0) then
             
       call MeshCopy ( SrcMesh  = u%TowerMotion    &
                     , DestMesh = y%TowerLoad      &
@@ -1094,7 +1094,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
-   p%AddedMass        = InputFileData%AddedMass
    p%Buoyancy         = InputFileData%Buoyancy
    
 
@@ -1114,20 +1113,17 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    else
       p%NumBlNds         = 0
    endif
-   if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. .not. p%Buoyancy .and. .not. p%AddedMass ) then
+   if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. .not. p%Buoyancy ) then
       p%NumTwrNds     = 0
-   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. (p%Buoyancy .or. p%AddedMass) .and. RotData%NumTwrNds <= 0 ) then
+   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%Buoyancy .and. RotData%NumTwrNds <= 0 ) then
       p%NumTwrNds     = 0
-   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. (p%Buoyancy .or. p%AddedMass) .and. RotData%NumTwrNds > 0 ) then
+   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%Buoyancy .and. RotData%NumTwrNds > 0 ) then
       p%NumTwrNds     = RotData%NumTwrNds
       
       call move_alloc( RotData%TwrDiam, p%TwrDiam )
       call move_alloc( RotData%TwrCd,   p%TwrCd )      
       call move_alloc( RotData%TwrTI,   p%TwrTI )   
-      call move_alloc( RotData%TwrCb,   p%TwrCb )
-      call move_alloc( RotData%TwrCax,  p%TwrCax )
-      call move_alloc( RotData%TwrCay,  p%TwrCay )
-      call move_alloc( RotData%TwrCaz,  p%TwrCaz )	  
+      call move_alloc( RotData%TwrCb,   p%TwrCb ) 
    else
       p%NumTwrNds     = RotData%NumTwrNds
       
@@ -1135,9 +1131,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       call move_alloc( RotData%TwrCd,   p%TwrCd )      
       call move_alloc( RotData%TwrTI,   p%TwrTI )   
       call move_alloc( RotData%TwrCb,   p%TwrCb )
-      call move_alloc( RotData%TwrCax,  p%TwrCax )
-      call move_alloc( RotData%TwrCay,  p%TwrCay )
-      call move_alloc( RotData%TwrCaz,  p%TwrCaz )	  
    end if
 
    if (p%Buoyancy) then
@@ -1150,20 +1143,10 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%BlCenBt = BlCenBttmp
    p%VolHub = RotData%VolHub
    p%HubCenBx = RotData%HubCenBx
-   p%HubCenAx = RotData%HubCenAx
-   p%HubCax = RotData%HubCax
-   p%HubCay = RotData%HubCay
-   p%HubCaz = RotData%HubCaz
    p%VolNac = RotData%VolNac
    p%NacCenBx = RotData%NacCenBx
    p%NacCenBy = RotData%NacCenBy
    p%NacCenBz = RotData%NacCenBz
-   p%NacCenAx = RotData%NacCenAx
-   p%NacCenAy = RotData%NacCenAy
-   p%NacCenAz = RotData%NacCenAz
-   p%NacCax = RotData%NacCax
-   p%NacCay = RotData%NacCay
-   p%NacCaz = RotData%NacCaz
    
    p%Gravity          = InitInp%Gravity
    p%AirDens          = InputFileData%AirDens          
@@ -2872,7 +2855,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    endif
    
    if (InitInp%MHK == 0 .and. InputFileData%CavitCheck) call SetErrStat ( ErrID_Fatal, 'A cavitation check can only be performed for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
-   if (InitInp%MHK == 0 .and. InputFileData%AddedMass) call SetErrStat ( ErrID_Fatal, 'Added mass can only be calculated for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == 0 .and. InputFileData%Buoyancy) call SetErrStat ( ErrID_Fatal, 'Buoyancy can only be calculated for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == 1 .and. InputFileData%CompAA .or. InitInp%MHK == 2 .and. InputFileData%CompAA) call SetErrStat ( ErrID_Fatal, 'The aeroacoustics module cannot be used with an MHK turbine.', ErrStat, ErrMsg, RoutineName )
 
@@ -2951,26 +2933,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          end do ! j=nodes
       end do ! k=blades
 
-      ! If the AddedMass flag is True, check that the blade added mass coefficients are >= 0.
-      if ( InputFileData%AddedMass )  then
-         do k=1,NumBl(iR)
-            do j=1,InputFileData%rotors(iR)%BladeProps(k)%NumBlNds
-               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCax(j) < 0.0_ReKi )  then
-                  call SetErrStat( ErrID_Fatal, 'The X-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
-                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-               endif
-               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCay(j) < 0.0_ReKi )  then
-                  call SetErrStat( ErrID_Fatal, 'The Y-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
-                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-               endif
-               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCaz(j) < 0.0_ReKi )  then
-                  call SetErrStat( ErrID_Fatal, 'The Z-direction added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
-                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-               endif
-            end do ! j=nodes
-         end do ! k=blades
-      end if
-
       ! If the Buoyancy flag is True, check that the blade buoyancy coefficients are >= 0.
       if ( InputFileData%Buoyancy )  then
          do k=1,NumBl(iR)
@@ -2988,8 +2950,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       ! check tower mesh data:
       ! .............................   
    do iR = 1,size(NumBl)
-      if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero .or. InputFileData%Buoyancy .and. InputFileData%rotors(iR)%NumTwrNds > 0 & 
-          .or. InputFileData%AddedMass .and. InputFileData%rotors(iR)%NumTwrNds > 0 ) then
+      if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero .or. InputFileData%Buoyancy .and. InputFileData%rotors(iR)%NumTwrNds > 0 ) then
          if (InputFileData%rotors(iR)%NumTwrNds < 2) call SetErrStat( ErrID_Fatal, 'There must be at least two nodes on the tower.',ErrStat, ErrMsg, RoutineName )
          
             ! Check that the tower diameter is > 0.
@@ -3016,21 +2977,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
                endif
             end do ! j=nodes
          end if
-
-         ! If the AddedMass flag is True, check that the tower added mass coefficients are >= 0.
-         if ( InputFileData%AddedMass .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
-            do j=1,InputFileData%rotors(iR)%NumTwrNds
-               if ( InputFileData%rotors(iR)%TwrCax(j) < 0.0_ReKi )  then
-                  call SetErrStat( ErrID_Fatal, 'The added mass coefficient in x-direction for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-               endif
-               if ( InputFileData%rotors(iR)%TwrCay(j) < 0.0_ReKi )  then
-                  call SetErrStat( ErrID_Fatal, 'The added mass coefficient in y-direction for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-               endif
-               if ( InputFileData%rotors(iR)%TwrCaz(j) < 0.0_ReKi )  then
-                  call SetErrStat( ErrID_Fatal, 'The added mass coefficient in z-direction for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-               endif			   
-            end do ! j=nodes
-         end if
 		 
       end if
    end do ! iR rotor
@@ -3051,22 +2997,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    
    end if
 
-   if ( InputFileData%AddedMass )  then
-         ! Check that the hub added mass coefficients are >= 0.
-      do iR = 1,size(NumBl)
-         if ( InputFileData%rotors(iR)%HubCax < 0.0_ReKi )  then
-            call SetErrStat( ErrID_Fatal, 'The X-direction added mass coefficient at hub node must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-         endif
-         if ( InputFileData%rotors(iR)%HubCay < 0.0_ReKi )  then
-            call SetErrStat( ErrID_Fatal, 'The Y-direction added mass coefficient at hub node must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-         endif
-         if ( InputFileData%rotors(iR)%HubCaz < 0.0_ReKi )  then
-            call SetErrStat( ErrID_Fatal, 'The Z-direction added mass coefficient at hub node must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-         endif		 
-      end do ! iR rotor
-   
-   end if
-
       ! .............................
       ! check nacelle mesh data:
       ! .............................
@@ -3079,22 +3009,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          endif
       end do ! iR rotor
 
-   end if
-
-   if ( InputFileData%AddedMass )  then
-         ! Check that the nacelle added mass coefficients are >= 0.
-      do iR = 1,size(NumBl)
-         if ( InputFileData%rotors(iR)%NacCax < 0.0_ReKi )  then
-            call SetErrStat( ErrID_Fatal, 'The X-direction added mass coefficient at nacelle node must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-         endif
-         if ( InputFileData%rotors(iR)%NacCay < 0.0_ReKi )  then
-            call SetErrStat( ErrID_Fatal, 'The Y-direction added mass coefficient at nacelle node must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-         endif
-         if ( InputFileData%rotors(iR)%NacCaz < 0.0_ReKi )  then
-            call SetErrStat( ErrID_Fatal, 'The Z-direction added mass coefficient at nacelle node must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
-         endif		 
-      end do ! iR rotor
-   
    end if
   
       ! .............................
