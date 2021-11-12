@@ -24,6 +24,8 @@ module AeroDyn_Inflow
    ! Convenient routines for driver
    public   :: ADI_ADIW_Solve
    public   :: concatOutputHeaders
+   public   :: Init_MeshMap_For_ADI
+   public   :: Set_Inputs_For_ADI
 
    real(ReKi), parameter :: myNaN = -99.9_ReKi
 contains
@@ -301,9 +303,6 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! locals
-   real(reKi)                      :: theta(3)
-   integer(IntKi)                  :: j, k, nOut_AD, nOut_IW, nOut_Dvr
-   integer(IntKi)                  :: iWT
    integer(IntKi)                  :: errStat2      ! local status of error message
    character(errMsgLen)            :: errMsg2       ! local error message if errStat /= ErrID_None
    type(InflowWind_InitInputType)  :: InitInData     ! Input data for initialization
@@ -470,10 +469,6 @@ subroutine ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
       do J=1,size(o_AD%WakeLocationPoints,dim=2)
          Node = Node + 1
          u_IfW%PositionXYZ(:,Node) = o_AD%WakeLocationPoints(:,J)
-         ! rewrite the history of this so that extrapolation doesn't make a mess of things
-!          do k=2,size(IW%u)
-!             if (allocated(IW%u(k)%PositionXYZ))   IW%u(k)%PositionXYZ(:,Node) = IW%u(1)%PositionXYZ(:,Node)
-!          end do
       enddo !j, wake points
    end if
 end subroutine ADI_Set_IW_Inputs
@@ -574,5 +569,187 @@ subroutine ADI_AD_InputSolve_IfW(u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
       end do !j, wake points
    end if
 end subroutine ADI_AD_InputSolve_IfW
+
+
+! --------------------------------------------------------------------------------}
+! --- ROUTINES RELEVANT FOR COUPLING WITH "FED": Fake ElastoDyn 
+! --------------------------------------------------------------------------------{
+!> Initialize the mesh mappings between the structure and aerodyn
+!! Also adjust the tower mesh so that is is aligned with the tower base and tower top
+subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
+   type(FED_Data), target,       intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
+   type(AD_InputType),           intent(inout) :: uAD           ! AeroDyn input data 
+   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
+   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
+   ! locals
+   real(ReKi)            :: pos(3), Pbase(3), Ptop(3), Pmid(3), DeltaP(3)
+   real(R8Ki)            :: orientation(3,3)
+   real(ReKi)            :: twrHeightAD , twrHeight
+   real(ReKi)            :: zBar ! dimensionsless tower height
+   integer(IntKi)        :: iWT, iB, i
+   integer(IntKi)        :: errStat2      ! local status of error message
+   character(ErrMsgLen)  :: errMsg2       ! local error message if errStat /= ErrID_None
+   type(RotFED), pointer :: y_ED ! Alias to shorten notation
+   errStat = ErrID_None
+   errMsg  = ''
+
+   ! --- Create Mappings from structure to AeroDyn
+   do iWT=1,size(FED%WT)
+      y_ED => FED%WT(iWT)
+      ! hub 2 hubAD
+      call MeshMapCreate(y_ED%HubPtMotion, uAD%rotors(iWT)%hubMotion, y_ED%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
+
+      ! bldroot 2 bldroot AD
+      allocate(y_ED%ED_P_2_AD_P_R(y_ED%numBlades))
+      do iB = 1, y_ED%numBlades
+         call MeshMapCreate(y_ED%BladeRootMotion(iB), uAD%rotors(iWT)%BladeRootMotion(iB), y_ED%ED_P_2_AD_P_R(iB), errStat2, errMsg2); if(Failed())return
+      enddo
+
+      if (y_ED%rigidBlades) then
+         ! TODO Only for Rigid
+         ! AD bld root 2 AD blade line
+         allocate(y_ED%AD_P_2_AD_L_B(y_ED%numBlades))
+         do iB = 1, y_ED%numBlades
+            call MeshMapCreate(uAD%rotors(iWT)%BladeRootMotion(iB), uAD%rotors(iWT)%BladeMotion(iB), y_ED%AD_P_2_AD_L_B(iB), errStat2, errMsg2); if(Failed())return
+         enddo
+      else
+         print*,'>>> Init_MeshMap_For_ADI, TODO coupling with elastic blades'
+         STOP
+      endif
+
+      if (uAD%rotors(iWT)%TowerMotion%nNodes>0) then
+         if (y_ED%hasTower) then
+            twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes)-uAD%rotors(iWT)%TowerMotion%Position(3,1)
+            ! Check tower height
+            if (twrHeightAD<0) then
+               errStat=ErrID_Fatal
+               errMsg='First AeroDyn tower height should be smaller than last AD tower height'
+            endif
+
+            twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes) ! NOTE: assuming start a z=0
+
+            twrHeight=TwoNorm(y_ED%NacelleMotion%Position(:,1) - y_ED%TwrPtMesh%Position(:,1)  )
+            ! KEEP ME, in summary file
+            !print*,'Tower Height',twrHeight, twrHeightAD
+            if (abs(twrHeightAD-twrHeight)> twrHeight*0.1) then
+               errStat=ErrID_Fatal
+               errMsg='More than 10% difference between AeroDyn tower length ('//trim(num2lstr(twrHeightAD))//&
+                  'm), and the distance from tower base to nacelle ('//trim(num2lstr(twrHeight))//'m) for turbine '//trim(num2lstr(iWT))
+            endif
+
+            ! Adjust tower position (AeroDyn return values assuming (0,0,0) for tower base
+            Pbase = y_ED%TwrPtMesh%Position(:,1)
+            Ptop = y_ED%NacelleMotion%Position(:,1)
+            DeltaP = Ptop-Pbase
+            do i = 1, uAD%rotors(iWT)%TowerMotion%nNodes
+               zBar = uAD%rotors(iWT)%TowerMotion%Position(3,i)/twrHeight
+               uAD%rotors(iWT)%TowerMotion%Position(:,i)= Pbase+ zBar * DeltaP
+               uAD%rotors(iWT)%TowerMotion%RefOrientation(:,:,i)= y_ED%TwrPtMesh%RefOrientation(:,:,1)
+            enddo
+            ! Create AD tower base point mesh
+            pos         = y_ED%TwrPtMesh%Position(:,1)
+            orientation = y_ED%TwrPtMesh%RefOrientation(:,:,1)
+            call Eye(orientation, errStat2, errMsg2)
+            call CreatePointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2); if(Failed())return
+
+            ! TowerBase to AD tower base
+            call MeshMapCreate(y_ED%TwrPtMesh, y_ED%TwrPtMeshAD, y_ED%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
+
+            ! AD TowerBase to AD tower line
+            call MeshMapCreate(y_ED%TwrPtMeshAD, uAD%rotors(iWT)%TowerMotion, y_ED%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+         endif ! hasTower
+      else
+         ! Do Nothing for now
+      endif
+
+   enddo ! Loop on WT/rotors
+
+contains
+
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_MeshMap_For_ADI')
+      Failed = errStat >= AbortErrLev
+   end function Failed
+end subroutine Init_MeshMap_For_ADI
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Creation of a point mesh
+subroutine CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg)
+   type(MeshType), intent(inout) :: mesh
+   real(ReKi),                   intent(in   ) :: PosInit(3)                                             !< Xi,Yi,Zi, coordinates of node
+   real(R8Ki),                   intent(in   ) :: orientInit(3,3)                                        !< Orientation (direction cosine matrix) of node; identity by default
+   integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
+   character(*)                , intent(out)   :: errMsg        ! Error message if errStat /= ErrID_None
+   integer(IntKi)       :: errStat2      ! local status of error message
+   character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
+   errStat = ErrID_None
+   errMsg  = ''
+
+   call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2, Orientation=.true., TranslationDisp=.true., TranslationVel=.true., RotationVel=.true., TranslationAcc=.true., RotationAcc=.true.)
+   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+   if (errStat >= AbortErrLev) return
+
+   call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
+   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+   call MeshConstructElement(mesh, ELEMENT_POINT, errStat2, errMsg2, p1=1); 
+   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+   call MeshCommit(mesh, errStat2, errMsg2);
+   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+end subroutine CreatePointMesh
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Set aerodyn inputs based on FED meshes
+!  - set AD input meshes and inflow
+subroutine Set_Inputs_For_ADI(u_ADI, FED, errStat, errMsg)
+   type(ADI_InputType),          intent(inout) :: u_ADI     !< AeroDyn/InflowWind Data inputs
+   type(FED_Data), target,       intent(inout) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
+   integer(IntKi)              , intent(  out) :: errStat   !< Status of error message
+   character(*)                , intent(  out) :: errMsg    !< Error message if errStat /= ErrID_None
+   ! local variables
+   integer(intKi)          :: iWT ! loop counter for rotors
+   integer(intKi)          :: iB ! loop counter for blades
+   integer(IntKi)          :: errStat2      ! local status of error message
+   character(ErrMsgLen)    :: errMsg2       ! local error message if errStat /= ErrID_None
+   type(RotFED), pointer :: y_ED ! Alias to shorten notation
+   errStat = ErrID_None
+   errMsg  = ""
+
+   ! --- Transfer motion from "ED" to AeroDyn
+   do iWT=1,size(FED%WT)
+      y_ED => FED%WT(iWT)
+      ! Hub 2 Hub AD 
+      call Transfer_Point_to_Point(y_ED%HubPtMotion, u_ADI%AD%rotors(iWT)%hubMotion, y_ED%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+
+      ! Blade root to blade root AD
+      do iB = 1,y_ED%numBlades
+         call Transfer_Point_to_Point(y_ED%BladeRootMotion(iB), u_ADI%AD%rotors(iWT)%BladeRootMotion(iB), y_ED%ED_P_2_AD_P_R(iB), errStat2, errMsg2); if(Failed()) return
+      enddo
+            
+      ! Blade root AD to blade line AD
+      if (y_ED%rigidBlades) then
+         do iB = 1,y_ED%numBlades
+            call Transfer_Point_to_Line2(u_ADI%AD%rotors(iWT)%BladeRootMotion(iB), u_ADI%AD%rotors(iWT)%BladeMotion(iB), y_ED%AD_P_2_AD_L_B(iB), errStat2, errMsg2); if(Failed()) return
+         enddo
+      else
+         print*,'>>> Set_Inputs_For_ADI: TODO Elastic Blades'
+         STOP
+      endif
+
+      ! Tower motion
+      if (y_ED%hasTower) then
+         if (u_ADI%AD%rotors(iWT)%TowerMotion%nNodes>0) then
+            call Transfer_Point_to_Point(y_ED%TwrPtMesh,  y_ED%TwrPtMeshAD, y_ED%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
+            call Transfer_Point_to_Line2(y_ED%TwrPtMeshAD, u_ADI%AD%rotors(iWT)%TowerMotion, y_ED%AD_P_2_AD_L_T, errStat2, errMsg2); if(Failed()) return
+         endif
+      endif
+   enddo ! iWT, rotors
+
+contains
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Set_Inputs_For_ADI')
+      Failed = errStat >= AbortErrLev
+   end function Failed
+end subroutine Set_Inputs_For_ADI
+
 
 end module AeroDyn_Inflow

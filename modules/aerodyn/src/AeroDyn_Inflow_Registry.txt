@@ -76,7 +76,6 @@ typedef    ^    InputType              AD_InputType                     AD      
 
 # ..... Outputs ...................................................................................................................
 #typedef    ^    ADI_RotOutputType      ReKi                             WriteOutput     {:}     -     -   "WriteOutputs for a given rotor" -
-
 typedef    ^    OutputType             AD_OutputType                    AD               -      -     -   "System outputs"
 #typedef    ^        ^                  InflowWind_OutputType            IW               -      -     -   "System outputs"
 typedef    ^        ^                  ReKi                             HHVel            {:}{:} -     -   "Hub Height velocities for each rotors"
@@ -95,3 +94,32 @@ typedef   ^          ^                 ADI_MiscVarType                  m       
 typedef   ^          ^                 ADI_InputType                    u        {2}   -    -    "Array of inputs associated with InputTimes"
 typedef   ^          ^                 ADI_OutputType                   y        -     -    -    "System outputs"
 typedef   ^          ^                 DbKi                             inputTimes {2} -    -    "Array of times associated with u array"
+
+# ..... Rotor elastic data ..................................................................................................
+# NOTE: useful for driver/wrapper of this module
+typedef   ^                     RotFED           MeshType                PlatformPtMesh   -      -     -   "Platform reference point positions/orientations/velocities/accelerations"    -
+typedef   ^                         ^            MeshType                TwrPtMesh        -      -     -   "(only if hasTower) Point mesh for tower base motion" "-"
+typedef   ^                         ^            MeshType                TwrPtMeshAD      -      -     -   "(only if hasTower) Point mesh for tower base for AD" "-"
+#typedef   ^                         ^            MeshType                TowerLn2Mesh     -      -     -   "Tower line2 mesh with positions/orientations/velocities/accelerations"    -
+typedef   ^                         ^            MeshType                NacelleMotion    -      -     -   "Point mesh for nacelle point motion" "-"
+typedef   ^                         ^            MeshType                HubPtMotion      -      -     -   "Point mesh for hub point motion" "-"
+typedef   ^                         ^            MeshType                BladeRootMotion  :      -     -   "BladeRootMotion Point mesh for blade root motion" "-"
+typedef   ^                         ^            MeshType                BladeLn2Mesh     :      -     -   "(only if elastic blades) BladeLn2Mesh    Line mesh along blade" "-"
+typedef   ^                         ^            Logical                 hasTower         -      -  .true. "True if a tower is present" "-"
+typedef   ^                         ^            Logical                 rigidBlades      -      -  .true. "True if blades are rigid (using BladeRootMotion) or not (Useing BldeLn2Mesh)" "-"
+typedef   ^                         ^            IntKi                   numBlades        -      -     -   "Number of blades" -
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_T    -      -     -   "(only if hasTower) Mesh mapping from tower base to AD tower base"
+typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_T    -      -     -   "(only if hasTower) Mesh mapping from tower base to AD tower line"
+typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_B    :      -     -   "(only for rigid blades) Mesh mapping from AD blade root to AD line mesh" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_R    :      -     -   "Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_H    -      -     -   "Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
+#typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_N    -      -     -   "Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
+#typedef   ^                         ^            MeshMapType             AD_P_2_ED_P_N    -      -     -   "Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
+#typedef   ^                         ^            MeshMapType             ED_L_2_AD_L_T    -      -     -   "Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
+#typedef   ^                         ^            MeshMapType             AD_L_2_ED_P_T    -      -     -   "Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
+
+# ..... Turbine elastic data ................................................................................................
+typedef   ^                        FED_Data      RotFED                  WT                :      -     -   "Wind turbine/rotors elastic data" "-"
+
+
+
