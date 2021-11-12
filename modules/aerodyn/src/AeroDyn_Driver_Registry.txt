@@ -134,10 +134,12 @@ typedef   ^                         ^            ReKi                    amplitu
 typedef   ^                         ^            ReKi                    frequency        -      -     -   "" -
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    WriteOutput      :      -     -   "WriteOutputs of the driver only"
+
 typedef   ^                         ^            FED_Rot                 y_ED             -      -     -   "Structure of meshes mimicking ED outputs for one turbine"
 
+
 # ..... Turbine elastic data ................................................................................................
-#typedef   ^                        WT_ED_Dat    Rot_ED_Dat              WT                :      -     -   "Wind turbine/rotors elastic data" "-"
+typedef   ^                        FED_Data      FED_Rot                 WT                :      -     -   "Wind turbine/rotors elastic data" "-"
 #typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
 #typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
 #typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
@@ -164,9 +166,9 @@ typedef   ^                         ^            Dvr_Outputs             out    
 typedef   ^                         ^            ADI_IW_InputData        IW_InitInp       -      -     -   "" -
 
 # ..... Data to wrap the driver ..........................................................................................................
-typedef   ^                        AllData       Dvr_SimData             dvr              -      -     -   "" -
-typedef   ^                           ^          ADI_Data                ADI              -      -     -   "" -
-#typedef   ^                           ^          FED_Data                FED              -      -     -   "Elastic wind turbine data (Fake ElastoDyn)" "-"
+typedef   ^                        AllData       Dvr_SimData             dvr              -      -     -   "Driver data" -
+typedef   ^                           ^          ADI_Data                ADI              -      -     -   "AeroDyn InflowWind Data" -
+typedef   ^                           ^          FED_Data                FED              -      -     -   "Elastic wind turbine data (Fake ElastoDyn)" "-"
 typedef   ^                           ^          IntKi                   errStat          -      -     -   "" -
 typedef   ^                           ^          character(ErrMsgLen)    errMsg           -      -     -   "" -
 typedef   ^                           ^          logical                 initialized      -      -     -   "" -

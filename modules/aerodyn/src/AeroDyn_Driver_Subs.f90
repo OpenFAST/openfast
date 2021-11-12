@@ -76,10 +76,10 @@ contains
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
 subroutine Dvr_Init(dvr, ADI, errStat,errMsg )
-   type(Dvr_SimData),           intent(  out) :: dvr       ! driver data
-   type(ADI_Data),              intent(  out) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
+   type(Dvr_SimData),            intent(  out) :: dvr       !< driver data
+   type(ADI_Data),               intent(  out) :: ADI       !< AeroDyn/InflowWind data
+   integer(IntKi)              , intent(  out) :: errStat   !< Status of error message
+   character(*)                , intent(  out) :: errMsg    !< Error message if errStat /= ErrID_None
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
@@ -90,17 +90,16 @@ subroutine Dvr_Init(dvr, ADI, errStat,errMsg )
    errMsg  = ""
 
    ! --- Driver initialization
-   CALL NWTC_Init( ProgNameIN=version%Name )
+   call NWTC_Init( ProgNameIN=version%Name )
    InputFile = ""  ! initialize to empty string to make sure it's input from the command line
-   CALL CheckArgs( InputFile, Flag=FlagArg )
-   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+   call CheckArgs( InputFile, Flag=FlagArg )
+   if ( len( trim(FlagArg) ) > 0 ) call NormStop()
    ! Display the copyright notice
    call DispCopyrightLicense( version%Name )
    ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
    ! Tell our users what they're running
    call WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
-         
    ! Read the AeroDyn driver input file
    call Dvr_ReadInputFile(inputFile, dvr, errStat2, errMsg2 ); if(Failed()) return
 
@@ -115,10 +114,11 @@ end subroutine Dvr_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_InitCase(iCase, dvr, ADI, errStat, errMsg )
+subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    integer(IntKi)              , intent(in   ) :: iCase
-   type(Dvr_SimData),           intent(inout) :: dvr           ! driver data
-   type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(Dvr_SimData),           intent(inout) :: dvr       !< driver data
+   type(ADI_Data),              intent(inout) :: ADI       !< AeroDyn/InflowWind data
+   type(FED_Data),              intent(inout) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
@@ -180,7 +180,7 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, errStat, errMsg )
 
    ! --- Initialize meshes
    if (iCase==1) then
-      call Init_Meshes(dvr, errStat2, errMsg2); if(Failed()) return
+      call Init_Meshes(dvr, FED, errStat2, errMsg2); if(Failed()) return
    endif
 
    ! --- Initialize driver-only outputs
@@ -195,11 +195,11 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, errStat, errMsg )
 
    ! --- Initialize ADI
    print*,'>>> AD_Driver_Subs, TEMP, init ADI'
-   call Init_ADI_ForDriver(iCase, ADI, dvr, dvr%dt, errStat2, errMsg2); if(Failed()) return
+   call Init_ADI_ForDriver(iCase, ADI, dvr, FED, dvr%dt, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize meshes
    if (iCase==1) then
-      call Init_ADMeshMap(dvr, ADI%u(1)%AD, errStat2, errMsg2); if(Failed()) return
+      call Init_ADMeshMap(dvr, FED, ADI%u(1)%AD, errStat2, errMsg2); if(Failed()) return
    endif
 
    ! Copy AD input here because tower is modified in ADMeshMap
@@ -208,12 +208,12 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, errStat, errMsg )
    end do
 
    ! Compute driver outputs at t=0 
-   call Set_Mesh_Motion(0,dvr,ADI,errStat2,errMsg2); if(Failed()) return
+   call Set_Mesh_Motion(0, dvr, ADI, FED, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initial AD inputs
    ADI%inputTimes = -999 ! TODO use something better?
    DO j = 1-numInp, 0
-      call Set_AD_Inputs(j, dvr, ADI, errStat2,errMsg2); if(Failed()) return
+      call Set_AD_Inputs(j, dvr, ADI, FED, errStat2, errMsg2); if(Failed()) return
    END DO              
    ! --- Inflow on points at t=0
    call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
@@ -248,10 +248,11 @@ end subroutine Dvr_InitCase
 
 
 !> Perform one time step
-subroutine Dvr_TimeStep(nt, dvr, ADI, errStat, errMsg)
+subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: nt            ! time step
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(FED_Data),              intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
@@ -263,11 +264,11 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, errStat, errMsg)
    errMsg  = ''
 
    ! Update motion of meshes
-   call Set_Mesh_Motion(nt,dvr,ADI,errStat,errMsg)
+   call Set_Mesh_Motion(nt, dvr, ADI, FED, errStat,errMsg)
 
    ! Set AD inputs for nt (and keep values at nt-1 as well)
    ! u(1) is at nt, u(2) is at nt-1
-   call Set_AD_Inputs(nt,dvr,ADI,errStat2,errMsg2); if(Failed()) return
+   call Set_AD_Inputs(nt, dvr, ADI, FED, errStat2,errMsg2); if(Failed()) return
    ! TODO TODO TODO REMOVE ME
    call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
 
@@ -286,10 +287,10 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, errStat, errMsg)
    ! VTK outputs
    if (dvr%out%WrVTK==1 .and. nt==1) then
       ! Init only
-      call WrVTK_Surfaces(time, dvr, dvr%out, nt-1, ADI)
+      call WrVTK_Surfaces(time, dvr, ADI, FED, dvr%out, nt-1)
    else if (dvr%out%WrVTK==2) then
       ! Animation
-      call WrVTK_Surfaces(time, dvr, dvr%out, nt-1, ADI)
+      call WrVTK_Surfaces(time, dvr, ADI, FED, dvr%out, nt-1)
    endif
 
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
@@ -343,9 +344,10 @@ subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
 end subroutine Dvr_EndCase
 
 !> End current case if not already closed, and destroy data
-subroutine Dvr_CleanUp(dvr, ADI, initialized, errStat, errMsg)
-   type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
-   type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+subroutine Dvr_CleanUp(dvr, ADI, FED, initialized, errStat, errMsg)
+   type(Dvr_SimData),            intent(inout) :: dvr       !< driver data
+   type(ADI_Data),               intent(inout) :: ADI       !< AeroDyn/InflowWind data
+   type(FED_Data),               intent(inout) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
    logical,                      intent(inout) :: initialized   ! 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
@@ -365,13 +367,16 @@ subroutine Dvr_CleanUp(dvr, ADI, initialized, errStat, errMsg)
 
    call AD_Dvr_DestroyDvr_SimData   (dvr ,    errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
+   call AD_Dvr_DestroyFED_Data     (FED ,    errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+
 end subroutine Dvr_CleanUp
 
 
-subroutine Init_ADI_ForDriver(iCase, ADI, dvr, dt, errStat, errMsg)
+subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: iCase
    type(ADI_Data),               intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(Dvr_SimData), target,    intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(FED_Data), target,       intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
    real(DbKi),                   intent(inout) :: dt            ! interval
    integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
    character(*)                , intent(out)   :: errMsg        ! Error message if errStat /= ErrID_None
@@ -470,8 +475,9 @@ contains
 end subroutine Init_ADI_ForDriver
 !----------------------------------------------------------------------------------------------------------------------------------
 !>
-subroutine Init_Meshes(dvr,  errStat, errMsg)
+subroutine Init_Meshes(dvr, FED, errStat, errMsg)
    type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(FED_Data), target,      intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! locals
@@ -576,8 +582,9 @@ end subroutine Init_Meshes
 
 !> Initialize the mesh mappings between the structure and aerodyn
 !! Also adjust the tower mesh so that is is aligned with the tower base and tower top
-subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
+subroutine Init_ADMeshMap(dvr, FED, uAD, errStat, errMsg)
    type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(FED_Data), target,       intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
    type(AD_InputType),           intent(inout) :: uAD           ! AeroDyn input data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
@@ -698,10 +705,11 @@ end subroutine CreatePointMesh
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Set the motion of the different structural meshes
 !! "ED_CalcOutput"
-subroutine Set_Mesh_Motion(nt,dvr,ADI,errStat,errMsg)
+subroutine Set_Mesh_Motion(nt,dvr,ADI,FED,errStat,errMsg)
    integer(IntKi)              , intent(in   ) :: nt       !< time step number
    type(Dvr_SimData), target,    intent(inout) :: dvr      !< Driver data 
-   type(ADI_Data),               intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(ADI_Data),               intent(inout) :: ADI      !< AeroDyn/InflowWind Data
+   type(FED_Data), target,       intent(inout) :: FED      !< Elastic wind turbine data (Fake ElastoDyn)
    integer(IntKi)              , intent(  out) :: errStat  !< Status of error message
    character(*)                , intent(  out) :: errMsg   !< Error message if errStat /= ErrID_None
    ! local variables
@@ -905,12 +913,13 @@ end subroutine Set_Mesh_Motion
 !> Set aerodyn inputs
 !  - cycle values in the input array AD%InputTime and AD%u.
 !  - set AD input meshes and inflow
-subroutine Set_AD_Inputs(nt,dvr,ADI,errStat,errMsg)
-   integer(IntKi)              , intent(in   ) :: nt            ! time step number
-   type(Dvr_SimData), target,    intent(inout) :: dvr       ! Driver data 
-   type(ADI_Data),               intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
+subroutine Set_AD_Inputs(nt, dvr, ADI, FED, errStat, errMsg)
+   integer(IntKi)              , intent(in   ) :: nt        !< time step number
+   type(Dvr_SimData), target,    intent(inout) :: dvr       !< Driver data 
+   type(ADI_Data),               intent(inout) :: ADI       !< AeroDyn/InflowWind Data
+   type(FED_Data), target,       intent(inout) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
+   integer(IntKi)              , intent(  out) :: errStat   !< Status of error message
+   character(*)                , intent(  out) :: errMsg    !< Error message if errStat /= ErrID_None
    ! local variables
    integer(intKi)          :: j   ! loop index
    integer(intKi)          :: iWT ! loop counter for rotors
@@ -1920,14 +1929,15 @@ END SUBROUTINE SetVTKParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes a minimal subset of meshes with surfaces to VTK-formatted files. It doesn't bother with 
 !! returning an error code.
-SUBROUTINE WrVTK_Surfaces(t_global, dvr, p_FAST, VTK_count, ADI)
+SUBROUTINE WrVTK_Surfaces(t_global, dvr, ADI, FED, p_FAST, VTK_count)
    use FVW_IO, only: WrVTK_FVW
 
-   REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
-   type(Dvr_SimData), target,    intent(inout) :: dvr           ! intent(out) only so that we can save FmtWidth in dvr%out%ActualChanLen
-   TYPE(Dvr_Outputs),       INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
-   INTEGER(IntKi)          , INTENT(IN   ) :: VTK_count
-   type(ADI_Data),           intent(in   ) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   REAL(DbKi),                intent(in   ) :: t_global  !< Current global time
+   type(Dvr_SimData), target, intent(inout) :: dvr       !< intent(out) only so that we can save FmtWidth in dvr%out%ActualChanLen
+   type(FED_Data), target,    intent(in   ) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
+   type(ADI_Data),            intent(in   ) :: ADI       !< Input data for initialization (intent out for getting AD WriteOutput names/units)
+   TYPE(Dvr_Outputs),         intent(in   ) :: p_FAST    !< Parameters for the glue code
+   INTEGER(IntKi)          ,  intent(in   ) :: VTK_count
    logical, parameter    :: OutputFields = .FALSE. ! due to confusion about what fields mean on a surface, we are going to just output the basic meshes if people ask for fields
    INTEGER(IntKi)        :: errStat2
    CHARACTER(ErrMsgLen)  :: errMSg2

@@ -46,7 +46,7 @@ program AeroDyn_Driver
    do iCase= 1,dat%dvr%numCases
 
       ! Initial case
-      call dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%errStat, dat%errMsg); call CheckError()
+      call dvr_InitCase(iCase, dat%dvr, dat%ADI, dat%FED, dat%errStat, dat%errMsg); call CheckError()
       dat%initialized=.true.
    
       ! Init of time estimator
@@ -58,7 +58,7 @@ program AeroDyn_Driver
 
       ! One time loop
       do nt = 1, dat%dvr%numSteps
-         call dvr_TimeStep(nt, dat%dvr, dat%ADI, dat%errStat, dat%errMsg); call CheckError()
+         call dvr_TimeStep(nt, dat%dvr, dat%ADI, dat%FED, dat%errStat, dat%errMsg); call CheckError()
          ! Time update to screen
          t_global=nt*dat%dvr%dt
          if (dat%dvr%analysisType/=idAnalysisCombi) then
@@ -91,7 +91,7 @@ contains
       integer(IntKi)       :: errStat2      ! local status of error message
       character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
 
-      call dvr_CleanUp(dat%dvr, dat%ADI, dat%initialized, errStat2, errMsg2)
+      call dvr_CleanUp(dat%dvr, dat%ADI, dat%FED, dat%initialized, errStat2, errMsg2)
       CALL SetErrStat(errStat2, errMsg2, dat%errStat, dat%errMsg, 'dvr_End')
 
       if (dat%errStat >= AbortErrLev) then      
