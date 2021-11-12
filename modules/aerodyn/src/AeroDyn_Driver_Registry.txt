@@ -28,12 +28,12 @@ typedef   ^                         ^             ReKi                   amplitu
 typedef   ^                         ^             ReKi                   frequency        -      -     -   "Frequency for sinusoidal motion (when DOF>0)" "-"
 
 # ...... Data for VTK surface visualization ............................................................................
-typedef   AeroDyn_Driver/AD_Dvr   DvrVTK_BLSurfaceType SiKi    AirfoilCoords    {:}{:}{:}    -    -    "x,y coordinates for airfoil around each blade node on a blade (relative to reference)"    -
+# typedef   AeroDyn_Driver/AD_Dvr   DvrVTK_BLSurfaceType SiKi    AirfoilCoords    {:}{:}{:}    -    -    "x,y coordinates for airfoil around each blade node on a blade (relative to reference)"    -
 typedef    ^    DvrVTK_SurfaceType    IntKi    NumSectors        -    -    -    "number of sectors in which to split circles (higher number gives smoother surface)"    -
 typedef    ^    DvrVTK_SurfaceType    SiKi    NacelleBox    {3}{8}    -    -    "X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"    m
 typedef    ^    DvrVTK_SurfaceType    SiKi    BaseBox       {3}{8}    -    -    "X-Y-Z locations of 8 points that define the base box"    m
-typedef    ^    DvrVTK_SurfaceType    SiKi    TowerRad         {:}    -    -    "radius of each ED tower node"    m
-typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:}    -    -    "AirfoilCoords for each blade"    m
+# typedef    ^    DvrVTK_SurfaceType    SiKi    TowerRad         {:}    -    -    "radius of each ED tower node"    m
+# typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:}    -    -    "AirfoilCoords for each blade"    m
 
 # ..... Data for driver output file .......................................................................................................
 typedef   AeroDyn_Driver/AD_Dvr  Dvr_Outputs ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
@@ -59,19 +59,7 @@ typedef   ^                         ^             SiKi                   VTKHubR
 typedef   ^                         ^             ReKi                   VTKNacDim        6      -     -   "Nacelle dimensions for visualization"    m
 typedef   ^                         ^             SiKi                   VTKRefPoint      3      -     -   "RefPoint for VTK outputs"
 
-
-# ..... AeroDyn_Inflow data ...................................................................................................
-typedef   ^                    ADI_Data          ADI_ContinuousStateType          x        -     -    -    "Continuous states"
-typedef   ^                         ^            ADI_DiscreteStateType            xd       -     -    -    "Discrete states"
-typedef   ^                         ^            ADI_ConstraintStateType          z        -     -    -    "Constraint states"
-typedef   ^                         ^            ADI_OtherStateType               OtherState   - -    -    "Other states"
-typedef   ^                         ^            ADI_ParameterType                p        -     -    -    "Parameters"
-typedef   ^                         ^            ADI_MiscVarType                  m        -     -    -    "Misc/optimization variables"
-typedef   ^                         ^            ADI_InputType                    u        {2}   -    -    "Array of inputs associated with InputTimes"
-typedef   ^                         ^            ADI_OutputType                   y        -     -    -    "System outputs"
-typedef   ^                         ^            DbKi                             inputTimes {2} -    -    "Array of times associated with u array"
-
-# ..... Blade data ...........................................................................................................
+# ..... Blade data for driver.................................................................................................
 typedef   ^                        BladeData     ReKi                    pitch            -      -     -   "rad" -
 typedef   ^                         ^            ReKi                    pitchSpeed       -      -     -   "rad/s" -
 typedef   ^                         ^            ReKi                    pitchAcc         -      -     -   "rad/s/s" -
@@ -83,11 +71,8 @@ typedef   ^                         ^            IntKi                   motionT
 typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
-# typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
-# typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_R    -      -     -   "Mesh mapping from blade to AD hub motion"
-# typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_B    -      -     -   "Mesh mapping from AD blade root to AD line mesh" "-"
                                                                         
-# ... Hub data ..............................................................................................................
+# ... Hub data for driver....................................................................................................
 typedef   ^                         HubData      ReKi                    origin_n         3      -     -   "" -
 typedef   ^                         ^            ReKi                    orientation_n    3      -     -   "" -
 typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
@@ -97,11 +82,8 @@ typedef   ^                         ^            ReKi                    rotSpee
 typedef   ^                         ^            ReKi                    rotAcc           -      -     -   "rotor acceleration" "rad/s/s"
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
-# typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
-# typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_H    -      -     -   "Mesh mapping from hub to AD hub motion"
-# typedef   ^                         ^            MeshMapType             map2BldPt        :      -     -   "Mesh mapping from hub to bld root motion"
 
-# ... Nacelle data ..........................................................................................................
+# ... Nacelle data for driver................................................................................................
 typedef   ^                         NacData      ReKi                    origin_t         3      -     -   "" -
 typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
 typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
@@ -110,43 +92,19 @@ typedef   ^                         ^            ReKi                    yawSpee
 typedef   ^                         ^            ReKi                    yawAcc           -      -     -   "yawAcceleration" "rad/s^2"
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
-# typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
-# typedef   ^                         ^            MeshMapType             map2hubPt        -      -     -   "Mesh mapping from Nacelle to hub"
 
-# ... Tower data ............................................................................................................
+# ... Tower data for driver .................................................................................................
 typedef   ^                         TwrData      ReKi                    origin_t         3      -     -   "" -
-# typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
 
-
-# ..... Wind Turbine data ...................................................................................................
-typedef   ^                        WT_ED_Out     MeshType                TwrPtMesh        -      -     -   "Point mesh for tower base motion" "-"
+# ..... Rotor elastic data ..................................................................................................
+typedef   ^                        FED_Rot       MeshType                TwrPtMesh        -      -     -   "Point mesh for tower base motion" "-"
 typedef   ^                         ^            MeshType                NacelleMotion    -      -     -   "Point mesh for nacelle point motion" "-"
 typedef   ^                         ^            MeshType                HubPtMotion      -      -     -   "Point mesh for hub point motion" "-"
 typedef   ^                         ^            MeshType                BladeRootMotion  :      -     -   "BladeRootMotion Point mesh for blade root motion" "-"
-typedef   ^                         ^            MeshType                BladeLn2Mesh     :      -     -   "BladeLn2Mesh    Line mesh along blade" "-"
-
-# ED OUTPUTS
-# typedef   ^                         ^            MeshType                TwrLn2Mesh       -      -     -   "TowerLn2Mesh    Line mesh along blade" "-"
-# typedef	^	OutputType	MeshType	BladeLn2Mesh	{:}	-	-	"A mesh on each blade, containing positions and orientations of the blade elements"
-# typedef	^	OutputType	MeshType	BladeRootMotion	{:}	-	-	"For AeroDyn/BeamDyn: motions at the blade roots"
-# typedef	^	OutputType	MeshType	PlatformPtMesh	-	-	-	"Platform reference point positions/orientations/velocities/accelerations"	-
-# typedef	^	OutputType	MeshType	TowerLn2Mesh	-	-	-	"Tower line2 mesh with positions/orientations/velocities/accelerations"	-
-# typedef	^	OutputType	MeshType	HubPtMotion	-	-	-	"For AeroDyn and Lidar(InflowWind): motions of the hub"
-# typedef	^	OutputType	MeshType	NacelleMotion	-	-	-	"For AeroDyn14 & ServoDyn/TMD: motions of the nacelle."
-
-
-# ED <-> AD (nacelle, tower, hub, blade root)
-# typedef	^	FAST_TurbineType	FAST_ModuleMapType	MeshMapData	-	-	-	"Data for mapping between modules"	-
-#typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
-#typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
-#typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
-#typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
-#typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
-#typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
-
-
-
-# ..... Wind Turbine data ...................................................................................................
+#typedef   ^                         ^            MeshType                BladeLn2Mesh     :      -     -   "BladeLn2Mesh    Line mesh along blade" "-"
+#typedef   ^                         ^            MeshType                PlatformPtMesh   -      -     -   "Platform reference point positions/orientations/velocities/accelerations"    -
+#typedef   ^                         ^            MeshType                TowerLn2Mesh     -      -     -   "Tower line2 mesh with positions/orientations/velocities/accelerations"    -
+# ..... Wind Turbine data for driver ........................................................................................
 typedef   ^                        WTData        ReKi                    originInit       3      -     -   "" -
 typedef   ^                         ^            ReKi                    orientationInit  3      -     -   "" -
 typedef   ^                         ^            MeshType                PlatformPtMesh   -      -     -   "Point mesh for origin motion" "-"
@@ -176,18 +134,23 @@ typedef   ^                         ^            ReKi                    amplitu
 typedef   ^                         ^            ReKi                    frequency        -      -     -   "" -
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    WriteOutput      :      -     -   "WriteOutputs of the driver only"
-typedef   ^                         ^            WT_ED_OUT               y_ED             -      -     -   "Structure of meshes mimicking ED outputs for one turbine"
+typedef   ^                         ^            FED_Rot                 y_ED             -      -     -   "Structure of meshes mimicking ED outputs for one turbine"
 
-
-
-
+# ..... Turbine elastic data ................................................................................................
+#typedef   ^                        WT_ED_Dat    Rot_ED_Dat              WT                :      -     -   "Wind turbine/rotors elastic data" "-"
+#typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
+#typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
+#typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
+#typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
+#typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
+#typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
 
 
 # ..... Data for driver simulation .......................................................................................................
 typedef   ^                        Dvr_SimData  character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
 typedef   ^                         ^            IntKi                   AnalysisType     -      -     -   "0=Steady Wind, 1=InflowWind" "-"
 typedef   ^                         ^            IntKi                   numTurbines      -      -     -   "number of blades on turbine" "-"
-typedef   ^                         ^            WTData                  WT               :      -     -   "Wind turbine data" "-"
+typedef   ^                         ^            WTData                  WT               :      -     -   "Wind turbine data for driver" "-"
 typedef   ^                         ^            DbKi                    dT               -      -     -   "time increment" "s"
 typedef   ^                         ^            DbKi                    tMax             -      -     -   "time increment" "s"
 typedef   ^                         ^            IntKi                   numSteps         -      -     -   "number of steps in this case" "-"
@@ -197,12 +160,13 @@ typedef   ^                         ^            IntKi                   iCase  
 typedef   ^                         ^            ReKi                    timeSeries       ::     -     -   "Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw" "-"
 typedef   ^                         ^            IntKi                   iTimeSeries      -      -     -   "Stored index to optimize time interpolation" -
 typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
-typedef   ^                         ^            Dvr_Outputs            out               -      -     -   "data for driver output file" "-"
-typedef   ^                         ^            ADI_Data                ADI              -      -     -   "" -
+typedef   ^                         ^            Dvr_Outputs             out              -      -     -   "data for driver output file" "-"
 typedef   ^                         ^            ADI_IW_InputData        IW_InitInp       -      -     -   "" -
 
 # ..... Data to wrap the driver ..........................................................................................................
-typedef   ^                        AllData       Dvr_SimData            dvr              -      -     -   "" -
+typedef   ^                        AllData       Dvr_SimData             dvr              -      -     -   "" -
+typedef   ^                           ^          ADI_Data                ADI              -      -     -   "" -
+#typedef   ^                           ^          FED_Data                FED              -      -     -   "Elastic wind turbine data (Fake ElastoDyn)" "-"
 typedef   ^                           ^          IntKi                   errStat          -      -     -   "" -
 typedef   ^                           ^          character(ErrMsgLen)    errMsg           -      -     -   "" -
 typedef   ^                           ^          logical                 initialized      -      -     -   "" -
