@@ -11064,7 +11064,7 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
    REAL(DbKi)                              :: OutTime             ! Used to determine if output should be generated at this simulation time
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
-   CHARACTER(*), PARAMETER                 :: RoutineName = 'WriteOutputToFile'
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'WriteFarmOutputToFile'
    CHARACTER(200)                          :: Frmt                                      ! A string to hold a format specifier
    CHARACTER(farm%p%TChanLen)              :: TmpStr                                    ! temporary string to print the time output as text 
    CHARACTER(ChanLen)                      :: TmpStr2                                    ! temporary string to print the output as text 

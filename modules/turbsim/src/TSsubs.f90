@@ -650,16 +650,9 @@ ENDIF
          DO J=max(1, p%usr%NPoints),p%grid%NPoints
             DO I=J,p%grid%NPoints   
    
-!mlb: THis is where to look for the error.
-
-!mlb                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
-!mlb                  TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
-               
-!dist_x is zero, so we ignore it here (i.e., A_X = 0)
                A_Y = Alpha(2) * (p%grid%Freq(IFreq)**rc(2)) * ((Dist_Y(Indx)/Coef_1)**qc(2)) * (z_g(Indx)**(-pc(2)))
                A_Z = Alpha(3) * (p%grid%Freq(IFreq)**rc(3)) * ((Dist_Z(Indx)/Coef_1)**qc(3)) * (z_g(Indx)**(-pc(3)))
 
-!mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
                TRH(Indx)=EXP(- Coef_1 * SQRT(A_Y**2 + A_Z**2) / p%met%URef)
                
                Indx = Indx  + 1                                    
