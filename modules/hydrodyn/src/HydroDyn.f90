@@ -1584,7 +1584,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          do iBody = 1, p%NBody
-            theta = (/ 0.0_R8Ki, 0.0_R8Ki, InputFileData%PtfmRefztRot(iBody)/)
+            theta = (/ 0.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki /)
             orientation = EulerConstruct(theta)
 
             CALL MeshPositionNode (u%WAMITMesh                                                                              &
@@ -1612,7 +1612,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             CALL CleanUp()
             RETURN
          END IF
-
 
       ! Output mesh for loads at each WAMIT body
          CALL MeshCopy (   SrcMesh    = u%WAMITMesh            &
