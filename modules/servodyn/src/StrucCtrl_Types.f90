@@ -46,6 +46,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: StC_X_DSP      !< StC_X initial displacement [m]
     REAL(ReKi)  :: StC_Y_DSP      !< StC_Y initial displacement [m]
     REAL(ReKi)  :: StC_Z_DSP      !< StC_Z initial displacement [m]
+    Character(10)  :: StC_Z_PreLdC      !< StC_Z spring preload [N]
     REAL(ReKi)  :: StC_X_M      !< StC X mass [kg]
     REAL(ReKi)  :: StC_Y_M      !< StC Y mass [kg]
     REAL(ReKi)  :: StC_Z_M      !< StC Z mass [kg]
@@ -184,6 +185,7 @@ IMPLICIT NONE
     LOGICAL  :: StC_X_DOF      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF      !< DOF on or off [-]
     LOGICAL  :: StC_Z_DOF      !< DOF on or off [-]
+    REAL(ReKi)  :: StC_Z_PreLd      !< StC_Z spring preload [N]
     REAL(ReKi)  :: M_X      !< StC mass [kg]
     REAL(ReKi)  :: M_Y      !< StC mass [kg]
     REAL(ReKi)  :: M_Z      !< StC mass [kg]
@@ -275,6 +277,7 @@ CONTAINS
     DstInputFileData%StC_X_DSP = SrcInputFileData%StC_X_DSP
     DstInputFileData%StC_Y_DSP = SrcInputFileData%StC_Y_DSP
     DstInputFileData%StC_Z_DSP = SrcInputFileData%StC_Z_DSP
+    DstInputFileData%StC_Z_PreLdC = SrcInputFileData%StC_Z_PreLdC
     DstInputFileData%StC_X_M = SrcInputFileData%StC_X_M
     DstInputFileData%StC_Y_M = SrcInputFileData%StC_Y_M
     DstInputFileData%StC_Z_M = SrcInputFileData%StC_Z_M
@@ -434,6 +437,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_DSP
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_DSP
       Re_BufSz   = Re_BufSz   + 1  ! StC_Z_DSP
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%StC_Z_PreLdC)  ! StC_Z_PreLdC
       Re_BufSz   = Re_BufSz   + 1  ! StC_X_M
       Re_BufSz   = Re_BufSz   + 1  ! StC_Y_M
       Re_BufSz   = Re_BufSz   + 1  ! StC_Z_M
@@ -551,6 +555,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Z_DSP
     Re_Xferred = Re_Xferred + 1
+    DO I = 1, LEN(InData%StC_Z_PreLdC)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%StC_Z_PreLdC(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
     ReKiBuf(Re_Xferred) = InData%StC_X_M
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%StC_Y_M
@@ -767,6 +775,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Z_DSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    DO I = 1, LEN(OutData%StC_Z_PreLdC)
+      OutData%StC_Z_PreLdC(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
     OutData%StC_X_M = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%StC_Y_M = ReKiBuf(Re_Xferred)
@@ -4154,6 +4166,7 @@ ENDIF
     DstParamData%StC_X_DOF = SrcParamData%StC_X_DOF
     DstParamData%StC_Y_DOF = SrcParamData%StC_Y_DOF
     DstParamData%StC_Z_DOF = SrcParamData%StC_Z_DOF
+    DstParamData%StC_Z_PreLd = SrcParamData%StC_Z_PreLd
     DstParamData%M_X = SrcParamData%M_X
     DstParamData%M_Y = SrcParamData%M_Y
     DstParamData%M_Z = SrcParamData%M_Z
@@ -4298,6 +4311,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! StC_X_DOF
       Int_BufSz  = Int_BufSz  + 1  ! StC_Y_DOF
       Int_BufSz  = Int_BufSz  + 1  ! StC_Z_DOF
+      Re_BufSz   = Re_BufSz   + 1  ! StC_Z_PreLd
       Re_BufSz   = Re_BufSz   + 1  ! M_X
       Re_BufSz   = Re_BufSz   + 1  ! M_Y
       Re_BufSz   = Re_BufSz   + 1  ! M_Z
@@ -4395,6 +4409,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%StC_Z_DOF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%StC_Z_PreLd
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%M_X
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%M_Y
@@ -4586,6 +4602,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%StC_Z_DOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%StC_Z_DOF)
     Int_Xferred = Int_Xferred + 1
+    OutData%StC_Z_PreLd = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%M_X = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%M_Y = ReKiBuf(Re_Xferred)
