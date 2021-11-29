@@ -1,0 +1,58 @@
+----- AeroDyn Driver Input File ---------------------------------------------------------
+Three bladed wind turbine, using basic geometry input
+----- Input Configuration ---------------------------------------------------------------
+False           Echo         - Echo input parameters to "<rootname>.ech"?
+        0       MHK          - MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}
+        3       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined cases}
+       11.0     TMax         - Total run time [used only when AnalysisType/=3] (s)
+        0.5     DT           - Simulation time step [used only when AnalysisType/=3] (s)
+"./AD.dat"      AeroFile - Name of the primary AeroDyn input file
+----- Environmental Conditions ----------------------------------------------------------
+       1025     FldDens      - Density of working fluid (kg/m^3)
+ 1.4639E-05     KinVisc      - Kinematic viscosity of working fluid (m^2/s)
+      333.3     SpdSound     - Speed of sound in working fluid (m/s)
+     101325     Patm         - Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+       2000     Pvap         - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+        150     WtrDpth      - Water depth (m)
+----- Inflow Data -----------------------------------------------------------------------
+          0      CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
+"unused"         InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
+        9.0      HWindSpeed  - Horizontal wind speed   [used only when CompInflow=0 and AnalysisType=1] (m/s)
+        140      RefHt       - Reference height for horizontal wind speed [used only when CompInflow=0]  (m)
+       0.10      PLExp       - Power law exponent   [used only when CompInflow=0 and AnalysisType=1]                        (-)
+----- Turbine Data ----------------------------------------------------------------------
+1               NumTurbines  - Number of turbines
+----- Turbine(1) Geometry ---------------------------------------------------------------
+        True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
+       0,0,0    BaseOriginInit(1) - Coordinate of tower base in base coordinates (m)
+           3    NumBlades(1)    - Number of blades (-)
+          3.    HubRad(1)       - Hub radius (m)
+      140.82513 HubHt(1)        - Hub height (m)
+          -7    Overhang(1)     - Overhang (m)
+          -6    ShftTilt(1)     - Shaft tilt (deg)
+          -4    Precone(1)      - Blade precone (deg)
+----- Turbine(1) Motion [used only when AnalysisType=1] ---------------------------------
+1               BaseMotionType(1)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
+1               DegreeOfFreedom(1)     - {1:xg, 2:yg, 3:zg, 4:theta_xg, 5:theta_yg, 6:theta_zg} [used only when BaseMotionType=1] (flag)
+5.0             Amplitude(1)           - Amplitude of sinusoidal motion   [used only when BaseMotionType=1]
+0.1             Frequency(1)           - Frequency of sinusoidal motion   [used only when BaseMotionType=1]
+""              BaseMotionFileName(1)  - Filename containing arbitrary base motion (19 columns: Time, x, y, z, theta_x, ..., alpha_z)  [used only when BaseMotionType=2]
+0               NacYaw(1)              - Yaw angle (about z_t) of the nacelle (deg)
+7               RotSpeed(1)            - Rotational speed of rotor in rotor coordinates (rpm)
+1               BldPitch(1)            - Blade 1 pitch (deg)
+----- Time-dependent Analysis [used only when AnalysisType=2, numTurbines=1] ------------
+"unused"         TimeAnalysisFileName - Filename containing time series (6 column: Time, HWndSpeed, PLExp, RotSpd, Pitch, Yaw). 
+-----  Combined-Case Analysis [used only when AnalysisType=3, numTurbines=1 -------------
+         4  NumCases     - Number of cases to run
+HWndSpeed  PLExp  RotSpd  Pitch   Yaw   dT    Tmax  DOF  Amplitude Frequency 
+(m/s)      (-)    (rpm)   (deg)  (deg)  (s)   (s)   (-)   (-)       (Hz)
+  8.0      0.0     6.      0.      0.   1.0   100    0    0          0 
+  8.0      0.0     6.      0.      0.   1.0   100    0    0          0 
+  9.0      0.1     7.      1.      0.   0.5   51     1    5.0        0.1 
+  9.0      0.2     8.      2.      0.   0.51  52     1    2.0        0.2 
+----- Output Settings -------------------------------------------------------------------
+"ES15.8E2"       OutFmt      - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
+2                OutFileFmt  - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
+0                WrVTK       - VTK visualization data output: (switch) {0=none; 1=animation}
+2                VTKHubRad   - HubRadius for VTK visualization (m)
+-1,-1,-1,2,2,2   VTKNacDim   - Nacelle Dimension for VTK visualization x0,y0,z0,Lx,Ly,Lz (m)

@@ -33,43 +33,17 @@ MODULE FAST_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE ElastoDyn_Types
 USE BeamDyn_Types
-USE StrucCtrl_Types
 USE ServoDyn_Types
-USE IfW_UniformWind_Types
-USE IfW_FFWind_Base_Types
-USE IfW_TSFFWind_Types
-USE IfW_BladedFFWind_Types
-USE IfW_HAWCWind_Types
-USE IfW_UserWind_Types
-USE IfW_4Dext_Types
-USE Lidar_Types
 USE InflowWind_Types
-USE DWM_Types
 USE AeroDyn14_Types
-USE AirfoilInfo_Types
-USE UnsteadyAero_Types
-USE DBEMT_Types
-USE BEMT_Types
-USE FVW_Types
-USE AeroAcoustics_Types
 USE AeroDyn_Types
 USE SubDyn_Types
-USE Current_Types
-USE Waves_Types
-USE Waves2_Types
-USE Conv_Radiation_Types
-USE SS_Radiation_Types
-USE SS_Excitation_Types
-USE WAMIT_Types
-USE WAMIT2_Types
-USE Morison_Types
 USE HydroDyn_Types
 USE IceFloe_Types
 USE OpenFOAM_Types
 USE SCDataEx_Types
 USE IceDyn_Types
 USE FEAMooring_Types
-USE MAP_Fortran_Types
 USE MAP_Types
 USE MoorDyn_Types
 USE OrcaFlexInterface_Types
@@ -159,8 +133,18 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: CompSub      !< Compute sub-structural dynamics (switch) {Module_None; Module_HD} [-]
     INTEGER(IntKi)  :: CompMooring      !< Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca} [-]
     INTEGER(IntKi)  :: CompIce      !< Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD} [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine} [-]
     LOGICAL  :: UseDWM      !< Use the DWM module in AeroDyn [-]
     LOGICAL  :: Linearize      !< Linearization analysis (flag) [-]
+    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
+    REAL(ReKi)  :: AirDens      !< Air density [kg/m^3]
+    REAL(ReKi)  :: WtrDens      !< Water density [kg/m^3]
+    REAL(ReKi)  :: KinVisc      !< Kinematic viscosity of working fluid [m^2/s]
+    REAL(ReKi)  :: SpdSound      !< Speed of sound in working fluid [m/s]
+    REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
+    REAL(ReKi)  :: Pvap      !< Vapour pressure of working fluid [Pa]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
     CHARACTER(1024)  :: EDFile      !< The name of the ElastoDyn input file [-]
     CHARACTER(1024) , DIMENSION(MaxNBlades)  :: BDBldFile      !< Name of files containing BeamDyn inputs for each blade [-]
     CHARACTER(1024)  :: InflowFile      !< Name of file containing inflow wind input parameters [-]
@@ -177,7 +161,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: n_ChkptTime      !< Number of time steps between writing checkpoint files [-]
     INTEGER(IntKi)  :: n_DT_Out      !< Number of time steps between writing a line in the time-marching output files [-]
     INTEGER(IntKi)  :: n_VTKTime      !< Number of time steps between writing VTK files [-]
-    INTEGER(IntKi)  :: TurbineType      !< Type_LandBased, Type_Offshore_Fixed, or Type_Offshore_Floating [-]
+    INTEGER(IntKi)  :: TurbineType      !< Type_LandBased, Type_Offshore_Fixed, Type_Offshore_Floating, Type_MHK_Fixed, or Type_MHK_Floating [-]
     LOGICAL  :: WrBinOutFile      !< Write a binary output file? (.outb) [-]
     LOGICAL  :: WrTxtOutFile      !< Write a text (formatted) output file? (.out) [-]
     INTEGER(IntKi)  :: WrBinMod      !< If writing binary, which file format is to be written [1, 2, or 3] [-]
@@ -628,7 +612,7 @@ IMPLICIT NONE
     TYPE(MeshMapType)  :: HD_M_P_2_ED_P      !< Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh [-]
     TYPE(MeshMapType)  :: ED_P_2_Mooring_P      !< Map ElastoDyn PlatformPtMesh to MAP/FEAM/MoorDyn/OrcaFlex point mesh [-]
     TYPE(MeshMapType)  :: Mooring_P_2_ED_P      !< Map FEAM/MAP/MoorDyn/OrcaFlex point mesh to ElastoDyn PlatformPtMesh [-]
-    TYPE(MeshMapType)  :: SD_P_2_Mooring_P      !< Map SD Motions (y2Mesh) to MAP/FEAM/MoorDyn/OrcaFlex point mesh [-]
+    TYPE(MeshMapType)  :: SDy3_P_2_Mooring_P      !< Map SD Motions (y3Mesh) to MAP/FEAM/MoorDyn/OrcaFlex point mesh [-]
     TYPE(MeshMapType)  :: Mooring_P_2_SD_P      !< Map FEAM/MAP/MoorDyn/OrcaFlex point mesh to SD point loads (LMesh) mesh [-]
     TYPE(MeshMapType)  :: ED_P_2_SD_TP      !< Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh [-]
     TYPE(MeshMapType)  :: SD_TP_2_ED_P      !< Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh [-]
@@ -646,8 +630,8 @@ IMPLICIT NONE
     TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: SrvD_P_2_BD_P_B      !< Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SrvD_P_P_2_ED_P      !< Map ServoDyn  platform point mesh load   to ElastoDyn     point load mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_P_2_SrvD_P_P      !< Map ElastoDyn platform point mesh motion to ServoDyn/SStC point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SrvD_P_P_2_SD_P      !< Map ServoDyn  platform point mesh load   to SubDyn        point load mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SD_P_2_SrvD_P_P      !< Map SubDyn    platform point mesh motion to ServoDyn/SStC point mesh [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SrvD_P_P_2_SD_P      !< Map ServoDyn  platform point mesh load   to SubDyn        point load Lmesh [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SDy3_P_2_SrvD_P_P      !< Map SubDyn    platform y3mesh motion to ServoDyn/SStC point mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BDED_L_2_AD_L_B      !< Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_L_2_BDED_B      !< Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BD_L_2_BD_L      !< Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations [-]
@@ -658,9 +642,9 @@ IMPLICIT NONE
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_P_2_AD_P_R      !< Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes [-]
     TYPE(MeshMapType)  :: ED_P_2_AD_P_H      !< Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh [-]
     TYPE(MeshMapType)  :: IceF_P_2_SD_P      !< Map IceFloe point mesh to SubDyn LMesh point mesh [-]
-    TYPE(MeshMapType)  :: SD_P_2_IceF_P      !< Map SubDyn y2Mesh point mesh to IceFloe point mesh [-]
+    TYPE(MeshMapType)  :: SDy3_P_2_IceF_P      !< Map SubDyn y3Mesh point mesh to IceFloe point mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: IceD_P_2_SD_P      !< Map IceDyn point mesh to SubDyn LMesh point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SD_P_2_IceD_P      !< Map SubDyn y2Mesh point mesh to IceDyn point mesh [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SDy3_P_2_IceD_P      !< Map SubDyn y3Mesh point mesh to IceDyn point mesh [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Jacobian_Opt1      !< Stored Jacobian in ED_HD_InputOutputSolve or FullOpt1_InputOutputSolve [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Jacobian_pivot      !< Pivot array used for LU decomposition of Jacobian_Opt1 [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
@@ -2125,8 +2109,18 @@ ENDIF
     DstParamData%CompSub = SrcParamData%CompSub
     DstParamData%CompMooring = SrcParamData%CompMooring
     DstParamData%CompIce = SrcParamData%CompIce
+    DstParamData%MHK = SrcParamData%MHK
     DstParamData%UseDWM = SrcParamData%UseDWM
     DstParamData%Linearize = SrcParamData%Linearize
+    DstParamData%Gravity = SrcParamData%Gravity
+    DstParamData%AirDens = SrcParamData%AirDens
+    DstParamData%WtrDens = SrcParamData%WtrDens
+    DstParamData%KinVisc = SrcParamData%KinVisc
+    DstParamData%SpdSound = SrcParamData%SpdSound
+    DstParamData%Patm = SrcParamData%Patm
+    DstParamData%Pvap = SrcParamData%Pvap
+    DstParamData%WtrDpth = SrcParamData%WtrDpth
+    DstParamData%MSL2SWL = SrcParamData%MSL2SWL
     DstParamData%EDFile = SrcParamData%EDFile
     DstParamData%BDBldFile = SrcParamData%BDBldFile
     DstParamData%InflowFile = SrcParamData%InflowFile
@@ -2258,8 +2252,18 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! CompSub
       Int_BufSz  = Int_BufSz  + 1  ! CompMooring
       Int_BufSz  = Int_BufSz  + 1  ! CompIce
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! UseDWM
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
+      Re_BufSz   = Re_BufSz   + 1  ! Gravity
+      Re_BufSz   = Re_BufSz   + 1  ! AirDens
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDens
+      Re_BufSz   = Re_BufSz   + 1  ! KinVisc
+      Re_BufSz   = Re_BufSz   + 1  ! SpdSound
+      Re_BufSz   = Re_BufSz   + 1  ! Patm
+      Re_BufSz   = Re_BufSz   + 1  ! Pvap
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%EDFile)  ! EDFile
       Int_BufSz  = Int_BufSz  + SIZE(InData%BDBldFile)*LEN(InData%BDBldFile)  ! BDBldFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InflowFile)  ! InflowFile
@@ -2428,10 +2432,30 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompIce
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseDWM, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Gravity
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AirDens
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDens
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%KinVisc
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%SpdSound
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Patm
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Pvap
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
+    Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(InData%EDFile)
       IntKiBuf(Int_Xferred) = ICHAR(InData%EDFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -2721,10 +2745,30 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%CompIce = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%UseDWM = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseDWM)
     Int_Xferred = Int_Xferred + 1
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
     Int_Xferred = Int_Xferred + 1
+    OutData%Gravity = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%AirDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WtrDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%KinVisc = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SpdSound = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Patm = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Pvap = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     DO I = 1, LEN(OutData%EDFile)
       OutData%EDFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
@@ -35896,7 +35940,7 @@ ENDIF
       CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%Mooring_P_2_ED_P, DstModuleMapTypeData%Mooring_P_2_ED_P, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SD_P_2_Mooring_P, DstModuleMapTypeData%SD_P_2_Mooring_P, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SDy3_P_2_Mooring_P, DstModuleMapTypeData%SDy3_P_2_Mooring_P, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
       CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%Mooring_P_2_SD_P, DstModuleMapTypeData%Mooring_P_2_SD_P, CtrlCode, ErrStat2, ErrMsg2 )
@@ -36112,18 +36156,18 @@ IF (ALLOCATED(SrcModuleMapTypeData%SrvD_P_P_2_SD_P)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcModuleMapTypeData%SD_P_2_SrvD_P_P)) THEN
-  i1_l = LBOUND(SrcModuleMapTypeData%SD_P_2_SrvD_P_P,1)
-  i1_u = UBOUND(SrcModuleMapTypeData%SD_P_2_SrvD_P_P,1)
-  IF (.NOT. ALLOCATED(DstModuleMapTypeData%SD_P_2_SrvD_P_P)) THEN 
-    ALLOCATE(DstModuleMapTypeData%SD_P_2_SrvD_P_P(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcModuleMapTypeData%SDy3_P_2_SrvD_P_P)) THEN
+  i1_l = LBOUND(SrcModuleMapTypeData%SDy3_P_2_SrvD_P_P,1)
+  i1_u = UBOUND(SrcModuleMapTypeData%SDy3_P_2_SrvD_P_P,1)
+  IF (.NOT. ALLOCATED(DstModuleMapTypeData%SDy3_P_2_SrvD_P_P)) THEN 
+    ALLOCATE(DstModuleMapTypeData%SDy3_P_2_SrvD_P_P(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SD_P_2_SrvD_P_P.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SDy3_P_2_SrvD_P_P.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DO i1 = LBOUND(SrcModuleMapTypeData%SD_P_2_SrvD_P_P,1), UBOUND(SrcModuleMapTypeData%SD_P_2_SrvD_P_P,1)
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SD_P_2_SrvD_P_P(i1), DstModuleMapTypeData%SD_P_2_SrvD_P_P(i1), CtrlCode, ErrStat2, ErrMsg2 )
+    DO i1 = LBOUND(SrcModuleMapTypeData%SDy3_P_2_SrvD_P_P,1), UBOUND(SrcModuleMapTypeData%SDy3_P_2_SrvD_P_P,1)
+      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SDy3_P_2_SrvD_P_P(i1), DstModuleMapTypeData%SDy3_P_2_SrvD_P_P(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
@@ -36210,7 +36254,7 @@ ENDIF
       CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%IceF_P_2_SD_P, DstModuleMapTypeData%IceF_P_2_SD_P, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SD_P_2_IceF_P, DstModuleMapTypeData%SD_P_2_IceF_P, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SDy3_P_2_IceF_P, DstModuleMapTypeData%SDy3_P_2_IceF_P, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
 IF (ALLOCATED(SrcModuleMapTypeData%IceD_P_2_SD_P)) THEN
@@ -36229,18 +36273,18 @@ IF (ALLOCATED(SrcModuleMapTypeData%IceD_P_2_SD_P)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcModuleMapTypeData%SD_P_2_IceD_P)) THEN
-  i1_l = LBOUND(SrcModuleMapTypeData%SD_P_2_IceD_P,1)
-  i1_u = UBOUND(SrcModuleMapTypeData%SD_P_2_IceD_P,1)
-  IF (.NOT. ALLOCATED(DstModuleMapTypeData%SD_P_2_IceD_P)) THEN 
-    ALLOCATE(DstModuleMapTypeData%SD_P_2_IceD_P(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcModuleMapTypeData%SDy3_P_2_IceD_P)) THEN
+  i1_l = LBOUND(SrcModuleMapTypeData%SDy3_P_2_IceD_P,1)
+  i1_u = UBOUND(SrcModuleMapTypeData%SDy3_P_2_IceD_P,1)
+  IF (.NOT. ALLOCATED(DstModuleMapTypeData%SDy3_P_2_IceD_P)) THEN 
+    ALLOCATE(DstModuleMapTypeData%SDy3_P_2_IceD_P(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SD_P_2_IceD_P.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SDy3_P_2_IceD_P.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DO i1 = LBOUND(SrcModuleMapTypeData%SD_P_2_IceD_P,1), UBOUND(SrcModuleMapTypeData%SD_P_2_IceD_P,1)
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SD_P_2_IceD_P(i1), DstModuleMapTypeData%SD_P_2_IceD_P(i1), CtrlCode, ErrStat2, ErrMsg2 )
+    DO i1 = LBOUND(SrcModuleMapTypeData%SDy3_P_2_IceD_P,1), UBOUND(SrcModuleMapTypeData%SDy3_P_2_IceD_P,1)
+      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SDy3_P_2_IceD_P(i1), DstModuleMapTypeData%SDy3_P_2_IceD_P(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
@@ -36427,7 +36471,7 @@ ENDIF
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%HD_M_P_2_ED_P, ErrStat, ErrMsg )
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%Mooring_P_2_ED_P, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SD_P_2_Mooring_P, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SDy3_P_2_Mooring_P, ErrStat, ErrMsg )
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%Mooring_P_2_SD_P, ErrStat, ErrMsg )
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%ED_P_2_SD_TP, ErrStat, ErrMsg )
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SD_TP_2_ED_P, ErrStat, ErrMsg )
@@ -36509,11 +36553,11 @@ DO i1 = LBOUND(ModuleMapTypeData%SrvD_P_P_2_SD_P,1), UBOUND(ModuleMapTypeData%Sr
 ENDDO
   DEALLOCATE(ModuleMapTypeData%SrvD_P_P_2_SD_P)
 ENDIF
-IF (ALLOCATED(ModuleMapTypeData%SD_P_2_SrvD_P_P)) THEN
-DO i1 = LBOUND(ModuleMapTypeData%SD_P_2_SrvD_P_P,1), UBOUND(ModuleMapTypeData%SD_P_2_SrvD_P_P,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SD_P_2_SrvD_P_P(i1), ErrStat, ErrMsg )
+IF (ALLOCATED(ModuleMapTypeData%SDy3_P_2_SrvD_P_P)) THEN
+DO i1 = LBOUND(ModuleMapTypeData%SDy3_P_2_SrvD_P_P,1), UBOUND(ModuleMapTypeData%SDy3_P_2_SrvD_P_P,1)
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SDy3_P_2_SrvD_P_P(i1), ErrStat, ErrMsg )
 ENDDO
-  DEALLOCATE(ModuleMapTypeData%SD_P_2_SrvD_P_P)
+  DEALLOCATE(ModuleMapTypeData%SDy3_P_2_SrvD_P_P)
 ENDIF
 IF (ALLOCATED(ModuleMapTypeData%BDED_L_2_AD_L_B)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%BDED_L_2_AD_L_B,1), UBOUND(ModuleMapTypeData%BDED_L_2_AD_L_B,1)
@@ -36545,18 +36589,18 @@ ENDDO
 ENDIF
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%ED_P_2_AD_P_H, ErrStat, ErrMsg )
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%IceF_P_2_SD_P, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SD_P_2_IceF_P, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SDy3_P_2_IceF_P, ErrStat, ErrMsg )
 IF (ALLOCATED(ModuleMapTypeData%IceD_P_2_SD_P)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%IceD_P_2_SD_P,1), UBOUND(ModuleMapTypeData%IceD_P_2_SD_P,1)
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%IceD_P_2_SD_P(i1), ErrStat, ErrMsg )
 ENDDO
   DEALLOCATE(ModuleMapTypeData%IceD_P_2_SD_P)
 ENDIF
-IF (ALLOCATED(ModuleMapTypeData%SD_P_2_IceD_P)) THEN
-DO i1 = LBOUND(ModuleMapTypeData%SD_P_2_IceD_P,1), UBOUND(ModuleMapTypeData%SD_P_2_IceD_P,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SD_P_2_IceD_P(i1), ErrStat, ErrMsg )
+IF (ALLOCATED(ModuleMapTypeData%SDy3_P_2_IceD_P)) THEN
+DO i1 = LBOUND(ModuleMapTypeData%SDy3_P_2_IceD_P,1), UBOUND(ModuleMapTypeData%SDy3_P_2_IceD_P,1)
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SDy3_P_2_IceD_P(i1), ErrStat, ErrMsg )
 ENDDO
-  DEALLOCATE(ModuleMapTypeData%SD_P_2_IceD_P)
+  DEALLOCATE(ModuleMapTypeData%SDy3_P_2_IceD_P)
 ENDIF
 IF (ALLOCATED(ModuleMapTypeData%Jacobian_Opt1)) THEN
   DEALLOCATE(ModuleMapTypeData%Jacobian_Opt1)
@@ -36831,20 +36875,20 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! SD_P_2_Mooring_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_Mooring_P, ErrStat2, ErrMsg2, .TRUE. ) ! SD_P_2_Mooring_P 
+      Int_BufSz   = Int_BufSz + 3  ! SDy3_P_2_Mooring_P: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2, .TRUE. ) ! SDy3_P_2_Mooring_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! SD_P_2_Mooring_P
+      IF(ALLOCATED(Re_Buf)) THEN ! SDy3_P_2_Mooring_P
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! SD_P_2_Mooring_P
+      IF(ALLOCATED(Db_Buf)) THEN ! SDy3_P_2_Mooring_P
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! SD_P_2_Mooring_P
+      IF(ALLOCATED(Int_Buf)) THEN ! SDy3_P_2_Mooring_P
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -37228,24 +37272,24 @@ ENDIF
       END IF
     END DO
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! SD_P_2_SrvD_P_P allocated yes/no
-  IF ( ALLOCATED(InData%SD_P_2_SrvD_P_P) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! SD_P_2_SrvD_P_P upper/lower bounds for each dimension
-    DO i1 = LBOUND(InData%SD_P_2_SrvD_P_P,1), UBOUND(InData%SD_P_2_SrvD_P_P,1)
-      Int_BufSz   = Int_BufSz + 3  ! SD_P_2_SrvD_P_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_SrvD_P_P(i1), ErrStat2, ErrMsg2, .TRUE. ) ! SD_P_2_SrvD_P_P 
+  Int_BufSz   = Int_BufSz   + 1     ! SDy3_P_2_SrvD_P_P allocated yes/no
+  IF ( ALLOCATED(InData%SDy3_P_2_SrvD_P_P) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! SDy3_P_2_SrvD_P_P upper/lower bounds for each dimension
+    DO i1 = LBOUND(InData%SDy3_P_2_SrvD_P_P,1), UBOUND(InData%SDy3_P_2_SrvD_P_P,1)
+      Int_BufSz   = Int_BufSz + 3  ! SDy3_P_2_SrvD_P_P: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_SrvD_P_P(i1), ErrStat2, ErrMsg2, .TRUE. ) ! SDy3_P_2_SrvD_P_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! SD_P_2_SrvD_P_P
+      IF(ALLOCATED(Re_Buf)) THEN ! SDy3_P_2_SrvD_P_P
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! SD_P_2_SrvD_P_P
+      IF(ALLOCATED(Db_Buf)) THEN ! SDy3_P_2_SrvD_P_P
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! SD_P_2_SrvD_P_P
+      IF(ALLOCATED(Int_Buf)) THEN ! SDy3_P_2_SrvD_P_P
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -37445,20 +37489,20 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! SD_P_2_IceF_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_IceF_P, ErrStat2, ErrMsg2, .TRUE. ) ! SD_P_2_IceF_P 
+      Int_BufSz   = Int_BufSz + 3  ! SDy3_P_2_IceF_P: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_IceF_P, ErrStat2, ErrMsg2, .TRUE. ) ! SDy3_P_2_IceF_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! SD_P_2_IceF_P
+      IF(ALLOCATED(Re_Buf)) THEN ! SDy3_P_2_IceF_P
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! SD_P_2_IceF_P
+      IF(ALLOCATED(Db_Buf)) THEN ! SDy3_P_2_IceF_P
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! SD_P_2_IceF_P
+      IF(ALLOCATED(Int_Buf)) THEN ! SDy3_P_2_IceF_P
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -37485,24 +37529,24 @@ ENDIF
       END IF
     END DO
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! SD_P_2_IceD_P allocated yes/no
-  IF ( ALLOCATED(InData%SD_P_2_IceD_P) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! SD_P_2_IceD_P upper/lower bounds for each dimension
-    DO i1 = LBOUND(InData%SD_P_2_IceD_P,1), UBOUND(InData%SD_P_2_IceD_P,1)
-      Int_BufSz   = Int_BufSz + 3  ! SD_P_2_IceD_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_IceD_P(i1), ErrStat2, ErrMsg2, .TRUE. ) ! SD_P_2_IceD_P 
+  Int_BufSz   = Int_BufSz   + 1     ! SDy3_P_2_IceD_P allocated yes/no
+  IF ( ALLOCATED(InData%SDy3_P_2_IceD_P) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! SDy3_P_2_IceD_P upper/lower bounds for each dimension
+    DO i1 = LBOUND(InData%SDy3_P_2_IceD_P,1), UBOUND(InData%SDy3_P_2_IceD_P,1)
+      Int_BufSz   = Int_BufSz + 3  ! SDy3_P_2_IceD_P: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_IceD_P(i1), ErrStat2, ErrMsg2, .TRUE. ) ! SDy3_P_2_IceD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! SD_P_2_IceD_P
+      IF(ALLOCATED(Re_Buf)) THEN ! SDy3_P_2_IceD_P
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! SD_P_2_IceD_P
+      IF(ALLOCATED(Db_Buf)) THEN ! SDy3_P_2_IceD_P
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! SD_P_2_IceD_P
+      IF(ALLOCATED(Int_Buf)) THEN ! SDy3_P_2_IceD_P
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -38199,7 +38243,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_Mooring_P, ErrStat2, ErrMsg2, OnlySize ) ! SD_P_2_Mooring_P 
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2, OnlySize ) ! SDy3_P_2_Mooring_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -38894,18 +38938,18 @@ ENDIF
       ENDIF
     END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%SD_P_2_SrvD_P_P) ) THEN
+  IF ( .NOT. ALLOCATED(InData%SDy3_P_2_SrvD_P_P) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SD_P_2_SrvD_P_P,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SD_P_2_SrvD_P_P,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SDy3_P_2_SrvD_P_P,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SDy3_P_2_SrvD_P_P,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%SD_P_2_SrvD_P_P,1), UBOUND(InData%SD_P_2_SrvD_P_P,1)
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_SrvD_P_P(i1), ErrStat2, ErrMsg2, OnlySize ) ! SD_P_2_SrvD_P_P 
+    DO i1 = LBOUND(InData%SDy3_P_2_SrvD_P_P,1), UBOUND(InData%SDy3_P_2_SrvD_P_P,1)
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_SrvD_P_P(i1), ErrStat2, ErrMsg2, OnlySize ) ! SDy3_P_2_SrvD_P_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -39267,7 +39311,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_IceF_P, ErrStat2, ErrMsg2, OnlySize ) ! SD_P_2_IceF_P 
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_IceF_P, ErrStat2, ErrMsg2, OnlySize ) ! SDy3_P_2_IceF_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -39336,18 +39380,18 @@ ENDIF
       ENDIF
     END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%SD_P_2_IceD_P) ) THEN
+  IF ( .NOT. ALLOCATED(InData%SDy3_P_2_IceD_P) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SD_P_2_IceD_P,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SD_P_2_IceD_P,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SDy3_P_2_IceD_P,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SDy3_P_2_IceD_P,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%SD_P_2_IceD_P,1), UBOUND(InData%SD_P_2_IceD_P,1)
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_IceD_P(i1), ErrStat2, ErrMsg2, OnlySize ) ! SD_P_2_IceD_P 
+    DO i1 = LBOUND(InData%SDy3_P_2_IceD_P,1), UBOUND(InData%SDy3_P_2_IceD_P,1)
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_IceD_P(i1), ErrStat2, ErrMsg2, OnlySize ) ! SDy3_P_2_IceD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -40499,7 +40543,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SD_P_2_Mooring_P, ErrStat2, ErrMsg2 ) ! SD_P_2_Mooring_P 
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2 ) ! SDy3_P_2_Mooring_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -41422,20 +41466,20 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SD_P_2_SrvD_P_P not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SDy3_P_2_SrvD_P_P not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%SD_P_2_SrvD_P_P)) DEALLOCATE(OutData%SD_P_2_SrvD_P_P)
-    ALLOCATE(OutData%SD_P_2_SrvD_P_P(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%SDy3_P_2_SrvD_P_P)) DEALLOCATE(OutData%SDy3_P_2_SrvD_P_P)
+    ALLOCATE(OutData%SDy3_P_2_SrvD_P_P(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SD_P_2_SrvD_P_P.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SDy3_P_2_SrvD_P_P.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    DO i1 = LBOUND(OutData%SD_P_2_SrvD_P_P,1), UBOUND(OutData%SD_P_2_SrvD_P_P,1)
+    DO i1 = LBOUND(OutData%SDy3_P_2_SrvD_P_P,1), UBOUND(OutData%SDy3_P_2_SrvD_P_P,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -41469,7 +41513,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SD_P_2_SrvD_P_P(i1), ErrStat2, ErrMsg2 ) ! SD_P_2_SrvD_P_P 
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SDy3_P_2_SrvD_P_P(i1), ErrStat2, ErrMsg2 ) ! SDy3_P_2_SrvD_P_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -41975,7 +42019,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SD_P_2_IceF_P, ErrStat2, ErrMsg2 ) ! SD_P_2_IceF_P 
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SDy3_P_2_IceF_P, ErrStat2, ErrMsg2 ) ! SDy3_P_2_IceF_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -42038,20 +42082,20 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SD_P_2_IceD_P not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SDy3_P_2_IceD_P not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%SD_P_2_IceD_P)) DEALLOCATE(OutData%SD_P_2_IceD_P)
-    ALLOCATE(OutData%SD_P_2_IceD_P(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%SDy3_P_2_IceD_P)) DEALLOCATE(OutData%SDy3_P_2_IceD_P)
+    ALLOCATE(OutData%SDy3_P_2_IceD_P(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SD_P_2_IceD_P.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SDy3_P_2_IceD_P.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    DO i1 = LBOUND(OutData%SD_P_2_IceD_P,1), UBOUND(OutData%SD_P_2_IceD_P,1)
+    DO i1 = LBOUND(OutData%SDy3_P_2_IceD_P,1), UBOUND(OutData%SDy3_P_2_IceD_P,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -42085,7 +42129,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SD_P_2_IceD_P(i1), ErrStat2, ErrMsg2 ) ! SD_P_2_IceD_P 
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SDy3_P_2_IceD_P(i1), ErrStat2, ErrMsg2 ) ! SDy3_P_2_IceD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

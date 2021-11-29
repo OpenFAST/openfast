@@ -164,7 +164,7 @@ END SUBROUTINE AllBldNdOuts_InitOut
 !! NOTE: the equations here came from the output section of AeroDyn_IO.f90.  If anything changes in there, it needs to be reflected
 !!       here.
 
-SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, iRot, ErrStat, ErrMsg )
    TYPE(RotParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p_AD                              ! The module parameters
    TYPE(RotInputType),        INTENT(IN   )  :: u                                 ! inputs
@@ -173,13 +173,14 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
    TYPE(RotOutputType),       INTENT(INOUT)  :: y                                 ! outputs (updates y%WriteOutput)
    TYPE(RotOtherStateType),   INTENT(IN   )  :: OtherState                        ! other states
    INTEGER,                   INTENT(IN   )  :: Indx                              ! index into m%BEMT_u(Indx) array; 1=t and 2=t+dt (but not checked here)
+   INTEGER,                   INTENT(IN   )  :: iRot                              ! Rotor index, needed for OLAF
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
 
       ! local variables
  
    INTEGER(IntKi)                               :: OutIdx                             ! Index count within WriteOutput
-   INTEGER(IntKi)                               :: IdxBlade                         ! Counter to which blade we are on
+   INTEGER(IntKi)                               :: IdxBlade, iW                     ! Counter to which blade we are on, and Wing
    INTEGER(IntKi)                               :: IdxNode                          ! Counter to the blade node we ae on
    INTEGER(IntKi)                               :: IdxChan                          ! Counter to the channel we are outputting.
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Calc_WriteAllBldNdOutput'
@@ -322,8 +323,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Vrel(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Vrel(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -340,8 +342,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                 END DO
             else
                 DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                    DO IdxNode=1,p%NumBlNds
-                      y%WriteOutput( OutIdx )  = 0.5 * p%airDens *  m_AD%FVW%BN_Vrel(IdxNode,IdxBlade)**2
+                      y%WriteOutput( OutIdx )  = 0.5 * p%airDens *  m_AD%FVW%W(iW)%BN_Vrel(IdxNode)**2
                       OutIdx = OutIdx + 1
                    END DO
                 END DO
@@ -358,8 +361,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Re(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Re(IdxNode) / 1.0E6
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -376,8 +380,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Vrel(IdxNode,IdxBlade) / p%SpdSound
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Vrel(IdxNode) / p%SpdSound
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -396,8 +401,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds 
-                     y%WriteOutput( OutIdx )  = -m_AD%FVW%BN_UrelWind_s(1,IdxNode,IdxBlade) * m_AD%FVW%BN_AxInd(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = -m_AD%FVW%W(iW)%BN_UrelWind_s(1,IdxNode) * m_AD%FVW%W(iW)%BN_AxInd(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -413,8 +419,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds 
-                     y%WriteOutput( OutIdx )  =  m_AD%FVW%BN_UrelWind_s(2,IdxNode,IdxBlade) * m_AD%FVW%BN_TanInd(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,IdxNode) * m_AD%FVW%W(iW)%BN_TanInd(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -432,8 +439,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_AxInd(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_AxInd(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -449,8 +457,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_TanInd(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_TanInd(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -468,8 +477,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_alpha(IdxNode,IdxBlade)*R2D
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_alpha(IdxNode)*R2D
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -485,8 +495,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade)*R2D
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%PitchAndTwist(IdxNode)*R2D
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -502,8 +513,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  =m_AD%FVW%BN_phi(IdxNode,IdxBlade)*R2D
+                     y%WriteOutput( OutIdx )  =m_AD%FVW%W(iW)%BN_phi(IdxNode)*R2D
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -519,6 +531,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
 !NOT available in FVW yet
                      y%WriteOutput( OutIdx ) = 0.0_ReKi 
@@ -539,8 +552,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Cl(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cl(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -556,8 +570,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Cd(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cd(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -573,8 +588,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Cm(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cm(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -591,8 +607,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Cx(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cx(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -608,8 +625,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Cy(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cy(IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -628,10 +646,11 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     ct=cos(m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade))    ! cos(theta)
-                     st=sin(m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade))    ! sin(theta)
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_Cx(IdxNode,IdxBlade)*ct + m_AD%FVW%BN_Cy(IdxNode,IdxBlade)*st
+                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! cos(theta)
+                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! sin(theta)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cx(IdxNode)*ct + m_AD%FVW%W(iW)%BN_Cy(IdxNode)*st
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -649,10 +668,11 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     ct=cos(m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade))    ! cos(theta)
-                     st=sin(m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade))    ! sin(theta)
-                     y%WriteOutput( OutIdx )  = -m_AD%FVW%BN_Cx(IdxNode,IdxBlade)*st + m_AD%FVW%BN_Cy(IdxNode,IdxBlade)*ct
+                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! cos(theta)
+                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! sin(theta)
+                     y%WriteOutput( OutIdx )  = -m_AD%FVW%W(iW)%BN_Cx(IdxNode)*st + m_AD%FVW%W(iW)%BN_Cy(IdxNode)*ct
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -672,9 +692,10 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     cp=cos(m_AD%FVW%BN_phi(IdxNode,IdxBlade))
-                     sp=sin(m_AD%FVW%BN_phi(IdxNode,IdxBlade))
+                     cp=cos(m_AD%FVW%W(iW)%BN_phi(IdxNode))
+                     sp=sin(m_AD%FVW%W(iW)%BN_phi(IdxNode))
                      y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*cp - m%Y(IdxNode,IdxBlade)*sp
                      OutIdx = OutIdx + 1
                   END DO
@@ -693,9 +714,10 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds                   
-                     cp=cos(m_AD%FVW%BN_phi(IdxNode,IdxBlade))
-                     sp=sin(m_AD%FVW%BN_phi(IdxNode,IdxBlade))
+                     cp=cos(m_AD%FVW%W(iW)%BN_phi(IdxNode))
+                     sp=sin(m_AD%FVW%W(iW)%BN_phi(IdxNode))
                      y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*sp + m%Y(IdxNode,IdxBlade)*cp
                      OutIdx = OutIdx + 1
                   END DO
@@ -740,9 +762,10 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds   
-                     ct=cos(m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade))    ! cos(theta)
-                     st=sin(m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade))    ! sin(theta)
+                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! cos(theta)
+                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! sin(theta)
                      y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*ct - m%Y(IdxNode,IdxBlade)*st
                      OutIdx = OutIdx + 1
                   END DO
@@ -761,9 +784,10 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO 
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds   
-                     ct=cos(m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade))    ! cos(theta)
-                     st=sin(m_AD%FVW%PitchAndTwist(IdxNode,IdxBlade))    ! sin(theta)
+                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! cos(theta)
+                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! sin(theta)
                      y%WriteOutput( OutIdx )  = -m%X(IdxNode,IdxBlade)*st - m%Y(IdxNode,IdxBlade)*ct
                      OutIdx = OutIdx + 1
                   END DO
@@ -799,8 +823,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else 
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%BN_UrelWind_s(1,IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_UrelWind_s(1,IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -816,8 +841,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                END DO
             else 
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  =  m_AD%FVW%BN_UrelWind_s(2,IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx )  =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,IdxNode)
                      OutIdx = OutIdx + 1
                   END DO
                END DO
@@ -838,6 +864,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                   END DO 
                else
                   DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                      DO IdxNode=1,p%NumBlNds   
                         y%WriteOutput( OutIdx )  = 1.0_ReKi
                         OutIdx = OutIdx + 1
@@ -891,8 +918,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
             else
                IF (m_AD%FVW%UA_Flag) THEN
                   DO IdxBlade=1,p%BldNd_BladesOut
+                     iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                      DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                        y%WriteOutput( OutIdx ) = m_AD%FVW%m_UA%weight(IdxNode, IdxBlade)
+                        y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%m_UA%weight(IdxNode, 1)
                         OutIdx = OutIdx + 1
                      ENDDO
                   ENDDO
@@ -919,6 +947,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                ENDDO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
 !NOT available in FVW yet
                      y%WriteOutput( OutIdx ) = 0.0_ReKi
@@ -955,8 +984,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                ENDDO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = 0.5_ReKi * p_AD%FVW%Chord(IdxNode,IdxBlade) * m_AD%FVW%BN_Vrel(IdxNode,IdxBlade) * m_AD%FVW%BN_Cl(IdxNode,IdxBlade) ! "Gam" [m^2/s]
+                     y%WriteOutput( OutIdx ) = 0.5_ReKi * p_AD%FVW%W(iW)%chord_LL(IdxNode) * m_AD%FVW%W(iW)%BN_Vrel(IdxNode) * m_AD%FVW%W(iW)%BN_Cl(IdxNode) ! "Gam" [m^2/s]
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -977,8 +1007,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                ENDDO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = m_AD%FVW%BN_Cl_Static(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%BN_Cl_Static(IdxNode)
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -996,8 +1027,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                ENDDO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = m_AD%FVW%BN_Cd_Static(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%BN_Cd_Static(IdxNode)
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -1015,8 +1047,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                ENDDO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = m_AD%FVW%BN_Cm_Static(IdxNode,IdxBlade)
+                     y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%BN_Cm_Static(IdxNode)
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -1039,8 +1072,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                ENDDO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(1,1:3,IdxBlade), m_AD%FVW_y%Vind(1:3,IdxNode,IdxBlade) ) ! Uihn, hub normal
+                     y%WriteOutput( OutIdx ) = dot_product(M_pg(1,1:3,IdxBlade), m_AD%FVW_y%W(iW)%Vind(1:3,IdxNode) ) ! Uihn, hub normal
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -1059,8 +1093,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                ENDDO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(2,1:3,IdxBlade), m_AD%FVW_y%Vind(1:3,IdxNode,IdxBlade) ) ! Uiht, hub tangential
+                     y%WriteOutput( OutIdx ) = dot_product(M_pg(2,1:3,IdxBlade), m_AD%FVW_y%W(iW)%Vind(1:3,IdxNode) ) ! Uiht, hub tangential
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -1079,8 +1114,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, E
                ENDDO
             else
                DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(3,1:3,IdxBlade), m_AD%FVW_y%Vind(1:3,IdxNode,IdxBlade) ) ! Uihr, hub radial
+                     y%WriteOutput( OutIdx ) = dot_product(M_pg(3,1:3,IdxBlade), m_AD%FVW_y%W(iW)%Vind(1:3,IdxNode) ) ! Uihr, hub radial
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -1134,7 +1170,6 @@ SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, p_AD, ErrStat, ErrMsg )
 
       ! Set the parameter to store number of requested Blade Node output sets
    p%BldNd_NumOuts = InputFileData%BldNd_NumOuts
-   if (p%BldNd_BladesOut==0) p%BldNd_NumOuts = 0
 
       ! Set the total number of outputs ( requested channel groups * number requested nodes * number requested blades )
    p%BldNd_TotNumOuts = p%BldNd_NumOuts*p%NumBlNds*p%BldNd_BladesOut    ! p%BldNd_NumOuts * size(p%BldNd_BlOutNd) * size(p%BldNd_BladesOut)

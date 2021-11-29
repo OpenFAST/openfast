@@ -1,0 +1,45 @@
+--------------------------- OLAF (cOnvecting LAgrangian Filaments) INPUT FILE -----------------
+Free wake input file for the Helix test case
+--------------------------- GENERAL OPTIONS ---------------------------------------------------
+5       IntMethod          Integration method {1: Runge-Kutta 4th order, 5: Forward Euler 1st order, default: 5} (switch)
+0.2     DTfvw              Time interval for wake propagation. {default: dtaero} (s)
+default FreeWakeStart      Time when wake is free. (-) value = always free. {default: 0.0} (s)
+default FullCircStart      Time at which full circulation is reached. {default: 0.0} (s)
+--------------------------- CIRCULATION SPECIFICATIONS ----------------------------------------
+1       CircSolvingMethod  Circulation solving method {1: Cl-Based, 2: No-Flow Through, 3: Prescribed, default: 1 }(switch)
+default CircSolvConvCrit   Convergence criteria {default: 0.001} [only if CircSolvingMethod=1] (-)
+default CircSolvRelaxation Relaxation factor {default: 0.1} [only if CircSolvingMethod=1] (-)
+default CircSolvMaxIter    Maximum number of iterations for circulation solving {default: 30} (-)
+ "NA"   PrescribedCircFile File containing prescribed circulation [only if CircSolvingMethod=3] (quoted string)
+===============================================================================================
+--------------------------- WAKE OPTIONS ------------------------------------------------------
+------------------- WAKE EXTENT AND DISCRETIZATION --------------------------------------------
+150      nNWPanel           Number of near-wake panels [integer] (-)
+400     WakeLength         Total wake distance [integer] (number of time steps)
+default FreeWakeLength     Wake length that is free [integer] (number of time steps) {default: WakeLength}
+False   FWShedVorticity    Include shed vorticity in the far wake {default: false}
+------------------- WAKE REGULARIZATIONS AND DIFFUSION -----------------------------------------
+0       DiffusionMethod    Diffusion method to account for viscous effects {0: None, 1: Core Spreading, "default": 0}         
+2       RegDeterMethod     Method to determine the regularization parameters {0: Constant, 1: Optimized, 2: Chord-scaled, 3: dr-scaled, default: 0 }          
+2       RegFunction        Viscous diffusion function {0: None, 1: Rankine, 2: LambOseen, 3: Vatistas, 4: Denominator, "default": 3} (switch)
+3       WakeRegMethod      Wake regularization method {1: Constant, 2: Stretching, 3: Age, default: 1} (switch)
+0.25    WakeRegFactor      Wake regularization factor (m or -)
+0.25    BladeRegFactor     Blade regularization factor (m or -)
+1000    CoreSpreadEddyVisc Eddy viscosity in core spreading methods, typical values 1-1000 
+------------------- WAKE TREATMENT OPTIONS ---------------------------------------------------
+False   TwrShadowOnWake    Include tower flow disturbance effects on wake convection {default:false} [only if TwrPotent or TwrShadow]
+0       ShearModel         Shear Model {0: No treatment, 1: Mirrored vorticity, default: 0}
+------------------- SPEEDUP OPTIONS -----------------------------------------------------------
+2       VelocityMethod     Method to determine the velocity {1:Biot-Savart Segment, 2:Particle tree, default: 1}
+1.5     TreeBranchFactor   Branch radius fraction above which a multipole calculation is used {default: 2.0} [only if VelocityMethod=2]
+1       PartPerSegment     Number of particles per segment [only if VelocityMethod=2]
+===============================================================================================
+--------------------------- OUTPUT OPTIONS  ---------------------------------------------------
+1       WrVTk              Outputs Visualization Toolkit (VTK) (independent of .fst option) {0: NoVTK, 1: Write VTK at each time step} (flag)
+1       nVTKBlades         Number of blades for which VTK files are exported {0: No VTK per blade, n: VTK for blade 1 to n} (-) 
+2       VTKCoord           Coordinate system used for VTK export. {1: Global, 2: Hub, "default": 1} 
+1       VTK_fps            Frame rate for VTK output (frames per second) {"all" for all glue code timesteps, "default" for all OLAF timesteps} [used only if WrVTK=1] 
+0       nGridOut           Number of grid outputs
+GridName  GridType  TStart  TEnd     DTOut     XStart    XEnd   nX    YStart   YEnd    nY    ZStart   ZEnd   nZ
+(-)         (-)      (s)     (s)      (s)        (m)      (m)    (-)    (m)     (m)     (-)    (m)     (m)    (-)
+------------------------------------------------------------------------------------------------
