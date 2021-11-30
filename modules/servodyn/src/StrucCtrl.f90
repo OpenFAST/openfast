@@ -98,8 +98,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       TYPE(StC_InputFile)                           :: InputFileData ! Data stored in the module's input file
       INTEGER(IntKi)                                :: i_pt          ! Generic counter for mesh point
       INTEGER(IntKi)                                :: i             ! Generic counter for mesh point
-      REAL(ReKi), allocatable, dimension(:,:)       :: PositionGlobal
-      REAL(R8Ki), allocatable, dimension(:,:,:)     :: OrientationP
+      REAL(ReKi), allocatable, dimension(:,:)       :: RefPosGlobal
 
       type(FileInfoType)                            :: FileInfo_In               !< The derived type for holding the full input file for parsing -- we may pass this in the future
       type(FileInfoType)                            :: FileInfo_In_PrescribeFrc  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
@@ -208,15 +207,13 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
    ! set positions and orientations for tuned mass dampers's
-   call AllocAry(InitOut%RelPosition,  3, p%NumMeshPts, 'RelPosition',    ErrStat2,ErrMsg2);  if (Failed())  return;
-   call AllocAry(PositionGlobal,       3, p%NumMeshPts, 'PositionGlobal', ErrStat2,ErrMsg2);  if (Failed())  return;
-   call AllocAry(OrientationP,      3, 3, p%NumMeshPts, 'OrientationP',   ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(InitOut%RelPosition,  3, p%NumMeshPts, 'RelPosition',     ErrStat2,ErrMsg2);  if (Failed())  return;
+   call AllocAry(RefPosGlobal,         3, p%NumMeshPts, 'RefPosGlobal',    ErrStat2,ErrMsg2);  if (Failed())  return;
 
-   ! Set the initial positions and orietantions for each point
+   ! Set the initial positions and orientations for each point (Ref coords)
    do i_pt = 1,p%NumMeshPts
       InitOut%RelPosition(:,i_pt)   = (/ InputFileData%StC_P_X, InputFileData%StC_P_Y, InputFileData%StC_P_Z /)
-      OrientationP(:,:,i_pt)        = InitInp%InitOrientation(:,:,i_pt)
-      PositionGlobal(:,i_pt)        = InitInp%InitPosition(:,i_pt) + real( matmul(InitOut%RelPosition(:,i_pt),OrientationP(:,:,i_pt)), ReKi)
+      RefPosGlobal(:,i_pt)          = InitInp%InitRefPos(:,i_pt) + real( matmul(InitOut%RelPosition(:,i_pt),InitInp%InitRefOrient(:,:,i_pt)), ReKi)
    enddo
 
     ! Define system output initializations (set up mesh) here:
@@ -253,8 +250,7 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
          ! Create the node on the mesh
-         ! make position node at point P (rest position of tuned mass dampers, somewhere above the yaw bearing)
-      CALL MeshPositionNode ( u%Mesh(i_pt),1, PositionGlobal(:,i_pt), ErrStat2, ErrMsg2, OrientationP(:,:,i_pt) )
+      CALL MeshPositionNode ( u%Mesh(i_pt),1, RefPosGlobal(:,i_pt), ErrStat2, ErrMsg2, InitInp%InitRefOrient(:,:,i_pt) )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! Create the mesh element
@@ -282,6 +278,10 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
       u%Mesh(i_pt)%RemapFlag  = .TRUE.
       y%Mesh(i_pt)%RemapFlag  = .TRUE.
+
+      ! Set initial displacements
+      u%Mesh(i_pt)%Orientation(1:3,1:3,1) = InitInp%InitOrient(:,:,i_pt)
+      u%Mesh(i_pt)%TranslationDisp(1:3,1) = InitInp%InitTransDisp(:,i_pt)
    enddo
 
 
@@ -413,9 +413,8 @@ CONTAINS
    end function Failed
    !.........................................
    SUBROUTINE cleanup()
-      if (UnEcho > 0)                  close(UnEcho)                    ! Close echo file
-      if (allocated(PositionGlobal))   deallocate(PositionGlobal)
-      if (allocated(OrientationP  ))   deallocate(OrientationP  )
+      if (UnEcho > 0)                     close(UnEcho)                    ! Close echo file
+      if (allocated(RefPosGlobal    ))    deallocate(RefPosGlobal    )
       CALL StC_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)      ! Ignore warnings here.
    END SUBROUTINE cleanup
 !.........................................
@@ -811,7 +810,7 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             ! forces and moments in local coordinates
             m%F_P(1,i_pt) =  m%K(1,i_pt) * x%StC_x(1,i_pt) + m%C_ctrl(1,i_pt) * x%StC_x(2,i_pt) + m%C_Brake(1,i_pt) * x%StC_x(2,i_pt) - m%F_stop(1,i_pt) - m%F_ext(1,i_pt) - m%F_fr(1,i_pt) - F_Y_P(1) - F_Z_P(1) + m%F_table(1,i_pt)
             m%F_P(2,i_pt) =  m%K(2,i_pt) * x%StC_x(3,i_pt) + m%C_ctrl(2,i_pt) * x%StC_x(4,i_pt) + m%C_Brake(2,i_pt) * x%StC_x(4,i_pt) - m%F_stop(2,i_pt) - m%F_ext(2,i_pt) - m%F_fr(2,i_pt) - F_X_P(2) - F_Z_P(2) + m%F_table(2,i_pt)
-            m%F_P(3,i_pt) =  m%K(3,i_pt) * x%StC_x(5,i_pt) + m%C_ctrl(3,i_pt) * x%StC_x(6,i_pt) + m%C_Brake(3,i_pt) * x%StC_x(6,i_pt) - m%F_stop(3,i_pt) - m%F_ext(3,i_pt) - m%F_fr(3,i_pt) - F_X_P(3) - F_Y_P(3) + m%F_table(3,i_pt)
+            m%F_P(3,i_pt) =  m%K(3,i_pt) * x%StC_x(5,i_pt) + m%C_ctrl(3,i_pt) * x%StC_x(6,i_pt) + m%C_Brake(3,i_pt) * x%StC_x(6,i_pt) - m%F_stop(3,i_pt) - m%F_ext(3,i_pt) - m%F_fr(3,i_pt) - F_X_P(3) - F_Y_P(3) + m%F_table(3,i_pt) - p%StC_Z_PreLd
 
             m%M_P(1,i_pt) =  - F_Y_P(3)  * x%StC_x(3,i_pt)  +  F_Z_P(2) * x%StC_x(5,i_pt)
             m%M_P(2,i_pt) =    F_X_P(3)  * x%StC_x(1,i_pt)  -  F_Z_P(1) * x%StC_x(5,i_pt)
@@ -1075,7 +1074,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             ! Aggregate acceleration terms
             m%Acc(1,i_pt) = - m%rddot_P(1,i_pt) + m%a_G(1,i_pt) + 1 / p%M_X * ( m%F_ext(1,i_pt) + m%F_stop(1,i_pt) - m%F_table(1,i_pt) )
             m%Acc(2,i_pt) = - m%rddot_P(2,i_pt) + m%a_G(2,i_pt) + 1 / p%M_Y * ( m%F_ext(2,i_pt) + m%F_stop(2,i_pt) - m%F_table(2,i_pt) )
-            m%Acc(3,i_pt) = - m%rddot_P(3,i_pt) + m%a_G(3,i_pt) + 1 / p%M_Z * ( m%F_ext(3,i_pt) + m%F_stop(3,i_pt) - m%F_table(3,i_pt) )
+            m%Acc(3,i_pt) = - m%rddot_P(3,i_pt) + m%a_G(3,i_pt) + 1 / p%M_Z * ( m%F_ext(3,i_pt) + m%F_stop(3,i_pt) - m%F_table(3,i_pt) + p%StC_Z_PreLd )
          enddo
 
       ELSE IF (p%StC_DOF_MODE == DOFMode_Omni) THEN
@@ -1848,6 +1847,9 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
       !  StC Z initial displacement (m) [relative to at rest position; used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
    call ParseVar( FileInfo_In, Curline, 'StC_Z_DSP', InputFileData%StC_Z_DSP, ErrStat2, ErrMsg2, UnEcho )
       If (Failed()) return;
+      !  StC Z pre-load (N) {"gravity" to offset for gravity load; "none" or 0 to turn off} [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+   call ParseVar( FileInfo_In, Curline, 'StC_Z_PreLd', InputFileData%StC_Z_PreLdC, ErrStat2, ErrMsg2, UnEcho )
+      If (Failed()) return;
 
    !-------------------------------------------------------------------------------------------------
    ! StC CONFIGURATION  [used only when StC_DOF_MODE=1 or 2]
@@ -2123,6 +2125,9 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
    CHARACTER(ErrMsgLen),     INTENT(  OUT)   :: ErrMsg         !< The error message, if an error occurred
 
    integer(IntKi)                            :: i              !< generic loop counter
+   real(ReKi)                                :: TmpRe
+   character(10)                             :: TmpCh
+   integer(IntKi)                            :: ErrStat2
    CHARACTER(*), PARAMETER                   :: RoutineName = 'StC_ValidatePrimaryData'
 
       ! Initialize variables
@@ -2210,6 +2215,18 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
    if (InputFileData%StC_DOF_MODE == DOFMode_Omni .and. (InputFileData%StC_Y_K <= 0.0_ReKi) )    & 
       call SetErrStat(ErrID_Fatal,'StC_Y_K must be > 0 when DOF mode 2 (omni-directional) is used', ErrStat,ErrMsg,RoutineName)
 
+      ! Check spring preload in ZDof
+   TmpCh = trim(InputFileData%StC_Z_PreLdC)
+   call Conv2UC(TmpCh)
+   if ( INDEX(TmpCh, "GRAVITY") /= 1 ) then  ! if not gravity, check that it reads ok
+      if ( INDEX(TmpCh, "NONE") /= 1 ) then  ! if not NONE, check that it reads ok
+         READ (InputFileData%StC_Z_PreLdC,*,IOSTAT=ErrStat2)   TmpRe    ! attempt to read real number
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal,'StC_Z_PreLd must be "gravity", "none" or a real number', ErrStat,ErrMsg,RoutineName)
+         endif
+      endif
+   endif
+
       ! Sanity checks for the TLCD option
 !FIXME: add some sanity checks here
 
@@ -2227,6 +2244,7 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
    CHARACTER(ErrMsgLen),     INTENT(  OUT)   :: ErrMsg         !< The error message, if an error occurred
 
       ! Local variables
+   character(10)                             :: TmpCh          ! Temporary string for figuring out what to do with preload on Z spring
    INTEGER(IntKi)                            :: ErrStat2       ! Temporary error ID
    CHARACTER(ErrMsgLen)                      :: ErrMsg2        ! Temporary message describing error
    CHARACTER(*), PARAMETER                   :: RoutineName = 'StC_SetParameters'
@@ -2331,8 +2349,20 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
       p%F_TBL = InputFileData%F_TBL
    endif
 
-
-   p%F_TBL = InputFileData%F_TBL;
+   ! Spring preload in ZDof
+   p%StC_Z_PreLd = 0.0_ReKi
+   TmpCh = trim(InputFileData%StC_Z_PreLdC)
+   call Conv2UC(TmpCh)
+   if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_Z_DOF .and. &
+         (INDEX(TmpCh, "NONE") /= 1) ) then
+      if (INDEX(TmpCh, "GRAVITY") == 1 ) then  ! if gravity, then calculate
+         p%StC_Z_PreLd = -p%Gravity(3)*p%M_Z
+      else
+         READ (InputFileData%StC_Z_PreLdC,*,IOSTAT=ErrStat2)   p%StC_Z_PreLd     ! Read a real number and store
+         if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,'StC_Z_PreLd must be "gravity", "none" or a real number', ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= ErrID_Fatal) return
+      endif
+   endif
 
    ! Prescribed forces
    p%PrescribedForcesCoordSys =  InputFileData%PrescribedForcesCoordSys
