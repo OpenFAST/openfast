@@ -27,10 +27,6 @@ typedef  ^                 WD_InputFileType  ReKi            dr             - - 
 typedef  ^                 WD_InputFileType  IntKi           NumRadii       - - -  "Number of radii in the radial finite-difference grid [>=2]" -
 typedef  ^                 WD_InputFileType  IntKi           NumPlanes      - - -  "Number of wake planes [>=2]" -
 typedef  ^                 WD_InputFileType  IntKi           Mod_Wake       - - -  "Switch between wake formulations 1=Polar, 2=Cartesian, 3=Curl" -
-typedef  ^                 WD_InputFileType  Logical         Swirl          - - -  "Switch to add swirl [only used if Mod_Wake=2 or 2]" -
-typedef  ^                 WD_InputFileType  ReKi            k_VortexDecay  - - -  "Vortex decay constant for curl" - 
-typedef  ^                 WD_InputFileType  ReKi            sigma_D        -  - - "The width of the Gaussian vortices used for the curled wake model divided by diameter"      -
-typedef  ^                 WD_InputFileType  IntKi           NumVortices    -  - - "The number of vortices used for the curled wake model"      -
 typedef  ^                 WD_InputFileType  ReKi            f_c            - - -  "Cut-off frequency of the low-pass time-filter for the wake advection, deflection, and meandering model [>0.0]" Hz
 typedef  ^                 WD_InputFileType  ReKi            C_HWkDfl_O     - - -  "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor" m
 typedef  ^                 WD_InputFileType  ReKi            C_HWkDfl_OY    - - -  "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error" m/rad
@@ -49,7 +45,14 @@ typedef  ^                 WD_InputFileType  ReKi            C_vShr_FMin    - - 
 typedef  ^                 WD_InputFileType  ReKi            C_vShr_Exp     - - -  "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region [> 0.0]" -
 typedef  ^                 WD_InputFileType  IntKi           Mod_WakeDiam   - - -  "Wake diameter calculation model {1: rotor diameter, 2: velocity-based, 3: mass-flux based, 4: momentum-flux based} [DEFAULT=1]" -
 typedef  ^                 WD_InputFileType  ReKi            C_WakeDiam     - - -  "Calibrated parameter for wake diameter calculation [>0.0 and <1.0] [unused for Mod_WakeDiam=1]" -
+# curled-wake inputs
+typedef  ^                 WD_InputFileType  Logical         Swirl          - - -  "Switch to add swirl [only used if Mod_Wake=2 or 2]" -
+typedef  ^                 WD_InputFileType  ReKi            k_VortexDecay  - - -  "Vortex decay constant for curl" - 
+typedef  ^                 WD_InputFileType  ReKi            sigma_D        -  - - "The width of the Gaussian vortices used for the curled wake model divided by diameter"      -
+typedef  ^                 WD_InputFileType  IntKi           NumVortices    -  - - "The number of vortices used for the curled wake model"      -
 typedef  ^                 WD_InputFileType  IntKi           FilterInit     - - -  "Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch)"
+typedef  ^                 WD_InputFileType  ReKi            k_vCurl        - - -  "Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0]" - 
+typedef  ^                 WD_InputFileType  Logical         OutAllPlanes   - - -  "Output all planes" - 
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -156,6 +159,8 @@ typedef ^ ParameterType  ReKi             k_vShr         -  - -   "Calibrated pa
 typedef ^ ParameterType  IntKi            Mod_WakeDiam   -  - -   "Wake diameter calculation model"      -
 typedef ^ ParameterType  ReKi             C_WakeDiam     -  - -   "Calibrated parameter for wake diameter calculation"      -
 typedef ^ ParameterType  IntKi            FilterInit     - - -    "Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch)"
+typedef ^ ParameterType  ReKi             k_vCurl        - - -    "Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0]" - 
+typedef ^ ParameterType  Logical          OutAllPlanes   - - -    "Output all planes" - 
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

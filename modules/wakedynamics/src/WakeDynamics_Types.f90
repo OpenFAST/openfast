@@ -46,10 +46,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumRadii      !< Number of radii in the radial finite-difference grid [>=2] [-]
     INTEGER(IntKi)  :: NumPlanes      !< Number of wake planes [>=2] [-]
     INTEGER(IntKi)  :: Mod_Wake      !< Switch between wake formulations 1=Polar, 2=Cartesian, 3=Curl [-]
-    LOGICAL  :: Swirl      !< Switch to add swirl [only used if Mod_Wake=2 or 2] [-]
-    REAL(ReKi)  :: k_VortexDecay      !< Vortex decay constant for curl [-]
-    REAL(ReKi)  :: sigma_D      !< The width of the Gaussian vortices used for the curled wake model divided by diameter [-]
-    INTEGER(IntKi)  :: NumVortices      !< The number of vortices used for the curled wake model [-]
     REAL(ReKi)  :: f_c      !< Cut-off frequency of the low-pass time-filter for the wake advection, deflection, and meandering model [>0.0] [Hz]
     REAL(ReKi)  :: C_HWkDfl_O      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor [m]
     REAL(ReKi)  :: C_HWkDfl_OY      !< Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error [m/rad]
@@ -68,7 +64,13 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_vShr_Exp      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region [> 0.0] [-]
     INTEGER(IntKi)  :: Mod_WakeDiam      !< Wake diameter calculation model {1: rotor diameter, 2: velocity-based, 3: mass-flux based, 4: momentum-flux based} [DEFAULT=1] [-]
     REAL(ReKi)  :: C_WakeDiam      !< Calibrated parameter for wake diameter calculation [>0.0 and <1.0] [unused for Mod_WakeDiam=1] [-]
+    LOGICAL  :: Swirl      !< Switch to add swirl [only used if Mod_Wake=2 or 2] [-]
+    REAL(ReKi)  :: k_VortexDecay      !< Vortex decay constant for curl [-]
+    REAL(ReKi)  :: sigma_D      !< The width of the Gaussian vortices used for the curled wake model divided by diameter [-]
+    INTEGER(IntKi)  :: NumVortices      !< The number of vortices used for the curled wake model [-]
     INTEGER(IntKi)  :: FilterInit      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
+    REAL(ReKi)  :: k_vCurl      !< Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0] [-]
+    LOGICAL  :: OutAllPlanes      !< Output all planes [-]
   END TYPE WD_InputFileType
 ! =======================
 ! =========  WD_InitInputType  =======
@@ -180,6 +182,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Mod_WakeDiam      !< Wake diameter calculation model [-]
     REAL(ReKi)  :: C_WakeDiam      !< Calibrated parameter for wake diameter calculation [-]
     INTEGER(IntKi)  :: FilterInit      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
+    REAL(ReKi)  :: k_vCurl      !< Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0] [-]
+    LOGICAL  :: OutAllPlanes      !< Output all planes [-]
   END TYPE WD_ParameterType
 ! =======================
 ! =========  WD_InputType  =======
@@ -233,10 +237,6 @@ CONTAINS
     DstInputFileTypeData%NumRadii = SrcInputFileTypeData%NumRadii
     DstInputFileTypeData%NumPlanes = SrcInputFileTypeData%NumPlanes
     DstInputFileTypeData%Mod_Wake = SrcInputFileTypeData%Mod_Wake
-    DstInputFileTypeData%Swirl = SrcInputFileTypeData%Swirl
-    DstInputFileTypeData%k_VortexDecay = SrcInputFileTypeData%k_VortexDecay
-    DstInputFileTypeData%sigma_D = SrcInputFileTypeData%sigma_D
-    DstInputFileTypeData%NumVortices = SrcInputFileTypeData%NumVortices
     DstInputFileTypeData%f_c = SrcInputFileTypeData%f_c
     DstInputFileTypeData%C_HWkDfl_O = SrcInputFileTypeData%C_HWkDfl_O
     DstInputFileTypeData%C_HWkDfl_OY = SrcInputFileTypeData%C_HWkDfl_OY
@@ -255,7 +255,13 @@ CONTAINS
     DstInputFileTypeData%C_vShr_Exp = SrcInputFileTypeData%C_vShr_Exp
     DstInputFileTypeData%Mod_WakeDiam = SrcInputFileTypeData%Mod_WakeDiam
     DstInputFileTypeData%C_WakeDiam = SrcInputFileTypeData%C_WakeDiam
+    DstInputFileTypeData%Swirl = SrcInputFileTypeData%Swirl
+    DstInputFileTypeData%k_VortexDecay = SrcInputFileTypeData%k_VortexDecay
+    DstInputFileTypeData%sigma_D = SrcInputFileTypeData%sigma_D
+    DstInputFileTypeData%NumVortices = SrcInputFileTypeData%NumVortices
     DstInputFileTypeData%FilterInit = SrcInputFileTypeData%FilterInit
+    DstInputFileTypeData%k_vCurl = SrcInputFileTypeData%k_vCurl
+    DstInputFileTypeData%OutAllPlanes = SrcInputFileTypeData%OutAllPlanes
  END SUBROUTINE WD_CopyInputFileType
 
  SUBROUTINE WD_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg )
@@ -308,10 +314,6 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! NumRadii
       Int_BufSz  = Int_BufSz  + 1  ! NumPlanes
       Int_BufSz  = Int_BufSz  + 1  ! Mod_Wake
-      Int_BufSz  = Int_BufSz  + 1  ! Swirl
-      Re_BufSz   = Re_BufSz   + 1  ! k_VortexDecay
-      Re_BufSz   = Re_BufSz   + 1  ! sigma_D
-      Int_BufSz  = Int_BufSz  + 1  ! NumVortices
       Re_BufSz   = Re_BufSz   + 1  ! f_c
       Re_BufSz   = Re_BufSz   + 1  ! C_HWkDfl_O
       Re_BufSz   = Re_BufSz   + 1  ! C_HWkDfl_OY
@@ -330,7 +332,13 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! C_vShr_Exp
       Int_BufSz  = Int_BufSz  + 1  ! Mod_WakeDiam
       Re_BufSz   = Re_BufSz   + 1  ! C_WakeDiam
+      Int_BufSz  = Int_BufSz  + 1  ! Swirl
+      Re_BufSz   = Re_BufSz   + 1  ! k_VortexDecay
+      Re_BufSz   = Re_BufSz   + 1  ! sigma_D
+      Int_BufSz  = Int_BufSz  + 1  ! NumVortices
       Int_BufSz  = Int_BufSz  + 1  ! FilterInit
+      Re_BufSz   = Re_BufSz   + 1  ! k_vCurl
+      Int_BufSz  = Int_BufSz  + 1  ! OutAllPlanes
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -365,14 +373,6 @@ CONTAINS
     IntKiBuf(Int_Xferred) = InData%NumPlanes
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%Mod_Wake
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%Swirl, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%k_VortexDecay
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%sigma_D
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumVortices
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%f_c
     Re_Xferred = Re_Xferred + 1
@@ -410,7 +410,19 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_WakeDiam
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Swirl, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%k_VortexDecay
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%sigma_D
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumVortices
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%FilterInit
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%k_vCurl
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%OutAllPlanes, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_PackInputFileType
 
@@ -451,14 +463,6 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     OutData%Mod_Wake = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%Swirl = TRANSFER(IntKiBuf(Int_Xferred), OutData%Swirl)
-    Int_Xferred = Int_Xferred + 1
-    OutData%k_VortexDecay = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%sigma_D = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NumVortices = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
     OutData%f_c = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%C_HWkDfl_O = ReKiBuf(Re_Xferred)
@@ -495,7 +499,19 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     OutData%C_WakeDiam = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%Swirl = TRANSFER(IntKiBuf(Int_Xferred), OutData%Swirl)
+    Int_Xferred = Int_Xferred + 1
+    OutData%k_VortexDecay = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%sigma_D = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%NumVortices = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%FilterInit = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%k_vCurl = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%OutAllPlanes = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutAllPlanes)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_UnPackInputFileType
 
@@ -4006,6 +4022,8 @@ ENDIF
     DstParamData%Mod_WakeDiam = SrcParamData%Mod_WakeDiam
     DstParamData%C_WakeDiam = SrcParamData%C_WakeDiam
     DstParamData%FilterInit = SrcParamData%FilterInit
+    DstParamData%k_vCurl = SrcParamData%k_vCurl
+    DstParamData%OutAllPlanes = SrcParamData%OutAllPlanes
  END SUBROUTINE WD_CopyParam
 
  SUBROUTINE WD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -4107,6 +4125,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Mod_WakeDiam
       Re_BufSz   = Re_BufSz   + 1  ! C_WakeDiam
       Int_BufSz  = Int_BufSz  + 1  ! FilterInit
+      Re_BufSz   = Re_BufSz   + 1  ! k_vCurl
+      Int_BufSz  = Int_BufSz  + 1  ! OutAllPlanes
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4236,6 +4256,10 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%C_WakeDiam
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%FilterInit
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%k_vCurl
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%OutAllPlanes, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_PackParam
 
@@ -4377,6 +4401,10 @@ ENDIF
     OutData%C_WakeDiam = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%FilterInit = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%k_vCurl = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%OutAllPlanes = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutAllPlanes)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_UnPackParam
 
