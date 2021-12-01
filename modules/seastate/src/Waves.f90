@@ -572,8 +572,8 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
-      !ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',         ErrStat,ErrMsg,'StillWaterWaves_Init')
+      ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',         ErrStat,ErrMsg,'StillWaterWaves_Init')
       ALLOCATE ( InitOut%WaveElevC0 (2, 0:InitOut%NStepWave2                ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'StillWaterWaves_Init')
 
@@ -609,7 +609,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       InitOut%WaveDOmega = 0.0
       InitOut%WaveTime   = (/ 0.0_DbKi, 1.0_DbKi, 2.0_DbKi /)   ! We must have at least two different time steps in the interpolation
-     ! InitOut%WaveElev0 = 0.0
+      InitOut%WaveElev0 = 0.0
       InitOut%WaveElevC0 = 0.0
       InitOut%WaveElev   = 0.0
       !InitOut%PWaveDynP0  = 0.0
@@ -1082,12 +1082,15 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
       !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
 
-      !ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'VariousWaves_Init')
+      ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'VariousWaves_Init')
 
       ALLOCATE ( InitOut%WaveElev  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,'VariousWaves_Init')
-
+      
+      ALLOCATE ( InitOut%WaveElevC  (2,0:InitOut%NStepWave2,InitInp%NGrid(1)*InitInp%NGrid(2)  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
       ALLOCATE ( WaveDynP0B        (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP0B.',        ErrStat,ErrMsg,'VariousWaves_Init')
 
@@ -1776,19 +1779,19 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          RETURN
       END IF
       
-         ! We'll need the following for wave stretching once we implement it.
-     ! CALL    ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
-      !CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,'VariousWaves_Init')
-      !IF ( ErrStat >= AbortErrLev ) THEN
-      !   CALL CleanUp()
-      !   RETURN
-      !END IF
+         
+      CALL    ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+      CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,'VariousWaves_Init')
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
 !TODO: FIX ME For generating grid elevations
       DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
          i = mod(k-1, InitInp%NGrid(1)) + 1
          j = (k-1) / InitInp%NGrid(2) + 1
-         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), InitOut%WaveElev(:,i,j), ErrStatTmp, ErrMsgTmp )
+         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp )
          CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'VariousWaves_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -2010,7 +2013,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
   !    InitOut%PWaveDynP0(InitOut%NStepWave,:,:,:  )  = InitOut%PWaveDynP0(0,:,:,:  )
   !    InitOut%PWaveVel0 (InitOut%NStepWave,:,:,:,:)  = InitOut%PWaveVel0 (0,:,:,:,:)
   !    InitOut%PWaveAcc0 (InitOut%NStepWave,:,:,:,:)  = InitOut%PWaveAcc0 (0,:,:,:,:)
-   !   InitOut%WaveElev0 (InitOut%NStepWave)      = InitOut%WaveElev0 (0    )
+      InitOut%WaveElev0 (InitOut%NStepWave)      = InitOut%WaveElev0 (0    )
 
 
 
@@ -2020,11 +2023,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 CONTAINS
 
 
-   SUBROUTINE WaveElevTimeSeriesAtXY(Xcoord,Ycoord, WaveElevSeriesAtXY, ErrStatLcl, ErrMsgLcl )
+   SUBROUTINE WaveElevTimeSeriesAtXY(Xcoord,Ycoord, WaveElevAtXY, WaveElevCAtXY, ErrStatLcl, ErrMsgLcl )
 
       REAL(SiKi),       INTENT(IN   )                 :: Xcoord
       REAL(SiKi),       INTENT(IN   )                 :: Ycoord
-      REAL(SiKi),       INTENT(  OUT)                 :: WaveElevSeriesAtXY(0:InitOut%NStepWave)
+      REAL(SiKi),       INTENT(  OUT)                 :: WaveElevAtXY(0:InitOut%NStepWave)
+      real(SiKi),       INTENT(  OUT)                 :: WaveElevCAtXY(2,0:InitOut%NStepWave2)
       INTEGER(IntKi),   INTENT(  OUT)                 :: ErrStatLcl
       INTEGER(IntKi)                                  :: ErrStatLcl2
       CHARACTER(*),     INTENT(  OUT)                 :: ErrMsgLcl
@@ -2045,12 +2049,14 @@ CONTAINS
                   EXP( -ImagNmbr*WaveNmbr*(  Xcoord*CosWaveDir(I)+    &
                                              Ycoord*SinWaveDir(I) )   )
       ENDDO
-
-      CALL ApplyFFT_cx (   WaveElevSeriesAtXY(0:InitOut%NStepWave-1),   tmpComplexArr, FFT_Data,   ErrStatLcl2  )
+      
+      CALL ApplyFFT_cx (   WaveElevAtXY(0:InitOut%NStepWave-1),   tmpComplexArr, FFT_Data,   ErrStatLcl2  )
       CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStatLcl,ErrMsgLcl,'WaveElevTimeSeriesAtXY')
-
+!TODO: Why is tmpComplexArr 0:NStepWave2 long?  why not NStepWave2-1  ??  GJH
+      WaveElevCAtXY( 1,: ) = REAL(tmpComplexArr(:))
+      WaveElevCAtXY( 2,: ) = IMAG(tmpComplexArr(:))
          ! Append first datpoint as the last as aid for repeated wave data
-      WaveElevSeriesAtXY(InitOut%NStepWave) = WaveElevSeriesAtXY(0)
+      WaveElevAtXY(InitOut%NStepWave) = WaveElevAtXY(0)
 
    END SUBROUTINE WaveElevTimeSeriesAtXY
 

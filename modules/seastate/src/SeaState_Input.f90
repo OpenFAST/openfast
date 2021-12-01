@@ -54,7 +54,7 @@ SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat
 END SUBROUTINE PrintBadChannelWarning
 
    !====================================================================================================
-subroutine SeaState_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth, defMSL2SWL, FileInfo_In, InputFileData, ErrStat, ErrMsg )
+subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth, defMSL2SWL, FileInfo_In, InputFileData, ErrStat, ErrMsg )
 !     This public subroutine reads the input required for SeaState from the file whose name is an
 !     input parameter.
 !----------------------------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ subroutine SeaState_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    real(ReKi),                    intent(in   ) :: defWtrDpth           !< default value for water depth
    real(ReKi),                    intent(in   ) :: defMSL2SWL           !< default value for mean sea level to still water level
    type(FileInfoType),            INTENT(IN   ) :: FileInfo_In          !< The derived type for holding the file information
-   type(SeaState_InputFile),      INTENT(INOUT) :: InputFileData        ! the SeaState input file data
+   type(SeaSt_InputFile),      INTENT(INOUT) :: InputFileData        ! the SeaState input file data
    integer,                       INTENT(  OUT) :: ErrStat              ! returns a non-zero value when an error occurs
    character(*),                  INTENT(  OUT) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -84,7 +84,7 @@ subroutine SeaState_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    integer(IntKi)                               :: CurLine              !< Current entry in FileInfo_In%Lines array
    integer(IntKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
-   character(*),  parameter                     :: RoutineName = 'SeaState_ParaseInput'
+   character(*),  parameter                     :: RoutineName = 'SeaSt_ParaseInput'
    
       ! Initialize local data
    UnEc     = -1
@@ -439,7 +439,7 @@ subroutine SeaState_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
       ! WaveKinzi
    call ParseAry ( FileInfo_In, CurLine, 'WaveKinzi.', InputFileData%WaveKinzi, InputFileData%NWaveKin, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
- 
+   
    !-------------------------------------------------------------------------------------------------
    ! Data section for OUTPUT CHANNELS
    !-------------------------------------------------------------------------------------------------
@@ -471,7 +471,7 @@ contains
       if (UnEc > 0)  close ( UnEc )
    end subroutine Cleanup
 
-end subroutine SeaState_ParseInput
+end subroutine SeaSt_ParseInput
 
 !====================================================================================================
 subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, ErrStat, ErrMsg )
@@ -481,10 +481,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
       ! Passed variables
 
-   type(SeaState_InitInputType),  intent( in    )   :: InitInp              ! the SeaState data
-   type(SeaState_ParameterType),  intent( inout )   :: p                    ! the SeaState parameter data
+   type(SeaSt_InitInputType),  intent( in    )   :: InitInp              ! the SeaState data
+   type(SeaSt_ParameterType),  intent( inout )   :: p                    ! the SeaState parameter data
    real(DbKi),                    intent( in    )   :: Interval             ! The DT supplied by the glue code/driver
-   type(SeaState_InputFile),      intent( inout )   :: InputFileData        ! the SeaState input file data
+   type(SeaSt_InputFile),      intent( inout )   :: InputFileData        ! the SeaState input file data
    integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs
    character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -563,7 +563,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
   
        ! Z_Depth - Depth of the domain the Z direction (m)
    !TODO: I'm not sure we want to offset this grid depth value.  Check with Jason.
-   InputFileData%Z_Depth = InputFileData%Z_Depth + InputFileData%MSL2SWL
+   !InputFileData%Z_Depth = InputFileData%Z_Depth + InputFileData%MSL2SWL
    if ( ( InputFileData%Z_Depth <= 0.0_ReKi ) .or. ( InputFileData%Z_Depth > InputFileData%Waves%WtrDpth ) ) then
       call SetErrStat( ErrID_Fatal,'Z_Depth must be greater than zero and less than or equal to the WtrDpth + MSL2SWL.',ErrStat,ErrMsg,RoutineName)
       return
@@ -619,22 +619,12 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
    end if ! LEN_TRIM(InputFileData%Waves%WaveModChr)
 
-   if ( (WaveModIn == 6) .AND. .NOT. EqualRealNos(InputFileData%MSL2SWL, 0.0_ReKi) ) then
-      call SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when WaveMod = 6.',ErrStat,ErrMsg,RoutineName)        
-      return
-   end if
    
 !TODO: THese tests need to be done by HD GJH 7/11/21
-!   if ( WaveModIn < 0 .OR. WaveModIn > 6 ) then
-!      if ( InputFileData%PotMod == 1  ) then
-!         call SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, 5, or 6.',ErrStat,ErrMsg,RoutineName)
-!         return
-!!ADP: This seems like a strange test on ErrStat...
-!      else if ( ErrStat /= ErrID_None .OR. WaveModIn /= 5)  then
-!         call SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, or 5.',ErrStat,ErrMsg,RoutineName)
-!         return
-!      end if
-!   end if
+   if ( WaveModIn < 0 .OR. WaveModIn > 6 ) then
+         call SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, 5, or 6.',ErrStat,ErrMsg,RoutineName)
+         return
+   end if
 
       ! Linearization Checks
    ! LIN-TODO:
@@ -1234,6 +1224,8 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
    !InputFileData%OutFmt
    !InputFileData%OutSFmt
 
+   ! Shift from MSL to SWL coordinate system
+   InputFileData%WaveKinzi(:) = InputFileData%WaveKinzi(:) - InputFileData%MSL2SWL
 
          ! OutList - list of requested parameters to output to a file
 

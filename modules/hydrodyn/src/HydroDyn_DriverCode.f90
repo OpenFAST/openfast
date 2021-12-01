@@ -23,6 +23,8 @@
 PROGRAM HydroDynDriver
 
    USE NWTC_Library
+   use SeaState
+   use SeaState_Types
    USE HydroDyn
    USE HydroDyn_Types
    USE HydroDyn_Output
@@ -38,6 +40,7 @@ PROGRAM HydroDynDriver
       REAL(ReKi)              :: WtrDpth
       REAL(ReKi)              :: MSL2SWL
       CHARACTER(1024)         :: HDInputFile
+      CHARACTER(1024)         :: SeaStateInputFile
       CHARACTER(1024)         :: OutRootName
       LOGICAL                 :: Linearize
       INTEGER                 :: NSteps
@@ -70,6 +73,26 @@ PROGRAM HydroDynDriver
    REAL(DbKi)                                          :: Interval             ! HD module requested time interval
    INTEGER(B1Ki), ALLOCATABLE                          :: SaveAry(:)           ! Array to store packed data structure
 
+   type(SeaSt_InitInputType)                        :: InitInData_SeaSt           ! Input data for initialization
+   type(SeaSt_InitOutputType)                       :: InitOutData_SeaSt          ! Output data from initialization
+
+   type(SeaSt_ContinuousStateType)                  :: x_SeaSt                    ! Continuous states
+   type(SeaSt_ContinuousStateType)                  :: x_new_SeaSt                ! Continuous states at updated time
+   type(SeaSt_DiscreteStateType)                    :: xd_SeaSt                   ! Discrete states
+   type(SeaSt_DiscreteStateType)                    :: xd_new_SeaSt               ! Discrete states at updated time
+   type(SeaSt_ConstraintStateType)                  :: z_SeaSt                    ! Constraint states
+   type(SeaSt_ConstraintStateType)                  :: z_residual_SeaSt           ! Residual of the constraint state equations (Z)
+   type(SeaSt_OtherStateType)                       :: OtherState_SeaSt           ! Other states
+   type(SeaSt_MiscVarType)                          :: m_SeaSt                    ! Misc/optimization variables
+
+   type(SeaSt_ParameterType)                        :: p_SeaSt                    ! Parameters
+   !type(SeaSt_InputType)                           :: u                    ! System inputs [OLD STYLE]
+   type(SeaSt_InputType)                            :: u_SeaSt(NumInp)            ! System inputs
+   type(SeaSt_OutputType)                           :: y_SeaSt                    ! System outputs
+
+   type(SeaSt_ContinuousStateType)                  :: dxdt_SeaSt                 ! First time derivatives of the continuous states
+
+   
    TYPE(HydroDyn_InitInputType)                        :: InitInData           ! Input data for initialization
    TYPE(HydroDyn_InitOutputType)                       :: InitOutData          ! Output data from initialization
 
@@ -185,7 +208,7 @@ PROGRAM HydroDynDriver
    InitInData%UseInputFile = .TRUE. 
    InitInData%InputFile    = drvrInitInp%HDInputFile
    InitInData%OutRootName  = drvrInitInp%OutRootName
-   InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
+   InitInData%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
    InitInData%Linearize    = drvrInitInp%Linearize
   
       ! Get the current time
@@ -203,8 +226,86 @@ PROGRAM HydroDynDriver
 !-------------------------------------------------------------------------------------
 !       Begin Simulation Setup
 !-------------------------------------------------------------------------------------
-   
+ 
+      ! Initialize the SeaState module
+   InitInData_SeaSt%Gravity      = drvrInitInp%Gravity
+   InitInData_SeaSt%defWtrDens   = drvrInitInp%WtrDens
+   InitInData_SeaSt%defWtrDpth   = drvrInitInp%WtrDpth
+   InitInData_SeaSt%defMSL2SWL   = drvrInitInp%MSL2SWL
+   InitInData_SeaSt%UseInputFile = .TRUE. 
+   InitInData_SeaSt%InputFile    = drvrInitInp%SeaStateInputFile
+   InitInData_SeaSt%OutRootName  = drvrInitInp%OutRootName
+   InitInData_SeaSt%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
+   Interval = drvrInitInp%TimeInterval
+   call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
+   if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+      call HD_DvrCleanup()
+   end if
 
+   if ( Interval /= drvrInitInp%TimeInterval) then
+      call WrScr('The SeaState Module attempted to change timestep interval, but this is not allowed.  The SeaState Module must use the Driver Interval.')
+      call HD_DvrCleanup() 
+      
+   end if
+
+      ! Set HD Init Inputs based on SeaStates Init Outputs
+   InitInData%NStepWave      =  InitOutData_SeaSt%NStepWave
+   InitInData%NStepWave2     =  InitOutData_SeaSt%NStepWave2
+   InitInData%RhoXg          =  InitOutData_SeaSt%RhoXg
+   InitInData%WaveMod        =  InitOutData_SeaSt%WaveMod
+   InitInData%CurrMod        =  InitOutData_SeaSt%CurrMod
+   InitInData%WaveStMod      =  InitOutData_SeaSt%WaveStMod
+   InitInData%WaveDirMod     =  InitOutData_SeaSt%WaveDirMod
+   InitInData%WvLowCOff      =  InitOutData_SeaSt%WvLowCOff 
+   InitInData%WvHiCOff       =  InitOutData_SeaSt%WvHiCOff  
+   InitInData%WvLowCOffD     =  InitOutData_SeaSt%WvLowCOffD
+   InitInData%WvHiCOffD      =  InitOutData_SeaSt%WvHiCOffD 
+   InitInData%WvLowCOffS     =  InitOutData_SeaSt%WvLowCOffS
+   InitInData%WvHiCOffS      =  InitOutData_SeaSt%WvHiCOffS 
+   InitInData%WvDiffQTFF     =  InitOutData_SeaSt%WvDiffQTFF
+   InitInData%WvSumQTFF      =  InitOutData_SeaSt%WvSumQTFF 
+   InitInData%WaveDirMin     =  InitOutData_SeaSt%WaveDirMin  
+   InitInData%WaveDirMax     =  InitOutData_SeaSt%WaveDirMax  
+   InitInData%WaveDir        =  InitOutData_SeaSt%WaveDir     
+   InitInData%WaveMultiDir   =  InitOutData_SeaSt%WaveMultiDir
+   InitInData%WaveDOmega     =  InitOutData_SeaSt%WaveDOmega  
+   !InitInData%WaveElev0      => InitOutData_SeaSt%WaveElev0 
+   CALL MOVE_ALLOC(  InitOutData_SeaSt%WaveElev0, InitInData%WaveElev0 )  
+   InitInData%WaveTime       => InitOutData_SeaSt%WaveTime  
+   InitInData%WaveDynP       => InitOutData_SeaSt%WaveDynP  
+   InitInData%WaveAcc        => InitOutData_SeaSt%WaveAcc   
+   InitInData%WaveVel        => InitOutData_SeaSt%WaveVel   
+   InitInData%WaveElevC0     => InitOutData_SeaSt%WaveElevC0
+   CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElevC, InitInData%WaveElevC )
+   InitInData%WaveDirArr     => InitOutData_SeaSt%WaveDirArr
+   InitInData%WaveElev       => InitOutData_SeaSt%WaveElev
+   InitInData%WaveElev1      => InitOutData_SeaSt%WaveElev1
+   InitInData%WaveElev2      => InitOutData_SeaSt%WaveElev2
+   
+   ! Nullify these pointers because they are no longer needed
+   nullify(InitOutData_SeaSt%WaveDynP)   
+   nullify(InitOutData_SeaSt%WaveAcc)    
+   nullify(InitOutData_SeaSt%WaveVel)     
+   nullify(InitOutData_SeaSt%WaveTime)
+   nullify(InitOutData_SeaSt%WaveElevC0)
+   nullify(InitOutData_SeaSt%WaveDirArr)
+   nullify(InitOutData_SeaSt%WaveElev)
+   nullify(InitOutData_SeaSt%WaveElev1)
+   nullify(InitOutData_SeaSt%WaveElev2)
+   
+   call SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData%SeaSt_Interp_p, 0, ErrStat, ErrMsg )
+   
+   ! Destroy SeaState InitOutput
+   CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat, ErrMsg )
+   
+   if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+      call HD_DvrCleanup()
+   end if
+   
+   
+   
    IF ( drvrInitInp%PRPInputsMod == 2 ) THEN
       
          ! Open the PRP inputs data file
@@ -276,38 +377,27 @@ PROGRAM HydroDynDriver
    ELSE
       NBody = 0
    END IF
-   
   
-
-      ! Setup the arrays for the wave elevation timeseries if requested by the driver input file
-   IF ( drvrInitInp%WaveElevSeriesFlag ) THEN
-      ALLOCATE ( InitInData%WaveElevXY(2,drvrInitInp%WaveElevNX*drvrInitInp%WaveElevNY), STAT=ErrStat )
-      IF ( ErrStat >= ErrID_Fatal ) THEN
-         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) THEN
-            CALL WrScr( ErrMsg )     
-         END IF
-         STOP
-      END IF
-
-         ! Set the values
-      n  = 0         ! Dummy counter we are using to get the current point number
-      DO I  = 0,drvrInitInp%WaveElevNX-1
-         DO J  = 0, drvrInitInp%WaveElevNY-1
-            n  =  n+1
-               ! X dimension
-            InitInData%WaveElevXY(1,n) = drvrInitInp%WaveElevDX*(I - 0.5*(drvrInitInp%WaveElevNX-1))
-               ! Y dimension
-            InitInData%WaveElevXY(2,n) = drvrInitInp%WaveElevDY*(J - 0.5*(drvrInitInp%WaveElevNY-1))
-         ENDDO
-      ENDDO
-   ENDIF
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
    CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
+   
+   ! 1) Nullify the HD Init Input pointers
+   ! 2) Now, when HydroDyn_DestroyInitInput is called and hence SeaSt_DestroyInitOutput, we will not deallocate data which is still in use because the is associated test will fail.
+    
+   nullify(InitInData%WaveElevC0)
+   nullify(InitInData%WaveDirArr)
+   nullify(InitInData%WaveDynP)   
+   nullify(InitInData%WaveAcc)    
+   nullify(InitInData%WaveVel)     
+   nullify(InitInData%WaveTime)
+   nullify(InitInData%WaveElev)
+   nullify(InitInData%WaveElev1)
+   nullify(InitInData%WaveElev2)
+   
    if (errStat >= AbortErrLev) then
-         ! Clean up and exit
+         ! Clean up and exit 
       call HD_DvrCleanup()
    end if
 
@@ -320,19 +410,18 @@ PROGRAM HydroDynDriver
 
       ! Write the gridded wave elevation data to a file
 
-   IF ( drvrInitInp%WaveElevSeriesFlag )     CALL WaveElevGrid_Output  (drvrInitInp, InitInData, InitOutData, p, ErrStat, ErrMsg)
-   if (errStat >= AbortErrLev) then
-         ! Clean up and exit
-      call HD_DvrCleanup()
-   end if
-
-   
-      ! Destroy initialization data
+     
 
    CALL HydroDyn_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
+! Nullify unneeded SeaState pointers so that we can then destroy the InitOutput data structure without deallocated needed data
+   !nullify(InitOutData_SeaSt%WaveElev0)
+   !nullify(InitOutData_SeaSt%WaveElevC0)
+   !nullify(InitOutData_SeaSt%WaveDirArr)
 
+   
+   
    ! Create Mesh mappings
    if ( u(1)%WAMITMesh%Initialized ) then
       ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ]
@@ -519,13 +608,19 @@ PROGRAM HydroDynDriver
                end if
              END IF
              
-         END IF
+      END IF
         !@mhall: end of addition		 
      
       
      
          ! Calculate outputs at n
 
+      call SeaSt_CalcOutput( Time, u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, ErrStat, ErrMsg )
+      if (errStat >= AbortErrLev) then
+            ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
+      
       CALL HydroDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       if (errStat >= AbortErrLev) then
             ! Clean up and exit
@@ -594,7 +689,8 @@ subroutine HD_DvrCleanup()
       errMsg2  = ""
       
       
-      
+      call SeaSt_End( u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       call HydroDyn_DestroyDiscState( xd_new, errStat2, errMsg2 )
@@ -850,6 +946,18 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       RETURN
    END IF 
    
+       ! SeaStInputFile
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%SeaStateInputFile, 'SeaStateInputFile', &
+                                    'SeaState input filename', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read SeaStateInputFile parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
    
       ! OutRootName
    
@@ -1015,85 +1123,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       InitInp%uDotPRPInSteady    = 0.0
       InitInp%uDotDotPRPInSteady = 0.0
    END IF
-   
-   
-   !-------------------------------------------------------------------------------------------------
-   !> ### Waves elevation series section
-   !-------------------------------------------------------------------------------------------------
-
-      !> Header
-
-CALL ReadCom( UnIn, FileName, 'Waves multipoint elevation output header', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-      !> WaveElevSeriesFlag   -- are we doing multipoint wave elevation output?
-   CALL ReadVar ( UnIn, FileName, InitInp%WaveElevSeriesFlag, 'WaveElevSeriesFlag', 'WaveElevSeriesFlag', ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read WaveElevSeries parameter.'
-      ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-      !> WaveElevDX and WaveElevNY  -- point spacing (m)
-   CALL ReadAry ( UnIn, FileName, TmpRealVar2, 2, 'WaveElevDX WaveElevDY', &
-                        'WaveElevSeries spacing -- WaveElevDX WaveElevDY', ErrStat, ErrMsg, UnEchoLocal)
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      CALL SetErrStat( ErrID_Fatal,'Failed to read WaveElevDX and WaveElevDY parameters.',ErrStat,ErrMsg,'ReadDriverInputFile')
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-   InitInp%WaveElevDX   = TmpRealVar2(1)
-   InitInp%WaveElevDY   = TmpRealVar2(2)
-
-
-
-      !> WaveElevNX and WaveElevNY  -- point spacing (m)
-   CALL ReadAry ( UnIn, FileName, TmpIntVar2, 2, 'WaveElevNX WaveElevNY', &
-                        'WaveElevSeries points -- WaveElevNX WaveElevNY', ErrStat, ErrMsg, UnEchoLocal)
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      CALL SetErrStat( ErrID_Fatal,' Failed to read WaveElevNX and WaveElevNY parameters.',ErrStat,ErrMsg,'ReadDriverInputFile')
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
-
-   IF (MOD(TmpIntVar2(1),2) == 0) THEN
-      TmpIntVar2(1) = TmpIntVar2(1)+1
-      CALL SetErrStat( ErrID_Warn, "Changing WaveElevNX to an odd number ("//TRIM(Num2LStr(TmpIntVar2(1)))// &
-                                 ") so that there is a point at the origin.",ErrStat,ErrMsg,'ReadDriverInputFile' )
-   ENDIF
-   IF (MOD(TmpIntVar2(2),2) == 0) THEN
-      TmpIntVar2(2) = TmpIntVar2(2)+1
-      CALL SetErrStat( ErrID_Warn, "Changing WaveElevNX to an odd number ("//TRIM(Num2LStr(TmpIntVar2(2)))// &
-                                 ") so that there is a point at the origin.",ErrStat,ErrMsg,'ReadDriverInputFile' )
-   ENDIF
-   InitInp%WaveElevNX   = TmpIntVar2(1)
-   InitInp%WaveElevNY   = TmpIntVar2(2)
-
-
-      !> if the flag was false, set the spacing and number of points to 0
-   IF ( .NOT. InitInp%WaveElevSeriesFlag ) THEN
-      InitInp%WaveElevDX   =  0.0_ReKi
-      InitInp%WaveElevDY   =  0.0_ReKi
-      InitInp%WaveElevNX   =  0_IntKi
-      InitInp%WaveElevNY   =  0_IntKi
-   ENDIF
-
-
 
 
    CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
@@ -1101,76 +1130,6 @@ CALL ReadCom( UnIn, FileName, 'Waves multipoint elevation output header', ErrSta
    
 END SUBROUTINE ReadDriverInputFile
 
-SUBROUTINE WaveElevGrid_Output (drvrInitInp, HDynInitInp, HDynInitOut, HDyn_p, ErrStat, ErrMsg)
-
-   TYPE(HD_drvr_InitInput),       INTENT( IN    )   :: drvrInitInp
-   TYPE(HydroDyn_InitInputType),  INTENT( IN    )   :: HDynInitInp
-   TYPE(HydroDyn_InitOutputType), INTENT( IN    )   :: HDynInitOut          ! Output data from initialization
-   TYPE(HydroDyn_ParameterType),  INTENT( IN    )   :: HDyn_p               ! Output data from initialization
-   INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
-   CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
-         ! Temporary local variables
-   INTEGER(IntKi)                                   :: ErrStatTmp           !< Temporary variable for the status of error message
-   CHARACTER(1024)                                  :: ErrMsgTmp            !< Temporary variable for the error message
-
-   INTEGER(IntKi)                                   :: WaveElevFileUn       !< Number for the output file for the wave elevation series
-   CHARACTER(1024)                                  :: WaveElevFileName     !< Name for the output file for the wave elevation series
-   CHARACTER(128)                                   :: WaveElevFmt          !< Format specifier for the output file for wave elevation series
- 
-
-   WaveElevFmt = "(F14.7,3x,F14.7,3x,F14.7)"
-
-   ErrMsg      = ""
-   ErrStat     = ErrID_None
-   ErrMsgTmp   = ""
-   ErrStatTmp  = ErrID_None
-
-
-      ! If we calculated the wave elevation at a set of coordinates for use with making movies, put it into an output file
-   WaveElevFileName  =  TRIM(drvrInitInp%OutRootName)//".WaveElev.out"
-   CALL GetNewUnit( WaveElevFileUn )
-
-   CALL OpenFOutFile( WaveElevFileUn, WaveElevFileName, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None) THEN 
-      IF ( ErrStat >= AbortErrLev ) RETURN
-   END IF
-
-      ! Write some useful header information
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file was generated by '//TRIM(GetNVD(HDyn_Drv_ProgDesc))// &
-!         ' on '//CurDate()//' at '//CurTime()//'.'
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file was generated on '//CurDate()//' at '//CurTime()//'.'
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file contains the wave elevations at a series of points '// &
-         'through the entire timeseries.'
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## It is arranged as blocks of X,Y,Elevation at each timestep'
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## Each block is separated by two blank lines for use in gnuplot'
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# WaveTMax    =  '//TRIM(Num2LStr(HDyn_p%WaveTime(HDyn_P%NStepWave)))
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# NStepWave   =  '//TRIM(Num2LStr(HDyn_p%NStepWave))
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridXPoints =  '//TRIM(Num2LStr(drvrInitInp%WaveElevNX))
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridYPoints =  '//TRIM(Num2LStr(drvrInitInp%WaveElevNY))
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridDX      =  '//TRIM(Num2LStr(drvrInitInp%WaveElevDX))
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridDY      =  '//TRIM(Num2LStr(drvrInitInp%WaveElevDY))
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# MaxWaveElev =  '//TRIM(Num2LStr(MAXVAL(HDynInitOut%WaveElevSeries)))
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# MinWaveElev =  '//TRIM(Num2LStr(MINVAL(HDynInitOut%WaveElevSeries)))
-   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
-
-      ! Timestep looping
-   DO I = 0,HDyn_p%NStepWave
-      WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
-      WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(HDyn_p%WaveTime(I)))
-         ! Now output the X,Y, Elev info for this timestep
-      DO J=1,SIZE(HDynInitInp%WaveElevXY,DIM=2)
-         WRITE (WaveElevFileUn,WaveElevFmt, IOSTAT=ErrStatTmp ) HDynInitInp%WaveElevXY(1,J),&
-                  HDynInitInp%WaveElevXY(2,J),HDynInitOut%WaveElevSeries(I,J)
-      ENDDO
-
-   ENDDO
-
-      ! Done.  Close the file
-   CLOSE (WaveElevFileUn) 
-
-END SUBROUTINE WaveElevGrid_Output
 
 !----------------------------------------------------------------------------------------------------------------------------------
 

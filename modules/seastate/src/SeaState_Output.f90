@@ -446,10 +446,10 @@ END SUBROUTINE SeaStOut_WriteWvKinFiles
 !====================================================================================================
 subroutine SeaStOut_MapOutputs( CurrentTime, p, NWaveElev, WaveElev, WaveElev1, WaveElev2, NWaveKin, WaveVel, WaveAcc, WaveDynP, AllOuts, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
-! This is called by SeaState_CalcOutput() at each time step.
+! This is called by SeaSt_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
    REAL(DbKi),                         intent( in    )  :: CurrentTime    ! Current simulation time in seconds
-   TYPE(SeaState_ParameterType),       intent( in    )  :: p              ! SeaState's parameter data
+   TYPE(SeaSt_ParameterType),       intent( in    )  :: p              ! SeaState's parameter data
    INTEGER,                            intent( in    )  :: NWaveElev      ! Number of wave elevation locations to output
    REAL(ReKi),                         intent( in    )  :: WaveElev(:)    ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
    REAL(ReKi),                         intent( in    )  :: WaveElev1(:)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
@@ -496,8 +496,8 @@ SUBROUTINE SeaStOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
 
       ! Passed variables    
    REAL(DbKi),                   INTENT( IN    ) :: Time
-   TYPE(SeaState_OutputType),    INTENT( INOUT ) :: y                    ! SeaState's output data
-   TYPE(SeaState_ParameterType), INTENT( IN    ) :: p                    ! SeaState parameter data
+   TYPE(SeaSt_OutputType),    INTENT( INOUT ) :: y                    ! SeaState's output data
+   TYPE(SeaSt_ParameterType), INTENT( IN    ) :: p                    ! SeaState parameter data
    INTEGER,                      INTENT( INOUT ) :: Decimate             ! Output decimatation counter
    INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                 INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -552,7 +552,7 @@ SUBROUTINE SeaStOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
 END SUBROUTINE SeaStOut_WriteOutputs
 
 !====================================================================================================
-SUBROUTINE SeaStOut_Init( SeaState_ProgDesc, OutRootName, InputFileData, y,  p, m, InitOut, ErrStat, ErrMsg )
+SUBROUTINE SeaStOut_Init( SeaSt_ProgDesc, OutRootName, InputFileData, y,  p, m, InitOut, ErrStat, ErrMsg )
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 ! NOTE: This routine must be called only after any sub-modules OUT_Init() subroutines have been called.
@@ -562,13 +562,13 @@ SUBROUTINE SeaStOut_Init( SeaState_ProgDesc, OutRootName, InputFileData, y,  p, 
 
       ! Passed variables
 
-   TYPE(ProgDesc),                INTENT( IN    ) :: SeaState_ProgDesc    ! 
+   TYPE(ProgDesc),                INTENT( IN    ) :: SeaSt_ProgDesc    ! 
    CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! The name of the output file 
-   TYPE(SeaState_InputFile ),     INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
-   TYPE(SeaState_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
-   TYPE(SeaState_ParameterType),  INTENT( INOUT ) :: p 
-   TYPE(SeaState_MiscVarType),    INTENT( INOUT ) :: m
-   TYPE(SeaState_InitOutputType), INTENT( INOUT ) :: InitOut
+   TYPE(SeaSt_InputFile ),     INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
+   TYPE(SeaSt_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
+   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p 
+   TYPE(SeaSt_MiscVarType),    INTENT( INOUT ) :: m
+   TYPE(SeaSt_InitOutputType), INTENT( INOUT ) :: InitOut
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -658,7 +658,7 @@ SUBROUTINE SeaStOut_Init( SeaState_ProgDesc, OutRootName, InputFileData, y,  p, 
       
 
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
-         CALL SeaStOut_OpenOutput( SeaState_ProgDesc, OutRootName, p, InitOut, ErrStat, ErrMsg )
+         CALL SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName, p, InitOut, ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev ) RETURN
       END IF
       
@@ -669,7 +669,7 @@ SUBROUTINE SeaStOut_Init( SeaState_ProgDesc, OutRootName, InputFileData, y,  p, 
 END SUBROUTINE SeaStOUT_Init
 
 !====================================================================================================
-SUBROUTINE SeaStOut_OpenOutput( SeaState_ProgDesc, OutRootName,  p, InitOut, ErrStat, ErrMsg )
+SUBROUTINE SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName,  p, InitOut, ErrStat, ErrMsg )
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 !----------------------------------------------------------------------------------------------------
@@ -678,10 +678,10 @@ SUBROUTINE SeaStOut_OpenOutput( SeaState_ProgDesc, OutRootName,  p, InitOut, Err
 
       ! Passed variables
 
-   TYPE(ProgDesc)               , INTENT( IN    ) :: SeaState_ProgDesc
+   TYPE(ProgDesc)               , INTENT( IN    ) :: SeaSt_ProgDesc
    CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! Root name for the output file
-   TYPE(SeaState_ParameterType),  INTENT( INOUT ) :: p   
-   TYPE(SeaState_InitOutPutType ),INTENT( IN    ) :: InitOut            !
+   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p   
+   TYPE(SeaSt_InitOutPutType ),INTENT( IN    ) :: InitOut            !
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -715,7 +715,7 @@ SUBROUTINE SeaStOut_OpenOutput( SeaState_ProgDesc, OutRootName,  p, InitOut, Err
       
          ! Write the output file header
       
-      WRITE (p%UnOutFile,'(/,A/)', IOSTAT=ErrStat)  'These predictions were generated by '//TRIM(SeaState_ProgDesc%Name)//&
+      WRITE (p%UnOutFile,'(/,A/)', IOSTAT=ErrStat)  'These predictions were generated by '//TRIM(SeaSt_ProgDesc%Name)//&
                       ' on '//CurDate()//' at '//CurTime()//'.'
 
          ! Write three empty lines
@@ -869,8 +869,8 @@ SUBROUTINE SeaStOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    
       ! Passed variables
       
-   TYPE(SeaState_OutputType),     INTENT( INOUT ) :: y                                ! This module's internal data
-   TYPE(SeaState_ParameterType),  INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
+   TYPE(SeaSt_OutputType),     INTENT( INOUT ) :: y                                ! This module's internal data
+   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
 !   INTEGER,                 INTENT(IN   ) :: NumMemberNodes(*)                         ! the number of nodes on each of the first 9 members
    CHARACTER(ChanLen),            INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
@@ -977,7 +977,7 @@ SUBROUTINE SeaStOut_CloseOutput ( p, ErrStat, ErrMsg )
 
          ! Passed variables
 
-   TYPE(SeaState_ParameterType),  INTENT( INOUT ) :: p                    ! parameter data for this instance of the SeaState module        
+   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p                    ! parameter data for this instance of the SeaState module        
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 

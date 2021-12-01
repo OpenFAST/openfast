@@ -33,39 +33,39 @@ MODULE SeaState_Interp_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-! =========  SeaState_Interp_InitInputType  =======
-  TYPE, PUBLIC :: SeaState_Interp_InitInputType
+! =========  SeaSt_Interp_InitInputType  =======
+  TYPE, PUBLIC :: SeaSt_Interp_InitInputType
     INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of grid points in the x, y, z, and t directions [-]
     REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:4)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(ReKi)  :: Z_Depth      !< grid depth [m]
-  END TYPE SeaState_Interp_InitInputType
+  END TYPE SeaSt_Interp_InitInputType
 ! =======================
-! =========  SeaState_Interp_InitOutputType  =======
-  TYPE, PUBLIC :: SeaState_Interp_InitOutputType
+! =========  SeaSt_Interp_InitOutputType  =======
+  TYPE, PUBLIC :: SeaSt_Interp_InitOutputType
     TYPE(ProgDesc)  :: Ver      !< Version information of this submodule [-]
-  END TYPE SeaState_Interp_InitOutputType
+  END TYPE SeaSt_Interp_InitOutputType
 ! =======================
-! =========  SeaState_Interp_MiscVarType  =======
-  TYPE, PUBLIC :: SeaState_Interp_MiscVarType
+! =========  SeaSt_Interp_MiscVarType  =======
+  TYPE, PUBLIC :: SeaSt_Interp_MiscVarType
     REAL(SiKi) , DIMENSION(1:8)  :: N3D      !< this is the 3-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
     REAL(SiKi) , DIMENSION(1:16)  :: N4D      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
     INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Lo      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
     INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Hi      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
-  END TYPE SeaState_Interp_MiscVarType
+  END TYPE SeaSt_Interp_MiscVarType
 ! =======================
-! =========  SeaState_Interp_ParameterType  =======
-  TYPE, PUBLIC :: SeaState_Interp_ParameterType
+! =========  SeaSt_Interp_ParameterType  =======
+  TYPE, PUBLIC :: SeaSt_Interp_ParameterType
     INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
     REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:4)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(ReKi)  :: Z_Depth      !< grid depth [m]
-  END TYPE SeaState_Interp_ParameterType
+  END TYPE SeaSt_Interp_ParameterType
 ! =======================
 CONTAINS
- SUBROUTINE SeaState_Interp_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_Interp_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(SeaState_Interp_InitInputType), INTENT(INOUT) :: DstInitInputData
+ SUBROUTINE SeaSt_Interp_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_Interp_InitInputType), INTENT(IN) :: SrcInitInputData
+   TYPE(SeaSt_Interp_InitInputType), INTENT(INOUT) :: DstInitInputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -74,7 +74,7 @@ CONTAINS
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_CopyInitInput'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_CopyInitInput'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -82,24 +82,24 @@ CONTAINS
     DstInitInputData%delta = SrcInitInputData%delta
     DstInitInputData%pZero = SrcInitInputData%pZero
     DstInitInputData%Z_Depth = SrcInitInputData%Z_Depth
- END SUBROUTINE SeaState_Interp_CopyInitInput
+ END SUBROUTINE SeaSt_Interp_CopyInitInput
 
- SUBROUTINE SeaState_Interp_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(SeaState_Interp_InitInputType), INTENT(INOUT) :: InitInputData
+ SUBROUTINE SeaSt_Interp_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+  TYPE(SeaSt_Interp_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_Interp_DestroyInitInput'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_Interp_DestroyInitInput'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
- END SUBROUTINE SeaState_Interp_DestroyInitInput
+ END SUBROUTINE SeaSt_Interp_DestroyInitInput
 
- SUBROUTINE SeaState_Interp_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_Interp_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_Interp_InitInputType),  INTENT(IN) :: InData
+  TYPE(SeaSt_Interp_InitInputType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -114,7 +114,7 @@ CONTAINS
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_PackInitInput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_PackInitInput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -175,13 +175,13 @@ CONTAINS
     END DO
     ReKiBuf(Re_Xferred) = InData%Z_Depth
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_Interp_PackInitInput
+ END SUBROUTINE SeaSt_Interp_PackInitInput
 
- SUBROUTINE SeaState_Interp_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Interp_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_Interp_InitInputType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_Interp_InitInputType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -193,7 +193,7 @@ CONTAINS
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_UnPackInitInput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_UnPackInitInput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -224,11 +224,11 @@ CONTAINS
     END DO
     OutData%Z_Depth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_Interp_UnPackInitInput
+ END SUBROUTINE SeaSt_Interp_UnPackInitInput
 
- SUBROUTINE SeaState_Interp_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_Interp_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(SeaState_Interp_InitOutputType), INTENT(INOUT) :: DstInitOutputData
+ SUBROUTINE SeaSt_Interp_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_Interp_InitOutputType), INTENT(IN) :: SrcInitOutputData
+   TYPE(SeaSt_Interp_InitOutputType), INTENT(INOUT) :: DstInitOutputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -236,32 +236,32 @@ CONTAINS
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_CopyInitOutput'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_CopyInitOutput'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
       CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaState_Interp_CopyInitOutput
+ END SUBROUTINE SeaSt_Interp_CopyInitOutput
 
- SUBROUTINE SeaState_Interp_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(SeaState_Interp_InitOutputType), INTENT(INOUT) :: InitOutputData
+ SUBROUTINE SeaSt_Interp_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+  TYPE(SeaSt_Interp_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_Interp_DestroyInitOutput'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_Interp_DestroyInitOutput'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_Interp_DestroyInitOutput
+ END SUBROUTINE SeaSt_Interp_DestroyInitOutput
 
- SUBROUTINE SeaState_Interp_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_Interp_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_Interp_InitOutputType),  INTENT(IN) :: InData
+  TYPE(SeaSt_Interp_InitOutputType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -276,7 +276,7 @@ CONTAINS
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_PackInitOutput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_PackInitOutput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -365,13 +365,13 @@ CONTAINS
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE SeaState_Interp_PackInitOutput
+ END SUBROUTINE SeaSt_Interp_PackInitOutput
 
- SUBROUTINE SeaState_Interp_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Interp_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_Interp_InitOutputType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_Interp_InitOutputType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -382,7 +382,7 @@ CONTAINS
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_UnPackInitOutput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_UnPackInitOutput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -433,11 +433,11 @@ CONTAINS
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaState_Interp_UnPackInitOutput
+ END SUBROUTINE SeaSt_Interp_UnPackInitOutput
 
- SUBROUTINE SeaState_Interp_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_Interp_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(SeaState_Interp_MiscVarType), INTENT(INOUT) :: DstMiscData
+ SUBROUTINE SeaSt_Interp_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_Interp_MiscVarType), INTENT(IN) :: SrcMiscData
+   TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: DstMiscData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -446,7 +446,7 @@ CONTAINS
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_CopyMisc'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_CopyMisc'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -454,24 +454,24 @@ CONTAINS
     DstMiscData%N4D = SrcMiscData%N4D
     DstMiscData%Indx_Lo = SrcMiscData%Indx_Lo
     DstMiscData%Indx_Hi = SrcMiscData%Indx_Hi
- END SUBROUTINE SeaState_Interp_CopyMisc
+ END SUBROUTINE SeaSt_Interp_CopyMisc
 
- SUBROUTINE SeaState_Interp_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(SeaState_Interp_MiscVarType), INTENT(INOUT) :: MiscData
+ SUBROUTINE SeaSt_Interp_DestroyMisc( MiscData, ErrStat, ErrMsg )
+  TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_Interp_DestroyMisc'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_Interp_DestroyMisc'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
- END SUBROUTINE SeaState_Interp_DestroyMisc
+ END SUBROUTINE SeaSt_Interp_DestroyMisc
 
- SUBROUTINE SeaState_Interp_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_Interp_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_Interp_MiscVarType),  INTENT(IN) :: InData
+  TYPE(SeaSt_Interp_MiscVarType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -486,7 +486,7 @@ CONTAINS
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_PackMisc'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_PackMisc'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -549,13 +549,13 @@ CONTAINS
       IntKiBuf(Int_Xferred) = InData%Indx_Hi(i1)
       Int_Xferred = Int_Xferred + 1
     END DO
- END SUBROUTINE SeaState_Interp_PackMisc
+ END SUBROUTINE SeaSt_Interp_PackMisc
 
- SUBROUTINE SeaState_Interp_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Interp_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_Interp_MiscVarType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -567,7 +567,7 @@ CONTAINS
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_UnPackMisc'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_UnPackMisc'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -602,11 +602,11 @@ CONTAINS
       OutData%Indx_Hi(i1) = IntKiBuf(Int_Xferred)
       Int_Xferred = Int_Xferred + 1
     END DO
- END SUBROUTINE SeaState_Interp_UnPackMisc
+ END SUBROUTINE SeaSt_Interp_UnPackMisc
 
- SUBROUTINE SeaState_Interp_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_Interp_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(SeaState_Interp_ParameterType), INTENT(INOUT) :: DstParamData
+ SUBROUTINE SeaSt_Interp_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_Interp_ParameterType), INTENT(IN) :: SrcParamData
+   TYPE(SeaSt_Interp_ParameterType), INTENT(INOUT) :: DstParamData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -615,7 +615,7 @@ CONTAINS
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_CopyParam'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_CopyParam'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -623,24 +623,24 @@ CONTAINS
     DstParamData%delta = SrcParamData%delta
     DstParamData%pZero = SrcParamData%pZero
     DstParamData%Z_Depth = SrcParamData%Z_Depth
- END SUBROUTINE SeaState_Interp_CopyParam
+ END SUBROUTINE SeaSt_Interp_CopyParam
 
- SUBROUTINE SeaState_Interp_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(SeaState_Interp_ParameterType), INTENT(INOUT) :: ParamData
+ SUBROUTINE SeaSt_Interp_DestroyParam( ParamData, ErrStat, ErrMsg )
+  TYPE(SeaSt_Interp_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_Interp_DestroyParam'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_Interp_DestroyParam'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
- END SUBROUTINE SeaState_Interp_DestroyParam
+ END SUBROUTINE SeaSt_Interp_DestroyParam
 
- SUBROUTINE SeaState_Interp_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_Interp_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_Interp_ParameterType),  INTENT(IN) :: InData
+  TYPE(SeaSt_Interp_ParameterType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -655,7 +655,7 @@ CONTAINS
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_PackParam'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_PackParam'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -716,13 +716,13 @@ CONTAINS
     END DO
     ReKiBuf(Re_Xferred) = InData%Z_Depth
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_Interp_PackParam
+ END SUBROUTINE SeaSt_Interp_PackParam
 
- SUBROUTINE SeaState_Interp_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Interp_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_Interp_ParameterType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_Interp_ParameterType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -734,7 +734,7 @@ CONTAINS
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_Interp_UnPackParam'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_UnPackParam'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -765,7 +765,7 @@ CONTAINS
     END DO
     OutData%Z_Depth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_Interp_UnPackParam
+ END SUBROUTINE SeaSt_Interp_UnPackParam
 
 END MODULE SeaState_Interp_Types
 !ENDOFREGISTRYGENERATEDFILE

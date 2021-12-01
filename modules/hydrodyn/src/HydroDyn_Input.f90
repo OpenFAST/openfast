@@ -24,8 +24,7 @@ MODULE HydroDyn_Input
    USE                              NWTC_Library
    USE                              HydroDyn_Types
    USE                              HydroDyn_Output
-   USE                              Waves
-   USE                              Waves2_Output
+   USE                              SeaState
    USE                              Morison
    USE                              Morison_Output
    USE                              NWTC_RandomNumber
@@ -229,7 +228,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    CurLine = CurLine + 1
 
       ! WtrDens - Water density.
-   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%Waves%WtrDens, defWtrDens, ErrStat2, ErrMsg2, UnEc )
+   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%Morison%WtrDens, defWtrDens, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WtrDpth - Water depth
@@ -241,228 +240,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
       if (Failed())  return;
 
 
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for waves
-   !-------------------------------------------------------------------------------------------------
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
-   CurLine = CurLine + 1
-
-      ! WaveMod - Wave kinematics model switch.
-   call ParseVar( FileInfo_In, CurLine, 'WaveMod', InputFileData%Waves%WaveModChr, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-   CALL Conv2UC( InputFileData%Waves%WaveModChr )    ! Convert Line to upper case.
-
-   InputFileData%Waves%WavePhase = 0.0
-   InputFileData%Waves%WaveNDAmp = .FALSE.
-
-
-      ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-   call ParseVar( FileInfo_In, CurLine, 'WaveStMod', InputFileData%Waves%WaveStMod, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveTMax - Analysis time for incident wave calculations.
-   call ParseVar( FileInfo_In, CurLine, 'WaveTMax', InputFileData%Waves%WaveTMax, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveDT - Time step for incident wave calculations
-   call ParseVar( FileInfo_In, CurLine, 'WaveDT', InputFileData%Waves%WaveDT, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveHs - Significant wave height
-   call ParseVar( FileInfo_In, CurLine, 'WaveHs', InputFileData%Waves%WaveHs, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveTp - Peak spectral period.
-   call ParseVar( FileInfo_In, CurLine, 'WaveTp', InputFileData%Waves%WaveTp, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WavePkShp - Peak shape parameter.
-   call ParseVar( FileInfo_In, CurLine, 'WavePkShp', InputFileData%Waves%WavePkShpChr, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WvLowCOff - Low Cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).  
-   call ParseVar( FileInfo_In, CurLine, 'WvLowCOff', InputFileData%Waves%WvLowCOff, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-     ! WvHiCOff - High Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).  
-   call ParseVar( FileInfo_In, CurLine, 'WvHiCOff', InputFileData%Waves%WvHiCOff, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
    
-      ! WaveDir - Mean wave heading direction.
-   call ParseVar( FileInfo_In, CurLine, 'WaveDir', InputFileData%Waves%WaveDir, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveDirMod -  Directional spreading function {0: None, 1: COS2S}       (-) [Used only if WaveMod=2]
-   call ParseVar( FileInfo_In, CurLine, 'WaveDirMod', InputFileData%Waves%WaveDirMod, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveDirSpread -  Spreading coefficient [only used if WaveMod=2 and WaveDirMod=1]
-   call ParseVar( FileInfo_In, CurLine, 'WaveDirSpread', InputFileData%Waves%WaveDirSpread, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveNDir -  The number of wave directions to calculate [must be odd; only used if WaveDirMod=1]
-   call ParseVar( FileInfo_In, CurLine, 'WaveNDir', InputFileData%Waves%WaveNDir, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveDirRange - Full range of the wave directions from WaveDir - WaveDirRange/2 to WaveDir + WaveDirRange/2 (only used if WaveMod=2 and WaveDirMod=1)
-   call ParseVar( FileInfo_In, CurLine, 'WaveDirRange', InputFileData%Waves%WaveDirRange, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! Negative values should be treated as positive.
-   InputFileData%Waves%WaveDirRange =  ABS( InputFileData%Waves%WaveDirRange )
-
-
-      ! WaveSeed(1)
-   call ParseVar( FileInfo_In, CurLine, 'WaveSeed(1)', InputFileData%Waves%WaveSeed(1), ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-   InputFileData%Waves%RNG%RandSeed(1) = InputFileData%Waves%WaveSeed(1)
-
-      !WaveSeed(2)
-   call ParseVar( FileInfo_In, CurLine, 'WaveSeed(2)', Line, ErrStat2, ErrMsg2, UnEc )    ! Read into a string and then parse
-      if (Failed())  return;
-
-   READ (Line,*,IOSTAT=ErrStat2) Line1  ! check the first character to make sure we don't have T/F, which can be interpreted as 1/-1 or 0 in Fortran
-   CALL Conv2UC( Line1 )
-   IF ( (Line1 == 'T') .OR. (Line1 == 'F') ) THEN
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = ' WaveSeed(2): Invalid RNG type.'
-      if (Failed())  return;
-   ENDIF
-
-!FIXME: there is something a little strange here.  RandSeed(2) is an integer, but what if we get an error on the next read?
-   READ (Line,*,IOSTAT=ErrStat2) InputFileData%Waves%WaveSeed(2)
-   InputFileData%Waves%RNG%RandSeed(2) = InputFileData%Waves%WaveSeed(2)
-
-   IF (ErrStat2 == 0) THEN ! the user entered a number
-      InputFileData%Waves%RNG%RNG_type = "NORMAL"
-      InputFileData%Waves%RNG%pRNG = pRNG_INTRINSIC
-
-   ELSE
-
-      InputFileData%Waves%RNG%RNG_type = ADJUSTL( Line )
-      CALL Conv2UC( InputFileData%Waves%RNG%RNG_type )
-
-      IF ( InputFileData%Waves%RNG%RNG_type == "RANLUX") THEN
-         InputFileData%Waves%RNG%pRNG = pRNG_RANLUX
-      ELSE
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = ' WaveSeed(2): Invalid alternative random number generator.'
-         if (Failed())  return;
-      ENDIF
-
-   ENDIF
-
-
-      ! WaveNDAmp - Flag for normally distributed amplitudes.
-   call ParseVar( FileInfo_In, CurLine, 'WaveNDAmp', InputFileData%Waves%WaveNDAmp, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WvKinFile
-   call ParseVar( FileInfo_In, CurLine, 'WvKinFile', InputFileData%Waves%WvKinFile, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! NWaveElev
-   call ParseVar( FileInfo_In, CurLine, 'NWaveElev', InputFileData%Waves%NWaveElev, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! This check is needed here instead of being located in HydroDynInput_ProcessInputData() because
-      ! we need to allocate arrays.  If _GetInput() was skipped, then these array would already have
-      ! been allocated and populated.
-
-   IF ( InputFileData%Waves%NWaveElev < 0 .OR. InputFileData%Waves%NWaveElev > 9 ) THEN
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = 'NWaveElev must be greater than or equal to zero and less than 10.'
-      if (Failed())  return;
-   END IF
-
-      ! allocate space for the output location arrays:
-   CALL AllocAry( InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, 'WaveElevxi' , ErrStat2, ErrMsg2);  if (Failed())  return;
-   CALL AllocAry( InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, 'WaveElevyi' , ErrStat2, ErrMsg2);  if (Failed())  return;
-      
-      ! WaveElevxi
-   call ParseAry ( FileInfo_In, CurLine, 'WaveElevxi.', InputFileData%Waves%WaveElevxi, InputFileData%Waves%NWaveElev, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WaveElevyi
-   call ParseAry ( FileInfo_In, CurLine, 'WaveElevyi.', InputFileData%Waves%WaveElevyi, InputFileData%Waves%NWaveElev, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for 2nd Order Waves 
-   !-------------------------------------------------------------------------------------------------
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
-   CurLine = CurLine + 1
-
-      ! WvDiffQTFF     - Second order waves -- difference forces
-   call ParseVar( FileInfo_In, CurLine, 'WvDiffQTF', InputFileData%Waves2%WvDiffQTFF, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WvSumQTFF      - Second order waves -- sum forces
-   call ParseVar( FileInfo_In, CurLine, 'WvSumQTF', InputFileData%Waves2%WvSumQTFF, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WvLowCOffD   -- Minimum frequency used in the difference methods (rad/s)              [Only used if DiffQTF /= 0]
-   call ParseVar( FileInfo_In, CurLine, 'WvLowCOffD', InputFileData%Waves2%WvLowCOffD, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WvHiCOffD   -- Maximum frequency used in the difference methods  (rad/s)              [Only used if DiffQTF /= 0]
-   call ParseVar( FileInfo_In, CurLine, 'WvHiCOffD', InputFileData%Waves2%WvHiCOffD, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WvLowCOffS   -- Minimum frequency used in the        sum-QTF     (rad/s)              [Only used if  SumQTF /= 0]
-   call ParseVar( FileInfo_In, CurLine, 'WvLowCOffS', InputFileData%Waves2%WvLowCOffS, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WvHiCOffS   -- Maximum frequency used in the        sum-QTF      (rad/s)              [Only used if  SumQTF /= 0]
-   call ParseVar( FileInfo_In, CurLine, 'WvHiCOffS', InputFileData%Waves2%WvHiCOffS, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for current
-   !-------------------------------------------------------------------------------------------------
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
-   CurLine = CurLine + 1
-
-      ! CurrMod - Current profile model switch
-   call ParseVar( FileInfo_In, CurLine, 'CurrMod', InputFileData%Current%CurrMod, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! CurrSSV0 - Sub-surface current velocity at still water level
-   call ParseVar( FileInfo_In, CurLine, 'CurrSSV0', InputFileData%Current%CurrSSV0, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-
-      ! CurrSSDirChr - Sub-surface current heading direction
-   call ParseVar( FileInfo_In, CurLine, 'CurrSSDir', InputFileData%Current%CurrSSDirChr, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-   CALL Conv2UC( InputFileData%Current%CurrSSDirChr )    ! Convert Line to upper case.
-
-
-      ! CurrNSRef - Near-surface current reference depth.
-   call ParseVar( FileInfo_In, CurLine, 'CurrNSRef', InputFileData%Current%CurrNSRef, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! CurrNSV0 - Near-surface current velocity at still water level.
-   call ParseVar( FileInfo_In, CurLine, 'CurrNSV0', InputFileData%Current%CurrNSV0, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! CurrNSDir - Near-surface current heading direction.
-   call ParseVar( FileInfo_In, CurLine, 'CurrNSDir', InputFileData%Current%CurrNSDir, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! CurrDIV - Depth-independent current velocity.
-   call ParseVar( FileInfo_In, CurLine, 'CurrDIV', InputFileData%Current%CurrDIV, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! CurrDIDir - Depth-independent current heading direction.
-   call ParseVar( FileInfo_In, CurLine, 'CurrDIDir', InputFileData%Current%CurrDIDir, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-
    !-------------------------------------------------------------------------------------------------
    ! Data section for floating platform
    !-------------------------------------------------------------------------------------------------
@@ -478,6 +256,10 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    call ParseVar( FileInfo_In, CurLine, 'ExctnMod', InputFileData%WAMIT%ExctnMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
+      ! ExctnDisp  - Use body displacements to compute Wave Excitations {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]} (switch)
+   call ParseVar( FileInfo_In, CurLine, 'ExctnDisp', InputFileData%WAMIT%ExctnDisp, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+      
       ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
    call ParseVar( FileInfo_In, CurLine, 'RdtnMod', InputFileData%WAMIT%RdtnMod, ErrStat2, ErrMsg2, UnEc )
@@ -665,7 +447,16 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
       end do
    END DO
 
-
+   !-------------------------------------------------------------------------------------------------
+   !  Strip Theory Section
+   !-------------------------------------------------------------------------------------------------
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
+   CurLine = CurLine + 1
+   
+   ! WaveDisp  - Method of computing Wave Kinematics {0: use undisplaced position, 1: use displaced position) } (switch)
+   call ParseVar( FileInfo_In, CurLine, 'WaveDisp', InputFileData%Morison%WaveDisp, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+      
    !-------------------------------------------------------------------------------------------------
    !  Axial Coefficients Section
    !-------------------------------------------------------------------------------------------------
@@ -1348,7 +1139,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
  
       ! WtrDens - Water density.
 
-   IF ( InputFileData%Waves%WtrDens < 0.0 )  THEN
+   IF ( InputFileData%Morison%WtrDens < 0.0 )  THEN
       CALL SetErrStat( ErrID_Fatal,'WtrDens must not be negative.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
@@ -1366,59 +1157,23 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
 
       ! MSL2SWL - Mean sea level to still water level
-
+   
+!TODO: Add check for InputFileData%Morison%MSL2SWL
    IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InputFileData%Morison%MSL2SWL, 0.0_ReKi) ) THEN
-      CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
+      CALL SetErrStat( ErrID_Fatal,'SeaState MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
+      RETURN
+   END IF
+   IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InputFileData%Morison%MSL2SWL, 0.0_ReKi) ) THEN
+      CALL SetErrStat( ErrID_Fatal,'HydroDyn MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
       RETURN
    END IF
      
    
       ! WaveMod - Wave kinematics model switch.
-
-   IF ( LEN_TRIM(InputFileData%Waves%WaveModChr) > 1 ) THEN
-
-      IF ( InputFileData%Waves%WaveModChr(1:2) == '1P' )  THEN                     ! The user wants to specify the phase in place of a random phase
-
-         READ (InputFileData%Waves%WaveModChr(3:),*,IOSTAT=IOS )  InputFileData%Waves%WavePhase
-            CALL CheckIOS ( IOS, "", 'WavePhase', NumType, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
-            
-         WaveModIn               = 1
-         InputFileData%Waves%WaveMod   = 10                                ! Internally define WaveMod = 10 to mean regular waves with a specified (nonrandom) phase
-         InputFileData%Waves%WavePhase = InputFileData%Waves%WavePhase*D2R       ! Convert the phase from degrees to radians
-
-      ELSE                                               ! The user must have specified WaveMod incorrectly.
-         CALL SetErrStat( ErrID_Fatal,'WaveMod incorrectly specified',ErrStat,ErrMsg,RoutineName)
+!TODO: Verify this check
+   IF ( InputFileData%PotMod > 0 .and. InitInp%WaveMod == 6 ) THEN
+         CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, or 5 when PotMod is not 0',ErrStat,ErrMsg,RoutineName)
          RETURN
-      END IF
-
-   ELSE
-         ! The line below only works for 1 digit reads
-      READ( InputFileData%Waves%WaveModChr, *, IOSTAT=IOS ) InputFileData%Waves%WaveMod
-         CALL CheckIOS ( IOS, "", 'WaveMod', NumType, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-         
-      WaveModIn               = InputFileData%Waves%WaveMod
-
-   END IF ! LEN_TRIM(InputFileData%Waves%WaveModChr)
-
-   IF ( (WaveModIn == 6) .AND. .NOT. EqualRealNos(InputFileData%Morison%MSL2SWL, 0.0_ReKi) ) THEN
-      CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when WaveMod = 6.',ErrStat,ErrMsg,RoutineName)        
-      RETURN
-   END IF
-   
-
-   IF ( WaveModIn < 0 .OR. WaveModIn > 6 ) THEN
-      IF ( InputFileData%PotMod == 1  ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, 5, or 6.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-!ADP: This seems like a strange test on ErrStat...
-      ELSE IF ( ErrStat /= ErrID_None .OR. WaveModIn /= 5)  THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, or 5.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
    END IF
 
       ! Linearization Checks
@@ -1442,22 +1197,17 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
          ! TODO: We are only implementing WaveStMod = 0 (No stretching) at this point in time. 1 Mar 2013 GJH
 
-   IF ( InputFileData%Waves%WaveStMod /= 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'WaveStMod must be 0. Future versions of HydroDyn will once again support other wave stretching models.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-   IF ( InputFileData%Waves%WaveMod /= 6 .AND. InputFileData%Morison%NMembers > 0 .AND. InputFileData%Waves%WaveMod > 0 ) THEN
+   IF ( InitInp%WaveMod /= 6 .AND. InputFileData%Morison%NMembers > 0 .AND. InitInp%WaveMod > 0 ) THEN
       
-      IF ( ( InputFileData%Waves%WaveStMod /= 0 ) .AND. ( InputFileData%Waves%WaveStMod /= 1 ) .AND. &
-            ( InputFileData%Waves%WaveStMod /= 2 ) ) THEN ! (TODO: future version will support 3) .AND. ( InputFileData%Waves%WaveStMod /= 3 ) )  THEN
+      IF ( ( InitInp%WaveStMod /= 0 ) .AND. ( InitInp%WaveStMod /= 1 ) .AND. &
+            ( InitInp%WaveStMod /= 2 ) ) THEN ! (TODO: future version will support 3) .AND. ( InputFileData%Waves%WaveStMod /= 3 ) )  THEN
          ErrMsg  = ' WaveStMod must be 0, 1, or 2.' !, or 3.'
          ErrStat = ErrID_Fatal
    
          RETURN
       END IF
    
-      !IF ( ( InputFileData%Waves%WaveStMod /= 3 ) .AND. ( InputFileData%Waves%WaveMod == 5 ) )  THEN
+      !IF ( ( InitInp%WaveStMod /= 3 ) .AND. ( InitInp%WaveMod == 5 ) )  THEN
       !   ErrMsg  = ' WaveStMod must be set to 3 when WaveMod is set to 5.'
       !   ErrStat = ErrID_Fatal
       !
@@ -1475,480 +1225,27 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          !       Paul Sclavounos, there are such corrections).  Instead, the viscous
          !       drag term from Morison's equation is computed by integrating up to
          !       the MSL, regardless of the instantaneous free surface elevation.
+     ! TODO: The following can no longer be set because it is part of InitInp and SeaState Parameters.  GJH 9/24/2021
+     ! InitInp%WaveStMod = 0
    
-      InputFileData%Waves%WaveStMod = 0
-   
    END IF
 
 
-      ! WaveTMax - Analysis time for incident wave calculations.
-
-   IF ( InputFileData%Waves%WaveMod == 0 )  THEN   ! .TRUE if we have incident waves.
-      
-      ! TODO: Issue warning if WaveTMax was not already 0.0 in this case.
-      IF ( .NOT. EqualRealNos(InputFileData%Waves%WaveTMax, 0.0_DbKi) ) THEN
-         CALL WrScr( '  Setting WaveTMax to 0.0 since WaveMod = 0' )
-         InputFileData%Waves%WaveTMax = 0.0
-      END IF
-      IF ( .NOT. EqualRealNos(InputFileData%Waves%WaveDir, 0.0_SiKi) ) THEN
-         CALL WrScr( '  Setting WaveDir to 0.0 since WaveMod = 0' )
-         InputFileData%Waves%WaveDir = 0.0
-      END IF
-   ELSEIF ( InputFileData%Waves%WaveMod == 5 ) THEN   ! User wave elevation file reading in
-      IF (InitInp%TMax > InputFileData%Waves%WaveTMax ) THEN
-         CALL SetErrstat( ErrID_Fatal, '  WaveTMax must be larger than the simulation time for user wave elevations (WaveMod == 5).',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-   ELSE
-      IF (InitInp%TMax > InputFileData%Waves%WaveTMax ) THEN
-         CALL WrScr( '  WaveTMax is less then the simulation time.  Wave data will repeat every WaveTMax seconds.')
-      END IF
-   END IF   
 
 
-      ! WaveDT - Time step for incident wave calculations
-
-   IF ( InputFileData%Waves%WaveMod > 0 )  THEN   ! .TRUE if we have incident waves.
-
-      IF ( InputFileData%Waves%WaveDT <= 0.0 )  THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveDT must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-      
-      IF ( (InputFileData%Waves%WaveMod == 6) .AND. (.NOT. EqualRealNos(InputFileData%Waves%WaveDT, Interval)) ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveDT must equal the simulation DT value when WaveMod = 6.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-   ELSE
-
-      InputFileData%Waves%WaveDT = 0.0
-
-   END IF
-
-
-       ! WaveHs - Significant wave height
-
-   IF ( ( InputFileData%Waves%WaveMod /= 0 ) .AND. ( InputFileData%Waves%WaveMod /= 4 ) .AND. ( InputFileData%Waves%WaveMod /= 5 ) ) THEN   ! .TRUE. (when WaveMod = 1, 2, 3, or 10) if we have plane progressive (regular), JONSWAP/Pierson-Moskowitz spectrum (irregular) waves, or white-noise waves, but not user-defined or GH Bladed wave data.
-
-      IF ( InputFileData%Waves%WaveHs <= 0.0 )  THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveHs must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-   ELSE
-
-      InputFileData%Waves%WaveHs = 0.0
-
-   END IF
-
-
-      ! WaveTp - Peak spectral period.
-   ! We commented out the if else block due to a bug when WaveMod == 3, and then WaveTp is hence set to 0.0.  See line 1092 of Waves.f90 (as of 11/24/2014) GJH
-   !IF ( ( InputFileData%Waves%WaveMod == 1 ) .OR. ( InputFileData%Waves%WaveMod == 2 ) .OR. ( InputFileData%Waves%WaveMod == 10 ) ) THEN   ! .TRUE. (when WaveMod = 1, 2, or 10) if we have plane progressive (regular), JONSWAP/Pierson-Moskowitz spectrum (irregular) waves.
-
-      IF ( InputFileData%Waves%WaveTp <= 0.0 )  THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveTp must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-  ! ELSE
-
-  !    InputFileData%Waves%WaveTp = 0.0
-
-  ! END IF
-
-
-       ! WavePkShp - Peak shape parameter.
-
-   CALL Conv2UC( InputFileData%Waves%WavePkShpChr )    ! Convert Line to upper case.
-
-   IF ( InputFileData%Waves%WaveMod == 2 ) THEN   ! .TRUE if we have JONSWAP/Pierson-Moskowitz spectrum (irregular) waves, but not GH Bladed wave data.
-
-      IF ( TRIM(InputFileData%Waves%WavePkShpChr) == 'DEFAULT' )  THEN   ! .TRUE. when one wants to use the default value of the peak shape parameter, conditioned on significant wave height and peak spectral period.
-
-         InputFileData%Waves%WavePkShp = WavePkShpDefault ( InputFileData%Waves%WaveHs, InputFileData%Waves%WaveTp )
-
-      ELSE                                   ! The input must have been specified numerically.
-
-         READ (InputFileData%Waves%WavePkShpChr,*,IOSTAT=IOS)  InputFileData%Waves%WavePkShp
-            CALL CheckIOS ( IOS, "", 'WavePkShp', NumType, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
-
-         IF ( ( InputFileData%Waves%WavePkShp < 1.0 ) .OR. ( InputFileData%Waves%WavePkShp > 7.0 ) )  THEN
-            CALL SetErrStat( ErrID_Fatal,'WavePkShp must be greater than or equal to 1 and less than or equal to 7.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-
-      END IF
-
-   ELSE
-
-      InputFileData%Waves%WavePkShp = 1.0
-
-   END IF
-
-
-      ! WvLowCOff and WvHiCOff - Wave Cut-off frequency
-    
-   IF ( InputFileData%Waves%WvLowCOff < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'WvLowCOff must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   
-      ! Threshold upper cut-off based on sampling rate
-   IF ( EqualRealNos(InputFileData%Waves%WaveDT, 0.0_DbKi) ) THEN
-      InputFileData%Waves%WvHiCOff = 10000.0;  ! This is not going to be used because WaveDT is zero.
-   ELSE
-      InputFileData%Waves%WvHiCOff =  MIN( REAL( Pi/InputFileData%Waves%WaveDT,SiKi), InputFileData%Waves%WvHiCOff ) 
-   END IF
-   
-   !TODO Issue warning if we changed WvHiCOff  GJH 7/24/13
-   
-   IF ( InputFileData%Waves%WvLowCOff >= InputFileData%Waves%WvHiCOff ) THEN
-      CALL SetErrSTat( ErrID_Fatal,'WvLowCOff must be less than WvHiCOff.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   
    
         ! Copy over the first order frequency limits to the WAMIT2 module which needs them.
-   InputFileData%WAMIT2%WvLowCOff  = InputFileData%Waves%WvLowCOff
-   InputFileData%WAMIT2%WvHiCOff   = InputFileData%Waves%WvHiCOff
-
-
-      ! WaveDir - Wave heading direction.
-
-   IF ( ( InputFileData%Waves%WaveMod > 0 ) .AND. ( InputFileData%Waves%WaveMod /= 6 ) )  THEN   ! .TRUE if we have incident waves, but not user input wave data.
-
-      IF ( ( InputFileData%Waves%WaveDir <= -180.0 ) .OR. ( InputFileData%Waves%WaveDir > 180.0 ) )  THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveDir must be greater than -180 and less than or equal to 180.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-   ELSE
-
-      InputFileData%Waves%WaveDir = 0.0
-
-   END IF
-
-
-      ! Multi-directional waves
-
-      ! Check the WaveDirMod value
-   IF ( InputFileData%Waves%WaveDirMod < 0 .OR. InputFileData%Waves%WaveDirMod > 1 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'WaveDirMod must be either 0 (No spreading) or 1 (COS2S spreading function)',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-      ! Check if we are doing multidirectional waves or not.
-      ! We can only use multi directional waves on WaveMod=2,3,4
-   InputFileData%Waves%WaveMultiDir = .FALSE.         ! Set flag to false to start
-   IF ( InputFileData%Waves%WaveMod >= 2 .AND. InputFileData%Waves%WaveMod <= 4 .AND. InputFileData%Waves%WaveDirMod == 1 ) THEN
-      InputFileData%Waves%WaveMultiDir = .TRUE.
-   ELSEIF ( (InputFileData%Waves%WaveMod < 2 .OR. InputFileData%Waves%WaveMod >4) .AND. InputFileData%Waves%WaveDirMod == 1 ) THEN
-      CALL SetErrStat( ErrID_Warn,'WaveDirMod unused unless WaveMod == 2, 3, or 4.  Ignoring WaveDirMod.',ErrStat,ErrMsg,RoutineName)
-   ENDIF
-
-
-      !  Check to see if the for some reason the wave direction spreading range is set to zero.  If it is, 
-      !  we don't have any spreading, so we will turn off the multidirectional waves.
-   IF ( InputFileData%Waves%WaveMultiDir .AND. EqualRealNos( InputFileData%Waves%WaveDirRange, 0.0_SiKi ) ) THEN
-      CALL SetErrStat( ErrID_Warn,' WaveDirRange set to zero, so multidirectional waves are turned off.',ErrStat,ErrMsg,RoutineName)
-      InputFileData%Waves%WaveMultiDir = .FALSE.
-   ENDIF
-
-
-
-      ! We check the following only if we set WaveMultiDir to true, otherwise ignore them and set them to zero
-   IF ( InputFileData%Waves%WaveMultiDir ) THEN
-
-         ! Check WaveDirSpread
-      IF ( InputFileData%Waves%WaveDirSpread <= 0.0 ) THEN
-
-         CALL SetErrStat( ErrID_Fatal,'WaveDirSpread cannot negative or zero.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-
-      ENDIF
-
-
-         ! Check that the number of wave directions is a positive odd number.
-         !     -> If it is less than 0, error out.
-         !     -> If it is even, we will increment it by 1.
-      IF ( InputFileData%Waves%WaveNDir <= 0_IntKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' WaveNDir must be an odd number greater than 0.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      ENDIF
-
-         ! Check that the value for WaveNDir is odd
-      IF ( MODULO( InputFileData%Waves%WaveNDir, 2_IntKi) == 0_IntKi ) THEN
-         InputFileData%Waves%WaveNDir  = InputFileData%Waves%WaveNDir + 1
-         CALL SetErrStat( ErrID_Warn,'WaveNDir must be odd.  Changing the value to '//Num2LStr(InputFileData%Waves%WaveNDir),ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-         ! Now check that the WaveDirRange is less than 360 degrees (not sure why we would want that)
-      IF ( InputFileData%Waves%WaveDirRange > 360.0_ReKi ) THEN
-         CALL SetErrStat( ErrID_Fatal,' WaveDirRange should be less than a full circle.',ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
-   ELSE  ! Set everything to zero if we aren't going to use it
-
-      InputFileData%Waves%WaveNDir        = 1         ! Only one direction set -- this shouldn't get used later anyhow
-      InputFileData%Waves%WaveDirRange    = PiBy2     ! This is so that the constant C=1 in the COS2S function (it shouldn't get called, but in case it does)
-      InputFileData%Waves%WaveDirSpread   = 0.0
-
-   END IF
-
-
-       ! WaveSeed(1), !WaveSeed(2)
-
-   IF ( .NOT. ( ( InputFileData%Waves%WaveMod > 0 ) .AND. ( InputFileData%Waves%WaveMod /= 5 ) .AND. ( InputFileData%Waves%WaveMod /= 10 ) ) ) THEN   !.TRUE. for plane progressive (regular) with random phase or irregular wave 
-
-      DO I = 1,2
-
-         InputFileData%Waves%WaveSeed(I) = 0
-
-      END DO !I
-
-   END IF
-
-
-      ! WvKinFile
-
-   IF ( InputFileData%Waves%WaveMod == 5 .OR. InputFileData%Waves%WaveMod == 6 ) THEN      ! .TRUE if we are to read user-supplied wave elevation or wave kinematics file(s).
-
-      IF ( LEN_TRIM( InputFileData%Waves%WvKinFile ) == 0 )  THEN
-         CALL SetErrStat( ErrID_Fatal,'WvKinFile must not be an empty string.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-      IF ( PathIsRelative( InputFileData%Waves%WvKinFile ) ) THEN
-         CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
-         InputFileData%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InputFileData%Waves%WvKinFile)
-      END IF
-      InputFileData%Waves%WriteWvKin = .FALSE.
-   ELSE !don't use this one
-      
-#ifdef WRITE_WV_KIN
-      IF ( LEN_TRIM( InputFileData%Waves%WvKinFile ) == 0 )  THEN
-         InputFileData%Waves%WriteWvKin = .FALSE.
-      ELSE
-         InputFileData%Waves%WriteWvKin = .TRUE.
-         IF ( PathIsRelative( InputFileData%Waves%WvKinFile ) ) THEN
-            CALL GetPath( TRIM(InputFileData%InputFile), TmpPath )
-            InputFileData%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InputFileData%Waves%WvKinFile)
-         END IF
-      END IF
-      
-#else
-      InputFileData%Waves%WvKinFile = ""
-      InputFileData%Waves%WriteWvKin = .FALSE.
-#endif
-   END IF
-
-
-      ! NWaveElev
-
-   IF ( InputFileData%Waves%NWaveElev < 0 ) THEN
-
-      CALL SetErrStat( ErrID_Fatal,'NWaveElev must not be negative.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-
-   END IF
-
-
-
-      !-------------------------------------------------------------------------
-      ! Check 2nd Order Waves section
-      !-------------------------------------------------------------------------
-
-
-      ! Difference frequency cutoffs
-
-      ! WvLowCOffD and WvHiCOffD - Wave Cut-off frequency
-   IF ( InputFileData%Waves2%WvLowCOffD < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'WvLowCOffD must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-      ! Check that the order given makes sense. 
-   IF ( InputFileData%Waves2%WvLowCOffD >= InputFileData%Waves2%WvHiCOffD ) THEN
-      CALL SetErrStat( ErrID_Fatal,'WvLowCOffD must be less than WvHiCOffD.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-   
-
-      ! Sum frequency cutoffs
-
-      ! WvLowCOffS and WvHiCOffD - Wave Cut-off frequency
-   IF ( InputFileData%Waves2%WvLowCOffS < 0 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'WvLowCOffS must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-      ! Check that the order given makes sense. 
-   IF ( InputFileData%Waves2%WvLowCOffS >= InputFileData%Waves2%WvHiCOffS ) THEN
-      CALL SetErrStat( ErrID_Fatal,'WvLowCOffS must be less than WvHiCOffS.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
+   InputFileData%WAMIT2%WvLowCOff  = InitInp%WvLowCOff
+   InputFileData%WAMIT2%WvHiCOff   = InitInp%WvHiCOff
 
 
         ! Copy over the 2nd order limits to the WAMIT2 module which needs them.
-   InputFileData%WAMIT2%WvLowCOffD  = InputFileData%Waves2%WvLowCOffD
-   InputFileData%WAMIT2%WvHiCOffD   = InputFileData%Waves2%WvHiCOffD
-   InputFileData%WAMIT2%WvLowCOffS  = InputFileData%Waves2%WvLowCOffS
-   InputFileData%WAMIT2%WvHiCOffS   = InputFileData%Waves2%WvHiCOffS
+   InputFileData%WAMIT2%WvLowCOffD  = InitInp%WvLowCOffD
+   InputFileData%WAMIT2%WvHiCOffD   = InitInp%WvHiCOffD
+   InputFileData%WAMIT2%WvLowCOffS  = InitInp%WvLowCOffS
+   InputFileData%WAMIT2%WvHiCOffS   = InitInp%WvHiCOffS
 
 
-
-      !-------------------------------------------------------------------------
-      ! Check Current section
-      !-------------------------------------------------------------------------
-      
-
-      ! CurrMod - Current profile model switch
-
-   IF ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InputFileData%Current%CurrMod /= 1 ) .AND. ( InputFileData%Current%CurrMod /= 2 ) )  THEN
-      CALL SetErrStat( ErrID_Fatal,'CurrMod must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-   IF ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InputFileData%Waves%WaveMod == 6 ) )  THEN
-      CALL SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 when WaveMod is set to 6: user-input wave data.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-
-      ! CurrSSV0 - Sub-surface current velocity at still water level
-
-   IF ( InputFileData%Current%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-
-      IF ( InputFileData%Current%CurrSSV0 < 0.0 )  THEN
-         CALL SetErrStat( ErrID_Fatal,'CurrSSV0 must not be less than zero.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-   ELSE
-
-      InputFileData%Current%CurrSSV0 = 0.0
-
-   END IF
-
-
-      ! CurrSSDirChr - Sub-surface current heading direction
-
-   IF ( InputFileData%Current%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-
-
-      IF ( TRIM(InputFileData%Current%CurrSSDirChr) == 'DEFAULT' )  THEN   ! .TRUE. when one wants to use the default value of codirectionality between sub-surface current and incident wave propogation heading directions.
-
-         IF ( InputFileData%Waves%WaveMod == 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'CurrSSDir must not be set to ''DEFAULT'' when WaveMod is set to 0.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-
-         InputFileData%Current%CurrSSDir = InputFileData%Waves%WaveDir
-
-      ELSE                                   ! The input must have been specified numerically.
-
-         READ (InputFileData%Current%CurrSSDirChr,*,IOSTAT=IOS)  InputFileData%Current%CurrSSDir
-            CALL CheckIOS ( IOS, "", 'CurrSSDir', NumType, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) RETURN
-
-         IF ( ( InputFileData%Current%CurrSSDir <= -180.0 ) .OR. ( InputFileData%Current%CurrSSDir > 180.0 ) )  THEN
-            CALL SetErrStat( ErrID_Fatal,'CurrSSDir must be greater than -180 and less than or equal to 180.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-
-      END IF
-
-
-   ELSE
-
-      InputFileData%Current%CurrSSDir = 0.0
-
-   END IF
-
-
-      ! CurrNSRef - Near-surface current reference depth.
-
-   IF ( InputFileData%Current%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-
-      IF ( InputFileData%Current%CurrNSRef <= 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'CurrNSRef must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-   ELSE
-
-      InputFileData%Current%CurrNSRef = 0.0
-
-   END IF
-
-
-
-        ! CurrNSV0 - Near-surface current velocity at still water level.
-
-   IF ( InputFileData%Current%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-
-      IF ( InputFileData%Current%CurrNSV0 < 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'CurrNSV0 must not be less than zero.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-   ELSE
-
-      InputFileData%Current%CurrNSV0 = 0.0
-
-   END IF
-
-
-      ! CurrNSDir - Near-surface current heading direction.
-
-   IF ( InputFileData%Current%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-
-      IF ( ( InputFileData%Current%CurrNSDir <= -180.0 ) .OR. ( InputFileData%Current%CurrNSDir > 180.0 ) )  THEN
-         CALL SetErrStat( ErrID_Fatal,'CurrNSDir must be greater than -180 and less than or equal to 180.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-   ELSE
-
-      InputFileData%Current%CurrNSDir = 0.0
-
-   END IF
-
-
-      ! CurrDIV - Depth-independent current velocity.
-
-   IF ( InputFileData%Current%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-
-      IF ( InputFileData%Current%CurrDIV < 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'CurrDIV must not be less than zero.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-   ELSE
-
-      InputFileData%Current%CurrDIV = 0.0
-
-   END IF
-
-
-      ! CurrDIDir - Depth-independent current heading direction.
-
-   IF ( InputFileData%Current%CurrMod == 1 )  THEN  ! .TRUE if we have standard current.
-
-      IF ( ( InputFileData%Current%CurrDIDir <= -180.0 ) .OR. ( InputFileData%Current%CurrDIDir > 180.0 ) ) THEN
-         CALL SetErrStat( ErrID_Fatal,'CurrDIDir must be greater than -180 and less than or equal to 180.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-   ELSE
-
-      InputFileData%Current%CurrDIDir = 0.0
-
-   END IF
 
        ! PotFile - Root name of potential flow files
 
@@ -1974,12 +1271,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       
          ! Set the flag for multidirectional waves for WAMIT2 module.  It needs to know since the Newman approximation
          ! can only use uni-directional waves.
-         InputFileData%WAMIT2%WaveMultiDir = InputFileData%Waves%WaveMultiDir
+         InputFileData%WAMIT2%WaveMultiDir = InitInp%WaveMultiDir
 
    ELSE
       InputFileData%PotFile            = ""
       InputFileData%WAMIT%WAMITFile    = ""
-      InputFileData%WAMIT2%WAMITFile   = ""     
+      InputFileData%WAMIT2%WAMITFile   = ""  
+      ! These can be set to zero because they are only used if PotMod = 1
+      InputFileData%WAMIT%ExctnMod     = 0  
+      InputFileData%WAMIT%RdtnMod      = 0
    END IF
 
       ! Set the WAMIT file name on the Convolution module
@@ -2002,8 +1302,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       InputFileData%WAMIT2%WAMITULEN = 1.0
 
    END IF
-
-
+   
+      ! ExctnDisp - Method of computing Wave Excitation
+   if ( InputFileData%PotMod /= 1 .or. InputFileData%WAMIT%ExctnMod == 0 .or. InitInp%WaveMod == 0) then
+      InputFileData%WAMIT%ExctnDisp    = 0  !Force ExctnDisp = 0, so that the Grid of Wave Excitation forces is not computed (saves time and memory)
+   end if
+   
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
 
    IF ( InputFileData%PotMod == 1 ) THEN
@@ -2266,19 +1570,19 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !..................
    if ( (InputFileData%WAMIT%ExctnMod == 2) ) then
 
-      if ( InputFileData%Waves%WaveMod == 6 ) then
+      if ( InitInp%WaveMod == 6 ) then
          call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
       end if
       
-      if ( InputFileData%Waves%WaveDirMod /= 0 ) then
+      if ( InitInp%WaveDirMod /= 0 ) then
          call SetErrStat( ErrID_Fatal, 'Directional spreading cannot be used with state-space wave excitations. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
       end if
       
-      if ( InputFileData%Waves2%WvDiffQTFF ) then
+      if ( InitInp%WvDiffQTFF ) then
          call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       end if
       
-      if ( InputFileData%Waves2%WvSumQTFF ) then
+      if ( InitInp%WvSumQTFF ) then
          call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       end if
 
@@ -2309,19 +1613,19 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !..................
    if (InitInp%Linearize) then
       
-      if ( InputFileData%Waves%WaveMod /= 0 ) then
+      if ( InitInp%WaveMod /= 0 ) then
          call SetErrStat( ErrID_Fatal, 'Still water conditions must be used for linearization. Set WaveMod=0.', ErrStat, ErrMsg, RoutineName )
       end if
       
-      if ( InputFileData%Waves%WaveDirMod /= 0 ) then
+      if ( InitInp%WaveDirMod /= 0 ) then
          call SetErrStat( ErrID_Fatal, 'No directional spreading must be used for linearization. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
       end if
       
-      if ( InputFileData%Waves2%WvDiffQTFF ) then
+      if ( InitInp%WvDiffQTFF ) then
          call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics for linearization. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       end if
       
-      if ( InputFileData%Waves2%WvSumQTFF ) then
+      if ( InitInp%WvSumQTFF ) then
          call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics for linearization. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       end if
 
@@ -2911,7 +2215,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
                CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
          ELSE
-            InputFileData%Morison%FilledGroups(I)%FillDens = InputFileData%Waves%WtrDens
+            InputFileData%Morison%FilledGroups(I)%FillDens = InputFileData%Morison%WtrDens
          END IF
 
       END DO
@@ -2931,10 +2235,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
    IF ( InputFileData%Morison%NMGDepths > 0 ) THEN
 
-      InitInp%Morison%MGTop    = -999999.0
-      InitInp%Morison%MGBottom =  999999.0
+      InputFileData%Morison%MGTop    = -999999.0
+      InputFileData%Morison%MGBottom =  999999.0
       
-      DO I = 1,InitInp%Morison%NMGDepths
+      DO I = 1,InputFileData%Morison%NMGDepths
             ! Store the boundaries of the marine growth zone
          IF ( InputFileData%Morison%MGDepths(I)%MGDpth > InputFileData%Morison%MGTop ) THEN
             InputFileData%Morison%MGTop    = InputFileData%Morison%MGDepths(I)%MGDpth
@@ -3087,7 +2391,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       END IF
       foundMask = .FALSE.
          ! Extract Waves2 list
-      InputFileData%Waves2%NumOuts  = GetWaves2Channels   ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!      InputFileData%Waves2%NumOuts  = GetWaves2Channels   ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
 !         ! Extract WAMIT2 list
 !      InputFileData%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -3138,47 +2442,21 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    ! Populate data in sub-types from parent or other module types
    !----------------------------------------------------------
 
-      ! Current
-         ! For wave kinematic calculations, the effective water depth is the user input water depth (positive valued) + MSL2SWL (positive when SWL is above MSL).
-      InputFileData%Current%WtrDpth    = InputFileData%Morison%WtrDpth ! already adjusted for the MSL2SWL.  
-                                                       
+     
       
-      ! Waves
-      InputFileData%Waves%Gravity      = InitInp%Gravity
-      InputFileData%Waves%UnSum        = InputFileData%UnSum
-         ! For wave kinematic calculations, the effective water depth is the user input water depth (positive valued) + MSL2SWL (positive when SWL is above MSL).
-      InputFileData%Waves%WtrDpth      = InputFileData%Morison%WtrDpth ! already adjusted for the MSL2SWL.
-      
-      ! Waves2
-      IF (InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) THEN
-         InputFileData%Waves2%WtrDens     = InputFileData%Waves%WtrDens
-         InputFileData%Waves2%Gravity     = InitInp%Gravity
-         InputFileData%Waves2%UnSum       = InputFileData%UnSum
-         InputFileData%Waves2%WtrDpth     = InputFileData%Waves%WtrDpth
-         InputFileData%Waves2%WaveStMod   = InputFileData%Waves%WaveStMod
-         InputFileData%Waves2%NWaveElev   = InputFileData%Waves%NWaveElev
-         CALL AllocAry( InputFileData%Waves2%WaveElevxi, InputFileData%Waves2%NWaveElev, 'WaveElevxi' , ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         CALL AllocAry( InputFileData%Waves2%WaveElevyi, InputFileData%Waves2%NWaveElev, 'WaveElevyi' , ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         IF ( ErrStat >= AbortErrLev ) RETURN 
-         InputFileData%Waves2%WaveElevxi  = InputFileData%Waves%WaveElevxi
-         InputFileData%Waves2%WaveElevyi  = InputFileData%Waves%WaveElevyi
-      ENDIF
 
       ! WAMIT
-      InputFileData%WAMIT%WtrDens      = InputFileData%Waves%WtrDens
-      InputFileData%WAMIT%WaveMod      = InputFileData%Waves%WaveMod
+      InputFileData%WAMIT%WtrDens      = InputFileData%Morison%WtrDens
+      InputFileData%WAMIT%WaveMod      = InitInp%WaveMod
       InputFileData%WAMIT%OutAll       = InputFileData%OutAll
       InputFileData%WAMIT%HasWAMIT     = InputFileData%PotMod == 1
       ! WAMIT2
-      InputFileData%WAMIT2%WtrDens     = InputFileData%Waves%WtrDens
-      InputFileData%WAMIT2%WaveMod     = InputFileData%Waves%WaveMod
+      InputFileData%WAMIT2%WtrDens     = InputFileData%Morison%WtrDens
+      InputFileData%WAMIT2%WaveMod     = InitInp%WaveMod
       InputFileData%WAMIT2%HasWAMIT    = InputFileData%PotMod == 1
       ! Morison
       InputFileData%Morison%UnSum      = InputFileData%UnSum
       InputFileData%Morison%Gravity    = InitInp%Gravity
-      InputFileData%Morison%WtrDens    = InputFileData%Waves%WtrDens
       InputFileData%Morison%OutAll     = InputFileData%OutAll
 
          ! Process the input geometry and generate the simulation mesh representation
@@ -3187,68 +2465,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-         ! Set the number and global Z locations for the X and Y components of the current velocities
-      InputFileData%Current%NMorisonNodes = InputFileData%Morison%NNodes
-
-      ALLOCATE ( InputFileData%Current%MorisonNodezi(InputFileData%Morison%NNodes), STAT = ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,'Error allocating space for MorisonNodezi array.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-
-
-         ! Establish the number and locations where the wave kinematics will be computed
-      InputFileData%Waves%NWaveKin   = InputFileData%Morison%NNodes                          ! Number of points where the incident wave kinematics will be computed (-)
-      ALLOCATE ( InputFileData%Waves%WaveKinxi(InputFileData%Waves%NWaveKin), STAT = ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array.',ErrStat,ErrMsg,RoutineName)
-
-         RETURN
-      END IF
-      ALLOCATE ( InputFileData%Waves%WaveKinyi(InputFileData%Waves%NWaveKin), STAT = ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi array.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-      ALLOCATE ( InputFileData%Waves%WaveKinzi(InputFileData%Waves%NWaveKin), STAT = ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi array.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-      DO I=1,InputFileData%Morison%NNodes
-         InputFileData%Waves%WaveKinxi(I)      = InputFileData%Morison%Nodes(I)%Position(1)   ! xi-coordinates for points where the incident wave kinematics will be computed;
-         InputFileData%Waves%WaveKinyi(I)      = InputFileData%Morison%Nodes(I)%Position(2)   ! yi-coordinates for points where the incident wave kinematics will be computed;
-         InputFileData%Waves%WaveKinzi(I)      = InputFileData%Morison%Nodes(I)%Position(3)   ! zi-coordinates for points where the incident wave kinematics will be computed; 
-         InputFileData%Current%MorisonNodezi(I) = InputFileData%Waves%WaveKinzi(I)
-      END DO
-
-
-            ! If we are using the Waves module, the node information must be copied over.
-      InputFileData%Waves2%NWaveKin   = InputFileData%Waves%NWaveKin                          ! Number of points where the incident wave kinematics will be computed (-)
-      IF ( InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) THEN
-         ALLOCATE ( InputFileData%Waves2%WaveKinxi(InputFileData%Waves2%NWaveKin), STAT = ErrStat2 )
-         IF ( ErrStat2 /= ErrID_None ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
-
-            RETURN
-         END IF
-         ALLOCATE ( InputFileData%Waves2%WaveKinyi(InputFileData%Waves2%NWaveKin), STAT = ErrStat2 )
-         IF ( ErrStat2 /= ErrID_None ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-         ALLOCATE ( InputFileData%Waves2%WaveKinzi(InputFileData%Waves2%NWaveKin), STAT = ErrStat2 )
-         IF ( ErrStat2 /= ErrID_None ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-
-         InputFileData%Waves2%WaveKinxi  = InputFileData%Waves%WaveKinxi
-         InputFileData%Waves2%WaveKinyi  = InputFileData%Waves%WaveKinyi
-         InputFileData%Waves2%WaveKinzi  = InputFileData%Waves%WaveKinzi
-
-      ENDIF
 
 END SUBROUTINE HydroDynInput_ProcessInitData
 

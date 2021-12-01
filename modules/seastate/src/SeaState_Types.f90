@@ -38,8 +38,8 @@ USE SeaState_Interp_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxSeaStOutputs = 90      ! The maximum number of output channels supported by this module [-]
-! =========  SeaState_InputFile  =======
-  TYPE, PUBLIC :: SeaState_InputFile
+! =========  SeaSt_InputFile  =======
+  TYPE, PUBLIC :: SeaSt_InputFile
     LOGICAL  :: EchoFlag      !< Echo the input file [-]
     REAL(ReKi)  :: MSL2SWL      !< Mean Sea Level to Still Water Level offset [m]
     REAL(ReKi)  :: X_HalfWidth      !< Half-width of the domain in the X direction [m]
@@ -69,10 +69,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UnSum      !< File unit for the SeaState summary file [-1 = no summary file] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
-  END TYPE SeaState_InputFile
+  END TYPE SeaSt_InputFile
 ! =======================
-! =========  SeaState_InitInputType  =======
-  TYPE, PUBLIC :: SeaState_InitInputType
+! =========  SeaSt_InitInputType  =======
+  TYPE, PUBLIC :: SeaSt_InitInputType
     CHARACTER(1024)  :: InputFile      !< Supplied by Driver:  full path and filename for the SeaState module [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
@@ -85,10 +85,10 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
-  END TYPE SeaState_InitInputType
+  END TYPE SeaSt_InitInputType
 ! =======================
-! =========  SeaState_InitOutputType  =======
-  TYPE, PUBLIC :: SeaState_InitOutputType
+! =========  SeaSt_InitOutputType  =======
+  TYPE, PUBLIC :: SeaSt_InitOutputType
     TYPE(Waves2_InitOutputType)  :: Waves2      !< Initialization output from the Waves2 module [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all HD-related output channel header strings (includes all sub-module channels) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all HD-related output channel unit strings (includes all sub-module channels) [-]
@@ -97,40 +97,72 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDens      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
     REAL(ReKi)  :: WtrDpth      !< Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default) [(m)]
     REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level, this is necessary to inform glue-code what the module is using for MSL2SWL (may not be the glue-code's default) [(m)]
-  END TYPE SeaState_InitOutputType
+    REAL(SiKi) , DIMENSION(:,:), POINTER  :: WaveElevC0 => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part [(meters)]
+    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
+    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
+    REAL(SiKi)  :: WaveDirMin      !< Minimum wave direction. [(degrees)]
+    REAL(SiKi)  :: WaveDirMax      !< Maximum wave direction. [(degrees)]
+    REAL(SiKi)  :: WaveDir      !< Incident wave propagation heading direction [(degrees)]
+    LOGICAL  :: WaveMultiDir      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
+    REAL(SiKi)  :: WaveDOmega      !< Frequency step for incident wave calculations [(rad/s)]
+    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: WaveDynP => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(N/m^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(m/s^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveVel => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
+    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev => NULL()      !< Total wave elevation [-]
+    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation [-]
+    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Second order wave elevation [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
+    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined [(sec)]
+    REAL(SiKi)  :: RhoXg      !< = WtrDens*Gravity [-]
+    INTEGER(IntKi)  :: NStepWave      !< Total number of frequency components = total number of time steps in the incident wave [-]
+    INTEGER(IntKi)  :: NStepWave2      !< NStepWave / 2 [-]
+    INTEGER(IntKi)  :: WaveMod      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
+    INTEGER(IntKi)  :: CurrMod      !<  [-]
+    INTEGER(IntKi)  :: WaveStMod      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
+    INTEGER(IntKi)  :: WaveDirMod      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
+    REAL(SiKi)  :: WvLowCOff      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOff      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffD      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffD      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffS      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffS      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    LOGICAL  :: WvDiffQTFF      !< Full difference QTF second order forces flag [(-)]
+    LOGICAL  :: WvSumQTFF      !< Full sum QTF second order forces flag [(-)]
+    TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
+  END TYPE SeaSt_InitOutputType
 ! =======================
-! =========  SeaState_ContinuousStateType  =======
-  TYPE, PUBLIC :: SeaState_ContinuousStateType
+! =========  SeaSt_ContinuousStateType  =======
+  TYPE, PUBLIC :: SeaSt_ContinuousStateType
     TYPE(Waves2_ContinuousStateType)  :: Waves2      !< continuous states from the waves2 module [-]
-  END TYPE SeaState_ContinuousStateType
+  END TYPE SeaSt_ContinuousStateType
 ! =======================
-! =========  SeaState_DiscreteStateType  =======
-  TYPE, PUBLIC :: SeaState_DiscreteStateType
+! =========  SeaSt_DiscreteStateType  =======
+  TYPE, PUBLIC :: SeaSt_DiscreteStateType
     TYPE(Waves2_DiscreteStateType)  :: Waves2      !< discrete states from the waves2 module [-]
-  END TYPE SeaState_DiscreteStateType
+  END TYPE SeaSt_DiscreteStateType
 ! =======================
-! =========  SeaState_ConstraintStateType  =======
-  TYPE, PUBLIC :: SeaState_ConstraintStateType
+! =========  SeaSt_ConstraintStateType  =======
+  TYPE, PUBLIC :: SeaSt_ConstraintStateType
     TYPE(Waves2_ConstraintStateType)  :: Waves2      !< constraint states from the waves2 module [-]
-  END TYPE SeaState_ConstraintStateType
+  END TYPE SeaSt_ConstraintStateType
 ! =======================
-! =========  SeaState_OtherStateType  =======
-  TYPE, PUBLIC :: SeaState_OtherStateType
+! =========  SeaSt_OtherStateType  =======
+  TYPE, PUBLIC :: SeaSt_OtherStateType
     TYPE(Waves2_OtherStateType)  :: Waves2      !< OtherState information from the Waves2 module [-]
-  END TYPE SeaState_OtherStateType
+  END TYPE SeaSt_OtherStateType
 ! =======================
-! =========  SeaState_MiscVarType  =======
-  TYPE, PUBLIC :: SeaState_MiscVarType
+! =========  SeaSt_MiscVarType  =======
+  TYPE, PUBLIC :: SeaSt_MiscVarType
     INTEGER(IntKi)  :: Decimate      !< The output decimation counter [-]
     REAL(DbKi)  :: LastOutTime      !< Last time step which was written to the output file (sec) [-]
     INTEGER(IntKi)  :: LastIndWave      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
-    TYPE(SeaState_Interp_MiscVarType)  :: Sea_Interp_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(SeaSt_Interp_MiscVarType)  :: SeaSt_Interp_m      !< misc var information from the SeaState Interpolation module [-]
     TYPE(Waves2_MiscVarType)  :: Waves2      !< misc var information from the Waves2 module [-]
     TYPE(Waves2_InputType)  :: u_Waves2      !< Waves2 module inputs [-]
-  END TYPE SeaState_MiscVarType
+  END TYPE SeaSt_MiscVarType
 ! =======================
-! =========  SeaState_ParameterType  =======
-  TYPE, PUBLIC :: SeaState_ParameterType
+! =========  SeaSt_ParameterType  =======
+  TYPE, PUBLIC :: SeaSt_ParameterType
     TYPE(Waves2_ParameterType)  :: Waves2      !< Parameter data for the Waves2 module [-]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Array of time samples, (sec) [-]
     REAL(DbKi)  :: WaveDT      !< Wave DT [sec]
@@ -162,24 +194,24 @@ IMPLICIT NONE
     CHARACTER(ChanLen)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
     INTEGER(IntKi)  :: UnOutFile      !< File unit for the SeaState outputs [-]
     INTEGER(IntKi)  :: OutDec      !< Write every OutDec time steps [-]
-    TYPE(SeaState_Interp_ParameterType)  :: Sea_Interp_p      !< parameter information from the SeaState Interpolation module [-]
-  END TYPE SeaState_ParameterType
+    TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
+  END TYPE SeaSt_ParameterType
 ! =======================
-! =========  SeaState_InputType  =======
-  TYPE, PUBLIC :: SeaState_InputType
+! =========  SeaSt_InputType  =======
+  TYPE, PUBLIC :: SeaSt_InputType
     REAL(SiKi)  :: DummyInput      !< Remove this variable if you have discrete states [-]
-  END TYPE SeaState_InputType
+  END TYPE SeaSt_InputType
 ! =======================
-! =========  SeaState_OutputType  =======
-  TYPE, PUBLIC :: SeaState_OutputType
+! =========  SeaSt_OutputType  =======
+  TYPE, PUBLIC :: SeaSt_OutputType
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Outputs to be written to the output file(s) [-]
     TYPE(Waves2_OutputType)  :: Waves2      !< Waves2 module outputs [-]
-  END TYPE SeaState_OutputType
+  END TYPE SeaSt_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE SeaState_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_InputFile), INTENT(IN) :: SrcInputFileData
-   TYPE(SeaState_InputFile), INTENT(INOUT) :: DstInputFileData
+ SUBROUTINE SeaSt_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_InputFile), INTENT(IN) :: SrcInputFileData
+   TYPE(SeaSt_InputFile), INTENT(INOUT) :: DstInputFileData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -192,7 +224,7 @@ CONTAINS
    INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyInputFile'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyInputFile'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -308,13 +340,13 @@ ENDIF
     DstInputFileData%UnSum = SrcInputFileData%UnSum
     DstInputFileData%OutFmt = SrcInputFileData%OutFmt
     DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
- END SUBROUTINE SeaState_CopyInputFile
+ END SUBROUTINE SeaSt_CopyInputFile
 
- SUBROUTINE SeaState_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
-  TYPE(SeaState_InputFile), INTENT(INOUT) :: InputFileData
+ SUBROUTINE SeaSt_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
+  TYPE(SeaSt_InputFile), INTENT(INOUT) :: InputFileData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyInputFile'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyInputFile'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
@@ -343,13 +375,13 @@ ENDIF
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
 ENDIF
- END SUBROUTINE SeaState_DestroyInputFile
+ END SUBROUTINE SeaSt_DestroyInputFile
 
- SUBROUTINE SeaState_PackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_InputFile),  INTENT(IN) :: InData
+  TYPE(SeaSt_InputFile),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -364,7 +396,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackInputFile'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackInputFile'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -748,13 +780,13 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%OutSFmt(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
- END SUBROUTINE SeaState_PackInputFile
+ END SUBROUTINE SeaSt_PackInputFile
 
- SUBROUTINE SeaState_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_InputFile), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_InputFile), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -770,7 +802,7 @@ ENDIF
   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackInputFile'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackInputFile'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -1073,11 +1105,11 @@ ENDIF
       OutData%OutSFmt(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
- END SUBROUTINE SeaState_UnPackInputFile
+ END SUBROUTINE SeaSt_UnPackInputFile
 
- SUBROUTINE SeaState_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(SeaState_InitInputType), INTENT(INOUT) :: DstInitInputData
+ SUBROUTINE SeaSt_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_InitInputType), INTENT(IN) :: SrcInitInputData
+   TYPE(SeaSt_InitInputType), INTENT(INOUT) :: DstInitInputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -1087,7 +1119,7 @@ ENDIF
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyInitInput'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyInitInput'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1118,13 +1150,13 @@ IF (ALLOCATED(SrcInitInputData%WaveElevXY)) THEN
 ENDIF
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
- END SUBROUTINE SeaState_CopyInitInput
+ END SUBROUTINE SeaSt_CopyInitInput
 
- SUBROUTINE SeaState_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(SeaState_InitInputType), INTENT(INOUT) :: InitInputData
+ SUBROUTINE SeaSt_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+  TYPE(SeaSt_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyInitInput'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyInitInput'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
@@ -1133,13 +1165,13 @@ ENDIF
 IF (ALLOCATED(InitInputData%WaveElevXY)) THEN
   DEALLOCATE(InitInputData%WaveElevXY)
 ENDIF
- END SUBROUTINE SeaState_DestroyInitInput
+ END SUBROUTINE SeaSt_DestroyInitInput
 
- SUBROUTINE SeaState_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_InitInputType),  INTENT(IN) :: InData
+  TYPE(SeaSt_InitInputType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -1154,7 +1186,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackInitInput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackInitInput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -1302,13 +1334,13 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PtfmLocationY
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_PackInitInput
+ END SUBROUTINE SeaSt_PackInitInput
 
- SUBROUTINE SeaState_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_InitInputType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_InitInputType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -1321,7 +1353,7 @@ ENDIF
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackInitInput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackInitInput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -1419,11 +1451,11 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_UnPackInitInput
+ END SUBROUTINE SeaSt_UnPackInitInput
 
- SUBROUTINE SeaState_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(SeaState_InitOutputType), INTENT(INOUT) :: DstInitOutputData
+ SUBROUTINE SeaSt_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_InitOutputType), INTENT(IN) :: SrcInitOutputData
+   TYPE(SeaSt_InitOutputType), INTENT(INOUT) :: DstInitOutputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -1431,9 +1463,12 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyInitOutput'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyInitOutput'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1484,13 +1519,208 @@ ENDIF
     DstInitOutputData%WtrDens = SrcInitOutputData%WtrDens
     DstInitOutputData%WtrDpth = SrcInitOutputData%WtrDpth
     DstInitOutputData%MSL2SWL = SrcInitOutputData%MSL2SWL
- END SUBROUTINE SeaState_CopyInitOutput
+IF (ASSOCIATED(SrcInitOutputData%WaveElevC0)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveElevC0,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveElevC0,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveElevC0,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveElevC0,2)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveElevC0)) THEN 
+    ALLOCATE(DstInitOutputData%WaveElevC0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevC0.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveElevC0 = SrcInitOutputData%WaveElevC0
+ENDIF
+IF (ALLOCATED(SrcInitOutputData%WaveElevC)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveElevC,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveElevC,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveElevC,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveElevC,2)
+  i3_l = LBOUND(SrcInitOutputData%WaveElevC,3)
+  i3_u = UBOUND(SrcInitOutputData%WaveElevC,3)
+  IF (.NOT. ALLOCATED(DstInitOutputData%WaveElevC)) THEN 
+    ALLOCATE(DstInitOutputData%WaveElevC(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevC.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveElevC = SrcInitOutputData%WaveElevC
+ENDIF
+IF (ASSOCIATED(SrcInitOutputData%WaveDirArr)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveDirArr,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveDirArr,1)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveDirArr)) THEN 
+    ALLOCATE(DstInitOutputData%WaveDirArr(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveDirArr.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveDirArr = SrcInitOutputData%WaveDirArr
+ENDIF
+    DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
+    DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
+    DstInitOutputData%WaveDir = SrcInitOutputData%WaveDir
+    DstInitOutputData%WaveMultiDir = SrcInitOutputData%WaveMultiDir
+    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
+IF (ASSOCIATED(SrcInitOutputData%WaveDynP)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveDynP,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveDynP,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveDynP,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveDynP,2)
+  i3_l = LBOUND(SrcInitOutputData%WaveDynP,3)
+  i3_u = UBOUND(SrcInitOutputData%WaveDynP,3)
+  i4_l = LBOUND(SrcInitOutputData%WaveDynP,4)
+  i4_u = UBOUND(SrcInitOutputData%WaveDynP,4)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveDynP)) THEN 
+    ALLOCATE(DstInitOutputData%WaveDynP(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveDynP.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveDynP = SrcInitOutputData%WaveDynP
+ENDIF
+IF (ASSOCIATED(SrcInitOutputData%WaveAcc)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveAcc,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveAcc,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveAcc,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveAcc,2)
+  i3_l = LBOUND(SrcInitOutputData%WaveAcc,3)
+  i3_u = UBOUND(SrcInitOutputData%WaveAcc,3)
+  i4_l = LBOUND(SrcInitOutputData%WaveAcc,4)
+  i4_u = UBOUND(SrcInitOutputData%WaveAcc,4)
+  i5_l = LBOUND(SrcInitOutputData%WaveAcc,5)
+  i5_u = UBOUND(SrcInitOutputData%WaveAcc,5)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveAcc)) THEN 
+    ALLOCATE(DstInitOutputData%WaveAcc(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveAcc.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveAcc = SrcInitOutputData%WaveAcc
+ENDIF
+IF (ASSOCIATED(SrcInitOutputData%WaveVel)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveVel,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveVel,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveVel,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveVel,2)
+  i3_l = LBOUND(SrcInitOutputData%WaveVel,3)
+  i3_u = UBOUND(SrcInitOutputData%WaveVel,3)
+  i4_l = LBOUND(SrcInitOutputData%WaveVel,4)
+  i4_u = UBOUND(SrcInitOutputData%WaveVel,4)
+  i5_l = LBOUND(SrcInitOutputData%WaveVel,5)
+  i5_u = UBOUND(SrcInitOutputData%WaveVel,5)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveVel)) THEN 
+    ALLOCATE(DstInitOutputData%WaveVel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveVel.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveVel = SrcInitOutputData%WaveVel
+ENDIF
+IF (ASSOCIATED(SrcInitOutputData%WaveElev)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveElev,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveElev,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveElev,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveElev,2)
+  i3_l = LBOUND(SrcInitOutputData%WaveElev,3)
+  i3_u = UBOUND(SrcInitOutputData%WaveElev,3)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveElev)) THEN 
+    ALLOCATE(DstInitOutputData%WaveElev(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElev.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveElev = SrcInitOutputData%WaveElev
+ENDIF
+IF (ASSOCIATED(SrcInitOutputData%WaveElev1)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveElev1,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveElev1,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveElev1,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveElev1,2)
+  i3_l = LBOUND(SrcInitOutputData%WaveElev1,3)
+  i3_u = UBOUND(SrcInitOutputData%WaveElev1,3)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveElev1)) THEN 
+    ALLOCATE(DstInitOutputData%WaveElev1(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElev1.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveElev1 = SrcInitOutputData%WaveElev1
+ENDIF
+IF (ASSOCIATED(SrcInitOutputData%WaveElev2)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveElev2,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveElev2,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveElev2,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveElev2,2)
+  i3_l = LBOUND(SrcInitOutputData%WaveElev2,3)
+  i3_u = UBOUND(SrcInitOutputData%WaveElev2,3)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveElev2)) THEN 
+    ALLOCATE(DstInitOutputData%WaveElev2(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElev2.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveElev2 = SrcInitOutputData%WaveElev2
+ENDIF
+IF (ALLOCATED(SrcInitOutputData%WaveElev0)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveElev0,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveElev0,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%WaveElev0)) THEN 
+    ALLOCATE(DstInitOutputData%WaveElev0(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElev0.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveElev0 = SrcInitOutputData%WaveElev0
+ENDIF
+IF (ASSOCIATED(SrcInitOutputData%WaveTime)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveTime,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveTime,1)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveTime)) THEN 
+    ALLOCATE(DstInitOutputData%WaveTime(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveTime.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveTime = SrcInitOutputData%WaveTime
+ENDIF
+    DstInitOutputData%RhoXg = SrcInitOutputData%RhoXg
+    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
+    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
+    DstInitOutputData%WaveMod = SrcInitOutputData%WaveMod
+    DstInitOutputData%CurrMod = SrcInitOutputData%CurrMod
+    DstInitOutputData%WaveStMod = SrcInitOutputData%WaveStMod
+    DstInitOutputData%WaveDirMod = SrcInitOutputData%WaveDirMod
+    DstInitOutputData%WvLowCOff = SrcInitOutputData%WvLowCOff
+    DstInitOutputData%WvHiCOff = SrcInitOutputData%WvHiCOff
+    DstInitOutputData%WvLowCOffD = SrcInitOutputData%WvLowCOffD
+    DstInitOutputData%WvHiCOffD = SrcInitOutputData%WvHiCOffD
+    DstInitOutputData%WvLowCOffS = SrcInitOutputData%WvLowCOffS
+    DstInitOutputData%WvHiCOffS = SrcInitOutputData%WvHiCOffS
+    DstInitOutputData%WvDiffQTFF = SrcInitOutputData%WvDiffQTFF
+    DstInitOutputData%WvSumQTFF = SrcInitOutputData%WvSumQTFF
+      CALL SeaSt_Interp_CopyParam( SrcInitOutputData%SeaSt_Interp_p, DstInitOutputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+ END SUBROUTINE SeaSt_CopyInitOutput
 
- SUBROUTINE SeaState_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(SeaState_InitOutputType), INTENT(INOUT) :: InitOutputData
+ SUBROUTINE SeaSt_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+  TYPE(SeaSt_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyInitOutput'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyInitOutput'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
@@ -1506,13 +1736,56 @@ IF (ALLOCATED(InitOutputData%WaveElevSeries)) THEN
   DEALLOCATE(InitOutputData%WaveElevSeries)
 ENDIF
   CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_DestroyInitOutput
+IF (ASSOCIATED(InitOutputData%WaveElevC0)) THEN
+  DEALLOCATE(InitOutputData%WaveElevC0)
+  InitOutputData%WaveElevC0 => NULL()
+ENDIF
+IF (ALLOCATED(InitOutputData%WaveElevC)) THEN
+  DEALLOCATE(InitOutputData%WaveElevC)
+ENDIF
+IF (ASSOCIATED(InitOutputData%WaveDirArr)) THEN
+  DEALLOCATE(InitOutputData%WaveDirArr)
+  InitOutputData%WaveDirArr => NULL()
+ENDIF
+IF (ASSOCIATED(InitOutputData%WaveDynP)) THEN
+  DEALLOCATE(InitOutputData%WaveDynP)
+  InitOutputData%WaveDynP => NULL()
+ENDIF
+IF (ASSOCIATED(InitOutputData%WaveAcc)) THEN
+  DEALLOCATE(InitOutputData%WaveAcc)
+  InitOutputData%WaveAcc => NULL()
+ENDIF
+IF (ASSOCIATED(InitOutputData%WaveVel)) THEN
+  DEALLOCATE(InitOutputData%WaveVel)
+  InitOutputData%WaveVel => NULL()
+ENDIF
+IF (ASSOCIATED(InitOutputData%WaveElev)) THEN
+  DEALLOCATE(InitOutputData%WaveElev)
+  InitOutputData%WaveElev => NULL()
+ENDIF
+IF (ASSOCIATED(InitOutputData%WaveElev1)) THEN
+  DEALLOCATE(InitOutputData%WaveElev1)
+  InitOutputData%WaveElev1 => NULL()
+ENDIF
+IF (ASSOCIATED(InitOutputData%WaveElev2)) THEN
+  DEALLOCATE(InitOutputData%WaveElev2)
+  InitOutputData%WaveElev2 => NULL()
+ENDIF
+IF (ALLOCATED(InitOutputData%WaveElev0)) THEN
+  DEALLOCATE(InitOutputData%WaveElev0)
+ENDIF
+IF (ASSOCIATED(InitOutputData%WaveTime)) THEN
+  DEALLOCATE(InitOutputData%WaveTime)
+  InitOutputData%WaveTime => NULL()
+ENDIF
+  CALL SeaSt_Interp_DestroyParam( InitOutputData%SeaSt_Interp_p, ErrStat, ErrMsg )
+ END SUBROUTINE SeaSt_DestroyInitOutput
 
- SUBROUTINE SeaState_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_InitOutputType),  INTENT(IN) :: InData
+  TYPE(SeaSt_InitOutputType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -1527,7 +1800,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackInitOutput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackInitOutput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -1596,6 +1869,98 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WtrDens
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
       Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
+  Int_BufSz   = Int_BufSz   + 1     ! WaveElevC0 allocated yes/no
+  IF ( ASSOCIATED(InData%WaveElevC0) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! WaveElevC0 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElevC0)  ! WaveElevC0
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveElevC allocated yes/no
+  IF ( ALLOCATED(InData%WaveElevC) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! WaveElevC upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElevC)  ! WaveElevC
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveDirArr allocated yes/no
+  IF ( ASSOCIATED(InData%WaveDirArr) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WaveDirArr upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveDirArr)  ! WaveDirArr
+  END IF
+      Re_BufSz   = Re_BufSz   + 1  ! WaveDirMin
+      Re_BufSz   = Re_BufSz   + 1  ! WaveDirMax
+      Re_BufSz   = Re_BufSz   + 1  ! WaveDir
+      Int_BufSz  = Int_BufSz  + 1  ! WaveMultiDir
+      Re_BufSz   = Re_BufSz   + 1  ! WaveDOmega
+  Int_BufSz   = Int_BufSz   + 1     ! WaveDynP allocated yes/no
+  IF ( ASSOCIATED(InData%WaveDynP) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! WaveDynP upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveDynP)  ! WaveDynP
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveAcc allocated yes/no
+  IF ( ASSOCIATED(InData%WaveAcc) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*5  ! WaveAcc upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveAcc)  ! WaveAcc
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveVel allocated yes/no
+  IF ( ASSOCIATED(InData%WaveVel) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*5  ! WaveVel upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveVel)  ! WaveVel
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveElev allocated yes/no
+  IF ( ASSOCIATED(InData%WaveElev) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! WaveElev upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElev)  ! WaveElev
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveElev1 allocated yes/no
+  IF ( ASSOCIATED(InData%WaveElev1) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! WaveElev1 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElev1)  ! WaveElev1
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveElev2 allocated yes/no
+  IF ( ASSOCIATED(InData%WaveElev2) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! WaveElev2 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElev2)  ! WaveElev2
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveElev0 allocated yes/no
+  IF ( ALLOCATED(InData%WaveElev0) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WaveElev0 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElev0)  ! WaveElev0
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveTime allocated yes/no
+  IF ( ASSOCIATED(InData%WaveTime) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WaveTime upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveTime)  ! WaveTime
+  END IF
+      Re_BufSz   = Re_BufSz   + 1  ! RhoXg
+      Int_BufSz  = Int_BufSz  + 1  ! NStepWave
+      Int_BufSz  = Int_BufSz  + 1  ! NStepWave2
+      Int_BufSz  = Int_BufSz  + 1  ! WaveMod
+      Int_BufSz  = Int_BufSz  + 1  ! CurrMod
+      Int_BufSz  = Int_BufSz  + 1  ! WaveStMod
+      Int_BufSz  = Int_BufSz  + 1  ! WaveDirMod
+      Re_BufSz   = Re_BufSz   + 1  ! WvLowCOff
+      Re_BufSz   = Re_BufSz   + 1  ! WvHiCOff
+      Re_BufSz   = Re_BufSz   + 1  ! WvLowCOffD
+      Re_BufSz   = Re_BufSz   + 1  ! WvHiCOffD
+      Re_BufSz   = Re_BufSz   + 1  ! WvLowCOffS
+      Re_BufSz   = Re_BufSz   + 1  ! WvHiCOffS
+      Int_BufSz  = Int_BufSz  + 1  ! WvDiffQTFF
+      Int_BufSz  = Int_BufSz  + 1  ! WvSumQTFF
+      Int_BufSz   = Int_BufSz + 3  ! SeaSt_Interp_p: size of buffers for each call to pack subtype
+      CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, .TRUE. ) ! SeaSt_Interp_p 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! SeaSt_Interp_p
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! SeaSt_Interp_p
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! SeaSt_Interp_p
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1739,13 +2104,346 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_PackInitOutput
+  IF ( .NOT. ASSOCIATED(InData%WaveElevC0) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElevC0,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElevC0,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElevC0,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElevC0,2)
+    Int_Xferred = Int_Xferred + 2
 
- SUBROUTINE SeaState_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+      DO i2 = LBOUND(InData%WaveElevC0,2), UBOUND(InData%WaveElevC0,2)
+        DO i1 = LBOUND(InData%WaveElevC0,1), UBOUND(InData%WaveElevC0,1)
+          ReKiBuf(Re_Xferred) = InData%WaveElevC0(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WaveElevC) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElevC,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElevC,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElevC,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElevC,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElevC,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElevC,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%WaveElevC,3), UBOUND(InData%WaveElevC,3)
+        DO i2 = LBOUND(InData%WaveElevC,2), UBOUND(InData%WaveElevC,2)
+          DO i1 = LBOUND(InData%WaveElevC,1), UBOUND(InData%WaveElevC,1)
+            ReKiBuf(Re_Xferred) = InData%WaveElevC(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveDirArr) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveDirArr,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveDirArr,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%WaveDirArr,1), UBOUND(InData%WaveDirArr,1)
+        ReKiBuf(Re_Xferred) = InData%WaveDirArr(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    ReKiBuf(Re_Xferred) = InData%WaveDirMin
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WaveDirMax
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WaveDir
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%WaveMultiDir, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WaveDOmega
+    Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ASSOCIATED(InData%WaveDynP) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveDynP,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveDynP,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveDynP,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveDynP,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveDynP,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveDynP,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveDynP,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveDynP,4)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i4 = LBOUND(InData%WaveDynP,4), UBOUND(InData%WaveDynP,4)
+        DO i3 = LBOUND(InData%WaveDynP,3), UBOUND(InData%WaveDynP,3)
+          DO i2 = LBOUND(InData%WaveDynP,2), UBOUND(InData%WaveDynP,2)
+            DO i1 = LBOUND(InData%WaveDynP,1), UBOUND(InData%WaveDynP,1)
+              ReKiBuf(Re_Xferred) = InData%WaveDynP(i1,i2,i3,i4)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveAcc) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAcc,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAcc,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAcc,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAcc,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAcc,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAcc,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAcc,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAcc,4)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAcc,5)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAcc,5)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i5 = LBOUND(InData%WaveAcc,5), UBOUND(InData%WaveAcc,5)
+        DO i4 = LBOUND(InData%WaveAcc,4), UBOUND(InData%WaveAcc,4)
+          DO i3 = LBOUND(InData%WaveAcc,3), UBOUND(InData%WaveAcc,3)
+            DO i2 = LBOUND(InData%WaveAcc,2), UBOUND(InData%WaveAcc,2)
+              DO i1 = LBOUND(InData%WaveAcc,1), UBOUND(InData%WaveAcc,1)
+                ReKiBuf(Re_Xferred) = InData%WaveAcc(i1,i2,i3,i4,i5)
+                Re_Xferred = Re_Xferred + 1
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveVel) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveVel,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveVel,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveVel,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveVel,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveVel,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveVel,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveVel,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveVel,4)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveVel,5)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveVel,5)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i5 = LBOUND(InData%WaveVel,5), UBOUND(InData%WaveVel,5)
+        DO i4 = LBOUND(InData%WaveVel,4), UBOUND(InData%WaveVel,4)
+          DO i3 = LBOUND(InData%WaveVel,3), UBOUND(InData%WaveVel,3)
+            DO i2 = LBOUND(InData%WaveVel,2), UBOUND(InData%WaveVel,2)
+              DO i1 = LBOUND(InData%WaveVel,1), UBOUND(InData%WaveVel,1)
+                ReKiBuf(Re_Xferred) = InData%WaveVel(i1,i2,i3,i4,i5)
+                Re_Xferred = Re_Xferred + 1
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveElev) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%WaveElev,3), UBOUND(InData%WaveElev,3)
+        DO i2 = LBOUND(InData%WaveElev,2), UBOUND(InData%WaveElev,2)
+          DO i1 = LBOUND(InData%WaveElev,1), UBOUND(InData%WaveElev,1)
+            ReKiBuf(Re_Xferred) = InData%WaveElev(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveElev1) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev1,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev1,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev1,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev1,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev1,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev1,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%WaveElev1,3), UBOUND(InData%WaveElev1,3)
+        DO i2 = LBOUND(InData%WaveElev1,2), UBOUND(InData%WaveElev1,2)
+          DO i1 = LBOUND(InData%WaveElev1,1), UBOUND(InData%WaveElev1,1)
+            ReKiBuf(Re_Xferred) = InData%WaveElev1(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveElev2) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev2,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev2,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev2,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev2,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev2,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev2,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%WaveElev2,3), UBOUND(InData%WaveElev2,3)
+        DO i2 = LBOUND(InData%WaveElev2,2), UBOUND(InData%WaveElev2,2)
+          DO i1 = LBOUND(InData%WaveElev2,1), UBOUND(InData%WaveElev2,1)
+            ReKiBuf(Re_Xferred) = InData%WaveElev2(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WaveElev0) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev0,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev0,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%WaveElev0,1), UBOUND(InData%WaveElev0,1)
+        ReKiBuf(Re_Xferred) = InData%WaveElev0(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveTime) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveTime,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveTime,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%WaveTime,1), UBOUND(InData%WaveTime,1)
+        ReKiBuf(Re_Xferred) = InData%WaveTime(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    ReKiBuf(Re_Xferred) = InData%RhoXg
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NStepWave
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NStepWave2
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%CurrMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveStMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveDirMod
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WvLowCOff
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WvHiCOff
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WvLowCOffD
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WvHiCOffD
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WvLowCOffS
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WvHiCOffS
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%WvDiffQTFF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%WvSumQTFF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+      CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, OnlySize ) ! SeaSt_Interp_p 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+ END SUBROUTINE SeaSt_PackInitOutput
+
+ SUBROUTINE SeaSt_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_InitOutputType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_InitOutputType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -1756,9 +2454,12 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackInitOutput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackInitOutput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -1918,11 +2619,389 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_UnPackInitOutput
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElevC0 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveElevC0)) DEALLOCATE(OutData%WaveElevC0)
+    ALLOCATE(OutData%WaveElevC0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevC0.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%WaveElevC0,2), UBOUND(OutData%WaveElevC0,2)
+        DO i1 = LBOUND(OutData%WaveElevC0,1), UBOUND(OutData%WaveElevC0,1)
+          OutData%WaveElevC0(i1,i2) = REAL(ReKiBuf(Re_Xferred), SiKi)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElevC not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WaveElevC)) DEALLOCATE(OutData%WaveElevC)
+    ALLOCATE(OutData%WaveElevC(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevC.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%WaveElevC,3), UBOUND(OutData%WaveElevC,3)
+        DO i2 = LBOUND(OutData%WaveElevC,2), UBOUND(OutData%WaveElevC,2)
+          DO i1 = LBOUND(OutData%WaveElevC,1), UBOUND(OutData%WaveElevC,1)
+            OutData%WaveElevC(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveDirArr not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveDirArr)) DEALLOCATE(OutData%WaveDirArr)
+    ALLOCATE(OutData%WaveDirArr(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveDirArr.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WaveDirArr,1), UBOUND(OutData%WaveDirArr,1)
+        OutData%WaveDirArr(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    OutData%WaveDirMin = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WaveDirMax = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WaveDir = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WaveMultiDir = TRANSFER(IntKiBuf(Int_Xferred), OutData%WaveMultiDir)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WaveDOmega = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveDynP not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveDynP)) DEALLOCATE(OutData%WaveDynP)
+    ALLOCATE(OutData%WaveDynP(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveDynP.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i4 = LBOUND(OutData%WaveDynP,4), UBOUND(OutData%WaveDynP,4)
+        DO i3 = LBOUND(OutData%WaveDynP,3), UBOUND(OutData%WaveDynP,3)
+          DO i2 = LBOUND(OutData%WaveDynP,2), UBOUND(OutData%WaveDynP,2)
+            DO i1 = LBOUND(OutData%WaveDynP,1), UBOUND(OutData%WaveDynP,1)
+              OutData%WaveDynP(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveAcc not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i5_l = IntKiBuf( Int_Xferred    )
+    i5_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveAcc)) DEALLOCATE(OutData%WaveAcc)
+    ALLOCATE(OutData%WaveAcc(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveAcc.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i5 = LBOUND(OutData%WaveAcc,5), UBOUND(OutData%WaveAcc,5)
+        DO i4 = LBOUND(OutData%WaveAcc,4), UBOUND(OutData%WaveAcc,4)
+          DO i3 = LBOUND(OutData%WaveAcc,3), UBOUND(OutData%WaveAcc,3)
+            DO i2 = LBOUND(OutData%WaveAcc,2), UBOUND(OutData%WaveAcc,2)
+              DO i1 = LBOUND(OutData%WaveAcc,1), UBOUND(OutData%WaveAcc,1)
+                OutData%WaveAcc(i1,i2,i3,i4,i5) = REAL(ReKiBuf(Re_Xferred), SiKi)
+                Re_Xferred = Re_Xferred + 1
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveVel not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i5_l = IntKiBuf( Int_Xferred    )
+    i5_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveVel)) DEALLOCATE(OutData%WaveVel)
+    ALLOCATE(OutData%WaveVel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveVel.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i5 = LBOUND(OutData%WaveVel,5), UBOUND(OutData%WaveVel,5)
+        DO i4 = LBOUND(OutData%WaveVel,4), UBOUND(OutData%WaveVel,4)
+          DO i3 = LBOUND(OutData%WaveVel,3), UBOUND(OutData%WaveVel,3)
+            DO i2 = LBOUND(OutData%WaveVel,2), UBOUND(OutData%WaveVel,2)
+              DO i1 = LBOUND(OutData%WaveVel,1), UBOUND(OutData%WaveVel,1)
+                OutData%WaveVel(i1,i2,i3,i4,i5) = REAL(ReKiBuf(Re_Xferred), SiKi)
+                Re_Xferred = Re_Xferred + 1
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElev not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveElev)) DEALLOCATE(OutData%WaveElev)
+    ALLOCATE(OutData%WaveElev(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%WaveElev,3), UBOUND(OutData%WaveElev,3)
+        DO i2 = LBOUND(OutData%WaveElev,2), UBOUND(OutData%WaveElev,2)
+          DO i1 = LBOUND(OutData%WaveElev,1), UBOUND(OutData%WaveElev,1)
+            OutData%WaveElev(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElev1 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveElev1)) DEALLOCATE(OutData%WaveElev1)
+    ALLOCATE(OutData%WaveElev1(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%WaveElev1,3), UBOUND(OutData%WaveElev1,3)
+        DO i2 = LBOUND(OutData%WaveElev1,2), UBOUND(OutData%WaveElev1,2)
+          DO i1 = LBOUND(OutData%WaveElev1,1), UBOUND(OutData%WaveElev1,1)
+            OutData%WaveElev1(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElev2 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveElev2)) DEALLOCATE(OutData%WaveElev2)
+    ALLOCATE(OutData%WaveElev2(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%WaveElev2,3), UBOUND(OutData%WaveElev2,3)
+        DO i2 = LBOUND(OutData%WaveElev2,2), UBOUND(OutData%WaveElev2,2)
+          DO i1 = LBOUND(OutData%WaveElev2,1), UBOUND(OutData%WaveElev2,1)
+            OutData%WaveElev2(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElev0 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WaveElev0)) DEALLOCATE(OutData%WaveElev0)
+    ALLOCATE(OutData%WaveElev0(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev0.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WaveElev0,1), UBOUND(OutData%WaveElev0,1)
+        OutData%WaveElev0(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveTime not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveTime)) DEALLOCATE(OutData%WaveTime)
+    ALLOCATE(OutData%WaveTime(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveTime.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WaveTime,1), UBOUND(OutData%WaveTime,1)
+        OutData%WaveTime(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    OutData%RhoXg = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%NStepWave = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NStepWave2 = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WaveMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%CurrMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WaveStMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WaveDirMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WvLowCOff = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WvHiCOff = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WvLowCOffD = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WvHiCOffD = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WvLowCOffS = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WvHiCOffS = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WvDiffQTFF = TRANSFER(IntKiBuf(Int_Xferred), OutData%WvDiffQTFF)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WvSumQTFF = TRANSFER(IntKiBuf(Int_Xferred), OutData%WvSumQTFF)
+    Int_Xferred = Int_Xferred + 1
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL SeaSt_Interp_UnpackParam( Re_Buf, Db_Buf, Int_Buf, OutData%SeaSt_Interp_p, ErrStat2, ErrMsg2 ) ! SeaSt_Interp_p 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
 
- SUBROUTINE SeaState_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_ContinuousStateType), INTENT(IN) :: SrcContStateData
-   TYPE(SeaState_ContinuousStateType), INTENT(INOUT) :: DstContStateData
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+ END SUBROUTINE SeaSt_UnPackInitOutput
+
+ SUBROUTINE SeaSt_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_ContinuousStateType), INTENT(IN) :: SrcContStateData
+   TYPE(SeaSt_ContinuousStateType), INTENT(INOUT) :: DstContStateData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -1930,32 +3009,32 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyContState'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyContState'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
       CALL Waves2_CopyContState( SrcContStateData%Waves2, DstContStateData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaState_CopyContState
+ END SUBROUTINE SeaSt_CopyContState
 
- SUBROUTINE SeaState_DestroyContState( ContStateData, ErrStat, ErrMsg )
-  TYPE(SeaState_ContinuousStateType), INTENT(INOUT) :: ContStateData
+ SUBROUTINE SeaSt_DestroyContState( ContStateData, ErrStat, ErrMsg )
+  TYPE(SeaSt_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyContState'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyContState'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL Waves2_DestroyContState( ContStateData%Waves2, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_DestroyContState
+ END SUBROUTINE SeaSt_DestroyContState
 
- SUBROUTINE SeaState_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_ContinuousStateType),  INTENT(IN) :: InData
+  TYPE(SeaSt_ContinuousStateType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -1970,7 +3049,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackContState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackContState'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2059,13 +3138,13 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE SeaState_PackContState
+ END SUBROUTINE SeaSt_PackContState
 
- SUBROUTINE SeaState_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_ContinuousStateType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_ContinuousStateType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -2076,7 +3155,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackContState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackContState'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2127,11 +3206,11 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaState_UnPackContState
+ END SUBROUTINE SeaSt_UnPackContState
 
- SUBROUTINE SeaState_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
-   TYPE(SeaState_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
+ SUBROUTINE SeaSt_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
+   TYPE(SeaSt_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -2139,32 +3218,32 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyDiscState'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyDiscState'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
       CALL Waves2_CopyDiscState( SrcDiscStateData%Waves2, DstDiscStateData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaState_CopyDiscState
+ END SUBROUTINE SeaSt_CopyDiscState
 
- SUBROUTINE SeaState_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
-  TYPE(SeaState_DiscreteStateType), INTENT(INOUT) :: DiscStateData
+ SUBROUTINE SeaSt_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+  TYPE(SeaSt_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyDiscState'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyDiscState'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL Waves2_DestroyDiscState( DiscStateData%Waves2, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_DestroyDiscState
+ END SUBROUTINE SeaSt_DestroyDiscState
 
- SUBROUTINE SeaState_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_DiscreteStateType),  INTENT(IN) :: InData
+  TYPE(SeaSt_DiscreteStateType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -2179,7 +3258,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackDiscState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackDiscState'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2268,13 +3347,13 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE SeaState_PackDiscState
+ END SUBROUTINE SeaSt_PackDiscState
 
- SUBROUTINE SeaState_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_DiscreteStateType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_DiscreteStateType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -2285,7 +3364,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackDiscState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackDiscState'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2336,11 +3415,11 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaState_UnPackDiscState
+ END SUBROUTINE SeaSt_UnPackDiscState
 
- SUBROUTINE SeaState_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
-   TYPE(SeaState_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
+ SUBROUTINE SeaSt_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
+   TYPE(SeaSt_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -2348,32 +3427,32 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyConstrState'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyConstrState'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
       CALL Waves2_CopyConstrState( SrcConstrStateData%Waves2, DstConstrStateData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaState_CopyConstrState
+ END SUBROUTINE SeaSt_CopyConstrState
 
- SUBROUTINE SeaState_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
-  TYPE(SeaState_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
+ SUBROUTINE SeaSt_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+  TYPE(SeaSt_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyConstrState'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyConstrState'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL Waves2_DestroyConstrState( ConstrStateData%Waves2, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_DestroyConstrState
+ END SUBROUTINE SeaSt_DestroyConstrState
 
- SUBROUTINE SeaState_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_ConstraintStateType),  INTENT(IN) :: InData
+  TYPE(SeaSt_ConstraintStateType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -2388,7 +3467,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackConstrState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackConstrState'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2477,13 +3556,13 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE SeaState_PackConstrState
+ END SUBROUTINE SeaSt_PackConstrState
 
- SUBROUTINE SeaState_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_ConstraintStateType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_ConstraintStateType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -2494,7 +3573,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackConstrState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackConstrState'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2545,11 +3624,11 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaState_UnPackConstrState
+ END SUBROUTINE SeaSt_UnPackConstrState
 
- SUBROUTINE SeaState_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_OtherStateType), INTENT(IN) :: SrcOtherStateData
-   TYPE(SeaState_OtherStateType), INTENT(INOUT) :: DstOtherStateData
+ SUBROUTINE SeaSt_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_OtherStateType), INTENT(IN) :: SrcOtherStateData
+   TYPE(SeaSt_OtherStateType), INTENT(INOUT) :: DstOtherStateData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -2557,32 +3636,32 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyOtherState'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyOtherState'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
       CALL Waves2_CopyOtherState( SrcOtherStateData%Waves2, DstOtherStateData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaState_CopyOtherState
+ END SUBROUTINE SeaSt_CopyOtherState
 
- SUBROUTINE SeaState_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
-  TYPE(SeaState_OtherStateType), INTENT(INOUT) :: OtherStateData
+ SUBROUTINE SeaSt_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+  TYPE(SeaSt_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyOtherState'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyOtherState'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
   CALL Waves2_DestroyOtherState( OtherStateData%Waves2, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_DestroyOtherState
+ END SUBROUTINE SeaSt_DestroyOtherState
 
- SUBROUTINE SeaState_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_OtherStateType),  INTENT(IN) :: InData
+  TYPE(SeaSt_OtherStateType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -2597,7 +3676,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackOtherState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackOtherState'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2686,13 +3765,13 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE SeaState_PackOtherState
+ END SUBROUTINE SeaSt_PackOtherState
 
- SUBROUTINE SeaState_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_OtherStateType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_OtherStateType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -2703,7 +3782,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackOtherState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackOtherState'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2754,11 +3833,11 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaState_UnPackOtherState
+ END SUBROUTINE SeaSt_UnPackOtherState
 
- SUBROUTINE SeaState_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(SeaState_MiscVarType), INTENT(INOUT) :: DstMiscData
+ SUBROUTINE SeaSt_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_MiscVarType), INTENT(IN) :: SrcMiscData
+   TYPE(SeaSt_MiscVarType), INTENT(INOUT) :: DstMiscData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -2766,14 +3845,14 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyMisc'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyMisc'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstMiscData%Decimate = SrcMiscData%Decimate
     DstMiscData%LastOutTime = SrcMiscData%LastOutTime
     DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-      CALL SeaState_Interp_CopyMisc( SrcMiscData%Sea_Interp_m, DstMiscData%Sea_Interp_m, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL SeaSt_Interp_CopyMisc( SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
       CALL Waves2_CopyMisc( SrcMiscData%Waves2, DstMiscData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
@@ -2782,27 +3861,27 @@ ENDIF
       CALL Waves2_CopyInput( SrcMiscData%u_Waves2, DstMiscData%u_Waves2, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaState_CopyMisc
+ END SUBROUTINE SeaSt_CopyMisc
 
- SUBROUTINE SeaState_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(SeaState_MiscVarType), INTENT(INOUT) :: MiscData
+ SUBROUTINE SeaSt_DestroyMisc( MiscData, ErrStat, ErrMsg )
+  TYPE(SeaSt_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyMisc'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyMisc'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL SeaState_Interp_DestroyMisc( MiscData%Sea_Interp_m, ErrStat, ErrMsg )
+  CALL SeaSt_Interp_DestroyMisc( MiscData%SeaSt_Interp_m, ErrStat, ErrMsg )
   CALL Waves2_DestroyMisc( MiscData%Waves2, ErrStat, ErrMsg )
   CALL Waves2_DestroyInput( MiscData%u_Waves2, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_DestroyMisc
+ END SUBROUTINE SeaSt_DestroyMisc
 
- SUBROUTINE SeaState_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_MiscVarType),  INTENT(IN) :: InData
+  TYPE(SeaSt_MiscVarType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -2817,7 +3896,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackMisc'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackMisc'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2837,20 +3916,20 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! LastOutTime
       Int_BufSz  = Int_BufSz  + 1  ! LastIndWave
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! Sea_Interp_m: size of buffers for each call to pack subtype
-      CALL SeaState_Interp_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%Sea_Interp_m, ErrStat2, ErrMsg2, .TRUE. ) ! Sea_Interp_m 
+      Int_BufSz   = Int_BufSz + 3  ! SeaSt_Interp_m: size of buffers for each call to pack subtype
+      CALL SeaSt_Interp_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_m, ErrStat2, ErrMsg2, .TRUE. ) ! SeaSt_Interp_m 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Sea_Interp_m
+      IF(ALLOCATED(Re_Buf)) THEN ! SeaSt_Interp_m
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Sea_Interp_m
+      IF(ALLOCATED(Db_Buf)) THEN ! SeaSt_Interp_m
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Sea_Interp_m
+      IF(ALLOCATED(Int_Buf)) THEN ! SeaSt_Interp_m
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -2921,7 +4000,7 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%LastIndWave
     Int_Xferred = Int_Xferred + 1
-      CALL SeaState_Interp_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%Sea_Interp_m, ErrStat2, ErrMsg2, OnlySize ) ! Sea_Interp_m 
+      CALL SeaSt_Interp_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_m, ErrStat2, ErrMsg2, OnlySize ) ! SeaSt_Interp_m 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3005,13 +4084,13 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE SeaState_PackMisc
+ END SUBROUTINE SeaSt_PackMisc
 
- SUBROUTINE SeaState_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_MiscVarType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_MiscVarType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -3022,7 +4101,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackMisc'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackMisc'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -3072,7 +4151,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL SeaState_Interp_UnpackMisc( Re_Buf, Db_Buf, Int_Buf, OutData%Sea_Interp_m, ErrStat2, ErrMsg2 ) ! Sea_Interp_m 
+      CALL SeaSt_Interp_UnpackMisc( Re_Buf, Db_Buf, Int_Buf, OutData%SeaSt_Interp_m, ErrStat2, ErrMsg2 ) ! SeaSt_Interp_m 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3159,11 +4238,11 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaState_UnPackMisc
+ END SUBROUTINE SeaSt_UnPackMisc
 
- SUBROUTINE SeaState_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(SeaState_ParameterType), INTENT(INOUT) :: DstParamData
+ SUBROUTINE SeaSt_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_ParameterType), INTENT(IN) :: SrcParamData
+   TYPE(SeaSt_ParameterType), INTENT(INOUT) :: DstParamData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -3176,7 +4255,7 @@ ENDIF
    INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyParam'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyParam'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -3394,16 +4473,16 @@ ENDIF
     DstParamData%Delim = SrcParamData%Delim
     DstParamData%UnOutFile = SrcParamData%UnOutFile
     DstParamData%OutDec = SrcParamData%OutDec
-      CALL SeaState_Interp_CopyParam( SrcParamData%Sea_Interp_p, DstParamData%Sea_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL SeaSt_Interp_CopyParam( SrcParamData%SeaSt_Interp_p, DstParamData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaState_CopyParam
+ END SUBROUTINE SeaSt_CopyParam
 
- SUBROUTINE SeaState_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(SeaState_ParameterType), INTENT(INOUT) :: ParamData
+ SUBROUTINE SeaSt_DestroyParam( ParamData, ErrStat, ErrMsg )
+  TYPE(SeaSt_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyParam'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyParam'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
@@ -3458,14 +4537,14 @@ DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
-  CALL SeaState_Interp_DestroyParam( ParamData%Sea_Interp_p, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_DestroyParam
+  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat, ErrMsg )
+ END SUBROUTINE SeaSt_DestroyParam
 
- SUBROUTINE SeaState_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_ParameterType),  INTENT(IN) :: InData
+  TYPE(SeaSt_ParameterType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -3480,7 +4559,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackParam'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackParam'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -3614,20 +4693,20 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Delim)  ! Delim
       Int_BufSz  = Int_BufSz  + 1  ! UnOutFile
       Int_BufSz  = Int_BufSz  + 1  ! OutDec
-      Int_BufSz   = Int_BufSz + 3  ! Sea_Interp_p: size of buffers for each call to pack subtype
-      CALL SeaState_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%Sea_Interp_p, ErrStat2, ErrMsg2, .TRUE. ) ! Sea_Interp_p 
+      Int_BufSz   = Int_BufSz + 3  ! SeaSt_Interp_p: size of buffers for each call to pack subtype
+      CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, .TRUE. ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Sea_Interp_p
+      IF(ALLOCATED(Re_Buf)) THEN ! SeaSt_Interp_p
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Sea_Interp_p
+      IF(ALLOCATED(Db_Buf)) THEN ! SeaSt_Interp_p
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Sea_Interp_p
+      IF(ALLOCATED(Int_Buf)) THEN ! SeaSt_Interp_p
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -4036,7 +5115,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%OutDec
     Int_Xferred = Int_Xferred + 1
-      CALL SeaState_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%Sea_Interp_p, ErrStat2, ErrMsg2, OnlySize ) ! Sea_Interp_p 
+      CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, OnlySize ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -4064,13 +5143,13 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE SeaState_PackParam
+ END SUBROUTINE SeaSt_PackParam
 
- SUBROUTINE SeaState_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_ParameterType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_ParameterType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -4086,7 +5165,7 @@ ENDIF
   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackParam'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackParam'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -4575,18 +5654,18 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL SeaState_Interp_UnpackParam( Re_Buf, Db_Buf, Int_Buf, OutData%Sea_Interp_p, ErrStat2, ErrMsg2 ) ! Sea_Interp_p 
+      CALL SeaSt_Interp_UnpackParam( Re_Buf, Db_Buf, Int_Buf, OutData%SeaSt_Interp_p, ErrStat2, ErrMsg2 ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaState_UnPackParam
+ END SUBROUTINE SeaSt_UnPackParam
 
- SUBROUTINE SeaState_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_InputType), INTENT(IN) :: SrcInputData
-   TYPE(SeaState_InputType), INTENT(INOUT) :: DstInputData
+ SUBROUTINE SeaSt_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_InputType), INTENT(IN) :: SrcInputData
+   TYPE(SeaSt_InputType), INTENT(INOUT) :: DstInputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -4594,29 +5673,29 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyInput'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyInput'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstInputData%DummyInput = SrcInputData%DummyInput
- END SUBROUTINE SeaState_CopyInput
+ END SUBROUTINE SeaSt_CopyInput
 
- SUBROUTINE SeaState_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(SeaState_InputType), INTENT(INOUT) :: InputData
+ SUBROUTINE SeaSt_DestroyInput( InputData, ErrStat, ErrMsg )
+  TYPE(SeaSt_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyInput'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyInput'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
- END SUBROUTINE SeaState_DestroyInput
+ END SUBROUTINE SeaSt_DestroyInput
 
- SUBROUTINE SeaState_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_InputType),  INTENT(IN) :: InData
+  TYPE(SeaSt_InputType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -4631,7 +5710,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackInput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackInput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -4677,13 +5756,13 @@ ENDIF
 
     ReKiBuf(Re_Xferred) = InData%DummyInput
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_PackInput
+ END SUBROUTINE SeaSt_PackInput
 
- SUBROUTINE SeaState_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_InputType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_InputType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -4694,7 +5773,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackInput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackInput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -4707,11 +5786,11 @@ ENDIF
   Int_Xferred  = 1
     OutData%DummyInput = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaState_UnPackInput
+ END SUBROUTINE SeaSt_UnPackInput
 
- SUBROUTINE SeaState_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaState_OutputType), INTENT(IN) :: SrcOutputData
-   TYPE(SeaState_OutputType), INTENT(INOUT) :: DstOutputData
+ SUBROUTINE SeaSt_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(SeaSt_OutputType), INTENT(IN) :: SrcOutputData
+   TYPE(SeaSt_OutputType), INTENT(INOUT) :: DstOutputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -4720,7 +5799,7 @@ ENDIF
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_CopyOutput'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyOutput'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -4739,13 +5818,13 @@ ENDIF
       CALL Waves2_CopyOutput( SrcOutputData%Waves2, DstOutputData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaState_CopyOutput
+ END SUBROUTINE SeaSt_CopyOutput
 
- SUBROUTINE SeaState_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(SeaState_OutputType), INTENT(INOUT) :: OutputData
+ SUBROUTINE SeaSt_DestroyOutput( OutputData, ErrStat, ErrMsg )
+  TYPE(SeaSt_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaState_DestroyOutput'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyOutput'
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
@@ -4754,13 +5833,13 @@ IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
   CALL Waves2_DestroyOutput( OutputData%Waves2, ErrStat, ErrMsg )
- END SUBROUTINE SeaState_DestroyOutput
+ END SUBROUTINE SeaSt_DestroyOutput
 
- SUBROUTINE SeaState_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE SeaSt_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaState_OutputType),  INTENT(IN) :: InData
+  TYPE(SeaSt_OutputType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -4775,7 +5854,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_PackOutput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_PackOutput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -4884,13 +5963,13 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE SeaState_PackOutput
+ END SUBROUTINE SeaSt_PackOutput
 
- SUBROUTINE SeaState_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaState_OutputType), INTENT(INOUT) :: OutData
+  TYPE(SeaSt_OutputType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -4902,7 +5981,7 @@ ENDIF
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaState_UnPackOutput'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_UnPackOutput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -4971,10 +6050,10 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaState_UnPackOutput
+ END SUBROUTINE SeaSt_UnPackOutput
 
 
- SUBROUTINE SeaState_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
@@ -4990,9 +6069,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SeaState_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
- TYPE(SeaState_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+ TYPE(SeaSt_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
  INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
  CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
@@ -5000,7 +6079,7 @@ ENDIF
  INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
  INTEGER(IntKi)                             :: ErrStat2        ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'SeaState_Input_ExtrapInterp'
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'SeaSt_Input_ExtrapInterp'
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -5010,22 +6089,22 @@ ENDIF
  endif
  order = SIZE(u) - 1
  IF ( order .eq. 0 ) THEN
-   CALL SeaState_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+   CALL SeaSt_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  ELSE IF ( order .eq. 1 ) THEN
-   CALL SeaState_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
+   CALL SeaSt_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  ELSE IF ( order .eq. 2 ) THEN
-   CALL SeaState_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
+   CALL SeaSt_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  ELSE 
    CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
    RETURN
  ENDIF 
- END SUBROUTINE SeaState_Input_ExtrapInterp
+ END SUBROUTINE SeaSt_Input_ExtrapInterp
 
 
- SUBROUTINE SeaState_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 1.
@@ -5037,17 +6116,17 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SeaState_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
- TYPE(SeaState_InputType), INTENT(IN)  :: u2    ! Input at t2 
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
- TYPE(SeaState_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+ TYPE(SeaSt_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
  INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
  CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'SeaState_Input_ExtrapInterp1'
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'SeaSt_Input_ExtrapInterp1'
  REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
@@ -5068,10 +6147,10 @@ ENDIF
    ScaleFactor = t_out / t(2)
   b = -(u1%DummyInput - u2%DummyInput)
   u_out%DummyInput = u1%DummyInput + b * ScaleFactor
- END SUBROUTINE SeaState_Input_ExtrapInterp1
+ END SUBROUTINE SeaSt_Input_ExtrapInterp1
 
 
- SUBROUTINE SeaState_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 2.
@@ -5085,11 +6164,11 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SeaState_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
- TYPE(SeaState_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
- TYPE(SeaState_InputType), INTENT(IN)  :: u3      ! Input at t3
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
- TYPE(SeaState_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
+ TYPE(SeaSt_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
  INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
  CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
@@ -5102,7 +6181,7 @@ ENDIF
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'SeaState_Input_ExtrapInterp2'
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'SeaSt_Input_ExtrapInterp2'
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -5126,10 +6205,10 @@ ENDIF
   b = (t(3)**2*(u1%DummyInput - u2%DummyInput) + t(2)**2*(-u1%DummyInput + u3%DummyInput))* scaleFactor
   c = ( (t(2)-t(3))*u1%DummyInput + t(3)*u2%DummyInput - t(2)*u3%DummyInput ) * scaleFactor
   u_out%DummyInput = u1%DummyInput + b  + c * t_out
- END SUBROUTINE SeaState_Input_ExtrapInterp2
+ END SUBROUTINE SeaSt_Input_ExtrapInterp2
 
 
- SUBROUTINE SeaState_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
@@ -5145,9 +6224,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SeaState_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
- TYPE(SeaState_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+ TYPE(SeaSt_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
  INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
  CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
@@ -5155,7 +6234,7 @@ ENDIF
  INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
  INTEGER(IntKi)                             :: ErrStat2        ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'SeaState_Output_ExtrapInterp'
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'SeaSt_Output_ExtrapInterp'
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -5165,22 +6244,22 @@ ENDIF
  endif
  order = SIZE(y) - 1
  IF ( order .eq. 0 ) THEN
-   CALL SeaState_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+   CALL SeaSt_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  ELSE IF ( order .eq. 1 ) THEN
-   CALL SeaState_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
+   CALL SeaSt_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  ELSE IF ( order .eq. 2 ) THEN
-   CALL SeaState_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
+   CALL SeaSt_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
  ELSE 
    CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
    RETURN
  ENDIF 
- END SUBROUTINE SeaState_Output_ExtrapInterp
+ END SUBROUTINE SeaSt_Output_ExtrapInterp
 
 
- SUBROUTINE SeaState_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 1.
@@ -5192,17 +6271,17 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SeaState_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
- TYPE(SeaState_OutputType), INTENT(IN)  :: y2    ! Output at t2 
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
- TYPE(SeaState_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+ TYPE(SeaSt_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
  INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
  CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'SeaState_Output_ExtrapInterp1'
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'SeaSt_Output_ExtrapInterp1'
  REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
@@ -5231,10 +6310,10 @@ IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
 END IF ! check if allocated
       CALL Waves2_Output_ExtrapInterp1( y1%Waves2, y2%Waves2, tin, y_out%Waves2, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- END SUBROUTINE SeaState_Output_ExtrapInterp1
+ END SUBROUTINE SeaSt_Output_ExtrapInterp1
 
 
- SUBROUTINE SeaState_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
+ SUBROUTINE SeaSt_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 2.
@@ -5248,11 +6327,11 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(SeaState_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
- TYPE(SeaState_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
- TYPE(SeaState_OutputType), INTENT(IN)  :: y3      ! Output at t3
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
- TYPE(SeaState_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
+ TYPE(SeaSt_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
  INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
  CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
@@ -5265,7 +6344,7 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'SeaState_Output_ExtrapInterp2'
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'SeaSt_Output_ExtrapInterp2'
  INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
  INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
@@ -5297,7 +6376,7 @@ IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
 END IF ! check if allocated
       CALL Waves2_Output_ExtrapInterp2( y1%Waves2, y2%Waves2, y3%Waves2, tin, y_out%Waves2, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- END SUBROUTINE SeaState_Output_ExtrapInterp2
+ END SUBROUTINE SeaSt_Output_ExtrapInterp2
 
 END MODULE SeaState_Types
 !ENDOFREGISTRYGENERATEDFILE

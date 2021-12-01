@@ -19,9 +19,9 @@ usefrom   Waves.txt
 usefrom   Waves2.txt
 usefrom   SeaState_Interp.txt
 #
-param     SeaState/SeaState  unused                 INTEGER                  MaxSeaStOutputs   -       90     -  "The maximum number of output channels supported by this module"    -
+param     SeaState/SeaSt     unused                 INTEGER                  MaxSeaStOutputs   -       90     -  "The maximum number of output channels supported by this module"    -
 #
-typedef   SeaState/SeaState  SeaState_InputFile      LOGICAL                  EchoFlag          -     -     -     "Echo the input file"   
+typedef   SeaState/SeaSt     SeaSt_InputFile      LOGICAL                  EchoFlag          -     -     -     "Echo the input file"   
 typedef   ^                  ^                      ReKi                     MSL2SWL           -       -      -  "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                  ^                      ReKi                     X_HalfWidth       -       -      -  "Half-width of the domain in the X direction" m
 typedef   ^                  ^                      ReKi                     Y_HalfWidth       -       -      -  "Half-width of the domain in the Y direction" m
@@ -51,7 +51,7 @@ typedef   ^                  ^                      INTEGER                  UnS
 typedef   ^                  ^                      CHARACTER(20)            OutFmt            -       -      -  "Output format for numerical results"    -
 typedef   ^                  ^                      CHARACTER(20)            OutSFmt           -       -      -  "Output format for header strings"    -
 
-typedef   SeaState/SeaState  InitInputType          CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the SeaState module"    -
+typedef   SeaState/SeaSt     InitInputType          CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the SeaState module"    -
 typedef   ^                  ^                      LOGICAL                  UseInputFile                    -       .TRUE.        -         "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
 typedef   ^                  ^                      FileInfoType             PassedFileData                  -          -          -         "If we don't use the input file, pass everything through this"   -
 typedef   ^                  ^                      CHARACTER(1024)          OutRootName                     -          -          -         "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
@@ -75,6 +75,45 @@ typedef   ^                  ^                      ProgDesc                 Ver
 typedef   ^                  ^                      ReKi                     WtrDens           -       -      -  "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
 typedef   ^                  ^                      ReKi                     WtrDpth           -       -      -  "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef   ^                  ^                      ReKi                     MSL2SWL           -       -      -  "Offset between still-water level and mean sea level, this is necessary to inform glue-code what the module is using for MSL2SWL (may not be the glue-code's default)"    (m)
+typedef   ^                  ^    SiKi                 WaveElevC0        {*}{*}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
+typedef   ^                  ^    SiKi                 WaveElevC         {:}{:}{:}   -        -     "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part"   (meters)
+typedef   ^                  ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction array.  Each frequency has a unique direction of WaveNDir > 1" (degrees)
+typedef   ^                  ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction."  (degrees)
+typedef   ^                  ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction."  (degrees)
+typedef   ^                  ^                 SiKi                 WaveDir           -        -        -        "Incident wave propagation heading direction" (degrees)
+#typedef   ^                  ^                 INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
+typedef   ^                  ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
+typedef   ^                  ^                 SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations" (rad/s)
+#typedef   ^                  ^                 SiKi                 WaveKinzi         {:}      -        -        "zi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean see level" (meters)
+typedef   ^                  ^                 SiKi                 WaveDynP          {*}{*}{*}{*}   -        -        "Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed" (N/m^2)
+typedef   ^                  ^                 SiKi                 WaveAcc           {*}{*}{*}{*}{*} -       -        "Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed" (m/s^2)
+typedef   ^                  ^                 SiKi                 WaveVel           {*}{*}{*}{*}{*} -       -        "Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
+#typedef   ^                  ^                 SiKi                 PWaveDynP0        {*}{*}{*}{*}   -        -        "Instantaneous dynamic pressure of incident waves                                                          , at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed" (N/m^2)
+#typedef   ^                  ^                 SiKi                 PWaveAcc0         {*}{*}{*}{*}{*} -       -        "Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed" (m/s^2)
+#typedef   ^                  ^                 SiKi                 PWaveVel0         {*}{*}{*}{*}{*} -       -        "Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
+typedef   ^                  ^                      SiKi                     WaveElev         {*}{*}{*}  -      -  "Total wave elevation"   -
+typedef   ^                  ^                      SiKi                     WaveElev1         {*}{*}{*}  -      -  "First order wave elevation"        -
+typedef   ^                  ^                      SiKi                     WaveElev2         {*}{*}{*}  -      -  "Second order wave elevation"        -
+typedef   ^                  ^                 SiKi                 WaveElev0         {:}      -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (meters)
+typedef     ^                 ^                 SiKi                 WaveTime          {*}      -        -        "Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined" (sec)
+#typedef     ^                 ^                 DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
+#typedef     ^                 ^                 INTEGER              nodeInWater       {:}{:}   -        -        "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
+typedef     ^                 ^                 SiKi                 RhoXg             -        -        -        "= WtrDens*Gravity" -
+typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
+typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
+typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED }" -
+typedef   ^                   ^                             INTEGER           CurrMod                -          -        -         ""    -
+typedef     ^                 ^                 INTEGER              WaveStMod         -        -        -        "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
+typedef     ^                 ^                 INTEGER              WaveDirMod        -        -        -        "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
+typedef     ^                 ^                 SiKi                 WvLowCOff         -        -        -        "Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOff          -        -        -        "High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvLowCOffD        -        -        -        "Minimum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOffD         -        -        -        "Maximum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvLowCOffS        -        -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOffS         -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
+typedef     ^                 ^                 LOGICAL              WvDiffQTFF        -        -        -        "Full difference QTF second order forces flag" (-)
+typedef     ^                 ^                 LOGICAL              WvSumQTFF         -        -        -        "Full sum QTF second order forces flag" (-)
+typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
 #                            
 #                            
 # ..... States ....................................................................................................................
@@ -99,7 +138,7 @@ typedef   ^                            OtherStateType                Waves2_Othe
 typedef   ^                  MiscVarType            INTEGER                  Decimate          -       -      -  "The output decimation counter" -
 typedef   ^                  ^                      DbKi                     LastOutTime       -       -      -  "Last time step which was written to the output file (sec)"    -
 typedef   ^                  ^                      INTEGER                  LastIndWave       -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
-typedef   ^                  ^                      SeaState_Interp_MiscVarType       Sea_Interp_m            -       -      -  "misc var information from the SeaState Interpolation module"   -
+typedef   ^                  ^                      SeaSt_Interp_MiscVarType       SeaSt_Interp_m            -       -      -  "misc var information from the SeaState Interpolation module"   -
 typedef   ^                  ^                      Waves2_MiscVarType       Waves2            -       -      -  "misc var information from the Waves2 module"   -
 typedef   ^                  ^                      Waves2_InputType         u_Waves2          -       -      -  "Waves2 module inputs" -
 # ..... Parameters ................................................................................................................
@@ -144,7 +183,7 @@ typedef   ^                  ^                      CHARACTER(20)            Out
 typedef   ^                  ^                      CHARACTER(ChanLen)       Delim             -       -      -  "Delimiter string for outputs, defaults to tab-delimiters"        -
 typedef   ^                  ^                      INTEGER                  UnOutFile         -       -      -  "File unit for the SeaState outputs"        -
 typedef   ^                  ^                      INTEGER                  OutDec            -       -      -  "Write every OutDec time steps"  -
-typedef   ^                  ^                      SeaState_Interp_ParameterType       Sea_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
+typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
 #
 #
 # ..... Inputs ....................................................................................................................

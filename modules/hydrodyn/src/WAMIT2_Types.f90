@@ -53,13 +53,12 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDens      !< Water density [(kg/m^3)]
     REAL(ReKi)  :: Gravity      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     REAL(SiKi)  :: WtrDpth      !< Water depth (positive-valued) [(m)]
-    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevC0      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part [(meters)]
+    REAL(SiKi) , DIMENSION(:,:), POINTER  :: WaveElevC0 => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi)  :: WaveDir      !< Mean incident wave propagation heading direction [(degrees)]
     LOGICAL  :: WaveMultiDir      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveDirArr      !< Wave direction assigned to each frequency [(degrees)]
+    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction assigned to each frequency [(degrees)]
     REAL(SiKi)  :: WaveDirMin      !< Minimum wave direction from Waves module [-]
     REAL(SiKi)  :: WaveDirMax      !< Maximum wave direction from Waves module [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Simulation times at which the instantaneous second order loads associated with the incident waves are determined [sec]
     INTEGER(IntKi)  :: WaveMod      !< The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here. [-]
     INTEGER(IntKi)  :: MnDrift      !< Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: NewmanApp      !< Slow drift forces computed with Newman approximation from WAMIT file:{0: No slow drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
@@ -110,7 +109,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  WAMIT2_ParameterType  =======
   TYPE, PUBLIC :: WAMIT2_ParameterType
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Simulation times at which the instantaneous second order loads associated with the incident waves are determined [sec]
     INTEGER(IntKi)  :: NStepWave      !< Number of wave time steps [-]
     REAL(DbKi)  :: DT      !<  [-]
     INTEGER(IntKi)  :: NBody      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
@@ -221,12 +219,12 @@ ENDIF
     DstInitInputData%WtrDens = SrcInitInputData%WtrDens
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-IF (ALLOCATED(SrcInitInputData%WaveElevC0)) THEN
+IF (ASSOCIATED(SrcInitInputData%WaveElevC0)) THEN
   i1_l = LBOUND(SrcInitInputData%WaveElevC0,1)
   i1_u = UBOUND(SrcInitInputData%WaveElevC0,1)
   i2_l = LBOUND(SrcInitInputData%WaveElevC0,2)
   i2_u = UBOUND(SrcInitInputData%WaveElevC0,2)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveElevC0)) THEN 
+  IF (.NOT. ASSOCIATED(DstInitInputData%WaveElevC0)) THEN 
     ALLOCATE(DstInitInputData%WaveElevC0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
       CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevC0.', ErrStat, ErrMsg,RoutineName)
@@ -237,10 +235,10 @@ IF (ALLOCATED(SrcInitInputData%WaveElevC0)) THEN
 ENDIF
     DstInitInputData%WaveDir = SrcInitInputData%WaveDir
     DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
-IF (ALLOCATED(SrcInitInputData%WaveDirArr)) THEN
+IF (ASSOCIATED(SrcInitInputData%WaveDirArr)) THEN
   i1_l = LBOUND(SrcInitInputData%WaveDirArr,1)
   i1_u = UBOUND(SrcInitInputData%WaveDirArr,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveDirArr)) THEN 
+  IF (.NOT. ASSOCIATED(DstInitInputData%WaveDirArr)) THEN 
     ALLOCATE(DstInitInputData%WaveDirArr(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
       CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveDirArr.', ErrStat, ErrMsg,RoutineName)
@@ -251,18 +249,6 @@ IF (ALLOCATED(SrcInitInputData%WaveDirArr)) THEN
 ENDIF
     DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
     DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
-IF (ALLOCATED(SrcInitInputData%WaveTime)) THEN
-  i1_l = LBOUND(SrcInitInputData%WaveTime,1)
-  i1_u = UBOUND(SrcInitInputData%WaveTime,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveTime)) THEN 
-    ALLOCATE(DstInitInputData%WaveTime(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveTime.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%WaveTime = SrcInitInputData%WaveTime
-ENDIF
     DstInitInputData%WaveMod = SrcInitInputData%WaveMod
     DstInitInputData%MnDrift = SrcInitInputData%MnDrift
     DstInitInputData%NewmanApp = SrcInitInputData%NewmanApp
@@ -301,14 +287,13 @@ ENDIF
 IF (ALLOCATED(InitInputData%PtfmRefztRot)) THEN
   DEALLOCATE(InitInputData%PtfmRefztRot)
 ENDIF
-IF (ALLOCATED(InitInputData%WaveElevC0)) THEN
+IF (ASSOCIATED(InitInputData%WaveElevC0)) THEN
   DEALLOCATE(InitInputData%WaveElevC0)
+  InitInputData%WaveElevC0 => NULL()
 ENDIF
-IF (ALLOCATED(InitInputData%WaveDirArr)) THEN
+IF (ASSOCIATED(InitInputData%WaveDirArr)) THEN
   DEALLOCATE(InitInputData%WaveDirArr)
-ENDIF
-IF (ALLOCATED(InitInputData%WaveTime)) THEN
-  DEALLOCATE(InitInputData%WaveTime)
+  InitInputData%WaveDirArr => NULL()
 ENDIF
  END SUBROUTINE WAMIT2_DestroyInitInput
 
@@ -381,24 +366,19 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
   Int_BufSz   = Int_BufSz   + 1     ! WaveElevC0 allocated yes/no
-  IF ( ALLOCATED(InData%WaveElevC0) ) THEN
+  IF ( ASSOCIATED(InData%WaveElevC0) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! WaveElevC0 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElevC0)  ! WaveElevC0
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! WaveDir
       Int_BufSz  = Int_BufSz  + 1  ! WaveMultiDir
   Int_BufSz   = Int_BufSz   + 1     ! WaveDirArr allocated yes/no
-  IF ( ALLOCATED(InData%WaveDirArr) ) THEN
+  IF ( ASSOCIATED(InData%WaveDirArr) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WaveDirArr upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveDirArr)  ! WaveDirArr
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! WaveDirMin
       Re_BufSz   = Re_BufSz   + 1  ! WaveDirMax
-  Int_BufSz   = Int_BufSz   + 1     ! WaveTime allocated yes/no
-  IF ( ALLOCATED(InData%WaveTime) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WaveTime upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveTime)  ! WaveTime
-  END IF
       Int_BufSz  = Int_BufSz  + 1  ! WaveMod
       Int_BufSz  = Int_BufSz  + 1  ! MnDrift
       Int_BufSz  = Int_BufSz  + 1  ! NewmanApp
@@ -529,7 +509,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WtrDpth
     Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%WaveElevC0) ) THEN
+  IF ( .NOT. ASSOCIATED(InData%WaveElevC0) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -553,7 +533,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%WaveMultiDir, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%WaveDirArr) ) THEN
+  IF ( .NOT. ASSOCIATED(InData%WaveDirArr) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -572,21 +552,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WaveDirMax
     Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%WaveTime) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveTime,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveTime,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WaveTime,1), UBOUND(InData%WaveTime,1)
-        ReKiBuf(Re_Xferred) = InData%WaveTime(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
     IntKiBuf(Int_Xferred) = InData%WaveMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MnDrift
@@ -757,7 +722,7 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveElevC0)) DEALLOCATE(OutData%WaveElevC0)
+    IF (ASSOCIATED(OutData%WaveElevC0)) DEALLOCATE(OutData%WaveElevC0)
     ALLOCATE(OutData%WaveElevC0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevC0.', ErrStat, ErrMsg,RoutineName)
@@ -781,7 +746,7 @@ ENDIF
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveDirArr)) DEALLOCATE(OutData%WaveDirArr)
+    IF (ASSOCIATED(OutData%WaveDirArr)) DEALLOCATE(OutData%WaveDirArr)
     ALLOCATE(OutData%WaveDirArr(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveDirArr.', ErrStat, ErrMsg,RoutineName)
@@ -796,24 +761,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%WaveDirMax = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveTime not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveTime)) DEALLOCATE(OutData%WaveTime)
-    ALLOCATE(OutData%WaveTime(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveTime.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WaveTime,1), UBOUND(OutData%WaveTime,1)
-        OutData%WaveTime(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
     OutData%WaveMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%MnDrift = IntKiBuf(Int_Xferred)
@@ -1673,18 +1620,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcParamData%WaveTime)) THEN
-  i1_l = LBOUND(SrcParamData%WaveTime,1)
-  i1_u = UBOUND(SrcParamData%WaveTime,1)
-  IF (.NOT. ALLOCATED(DstParamData%WaveTime)) THEN 
-    ALLOCATE(DstParamData%WaveTime(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveTime.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%WaveTime = SrcParamData%WaveTime
-ENDIF
     DstParamData%NStepWave = SrcParamData%NStepWave
     DstParamData%DT = SrcParamData%DT
     DstParamData%NBody = SrcParamData%NBody
@@ -1744,9 +1679,6 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(ParamData%WaveTime)) THEN
-  DEALLOCATE(ParamData%WaveTime)
-ENDIF
 IF (ALLOCATED(ParamData%WaveExctn2)) THEN
   DEALLOCATE(ParamData%WaveExctn2)
 ENDIF
@@ -1793,11 +1725,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! WaveTime allocated yes/no
-  IF ( ALLOCATED(InData%WaveTime) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WaveTime upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveTime)  ! WaveTime
-  END IF
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Int_BufSz  = Int_BufSz  + 1  ! NBody
@@ -1872,21 +1799,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%WaveTime) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveTime,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveTime,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WaveTime,1), UBOUND(InData%WaveTime,1)
-        ReKiBuf(Re_Xferred) = InData%WaveTime(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
     IntKiBuf(Int_Xferred) = InData%NStepWave
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DT
@@ -2028,24 +1940,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveTime not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveTime)) DEALLOCATE(OutData%WaveTime)
-    ALLOCATE(OutData%WaveTime(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveTime.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WaveTime,1), UBOUND(OutData%WaveTime,1)
-        OutData%WaveTime(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
     OutData%NStepWave = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%DT = DbKiBuf(Db_Xferred)

@@ -23,6 +23,7 @@ MODULE Morison
    USE Waves
    USE Morison_Types  
    USE Morison_Output
+   use SeaState_Interp
   ! USE HydroDyn_Output_Types
    USE NWTC_Library
 
@@ -1887,6 +1888,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
    p%OutSwtch   = InitInp%OutSwtch
    p%MSL2SWL    = InitInp%MSL2SWL
+   p%WaveDisp   = InitInp%WaveDisp
    
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat )
    IF ( errStat /= ErrID_None ) THEN
@@ -2158,6 +2160,10 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! Define system output initializations (set up mesh) here:  
          ! Define initialization-routine output here:
          
+   
+    ! Setup the 4D grid information for the Interpolatin Module
+   p%seast_interp_p = InitInp%seast_interp_p
+      
          ! Initialize the outputs      
    IF ( p%OutSwtch > 0) then  !@mhall: moved this "if" to after allocations
    
@@ -2318,37 +2324,11 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    p%F_WMG_End     = 0.0
    p%AM_End        = 0.0
    
-   allocate( p%WaveVel(0:p%NStepWave, p%NNodes, 3), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for wave velocities array.'
-      errStat = ErrID_Fatal
-      RETURN
-   END IF
-   p%WaveVel = InitInp%WaveVel      
-      
-   allocate( p%WaveAcc(0:p%NStepWave, p%NNodes, 3), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for wave accelerations array.'
-      errStat = ErrID_Fatal
-      RETURN
-   END IF
-   p%WaveAcc = InitInp%WaveAcc
-      
-   allocate( p%WaveDynP(0:p%NStepWave, p%NNodes), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for wave dynamic pressure array.'
-      errStat = ErrID_Fatal
-      RETURN
-   END IF
-   p%WaveDynP = InitInp%WaveDynP
-      
-   allocate( p%WaveTime(0:p%NStepWave), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for wave time array.'
-      errStat = ErrID_Fatal
-      RETURN
-   END IF     
-   p%WaveTime     = InitInp%WaveTime   
+
+   p%WaveVel  => InitInp%WaveVel      
+   p%WaveAcc  => InitInp%WaveAcc
+   p%WaveDynP => InitInp%WaveDynP    
+   p%WaveTime => InitInp%WaveTime   
    
    
 END SUBROUTINE AllocateNodeLoadVariables
@@ -2399,7 +2379,14 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          
          ! Destroy the parameter data:
          
-      
+      ! First need to nullify pointers so that SeaState module data is not deallocation by HD
+      nullify(p%WaveTime)
+      nullify(p%WaveDynP)
+      nullify(p%WaveAcc)
+      nullify(p%WaveVel)
+      nullify(p%WaveElev)
+      nullify(p%WaveElev1)
+      nullify(p%WaveElev2)
       CALL Morison_DestroyParam( p, errStat, errMsg )
 
 
@@ -2564,7 +2551,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)                                        :: D_AM_M(6,6)
    REAL(ReKi)                                        :: nodeInWater
    REAL(ReKi)                                        :: D_dragConst     ! The distributed drag factor
-   REAL(ReKi)                                        :: InterpolationSlope 
+  ! REAL(ReKi)                                        :: InterpolationSlope 
 
 
       
@@ -2631,23 +2618,43 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    Imat    = 0.0_ReKi   
    g       = p%Gravity
    
-   InterpolationSlope = GetInterpolationSlope(Time, p, m, IntWrapIndx)
+   !InterpolationSlope = GetInterpolationSlope(Time, p, m, IntWrapIndx)
 
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
    
    do j = 1, p%NNodes
-      m%nodeInWater(j) = REAL( p%nodeInWater(IntWrapIndx,j), ReKi )
+      !m%nodeInWater(j) = REAL( p%nodeInWater(IntWrapIndx,j), ReKi )
+! TODO: Update for Wave Kinematics grid  
+      if (p%WaveDisp == 0 ) then
+         ! use the initial  X,Y location and initial Z location
+         pos1(1) = u%Mesh%Position(1,j)
+         pos1(2) = u%Mesh%Position(2,j)
+      else        
+         ! Use current X,Y location and initial Z location
+         pos1(1) = u%Mesh%TranslationDisp(1,j) + u%Mesh%Position(1,j)
+         pos1(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
+      end if
       
-         ! Determine the dynamic pressure at the node
-      m%FDynP(j) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveDynP(:,j))
-      do i=1,3
-            ! Determine the fluid acceleration and velocity and relative structural velocity at the node
-         m%FA(i,j) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveAcc(:,j,i)) 
-               
-         m%FV(i,j) = InterpolateWithSlope(InterpolationSlope, m%LastIndWave, p%WaveVel(:,j,i)) 
-         m%vrel(i,j) = m%FV(i,j) - u%Mesh%TranslationVel(i,j)
-      end do
+      pos1(3) =                               u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
+      if ( pos1(3) <= 0.0 ) then
+         ! Use location to obtain interpolated values of kinematics
+         call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+         m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+         m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+         m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+      else
+         m%FV(:,j)  = 0.0
+         m%FA(:,j)  = 0.0
+         m%FDynP(j) = 0.0   
+      end if
+      
+      m%vrel(:,j) = m%FV(:,j) - u%Mesh%TranslationVel(:,j)
+      
    end do
    
    ! ==============================================================================================
@@ -2785,13 +2792,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
 
 !TODO: What about elements which are buried in the seabed?  This doesn't seem to be tested for
-            if (z1 < 0) then   ! if segment is at least partially submerged ...
+            if (z1 < 0.0_ReKi) then   ! if segment is at least partially submerged ...
               
-              
-               if (z1*z2 <= 0) then ! special calculation if the slice is partially submerged
+    
+               if (z2 >= 0) then ! special calculation if the slice is partially submerged
                   
                   ! Check that this is not the 1st element of the member
-                  if ( i == 1 ) then
+                  if (( i == 1 ) .and. (z2 > 0.0_ReKi)) then
                      call SeterrStat(ErrID_Fatal, 'The lowest element of a Morison member has become partially submerged!  This is not allowed.  Please review your model and create a discretization such that even with displacements, the lowest element of a member does not become partially submerged.', errStat, errMsg, 'Morison_CalcOutput' )                  
                      return
                   end if

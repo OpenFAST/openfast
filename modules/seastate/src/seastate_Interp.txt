@@ -12,7 +12,7 @@ include Registry_NWTC_Library.txt
 
 #########################
 
-typedef SeaState_Interp/SeaState_Interp   InitInputType       IntKi     n      4     -     -     "number of grid points in the x, y, z, and t directions"                     -
+typedef SeaState_Interp/SeaSt_Interp   InitInputType       IntKi     n      4     -     -     "number of grid points in the x, y, z, and t directions"                     -
 typedef  ^                              InitInputType       ReKi      delta  4     -     -     "size between 2 consecutive grid points in each grid direction"  "m,m,m,s"
 typedef  ^                              InitInputType       ReKi      pZero  4     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
 typedef  ^                    InitInputType       ReKi      Z_Depth - - - "grid depth" m

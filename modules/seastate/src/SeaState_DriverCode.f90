@@ -63,24 +63,24 @@ program SeaStateDriver
    real(DbKi)                                          :: Interval             ! HD module requested time interval
    integer(B1Ki), allocatable                          :: SaveAry(:)           ! Array to store packed data structure
 
-   type(SeaState_InitInputType)                        :: InitInData           ! Input data for initialization
-   type(SeaState_InitOutputType)                       :: InitOutData          ! Output data from initialization
+   type(SeaSt_InitInputType)                        :: InitInData           ! Input data for initialization
+   type(SeaSt_InitOutputType)                       :: InitOutData          ! Output data from initialization
 
-   type(SeaState_ContinuousStateType)                  :: x                    ! Continuous states
-   type(SeaState_ContinuousStateType)                  :: x_new                ! Continuous states at updated time
-   type(SeaState_DiscreteStateType)                    :: xd                   ! Discrete states
-   type(SeaState_DiscreteStateType)                    :: xd_new               ! Discrete states at updated time
-   type(SeaState_ConstraintStateType)                  :: z                    ! Constraint states
-   type(SeaState_ConstraintStateType)                  :: z_residual           ! Residual of the constraint state equations (Z)
-   type(SeaState_OtherStateType)                       :: OtherState           ! Other states
-   type(SeaState_MiscVarType)                          :: m                    ! Misc/optimization variables
+   type(SeaSt_ContinuousStateType)                  :: x                    ! Continuous states
+   type(SeaSt_ContinuousStateType)                  :: x_new                ! Continuous states at updated time
+   type(SeaSt_DiscreteStateType)                    :: xd                   ! Discrete states
+   type(SeaSt_DiscreteStateType)                    :: xd_new               ! Discrete states at updated time
+   type(SeaSt_ConstraintStateType)                  :: z                    ! Constraint states
+   type(SeaSt_ConstraintStateType)                  :: z_residual           ! Residual of the constraint state equations (Z)
+   type(SeaSt_OtherStateType)                       :: OtherState           ! Other states
+   type(SeaSt_MiscVarType)                          :: m                    ! Misc/optimization variables
 
-   type(SeaState_ParameterType)                        :: p                    ! Parameters
-   !type(SeaState_InputType)                           :: u                    ! System inputs [OLD STYLE]
-   type(SeaState_InputType)                            :: u(NumInp)            ! System inputs
-   type(SeaState_OutputType)                           :: y                    ! System outputs
+   type(SeaSt_ParameterType)                        :: p                    ! Parameters
+   !type(SeaSt_InputType)                           :: u                    ! System inputs [OLD STYLE]
+   type(SeaSt_InputType)                            :: u(NumInp)            ! System inputs
+   type(SeaSt_OutputType)                           :: y                    ! System outputs
 
-   type(SeaState_ContinuousStateType)                  :: dxdt                 ! First time derivatives of the continuous states
+   type(SeaSt_ContinuousStateType)                  :: dxdt                 ! First time derivatives of the continuous states
 
    integer(IntKi)                                      :: UnSeaSt_Out          ! Output file identifier 
    integer(IntKi)                                      :: I                    ! Generic loop counter
@@ -164,7 +164,7 @@ program SeaStateDriver
    InitInData%UseInputFile = .TRUE. 
    InitInData%InputFile    = drvrInitInp%SeaStateInputFile
    InitInData%OutRootName  = drvrInitInp%OutRootName
-   InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
+   InitInData%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
   
       ! Get the current time
    call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
@@ -183,7 +183,7 @@ program SeaStateDriver
    !if ( drvrInitInp%WaveElevSeriesFlag ) then
    !   ALLOCATE ( InitInData%WaveElevXY(2,drvrInitInp%WaveElevNX*drvrInitInp%WaveElevNY), STAT=ErrStat )
    !   if ( ErrStat >= ErrID_Fatal ) then
-   !      call SeaState_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+   !      call SeaSt_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    !      if ( ErrStat /= ErrID_None ) then
    !         call WrScr( ErrMsg )     
    !      end if
@@ -205,7 +205,7 @@ program SeaStateDriver
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
-   call SeaState_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
+   call SeaSt_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
       call SeaSt_DvrCleanup()
@@ -229,8 +229,8 @@ program SeaStateDriver
    
       ! Destroy initialization data
 
-   call SeaState_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
-   call SeaState_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
+   call SeaSt_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
+   call SeaSt_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
 
   
@@ -253,7 +253,7 @@ program SeaStateDriver
       
          ! Calculate outputs at n
 
-      call SeaState_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+      call SeaSt_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       if (errStat >= AbortErrLev) then
             ! Clean up and exit
          call SeaSt_DvrCleanup()
@@ -309,10 +309,10 @@ subroutine SeaSt_DvrCleanup()
       errStat2 = ErrID_None
       errMsg2  = ""
      
-      call SeaState_DestroyInitInput( InitInData, errStat2, errMsg2 )
+      call SeaSt_DestroyInitInput( InitInData, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'SeaSt_DvrCleanup' )
 
-      call SeaState_End( u(1), p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )
+      call SeaSt_End( u(1), p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'SeaSt_DvrCleanup' )
       
       if ( ErrStat /= ErrID_None ) then !This assumes PRESENT(ErrID) is also .TRUE. :
@@ -640,9 +640,9 @@ end SUBROUTINE ReadDriverInputFile
 SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, SeaState_p, ErrStat, ErrMsg)
 
    type(SeaSt_drvr_InitInput),       intent( in    )   :: drvrInitInp
-   type(SeaState_InitInputType),  intent( in    )   :: SeaStateInitInp
-   type(SeaState_InitOutputType), intent( in    )   :: SeaStateInitOut          ! Output data from initialization
-   type(SeaState_ParameterType),  intent( in    )   :: SeaState_p               ! Output data from initialization
+   type(SeaSt_InitInputType),  intent( in    )   :: SeaStateInitInp
+   type(SeaSt_InitOutputType), intent( in    )   :: SeaStateInitOut          ! Output data from initialization
+   type(SeaSt_ParameterType),  intent( in    )   :: SeaState_p               ! Output data from initialization
    integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs  
    character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 

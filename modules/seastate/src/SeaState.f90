@@ -3,7 +3,7 @@
 ! Framework. HydroDyns_Types will be auto-generated based on a description of the variables for the module.
 !
 ! "SeaState" should be replaced with the name of your module. Example: SeaState
-! "SeaState" (in SeaState_*) should be replaced with the module name or an abbreviation of it. Example: HD
+! "SeaState" (in SeaState_*) should be replaced with the module name or an abbreviation of it. Example: SeaSt
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2013-2015  National Renewable Energy Laboratory
@@ -38,23 +38,23 @@ MODULE SeaState
    PRIVATE
 
   
-   TYPE(ProgDesc), PARAMETER            :: SeaState_ProgDesc = ProgDesc( 'SeaState', '', '' )
+   TYPE(ProgDesc), PARAMETER            :: SeaSt_ProgDesc = ProgDesc( 'SeaState', '', '' )
 
     
    
    
       ! ..... Public Subroutines ...................................................................................................
 
-   PUBLIC :: SeaState_Init                           ! Initialization routine
-   PUBLIC :: SeaState_End                            ! Ending routine (includes clean up)
+   PUBLIC :: SeaSt_Init                           ! Initialization routine
+   PUBLIC :: SeaSt_End                            ! Ending routine (includes clean up)
    
-   PUBLIC :: SeaState_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating 
+   PUBLIC :: SeaSt_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating 
                                                     !   continuous states, and updating discrete states
-   PUBLIC :: SeaState_CalcOutput                     ! Routine for computing outputs
+   PUBLIC :: SeaSt_CalcOutput                     ! Routine for computing outputs
    
-   PUBLIC :: SeaState_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-   PUBLIC :: SeaState_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
-   !PUBLIC :: SeaState_UpdateDiscState                ! Tight coupling routine for updating discrete states
+   PUBLIC :: SeaSt_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
+   PUBLIC :: SeaSt_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
+   !PUBLIC :: SeaSt_UpdateDiscState                ! Tight coupling routine for updating discrete states
       
   
    CONTAINS
@@ -97,7 +97,7 @@ FUNCTION GetVersion(ThisProgVer)
 END FUNCTION GetVersion   
 !subroutine ConvertWaveDataToSeaStatePointers(Waves_InitOut, p, ErrStat, ErrMsg)
 !   TYPE(Waves_InitOutputType),      INTENT(in   )  :: Waves_InitOut     !< Output from Waves initialization routine
-!   TYPE(SeaState_ParameterType),       INTENT(inout)  :: p                 !< SeaState Parameters      
+!   TYPE(SeaSt_ParameterType),       INTENT(inout)  :: p                 !< SeaState Parameters      
 !   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
 !   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 !
@@ -297,26 +297,26 @@ END FUNCTION GetVersion
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(SeaState_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine.
-      TYPE(SeaState_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
-      TYPE(SeaState_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
-      TYPE(SeaState_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
-      TYPE(SeaState_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
-      TYPE(SeaState_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
-      TYPE(SeaState_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states            
-      TYPE(SeaState_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
+      TYPE(SeaSt_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine.
+      TYPE(SeaSt_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+      TYPE(SeaSt_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
+      TYPE(SeaSt_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+      TYPE(SeaSt_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+      TYPE(SeaSt_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+      TYPE(SeaSt_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states            
+      TYPE(SeaSt_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
                                                                         !!   only the output mesh is initialized)
-      TYPE(SeaState_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(SeaSt_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables           
       REAL(DbKi),                         INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
-                                                                        !!   (1) SeaState_UpdateStates() is called in loose coupling &
-                                                                        !!   (2) SeaState_UpdateDiscState() is called in tight coupling.
+                                                                        !!   (1) SeaSt_UpdateStates() is called in loose coupling &
+                                                                        !!   (2) SeaSt_UpdateDiscState() is called in tight coupling.
                                                                         !!   Input is the suggested time from the glue code; 
                                                                         !!   Output is the actual coupling interval that will be used 
                                                                         !!   by the glue code.
-      TYPE(SeaState_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+      TYPE(SeaSt_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -324,10 +324,10 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! Local variables
          
       CHARACTER(1024)                        :: SummaryName                         ! name of the SeaState summary file   
-      TYPE(SeaState_InputFile)               :: InputFileData                       !< Data from input file
+      TYPE(SeaSt_InputFile)               :: InputFileData                       !< Data from input file
       TYPE(FileInfoType)                     :: InFileInfo                          !< The derived type for holding the full input file for parsing -- we may pass this in the future
       TYPE(Waves_InitOutputType)             :: Waves_InitOut                       ! Initialization Outputs from the Waves module initialization
-      TYPE(SeaState_Interp_InitInputType)    :: SeaSt_Interp_InitInp
+      TYPE(SeaSt_Interp_InitInputType)    :: SeaSt_Interp_InitInp
 !      TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 module initialization
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
       INTEGER                                :: I, J, k, iBody                                ! Generic counters
@@ -380,7 +380,7 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       CHARACTER(1024)                        :: versionStr                                      
       INTEGER(IntKi)                         :: ErrStat2                            ! local error status
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
-      CHARACTER(*), PARAMETER                :: RoutineName = 'SeaState_Init'
+      CHARACTER(*), PARAMETER                :: RoutineName = 'SeaSt_Init'
    
       CHARACTER(64)                              :: Frmt
       CHARACTER(2)                           :: Delim
@@ -402,7 +402,7 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
         
          ! Display the module information
 
-      CALL DispNVD( SeaState_ProgDesc )        
+      CALL DispNVD( SeaSt_ProgDesc )        
       
 
       IF ( InitInp%UseInputFile ) THEN
@@ -427,7 +427,7 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
 
       ! Parse all SeaState-related input and populate the InputFileData structure 
-      CALL SeaState_ParseInput( InitInp%InputFile, InitInp%OutRootName, InitInp%defWtrDens, InitInp%defWtrDpth, InitInp%defMSL2SWL, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
+      CALL SeaSt_ParseInput( InitInp%InputFile, InitInp%OutRootName, InitInp%defWtrDens, InitInp%defWtrDpth, InitInp%defMSL2SWL, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -452,8 +452,8 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       IF ( InputFileData%SeaStSum ) THEN 
          
-         SummaryName = TRIM(InitInp%OutRootName)//'.HD.sum'
-         CALL SeaStOut_OpenSum( InputFileData%UnSum, SummaryName, SeaState_ProgDesc, ErrStat2, ErrMsg2 )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
+         SummaryName = TRIM(InitInp%OutRootName)//'.SEA.sum'
+         CALL SeaStOut_OpenSum( InputFileData%UnSum, SummaryName, SeaSt_ProgDesc, ErrStat2, ErrMsg2 )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -654,6 +654,7 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%WaveDT       = InputFileData%Waves%WaveDT
       p%WaveTime  => Waves_InitOut%WaveTime
       p%WaveElev1 => Waves_InitOut%WaveElev
+      InitOut%WaveElev1 => p%WaveElev1
       p%WaveVel   => Waves_InitOut%WaveVel
       p%WaveAcc   => Waves_InitOut%WaveAcc
       p%WaveDynP  => Waves_InitOut%WaveDynP
@@ -681,14 +682,15 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
      ! CALL MOVE_ALLOC( Waves_InitOut%WaveElev, p%WaveElev1 ) ! allocate p%WaveElev1, set p%WaveElev1 = Waves_InitOut%WaveElev, and deallocate Waves_InitOut%WaveElev
       
          ! Copy the first order wave elevation information to p%WaveElev1 so that we can output the total, first, and second order wave elevation separately
-      ALLOCATE ( p%WaveElev   (0:p%NStepWave, p%NGrid(1), p%NGrid(2) ) , STAT=ErrStat2 )
-      IF ( ErrStat2 /= 0 )  THEN
-         CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElev array.',ErrStat,ErrMsg,RoutineName)
-         CALL CleanUp()
-         RETURN         
-      END IF
-      ! Need to loop over all the elements and copy
-      p%WaveElev(:,:,:) = p%WaveElev1(:,:,:)
+      !ALLOCATE ( p%WaveElev   (0:p%NStepWave, p%NGrid(1), p%NGrid(2) ) , STAT=ErrStat2 )
+      !IF ( ErrStat2 /= 0 )  THEN
+      !   CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElev array.',ErrStat,ErrMsg,RoutineName)
+      !   CALL CleanUp()
+      !   RETURN         
+      !END IF
+      !! Need to loop over all the elements and copy
+      !! TODO: This can create a stack overflowstory error
+      !p%WaveElev(:,:,:) = p%WaveElev1(:,:,:)
 
 
 
@@ -850,16 +852,16 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   CALL SetErrStat(ErrID_Fatal,' WaveElev(NWaveElev) arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
                   CALL CleanUp()
                   RETURN
-               ELSE
-                
-                  do k = 1, p%NGrid(2)
-                     do J=1, p%NGrid(1)
-                        do I = 0,p%NStepWave
-                           p%WaveElev(I,J,k)  =  p%Waves2%WaveElev2(I,J,k) + p%WaveElev(I,J,k)
-                        end do
-                     end do
-                  end do
-                  !CALL MOVE_ALLOC(p%Waves2%WaveElev2,p%WaveElev2)
+               !ELSE
+               ! 
+               !   do k = 1, p%NGrid(2)
+               !      do J=1, p%NGrid(1)
+               !         do I = 0,p%NStepWave
+               !            p%WaveElev(I,J,k)  =  p%Waves2%WaveElev2(I,J,k) + p%WaveElev(I,J,k)
+               !         end do
+               !      end do
+               !   end do
+               !   !CALL MOVE_ALLOC(p%Waves2%WaveElev2,p%WaveElev2)
                ENDIF
             ENDIF
    
@@ -1004,14 +1006,14 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%NumOuts       = InputFileData%NumOuts
    
        ! Define initialization-routine output here:
-      InitOut%Ver = SeaState_ProgDesc         
+      InitOut%Ver = SeaSt_ProgDesc         
          ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
       InitOut%WtrDens = InputFileData%Waves%WtrDens
       InitOut%WtrDpth = InputFileData%Waves%WtrDpth
       InitOut%MSL2SWL = InputFileData%MSL2SWL
       p%WtrDpth       = InitOut%WtrDpth  
-      
-      CALL SeaStOut_Init( SeaState_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+ 
+      CALL SeaStOut_Init( SeaSt_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
@@ -1026,7 +1028,7 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 !===============================================
           
       IF ( InputFileData%UnSum > 0 ) THEN
-      versionStr = GetVersion(SeaState_ProgDesc)
+      versionStr = GetVersion(SeaSt_ProgDesc)
       WRITE( InputFileData%UnSum, '(A/)') versionStr
       Delim         = ' '
          IF (InputFileData%Waves%WaveMod /= 0 .AND. InputFileData%Waves%WaveMod /= 6)  THEN
@@ -1044,7 +1046,8 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
            ! WRITE( InputFileData%UnSum,  '(/)' ) 
             WRITE( InputFileData%UnSum, '(1X,A78)' )   '            Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
             do i= 1, p%NGridPts
-               WRITE(InputFileData%UnSum,Frmt)   InputFileData%Waves%WaveKinxi(i),Delim,  InputFileData%Waves%WaveKinyi(i),Delim,  InputFileData%Waves%WaveKinzi(i) - InitOut%MSL2SWL,Delim,  InputFileData%Waves%WaveKinzi(i)
+               ! NOTE: The Waves%WaveKinxi, yi, zi arrays hold all the grid point locations
+               WRITE(InputFileData%UnSum,Frmt)   InputFileData%Waves%WaveKinxi(i),Delim,  InputFileData%Waves%WaveKinyi(i),Delim,  InputFileData%Waves%WaveKinzi(i) + InitOut%MSL2SWL,Delim,  InputFileData%Waves%WaveKinzi(i)
             end do
            
             !WRITE( InputFileData%UnSum, '(1X,A11)' )   'Y-locations'
@@ -1065,7 +1068,8 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                WRITE( InputFileData%UnSum, '(2X,A84)' )   'Index                Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
                Frmt  = '(1X,I5, 2X,ES18.4e2,A,ES18.4e2,A,ES18.4e2,A,ES18.4e2)'
                do i= 1, p%NWaveKin
-                  WRITE(InputFileData%UnSum,Frmt)   i, InputFileData%WaveKinxi(i),Delim,  InputFileData%WaveKinyi(i),Delim,  InputFileData%WaveKinzi(i) - InitOut%MSL2SWL,Delim,  InputFileData%WaveKinzi(i)
+                  ! NOTE: The InputFileData%WaveKinxi, yi, zi arrays hold the User-request kinematics output locations
+                  WRITE(InputFileData%UnSum,Frmt)   i, InputFileData%WaveKinxi(i),Delim,  InputFileData%WaveKinyi(i),Delim,  InputFileData%WaveKinzi(i) + InitOut%MSL2SWL,Delim,  InputFileData%WaveKinzi(i)
                end do
                
             else
@@ -1146,12 +1150,72 @@ SUBROUTINE SeaState_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       SeaSt_Interp_InitInp%pZero(1) = 0.0  !Time
       SeaSt_Interp_InitInp%pZero(4) = -InputFileData%Z_Depth  ! zi
       SeaSt_Interp_InitInp%Z_Depth  = InputFileData%Z_Depth
-      call SeaState_Interp_Init(SeaSt_Interp_InitInp, p%sea_interp_p,  ErrStat2, ErrMsg2)
+      call SeaSt_Interp_Init(SeaSt_Interp_InitInp, p%seast_interp_p,  ErrStat2, ErrMsg2)
 
       IF ( p%OutSwtch == 1 ) THEN ! Only HD-level output writing
          ! HACK  WE can tell FAST not to write any HD outputs by simply deallocating the WriteOutputHdr array!
          DEALLOCATE ( InitOut%WriteOutputHdr )
       END IF
+      
+      ! Copy Waves InitOut data to SeaState InitOut
+      
+       InitOut%WaveElevC0   => Waves_InitOut%WaveElevC0          ! For WAMIT and WAMIT2,  FIT           
+       CALL MOVE_ALLOC( Waves_InitOut%WaveElevC, InitOut%WaveElevC ) ! For WAMIT
+       InitOut%WaveDirArr   => Waves_InitOut%WaveDirArr          ! For WAMIT and WAMIT2
+       InitOut%WaveDirMin   =  Waves_InitOut%WaveDirMin          ! For WAMIT and WAMIT2
+       InitOut%WaveDirMax   =  Waves_InitOut%WaveDirMax          ! For WAMIT and WAMIT2
+       InitOut%WaveDir      =  Waves_InitOut%WaveDir             ! For WAMIT for use in SS_Excitation
+       !InitOut%WaveNDir     =  Waves_InitOut%WaveNDir            ! Not needed
+       InitOut%WaveMultiDir =  Waves_InitOut%WaveMultiDir        ! For WAMIT2
+       InitOut%WaveDOmega   =  Waves_InitOut%WaveDOmega          ! For WAMIT and WAMIT2, FIT
+       !InitOut%WaveKinzi    =  Waves_InitOut%WaveKinzi           ! Not needed
+       InitOut%WaveDynP     => Waves_InitOut%WaveDynP            ! For Morison
+       InitOut%WaveAcc      => Waves_InitOut%WaveAcc             ! For Morison
+       InitOut%WaveVel      => Waves_InitOut%WaveVel             ! For Morison
+       !InitOut%WaveElev     => Waves_InitOut%WaveElev            ! Not needed
+       !InitOut%WaveElev0    => Waves_InitOut%WaveElev0           ! For WAMIT for use in SS_Excitation
+       call MOVE_ALLOC(Waves_InitOut%WaveElev0, InitOut%WaveElev0 )
+       InitOut%WaveTime     => Waves_InitOut%WaveTime            ! For Morison, and WAMIT for use in SS_Excitation
+       !InitOut%WaveTMax     =  Waves_InitOut%WaveTMax            ! Not needed
+       InitOut%RhoXg        =  Waves_InitOut%RhoXg               ! For WAMIT and WAMIT2
+       InitOut%NStepWave    =  Waves_InitOut%NStepWave           ! For WAMIT, WAMIT2, SS_Excitation, Morison
+       InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT
+      
+       InitOut%WaveMod      =  InputFileData%Waves%WaveMod   
+       InitOut%WaveStMod    =  InputFileData%Waves%WaveStMod 
+       InitOut%WvLowCOff    =  InputFileData%Waves%WvLowCOff 
+       InitOut%WvHiCOff     =  InputFileData%Waves%WvHiCOff  
+       InitOut%WvLowCOffD   =  InputFileData%Waves2%WvLowCOffD
+       InitOut%WvHiCOffD    =  InputFileData%Waves2%WvHiCOffD 
+       InitOut%WvLowCOffS   =  InputFileData%Waves2%WvLowCOffS
+       InitOut%WvHiCOffS    =  InputFileData%Waves2%WvHiCOffS 
+       InitOut%WvDiffQTFF   =  InputFileData%Waves2%WvDiffQTFF
+       InitOut%WvSumQTFF    =  InputFileData%Waves2%WvSumQTFF 
+       InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
+       InitOut%CurrMod      =  InputFileData%Current%CurrMod
+       InitOut%SeaSt_Interp_p =  p%seast_interp_p
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
       
          ! Destroy the local initialization data
       CALL CleanUp()
@@ -1160,7 +1224,7 @@ CONTAINS
 !................................
    SUBROUTINE CleanUp()
       
-      CALL SeaState_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL SeaSt_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
     !  CALL Waves_DestroyInitOutput(   Waves_InitOut,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
@@ -1204,21 +1268,21 @@ CONTAINS
 
    END SUBROUTINE CleanUp
 !................................
-END SUBROUTINE SeaState_Init
+END SUBROUTINE SeaSt_Init
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
-SUBROUTINE SeaState_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+SUBROUTINE SeaSt_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
-      TYPE(SeaState_InputType),           INTENT(INOUT)  :: u           !< System inputs
-      TYPE(SeaState_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
-      TYPE(SeaState_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
-      TYPE(SeaState_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
-      TYPE(SeaState_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
-      TYPE(SeaState_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states            
-      TYPE(SeaState_OutputType),          INTENT(INOUT)  :: y           !< System outputs
-      TYPE(SeaState_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(SeaSt_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(SeaSt_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(SeaSt_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(SeaSt_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(SeaSt_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(SeaSt_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states            
+      TYPE(SeaSt_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -1247,52 +1311,52 @@ SUBROUTINE SeaState_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! Destroy the input data:
          
-      CALL SeaState_DestroyInput( u, ErrStat, ErrMsg )
+      CALL SeaSt_DestroyInput( u, ErrStat, ErrMsg )
 
 
          ! Destroy the parameter data:
       
-      CALL SeaState_DestroyParam( p, ErrStat, ErrMsg )
+      CALL SeaSt_DestroyParam( p, ErrStat, ErrMsg )
 
 
          ! Destroy the state data:
          
-      CALL SeaState_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL SeaState_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL SeaState_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL SeaState_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+      CALL SeaSt_DestroyContState(   x,           ErrStat, ErrMsg )
+      CALL SeaSt_DestroyDiscState(   xd,          ErrStat, ErrMsg )
+      CALL SeaSt_DestroyConstrState( z,           ErrStat, ErrMsg )
+      CALL SeaSt_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
          
          ! Destroy misc variables:
       
-      CALL SeaState_DestroyMisc( m, ErrStat, ErrMsg )
+      CALL SeaSt_DestroyMisc( m, ErrStat, ErrMsg )
 
          ! Destroy the output data:
          
-      CALL SeaState_DestroyOutput( y, ErrStat, ErrMsg )
+      CALL SeaSt_DestroyOutput( y, ErrStat, ErrMsg )
       
 
-END SUBROUTINE SeaState_End
+END SUBROUTINE SeaSt_End
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
 !! Continuous, constraint, and discrete states are updated to values at t + Interval.
-SUBROUTINE SeaState_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+SUBROUTINE SeaSt_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       REAL(DbKi),                         INTENT(IN   )  :: t               !< Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   )  :: n               !< Current step of the simulation: t = n*Interval
-      TYPE(SeaState_InputType),           INTENT(INOUT ) :: Inputs(:)       !< Inputs at InputTimes
+      TYPE(SeaSt_InputType),           INTENT(INOUT ) :: Inputs(:)       !< Inputs at InputTimes
       REAL(DbKi),                         INTENT(IN   )  :: InputTimes(:)   !< Times in seconds associated with Inputs
-      TYPE(SeaState_ParameterType),       INTENT(IN   )  :: p               !< Parameters
-      TYPE(SeaState_ContinuousStateType), INTENT(INOUT)  :: x               !< Input: Continuous states at t;
+      TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p               !< Parameters
+      TYPE(SeaSt_ContinuousStateType), INTENT(INOUT)  :: x               !< Input: Continuous states at t;
                                                                             !!   Output: Continuous states at t + Interval
-      TYPE(SeaState_DiscreteStateType),   INTENT(INOUT)  :: xd              !< Input: Discrete states at t;
+      TYPE(SeaSt_DiscreteStateType),   INTENT(INOUT)  :: xd              !< Input: Discrete states at t;
                                                                             !!   Output: Discrete states at t + Interval
-      TYPE(SeaState_ConstraintStateType), INTENT(INOUT)  :: z               !< Input: Constraint states at t;
+      TYPE(SeaSt_ConstraintStateType), INTENT(INOUT)  :: z               !< Input: Constraint states at t;
                                                                             !!   Output: Constraint states at t + Interval
-      TYPE(SeaState_OtherStateType),      INTENT(INOUT)  :: OtherState      !< Other states: Other states at t;
+      TYPE(SeaSt_OtherStateType),      INTENT(INOUT)  :: OtherState      !< Other states: Other states at t;
                                                                             !!   Output: Other states at t + Interval
-      TYPE(SeaState_MiscVarType),         INTENT(INOUT)  :: m               !< Initial misc/optimization variables           
+      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m               !< Initial misc/optimization variables           
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat         !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -1305,23 +1369,23 @@ SUBROUTINE SeaState_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
 
    
       
-END SUBROUTINE SeaState_UpdateStates
+END SUBROUTINE SeaSt_UpdateStates
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE SeaState_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
+SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
    
       REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      TYPE(SeaState_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (note that this is intent out because we're copying the u%WAMITMesh into m%u_wamit%mesh)
-      TYPE(SeaState_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-      TYPE(SeaState_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(SeaState_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
-      TYPE(SeaState_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(SeaState_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
-      TYPE(SeaState_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
+      TYPE(SeaSt_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (note that this is intent out because we're copying the u%WAMITMesh into m%u_wamit%mesh)
+      TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(SeaSt_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(SeaSt_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(SeaSt_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(SeaSt_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(SeaSt_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
                                                                         !!   nectivity information does not have to be recalculated)
-      TYPE(SeaState_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !! Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !! Error message if ErrStat /= ErrID_None
 
@@ -1368,16 +1432,20 @@ SUBROUTINE SeaState_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       !      ! Waves2_CalcOutput is called only so that the wave elevations can be output (if requested).
       !   CALL Waves2_CalcOutput( Time, m%u_Waves2, p%Waves2, x%Waves2, xd%Waves2,  &
       !                          z%Waves2, OtherState%Waves2, y%Waves2, m%Waves2, ErrStat2, ErrMsg2 )
-      !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )                  
+      !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )                  
       !END IF
 
 
       do i = 1, p%NWaveKin
          positionXYZ = (/p%WaveKinxi(i),p%WaveKinyi(i),p%WaveKinzi(i)/)
-         call SeaState_Interp_Setup( Time, positionXYZ, p%sea_interp_p, m%sea_interp_m, ErrStat, ErrMsg )     
-         WaveVel(:,i) = SeaState_Interp_4D_Vec( p%WaveVel, m%sea_interp_m, ErrStat, ErrMsg )
-         WaveAcc(:,i) = SeaState_Interp_4D_Vec( p%WaveAcc, m%sea_interp_m, ErrStat, ErrMsg )
-         WaveDynP(i)  = SeaState_Interp_4D    ( p%WaveDynP, m%sea_interp_m, ErrStat, ErrMsg )
+         call SeaSt_Interp_Setup( Time, positionXYZ, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+         WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+         WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+         WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
          
       end do
      
@@ -1386,10 +1454,17 @@ SUBROUTINE SeaState_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       do i = 1, p%NWaveElev
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
          ! TODO: Why interp the WaveElev.  Instead just add 1 + 2 if Waves2 is being used?
-         WaveElev(i) = SeaState_Interp_3D( Time, positionXY, p%WaveElev, p%sea_interp_p, ErrStat, ErrMsg )
-         WaveElev1(i) = SeaState_Interp_3D( Time, positionXY, p%WaveElev1, p%sea_interp_p, ErrStat, ErrMsg )
+         !WaveElev(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev, p%sea_interp_p, ErrStat2, ErrMsg2 )
+         !   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+         WaveElev1(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+        
          if (allocated(p%Waves2%WaveElev2)) then
-            WaveElev2(i) = SeaState_Interp_3D( Time, positionXY, p%Waves2%WaveElev2, p%sea_interp_p, ErrStat, ErrMsg )
+            WaveElev2(i) = SeaSt_Interp_3D( Time, positionXY, p%Waves2%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+            WaveElev(i) =  WaveElev1(i) + WaveElev2(i)
+         else
+            WaveElev(i) =  WaveElev1(i) 
          end if
          
       end do
@@ -1401,12 +1476,12 @@ SUBROUTINE SeaState_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
            
       IF ( (p%OutSwtch == 1 .OR. p%OutSwtch == 3) .AND. ( Time > m%LastOutTime ) ) THEN    
          CALL SeaStOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )         
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )                  
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )                  
       END IF
 
          ! Map calculated results into the AllOuts Array
       CALL SeaStOut_MapOutputs( Time, p, p%NWaveElev, WaveElev, WaveElev1, WaveElev2, p%NWaveKin, WaveVel, WaveAcc, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )                  
       
       DO I = 1,p%NumOuts
             y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
@@ -1432,26 +1507,26 @@ SUBROUTINE SeaState_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       m%LastOutTime   = Time
       end if
       
-END SUBROUTINE SeaState_CalcOutput
+END SUBROUTINE SeaSt_CalcOutput
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for computing derivatives of continuous states
-SUBROUTINE SeaState_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
+SUBROUTINE SeaSt_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
    
       REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      TYPE(SeaState_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)
-      TYPE(SeaState_ParameterType),       INTENT(IN   )  :: p           !< Parameters                             
-      TYPE(SeaState_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(SeaState_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
-      TYPE(SeaState_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(SeaState_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states                    
-      TYPE(SeaState_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
-      TYPE(SeaState_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
+      TYPE(SeaSt_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)
+      TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p           !< Parameters                             
+      TYPE(SeaSt_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(SeaSt_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(SeaSt_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(SeaSt_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states                    
+      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(SeaSt_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       integer(IntKi)             :: iWAMIT        ! loop counter
-      CHARACTER(*), PARAMETER    :: RoutineName = 'SeaState_CalcContStateDeriv'
+      CHARACTER(*), PARAMETER    :: RoutineName = 'SeaSt_CalcContStateDeriv'
                
          ! Initialize ErrStat
          
@@ -1460,24 +1535,24 @@ SUBROUTINE SeaState_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxd
       
  
    
-END SUBROUTINE SeaState_CalcContStateDeriv
+END SUBROUTINE SeaSt_CalcContStateDeriv
 
 
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
-SUBROUTINE SeaState_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )   
+SUBROUTINE SeaSt_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )   
    
    REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds   
-   TYPE(SeaState_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)              
-   TYPE(SeaState_ParameterType),       INTENT(IN   )  :: p           !< Parameters                           
-   TYPE(SeaState_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-   TYPE(SeaState_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
-   TYPE(SeaState_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
-   TYPE(SeaState_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other/optimization states                    
-   TYPE(SeaState_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
-   TYPE(SeaState_ConstraintStateType), INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using  
+   TYPE(SeaSt_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)              
+   TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p           !< Parameters                           
+   TYPE(SeaSt_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(SeaSt_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+   TYPE(SeaSt_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
+   TYPE(SeaSt_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other/optimization states                    
+   TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+   TYPE(SeaSt_ConstraintStateType), INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using  
                                                                      !!     the input values described above      
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -1494,7 +1569,7 @@ SUBROUTINE SeaState_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m
          ! Solve for the constraint states here:
 
 
-END SUBROUTINE SeaState_CalcConstrStateResidual
+END SUBROUTINE SeaSt_CalcConstrStateResidual
 
 
 
