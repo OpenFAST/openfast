@@ -549,12 +549,13 @@ int
 set_dim_len ( char * dimspec , node_t * dim_entry )
 {
   dim_entry->deferred = 0 ;
+  dim_entry->is_pointer = 0;
   if      (!strcmp( dimspec , "standard_domain" ))
    { dim_entry->len_defined_how = DOMAIN_STANDARD ; }
-  else if (!strncmp( dimspec, "constant=" , 9 ) || isNum(dimspec[0]) || dimspec[0] == ':' || dimspec[0] == '(' )
+  else if (!strncmp( dimspec, "constant=" , 9 ) || isNum(dimspec[0]) || dimspec[0] == ':' || dimspec[0] == '*' || dimspec[0] == '(' )
   {
     char *p, *colon, *paren ;
-    p = (isNum(dimspec[0])||dimspec[0]==':'||dimspec[0]=='(')?dimspec:&(dimspec[9]) ;
+    p = (isNum(dimspec[0])||dimspec[0]==':'||dimspec[0]=='*'||dimspec[0]=='(')?dimspec:&(dimspec[9]) ;
     /* check for colon */
     if (( colon = index(p,':')) != NULL )
     {
@@ -571,6 +572,13 @@ set_dim_len ( char * dimspec , node_t * dim_entry )
         dim_entry->deferred = 1 ;
       }
       dim_entry->coord_end   = atoi(colon+1) ;
+    }
+    else if ((colon = index(p, '*')) != NULL)
+    {
+        *colon = '\0';
+        dim_entry->deferred = 1;    
+        dim_entry->coord_end = atoi(colon + 1);
+        dim_entry->is_pointer = 1;
     }
     else
     {
