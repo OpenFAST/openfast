@@ -906,9 +906,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    !call filter_angles2(xd%psi_skew_filt, xd%chi_skew_filt, u%psi_skew, u%chi_skew, p%filtParam, p%oneMinusFiltParam)
    
    xd%YawErr_filt      (0) =  xd%YawErr_filt(0)*p%filtParam + u%YawErr  *p%oneMinusFiltParam
-   xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
-   xd%psi_skew_filt        =  filter_angles(xd%psi_skew_filt, u%psi_skew, p%filtParam, p%oneMinusFiltParam)
-   
+  
    if ( EqualRealNos(abs(xd%YawErr_filt(0)), pi/2) .or. abs(xd%YawErr_filt(0)) > pi/2 ) then
       ! TEST: E4
       call SetErrStat(ErrID_FATAL, 'The time-filtered nacelle-yaw error has reached +/- pi/2.', errStat, errMsg, RoutineName) 
