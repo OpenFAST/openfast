@@ -49,18 +49,18 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
       IF (PRESENT(ExternInitData)) THEN
          CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC_DX,&
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
       ELSE
          CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC_DX, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg, InFile  )
       END IF
    ELSE
       CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC_DX, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
    END IF
 
@@ -68,7 +68,7 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to call Init routine for each module. This routine sets all of the init input data for each module.
-SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, SC_DX, HD, SD, ExtPtfm, &
+SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, SC_DX, SeaSt, HD, SD, ExtPtfm, &
                                MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
 
    use ElastoDyn_Parameters, only: Method_RK4
@@ -86,6 +86,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
    TYPE(SCDataEx_Data),      INTENT(INOUT) :: SC_DX               !< SuperController exchange data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
@@ -856,7 +857,88 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          END IF
    end if
 
+   ! ........................
+   ! initialize SeaStates
+   ! ........................
+   if ( p_FAST%CompSeaSt == Module_SeaSt ) then
 
+      Init%InData_SeaSt%Gravity       = p_FAST%Gravity
+      Init%InData_SeaSt%defWtrDens    = p_FAST%WtrDens
+      Init%InData_SeaSt%defWtrDpth    = p_FAST%WtrDpth
+      Init%InData_SeaSt%defMSL2SWL    = p_FAST%MSL2SWL
+      Init%InData_SeaSt%UseInputFile  = .TRUE.
+      Init%InData_SeaSt%InputFile     = p_FAST%SeaStFile
+      Init%InData_SeaSt%OutRootName   = p_FAST%OutFileRoot
+      Init%InData_SeaSt%TMax          = p_FAST%TMax
+      
+      CALL SeaSt_Init( Init%InData_SeaSt, SeaSt%Input(1), SeaSt%p,  SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
+                          SeaSt%OtherSt(STATE_CURR), SeaSt%y, SeaSt%m, p_FAST%dt_module( MODULE_SeaSt ), Init%OutData_SeaSt, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+      p_FAST%ModuleInitialized(Module_SeaSt) = .TRUE.
+      CALL SetModuleSubstepTime(Module_SeaSt, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF  
+      
+      ! Need to set up other module's InitInput data here because we will also need to clean up SeaState data and would rather not defer that cleanup
+      if ( p_FAST%CompHydro == Module_HD ) then
+         Init%InData_HD%NStepWave      =  Init%OutData_SeaSt%NStepWave
+         Init%InData_HD%NStepWave2     =  Init%OutData_SeaSt%NStepWave2
+         Init%InData_HD%RhoXg          =  Init%OutData_SeaSt%RhoXg
+         Init%InData_HD%WaveMod        =  Init%OutData_SeaSt%WaveMod
+         Init%InData_HD%CurrMod        =  Init%OutData_SeaSt%CurrMod
+         Init%InData_HD%WaveStMod      =  Init%OutData_SeaSt%WaveStMod
+         Init%InData_HD%WaveDirMod     =  Init%OutData_SeaSt%WaveDirMod
+         Init%InData_HD%WvLowCOff      =  Init%OutData_SeaSt%WvLowCOff 
+         Init%InData_HD%WvHiCOff       =  Init%OutData_SeaSt%WvHiCOff  
+         Init%InData_HD%WvLowCOffD     =  Init%OutData_SeaSt%WvLowCOffD
+         Init%InData_HD%WvHiCOffD      =  Init%OutData_SeaSt%WvHiCOffD 
+         Init%InData_HD%WvLowCOffS     =  Init%OutData_SeaSt%WvLowCOffS
+         Init%InData_HD%WvHiCOffS      =  Init%OutData_SeaSt%WvHiCOffS 
+         Init%InData_HD%WvDiffQTFF     =  Init%OutData_SeaSt%WvDiffQTFF
+         Init%InData_HD%WvSumQTFF      =  Init%OutData_SeaSt%WvSumQTFF 
+         Init%InData_HD%WaveDirMin     =  Init%OutData_SeaSt%WaveDirMin  
+         Init%InData_HD%WaveDirMax     =  Init%OutData_SeaSt%WaveDirMax  
+         Init%InData_HD%WaveDir        =  Init%OutData_SeaSt%WaveDir     
+         Init%InData_HD%WaveMultiDir   =  Init%OutData_SeaSt%WaveMultiDir
+         Init%InData_HD%WaveDOmega     =  Init%OutData_SeaSt%WaveDOmega  
+         CALL MOVE_ALLOC(  Init%OutData_SeaSt%WaveElev0, Init%InData_HD%WaveElev0 )  
+         Init%InData_HD%WaveTime       => Init%OutData_SeaSt%WaveTime  
+         Init%InData_HD%WaveDynP       => Init%OutData_SeaSt%WaveDynP  
+         Init%InData_HD%WaveAcc        => Init%OutData_SeaSt%WaveAcc   
+         Init%InData_HD%WaveVel        => Init%OutData_SeaSt%WaveVel   
+         Init%InData_HD%WaveElevC0     => Init%OutData_SeaSt%WaveElevC0
+         CALL MOVE_ALLOC( Init%OutData_SeaSt%WaveElevC, Init%InData_HD%WaveElevC )
+         Init%InData_HD%WaveDirArr     => Init%OutData_SeaSt%WaveDirArr
+         Init%InData_HD%WaveElev       => Init%OutData_SeaSt%WaveElev
+         Init%InData_HD%WaveElev1      => Init%OutData_SeaSt%WaveElev1
+         Init%InData_HD%WaveElev2      => Init%OutData_SeaSt%WaveElev2
+         
+         call SeaSt_Interp_CopyParam(Init%OutData_SeaSt%SeaSt_Interp_p, Init%InData_HD%SeaSt_Interp_p, 0, ErrStat, ErrMsg )
+         
+      end if
+      
+      
+      ! Now that all modules have been handled their pointer data, we need to nullify some of the SeaState InitOut pointers
+      ! The modules which were handed the data will be deallocating it.
+      
+      ! NOTE: this may need to change once other modules start using SeaState
+      nullify(Init%OutData_SeaSt%WaveDynP)   
+      nullify(Init%OutData_SeaSt%WaveAcc)    
+      nullify(Init%OutData_SeaSt%WaveVel)     
+      nullify(Init%OutData_SeaSt%WaveTime)
+      nullify(Init%OutData_SeaSt%WaveElevC0)
+      nullify(Init%OutData_SeaSt%WaveDirArr)
+      nullify(Init%OutData_SeaSt%WaveElev)
+      nullify(Init%OutData_SeaSt%WaveElev1)
+      nullify(Init%OutData_SeaSt%WaveElev2)
+      
+   end if
+   
    ! ........................
    ! initialize HydroDyn
    ! ........................
@@ -905,6 +987,20 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(Init%OutData_HD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%NumOutputs = size(Init%OutData_HD%WriteOutputHdr)
       end if
 
+         ! 1) Nullify the HD Init Input pointers
+         ! 2) Now, when HydroDyn_DestroyInitInput is called and hence SeaState_DestroyInitOutput, we will not deallocate data which is still in use because the is associated test will fail.
+    
+         nullify(Init%InData_HD%WaveElevC0)
+         nullify(Init%InData_HD%WaveDirArr)
+         nullify(Init%InData_HD%WaveDynP)   
+         nullify(Init%InData_HD%WaveAcc)    
+         nullify(Init%InData_HD%WaveVel)      
+         nullify(Init%InData_HD%WaveTime)
+         nullify(Init%InData_HD%WaveElev)
+         nullify(Init%InData_HD%WaveElev1)
+         nullify(Init%InData_HD%WaveElev2)
+
+   
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1711,10 +1807,17 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    IF (p%CompElast   == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompElast must be 1 (ElastoDyn) or 2 (BeamDyn).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompAero    == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompAero must be 0 (None), 1 (AeroDyn14), or 2 (AeroDyn).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompServo   == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompServo must be 0 (None) or 1 (ServoDyn).', ErrStat, ErrMsg, RoutineName )
+   IF (p%CompSeaSt   == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompSeaSt must be 0 (None) or 1 (SeaState).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompHydro   == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompHydro must be 0 (None) or 1 (HydroDyn).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompSub     == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompSub must be 0 (None), 1 (SubDyn), or 2 (ExtPtfm_MCKF).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompMooring == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompMooring must be 0 (None), 1 (MAP), 2 (FEAMooring), 3 (MoorDyn), or 4 (OrcaFlex).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompIce     == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompIce must be 0 (None) or 1 (IceFloe).', ErrStat, ErrMsg, RoutineName )
+   
+      ! NOTE: If future modules consume SeaState data, then their checks should be added to this routine. 12/1/21 GJH
+   if (p%CompHydro == Module_HD .and. p%CompSeaSt==0) then
+      CALL SetErrStat( ErrID_Fatal, 'SeaState must be used when HydroDyn is used. Set CompSeaSt = 1 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+   end if
+   
    IF (p%CompHydro /= Module_HD) THEN
       IF (p%CompMooring == Module_MAP) THEN
          CALL SetErrStat( ErrID_Fatal, 'HydroDyn must be used when MAP is used. Set CompHydro > 0 or CompMooring = 0 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
@@ -2498,6 +2601,23 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
          END IF
 
 
+      ! CompSeaSt - Compute sea state information (switch) {0=None; 1=SeaState}:
+   CALL ReadVar( UnIn, InputFile, p%CompSeaSt, "CompSeaSt", "Compute sea state information (switch) {0=None; 1=SeaState}}", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
+
+         ! immediately convert to values used inside the code:
+         IF ( p%CompSeaSt == 0 ) THEN
+            p%CompSeaSt = Module_NONE
+         ELSEIF ( p%CompSeaSt == 1 ) THEN
+            p%CompSeaSt = Module_SeaSt
+         ELSE
+            p%CompSeaSt = Module_Unknown
+         END IF
+
       ! CompHydro - Compute hydrodynamic loads (switch) {0=None; 1=HydroDyn}:
    CALL ReadVar( UnIn, InputFile, p%CompHydro, "CompHydro", "Compute hydrodynamic loads (switch) {0=None; 1=HydroDyn}", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2718,6 +2838,15 @@ END DO
          RETURN
       end if
    IF ( PathIsRelative( p%ServoFile ) ) p%ServoFile = TRIM(PriPath)//TRIM(p%ServoFile)
+
+      ! SeaStFile - Name of file containing sea state input parameters (-):
+   CALL ReadVar( UnIn, InputFile, p%SeaStFile, "SeaStFile", "Name of file containing sea state input parameters (-)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
+   IF ( PathIsRelative( p%HydroFile ) ) p%HydroFile = TRIM(PriPath)//TRIM(p%HydroFile)
 
       ! HydroFile - Name of file containing hydrodynamic input parameters (-):
    CALL ReadVar( UnIn, InputFile, p%HydroFile, "HydroFile", "Name of file containing hydrodynamic input parameters (-)", ErrStat2, ErrMsg2, UnEc)

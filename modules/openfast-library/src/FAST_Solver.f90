@@ -36,6 +36,7 @@ MODULE FAST_Solver
    USE MoorDyn
    USE MAP
    USE OrcaFlexInterface
+   USE SeaState
    USE HydroDyn
    USE IceDyn
    USE IceFloe
