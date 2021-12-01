@@ -294,8 +294,8 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       SC_InitOut%NumSC2CtrlGlob = 0
       SC_InitOut%NumSC2Ctrl = 0
       SC_InitOut%NumCtrl2SC = 0
-      allocate(farm%SC%y%fromscglob(0))
-      allocate(farm%SC%y%fromsc(0))
+      allocate(farm%SC%y%fromSCglob(0))
+      allocate(farm%SC%y%fromSC(0))
    end if
    
       !-------------------
@@ -817,29 +817,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if      
       
       
-      ! dr - Radial increment of radial finite-difference grid (m) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%dr, "dr", "Radial increment of radial finite-difference grid (m) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   
-      ! NumRadii - Number of radii in the radial finite-difference grid (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii", "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   
-      ! NumPlanes - Number of wake planes (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes, "NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%Mod_Wake, "Mod_Wake", "Wake model", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl, "Swirl", "Swirl switch", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%dr      , "dr", "Radial increment of radial finite-difference grid (m) [>0.0]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii", "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay, "k_VortexDecay", "Vortex decay constant", 0.1, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices, "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D, "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
       
       ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
@@ -1022,7 +1007,9 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
-      end if            
+      end if           
+      
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%FilterInit, "FilterInit", "Filter Init", 1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return 
 
       ! Mod_Meander - Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=3]:
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Meander, "Mod_Meander", &
@@ -1043,6 +1030,17 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          call cleanup()
          RETURN        
       end if            
+    
+          
+   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Projection, "Mod_Projection", "Mod_Projection", -1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return 
+   if (AWAE_InitInp%Mod_Projection==-1) then
+      ! -1 means the user selected "default"
+      if (WD_InitInp%Mod_Wake==Mod_Wake_Curl) then
+           AWAE_InitInp%Mod_Projection=1
+      else 
+           AWAE_InitInp%Mod_Projection=0
+      endif
+   endif
 
    !---------------------- VISUALIZATION --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
@@ -1345,6 +1343,12 @@ CONTAINS
       CLOSE( UnIn )
       IF ( UnEc > 0 ) CLOSE ( UnEc )   
    end subroutine cleanup
+
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function Failed
    !...............................................................................................................................
 END SUBROUTINE Farm_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1377,10 +1381,14 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    
    
    ! --- WAKE DYNAMICS ---
+   IF (WD_InitInp%Mod_Wake < 1 .or. WD_InitInp%Mod_Wake >3 ) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1,2 or 3',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumPlanes < 2) CALL SetErrStat(ErrID_Fatal,'NumPlanes (number of wake planes) must be at least 2.',ErrStat,ErrMsg,RoutineName)
 
+   IF (WD_InitInp%k_VortexDecay < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'k_VortexDecay needs to be postive',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%NumVortices < 2) CALL SetErrStat(ErrID_Fatal,'NumVorticies needs to be greater than 1',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%sigma_D < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'sigma_D needs to be postive',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%f_c <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'f_c (cut-off [corner] frequency) must be more than 0 Hz.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_NearWake <= 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_NearWake parameter must be greater than 1.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%k_vAmb < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vAmb parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -1406,6 +1414,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
       END IF
    END IF
    
+   IF (WD_InitInp%FilterInit < 0 .or. WD_InitInp%FilterInit >1 ) CALL SetErrStat(ErrID_Fatal,'FilterInit needs to be 1 or 0',ErrStat,ErrMsg,RoutineName)
    IF (AWAE_InitInp%Mod_Meander < MeanderMod_Uniform .or. AWAE_InitInp%Mod_Meander > MeanderMod_WndwdJinc) THEN
       call SetErrStat(ErrID_Fatal,'Spatial filter model for wake meandering, Mod_Meander, must be 1 (uniform), 2 (truncated jinc), 3 (windowed jinc) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
    END IF
@@ -1413,6 +1422,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (AWAE_InitInp%C_Meander < 1.0_Reki) THEN
       CALL SetErrStat(ErrID_Fatal,'C_Meander parameter must not be less than 1.',ErrStat,ErrMsg,RoutineName)
    END IF
+   IF (AWAE_InitInp%Mod_Projection < 0 .or. AWAE_InitInp%Mod_Projection >1 ) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 0',ErrStat,ErrMsg,RoutineName)
          
    !--- OUTPUT ---
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
@@ -1577,10 +1587,20 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
       FWrap_InitInp%NumSC2Ctrl    = SC_InitOutput%NumSC2Ctrl
       FWrap_InitInp%NumSC2CtrlGlob= SC_InitOutput%NumSC2CtrlGlob
       FWrap_InitInp%NumCtrl2SC    = SC_InitOutput%NumCtrl2SC
-      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob))
-      FWrap_InitInp%fromSCglob = SC_y%fromSCglob
+      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSCglob`', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      if (SC_InitOutput%NumSC2CtrlGlob>0) then
+         FWrap_InitInp%fromSCglob = SC_y%fromSCglob
+      endif
       
-      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl))
+      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSC`', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
       
       
       DO nt = 1,farm%p%NumTurbines
@@ -1667,7 +1687,8 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    farm%AWAE%u%xhat_plane = 0.0_ReKi     ! Orientations of wake planes, normal to wake planes, for each turbine
    farm%AWAE%u%p_plane    = 0.0_ReKi     ! Center positions of wake planes for each turbine
    farm%AWAE%u%Vx_wake    = 0.0_ReKi     ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-   farm%AWAE%u%Vr_wake    = 0.0_ReKi     ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+   farm%AWAE%u%Vy_wake    = 0.0_ReKi     ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+   farm%AWAE%u%Vz_wake    = 0.0_ReKi     ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
    farm%AWAE%u%D_wake     = 0.0_ReKi     ! Wake diameters at wake planes for each turbine      
    
       !--------------------
@@ -2059,20 +2080,23 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                         ! Wake diameter for downstream wake volume, np, of turbine, nt, m
                      farm%m%AllOuts(WkDiamTD(iOutDist,nt)) = delta*farm%WD(nt)%y%D_wake(np+1) + deltad*farm%WD(nt)%y%D_wake(np)  !farm%AWAE%u%D_wake(np,nt)
             
+                     if (farm%WD(nt)%p%Mod_Wake == Mod_Wake_Polar) then
+                        do ir = 1, farm%p%NOutRadii
+                     
+                              ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                           farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np)
+                           farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np)
                   
-                     do ir = 1, farm%p%NOutRadii
-                  
-                           ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
-                        farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np)
-                        farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np)
-               
-                           ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
-                           !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
-                        farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np)
-                        farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np)
-                        farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np)
-                  
-                     end do  
+                              ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
+                              !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                           farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np)
+                           farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np)
+                           farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np)
+                     
+                        end do  
+                     else
+                        print*,'>>>FAST Farm Subs: TODO: Vx, Vr, eddy output for cartesian'
+                     endif
 
                   else if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np+1) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np) ) ) then   ! Overlapping wake volumes result in invalid output
                
@@ -2350,10 +2374,13 @@ SUBROUTINE Transfer_FAST_to_WD(farm)
    
    DO nt = 1,farm%p%NumTurbines   
       farm%WD(nt)%u%xhat_disk      = farm%FWrap(nt)%y%xHat_Disk       ! Orientation of rotor centerline, normal to disk
+      farm%WD(nt)%u%psi_skew       = farm%FWrap(nt)%y%psi_skew        ! Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined
+      farm%WD(nt)%u%chi_skew       = farm%FWrap(nt)%y%chi_skew        ! Inflow skew angle
       farm%WD(nt)%u%p_hub          = farm%FWrap(nt)%y%p_hub           ! Center position of hub, m
       farm%WD(nt)%u%D_rotor        = farm%FWrap(nt)%y%D_rotor         ! Rotor diameter, m
       farm%WD(nt)%u%Vx_rel_disk    = farm%FWrap(nt)%y%DiskAvg_Vx_Rel  ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
       farm%WD(nt)%u%Ct_azavg       = farm%FWrap(nt)%y%AzimAvg_Ct      ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
+      farm%WD(nt)%u%Cq_azavg       = farm%FWrap(nt)%y%AzimAvg_Cq      ! Azimuthally averaged torque force coefficient (normal to disk), distributed radially, -
       farm%WD(nt)%u%YawErr         = farm%FWrap(nt)%y%YawErr          ! Nacelle-yaw error at the wake planes, rad   
    END DO
    
@@ -2392,8 +2419,9 @@ SUBROUTINE Transfer_WD_to_AWAE(farm)
    DO nt = 1,farm%p%NumTurbines   
       farm%AWAE%u%xhat_plane(:,:,nt) = farm%WD(nt)%y%xhat_plane     ! Orientations of wake planes, normal to wake planes, for each turbine
       farm%AWAE%u%p_plane(:,:,nt)    = farm%WD(nt)%y%p_plane        ! Center positions of wake planes for each turbine
-      farm%AWAE%u%Vx_wake(:,:,nt)    = farm%WD(nt)%y%Vx_wake        ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vr_wake(:,:,nt)    = farm%WD(nt)%y%Vr_wake        ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vx_wake(:,:,:,nt)  = farm%WD(nt)%y%Vx_wake2       ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vy_wake(:,:,:,nt)  = farm%WD(nt)%y%Vy_wake2       ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vz_wake(:,:,:,nt)  = farm%WD(nt)%y%Vz_wake2       ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
       farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine      
    END DO
    

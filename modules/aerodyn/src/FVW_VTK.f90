@@ -36,6 +36,7 @@ module FVW_VTK
     end interface
     interface vtk_point_data_scalar; module procedure &
             vtk_point_data_scalar_flat, &
+            vtk_point_data_scalar_2D, &
             vtk_point_data_scalar_grid2D, &
             vtk_point_data_scalar_grid
     end interface
@@ -364,6 +365,25 @@ contains
 
     subroutine vtk_point_data_scalar_flat(D,sname,mvtk)
         real(ReKi), dimension(:),intent(in)::D
+        character(len=*),intent(in) ::sname
+        type(FVW_VTK_Misc),intent(inout) :: mvtk
+
+        if ( mvtk%bFileOpen ) then
+            if (mvtk%bBinary) then
+                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NL
+                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NL
+                write(mvtk%vtk_unit)D
+                write(mvtk%vtk_unit)NL
+            else
+                write(mvtk%vtk_unit,'(A,A,A)') 'SCALARS ', sname, ' double'
+                write(mvtk%vtk_unit,'(A)') 'LOOKUP_TABLE default'
+                write(mvtk%vtk_unit,'(1'//RFMT//')')D
+            endif
+        endif
+    end subroutine
+
+    subroutine vtk_point_data_scalar_2D(D,sname,mvtk)
+        real(ReKi), dimension(:,:),intent(in)::D
         character(len=*),intent(in) ::sname
         type(FVW_VTK_Misc),intent(inout) :: mvtk
 
