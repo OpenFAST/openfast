@@ -439,13 +439,9 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! set the rest of the parameters
    p%DT_low        = interval         
    p%Mod_Wake      = InitInp%InputFileData%Mod_Wake
-   p%Swirl         = InitInp%InputFileData%Swirl  
    p%NumPlanes     = InitInp%InputFileData%NumPlanes   
    p%NumRadii      = InitInp%InputFileData%NumRadii    
    p%dr            = InitInp%InputFileData%dr  
-   p%k_VortexDecay = InitInp%InputFileData%k_VortexDecay 
-   p%NumVortices   = InitInp%InputFileData%NumVortices 
-   p%sigma_D       = InitInp%InputFileData%sigma_D 
    p%C_HWkDfl_O    = InitInp%InputFileData%C_HWkDfl_O 
    p%C_HWkDfl_OY   = InitInp%InputFileData%C_HWkDfl_OY
    p%C_HWkDfl_x    = InitInp%InputFileData%C_HWkDfl_x 
@@ -463,7 +459,13 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%k_vShr        = InitInp%InputFileData%k_vShr      
    p%Mod_WakeDiam  = InitInp%InputFileData%Mod_WakeDiam
    p%C_WakeDiam    = InitInp%InputFileData%C_WakeDiam  
+   p%Swirl         = InitInp%InputFileData%Swirl  
+   p%k_VortexDecay = InitInp%InputFileData%k_VortexDecay 
+   p%NumVortices   = InitInp%InputFileData%NumVortices 
+   p%sigma_D       = InitInp%InputFileData%sigma_D 
    p%FilterInit    = InitInp%InputFileData%FilterInit  
+   p%k_vCurl       = InitInp%InputFileData%k_vCurl  
+   p%OutAllPlanes  = InitInp%InputFileData%OutAllPlanes  
    
    ! Finite difference grid coordinates r, y, z
    allocate( p%r(0:p%NumRadii-1),stat=errStat2)
@@ -830,7 +832,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                dvdr = m%dvx_dy(iy,iz,i-1) * C  + m%dvx_dz(iy,iz,i-1) * S
                m%vt_amb2(iy,iz,i-1) = EddyTermA
                m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)* (abs(dvdr) + abs(dvdtheta_r)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-               m%vt_tot2(iy,iz,i-1) = 2.0_ReKi * max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), abs(1.e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt))
+               m%vt_tot2(iy,iz,i-1) = p%k_vCurl * max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), abs(1.e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt))
 
             enddo
          enddo
@@ -1573,15 +1575,16 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          y%Vz_wake2(:,:,i) = xd%Vz_wake2(:,:,i)
       enddo
 
-      ! --- Temporary VTK output hack
-      call vtk_misc_init(mvtk)
-      call set_vtk_binary_format(.false.,mvtk) ! TODO binary fails
+      ! --- VTK outputs per plane
+      if (p%OutAllPlanes) then 
+          call vtk_misc_init(mvtk)
+          call set_vtk_binary_format(.false.,mvtk) ! TODO binary fails
 
-      if ( OtherState%firstPass ) then
-         call MKDIR('vtk_ff_planes')
-      endif
-      if (mod(n,10)==0) then
-         do i = 0, min(n-1,p%NumPlanes-1), 5 ! TODO changed to n
+          if ( OtherState%firstPass ) then
+             call MKDIR('vtk_ff_planes')
+          endif
+      !if (mod(n,10)==0) then
+         do i = 0, min(n-1,p%NumPlanes-1), 1 ! TODO changed to n
          
 !~             if (EqualRealNos(t,0.0_DbKi) ) then
 !~                write(Filename,'(A,I4.4,A)') 'vtk_ff_planes/PlaneOutputsAtPlane_',i,'_Init.vtk'
@@ -1611,8 +1614,6 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
                call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
                call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
-               
-               ! Debug
                call vtk_point_data_scalar_2D(m%vt_amb2(:,:,i),'vt_amb2', mvtk) 
                call vtk_point_data_scalar_2D(m%vt_shr2(:,:,i),'vt_shr2', mvtk) 
                call vtk_point_data_scalar_2D(m%vt_tot2(:,:,i),'vt_tot2', mvtk) 

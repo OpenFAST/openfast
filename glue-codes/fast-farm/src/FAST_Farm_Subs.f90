@@ -818,13 +818,10 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       
       
    CALL ReadVar( UnIn, InputFile, WD_InitInp%Mod_Wake, "Mod_Wake", "Wake model", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl, "Swirl", "Swirl switch", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%dr      , "dr", "Radial increment of radial finite-difference grid (m) [>0.0]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii", "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay, "k_VortexDecay", "Vortex decay constant", 0.1, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices, "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D, "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+
       
       ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
@@ -1009,7 +1006,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          RETURN        
       end if           
       
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%FilterInit, "FilterInit", "Filter Init", 1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return 
+
 
       ! Mod_Meander - Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=3]:
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Meander, "Mod_Meander", &
@@ -1032,6 +1029,13 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if            
     
           
+
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl        ,    "Swirl", "Swirl switch", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.1, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices,      "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D,          "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%FilterInit,       "FilterInit", "Filter Init", 1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return    
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vCurl,          "k_vCurl",    "Eddy viscosity for curl", 2.0 , ErrStat2, ErrMsg2, UnEc); if(failed()) return    
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Projection, "Mod_Projection", "Mod_Projection", -1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return 
    if (AWAE_InitInp%Mod_Projection==-1) then
       ! -1 means the user selected "default"
@@ -1041,6 +1045,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
            AWAE_InitInp%Mod_Projection=0
       endif
    endif
+
 
    !---------------------- VISUALIZATION --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
@@ -1229,6 +1234,10 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          RETURN        
       end if
       
+      
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%OutAllPlanes,    "OutAllPlanes", "Output all planes", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
+
+      
       ! NOutRadii - Number of radial nodes for wake output for an individual rotor (-) [0 to 20]:
    CALL ReadVar( UnIn, InputFile, p%NOutRadii, "NOutRadii", "Number of radial nodes for wake output for an individual rotor (-) [0 to 20]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1393,6 +1402,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (WD_InitInp%C_NearWake <= 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_NearWake parameter must be greater than 1.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%k_vAmb < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vAmb parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%k_vShr < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vShr parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%k_vCurl < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vCurl parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
    
    IF (WD_InitInp%C_vAmb_DMin < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vAmb_DMin parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_vAmb_DMax <= WD_InitInp%C_vAmb_DMin) CALL SetErrStat(ErrID_Fatal,'C_vAmb_DMax parameter must be larger than C_vAmb_DMin.',ErrStat,ErrMsg,RoutineName)
