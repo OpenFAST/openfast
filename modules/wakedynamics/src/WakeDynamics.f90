@@ -901,6 +901,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    end if
    xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0) / norm2_xhat_plane
    
+   xd%YawErr_filt      (0) =  xd%YawErr_filt(0)*p%filtParam + u%YawErr  *p%oneMinusFiltParam
    xd%psi_skew_filt        =  filter_angles(xd%psi_skew_filt, u%psi_skew, p%filtParam, p%oneMinusFiltParam)
    xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
    !call filter_angles2(xd%psi_skew_filt, xd%chi_skew_filt, u%psi_skew, u%chi_skew, p%filtParam, p%oneMinusFiltParam)
@@ -975,7 +976,6 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    call Cleanup()
    
 contains
-      
    subroutine updateVelocityPolar()
       integer(intKi) :: i,j
       real(ReKi)  :: dx, absdx
@@ -987,7 +987,6 @@ contains
          dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
          absdx = abs(dx)
          if ( EqualRealNos( dx, 0.0_ReKi ) ) absdx = 1.0_ReKi  ! This is to avoid division by zero problems in the formation of m%b and m%d below, which are not used when dx=0; the value of unity is arbitrary
-
          ! All of the m%a,m%b,m%c,m%d vectors use states at time increment [n]
          ! These need to be inside another radial loop because m%dvtdr depends on the j+1 and j-1 indices of m%vt()
          m%dvtdr(0) = 0.0_ReKi
@@ -1101,7 +1100,6 @@ contains
    end subroutine updateVelocityCartesian
 
    subroutine Cleanup()
-
    end subroutine Cleanup
    
 end subroutine WD_UpdateStates
