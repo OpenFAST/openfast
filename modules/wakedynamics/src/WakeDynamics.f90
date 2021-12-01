@@ -735,11 +735,11 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    character(*), parameter                      :: RoutineName = 'WD_UpdateStates'
    real(ReKi)                                   :: dx, norm2_xhat_plane  
    real(ReKi)                                   :: dy_HWkDfl(3), EddyTermA, EddyTermB, lstar, Vx_wake_min
-   real(ReKi)                                   :: dvdr, r_tmp, C, S
+   real(ReKi)                                   :: dvdr, r_tmp, C, S, dvdtheta_r
    integer(intKi)                               :: i,j, maxPln
-   integer(intKi)                               :: iy, iz ! indices on y and z
-   real(ReKi) :: Ct_avg            ! Rotor-disk averaged Ct
-   
+   integer(intKi)                               :: iy, iz            ! indices on y and z
+   real(ReKi)                                   :: Ct_avg            ! Rotor-disk averaged Ct
+
    errStat = ErrID_None
    errMsg  = ""
    
@@ -781,10 +781,14 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
 
       Vx_wake_min = huge(ReKi)
-      do j = 0,p%NumRadii-1
-         Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
-      end do
-        
+      if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
+         Vx_wake_min = minval(xd%Vx_wake2(:,:,i-1))
+      else
+         do j = 0,p%NumRadii-1
+            Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
+         end do
+      endif
+
       EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
       EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
       if (p%Mod_Wake == Mod_Wake_Polar) then
@@ -800,7 +804,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                ! All of the following states are at [n] 
             m%vt_amb(j,i-1) = EddyTermA
             m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(dvdr) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-            m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
+            m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1) 
+
          end do
       else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
          ! First compute gradients of dVx/dy and dVx/dz
@@ -815,21 +820,22 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                if (EqualRealNos(r_tmp,0.0_ReKi) ) then
                   S = 0.0_ReKi 
                   C = 0.0_ReKi
+                  dvdtheta_r = 0.0_ReKi
                else
                   S=p%z(iz)/r_tmp
                   C=p%y(iy)/r_tmp
+                  dvdtheta_r = (m%dvx_dy(iy,iz,i-1) * (-p%z(iz)) + m%dvx_dz(iy,iz,i-1) * p%y(iy)) / r_tmp
                endif
             
-!~                dvdr = sqrt(m%dvx_dy(iy,iz,i-1)**2 + m%dvx_dz(iy,iz,i-1)**2)  !!!!! Check this derivative
-               dvdr = m%dvx_dy(iy,iz,i-1) * C  + m%dvx_dz(iy,iz,i-1) * S !!!!! Check this derivative
+               dvdr = m%dvx_dy(iy,iz,i-1) * C  + m%dvx_dz(iy,iz,i-1) * S
                m%vt_amb2(iy,iz,i-1) = EddyTermA
-               m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)* abs(dvdr) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-               m%vt_tot2(iy,iz,i-1) = max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), abs(1.e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt))
+               m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)* (abs(dvdr) + abs(dvdtheta_r)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
+               m%vt_tot2(iy,iz,i-1) = 2.0_ReKi * max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), abs(1.e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt))
+
             enddo
          enddo
       endif
    end do ! loop on planes i = maxPln+1, 1, -1
-  
    ! --- Update Vx and Vr
    if (p%Mod_Wake == Mod_Wake_Polar) then
       call updateVelocityPolar()
@@ -1083,8 +1089,8 @@ contains
 !                                        - divTau) 
 
                ! Update state (decay) of Vy and Vz
-               xd%Vy_wake2(iy,iz,i)  = xd%Vy_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp)
-               xd%Vz_wake2(iy,iz,i)  = xd%Vz_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * xp)
+               xd%Vy_wake2(iy,iz,i)  = xd%Vy_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * dx)
+               xd%Vz_wake2(iy,iz,i)  = xd%Vz_wake2(iy,iz,i-1) * exp( - p%k_VortexDecay * dx)
 
             enddo ! iy
          enddo ! iz     
@@ -1602,6 +1608,15 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
                call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
                call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+               
+               ! Debug
+               call vtk_point_data_scalar_2D(m%vt_amb2(:,:,i),'vt_amb2', mvtk) 
+               call vtk_point_data_scalar_2D(m%vt_shr2(:,:,i),'vt_shr2', mvtk) 
+               call vtk_point_data_scalar_2D(m%vt_tot2(:,:,i),'vt_tot2', mvtk) 
+               call vtk_point_data_scalar_2D(m%dvx_dy(:,:,i),'dvx_dy', mvtk) 
+               call vtk_point_data_scalar_2D(m%dvx_dz(:,:,i),'dvx_dz', mvtk) 
+               
+               
                call vtk_close_file(mvtk)
             endif
          enddo ! loop on planes
