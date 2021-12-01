@@ -463,6 +463,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%k_vShr        = InitInp%InputFileData%k_vShr      
    p%Mod_WakeDiam  = InitInp%InputFileData%Mod_WakeDiam
    p%C_WakeDiam    = InitInp%InputFileData%C_WakeDiam  
+   p%FilterInit    = InitInp%InputFileData%FilterInit  
    
    ! Finite difference grid coordinates r, y, z
    allocate( p%r(0:p%NumRadii-1),stat=errStat2)
@@ -947,7 +948,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, m%Vx_polar(:), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
       ! Convert to Cartesian
       call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
-      call FilterVx(xd%Vx_wake2(:,:,0), 1)
+      call FilterVx(xd%Vx_wake2(:,:,0), p%FilterInit) ! don't filter if FilterInit is 0
       !call Axisymmetric2CartesianVx(m%Vx_polar * sin(xd%chi_skew_filt), p%r, p%y, p%z, xd%Vy_wake2(:,:,0))
       !xd%Vy_wake2(:,:,0) = xd%Vx_wake2(:,:,0) * sin(xd%chi_skew_filt)
       Ct_avg =  get_Ctavg(p%r, xd%Ct_azavg_filt, xd%D_rotor_filt(0))
@@ -1412,9 +1413,12 @@ subroutine FilterVx(Vx, nf)
    integer(IntKi), intent(in) :: nf     ! The filter width (number of grid points)
    real(ReKi), dimension(size(Vx,1),size(Vx,2)) :: Vx_filt     !< Axial velocity, distributed across the plane (m/s)
    integer(IntKi) :: iz, iy, n1, n2
+   
+   ! No filter if filter width is 0
+   if(nf==0) return
 
    ! Initialize the filtered vars
-   Vx_filt = 0.
+   Vx_filt = 0.0_ReKi 
 
    do iz = 1+nf, size(Vx,2) - nf
       do iy = 1+nf, size(Vx,1) - nf

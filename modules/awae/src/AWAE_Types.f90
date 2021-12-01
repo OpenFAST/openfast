@@ -86,6 +86,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Y0_low      !< Y-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi)  :: Z0_low      !< Z-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WT_Position      !< X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number [meters]
+    INTEGER(IntKi)  :: Mod_Projection      !< Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] [-]
   END TYPE AWAE_InputFileType
 ! =======================
 ! =========  AWAE_InitInputType  =======
@@ -211,6 +212,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Mod_Meander      !< Spatial filter model for wake meandering [-]
     REAL(ReKi)  :: C_Meander      !< Calibrated parameter for wake meandering [-]
     REAL(ReKi)  :: C_ScaleDiam      !< Normalized wake volume radius for wake meandering (normalized by the wake diameter) [-]
+    INTEGER(IntKi)  :: Mod_Projection      !< Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] [-]
     TYPE(InflowWind_ParameterType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< InflowWind module parameters [-]
     INTEGER(IntKi)  :: WrDisSkp1      !< Number of time steps to skip plus one [-]
     LOGICAL  :: WrDisWind      !< Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? [-]
@@ -641,6 +643,7 @@ IF (ALLOCATED(SrcInputFileTypeData%WT_Position)) THEN
   END IF
     DstInputFileTypeData%WT_Position = SrcInputFileTypeData%WT_Position
 ENDIF
+    DstInputFileTypeData%Mod_Projection = SrcInputFileTypeData%Mod_Projection
  END SUBROUTINE AWAE_CopyInputFileType
 
  SUBROUTINE AWAE_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg )
@@ -798,6 +801,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! WT_Position upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WT_Position)  ! WT_Position
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! Mod_Projection
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1042,6 +1046,8 @@ ENDIF
         END DO
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%Mod_Projection
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AWAE_PackInputFileType
 
  SUBROUTINE AWAE_UnPackInputFileType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1319,6 +1325,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%Mod_Projection = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AWAE_UnPackInputFileType
 
  SUBROUTINE AWAE_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -5683,6 +5691,7 @@ ENDIF
     DstParamData%Mod_Meander = SrcParamData%Mod_Meander
     DstParamData%C_Meander = SrcParamData%C_Meander
     DstParamData%C_ScaleDiam = SrcParamData%C_ScaleDiam
+    DstParamData%Mod_Projection = SrcParamData%Mod_Projection
 IF (ALLOCATED(SrcParamData%IfW)) THEN
   i1_l = LBOUND(SrcParamData%IfW,1)
   i1_u = UBOUND(SrcParamData%IfW,1)
@@ -5922,6 +5931,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Mod_Meander
       Re_BufSz   = Re_BufSz   + 1  ! C_Meander
       Re_BufSz   = Re_BufSz   + 1  ! C_ScaleDiam
+      Int_BufSz  = Int_BufSz  + 1  ! Mod_Projection
   Int_BufSz   = Int_BufSz   + 1     ! IfW allocated yes/no
   IF ( ALLOCATED(InData%IfW) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! IfW upper/lower bounds for each dimension
@@ -6241,6 +6251,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_ScaleDiam
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%Mod_Projection
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%IfW) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -6658,6 +6670,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%C_ScaleDiam = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%Mod_Projection = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! IfW not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

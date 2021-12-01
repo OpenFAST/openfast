@@ -68,6 +68,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: C_vShr_Exp      !< Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region [> 0.0] [-]
     INTEGER(IntKi)  :: Mod_WakeDiam      !< Wake diameter calculation model {1: rotor diameter, 2: velocity-based, 3: mass-flux based, 4: momentum-flux based} [DEFAULT=1] [-]
     REAL(ReKi)  :: C_WakeDiam      !< Calibrated parameter for wake diameter calculation [>0.0 and <1.0] [unused for Mod_WakeDiam=1] [-]
+    INTEGER(IntKi)  :: FilterInit      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
   END TYPE WD_InputFileType
 ! =======================
 ! =========  WD_InitInputType  =======
@@ -178,6 +179,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: k_vShr      !< Calibrated parameter for the influence of the shear layer in the eddy viscosity [-]
     INTEGER(IntKi)  :: Mod_WakeDiam      !< Wake diameter calculation model [-]
     REAL(ReKi)  :: C_WakeDiam      !< Calibrated parameter for wake diameter calculation [-]
+    INTEGER(IntKi)  :: FilterInit      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
   END TYPE WD_ParameterType
 ! =======================
 ! =========  WD_InputType  =======
@@ -253,6 +255,7 @@ CONTAINS
     DstInputFileTypeData%C_vShr_Exp = SrcInputFileTypeData%C_vShr_Exp
     DstInputFileTypeData%Mod_WakeDiam = SrcInputFileTypeData%Mod_WakeDiam
     DstInputFileTypeData%C_WakeDiam = SrcInputFileTypeData%C_WakeDiam
+    DstInputFileTypeData%FilterInit = SrcInputFileTypeData%FilterInit
  END SUBROUTINE WD_CopyInputFileType
 
  SUBROUTINE WD_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg )
@@ -327,6 +330,7 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! C_vShr_Exp
       Int_BufSz  = Int_BufSz  + 1  ! Mod_WakeDiam
       Re_BufSz   = Re_BufSz   + 1  ! C_WakeDiam
+      Int_BufSz  = Int_BufSz  + 1  ! FilterInit
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -406,6 +410,8 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_WakeDiam
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%FilterInit
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_PackInputFileType
 
  SUBROUTINE WD_UnPackInputFileType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -489,6 +495,8 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     OutData%C_WakeDiam = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%FilterInit = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_UnPackInputFileType
 
  SUBROUTINE WD_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -3997,6 +4005,7 @@ ENDIF
     DstParamData%k_vShr = SrcParamData%k_vShr
     DstParamData%Mod_WakeDiam = SrcParamData%Mod_WakeDiam
     DstParamData%C_WakeDiam = SrcParamData%C_WakeDiam
+    DstParamData%FilterInit = SrcParamData%FilterInit
  END SUBROUTINE WD_CopyParam
 
  SUBROUTINE WD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -4097,6 +4106,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! k_vShr
       Int_BufSz  = Int_BufSz  + 1  ! Mod_WakeDiam
       Re_BufSz   = Re_BufSz   + 1  ! C_WakeDiam
+      Int_BufSz  = Int_BufSz  + 1  ! FilterInit
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4225,6 +4235,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_WakeDiam
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%FilterInit
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_PackParam
 
  SUBROUTINE WD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4364,6 +4376,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%C_WakeDiam = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%FilterInit = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_UnPackParam
 
  SUBROUTINE WD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
