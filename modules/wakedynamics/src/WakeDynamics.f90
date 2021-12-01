@@ -43,6 +43,7 @@ module WakeDynamics
    public :: WD_CalcOutput                     ! Routine for computing outputs
    public :: WD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 
+   public :: WD_TEST_Axi2Cart
    contains  
 
 function  WD_Interp ( yVal, xArr, yArr )
@@ -587,7 +588,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    y%D_wake     = 0.0_Reki
    y%x_plane    = 0.0_Reki
 
-   call testAxi2Cart()
       
 end subroutine WD_Init
 
@@ -970,7 +970,7 @@ subroutine Axisymmetric2Cartesian(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
 end subroutine Axisymmetric2Cartesian
 
 
-subroutine testAxi2Cart()
+subroutine WD_TEST_Axi2Cart()
    real(ReKi) :: r(4)=(/0.,1.,2.,3./)
 !    real(ReKi) :: y(4)=(/-1.,0.,1.5,2./)
 !    real(ReKi) :: z(5)=(/-2.5,-1.5,0.,1.5,2./)
