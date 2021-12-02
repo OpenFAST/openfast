@@ -500,6 +500,43 @@ the wake meandering and must be greater than or equal to one. If the
 DEFAULT keyword is specified in place of a numerical value,
 **C_Meander** is set to :math:`1.9`.
 
+
+**Mod_Wake** [switch] is used to switch between wake formulations.
+There are three options available:
+1) Polar [**Mod_Wake=1**]
+2) Curl [**Mod_Wake=2**]
+3) Cartesian [**Mod_Wake=3**]
+
+
+**Swirl** [switch] 
+Include swirl velocities in wake [only used if [**Mod_Wake=2**]
+or [**Mod_Wake=3**].
+
+**k_VortexDecay** [-] This constant specifies the decay rate of the 
+spanwise velocity components from the curled wake model
+
+**NumVortices** [-] The number of vortices in the curled wake model.
+
+**sigma_D** [-] The width of the vortex core in the curled wake model 
+non-dimesionalized by rotor diameter.  If the DEFAULT keyword is 
+specified in place of a numerical value, **sigma_D** is set to 
+:math:`0.2`.
+
+**FilterInit** [switch] Switch to filter the initial wake plane deficit.
+This indicated how many grid points in the `y` and `z` directions are 
+used to filter the wake velocity deficit of the initial plane in the
+curled wake model. 
+
+**k_vCurl** [-] Calibrated parameter for scaling the eddy viscosity in the 
+curled-wake model. 
+
+**Mod_Projection** [switch] Select how the wake plane velocity is 
+projected in AWAE. There are two options:
+1) keep all components 
+2) project against plane normal} 
+
+**OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
+
 Visualize
 ~~~~~~~~~
 

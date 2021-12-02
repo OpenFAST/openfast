@@ -37,7 +37,18 @@ AeroDyn 15                                    41   UAEndRad        0.95       UA
 AirFoilTables                                 12\* alphaUpper      5.0        alphaUpper        ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
 AirFoilTables                                 13\* alphaLower      \-3.0      alphaLower        ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
 AirFoilTables                                 42\* UACutout_delta  "DEFAULT"  UACutout_delta    ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
+FASTFarm                                      28   Mod_Wake        1          Mod_Wake          -  Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
+FASTFarm                                      62   Swirl           False      Swirl             - Switch to include swirl velocities in wake [only used if Mod_Wake=2 or Mod_Wake=3] (-) (switch)
+FASTFarm                                      63   k_VortexDecay   0.         k_VortexDecay     - Vortex decay constant for curl (-)
+FASTFarm                                      64   NumVortices     DEFAULT    NumVortices       - The number of vortices in the curled wake model (-) [DEFAULT=100]
+FASTFarm                                      65   sigma_D         DEFAULT    sigma_D           - The width of the vortices in the curled wake model non-dimesionalized by rotor diameter (-) [DEFAULT=0.2]
+FASTFarm                                      66   FilterInit      DEFAULT    FilterInit        - Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=1] [unused for Mod_Wake=1] (switch)
+FASTFarm                                      67   k_vCurl         20         k_vCurl           - Calibrated parameter for scaling the eddy viscosity in the curled-wake model (-) [only used if Mod_Wake=2 or Mod_Wake=3] [>=0] or DEFAULT [DEFAULT=2.0 ]  
+FASTFarm                                      68   Mod_Projection  DEFAULT    Mod_Projection    - Switch to select how the wake plane velocity is project
+FASTFarm                                      85   OutAllPlanes    True       OutAllPlanes      - Output all wake planes at all time steps. [DEFAULT=False]
 ============================================= ==== =============== ========================================================================================================================================================================================================
+
+
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
 
