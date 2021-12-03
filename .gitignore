@@ -50,5 +50,7 @@ vs-build/
 *.nlo
 *.log
 
-# .vs folders
-.vs
+#Simulink cache files
+varcache
+*.slxc
+

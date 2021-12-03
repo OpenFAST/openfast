@@ -124,6 +124,8 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%UseAD14   = LEN_TRIM(InitInp%ADInputFile) > 0 ! if we're using AD14, we need to use the AD14 input files
 
    p%RootName = InitInp%RootName ! FAST already adds '.ED' to the root name
+
+   p%Gravity = InitInp%Gravity
    
    CALL ED_ReadInput( InitInp%InputFile, InitInp%ADInputFile, InputFileData, GetAdamsVals, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -237,7 +239,6 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       
    InitOut%Ver         = ED_Ver
    InitOut%NumBl       = p%NumBl
-   InitOut%Gravity     = p%Gravity
    InitOut%BladeLength = p%TipRad - p%HubRad
    InitOut%TowerHeight = p%TwrFlexL
    InitOut%TowerBaseHeight = p%TowerBsHt
@@ -249,9 +250,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
    InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
 
-   InitOut%HubHt       = p%HubHt
-   InitOut%TwrBasePos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
-   InitOut%TwrBaseOrient = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
+   InitOut%HubHt            = p%HubHt
+   InitOut%TwrBaseRefPos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
+   InitOut%TwrBaseTransDisp = y%TowerLn2Mesh%TranslationDisp(:,p%TwrNodes + 2)
+   InitOut%TwrBaseRefOrient = y%TowerLn2Mesh%RefOrientation(:,:,p%TwrNodes + 2)
+   InitOut%TwrBaseOrient    = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
    InitOut%RotSpeed    = p%RotSpeed
    InitOut%isFixed_GenDOF = .not. InputFileData%GenDOF
@@ -2459,18 +2462,18 @@ END SUBROUTINE Alloc_CoordSys
 SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(ED_ParameterType),        INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
-   TYPE(BladeInputData),          INTENT(IN)     :: BladeInData(:)                      !< Program input data for all blades
-   TYPE(ED_BladeMeshInputData),   INTENT(IN)     :: BladeMeshData(:)                    !< Program input mesh data for all blades
-   INTEGER(IntKi),                INTENT(OUT)    :: ErrStat                             !< Error status
-   CHARACTER(*),                  INTENT(OUT)    :: ErrMsg                              !< Error message
+   TYPE(ED_ParameterType),                      INTENT(INOUT)  :: p                 !< The parameters of the structural dynamics module
+   TYPE(BladeInputData),         ALLOCATABLE,   INTENT(IN)     :: BladeInData(:)    !< Program input data for all blades
+   TYPE(ED_BladeMeshInputData),  ALLOCATABLE,   INTENT(IN)     :: BladeMeshData(:)  !< Program input mesh data for all blades
+   INTEGER(IntKi),                              INTENT(OUT)    :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(OUT)    :: ErrMsg            !< Error message
 
       ! Local variables:
-   REAL(ReKi)                                    :: x                                   ! Fractional location between two points in linear interpolation
-   INTEGER(IntKi )                               :: K                                   ! Blade number
-   INTEGER(IntKi )                               :: J                                   ! Index for the node arrays
-   INTEGER(IntKi)                                :: InterpInd                           ! Index for the interpolation routine
-   LOGICAL                                       :: SetAdmVals                          ! Logical to determine if Adams inputs should be set
+   REAL(ReKi)                                                  :: x                 ! Fractional location between two points in linear interpolation
+   INTEGER(IntKi )                                             :: K                 ! Blade number
+   INTEGER(IntKi )                                             :: J                 ! Index for the node arrays
+   INTEGER(IntKi)                                              :: InterpInd         ! Index for the interpolation routine
+   LOGICAL                                                     :: SetAdmVals        ! Logical to determine if Adams inputs should be set
 
       ! initialize variables
    ErrStat = ErrID_None
@@ -3487,7 +3490,6 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%PtfmCMyt = InputFileData%PtfmCMyt   
    
    p%DT        = InputFileData%DT
-   p%Gravity   = InputFileData%Gravity
    p%OverHang  = InputFileData%OverHang
    p%ShftGagL  = InputFileData%ShftGagL
    p%TowerHt   = InputFileData%TowerHt

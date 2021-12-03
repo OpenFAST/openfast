@@ -36,6 +36,12 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
     set(PLOT_FLAG "-p")
   endif()
 
+  set(RUN_VERBOSE_FLAG "")
+  if(CTEST_RUN_VERBOSE_FLAG)
+     set(RUN_VERBOSE_FLAG "-v")
+  endif()
+
+
   add_test(
     ${TESTNAME} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
@@ -47,6 +53,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
        ${PLOT_FLAG}                     # empty or "-p"
+       ${RUN_VERBOSE_FLAG}              # empty or "-v"
   )
   # limit each test to 90 minutes: 5400s
   set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
@@ -137,6 +144,24 @@ function(sd_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${SUBDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(sd_regression)
 
+# inflowwind
+function(ifw_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeInflowwindRegressionCase.py")
+  set(INFLOWWIND_EXECUTABLE "${CTEST_INFLOWWIND_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
+  regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(ifw_regression)
+
+# inflowwind-Py
+function(ifw_py_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeInflowwindPyRegressionCase.py")
+  set(INFLOWWIND_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
+  regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(ifw_py_regression)
+
 #===============================================================================
 # Regression tests
 #===============================================================================
@@ -195,6 +220,16 @@ endif()
 
 # AeroDyn regression tests
 ad_regression("ad_timeseries_shutdown"      "aerodyn;bem")
+ad_regression("ad_EllipticalWingInf_OLAF"   "aerodyn;bem")
+ad_regression("ad_HelicalWakeInf_OLAF"      "aerodyn;bem")
+ad_regression("ad_Kite_OLAF"                "aerodyn;bem")
+ad_regression("ad_MultipleHAWT"             "aerodyn;bem")
+ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
+ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
+ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
+ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
+ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
+ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")
@@ -218,3 +253,14 @@ sd_regression("SD_Cable_5Joints"                              "subdyn;offshore")
 sd_regression("SD_PendulumDamp"                               "subdyn;offshore")
 sd_regression("SD_Rigid"                                      "subdyn;offshore")
 sd_regression("SD_SparHanging"                                "subdyn;offshore")
+sd_regression("SD_AnsysComp1_PinBeam"                         "subdyn;offshore") # TODO Issue #855
+sd_regression("SD_AnsysComp2_Cable"                           "subdyn;offshore") 
+sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore") # TODO Issue #855
+# TODO test below are bugs, should be added when fixed
+# sd_regression("SD_Force"                                      "subdyn;offshore")
+# sd_regression("SD_AnsysComp4_UniversalCableRigid"             "subdyn;offshore")
+# sd_regression("SD_Rigid2Interf_Cables"                        "subdyn;offshore")
+
+# InflowWind regression tests
+ifw_regression("ifw_turbsimff"                                "inflowwind")
+ifw_py_regression("ifw_py_turbsimff"                          "inflowwind;python")

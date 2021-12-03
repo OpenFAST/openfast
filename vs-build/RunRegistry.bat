@@ -147,7 +147,7 @@ GOTO checkError
 :AeroDyn_Driver
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\AeroDyn_Driver_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%"  -O "%Output_Loc%" -noextrap
+%REGISTRY% "%CURR_LOC%\AeroDyn_Driver_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -I "%CURR_LOC%"  -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :AFI
@@ -292,6 +292,7 @@ SET ModuleName=
 SET CURR_LOC=
 
 SET Root_Loc=
+SET Output_Loc=
 
 SET Subs_Loc=
 SET FAST_Loc=

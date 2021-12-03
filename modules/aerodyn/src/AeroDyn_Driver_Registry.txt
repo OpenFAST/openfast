@@ -5,45 +5,60 @@
 # See the NWTC Programmer's Handbook for further information on the format/contents of this file.
 #
 # Entries are of the form
-# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+# <keyword>    <ModuleName/ModName>    <TypeName>    <FieldType>    <FieldName>    <Dims>    <IO>    <DNAME>    <DESCRIP>    <UNITS>
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
-include	Registry_NWTC_Library.txt
-usefrom	AeroDyn_Registry.txt
-
+include    Registry_NWTC_Library.txt
+usefrom    AeroDyn_Registry.txt
+usefrom    InflowWind.txt
 #
-# ..... Table of cases to run .......................................................................................................
-typedef   AeroDyn_Driver/AD_Dvr     Dvr_Case      ReKi                   WndSpeed         {:}    -     -   "Wind Speed" "m/s"
-typedef   ^                         ^             ReKi                   ShearExp         {:}    -     -   "Power Law Wind-Shear Exponent" "-"
-typedef   ^                         ^             ReKi                   RotSpeed         {:}    -     -   "Rotor Speed" "rad/s"
-typedef   ^                         ^             ReKi                   Pitch            {:}    -     -   "Pitch angle" "rad"
-typedef   ^                         ^             ReKi                   Yaw              {:}    -     -   "Yaw angle" "rad"
-typedef   ^                         ^             DbKi                   time             {:}    -     -   "time increment" "s"
+# ..... Table of combined cases to run .......................................................................................................
+typedef   AeroDyn_Driver/AD_Dvr Dvr_Case   ReKi                   HWindSpeed       -      -     -   "Hub wind speed" "m/s"
+typedef   ^                         ^             ReKi                   PLExp            -      -     -   "Power law wind-shear exponent" "-"
+typedef   ^                         ^             ReKi                   rotSpeed         -      -     -   "Rotor speed" "rad/s"
+typedef   ^                         ^             ReKi                   bldPitch         -      -     -   "Pitch angle" "rad"
+typedef   ^                         ^             ReKi                   nacYaw           -      -     -   "Yaw angle" "rad"
+typedef   ^                         ^             DbKi                   tMax             -      -     -   "Max time" "s"
 typedef   ^                         ^             DbKi                   dT               -      -     -   "time increment" "s"
 typedef   ^                         ^             IntKi                  numSteps         -      -     -   "number of steps in this case" "-"
+typedef   ^                         ^             IntKi                  DOF              -      -     -   "Degree of freedom for sinusoidal motion" "-"
+typedef   ^                         ^             ReKi                   amplitude        -      -     -   "Amplitude for sinusoidal motion (when DOF>0)" "-"
+typedef   ^                         ^             ReKi                   frequency        -      -     -   "Frequency for sinusoidal motion (when DOF>0)" "-"
 
+# ...... Data for VTK surface visualization ............................................................................
+typedef   AeroDyn_Driver/AD_Dvr   DvrVTK_BLSurfaceType SiKi    AirfoilCoords    {:}{:}{:}    -    -    "x,y coordinates for airfoil around each blade node on a blade (relative to reference)"    -
+typedef    ^    DvrVTK_SurfaceType    IntKi    NumSectors        -    -    -    "number of sectors in which to split circles (higher number gives smoother surface)"    -
+typedef    ^    DvrVTK_SurfaceType    SiKi    NacelleBox    {3}{8}    -    -    "X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"    m
+typedef    ^    DvrVTK_SurfaceType    SiKi    BaseBox       {3}{8}    -    -    "X-Y-Z locations of 8 points that define the base box"    m
+typedef    ^    DvrVTK_SurfaceType    SiKi    TowerRad         {:}    -    -    "radius of each ED tower node"    m
+typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:}    -    -    "AirfoilCoords for each blade"    m
 
-
-#
 # ..... Data for driver output file .......................................................................................................
-typedef   ^                        Dvr_OutputFile ProgDesc               AD_ver           -      -     -   "AeroDyn version information" -
-typedef   ^                         ^             IntKi                  unOutFile        -      -     -   "unit number for writing output file" "-"
+typedef   AeroDyn_Driver/AD_Dvr  Dvr_Outputs ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
+typedef   ^                         ^             IntKi                  unOutFile        :      -     -   "unit number for writing output file for each rotor" "-"
 typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
+typedef   ^                         ^             IntKi                  nDvrOutputs      -      -     -   "Number of outputs for the driver (without AD and IW)" "-"
 typedef   ^                         ^             character(20)          Fmt_t            -      -     -   "Format specifier for time channel" "-"
 typedef   ^                         ^             character(25)          Fmt_a            -      -     -   "Format specifier for each column (including delimiter)" "-"
-typedef   ^                         ^             character(20)          Fmt_i            -      -     -   "Format specifier for integer column" "-"
 typedef   ^                         ^             character(1)           delim            -      -     -   "column delimiter" "-"
 typedef   ^                         ^             character(20)          outFmt           -      -     -   "Format specifier" "-"
+typedef   ^                         ^             IntKi                  fileFmt          -      -     -   "Output format 1=Text, 2=Binary, 3=Both" "-"
+typedef   ^                         ^             IntKi                  wrVTK            -      -     -   "0= no vtk, 1=animation" "-"
 typedef   ^                         ^             character(1024)        Root             -      -     -   "Output file rootname" "-"
-typedef   ^                         ^             character(1024)        runTitle         -      -     -   "Description string from input file" "-"
+typedef   ^                         ^             character(1024)        VTK_OutFileRoot  -      -     -   "Output file rootname for vtk" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputHdr  {:}     -     -   "Channel headers" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
-typedef   ^                         ^             logical                AllFiles         -      -     -   "Output file for each case" "-"
-typedef   ^                         ^             logical                SumFile          -      -     -   "Output summary file for all cases with last timestep" "-"
+typedef   ^                         ^             ReKi                   storage         :::     -     -   "nTurbines x nChannel x nTime"
+typedef   ^                         ^             ReKi                   outLine          :      -     -   "Output line to be written to disk"
+typedef   ^                         ^             DvrVTK_SurfaceType     VTK_surface      :      -     -   "Data for VTK surface visualization"
+typedef   ^                         ^             INTEGER                VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
+typedef   ^                         ^             INTEGER                n_VTKTime        -      -     -   "Number of time steps between writing VTK files"    -
+typedef   ^                         ^             SiKi                   VTKHubRad        -      -     -   "Hub radius for visualization"    m
+typedef   ^                         ^             ReKi                   VTKNacDim        6      -     -   "Nacelle dimensions for visualization"    m
+typedef   ^                         ^             SiKi                   VTKRefPoint      3      -     -   "RefPoint for VTK outputs"
 
-#
 # ..... AeroDyn data .......................................................................................................
 param     ^                         -             INTEGER                numInp           -      2     -   "Determines order of interpolation for input-output extrap (2=linear;3=quadratic)"
 typedef   ^                         AeroDyn_Data  AD_ContinuousStateType x                -      -     -   "Continuous states"
@@ -55,20 +70,123 @@ typedef   ^                         ^             AD_ParameterType       p      
 typedef   ^                         ^             AD_InputType           u              {numInp} -     -   "Array of system inputs"
 typedef   ^                         ^             AD_OutputType          y                -      -     -   "System outputs"
 typedef   ^                         ^             DbKi                   InputTime      {numInp} -     -   "Array of times associated with u array"
+# ..... InflowWind data .......................................................................................................
+typedef   ^                    InflowWind_Data   InflowWind_ContinuousStateType   x        -     -    -    "Continuous states"
+typedef   ^                         ^            InflowWind_DiscreteStateType     xd       -     -    -    "Discrete states"
+typedef   ^                         ^            InflowWind_ConstraintStateType   z        -     -    -    "Constraint states"
+typedef   ^                         ^            InflowWind_OtherStateType        OtherSt  -     -    -    "Other states"
+typedef   ^                         ^            InflowWind_ParameterType         p        -     -    -    "Parameters"
+typedef   ^                         ^            InflowWind_MiscVarType           m        -     -    -    "Misc/optimization variables"
+typedef   ^                         ^            InflowWind_InputType             u        {2}   -    -    "Array of inputs associated with InputTimes"
+typedef   ^                         ^            InflowWind_OutputType            y        -     -    -    "System outputs"
+typedef   ^                         ^            DbKi                             InputTimes {2} -    -    "Array of times associated with Input Array"
 
+# ..... Blade data ...........................................................................................................
+typedef   ^                        BladeData     ReKi                    pitch            -      -     -   "rad" -
+typedef   ^                         ^            ReKi                    pitchSpeed       -      -     -   "rad/s" -
+typedef   ^                         ^            ReKi                    pitchAcc         -      -     -   "rad/s/s" -
+typedef   ^                         ^            ReKi                    origin_h         3      -     -   "" -
+typedef   ^                         ^            ReKi                    orientation_h    3      -     -   "" -
+typedef   ^                         ^            ReKi                    hubRad_bl        -      -     -   "" -
+typedef   ^                         ^            DbKi                    Rh2bl0        {3}{3}    -     -   "Rotation matrix blade 2 hub" -
+typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
+typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
+typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
+typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
+typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_R    -      -     -   "Mesh mapping from blade to AD hub motion"
+typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_B    -      -     -   "Mesh mapping from AD blade root to AD line mesh" "-"
+                                                                        
+# ... Hub data ..............................................................................................................
+typedef   ^                         HubData      ReKi                    origin_n         3      -     -   "" -
+typedef   ^                         ^            ReKi                    orientation_n    3      -     -   "" -
+typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
+typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
+typedef   ^                         ^            ReKi                    azimuth          -      -     -   "rotor position" "rad"
+typedef   ^                         ^            ReKi                    rotSpeed         -      -     -   "rotor speed" "rad/s" 
+typedef   ^                         ^            ReKi                    rotAcc           -      -     -   "rotor acceleration" "rad/s/s"
+typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
+typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
+typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_H    -      -     -   "Mesh mapping from hub to AD hub motion"
+typedef   ^                         ^            MeshMapType             map2BldPt        :      -     -   "Mesh mapping from hub to bld root motion"
 
-#
+# ... Nacelle data ..........................................................................................................
+typedef   ^                         NacData      ReKi                    origin_t         3      -     -   "" -
+typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
+typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
+typedef   ^                         ^            ReKi                    yaw              -      -     -   "rad" "rad"
+typedef   ^                         ^            ReKi                    yawSpeed         -      -     -   "yawspeed " "rad/s"
+typedef   ^                         ^            ReKi                    yawAcc           -      -     -   "yawAcceleration" "rad/s^2"
+typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
+typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
+typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             map2hubPt        -      -     -   "Mesh mapping from Nacelle to hub"
+
+# ... Tower data ............................................................................................................
+typedef   ^                         TwrData      ReKi                    origin_t         3      -     -   "" -
+typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshType                ptMeshAD         -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_T    -      -     -   "Mesh mapping from tower base to AD tower base"
+typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_T    -      -     -   "Mesh mapping from tower base to AD tower line"
+
+# ..... Wind Turbine data ...................................................................................................
+typedef   ^                        WTData        ReKi                    originInit       3      -     -   "" -
+typedef   ^                         ^            ReKi                    orientationInit  3      -     -   "" -
+typedef   ^                         ^            MeshType                ptMesh         -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             map2twrPt        -      -     -   "Mesh mapping from base to tower"
+typedef   ^                         ^            MeshMapType             map2nacPt        -      -     -   "Mesh mapping from base to nacelle"
+typedef   ^                         ^            BladeData               bld              :      -     -   "" -
+typedef   ^                         ^            HubData                 hub              -      -     -   "" -
+typedef   ^                         ^            NacData                 nac              -      -     -   "" -
+typedef   ^                         ^            TwrData                 twr              -      -     -   "" -
+typedef   ^                         ^            IntKi                   numBlades        -      -     -   "" -
+typedef   ^                         ^            logical                 basicHAWTFormat  -      -     -   "If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs" -
+typedef   ^                         ^            logical                 hasTower         -      -     -   "" -
+typedef   ^                         ^            logical                 HAWTprojection   -      -     -   "" -
+typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
+typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
+typedef   ^                         ^            IntKi                   iMotion          -      -     -   "Stored index to optimize time interpolation" -
+typedef   ^                         ^            IntKi                   degreeOfFreedom  -      -     -   "" -
+typedef   ^                         ^            ReKi                    amplitude        -      -     -   "" -
+typedef   ^                         ^            ReKi                    frequency        -      -     -   "" -
+typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
+typedef   ^                         ^            ReKi                    WriteOutput      :      -     -   "WriteOutputs of the driver only"
+
 # ..... Data for driver simulation .......................................................................................................
 typedef   ^                        Dvr_SimData   character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
-typedef   ^                         ^            IntKi                   numBlades        -      -     -   "number of blades on turbine" "-"
-typedef   ^                         ^            ReKi                    hubRad           -      -     -   "Hub radius" "m"
-typedef   ^                         ^            ReKi                    hubHt            -      -     -   "Hub height" "m"
-typedef   ^                         ^            ReKi                    overhang         -      -     -   "overhang" "m"
-typedef   ^                         ^            ReKi                    ShftTilt         -      -     -   "Shaft tilt angle" "rad"
-typedef   ^                         ^            ReKi                    Precone          -      -     -   "Precone angle (all blades)" "rad"
-typedef   ^                         ^            IntKi                   NumCases         -      -     -   "number of time-marching cases to run" "-"
-typedef   ^                         ^            Dvr_Case                Cases           {:}     -     -   "table of cases to run" "-"
-typedef   ^                         ^            Dvr_OutputFile          OutFileData      -      -     -   "data for driver output file" "-"
-#typedef  ^                         ^            AeroDyn_Data            AD               -      -     -   "data for the AeroDyn module"
-#typedef   ^                         ^            Dvr_RootInfo            RootForceMom     3      -     -   "blade root forces and moments (blade coords)" "-"
+typedef   ^                         ^            character(1024)         IW_InputFile     -      -     -   "Name of InfloWind input file" -
+typedef   ^                         ^            IntKi                   MHK              -      -     -   "MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}" "-"
+typedef   ^                         ^            IntKi                   AnalysisType     -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef   ^                         ^            ReKi                    FldDens          -      -     -   "Density of working fluid" "kg/m^3"
+typedef   ^                         ^            ReKi                    KinVisc          -      -     -   "Kinematic viscosity of working fluid" "m^2/s"
+typedef   ^                         ^            ReKi                    SpdSound         -      -     -   "Speed of sound in working fluid" "m/s"
+typedef   ^                         ^            ReKi                    Patm             -      -     -   "Atmospheric pressure" "Pa"
+typedef   ^                         ^            ReKi                    Pvap             -      -     -   "Vapour pressure of working fluid" "Pa"
+typedef   ^                         ^            ReKi                    WtrDpth          -      -     -   "Water depth" "m"
+typedef   ^                         ^            ReKi                    MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" "m"
+typedef   ^                         ^            IntKi                   CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef   ^                         ^            ReKi                    HWindSpeed       -      -     -   "RefHeight Wind speed"
+typedef   ^                         ^            ReKi                    RefHt            -      -     -   "RefHeight"
+typedef   ^                         ^            ReKi                    PLExp            -      -     -   "PLExp"
+typedef   ^                         ^            IntKi                   numTurbines      -      -     -   "number of blades on turbine" "-"
+typedef   ^                         ^            WTData                  WT               :      -     -   "Wind turbine data" "-"
+typedef   ^                         ^            DbKi                    dT               -      -     -   "time increment" "s"
+typedef   ^                         ^            DbKi                    tMax             -      -     -   "time increment" "s"
+typedef   ^                         ^            IntKi                   numSteps         -      -     -   "number of steps in this case" "-"
+typedef   ^                         ^            IntKi                   numCases         -      -     -   "number of steps in this case" "-"
+typedef   ^                         ^            Dvr_Case               Cases           {:}     -     -   "table of cases to run when AnalysisType=2" "-"
+typedef   ^                         ^            IntKi                   iCase            -      -     -   "Current Case being run" -
+typedef   ^                         ^            ReKi                    timeSeries       ::     -     -   "Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw" "-"
+typedef   ^                         ^            IntKi                   iTimeSeries      -      -     -   "Stored index to optimize time interpolation" -
+typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
+typedef   ^                         ^            Dvr_Outputs            out              -      -     -   "data for driver output file" "-"
+
+# ..... Data to wrap the driver ..........................................................................................................
+typedef   ^                        AllData       Dvr_SimData            dvr              -      -     -   "" -
+typedef   ^                           ^          AeroDyn_Data            AD               -      -     -   "" -
+typedef   ^                           ^          InflowWind_Data         IW               -      -     -   "" -
+typedef   ^                           ^          IntKi                   errStat          -      -     -   "" -
+typedef   ^                           ^          character(ErrMsgLen)    errMsg           -      -     -   "" -
+typedef   ^                           ^          logical                 initialized      -      -     -   "" -
 

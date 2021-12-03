@@ -221,10 +221,11 @@ SUBROUTINE CallBladedLegacyDLL ( u, filt_fromSCglob, filt_fromSC, p, dll_data, E
    aviFAIL = 0                ! bjj, this won't necessarially work if aviFAIL is INTENT(OUT) in DLL_Procedure()--could be undefined???
 
       !Convert to C-type characters: the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+      ! Note: the optional size is specified to avoid an array mismatch issue with some intel compilers in debug (gfortran doesn't notice)
 
-   avcOUTNAME = TRANSFER( TRIM(dll_data%RootName)//C_NULL_CHAR,   avcOUTNAME )
-   accINFILE  = TRANSFER( TRIM(dll_data%DLL_InFile)//C_NULL_CHAR, accINFILE  )
-   avcMSG     = TRANSFER( C_NULL_CHAR,                            avcMSG     ) !bjj this is intent(out), so we shouldn't have to do this, but, to be safe...
+   avcOUTNAME  = TRANSFER( TRIM(dll_data%RootName)//C_NULL_CHAR,   avcOUTNAME, p%avcOUTNAME_LEN )
+   accINFILE   = TRANSFER( TRIM(dll_data%DLL_InFile)//C_NULL_CHAR, accINFILE,  LEN_TRIM(dll_data%DLL_InFile)+1 )
+   avcMSG      = TRANSFER( C_NULL_CHAR,                            avcMSG,     LEN(ErrMsg)+1 ) !bjj this is intent(out), so we shouldn't have to do this, but, to be safe...
 
 #ifdef STATIC_DLL_LOAD
 

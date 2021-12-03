@@ -21,6 +21,7 @@ typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				ReKi			StC_X_DSP	-	-	-	"StC_X initial displacement"	m
 typedef	^		^				ReKi			StC_Y_DSP	-	-	-	"StC_Y initial displacement"	m
 typedef	^		^				ReKi			StC_Z_DSP	-	-	-	"StC_Z initial displacement"	m
+typedef	^		^				Character(10)			StC_Z_PreLdC	-	-	-	"StC_Z spring preload"	N
 typedef	^		^				ReKi			StC_X_M		-	-	-	"StC X mass"	kg
 typedef	^		^				ReKi			StC_Y_M		-	-	-	"StC Y mass"	kg
 typedef	^		^				ReKi			StC_Z_M		-	-	-	"StC Z mass"	kg
@@ -82,8 +83,10 @@ typedef   StrucCtrl/StC   InitInputType   CHARACTER(1024)   InputFile   -   -   
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^		^				ReKi			Gravity	{3}	-	-	"Gravitational acceleration vector"	"m/s^2"
 typedef	^	InitInputType	IntKi			NumMeshPts	-	-	-	"Number of mesh points"	-
-typedef	^	InitInputType	ReKi	InitPosition	{:}{:}	-	-	"X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades)"	m
-typedef	^	InitInputType	R8Ki	InitOrientation	{:}{:}{:}	-	-	"DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades)"	-
+typedef	^	InitInputType	ReKi	InitRefPos	{:}{:}	-	-	"X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	InitTransDisp	{:}{:}	-	-	"X-Y-Z displacement from position of point at init: i.e. each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	R8Ki	InitOrient	{:}{:}{:}	-	-	"DCM orientation of point at init: i.e. each blade root (3x3 x NumBlades)"	-
+typedef	^	InitInputType	R8Ki	InitRefOrient	{:}{:}{:}	-	-	"DCM reference orientation of point: i.e. each blade root (3x3 x NumBlades)"	-
 typedef	^	InitInputType	LOGICAL	UseInputFile	-	.TRUE.	-	"Read from the input file.  If false, must parse the string info passed"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
 typedef	^	InitInputType	LOGICAL	UseInputFile_PrescribeFrc	-	.TRUE.	-	"Read from the input file.  If false, must parse the string info passed"	-
@@ -110,7 +113,6 @@ typedef  ^  InitOutputType ReKi  RelPosition    {:}{:} - - "StC position relativ
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 typedef	^		ContinuousStateType	ReKi		StC_x			{:}{:} - -  "Continuous States -- StrucCtrl x" -
-#typedef	^		ContinuousStateType	ReKi		StC_xdot			{:}{:} - -  "Continuous States -- StrucCtrl xdot" -
 # Define discrete (nondifferentiable) states here:
 typedef ^ DiscreteStateType ReKi DummyDiscState - - - "Remove this variable if you have discrete states" -
 # Define constraint states here:
@@ -149,6 +151,7 @@ typedef	^		^				INTEGER			StC_DOF_MODE	-	-	-	"DOF mode {0: NO StC_DOF; 1: StC_X_
 typedef	^		^				LOGICAL			StC_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Y_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			StC_Z_DOF	-	-	-	"DOF on or off"	-
+typedef	^		^				ReKi			StC_Z_PreLd	-	-	-	"StC_Z spring preload"	N
 typedef	^		^				ReKi			M_X		-	-	-	"StC mass"	kg
 typedef	^		^				ReKi			M_Y		-	-	-	"StC mass"	kg
 typedef	^		^				ReKi			M_Z		-	-	-	"StC mass"	kg

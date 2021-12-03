@@ -12,8 +12,25 @@ notice, but for more information, refer to the *changelog.txt* text file
 within the official archive and the GitHub log.
 
 
+
+V1.05.00 (October 2021)
+-----------------------
+
+- Version 1.05.00 integrates with OpenFAST version 3.1+
+
+- SubDyn driver supports loads at given nodes
+  
+- Outputs of Craig-Bampton/Guyan and FEM Modes to JSON format for visualization
+
+- Streamlined yaml file output, with rigid body mass matrix at different points
+
+- Bug fix for rigid assemblies.
+
+- Bug fix for mass reported in summary file
+
+
 V1.04.00 (September 2020)
-------------------------------
+-------------------------
 
 - Version 1.04.00 integrates with OpenFAST version 2.4
 

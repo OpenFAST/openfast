@@ -2181,8 +2181,16 @@ where
 Note that the overbar is used on the input vector to denote that the
 forces apply to the interface nodes only.
 
+
+
 The outputs to HydroDyn and other modules are the deflections,
-velocities, and accelerations of the substructure:
+velocities, and accelerations of the substructure. 
+Two meshes are introduced to store these motions, noted :math:`y_2` and :math:`y_3`.
+The two meshes have different displacements for th floating case, where :math:`y_2` 
+only has the Guyan motion, whereas :math:`y_3` has the full elastic motion. 
+This distinction is not made in the following equations. The full elastic motion is assumed 
+in :math:`y_2` in this section. For more details, see section :numref:`SD_summary`.
+The output motion is: 
 
 .. math:: :label: y2
 
@@ -2226,7 +2234,10 @@ Using the expression of :math:`\ddot{q}_m` from Eq. :eq:`ddotqm`, the internal a
                 - \tilde{K}_{mm} q_m \right]
 
 
-In the floating case, the Guyan part of the motion are replaced by the analytical rigid body motion (see details in section :numref:`SD_summary`). 
+In the floating case, some subtles changes are introduced: 1) the Guyan part of the motion are replaced by the analytical rigid body motion, 
+2) the elastic displacements are set to zero to avoid a coupling issue with HydroDyn (see details in section :numref:`SD_summary`). 
+Because of 2), a third mesh was introduced, :math:`y_3`, which always contains the full elastic motion (full elastic displacements, velocities and accelerations, including the analytical tigid body motion in the floating case). 
+The third mesh is used for instance by Moordyn.
 
 
 The output equation for :math:`y_2`: can then be written as:
@@ -2580,6 +2591,7 @@ Output: nodal motions
 
 
 Note: :math:`F_L` contains the "extra moment" if user-requested with **GuyanLoadCorrection**.
+The meshes :math:`y_2` and :math:`y_3` are identical (Guyan displacements computed using :math:`Phi_R`, elastic displacements are included, together with the elastic velocities/accelerations).
 
 
 
@@ -2602,7 +2614,11 @@ Note: :math:`F_L` contains the "extra moment" if user-requested with **GuyanLoad
                 - \tilde{C}_{mm} \dot{q}_m
                 - \tilde{K}_{mm} q_m \right]
 
-where: 1) :math:`F_L` does not contain the extra moment, 2) the operators :math:`R_{g2b}` and :math:`R_{b2g}` are when GuyanLoadCorrection is True,  3) the elastic displacements were set to 0 for stability purposes (assuming that these are small) 4) the Guyan motion is computed using the exact rigid body motions. For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
+where: 1) :math:`F_L` does not contain the extra moment, 
+2) the operators :math:`R_{g2b}` and :math:`R_{b2g}` are when GuyanLoadCorrection is True,  
+3) the elastic displacements are set to 0 for stability purposes (assuming that these are small) in :math:`y_2` (used by HydroDyn), but not set to 0 for :math:`y_3` (used by MoorDyn).
+4) the Guyan motion (:math:`U_{L,\text{rigid}}`) is computed using the exact rigid body motions. 
+For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
 
 
 .. math::
@@ -2633,7 +2649,5 @@ Outputs to file:
 **Motions**: nodal motions written to file are in global coordinates, and for the floating case they contain the elastic motion :math:`\bar{U}_L  = U_{L,\text{rigid}} + \Phi_m q_m +  U_{L,\text{SIM}}` (whereas these elastic motions are not returned to the glue code)
 
 
-**Loads**: 
-
-Nodal loads are written to file in the element coordinate system. The procedure are the same for fixed-bottom and floating cases. 
+**Loads**: Nodal loads are written to file in the element coordinate system. The procedure are the same for fixed-bottom and floating cases. 
 

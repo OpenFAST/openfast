@@ -172,32 +172,37 @@ contains
                TranslationAcc =.TRUE., RotationAcc=.TRUE.)
          if (Failed())  return;
       ! Create the node on the mesh
-      CALL MeshPositionNode ( u%PtfmMotionMesh,1, InitInp%PlatformPos(1:3), ErrStat2, ErrMsg2, InitInp%PlatformOrient )
+      CALL MeshPositionNode ( u%PtfmMotionMesh,1, InitInp%PtfmRefPos(1:3), ErrStat2, ErrMsg2, InitInp%PtfmRefOrient )
          if (Failed())  return;
       ! Create the mesh element
       CALL MeshConstructElement ( u%PtfmMotionMesh, ELEMENT_POINT, ErrStat2, ErrMsg2, 1 )
          if (Failed())  return;
       CALL MeshCommit ( u%PtfmMotionMesh, ErrStat2, ErrMsg2 )
          if (Failed())  return;
+      ! Set any initial offsets
+      u%PtfmMotionMesh%TranslationDisp(1:3,1) = InitInp%PtfmRefPos(1:3)
+      u%PtfmMotionMesh%Orientation(1:3,1:3,1) = InitInp%PtfmOrient(1:3,1:3)
       ! Writing out info on channels
-      call WrSumInfoSend(1001, 'General channel group -- Platform motion -- Displacement TDX (m)')
-      call WrSumInfoSend(1002, 'General channel group -- Platform motion -- Displacement TDY (m)')
-      call WrSumInfoSend(1003, 'General channel group -- Platform motion -- Displacement TDZ (m)')
-      call WrSumInfoSend(1004, 'General channel group -- Platform motion -- Displacement RDX (rad)')
-      call WrSumInfoSend(1005, 'General channel group -- Platform motion -- Displacement RDY (rad)')
-      call WrSumInfoSend(1006, 'General channel group -- Platform motion -- Displacement RDZ (rad)')
-      call WrSumInfoSend(1007, 'General channel group -- Platform motion -- Velocity     TVX (m/s)')
-      call WrSumInfoSend(1008, 'General channel group -- Platform motion -- Velocity     TVY (m/s)')
-      call WrSumInfoSend(1009, 'General channel group -- Platform motion -- Velocity     TVZ (m/s)')
-      call WrSumInfoSend(1010, 'General channel group -- Platform motion -- Velocity     RVX (rad/s)')
-      call WrSumInfoSend(1011, 'General channel group -- Platform motion -- Velocity     RVY (rad/s)')
-      call WrSumInfoSend(1012, 'General channel group -- Platform motion -- Velocity     RVZ (rad/s)')
-      call WrSumInfoSend(1013, 'General channel group -- Platform motion -- Acceleration TAX (m/s^2)')
-      call WrSumInfoSend(1014, 'General channel group -- Platform motion -- Acceleration TAY (m/s^2)')
-      call WrSumInfoSend(1015, 'General channel group -- Platform motion -- Acceleration TAZ (m/s^2)')
-      call WrSumInfoSend(1016, 'General channel group -- Platform motion -- Acceleration RAX (rad/s^2)')
-      call WrSumInfoSend(1017, 'General channel group -- Platform motion -- Acceleration RAY (rad/s^2)')
-      call WrSumInfoSend(1018, 'General channel group -- Platform motion -- Acceleration RAZ (rad/s^2)')
+      if (UnSum > 0) then
+         call WrSumInfoSend(1001, 'General channel group -- Platform motion -- Displacement TDX (m)')
+         call WrSumInfoSend(1002, 'General channel group -- Platform motion -- Displacement TDY (m)')
+         call WrSumInfoSend(1003, 'General channel group -- Platform motion -- Displacement TDZ (m)')
+         call WrSumInfoSend(1004, 'General channel group -- Platform motion -- Displacement RDX (rad)')
+         call WrSumInfoSend(1005, 'General channel group -- Platform motion -- Displacement RDY (rad)')
+         call WrSumInfoSend(1006, 'General channel group -- Platform motion -- Displacement RDZ (rad)')
+         call WrSumInfoSend(1007, 'General channel group -- Platform motion -- Velocity     TVX (m/s)')
+         call WrSumInfoSend(1008, 'General channel group -- Platform motion -- Velocity     TVY (m/s)')
+         call WrSumInfoSend(1009, 'General channel group -- Platform motion -- Velocity     TVZ (m/s)')
+         call WrSumInfoSend(1010, 'General channel group -- Platform motion -- Velocity     RVX (rad/s)')
+         call WrSumInfoSend(1011, 'General channel group -- Platform motion -- Velocity     RVY (rad/s)')
+         call WrSumInfoSend(1012, 'General channel group -- Platform motion -- Velocity     RVZ (rad/s)')
+         call WrSumInfoSend(1013, 'General channel group -- Platform motion -- Acceleration TAX (m/s^2)')
+         call WrSumInfoSend(1014, 'General channel group -- Platform motion -- Acceleration TAY (m/s^2)')
+         call WrSumInfoSend(1015, 'General channel group -- Platform motion -- Acceleration TAZ (m/s^2)')
+         call WrSumInfoSend(1016, 'General channel group -- Platform motion -- Acceleration RAX (rad/s^2)')
+         call WrSumInfoSend(1017, 'General channel group -- Platform motion -- Acceleration RAY (rad/s^2)')
+         call WrSumInfoSend(1018, 'General channel group -- Platform motion -- Acceleration RAZ (rad/s^2)')
+      endif
    end subroutine InitPtfmMotionSensors
 
 
