@@ -76,7 +76,11 @@ PROGRAM MoorDyn_Driver
    CHARACTER(100)                        :: Line             ! String to temporarially hold value of read line
    REAL(ReKi), ALLOCATABLE               :: PtfmMotIn(:,:)   ! Variable for storing time, and DOF time series from driver input file
    REAL(ReKi), ALLOCATABLE               :: r_in(:,:)        ! Variable for storing interpolated DOF time series from driver input file
+   REAL(ReKi), ALLOCATABLE               :: r_in2(:,:)       ! used for filtering
    REAL(ReKi), ALLOCATABLE               :: rd_in(:,:)       ! Variable for storing 1st derivative of interpolate DOF time series
+   REAL(ReKi), ALLOCATABLE               :: rd_in2(:,:)      ! used for filtering
+   REAL(ReKi), ALLOCATABLE               :: rdd_in(:,:)      ! Variable for storing 2nd derivative of interpolate DOF time series
+   REAL(ReKi), ALLOCATABLE               :: rdd_in2(:,:)     ! used for filtering
    INTEGER(IntKi)                        :: ntIn             ! number of time steps read from driver input file
    INTEGER(IntKi)                        :: ncIn             ! number of channels read from driver input file
    INTEGER(IntKi)                        :: nt               ! number of coupling time steps to use in simulation
@@ -136,7 +140,7 @@ PROGRAM MoorDyn_Driver
    CALL CPU_TIME ( ProgStrtCPU )                                    ! Initial time (this zeros the start time when used as a MATLAB function)
    
 
-
+   CALL WrScr( ' MD Driver updated 2021-11-15')
 
    ! Parse the driver input file and run the simulation based on that file
    CALL get_command_argument(1, drvrFilename)
@@ -178,7 +182,12 @@ PROGRAM MoorDyn_Driver
       MD_InitInp%TurbineRefPos(1,J) = drvrInitInp%FarmPositions(1,J)
       MD_InitInp%TurbineRefPos(2,J) = drvrInitInp%FarmPositions(2,J)
       MD_InitInp%TurbineRefPos(3,J) = 0.0_DbKi
-      MD_InitInp%PtfmInit(:,J)      = drvrInitInp%FarmPositions(3:8,J)
+      MD_InitInp%PtfmInit(1,J)      = drvrInitInp%FarmPositions(3,J)
+      MD_InitInp%PtfmInit(2,J)      = drvrInitInp%FarmPositions(4,J)
+      MD_InitInp%PtfmInit(3,J)      = drvrInitInp%FarmPositions(5,J)
+      MD_InitInp%PtfmInit(4,J)      = drvrInitInp%FarmPositions(6,J)*3.14159265/180.0
+      MD_InitInp%PtfmInit(5,J)      = drvrInitInp%FarmPositions(7,J)*3.14159265/180.0
+      MD_InitInp%PtfmInit(6,J)      = drvrInitInp%FarmPositions(8,J)*3.14159265/180.0
    end do
    
    MD_interp_order = 0
@@ -309,7 +318,7 @@ PROGRAM MoorDyn_Driver
 
       
       ! allocate space for processed motion array
-      ALLOCATE ( r_in(nt, ncIn), rd_in(nt, ncIn), STAT=ErrStat2)
+      ALLOCATE ( r_in(nt, ncIn), r_in2(nt, ncIn), rd_in(nt, ncIn), rd_in2(nt, ncIn), rdd_in(nt, ncIn), rdd_in2(nt, ncIn), STAT=ErrStat2)
       IF ( ErrStat2 /= ErrID_None ) THEN
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = '  Error allocating space for r_in or rd_in array.'
@@ -346,7 +355,110 @@ PROGRAM MoorDyn_Driver
          END DO
       
       END DO
-      ! InputsMod == 1 
+      
+      ! ----- filter position -----
+      ! now filter forward
+      DO i = 1,nt  
+         DO J=1,ncIn
+            if (i==1) then
+               r_in2(i, J) = r_in(i, J)
+            else
+               r_in2(i, J) = 0.2*r_in(i, J) + 0.8*r_in2(i-1, J)
+            end if
+         END DO
+      END DO
+      ! now filter backward and save back to original variable
+      DO i = nt,1,-1  
+         DO J=1,ncIn
+            if (i==nt) then
+               r_in(i, J) = r_in2(i, J)
+            else
+               r_in(i, J) = 0.2*r_in2(i, J) + 0.8*r_in(i+1, J)
+            end if
+         END DO
+      END DO
+      
+      
+      ! now get derivative after filtering has been applied (derivative no longer needs to be calculated earlier) 
+      DO i = 1,nt     
+         DO J=1,ncIn
+            if (i==1) then
+               ! use forward different to estimate velocity of coupling point
+               rd_in(i, J) = (r_in(i+1, J) - r_in(i, J)) / dtC
+            else if (i==nt) then
+               ! use forward different to estimate velocity of coupling point
+               rd_in(i, J) = (r_in(i, J) - r_in(i-1, J)) / dtC
+            else
+               ! use central different to estimate velocity of coupling point
+               rd_in(i, J) = (r_in(i+1, J) - r_in(i-1, J)) / (2.0*dtC)
+            end if
+         END DO
+      END DO
+      
+      
+      
+      ! ----- filter velocity -----
+      ! now filter forward
+      DO i = 1,nt  
+         DO J=1,ncIn
+            if (i==1) then
+               rd_in2(i, J) = rd_in(i, J)
+            else
+               rd_in2(i, J) = 0.2*rd_in(i, J) + 0.8*rd_in2(i-1, J)
+            end if
+         END DO
+      END DO
+      ! now filter backward and save back to original variable
+      DO i = nt,1,-1  
+         DO J=1,ncIn
+            if (i==nt) then
+               rd_in(i, J) = rd_in2(i, J)
+            else
+               rd_in(i, J) = 0.2*rd_in2(i, J) + 0.8*rd_in(i+1, J)
+            end if
+         END DO
+      END DO
+      
+      
+      ! now get derivative after filtering has been applied (derivative no longer needs to be calculated earlier) 
+      DO i = 1,nt     
+         DO J=1,ncIn
+            if (i==1) then
+               ! use forward different to estimate velocity of coupling point
+               rdd_in(i, J) = (rd_in(i+1, J) - rd_in(i, J)) / dtC
+            else if (i==nt) then
+               ! use forward different to estimate velocity of coupling point
+               rdd_in(i, J) = (rd_in(i, J) - rd_in(i-1, J)) / dtC
+            else
+               ! use central different to estimate velocity of coupling point
+               rdd_in(i, J) = (rd_in(i+1, J) - rd_in(i-1, J)) / (2.0*dtC)
+            end if
+         END DO
+      END DO
+      
+      
+      ! ----- filter acceleration -----
+      ! now filter forward
+      DO i = 1,nt  
+         DO J=1,ncIn
+            if (i==1) then
+               rdd_in2(i, J) = rdd_in(i, J)
+            else
+               rdd_in2(i, J) = 0.2*rdd_in(i, J) + 0.8*rdd_in2(i-1, J)
+            end if
+         END DO
+      END DO
+      ! now filter backward and save back to original variable
+      DO i = nt,1,-1  
+         DO J=1,ncIn
+            if (i==nt) then
+               rdd_in(i, J) = rdd_in2(i, J)
+            else
+               rdd_in(i, J) = 0.2*rdd_in2(i, J) + 0.8*rdd_in(i+1, J)
+            end if
+         END DO
+      END DO
+      
       
    else   
       nt = tMax/dtC - 1            ! number of coupling time steps
@@ -415,42 +527,46 @@ PROGRAM MoorDyn_Driver
          
          DO iTurb = 1, MD_p%nTurbines
             
-            J = 1  ! J is the index of the coupling points in the input mesh CoupledKinematics
+            K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
+            J = 1  ! the starting index of the relevant DOFs in the input array
             ! any coupled bodies (type -1)
             DO l = 1,MD_p%nCpldBodies(iTurb)
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,J) = r_in(i, J:J+2)  
-               MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,J) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,J) = rd_in(i, J:J+2)
-               MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,J) = rd_in(i, J+3:J+5)
-               !a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
-               !a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+               MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+               MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = rdd_in(i, J:J+2)
+               MD_u(1)%CoupledKinematics(iTurb)%RotationAcc(    :,K) = rdd_in(i, J+3:J+5)
             
+               K = K + 1
                J = J + 6            
             END DO
             
             ! any coupled rods (type -1 or -2)    >>> need to make rotations ignored if it's a pinned rod <<<
             DO l = 1,MD_p%nCpldRods(iTurb)
             
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,J) = r_in(i, J:J+2)  
-               MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,J) = EulerConstruct( r_in(i, J+3:J+5) )
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,J) = rd_in(i, J:J+2)
-               MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,J) = rd_in(i, J+3:J+5)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+               MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) )
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+               MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = rdd_in(i, J:J+2)
+               MD_u(1)%CoupledKinematics(iTurb)%RotationAcc(    :,K) = rdd_in(i, J+3:J+5)
             
+               K = K + 1
                J = J + 6            
             END DO
             
             ! any coupled points (type -1)
             DO l = 1, MD_p%nCpldCons(iTurb)
                
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,J) = r_in(i, J:J+2)  
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,J) = rd_in(i, J:J+2)
-               
-               !u%CoupledKinematics(iTurb)%TranslationVel(:,J)
-               !u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = rdd_in(i, J:J+2)
                
                !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
                !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
                
+               K = K + 1
                J = J + 3
             END DO
             
@@ -459,8 +575,8 @@ PROGRAM MoorDyn_Driver
          ! also provide any active tensioning commands
          do l = 1, size(MD_u(1)%DeltaL) 
          
-            MD_u(1)%DeltaL(   j) =  r_in(i, J)
-            MD_u(1)%DeltaLdot(j) = rd_in(i, J)
+            MD_u(1)%DeltaL(   l) =  r_in(i, J)
+            MD_u(1)%DeltaLdot(l) = rd_in(i, J)
 
             J = J + 1         
          end do

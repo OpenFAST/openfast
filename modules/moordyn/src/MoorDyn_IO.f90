@@ -1391,7 +1391,7 @@ CONTAINS
                                + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
            
            if (m%LineList(I)%OutFlagList(2) == 1) THEN   ! if node positions are included, make them using a float format for higher precision
-            Frmt = '(F10.4,'//TRIM(Int2LStr(3*(m%LineList(I)%N + 1)))//'(A1,F12.4)),'//TRIM(Int2LStr(LineNumOuts - 3*(m%LineList(I)%N - 1)))//'(A1,e12.5))'  
+            Frmt = '(F10.4,'//TRIM(Int2LStr(3*(m%LineList(I)%N + 1)))//'(A1,F12.4),'//TRIM(Int2LStr(LineNumOuts - 3*(m%LineList(I)%N - 1)))//'(A1,e12.5))'  
            else
             Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e12.5))'   ! should evenutally use user specified format?
            end if
