@@ -34,7 +34,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     PtfmCOByt                       {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  RdtnMod                         -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  ExctnDisp                -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
+typedef   ^                            ^                             INTEGER                  ExctnDisp                       -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
+typedef   ^                            ^                             INTEGER                  ExctnCutOff                     -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
 typedef   ^                            ^                             DbKi                     RdtnTMax                        -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WaveDir                         -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
@@ -124,6 +125,7 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  ExctnMod                 -          -        -          ""        -
 typedef   ^                            ^                             INTEGER                  ExctnDisp                -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
+typedef   ^                            ^                             INTEGER                  ExctnCutOff              -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
 typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveExctnGrid            {:}{:}{:}{:}     -         -         "WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body"        -
 typedef   ^                            ^                             INTEGER                  NStepWave                -          -         -         ""        -

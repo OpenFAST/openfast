@@ -260,6 +260,11 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    call ParseVar( FileInfo_In, CurLine, 'ExctnDisp', InputFileData%WAMIT%ExctnDisp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
       
+      ! ExctnCutOff  - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2])
+      ! [STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
+   call ParseVar( FileInfo_In, CurLine, 'ExctnCutOff', InputFileData%WAMIT%ExctnCutOff, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+
       ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
    call ParseVar( FileInfo_In, CurLine, 'RdtnMod', InputFileData%WAMIT%RdtnMod, ErrStat2, ErrMsg2, UnEc )
@@ -1308,6 +1313,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       InputFileData%WAMIT%ExctnDisp    = 0  !Force ExctnDisp = 0, so that the Grid of Wave Excitation forces is not computed (saves time and memory)
    end if
    
+   ! ExctnCutOff
+   if ( InputFileData%PotMod == 1 .and. InputFileData%WAMIT%ExctnMod  > 0 .and. InputFileData%WAMIT%ExctnDisp == 2 .and. InputFileData%WAMIT%ExctnCutOff <= 0.0 ) then
+      CALL SetErrStat( ErrID_Fatal,'ExctnCutOff must be greater than zero.',ErrStat,ErrMsg,RoutineName)
+   end if   
+      
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
 
    IF ( InputFileData%PotMod == 1 ) THEN

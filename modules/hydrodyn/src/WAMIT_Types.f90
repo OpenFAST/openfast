@@ -56,6 +56,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: RdtnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
+    INTEGER(IntKi)  :: ExctnCutOff      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
     REAL(DbKi)  :: RdtnTMax      !<  [-]
     REAL(ReKi)  :: WaveDir      !<  [-]
     CHARACTER(1024)  :: WAMITFile      !<  [-]
@@ -141,6 +142,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: RdtnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
+    INTEGER(IntKi)  :: ExctnCutOff      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveExctn      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WaveExctnGrid      !< WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body [-]
     INTEGER(IntKi)  :: NStepWave      !<  [-]
@@ -280,6 +282,7 @@ ENDIF
     DstInitInputData%RdtnMod = SrcInitInputData%RdtnMod
     DstInitInputData%ExctnMod = SrcInitInputData%ExctnMod
     DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
+    DstInitInputData%ExctnCutOff = SrcInitInputData%ExctnCutOff
     DstInitInputData%RdtnTMax = SrcInitInputData%RdtnTMax
     DstInitInputData%WaveDir = SrcInitInputData%WaveDir
     DstInitInputData%WAMITFile = SrcInitInputData%WAMITFile
@@ -519,6 +522,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! RdtnMod
       Int_BufSz  = Int_BufSz  + 1  ! ExctnMod
       Int_BufSz  = Int_BufSz  + 1  ! ExctnDisp
+      Int_BufSz  = Int_BufSz  + 1  ! ExctnCutOff
       Db_BufSz   = Db_BufSz   + 1  ! RdtnTMax
       Re_BufSz   = Re_BufSz   + 1  ! WaveDir
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%WAMITFile)  ! WAMITFile
@@ -747,6 +751,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%ExctnMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%ExctnDisp
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%ExctnCutOff
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%RdtnTMax
     Db_Xferred = Db_Xferred + 1
@@ -1128,6 +1134,8 @@ ENDIF
     OutData%ExctnMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%ExctnDisp = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%ExctnCutOff = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%RdtnTMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
@@ -4259,6 +4267,7 @@ ENDIF
     DstParamData%RdtnMod = SrcParamData%RdtnMod
     DstParamData%ExctnMod = SrcParamData%ExctnMod
     DstParamData%ExctnDisp = SrcParamData%ExctnDisp
+    DstParamData%ExctnCutOff = SrcParamData%ExctnCutOff
 IF (ALLOCATED(SrcParamData%WaveExctn)) THEN
   i1_l = LBOUND(SrcParamData%WaveExctn,1)
   i1_u = UBOUND(SrcParamData%WaveExctn,1)
@@ -4420,6 +4429,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! RdtnMod
       Int_BufSz  = Int_BufSz  + 1  ! ExctnMod
       Int_BufSz  = Int_BufSz  + 1  ! ExctnDisp
+      Int_BufSz  = Int_BufSz  + 1  ! ExctnCutOff
   Int_BufSz   = Int_BufSz   + 1     ! WaveExctn allocated yes/no
   IF ( ALLOCATED(InData%WaveExctn) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! WaveExctn upper/lower bounds for each dimension
@@ -4626,6 +4636,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%ExctnMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%ExctnDisp
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%ExctnCutOff
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WaveExctn) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4962,6 +4974,8 @@ ENDIF
     OutData%ExctnMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%ExctnDisp = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%ExctnCutOff = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveExctn not allocated
     Int_Xferred = Int_Xferred + 1
