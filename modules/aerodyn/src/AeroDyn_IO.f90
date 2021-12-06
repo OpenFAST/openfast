@@ -2139,11 +2139,12 @@ CONTAINS
 END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine parses the input file data stored in FileInfo_In and places it in the InputFileData structure for validating.
-SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
    implicit    none
 
       ! Passed variables
    character(*),                    intent(in   )  :: PriPath           !< primary path
+   type(AD_InitInputType),          intent(in   )  :: InitInp           !< Input data for initialization routine
    CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
    CHARACTER(*),                    intent(in   )  :: RootName          !< The rootname of the echo file, possibly opened in this routine
    integer(IntKi),                  intent(in   )  :: NumBlades(:)      !< Number of blades per rotor we expect -- from InitInp
@@ -2240,23 +2241,20 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
    !======  Environmental Conditions  ===================================================================
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
-      ! AirDens - Air density (kg/m^3)
-   call ParseVar( FileInfo_In, CurLine, "AirDens", InputFileData%AirDens, ErrStat2, ErrMsg2, UnEc )
+      ! AirDens - Air density {or default} (kg/m^3)
+   call ParseVarWDefault( FileInfo_In, CurLine, "AirDens", InputFileData%AirDens, InitInp%defFldDens, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      ! KinVisc - Kinematic air viscosity (m^2/s)
-   call ParseVar( FileInfo_In, CurLine, "KinVisc", InputFileData%KinVisc, ErrStat2, ErrMsg2, UnEc )
+      ! KinVisc - Kinematic air viscosity {or default} (m^2/s)
+   call ParseVarWDefault( FileInfo_In, CurLine, "KinVisc", InputFileData%KinVisc, InitInp%defKinVisc, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      ! SpdSound - Speed of sound (m/s)
-   call ParseVar( FileInfo_In, CurLine, "SpdSound", InputFileData%SpdSound, ErrStat2, ErrMsg2, UnEc )
+      ! SpdSound - Speed of sound {or default} (m/s)
+   call ParseVarWDefault( FileInfo_In, CurLine, "SpdSound", InputFileData%SpdSound, InitInp%defSpdSound, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      ! Patm - Atmospheric pressure (Pa) [used only when CavitCheck=True]
-   call ParseVar( FileInfo_In, CurLine, "Patm", InputFileData%Patm, ErrStat2, ErrMsg2, UnEc )
+      ! Patm - Atmospheric pressure {or default} (Pa) [used only when CavitCheck=True]
+   call ParseVarWDefault( FileInfo_In, CurLine, "Patm", InputFileData%Patm, InitInp%defPatm, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      ! Pvap - Vapour pressure of fluid (Pa) [used only when CavitCheck=True]
-   call ParseVar( FileInfo_In, CurLine, "Pvap", InputFileData%Pvap, ErrStat2, ErrMsg2, UnEc )
-      if (Failed()) return
-      ! FluidDepth - Water depth above mid-hub height (m) [used only when CavitCheck=True]
-   call ParseVar( FileInfo_In, CurLine, "FluidDepth", InputFileData%FluidDepth, ErrStat2, ErrMsg2, UnEc )
+      ! Pvap - Vapour pressure of fluid {or default} (Pa) [used only when CavitCheck=True]
+   call ParseVarWDefault( FileInfo_In, CurLine, "Pvap", InputFileData%Pvap, InitInp%defPvap, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
 
    !======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3]
