@@ -1878,7 +1878,7 @@ CONTAINS
       end if
    
       ! Integrate force/moments over blades by performing mesh transfer to blade root points:
-      do k=1,min(p%NumBlades,4)
+      do k=1,min(p%NumBlades,4) ! Temporary hack for at least one more blae outputs
          call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
          ! Transform force vector to blade root coordinate system
          tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
@@ -1973,7 +1973,7 @@ CONTAINS
             m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
             m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
 
-            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%Chord(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
+            m%AllOuts( BNGam(  beta,k) ) = 0.5_ReKi * p_AD%FVW%W(iW)%chord_LL(j) * m_AD%FVW%W(iW)%BN_Vrel(j) * m_AD%FVW%W(iW)%BN_Cl(j) ! "Gam" [m^2/s]
          end do ! nodes
       end do ! blades
 
@@ -2139,21 +2139,16 @@ CONTAINS
 END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine parses the input file data stored in FileInfo_In and places it in the InputFileData structure for validating.
-SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interval, defAirDens, defKinVisc, defSpdSound, defPatm, defPvap, &
-                                 FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
    implicit    none
 
       ! Passed variables
    character(*),                    intent(in   )  :: PriPath           !< primary path
+   type(AD_InitInputType),          intent(in   )  :: InitInp           !< Input data for initialization routine
    CHARACTER(*),                    intent(in   )  :: InputFile         !< Name of the file containing the primary input data
    CHARACTER(*),                    intent(in   )  :: RootName          !< The rootname of the echo file, possibly opened in this routine
    integer(IntKi),                  intent(in   )  :: NumBlades(:)      !< Number of blades per rotor we expect -- from InitInp
    real(DBKi),                      intent(in   )  :: interval          !< timestep
-   real(ReKi),                      intent(in   )  :: defAirDens        !< Default air density from the driver; may be overwritten
-   real(ReKi),                      intent(in   )  :: defKinVisc        !< Default kinematic viscosity from the driver; may be overwritten
-   real(ReKi),                      intent(in   )  :: defSpdSound       !< Default speed of sound from the driver; may be overwritten
-   real(ReKi),                      intent(in   )  :: defPatm           !< Default atmospheric pressure from the driver; may be overwritten
-   real(ReKi),                      intent(in   )  :: defPvap           !< Default vapor pressure from the driver; may be overwritten
    type(AD_InputFile),              intent(inout)  :: InputFileData     !< All the data in the AD15 primary input file
    type(FileInfoType),              intent(in   )  :: FileInfo_In       !< The derived type for holding the file information.
    integer(IntKi),                  intent(  out)  :: UnEc              !< The local unit number for this module's echo file
@@ -2247,19 +2242,19 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
       ! AirDens - Air density {or default} (kg/m^3)
-   call ParseVarWDefault( FileInfo_In, CurLine, "AirDens", InputFileData%AirDens, defAirDens, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault( FileInfo_In, CurLine, "AirDens", InputFileData%AirDens, InitInp%defFldDens, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! KinVisc - Kinematic air viscosity {or default} (m^2/s)
-   call ParseVarWDefault( FileInfo_In, CurLine, "KinVisc", InputFileData%KinVisc, defKinVisc, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault( FileInfo_In, CurLine, "KinVisc", InputFileData%KinVisc, InitInp%defKinVisc, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! SpdSound - Speed of sound {or default} (m/s)
-   call ParseVarWDefault( FileInfo_In, CurLine, "SpdSound", InputFileData%SpdSound, defSpdSound, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault( FileInfo_In, CurLine, "SpdSound", InputFileData%SpdSound, InitInp%defSpdSound, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! Patm - Atmospheric pressure {or default} (Pa) [used only when CavitCheck=True]
-   call ParseVarWDefault( FileInfo_In, CurLine, "Patm", InputFileData%Patm, defPatm, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault( FileInfo_In, CurLine, "Patm", InputFileData%Patm, InitInp%defPatm, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! Pvap - Vapour pressure of fluid {or default} (Pa) [used only when CavitCheck=True]
-   call ParseVarWDefault( FileInfo_In, CurLine, "Pvap", InputFileData%Pvap, defPvap, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault( FileInfo_In, CurLine, "Pvap", InputFileData%Pvap, InitInp%defPvap, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
 
    !======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3]
@@ -2324,6 +2319,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
    call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%FLookup, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+      
+      ! UAStartRad - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
+   call ParseVar( FileInfo_In, CurLine, "UAStartRad", InputFileData%UAStartRad, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2>= AbortErrLev) InputFileData%UAStartRad = 0.0_ReKi
+   
+      ! UAEndRad - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
+   call ParseVar( FileInfo_In, CurLine, "UAEndRad", InputFileData%UAEndRad, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2>= AbortErrLev) InputFileData%UAEndRad = 1.0_ReKi
 
    !======  Airfoil Information =========================================================================
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
@@ -2430,6 +2433,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
    endif
       ! BlOutNd - Blade nodes whose values will be output (-):
    call ParseAry( FileInfo_In, CurLine, "BlOutNd", InputFileData%BlOutNd, InputFileData%NBlOuts, ErrStat2, ErrMsg2, UnEc)
+      if (Failed()) return
 
       ! NTwOuts - Number of blade node outputs [0 - 9] (-)
    call ParseVar( FileInfo_In, CurLine, "NTwOuts", InputFileData%NTwOuts, ErrStat2, ErrMsg2, UnEc )
@@ -2442,6 +2446,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InputFile, RootName, NumBlades, interv
    endif
       ! TwOutNd - Tower nodes whose values will be output (-):
    call ParseAry( FileInfo_In, CurLine, "TwOutNd", InputFileData%TwOutNd, InputFileData%NTwOuts, ErrStat2, ErrMsg2, UnEc)
+      if (Failed()) return
 
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
@@ -2525,11 +2530,6 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
    ErrStat = ErrID_None
    ErrMsg  = ""
    UnIn = -1
-      
-   ! Allocate space for these variables
-   
-   
-   
    
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2559,7 +2559,10 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
       ! NumBlNds - Number of blade nodes used in the analysis (-):
    CALL ReadVar( UnIn, ADBlFile, BladeKInputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat>= AbortErrLev ) THEN 
+         CALL Cleanup()
+         RETURN
+      END IF
 
    CALL ReadCom ( UnIn, ADBlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2824,14 +2827,18 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       
       ! UAMod
       select case (InputFileData%UAMod)
-         case (1)
+         case (UA_Baseline)
             Msg = 'baseline model (original)'
-         case (2)
+         case (UA_Gonzalez)
             Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
-         case (3)
+         case (UA_MinnemaPierce)
             Msg = 'Minnema/Pierce variant (changes in Cc and Cm)'      
          !case (4)
          !   Msg = 'DYSTOOL'      
+         case (UA_HGM)
+            Msg = 'HGM (continuous state)'
+         case (UA_HGMV)
+            Msg = 'HGMV (continuous state + vortex)'
          case default      
             Msg = 'unknown'      
       end select

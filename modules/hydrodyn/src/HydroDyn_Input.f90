@@ -229,7 +229,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    CurLine = CurLine + 1
 
       ! WtrDens - Water density.
-   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%Waves%WtrDens, defWtrDens, ErrStat2, ErrMsg2, UnEc )
+   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%Waves%WtrDens, real(defWtrDens,SiKi), ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WtrDpth - Water depth
@@ -2933,10 +2933,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
       InputFileData%Morison%MGTop    = -999999.0
       InputFileData%Morison%MGBottom =  999999.0
-      do I = 1,InputFileData%Morison%NMGDepths
-            ! Adjust the depth values based on MSL2SWL
-         InputFileData%Morison%MGDepths(I)%MGDpth = InputFileData%Morison%MGDepths(I)%MGDpth - InputFileData%Morison%MSL2SWL
-      end do
+
       DO I = 1,InputFileData%Morison%NMGDepths
             ! Store the boundaries of the marine growth zone
          IF ( InputFileData%Morison%MGDepths(I)%MGDpth > InputFileData%Morison%MGTop ) THEN

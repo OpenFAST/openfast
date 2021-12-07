@@ -31,6 +31,18 @@ convention of ``OutRootName.dvr.ech``. **OutRootName** is specified
 in the HYDRODYN section of the driver input file. Set the gravity
 constant using the **Gravity** parameter. HydroDyn expects a magnitude,
 so in SI units this would be set to 9.80665 :math:`\frac{m}{s^{2}}`.
+**WtrDens** specifies the water density and must be a value greater than
+or equal to zero; a typical value of seawater is around 1025
+kg/m\ :sup:`3`. **WtrDpth** specifies the water depth (depth of the flat
+seabed), based on the reference MSL, and must be a value greater than
+zero. **MSL2SWL** is the offset between the MSL and SWL, positive
+upward. This parameter is useful when simulating the effect of tides or
+storm-surge sea-level variations without having to alter the
+substructure geometry information. This parameter is unused with
+**WaveMod** = 6 and must be set to zero if you are using a
+potential-flow model (**PotMod** = 1 or 2). **WaveMod** and **PotMod** are 
+specified in the HydroDyn primary input file.
+
 **HDInputFile** is the filename of the primary HydroDyn input file. This
 name should be in quotations and can contain an absolute path or a
 relative path. All HydroDyn-generated output files will be prefixed with
@@ -133,7 +145,11 @@ running a coupled simulation.
 
 Environmental Conditions
 ------------------------
-**WtrDens** specifies the water density and must be a value greater than
+Environmental conditions are now specified in the driver input file but are left in
+the primary input file for legacy compatibility. Use the keyword 
+DEFAULT to pass in values specified by the driver input file. Otherwise, 
+values given in the primary input file will overwrite those given in the
+driver input file. **WtrDens** specifies the water density and must be a value greater than
 or equal to zero; a typical value of seawater is around 1025
 kg/m\ :sup:`3`. **WtrDpth** specifies the water depth (depth of the flat
 seabed), based on the reference MSL, and must be a value greater than

@@ -97,7 +97,12 @@ Environmental conditions are specified here and passed to AeroDyn. `FldDens` (eq
 
 The inflow can be provided in two ways:
 
-- basic (`CompInflow=0`): uniform wind with a power law shear. The wind is defined using a reference height (`RefHt`), a power law exponent (`PLExp`), and the wind speed at reference height (`HWindSpeed`). With `AnalysisType=2`, the reference wind speed and power law are defined separately as time series (see "time-dependent analysis"). With `AnalysisType=3`, these parameters are provided in a separate table (see "Combined-Case analyses"). The reference height is used for all analyses types, since this height may be different than the hub height.
+- basic (`CompInflow=0`): uniform wind with a power law shear. The wind is defined using a reference height (`RefHt`), a power law exponent (`PLExp`), and the wind speed at reference height (`HWindSpeed`). With `AnalysisType=2`, the reference wind speed and power law are defined separately as time series (see "time-dependent analysis"). With `AnalysisType=3`, these parameters are provided in a separate table (see "Combined-Case analyses"). The reference height is used for all analyses types, since this height may be different than the hub height. The wind at a given node is determined using the following equation, where :math:`Z` is the instantaneous elevation of the node above the ground for land-based wind turbines, above the mean sea level (MSL) for offshore wind turbines, or above the seabed for MHK turbines.
+
+.. math::
+
+   U(Z) = \mathrm{HWindSpeed} \left( \frac{Z}{\mathrm{RefHt}} \right)^\mathrm{PLExp}
+
 - advanced (`CompInflow=1`): the InflowWind module is used to compute the inflow, and all available options of InflowWind are then available. The user needs to provide the (relative or absolute) path of the InflowWind input file (`InflowFile`). This feature is limited to `AnalysisType=1`.
 
 An example of inputs is given below:
@@ -244,7 +249,7 @@ An example of inputs for a sinusoidal surge motion is given below:
 
 The different inputs for the basic and advanced geometries are given below:
 
-- basic: The motion of a basic turbine consists of a constant nacelle yaw (`NacYaw`), rotor speed (`RotSpeed`), blade pitch (`BldPitch`). 
+- basic: The motion of a basic turbine consists of a constant nacelle yaw (`NacYaw`, positive rotation of the nacelle about the vertical tower axis, counterclockwise when looking downward), rotor speed (`RotSpeed`, positive clockwise looking downwind), and blade pitch (`BldPitch`, negative around :math:`z_b`). 
   Examples are given below:
 
 .. code::
@@ -299,7 +304,7 @@ Time-dependent analyses are selected using `AnalysisType=2`. They are restricted
 
 Combined-case analyses are used to run parametric studies in one single run.
 They are selected using `AnalysisType=3`, and are restricted to one turbine (`numTurbines=1`).
-The variables that can be changed for each simulation are: reference wind speed (`HWndSpeed`),  power law exponent (`PLExp`), rotor speed (`RotSpd`, positive clockwise looking downwind), collective pitch (`Pitch`, positive to feather, leading edge upwind), nacelle yaw (`Yaw`, positive rotation of the nacelle about the vertical tower axis, counterclockwise when looking downward), time step (`dT`), simulation time (`Tmax`), and sinusoidal motion parameters (degree of freedom, `DOF`, amplitude and frequency).
+The variables that can be changed for each simulation are: reference wind speed (`HWndSpeed`),  power law exponent (`PLExp`), rotor speed (`RotSpd`), collective pitch (`Pitch`), nacelle yaw (`Yaw`), time step (`dT`), simulation time (`Tmax`), and sinusoidal motion parameters (degree of freedom, `DOF`, amplitude and frequency).
 When `DOF=0`, the turbine base is fixed.
 
 
