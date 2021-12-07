@@ -450,7 +450,10 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    enddo
 
    ! --- Distributing wings to rotors
-   p%nRotors = maxval(p%W(:)%iRotor)
+   p%nRotors = p%W(1)%iRotor
+   do iW=2,p%nWings
+      p%nRotors = max(p%nRotors,p%W(iW)%iRotor)
+   end do
    ! Count number of blades per rotor
    call AllocAry(nBldPerRot, p%nRotors , 'nBldPerRot', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); 
    nBldPerRot=0

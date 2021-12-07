@@ -329,9 +329,9 @@ wind fluctuation. ``TwrElev`` must be entered in monotonically
 increasing order—from the lowest (tower-base) to the highest 
 (tower-top) elevation. Values of ``TwrTI`` between 0.05 and 0.4 are
 recommended.  Values larger than 0.4 up to 1 will trigger a warning
-that the results will need to be interpretted carefully, but the code
+that the results will need to be interpreted carefully, but the code
 will allow such values for scientific investigation purposes.
-See :numref:`fig:TwrGeom`.
+See :numref:`ad_tower_geom`.
 
 
 .. _AD-Outputs:
@@ -372,8 +372,8 @@ quantities are actually output at these nodes.
 
 .. figure:: figs/ad_tower_geom.png
    :width: 60%
-   :name: fig:TwrGeom
    :align: center
+   :alt: ad_tower_geom.png
 
    AeroDyn Tower Geometry
 
@@ -414,7 +414,7 @@ moment versus AoA, as well as UA model parameters. In these files, any
 line whose first non-blank character is an exclamation point (!) is
 ignored (for inserting comment lines). The non-comment lines should
 appear within the file in order, but comment lines may be intermixed as
-desired for reading clarity. A sample airfoil data input file is given
+desired for reading clarity. A sample airfoil data input file is given in
 :numref:`ad_appendix`.
 
 ``InterpOrd`` is the order the static airfoil data is interpolated
@@ -429,7 +429,7 @@ if the keyword ``DEFAULT`` is entered in place of a numerical value,
 ``RelThickness`` is the non-dimensional thickness of the airfoil 
 (thickness over chord ratio), expressed as a fraction (not a percentage), 
 typically between 0.1 and 1. 
-The parameter is currently used when `UAMod=7`, but might be used more in the future.
+The parameter is currently used when ``UAMod=7``, but might be used more in the future.
 The default value of 0.2 if provided for convenience.
 
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
@@ -736,6 +736,7 @@ See :numref:`ad_blade_geom`. Twist is shown in :numref:`ad_blade_local_cs` of :n
 .. figure:: figs/ad_blade_geom.png
    :width: 90%
    :align: center
+   :alt: ad_blade_geom.png
 
    AeroDyn Blade Geometry – Left: Side View; Right: Front View (Looking Downwind)
 

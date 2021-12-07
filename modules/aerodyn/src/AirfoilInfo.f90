@@ -391,7 +391,6 @@ CONTAINS
       CHARACTER(*), PARAMETER                 :: RoutineName = 'ReadAFfile'
       CHARACTER(10)                           :: defaultStr
       CHARACTER(1024)                         :: PriPath
-      CHARACTER(1024)                         :: sLine
       
       TYPE (AFI_UA_BL_Default_Type), ALLOCATABLE :: CalcDefaults(:)            ! Whether to calculate default values for the UA parameters
       
@@ -423,17 +422,19 @@ CONTAINS
       
       CALL ParseVarWDefault ( FileInfo, CurLine, 'InterpOrd', p%InterpOrd, DefaultInterpOrd, ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+         
          ! RelThickness, default is 0.2 if user doesn't know it, only used for Boing-Vertol UA model = 7
-      sLine = FileInfo%Lines(CurLine)
-      call Conv2UC(sLine)  ! to uppercase
-      if (index(sLine, 'RELTHICKNESS')>1) then
-         CALL ParseVarWDefault ( FileInfo, CurLine, 'RelThickness', p%RelThickness, 0.2_ReKi, ErrStat2, ErrMsg2, UnEc )
+      CALL ParseVarWDefault ( FileInfo, CurLine, 'RelThickness', p%RelThickness, 0.2_ReKi, ErrStat2, ErrMsg2, UnEc )
+         if (ErrStat2 >= AbortErrLev) then ! if the line is missing, set RelThickness = -1 and move on...
+            p%RelThickness=-1 ! To trigger an error
+            !call WrScr('Skipping. RelThickness not found on line 7 of Profile file: '//trim(InitInp%FileName) )
+         else
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      else
-         p%RelThickness=-1 ! To trigger an error
-         !call WrScr('Skipping. RelThickness not found on line 7 of Profile file: '//trim(InitInp%FileName) )
-      endif
+         endif
 
          
          ! NonDimArea is currently unused by AirfoilInfo or codes using AirfoilInfo.  GJH 9/13/2017
@@ -1042,10 +1043,12 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                         fullySeparate = p%Coefs(Row,ColCl) / 2.0_ReKi                      ! Eq. 61
                      end if
                   
+                     p%Coefs(Row,col_fs) = fullySeparate
+
                   end if
                
                   p%Coefs(Row,ColUAf) = f_st
-                  p%Coefs(Row,col_fs) = fullySeparate
+
                end do
                
                ! Compute variables to help x3 state with +/-180-degree wrap-around issues

@@ -368,20 +368,21 @@ The CMake options specific to OpenFAST and their default settings are:
 ::
 
     BUILD_DOCUMENTATION            - Build documentation (Default: OFF)
+    BUILD_FASTFARM                 - Enable FAST.Farm capabilities (Default: OFF)
     BUILD_OPENFAST_CPP_API         - Enable building OpenFAST - C++ API (Default: OFF)
-    BUILD_OPENFAST_SIMULINK_API    - Enable building OpenFAST for use with Simulink
+    BUILD_OPENFAST_SIMULINK_API    - Enable building OpenFAST for use with Simulink (Default: OFF)
     BUILD_SHARED_LIBS              - Enable building shared libraries (Default: OFF)
     BUILD_TESTING                  - Build the testing tree (Default: OFF)
     CMAKE_BUILD_TYPE               - Choose the build type: Debug Release (Default: Release)
     CMAKE_Fortran_MODULE_DIRECTORY - Set the Fortran Modules directory
     CMAKE_INSTALL_PREFIX           - Install path prefix, prepended onto install directories.
+    CODECOV                        - Enable infrastructure for measuring code coverage (Default: OFF)
     DOUBLE_PRECISION               - Treat REAL as double precision (Default: ON)
     FPE_TRAP_ENABLED               - Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
-    GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules
+    GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules (Default: OFF)
+    OPENMP                         - Enable OpenMP support (Default: OFF)
     ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
-    OPENMP                         - Enable OpenMP support (Default: OFF)
-    BUILD_FAST_FARM                - Enable FAST.Farm capabilities (Default: OFF)
 
 Additional system-specific options may exist for a given system, but those
 should not impact the OpenFAST configuration. As mentioned above, the

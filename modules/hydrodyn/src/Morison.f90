@@ -520,27 +520,27 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
                              NOutputs, OutParam, NMOutputs, MOutLst,  NJOutputs, JOutLst, uMesh, yMesh, &
                              p, m, errStat, errMsg ) 
                              
-   INTEGER,                  INTENT ( IN    )  :: UnSum
-   REAL(ReKi),               INTENT ( IN    )  :: g                    ! gravity
-   REAL(ReKi),               INTENT ( IN    )  :: MSL2SWL
-   REAL(ReKi),               INTENT ( IN    )  :: WtrDpth
-   INTEGER,                  INTENT ( IN    )  :: numJoints
-   INTEGER,                  INTENT ( IN    )  :: numNodes
-   TYPE(Morison_NodeType),   INTENT ( IN    )  :: nodes(:)  
-   INTEGER,                  INTENT ( IN    )  :: numMembers
-   TYPE(Morison_MemberType), INTENT ( IN    )  :: members(:)
-   INTEGER,                  INTENT ( IN    )  :: NOutputs
-   TYPE(OutParmType),        INTENT ( IN    )  :: OutParam(:)
-   INTEGER,                  INTENT ( IN    )  :: NMOutputs
-   TYPE(Morison_MOutput),    INTENT ( IN    )  :: MOutLst(:)
-   INTEGER,                  INTENT ( IN    )  :: NJOutputs
-   TYPE(Morison_JOutput),    INTENT ( IN    )  :: JOutLst(:)
-   TYPE(MeshType),           INTENT ( INOUT )  :: uMesh
-   TYPE(MeshType),           INTENT ( INOUT )  :: yMesh
-   TYPE(Morison_ParameterType), INTENT ( IN    ) :: p
-   TYPE(Morison_MiscVarType), INTENT ( IN    ) :: m 
-   INTEGER,                  INTENT (   OUT )  :: errStat             ! returns a non-zero value when an error occurs  
-   CHARACTER(*),             INTENT (   OUT )  :: errMsg              ! Error message if errStat /= ErrID_None
+   INTEGER,                               INTENT ( IN    )  :: UnSum
+   REAL(ReKi),                            INTENT ( IN    )  :: g                    ! gravity
+   REAL(ReKi),                            INTENT ( IN    )  :: MSL2SWL
+   REAL(ReKi),                            INTENT ( IN    )  :: WtrDpth
+   INTEGER,                               INTENT ( IN    )  :: numJoints
+   INTEGER,                               INTENT ( IN    )  :: numNodes
+   TYPE(Morison_NodeType),   ALLOCATABLE, INTENT ( IN    )  :: nodes(:)  
+   INTEGER,                               INTENT ( IN    )  :: numMembers
+   TYPE(Morison_MemberType), ALLOCATABLE, INTENT ( IN    )  :: members(:)
+   INTEGER,                               INTENT ( IN    )  :: NOutputs
+   TYPE(OutParmType),        ALLOCATABLE, INTENT ( IN    )  :: OutParam(:)
+   INTEGER,                               INTENT ( IN    )  :: NMOutputs
+   TYPE(Morison_MOutput),    ALLOCATABLE, INTENT ( IN    )  :: MOutLst(:)
+   INTEGER,                               INTENT ( IN    )  :: NJOutputs
+   TYPE(Morison_JOutput),    ALLOCATABLE, INTENT ( IN    )  :: JOutLst(:)
+   TYPE(MeshType),                        INTENT ( INOUT )  :: uMesh
+   TYPE(MeshType),                        INTENT ( INOUT )  :: yMesh
+   TYPE(Morison_ParameterType),           INTENT ( IN    ) :: p
+   TYPE(Morison_MiscVarType),             INTENT ( IN    ) :: m 
+   INTEGER,                               INTENT (   OUT )  :: errStat             ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                          INTENT (   OUT )  :: errMsg              ! Error message if errStat /= ErrID_None
 
    INTEGER                                     :: I, J
    REAL(ReKi)                                  :: l                   ! length of an element
@@ -1120,27 +1120,27 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
 !     This private subroutine generates the Cd, Ca, Cp, CdMG, CaMG and CpMG coefs for the member based on
 !     the input data.  
 !---------------------------------------------------------------------------------------------------- 
-   real(ReKi),                intent(in   )  :: MSL2SWL
-   integer(IntKi),            intent(in   )  :: MCoefMod
-   integer(IntKi),            intent(in   )  :: MmbrCoefIDIndx
-   real(ReKi),                intent(in   )  :: SimplCd 
-   real(ReKi),                intent(in   )  :: SimplCdMG
-   real(ReKi),                intent(in   )  :: SimplCa
-   real(ReKi),                intent(in   )  :: SimplCaMG 
-   real(ReKi),                intent(in   )  :: SimplCp
-   real(ReKi),                intent(in   )  :: SimplCpMG 
-   real(ReKi),                intent(in   )  :: SimplAxCd
-   real(ReKi),                intent(in   )  :: SimplAxCdMG 
-   real(ReKi),                intent(in   )  :: SimplAxCa
-   real(ReKi),                intent(in   )  :: SimplAxCaMG 
-   real(ReKi),                intent(in   )  :: SimplAxCp
-   real(ReKi),                intent(in   )  :: SimplAxCpMG 
-   type(Morison_CoefMembers), intent(in   )  :: CoefMembers(:)
-   integer(IntKi),            intent(in   )  :: NCoefDpth
-   type(Morison_CoefDpths),   intent(in   )  :: CoefDpths(:)
-   integer(IntKi),            intent(in   )  :: numNodes
-   type(Morison_NodeType),    intent(in   )  :: nodes(:)
-   type(Morison_MemberType),  intent(inout)  :: member
+   real(ReKi),                             intent(in   )  :: MSL2SWL
+   integer(IntKi),                         intent(in   )  :: MCoefMod
+   integer(IntKi),                         intent(in   )  :: MmbrCoefIDIndx
+   real(ReKi),                             intent(in   )  :: SimplCd 
+   real(ReKi),                             intent(in   )  :: SimplCdMG
+   real(ReKi),                             intent(in   )  :: SimplCa
+   real(ReKi),                             intent(in   )  :: SimplCaMG 
+   real(ReKi),                             intent(in   )  :: SimplCp
+   real(ReKi),                             intent(in   )  :: SimplCpMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCd
+   real(ReKi),                             intent(in   )  :: SimplAxCdMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCa
+   real(ReKi),                             intent(in   )  :: SimplAxCaMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCp
+   real(ReKi),                             intent(in   )  :: SimplAxCpMG 
+   type(Morison_CoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
+   integer(IntKi),                         intent(in   )  :: NCoefDpth
+   type(Morison_CoefDpths),   allocatable, intent(in   )  :: CoefDpths(:)
+   integer(IntKi),                         intent(in   )  :: numNodes
+   type(Morison_NodeType),    allocatable, intent(in   )  :: nodes(:)
+   type(Morison_MemberType),               intent(inout)  :: member
    
    type(Morison_NodeType)                      :: node, node1, node2
    integer(IntKi)                              :: i, j
@@ -1200,12 +1200,12 @@ end subroutine SetExternalHydroCoefs
 
 SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, MSL2SWL, tMG, MGdensity )
    ! sets the margine growth thickness of a single node (previously all nodes)
-   INTEGER,                      INTENT( IN    )  :: numMGDepths
-   TYPE(Morison_MGDepthsType),   INTENT( IN    )  :: MGDepths(:)
-   TYPE(Morison_NodeType),       INTENT( IN    )  :: node
-   real(ReKi),                   intent( in    )  :: MSL2SWL
-   real(ReKi),                   intent( inout )  :: tMG
-   real(ReKi),                   intent( inout )  :: MGdensity
+   INTEGER,                                  INTENT( IN    )  :: numMGDepths
+   TYPE(Morison_MGDepthsType), ALLOCATABLE,  INTENT( IN    )  :: MGDepths(:)
+   TYPE(Morison_NodeType),                   INTENT( IN    )  :: node
+   real(ReKi),                               intent( in    )  :: MSL2SWL
+   real(ReKi),                               intent( inout )  :: tMG
+   real(ReKi),                               intent( inout )  :: MGdensity
    
    INTEGER                 :: I, J
    REAL(ReKi)              :: z
