@@ -123,7 +123,15 @@ typedef   ^                         ^            ReKi                    WriteOu
 
 # ..... Data for driver simulation .......................................................................................................
 typedef   ^                        Dvr_SimData  character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
+typedef   ^                         ^            IntKi                   MHK              -      -     -   "MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}" "-"
 typedef   ^                         ^            IntKi                   AnalysisType     -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef   ^                         ^            ReKi                    FldDens          -      -     -   "Density of working fluid" "kg/m^3"
+typedef   ^                         ^            ReKi                    KinVisc          -      -     -   "Kinematic viscosity of working fluid" "m^2/s"
+typedef   ^                         ^            ReKi                    SpdSound         -      -     -   "Speed of sound in working fluid" "m/s"
+typedef   ^                         ^            ReKi                    Patm             -      -     -   "Atmospheric pressure" "Pa"
+typedef   ^                         ^            ReKi                    Pvap             -      -     -   "Vapour pressure of working fluid" "Pa"
+typedef   ^                         ^            ReKi                    WtrDpth          -      -     -   "Water depth" "m"
+typedef   ^                         ^            ReKi                    MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" "m"
 typedef   ^                         ^            IntKi                   numTurbines      -      -     -   "number of blades on turbine" "-"
 typedef   ^                         ^            WTData                  WT               :      -     -   "Wind turbine data for driver" "-"
 typedef   ^                         ^            DbKi                    dT               -      -     -   "time increment" "s"

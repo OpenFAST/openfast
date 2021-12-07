@@ -156,7 +156,15 @@ IMPLICIT NONE
 ! =========  Dvr_SimData  =======
   TYPE, PUBLIC :: Dvr_SimData
     character(1024)  :: AD_InputFile      !< Name of AeroDyn input file [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine} [-]
     INTEGER(IntKi)  :: AnalysisType      !< 0=Steady Wind, 1=InflowWind [-]
+    REAL(ReKi)  :: FldDens      !< Density of working fluid [kg/m^3]
+    REAL(ReKi)  :: KinVisc      !< Kinematic viscosity of working fluid [m^2/s]
+    REAL(ReKi)  :: SpdSound      !< Speed of sound in working fluid [m/s]
+    REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
+    REAL(ReKi)  :: Pvap      !< Vapour pressure of working fluid [Pa]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: numTurbines      !< number of blades on turbine [-]
     TYPE(WTData) , DIMENSION(:), ALLOCATABLE  :: WT      !< Wind turbine data for driver [-]
     REAL(DbKi)  :: dT      !< time increment [s]
@@ -3385,7 +3393,15 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstDvr_SimDataData%AD_InputFile = SrcDvr_SimDataData%AD_InputFile
+    DstDvr_SimDataData%MHK = SrcDvr_SimDataData%MHK
     DstDvr_SimDataData%AnalysisType = SrcDvr_SimDataData%AnalysisType
+    DstDvr_SimDataData%FldDens = SrcDvr_SimDataData%FldDens
+    DstDvr_SimDataData%KinVisc = SrcDvr_SimDataData%KinVisc
+    DstDvr_SimDataData%SpdSound = SrcDvr_SimDataData%SpdSound
+    DstDvr_SimDataData%Patm = SrcDvr_SimDataData%Patm
+    DstDvr_SimDataData%Pvap = SrcDvr_SimDataData%Pvap
+    DstDvr_SimDataData%WtrDpth = SrcDvr_SimDataData%WtrDpth
+    DstDvr_SimDataData%MSL2SWL = SrcDvr_SimDataData%MSL2SWL
     DstDvr_SimDataData%numTurbines = SrcDvr_SimDataData%numTurbines
 IF (ALLOCATED(SrcDvr_SimDataData%WT)) THEN
   i1_l = LBOUND(SrcDvr_SimDataData%WT,1)
@@ -3512,7 +3528,15 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%AD_InputFile)  ! AD_InputFile
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! AnalysisType
+      Re_BufSz   = Re_BufSz   + 1  ! FldDens
+      Re_BufSz   = Re_BufSz   + 1  ! KinVisc
+      Re_BufSz   = Re_BufSz   + 1  ! SpdSound
+      Re_BufSz   = Re_BufSz   + 1  ! Patm
+      Re_BufSz   = Re_BufSz   + 1  ! Pvap
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! numTurbines
   Int_BufSz   = Int_BufSz   + 1     ! WT allocated yes/no
   IF ( ALLOCATED(InData%WT) ) THEN
@@ -3638,8 +3662,24 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%AD_InputFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AnalysisType
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%FldDens
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%KinVisc
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%SpdSound
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Patm
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Pvap
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%numTurbines
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WT) ) THEN
@@ -3850,8 +3890,24 @@ ENDIF
       OutData%AD_InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%AnalysisType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%FldDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%KinVisc = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SpdSound = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Patm = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Pvap = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%numTurbines = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WT not allocated
