@@ -164,7 +164,7 @@ class HydroDynLib(CDLL):
 
     # _initialize_routines() ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
-        self.HydroDyn_Init_c.argtypes = [
+        self.HydroDyn_C_Init.argtypes = [
             POINTER(c_char),                    # OutRootName 
             POINTER(c_char_p),                  # input file string
             POINTER(c_int),                     # input file string length
@@ -186,9 +186,9 @@ class HydroDynLib(CDLL):
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
-        self.HydroDyn_Init_c.restype = c_int 
+        self.HydroDyn_C_Init.restype = c_int 
 
-        self.HydroDyn_CalcOutput_c.argtypes = [
+        self.HydroDyn_C_CalcOutput.argtypes = [
             POINTER(c_double),                  # Time_C
             POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
             POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
@@ -199,9 +199,9 @@ class HydroDynLib(CDLL):
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
-        self.HydroDyn_CalcOutput_c.restype = c_int
+        self.HydroDyn_C_CalcOutput.restype = c_int
 
-        self.HydroDyn_UpdateStates_c.argtypes = [
+        self.HydroDyn_C_UpdateStates.argtypes = [
             POINTER(c_double),                  # Time_C
             POINTER(c_double),                  # TimeNext_C
             POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
@@ -211,13 +211,13 @@ class HydroDynLib(CDLL):
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
-        self.HydroDyn_CalcOutput_c.restype = c_int
+        self.HydroDyn_C_UpdateStates.restype = c_int
 
-        self.HydroDyn_End_c.argtypes = [
+        self.HydroDyn_C_End.argtypes = [
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
-        self.HydroDyn_End_c.restype = c_int
+        self.HydroDyn_C_End.restype = c_int
 
     # hydrodyn_init ------------------------------------------------------------------------------------------------------------
     def hydrodyn_init(self, input_string_array):
@@ -265,8 +265,8 @@ class HydroDynLib(CDLL):
             nodeInitLoc_flat_c[i] = c_float(p)
 
 
-        # call HydroDyn_Init_c
-        self.HydroDyn_Init_c(
+        # call HydroDyn_C_Init
+        self.HydroDyn_C_Init(
             _outRootName_c,                         # IN: rootname for HD file writing
             c_char_p(input_string),                 # IN: input file string
             byref(c_int(input_string_length)),      # IN: input file string length
@@ -326,8 +326,8 @@ class HydroDynLib(CDLL):
         # Set up output channels
         outputChannelValues_c = (c_float * self.numChannels)(0.0,)
 
-        # Run HydroDyn_CalcOutput_c
-        self.HydroDyn_CalcOutput_c(
+        # Run HydroDyn_C_CalcOutput
+        self.HydroDyn_C_CalcOutput(
             byref(c_double(time)),                  # IN: time at which to calculate output forces 
             byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
             nodePos_flat_c,                         # IN: positions - specified by user
@@ -385,7 +385,7 @@ class HydroDynLib(CDLL):
         nodeFrc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
 
         # Run HydroDyn_UpdateStates_c
-        self.HydroDyn_UpdateStates_c(
+        self.HydroDyn_C_UpdateStates(
             byref(c_double(time)),                  # IN: time at which to calculate output forces 
             byref(c_double(timeNext)),              # IN: time T+dt we are stepping to 
             byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
@@ -402,8 +402,8 @@ class HydroDynLib(CDLL):
     def hydrodyn_end(self):
         if not self.ended:
             self.ended = True
-            # Run HydroDyn_End_c
-            self.HydroDyn_End_c(
+            # Run HydroDyn_C_End
+            self.HydroDyn_C_End(
                 byref(self.error_status_c),
                 self.error_message_c
             )

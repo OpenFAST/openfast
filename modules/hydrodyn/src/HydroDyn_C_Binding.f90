@@ -17,7 +17,7 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-MODULE HydroDyn_C
+MODULE HydroDyn_C_BINDING
 
     USE ISO_C_BINDING
     USE HydroDyn
@@ -26,10 +26,10 @@ MODULE HydroDyn_C
 
    IMPLICIT NONE
 
-   PUBLIC :: HydroDyn_Init_C
-   PUBLIC :: HydroDyn_CalcOutput_C
-   PUBLIC :: HydroDyn_UpdateStates_C
-   PUBLIC :: HydroDyn_End_C
+   PUBLIC :: HydroDyn_C_Init
+   PUBLIC :: HydroDyn_C_CalcOutput
+   PUBLIC :: HydroDyn_C_UpdateStates
+   PUBLIC :: HydroDyn_C_End
 
    !------------------------------------------------------------------------------------
    !  Error handling
@@ -169,18 +169,18 @@ end subroutine SetErr
 !===============================================================================================================
 !--------------------------------------------- HydroDyn Init----------------------------------------------------
 !===============================================================================================================
-SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLength_C, &
+SUBROUTINE HydroDyn_C_Init( OutRootName_C, InputFileString_C, InputFileStringLength_C, &
                Gravity_C, defWtrDens_C, defWtrDpth_C, defMSL2SWL_C,                    &
                PtfmRefPtPositionX_C, PtfmRefPtPositionY_C,                             &
                NumNodePts_C,  InitNodePositions_C,                                     &
                !NumWaveElev_C, WaveElevXY_C                                             &    !Placeholder for later
                InterpOrder_C, T_initial_C, DT_C, TMax_C,                               &
                NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,              &
-               ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_Init_c')
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_C_Init')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_Init_c
-!GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_Init_c
+!DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_Init
+!GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_Init
 #endif
 
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
@@ -217,7 +217,7 @@ SUBROUTINE HydroDyn_Init_c( OutRootName_C, InputFileString_C, InputFileStringLen
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
    integer(IntKi)                                                 :: i,j,k             !< generic counters
-   character(*), parameter                                        :: RoutineName = 'HydroDyn_Init_C'  !< for error handling
+   character(*), parameter                                        :: RoutineName = 'HydroDyn_C_Init'  !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -599,19 +599,19 @@ CONTAINS
       endif
    end subroutine CheckDepth
 
-END SUBROUTINE HydroDyn_Init_c
+END SUBROUTINE HydroDyn_C_Init
 
 
 !===============================================================================================================
 !--------------------------------------------- HydroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE HydroDyn_CalcOutput_c(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, NodeAcc_C, &
-               NodeFrc_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_CalcOutput_c')
+SUBROUTINE HydroDyn_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, NodeAcc_C, &
+               NodeFrc_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_C_CalcOutput')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_CalcOutput_c
-!GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_CalcOutput_c
+!DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_CalcOutput
+!GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_CalcOutput
 #endif
    real(c_double),            intent(in   )  :: Time_C
    integer(c_int),            intent(in   )  :: NumNodePts_C                 !< Number of mesh points we are transfering motions to and output loads to
@@ -630,7 +630,7 @@ SUBROUTINE HydroDyn_CalcOutput_c(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, Nod
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
-   character(*), parameter                   :: RoutineName = 'HydroDyn_CalcOutput_c' !< for error handling
+   character(*), parameter                   :: RoutineName = 'HydroDyn_C_CalcOutput' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -686,7 +686,7 @@ CONTAINS
       Failed = ErrStat >= AbortErrLev
       if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
-END SUBROUTINE HydroDyn_CalcOutput_c
+END SUBROUTINE HydroDyn_C_CalcOutput
 
 !===============================================================================================================
 !--------------------------------------------- HydroDyn UpdateStates -------------------------------------------
@@ -696,12 +696,12 @@ END SUBROUTINE HydroDyn_CalcOutput_c
 !! Since we don't really know if we are doing correction steps or not, we will track the previous state and
 !! reset to those if we are repeating a timestep (normally this would be handled by the OF glue code, but since
 !! the states are not passed across the interface, we must handle them here).
-SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C, NodeVel_C, NodeAcc_C,   &
-                                    ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_UpdateStates_c')
+SUBROUTINE HydroDyn_C_UpdateStates( Time_C, TimeNext_C, NumNodePts_C, NodePos_C, NodeVel_C, NodeAcc_C,   &
+                                    ErrStat_C, ErrMsg_C) BIND (C, NAME='HydroDyn_C_UpdateStates')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_UpdateStates_c
-!GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_UpdateStates_c
+!DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_UpdateStates
+!GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_UpdateStates
 #endif
    real(c_double),            intent(in   )  :: Time_C
    real(c_double),            intent(in   )  :: TimeNext_C
@@ -719,7 +719,7 @@ SUBROUTINE HydroDyn_UpdateStates_c( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
-   character(*), parameter                   :: RoutineName = 'HydroDyn_UpdateStates_c' !< for error handling
+   character(*), parameter                   :: RoutineName = 'HydroDyn_C_UpdateStates' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -841,18 +841,18 @@ contains
       Failed = ErrStat >= AbortErrLev
       if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
-END SUBROUTINE HydroDyn_UpdateStates_c
+END SUBROUTINE HydroDyn_C_UpdateStates
 
 !===============================================================================================================
 !--------------------------------------------------- HydroDyn End-----------------------------------------------
 !===============================================================================================================
 !  NOTE: the error handling in this routine is slightly different than the other routines
 
-SUBROUTINE HydroDyn_End_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='HydroDyn_End_c')
+SUBROUTINE HydroDyn_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='HydroDyn_C_End')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_End_c
-!GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_End_c
+!DEC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_End
+!GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_End
 #endif
    integer(c_int),          intent(  out) :: ErrStat_C
    character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
@@ -878,7 +878,7 @@ SUBROUTINE HydroDyn_End_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='HydroDyn_End_c')
 
    ! Call the main subroutine HydroDyn_End
    !     If u is not allocated, then we didn't get far at all in initialization,
-   !     or HD_End_C got called before Init.  We don't want a segfault, so check
+   !     or HD_C_End got called before Init.  We don't want a segfault, so check
    !     for allocation.
    if (allocated(u)) then
       call HydroDyn_End( u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
@@ -939,7 +939,7 @@ CONTAINS
       call NWTC_Library_Destroymeshmaptype( Map_HD_Mo_P_2_Load   , ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end subroutine ClearMesh
-END SUBROUTINE HydroDyn_End_c
+END SUBROUTINE HydroDyn_C_End
 
 
 !> This routine is operating on module level data, hence few inputs
@@ -1029,4 +1029,4 @@ subroutine Set_OutputLoadArray()
    enddo
 end subroutine Set_OutputLoadArray
 
-END MODULE HydroDyn_C
+END MODULE HydroDyn_C_BINDING
