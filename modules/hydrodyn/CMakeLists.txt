@@ -43,7 +43,6 @@ set(HYDRODYN_SOURCES
   src/WAMIT_Interp.f90
   src/Waves.f90
   src/Waves2.f90
-  src/Waves2_Output.f90
   src/Conv_Radiation_Types.f90
   src/Current_Types.f90
   src/HydroDyn_Types.f90
