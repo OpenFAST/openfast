@@ -41,8 +41,8 @@ typedef    ^        ^                  ReKi                             PLExp   
 typedef    ^    InitInputType          AD_InitInputType                 AD               -      -     -   "AD Init input types"
 typedef    ^        ^                  ADI_IW_InputData                 IW_InitInp       -      -     -   "IW Init input types"
 typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
-typedef    ^        ^                  Logical                          storeHHVel       -      - .false. "If True, hub height velocity will be computed by infow wind"	-
-typedef    ^        ^                  IntKi                            WrVTK            -      -    0    "Flag for VTK outputs"	-
+typedef    ^        ^                  Logical                          storeHHVel       -  .false.   -   "If True, hub height velocity will be computed by infow wind"	-
+typedef    ^        ^                  IntKi                            WrVTK            -     0      -   "Flag for VTK outputs"	-
 
 # ..... InitOut ...................................................................................................................
 typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
@@ -69,7 +69,7 @@ typedef    ^        ^                  AD_VTK_RotSurfaceType            VTK_surf
 typedef    ^    ParameterType          AD_ParameterType                 AD               -      -     -   "Parameters"
 typedef    ^        ^                  DbKi                             dt               -      -     -   "time increment" "s"
 typedef    ^        ^                  Logical                          storeHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
-typedef    ^        ^                  IntKi                            WrVTK            -      -    0    "Flag for VTK outputs"	-
+typedef    ^        ^                  IntKi                            WrVTK            -      0     -   "Flag for VTK outputs"	-
 
 # ..... Inputs ....................................................................................................................
 typedef    ^    InputType              AD_InputType                     AD               -      -     -   "Array of system inputs"
@@ -105,8 +105,8 @@ typedef   ^                         ^            MeshType                Nacelle
 typedef   ^                         ^            MeshType                HubPtMotion      -      -     -   "Point mesh for hub point motion" "-"
 typedef   ^                         ^            MeshType                BladeRootMotion  :      -     -   "BladeRootMotion Point mesh for blade root motion" "-"
 typedef   ^                         ^            MeshType                BladeLn2Mesh     :      -     -   "(only if elastic blades) BladeLn2Mesh    Line mesh along blade" "-"
-typedef   ^                         ^            Logical                 hasTower         -      -  .true. "True if a tower is present" "-"
-typedef   ^                         ^            Logical                 rigidBlades      -      -  .true. "True if blades are rigid (using BladeRootMotion) or not (Useing BldeLn2Mesh)" "-"
+typedef   ^                         ^            Logical                 hasTower         -   .true.   -   "True if a tower is present" "-"
+typedef   ^                         ^            Logical                 rigidBlades      -   .true.   -   "True if blades are rigid (using BladeRootMotion) or not (Useing BldeLn2Mesh)" "-"
 typedef   ^                         ^            IntKi                   numBlades        -      -     -   "Number of blades" -
 typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_T    -      -     -   "(only if hasTower) Mesh mapping from tower base to AD tower base"
 typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_T    -      -     -   "(only if hasTower) Mesh mapping from tower base to AD tower line"

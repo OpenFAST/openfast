@@ -66,8 +66,8 @@ IMPLICIT NONE
     TYPE(AD_InitInputType)  :: AD      !< AD Init input types [-]
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !< IW Init input types [-]
     Character(1024)  :: RootName      !< RootName for writing output files [-]
-    LOGICAL  :: storeHHVel      !< If True, hub height velocity will be computed by infow wind [-]
-    INTEGER(IntKi)  :: WrVTK      !< Flag for VTK outputs [-]
+    LOGICAL  :: storeHHVel = .false.      !< If True, hub height velocity will be computed by infow wind [-]
+    INTEGER(IntKi)  :: WrVTK = 0      !< Flag for VTK outputs [-]
   END TYPE ADI_InitInputType
 ! =======================
 ! =========  ADI_InitOutputType  =======
@@ -109,7 +109,7 @@ IMPLICIT NONE
     TYPE(AD_ParameterType)  :: AD      !< Parameters [-]
     REAL(DbKi)  :: dt      !< time increment [s]
     LOGICAL  :: storeHHVel      !< If True, hub height velocity will be computed by infow wind [-]
-    INTEGER(IntKi)  :: WrVTK      !< Flag for VTK outputs [-]
+    INTEGER(IntKi)  :: WrVTK = 0      !< Flag for VTK outputs [-]
   END TYPE ADI_ParameterType
 ! =======================
 ! =========  ADI_InputType  =======
@@ -147,8 +147,8 @@ IMPLICIT NONE
     TYPE(MeshType)  :: HubPtMotion      !< Point mesh for hub point motion [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootMotion      !< BladeRootMotion Point mesh for blade root motion [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeLn2Mesh      !< (only if elastic blades) BladeLn2Mesh    Line mesh along blade [-]
-    LOGICAL  :: hasTower      !< True if a tower is present [-]
-    LOGICAL  :: rigidBlades      !< True if blades are rigid (using BladeRootMotion) or not (Useing BldeLn2Mesh) [-]
+    LOGICAL  :: hasTower = .true.      !< True if a tower is present [-]
+    LOGICAL  :: rigidBlades = .true.      !< True if blades are rigid (using BladeRootMotion) or not (Useing BldeLn2Mesh) [-]
     INTEGER(IntKi)  :: numBlades      !< Number of blades [-]
     TYPE(MeshMapType)  :: ED_P_2_AD_P_T      !< (only if hasTower) Mesh mapping from tower base to AD tower base [-]
     TYPE(MeshMapType)  :: AD_P_2_AD_L_T      !< (only if hasTower) Mesh mapping from tower base to AD tower line [-]
