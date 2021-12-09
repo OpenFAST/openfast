@@ -27,7 +27,7 @@ set(SEAST_SOURCES
   src/Waves.f90
   src/Waves2.f90
   src/UserWaves.f90
-  src/seastate_interp.f90
+  src/seastate_Interp.f90
   src/SeaState.f90
   src/SeaState_Output.f90
   src/Current_Types.f90
