@@ -1041,10 +1041,12 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                         fullySeparate = p%Coefs(Row,ColCl) / 2.0_ReKi                      ! Eq. 61
                      end if
                   
+                     p%Coefs(Row,col_fs) = fullySeparate
+
                   end if
                
                   p%Coefs(Row,ColUAf) = f_st
-                  p%Coefs(Row,col_fs) = fullySeparate
+
                end do
                
                ! Compute variables to help x3 state with +/-180-degree wrap-around issues
