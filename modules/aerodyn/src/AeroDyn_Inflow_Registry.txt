@@ -70,6 +70,7 @@ typedef    ^    ParameterType          AD_ParameterType                 AD      
 typedef    ^        ^                  DbKi                             dt               -      -     -   "time increment" "s"
 typedef    ^        ^                  Logical                          storeHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
 typedef    ^        ^                  IntKi                            WrVTK            -      0     -   "Flag for VTK outputs"	-
+typedef    ^        ^                  IntKi                            NumOuts          -      0     -   "Total number of WriteOutput outputs"	-
 
 # ..... Inputs ....................................................................................................................
 typedef    ^    InputType              AD_InputType                     AD               -      -     -   "Array of system inputs"

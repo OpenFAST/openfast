@@ -110,6 +110,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: dt      !< time increment [s]
     LOGICAL  :: storeHHVel      !< If True, hub height velocity will be computed by infow wind [-]
     INTEGER(IntKi)  :: WrVTK = 0      !< Flag for VTK outputs [-]
+    INTEGER(IntKi)  :: NumOuts = 0      !< Total number of WriteOutput outputs [-]
   END TYPE ADI_ParameterType
 ! =======================
 ! =========  ADI_InputType  =======
@@ -3119,6 +3120,7 @@ ENDIF
     DstParamData%dt = SrcParamData%dt
     DstParamData%storeHHVel = SrcParamData%storeHHVel
     DstParamData%WrVTK = SrcParamData%WrVTK
+    DstParamData%NumOuts = SrcParamData%NumOuts
  END SUBROUTINE ADI_CopyParam
 
  SUBROUTINE ADI_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -3189,6 +3191,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! dt
       Int_BufSz  = Int_BufSz  + 1  ! storeHHVel
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! NumOuts
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3249,6 +3252,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%storeHHVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WrVTK
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_PackParam
 
@@ -3323,6 +3328,8 @@ ENDIF
     OutData%storeHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%storeHHVel)
     Int_Xferred = Int_Xferred + 1
     OutData%WrVTK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_UnPackParam
 
