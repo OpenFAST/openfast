@@ -16,7 +16,6 @@
 
 if (GENERATE_TYPES)
   generate_f90_types(src/Conv_Radiation.txt ${CMAKE_CURRENT_LIST_DIR}/src/Conv_Radiation_Types.f90)
-  generate_f90_types(src/Current.txt ${CMAKE_CURRENT_LIST_DIR}/src/Current_Types.f90)
   generate_f90_types(src/HydroDyn.txt ${CMAKE_CURRENT_LIST_DIR}/src/HydroDyn_Types.f90)
   generate_f90_types(src/Morison.txt ${CMAKE_CURRENT_LIST_DIR}/src/Morison_Types.f90)
   generate_f90_types(src/SS_Radiation.txt ${CMAKE_CURRENT_LIST_DIR}/src/SS_Radiation_Types.f90)
@@ -29,7 +28,6 @@ endif()
 
 set(HYDRODYN_SOURCES
   src/Conv_Radiation.f90
-  src/Current.f90
   src/HydroDyn.f90
   src/HydroDyn_Input.f90
   src/HydroDyn_Output.f90
@@ -44,7 +42,6 @@ set(HYDRODYN_SOURCES
   src/Waves.f90
   src/Waves2.f90
   src/Conv_Radiation_Types.f90
-  src/Current_Types.f90
   src/HydroDyn_Types.f90
   src/Morison_Types.f90
   src/SS_Radiation_Types.f90
