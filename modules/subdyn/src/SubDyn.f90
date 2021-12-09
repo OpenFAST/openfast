@@ -3628,7 +3628,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
 
    ! Nodes properties
    write(UnSum, '("#",4x,1(A9),8('//trim(SFmt)//'))') 'Node_[#]', 'X_[m]','Y_[m]','Z_[m]', 'JType_[-]', 'JDirX_[-]','JDirY_[-]','JDirZ_[-]','JStff_[Nm/rad]'
-   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),3(E15.6,","),E15.6') !, comment='',label=.true.)
+   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),3(ES15.6,","),ES15.6') !, comment='',label=.true.)
 
    ! Element properties
    CALL AllocAry( DummyArray,  size(p%ElemProps), 16, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -3651,7 +3651,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       DummyArray(i,16) = p%ElemProps(i)%T0    ! Pretension [N]
    enddo
    write(UnSum, '("#",4x,6(A9),10('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
-   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),6(E15.6,","),E15.6') !, comment='',label=.true.)
+   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),6(ES15.6,","),ES15.6') !, comment='',label=.true.)
    deallocate(DummyArray)
 
    ! --- C
@@ -3696,7 +3696,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A,I6)')  '#Number of concentrated masses (NCMass):',Init%NCMass
    WRITE(UnSum, '(A10,10(A15))')  '#JointCMass',     'Mass',         'JXX',             'JYY',             'JZZ',              'JXY',             'JXZ',             'JYZ',              'MCGX',             'MCGY',             'MCGZ'
    do i=1,Init%NCMass
-      WRITE(UnSum, '("#",F10.0, 10(E15.6))') (Init%Cmass(i, j), j = 1, CMassCol)
+      WRITE(UnSum, '("#",F10.0, 10(ES15.6))') (Init%Cmass(i, j), j = 1, CMassCol)
    enddo
 
    WRITE(UnSum, '()') 
