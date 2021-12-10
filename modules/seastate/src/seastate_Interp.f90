@@ -183,7 +183,7 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, E
    INTEGER(IntKi),                              INTENT(in   )  :: nMax
    INTEGER(IntKi),                              intent(inout)  :: Indx_Lo
    INTEGER(IntKi),                              intent(inout)  :: Indx_Hi
-   real(ReKi),                                  intent(inout)  :: isopc
+   real(SiKi),                                  intent(inout)  :: isopc
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -235,7 +235,7 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
    INTEGER(IntKi),                              INTENT(in   )  :: nMax
    INTEGER(IntKi),                              intent(inout)  :: Indx_Lo
    INTEGER(IntKi),                              intent(inout)  :: Indx_Hi
-   real(ReKi),                                  intent(inout)  :: isopc
+   real(SiKi),                                  intent(inout)  :: isopc
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -288,7 +288,7 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
    INTEGER(IntKi),                              INTENT(in   )  :: nMax
    INTEGER(IntKi),                              intent(inout)  :: Indx_Lo
    INTEGER(IntKi),                              intent(inout)  :: Indx_Hi
-   real(ReKi),                                  intent(inout)  :: isopc
+   real(SiKi),                                  intent(inout)  :: isopc
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 

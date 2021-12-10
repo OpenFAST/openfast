@@ -85,7 +85,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    integer(IntKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*),  parameter                     :: RoutineName = 'SeaSt_ParaseInput'
-   
+   real(ReKi) :: tmp
       ! Initialize local data
    UnEc     = -1
    ErrStat  =  ErrID_None         
@@ -123,13 +123,14 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    CurLine = CurLine + 1
 
       ! WtrDens - Water density.
-   call ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%Waves%WtrDens, defWtrDens, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', tmp, defWtrDens, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
+   InputFileData%Waves%WtrDens = tmp
 
       ! WtrDpth - Water depth
-   call ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDpth', InputFileData%Waves%WtrDpth, defWtrDpth, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDpth', tmp, defWtrDpth, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-
+   InputFileData%Waves%WtrDpth = tmp
       ! MSL2SWL
    call ParseVarWDefault ( FileInfo_In, CurLine, 'MSL2SWL', InputFileData%MSL2SWL, defMSL2SWL, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;

@@ -46,8 +46,8 @@ typedef     ^                 ^                 INTEGER              WaveSeed   
 typedef     ^                 ^                 INTEGER              WaveStMod         -        -        -        "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
 typedef     ^                 ^                 DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
 typedef     ^                 ^                 SiKi                 WaveTp            -        -        -        "Peak spectral period of incident waves"  (sec)
-typedef     ^                 ^                 SiKi                 WtrDens           -        -        -        "Water density"   (kg/m^3)
-typedef     ^                 ^                 SiKi                 WtrDpth           -        -        -        "Water depth"  (meters)
+typedef     ^                 ^                 ReKi                 WtrDens           -        -        -        "Water density"   (kg/m^3)
+typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth"  (meters)
 typedef     ^                 ^                 INTEGER              NWaveElev         -        -        -        "Number of points where the incident wave elevations are computed (the XY grid point locations)"  -
 typedef     ^                 ^                 SiKi                 WaveElevxi        {:}      -        -        "xi-coordinates for points where the incident wave elevations can be output"  (meters)
 typedef     ^                 ^                 SiKi                 WaveElevyi        {:}      -        -        "yi-coordinates for points where the incident wave elevations can be output"  (meters)
