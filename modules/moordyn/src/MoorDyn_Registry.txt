@@ -385,7 +385,11 @@ typedef   ^       ^                    IntKi               MDUnOut        -     
 typedef   ^       ^                    IntKi               WaveKin        -     -    -   "Flag for whether or how to consider water kinematics"
 typedef   ^       ^                    IntKi               Current        -     -    -   "Flag for whether or how to consider water kinematics"
 typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0"
-typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
+typedef   ^       ^                    ReKi                TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
+typedef   ^       ^                    DbKi                mu_kT          -     -    -   "transverse kinetic friction coefficient" "(-)"
+typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"
+typedef   ^       ^                    DbKi                mc             -     -    -   "ratio of the static friction coefficient to the kinetic friction coefficient" "(-)"
+typedef   ^       ^                    DbKi                cv             -     -    -   "saturated damping coefficient" "(-)"
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -

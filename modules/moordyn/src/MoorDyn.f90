@@ -35,7 +35,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a16', '13 December 2021 (input format changes)' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a17', '13 December 2021 (input format changes + friction)' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -124,7 +124,8 @@ CONTAINS
       CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
       CHARACTER(1024)              :: FileName             !
 
-      REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid
+      REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid [m]
+      Real(DbKi)                   :: nvec(3)              ! local seabed surface normal vector (positive out)
       
       
       CHARACTER(25)                 :: let1                ! strings used for splitting and parsing identifiers
@@ -183,11 +184,15 @@ CONTAINS
       InputFileDat%TMaxIC    = 60.0_DbKi
       InputFileDat%CdScaleIC = 4.0_ReKi
       InputFileDat%threshIC  = 0.01_ReKi
-      p%WaveKin             = 0_IntKi
-      p%Current             = 0_IntKi
+      p%WaveKin              = 0_IntKi
+      p%Current              = 0_IntKi
       p%dtOut                = 0.0_DbKi
+      p%mu_kT                = 0.0_DbKi
+      p%mu_kA                = 0.0_DbKi
+      p%mc                   = 1.0_DbKi
+      p%cv                   = 200.0_DbKi
       DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
-                       ! DepthValue and InitInp%WtrDepth are processed later by getBathymetry.
+                       ! DepthValue and InitInp%WtrDepth are processed later by setupBathymetry.
       WaterKinValue = ""
       
       m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
@@ -410,7 +415,7 @@ CONTAINS
                   else if ( OptString == 'RHOW') then
                      read (OptValue,*) p%rhoW
                   else if ( OptString == 'WTRDPTH') then
-                     read (OptValue,*) DepthValue    ! water depth input read in as a string to be processed by getBathymetry
+                     read (OptValue,*) DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
                   else if ( OptString == 'KBOT')  then
                      read (OptValue,*) p%kBot
                   else if ( OptString == 'CBOT')  then
@@ -427,6 +432,14 @@ CONTAINS
                      read (OptValue,*) WaterKinValue
                   else if ( OptString == 'DTOUT')  then
                      read (OptValue,*) p%dtOut
+                  else if ( OptString == 'MU_KT')  then
+                     read (OptValue,*) p%mu_kT
+                  else if ( OptString == 'MU_KA')  then
+                     read (OptValue,*) p%mu_kT
+                  else if ( OptString == 'MC')  then
+                     read (OptValue,*) p%mc
+                  else if ( OptString == 'CV')  then
+                     read (OptValue,*) p%cv
                   else
                      CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
                   end if
@@ -466,7 +479,7 @@ CONTAINS
 
       ! set up seabed bathymetry
       CALL setupBathymetry(DepthValue, InitInp%WtrDepth, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, ErrStat2, ErrMsg2)
-      CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, 0.0_DbKi, 0.0_DbKi, p%WtrDpth)  ! set depth at 0,0 as nominal for waves etc
+      CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, 0.0_DbKi, 0.0_DbKi, p%WtrDpth, nvec)  ! set depth at 0,0 as nominal for waves etc
       
       
       ! set up wave and current kinematics 
@@ -1011,8 +1024,8 @@ CONTAINS
                      CALL Conv2UC(tempString4) ! convert to uppercase so that matching is not case-sensitive
                      
                      if ((INDEX(tempString4, "SEABED") > 0 ) .or. (INDEX(tempString4, "GROUND") > 0 ) .or. (INDEX(tempString4, "FLOOR") > 0 )) then  ! if keyword used
-                        PRINT *, 'Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry'                   ! interpret the anchor depth value as a 'seabed' input
-                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth)               ! meaning the anchor should be at the depth of the local bathymetry
+                        PRINT *, 'Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry'         ! interpret the anchor depth value as a 'seabed' input
+                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth, nvec)         ! meaning the anchor should be at the depth of the local bathymetry
                         tempArray(3) = -depth
                      else                                                       ! if the anchor depth input isn't one of the supported keywords, 
                         READ(tempString4, *, IOSTAT=ErrStat2) tempArray(3)      ! assume it's a scalar depth value

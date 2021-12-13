@@ -561,7 +561,8 @@ CONTAINS
       Real(DbKi)                 :: Fcentripetal(3)        ! centripetal force
       Real(DbKi)                 :: Mcentripetal(3)        ! centripetal moment
 
-      Real(DbKi)                 :: depth                  ! local interpolated depth from bathymetry grid
+      Real(DbKi)                 :: depth                  ! local interpolated depth from bathymetry grid [m]
+      Real(DbKi)                 :: nvec(3)        ! local seabed surface normal vector (positive out)
 
 
       N = Rod%N
@@ -722,7 +723,7 @@ CONTAINS
             
             ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
             ! interpolate the local depth from the bathymetry grid
-            CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Rod%r(1,I), Rod%r(2,I), depth)
+            CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Rod%r(1,I), Rod%r(2,I), depth, nvec)
             
             IF (Rod%r(3,I) < -depth) THEN
                IF (I==0) THEN

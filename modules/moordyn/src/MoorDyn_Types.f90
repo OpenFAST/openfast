@@ -418,6 +418,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Current      !< Flag for whether or how to consider water kinematics [-]
     INTEGER(IntKi)  :: nTurbines      !< Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0 [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TurbineRefPos      !< reference position of turbines in farm, shape: 3, nTurbines [-]
+    REAL(DbKi)  :: mu_kT      !< transverse kinetic friction coefficient [(-)]
+    REAL(DbKi)  :: mu_kA      !< axial kinetic friction coefficient [(-)]
+    REAL(DbKi)  :: mc      !< ratio of the static friction coefficient to the kinetic friction coefficient [(-)]
+    REAL(DbKi)  :: cv      !< saturated damping coefficient [(-)]
     INTEGER(IntKi)  :: nxWave      !< number of x wave grid points [-]
     INTEGER(IntKi)  :: nyWave      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave      !< number of z wave grid points [-]
@@ -10701,6 +10705,10 @@ IF (ALLOCATED(SrcParamData%TurbineRefPos)) THEN
   END IF
     DstParamData%TurbineRefPos = SrcParamData%TurbineRefPos
 ENDIF
+    DstParamData%mu_kT = SrcParamData%mu_kT
+    DstParamData%mu_kA = SrcParamData%mu_kA
+    DstParamData%mc = SrcParamData%mc
+    DstParamData%cv = SrcParamData%cv
     DstParamData%nxWave = SrcParamData%nxWave
     DstParamData%nyWave = SrcParamData%nyWave
     DstParamData%nzWave = SrcParamData%nzWave
@@ -11153,6 +11161,10 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! TurbineRefPos upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%TurbineRefPos)  ! TurbineRefPos
   END IF
+      Db_BufSz   = Db_BufSz   + 1  ! mu_kT
+      Db_BufSz   = Db_BufSz   + 1  ! mu_kA
+      Db_BufSz   = Db_BufSz   + 1  ! mc
+      Db_BufSz   = Db_BufSz   + 1  ! cv
       Int_BufSz  = Int_BufSz  + 1  ! nxWave
       Int_BufSz  = Int_BufSz  + 1  ! nyWave
       Int_BufSz  = Int_BufSz  + 1  ! nzWave
@@ -11444,6 +11456,14 @@ ENDIF
         END DO
       END DO
   END IF
+    DbKiBuf(Db_Xferred) = InData%mu_kT
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%mu_kA
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%mc
+    Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%cv
+    Db_Xferred = Db_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nxWave
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nyWave
@@ -12066,6 +12086,14 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%mu_kT = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%mu_kA = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%mc = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%cv = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     OutData%nxWave = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nyWave = IntKiBuf(Int_Xferred)

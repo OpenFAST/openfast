@@ -1024,7 +1024,23 @@ CONTAINS
       Real(DbKi)                       :: Mforce_ip1(3)  ! force vector for a contributor to the effect of a bending moment [N]
       Real(DbKi)                       :: Mforce_i(  3)  ! force vector for a contributor to the effect of a bending moment [N]
 
-      Real(DbKi)                       :: depth          ! local water depth interpolated from bathymetry grid
+      Real(DbKi)                       :: depth          ! local water depth interpolated from bathymetry grid [m]
+      Real(DbKi)                       :: nvec(3)        ! local seabed surface normal vector (positive out)
+      Real(DbKi)                       :: Fn(3)          ! seabed contact normal force vector
+      Real(DbKi)                       :: Vn(3)          ! normal velocity of a line node relative to the seabed slope [m/s]
+      Real(DbKi)                       :: Va(3)          ! velocity of a line node in the axial or "in-line" direction [m/s]
+      Real(DbKi)                       :: Vt(3)          ! velocity of a line node in the transverse direction [m/s]
+      Real(DbKi)                       :: VtMag          ! magnitude of the transverse velocity of a line node [m/s]
+      Real(DbKi)                       :: VaMag          ! magnitude of the axial velocity of a line node [m/s]
+      Real(DbKi)                       :: FkTmax         ! maximum kinetic friction force in the transverse direction (scalar)
+      Real(DbKi)                       :: FkAmax         ! maximum kinetic friction force in the axial direction (scalar)
+      Real(DbKi)                       :: FkT(3)         ! kinetic friction force in the transverse direction (vector)
+      Real(DbKi)                       :: FkA(3)         ! kinetic friction force in the axial direction (vector)
+      !Real(DbKi)                       :: mc_T           ! ratio of the transverse static friction coefficient to the transverse kinetic friction coefficient
+      !Real(DbKi)                       :: mc_A           ! ratio of the axial static friction coefficient to the axial kinetic friction coefficient
+      Real(DbKi)                       :: FfT(3)         ! total friction force in the transverse direction
+      Real(DbKi)                       :: FfA(3)         ! total friction force in the axial direction
+      Real(DbKi)                       :: Ff(3)          ! total friction force on the line node
 
 
       N = Line%N                      ! for convenience
@@ -1316,31 +1332,78 @@ CONTAINS
          ! F-K force from fluid acceleration not implemented yet
 
          ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
+         ! bottom contact - updated throughout October 2021 for seabed bathymetry and friction models
          
-         ! interpolate the local depth from the bathymetry grid
-         CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Line%r(1,I), Line%r(2,I), depth)
+         ! interpolate the local depth from the bathymetry grid and return the vector normal to the seabed slope
+         CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Line%r(1,I), Line%r(2,I), depth, nvec)
 
-         IF (Line%r(3,I) < -depth) THEN
+         IF (Line%r(3,I) < -depth) THEN   ! for every line node at or below the seabed
+            ! calculate the velocity of the node in the normal direction of the seabed slope
+            DO J = 1, 3
+               Vn(J) = DOT_PRODUCT( Line%rd(:,I), nvec) * nvec(J)
+            END DO
+            ! calculate the normal contact force on the line node
             IF (I==0) THEN
-               Line%B(3,I) = ( (-depth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(            Line%l(I+1) ) 
+               Fn = ( (-depth - Line%r(3,I))*nvec(3)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(            Line%l(I+1) )
             ELSE IF (I==N) THEN
-               Line%B(3,I) = ( (-depth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I)               ) 
+               Fn = ( (-depth - Line%r(3,I))*nvec(3)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(Line%l(I)               )
             ELSE
-               Line%B(3,I) = ( (-depth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) ) 
-         ! IF (Line%r(3,I) < -p%WtrDpth) THEN
-         !    IF (I==0) THEN
-         !       Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(            Line%l(I+1) ) 
-         !    ELSE IF (I==N) THEN
-         !       Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I)               ) 
-         !    ELSE
-         !       Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) ) 
-
-
-
+               Fn = ( (-depth - Line%r(3,I))*nvec(3)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) )
             END IF
+         
+            ! calculate the axial and transverse components of the total node velocity vector (q can now have a z-component from seabed slope)
+            DO J = 1, 3
+               Va(J) = DOT_PRODUCT( Line%rd(:,I) , Line%q(:,I) ) * Line%q(J,I)
+               Vt(J) = Line%rd(J,I) - Va(J)
+            END DO
+            ! calculate the magnitudes of each velocity
+            VaMag = SQRT(Va(1)**2+Va(2)**2+Va(3)**2)
+            VtMag = SQRT(Vt(1)**2+Vt(2)**2+Vt(3)**2)
+
+            ! find the maximum possible kinetic friction force using transverse and axial kinetic friction coefficients
+            FkTmax = p%mu_kT*SQRT(Fn(1)**2+Fn(2)**2+Fn(3)**2)
+            FkAmax = p%mu_kA*SQRT(Fn(1)**2+Fn(2)**2+Fn(3)**2)
+            ! turn the maximum kinetic friction forces into vectors in the direction of their velocities
+            DO J = 1, 3
+               IF (VtMag==0) THEN
+                  FkT(J) = 0.0_DbKi
+               ELSE
+                  FkT(J) = FkTmax*Vt(J)/VtMag
+               END IF
+               IF (VaMag==0) THEN
+                  FkA(J) = 0.0_DbKi
+               ELSE
+                  FkA(J) = FkAmax*Va(J)/VaMag
+               END IF
+            END DO
+            ! calculate the ratio between the static and kinetic coefficients of friction
+            !mc_T = p%mu_sT/p%mu_kT
+            !mc_A = p%mu_sA/p%mu_kA
+            
+            ! calculate the transverse friction force
+            IF (p%mu_kT*p%cv*VtMag > p%mc*FkTmax) THEN   ! if the friction force of the linear curve is greater than the maximum friction force allowed adjusted for static friction,
+               FfT = -FkT                                ! then the friction force is the maximum kinetic friction force vector (constant part of the curve)
+            ELSE                                         ! if the friction force of the linear curve is less than the maximum friction force allowed adjusted for static friction,
+               FfT = -p%mu_kT*p%cv*Vt                    ! then the friction force is the calculated value of the linear line
+            END IF
+            ! calculate the axial friction force
+            IF (p%mu_kA*p%cv*VaMag > p%mc*FkAmax) THEN   ! if the friction force of the linear curve is greater than the maximum friction force allowed adjusted for static friction,
+               FfA = -FkA                                ! then the friction force is the maximum kinetic friction force vector (constant part of the curve)
+            ELSE                                         ! if the friction force of the linear curve is less than the maximum friction force allowed adjusted for static friction,
+               FfA = -p%mu_kA*p%cv*Va                    ! then the friction force is the calculated value of the linear line
+            END IF
+            ! NOTE: these friction forces have a negative sign here to indicate a force in the opposite direction of motion
+
+            ! the total friction force is along the plane of the seabed slope, which is just the vector sum of the transverse and axial components
+            Ff = FfT + FfA
+         
          ELSE
-            Line%B(3,I) = 0.0_DbKi
+            Fn = 0.0_DbKi
+            Ff = 0.0_DbKi
          END IF
+
+         ! the total force from bottom contact on the line node is the sum of the normal contact force and the friction force
+         Line%B(:,I) = Fn + Ff
 
          ! total forces
          IF (I==0)  THEN

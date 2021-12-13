@@ -802,7 +802,7 @@ CONTAINS
    ! :::::::::::::::::::::::::: bathymetry subroutines :::::::::::::::::::::::::::::::
    
    ! interpolates local seabed depth and normal vector
-   SUBROUTINE getDepthFromBathymetry(BathymetryGrid, BathGrid_Xs, BathGrid_Ys, LineX, LineY, depth)
+   SUBROUTINE getDepthFromBathymetry(BathymetryGrid, BathGrid_Xs, BathGrid_Ys, LineX, LineY, depth, nvec)
 
       REAL(DbKi),      INTENT(IN   )       :: BathymetryGrid(:,:) ! need colons or some sort of dimension setting
       REAL(DbKi),      INTENT(IN   )       :: BathGrid_Xs(:)
@@ -810,7 +810,7 @@ CONTAINS
       REAL(DbKi),      INTENT(IN   )       :: LineX
       REAL(DbKi),      INTENT(IN   )       :: LineY 
       REAL(DbKi),      INTENT(  OUT)       :: depth      ! local seabed depth (positive down) [m]
-      ! >>> to be added >>> REAL(DbKi),      INTENT(  OUT)       :: nvec(3)    ! local seabed surface normal vector (positive out) 
+      REAL(DbKi),      INTENT(  OUT)       :: nvec(3)       ! local seabed surface normal vector (positive out) 
 
       INTEGER(IntKi)                       :: ix0, iy0             ! indeces for interpolation   
       INTEGER(IntKi)                       :: ix1, iy1             ! second indices   
@@ -847,8 +847,8 @@ CONTAINS
       ! get interpolated points and local value
       cx0    = c00 *(1.0-fx) + c10 *fx
       cx1    = c01 *(1.0-fx) + c11 *fx
-      c0y    = c00 *(1.0-fy) + c01 *fx
-      c1y    = c10 *(1.0-fy) + c11 *fx
+      c0y    = c00 *(1.0-fy) + c01 *fy
+      c1y    = c10 *(1.0-fy) + c11 *fy
       depth  = cx0 *(1.0-fy) + cx1 *fy
       
       ! get local slope
@@ -865,10 +865,10 @@ CONTAINS
          dc_dy = 0.0_DbKi   ! maybe this should raise an error
       end if
       
-      tempVector = -dc_dx
-      tempVector = -dc_dy
-      tempVector = 1.0_DbKi
-      ! ScaleVector( tempVector, 1.0_DbKi, nvec ) <<< ! compute unit vector      
+      tempVector(1) = dc_dx
+      tempVector(2) = dc_dy
+      tempVector(3) = 1.0_DbKi
+      CALL ScaleVector( tempVector, 1.0_DbKi, nvec ) ! compute unit vector      
 
    END SUBROUTINE getDepthFromBathymetry
    
@@ -1327,7 +1327,7 @@ CONTAINS
       CALL ReadVar( UnIn, FileName, p%dtWave   , 'dtWave', 'time step for waves', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
       CALL ReadVar( UnIn, FileName, WaveDir    , 'WaveDir'    , 'wave direction', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
       ! X grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)	coordtype         ! get the entry type		
+      READ(UnIn,*, IOSTAT=ErrStat2)	coordtype         ! get the entry type
       READ(UnIn,*, IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
       ! Y grid points
