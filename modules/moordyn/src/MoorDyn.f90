@@ -435,7 +435,7 @@ CONTAINS
                   else if ( OptString == 'MU_KT')  then
                      read (OptValue,*) p%mu_kT
                   else if ( OptString == 'MU_KA')  then
-                     read (OptValue,*) p%mu_kT
+                     read (OptValue,*) p%mu_kA
                   else if ( OptString == 'MC')  then
                      read (OptValue,*) p%mc
                   else if ( OptString == 'CV')  then
