@@ -72,13 +72,6 @@ CONTAINS
       Body%nAttachedC = 0
       Body%nAttachedR = 0
 
-      ! for now take one entry and apply to all three DOFs just using a single entry for all axes <<<<<
-      DO J=2,3
-         Body%BodyI(J)   = Body%BodyI(1)
-         Body%BodyCdA(J) = Body%BodyCdA(1)
-         Body%BodyCa(J)  = Body%BodyCa(1)
-      END DO
-
       ! set up body initial mass matrix (excluding any rods or attachements)
       DO J=1,3
          Mtemp(J,J) = Body%bodyM          ! fill in mass

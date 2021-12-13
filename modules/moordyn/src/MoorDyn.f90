@@ -35,7 +35,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a15', '16 November 2021' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a16', '13 December 2021 (input format changes)' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -120,6 +120,7 @@ CONTAINS
       CHARACTER(40)                :: TempString2          !
       CHARACTER(40)                :: TempString3          !
       CHARACTER(40)                :: TempString4          !
+      CHARACTER(40)                :: TempString5          !
       CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
       CHARACTER(1024)              :: FileName             !
 
@@ -136,7 +137,6 @@ CONTAINS
       REAL(ReKi)                    :: rRef(6)             ! used to pass positions to mesh (real type precision)
       REAL(DbKi)                    :: rRefDub(3)
       
-      CHARACTER(500)               :: TempString5          ! long string used to hold CtrlChan inputs
       INTEGER(IntKi)               :: TempIDnums(100)      ! array to hold IdNums of controlled lines for each CtrlChan
       
       ! for reading output channels
@@ -542,6 +542,7 @@ CONTAINS
       
          if (INDEX(Line, "---") > 0) then ! look for a header line
              
+            CALL Conv2UC(Line)  ! allow lowercase section header names as well
 
             !-------------------------------------------------------------------------------------------
             if ( ( INDEX(Line, "LINE DICTIONARY") > 0) .or. ( INDEX(Line, "LINE TYPES") > 0) ) then ! if line dictionary header
@@ -558,7 +559,7 @@ CONTAINS
                    !read into a line
                    Line = NextLine(i)
 
-                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp >>EI(new)<<  Cdn  Can  Cdt  Cat
+                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp EI    Cd  Ca  CdAx  CaAx 
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
                       m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
                       m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat
@@ -587,7 +588,8 @@ CONTAINS
                                                            m%LineTypeList(l)%nEApoints, &
                                                            m%LineTypeList(l)%stiffXs,   &
                                                            m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2)
-                                                           
+
+                   
                    ! process damping coefficients 
                    CALL SplitByBars(tempString2, N, tempStrings)
                    if (N > m%LineTypeList(l)%ElasticMod) then
@@ -638,7 +640,7 @@ CONTAINS
                    !read into a line
                    Line = NextLine(i)
 
-                   ! parse out entries: Name  Diam MassDenInAir Can  Cat Cdn  Cdt 
+                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
                          m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd   
@@ -673,32 +675,85 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
-                  ! parse out entries: Name/ID X0 Y0 Z0 r0 p0 y0 Xcg Ycg Zcg M  V  IX IY IZ CdA-x,y,z Ca-x,y,z
+                  ! parse out entries: ID   Attachment  X0   Y0   Z0   r0    p0    y0         M      CG*     I*      V    CdA*    Ca*
                   IF (ErrStat2 == 0) THEN
-                     READ(Line,*,IOSTAT=ErrStat2) tempString1, &
+                     READ(Line,*,IOSTAT=ErrStat2) m%BodyList(l)%IdNum, tempString1, &
                         tempArray(1), tempArray(2), tempArray(3), tempArray(4), tempArray(5), tempArray(6), &
-                        m%BodyList(l)%rCG(1), m%BodyList(l)%rCG(2), m%BodyList(l)%rCG(3), &
-                        m%BodyList(l)%bodyM, m%BodyList(l)%bodyV, &
-                        m%BodyList(l)%bodyI(1), m%BodyList(l)%bodyCdA(1), m%BodyList(l)%bodyCa(1)
+                        m%BodyList(l)%bodyM, tempString2, tempString3, m%BodyList(l)%bodyV, tempString4, tempString5
                   END IF
+                  
+                  ! process CG
+                  CALL SplitByBars(tempString2, N, tempStrings)
+                  if (N == 1) then                                   ! if only one entry, it is the z coordinate
+                     m%BodyList(l)%rCG(1) = 0.0_DbKi
+                     m%BodyList(l)%rCG(2) = 0.0_DbKi
+                     READ(tempString2, *) m%BodyList(l)%rCG(3)
+                  else if (N==3) then                                ! all three coordinates provided
+                     READ(tempStrings(1), *) m%BodyList(l)%rCG(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%rCG(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%rCG(3)
+                  else
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CG entry (col 10) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                  end if
+                  ! process mements of inertia
+                  CALL SplitByBars(tempString3, N, tempStrings)
+                  if (N == 1) then                                   ! if only one entry, use it for all directions
+                     READ(tempString3, *) m%BodyList(l)%BodyI(1)
+                     m%BodyList(l)%BodyI(2) = m%BodyList(l)%BodyI(1)
+                     m%BodyList(l)%BodyI(3) = m%BodyList(l)%BodyI(1)
+                  else if (N==3) then                                ! all three directions provided separately
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyI(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyI(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%BodyI(3)
+                  else
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' inertia entry (col 11) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                  end if
+                  ! process drag ceofficient by area product
+                  CALL SplitByBars(tempString4, N, tempStrings)
+                  if (N == 1) then                                   ! if only one entry, use it for all directions
+                     READ(tempString4, *) m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(2) = m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(3) = m%BodyList(l)%BodyCdA(1)
+                  else if (N==3) then                                ! all three coordinates provided
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCdA(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%BodyCdA(3)
+                  else
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                  end if
+                  ! process added mass coefficient
+                  CALL SplitByBars(tempString5, N, tempStrings)
+                  if (N == 1) then                                   ! if only one entry, use it for all directions
+                     READ(tempString5, *) m%BodyList(l)%BodyCa(1)
+                     m%BodyList(l)%BodyCa(2) = m%BodyList(l)%BodyCa(1)
+                     m%BodyList(l)%BodyCa(3) = m%BodyList(l)%BodyCa(1)
+                  else if (N==3) then                                ! all three coordinates provided
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyCa(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCa(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%BodyCa(3)
+                  else
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' Ca entry (col 14) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                  end if
+
 
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL WrScr('   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.')  ! Specific screen output because errors likely
-                     CALL WrScr('   Ensure row has all 17 columns.')  
+                     CALL WrScr('   Ensure row has all 13 columns needed in MDv2 input file (13th Dec 2021).')  
                         CALL SetErrStat( ErrID_Fatal, 'Failed to read bodies.' , ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
                   
 
-
                   !----------- process body type -----------------
 
-                  call DecomposeString(tempString1, let1, num1, let2, num2, let3)
+                  call DecomposeString(tempString1, let1, num1, let2, num2, let3)   ! note: this call is overkill (it's just a string) but leaving it here for potential future expansions
                   
-                  READ(num1, *) m%BodyList(l)%IdNum   ! convert to int, representing parent body index
-                                          
-                     if ((let2 == "COUPLED") .or. (let2 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
+                  if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then   ! if a fixed body (this would just be used if someone wanted to temporarly fix a body that things were attached to)
+                  
+                     m%BodyList(l)%typeNum = 1
+                     
+                  else if ((let1 == "COUPLED") .or. (let1 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
                      
                      m%BodyList(l)%typeNum = -1
                      p%nCpldBodies(1)=p%nCpldBodies(1)+1  ! add this rod to coupled list                          
@@ -708,7 +763,7 @@ CONTAINS
                      
                   ! TODO: add option for body coupling to different turbines in FAST.Farm  <<<
                      
-                  else if ((let2 == "FREE") .or. (LEN_TRIM(let2)== 0)) then    ! if a free body
+                  else if (let1 == "FREE") then    ! if a free body
                      m%BodyList(l)%typeNum = 0
                      
                      p%nFreeBodies=p%nFreeBodies+1             ! add this pinned rod to the free list because it is half free
@@ -766,20 +821,32 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
-                  ! parse out entries: RodID  Type/BodyID  RodType  Xa   Ya   Za   Xb   Yb   Zb  NumSegs  Flags/Outputs
+                  ! parse out entries: RodID  RodType  Attachment  Xa   Ya   Za   Xb   Yb   Zb  NumSegs  Flags/Outputs
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%RodList(l)%IdNum, tempString1, tempString2, &
                          tempArray(1), tempArray(2), tempArray(3), tempArray(4), tempArray(5), tempArray(6), &
                          m%RodList(l)%N, LineOutString
                   END IF
 
+                  ! find Rod properties index
+                  DO J = 1,p%nRodTypes
+                     IF (trim(tempString1) == trim(m%RodTypeList(J)%name)) THEN
+                       m%RodList(l)%PropsIdNum = J
+                       EXIT
+                       IF (J == p%nRodTypes) THEN   ! call an error if there is no match
+                           CALL SetErrStat( ErrID_Fatal, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
+                       END IF
+                     END IF
+                  END DO
+
 
                   !----------- process rod type -----------------
 
-                  call DecomposeString(tempString1, let1, num1, let2, num2, let3)
+                  call DecomposeString(tempString2, let1, num1, let2, num2, let3)
                   
-                     if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then
-                         m%RodList(l)%typeNum = 2
+                  if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then
+                     
+                     m%RodList(l)%typeNum = 2
                      CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
                            
 
@@ -865,21 +932,9 @@ CONTAINS
                      
                   else 
                   
-                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
                      return
                   end if
-
-
-                  ! find Rod properties index
-                  DO J = 1,p%nRodTypes
-                     IF (trim(tempString2) == trim(m%RodTypeList(J)%name)) THEN
-                       m%RodList(l)%PropsIdNum = J
-                       EXIT
-                       IF (J == p%nRodTypes) THEN   ! call an error if there is no match
-                           CALL SetErrStat( ErrID_Fatal, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )
-                       END IF
-                     END IF
-                  END DO
                   
                 
                   ! process output flag characters (LineOutString) and set line output flag array (OutFlagList)
@@ -947,22 +1002,22 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
-                  ! parse out entries: Node Type X Y Z M V FX FY FZ CdA Ca 
+                  ! parse out entries: PointID Attachment  X  Y  Z  M  V  CdA Ca 
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%ConnectList(l)%IdNum, tempString1, tempArray(1), &
                         tempArray(2), tempString4, m%ConnectList(l)%conM, &
                         m%ConnectList(l)%conV, m%ConnectList(l)%conCdA, m%ConnectList(l)%conCa
+                                          
+                     CALL Conv2UC(tempString4) ! convert to uppercase so that matching is not case-sensitive
                      
-                     IF (SCAN(tempString4, "seabed") == 0) THEN
-                        ! if the tempString of the anchor depth value does not have any letters that are found in the word seabed, it's a scalar depth value
-                        READ(tempString4, *, IOSTAT=ErrStat2) tempArray(3)
-                     ELSE ! otherwise interpret the anchor depth value as a 'seabed' input, meaning the anchor should be on the seabed wherever the bathymetry says it should be
-                        PRINT *, "Anchor depth set for seabed; Finding the right seabed depth based on bathymetry"
-
-                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth)
+                     if ((INDEX(tempString4, "SEABED") > 0 ) .or. (INDEX(tempString4, "GROUND") > 0 ) .or. (INDEX(tempString4, "FLOOR") > 0 )) then  ! if keyword used
+                        PRINT *, 'Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry'                   ! interpret the anchor depth value as a 'seabed' input
+                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth)               ! meaning the anchor should be at the depth of the local bathymetry
                         tempArray(3) = -depth
-                     
-                     END IF
+                     else                                                       ! if the anchor depth input isn't one of the supported keywords, 
+                        READ(tempString4, *, IOSTAT=ErrStat2) tempArray(3)      ! assume it's a scalar depth value
+                        !TODO: add error check for if the above read fails
+                     end if
                         
                      ! not used
                      m%ConnectList(l)%conFX = 0.0_DbKi 
@@ -973,8 +1028,8 @@ CONTAINS
                   
 
                   IF ( ErrStat2 /= 0 ) THEN
-                     CALL WrScr('   Unable to parse Connection '//trim(Num2LStr(I))//' row in input file.')  ! Specific screen output because errors likely
-                     CALL WrScr('   Ensure row has all 12 columns, including CdA and Ca.')           ! to be caused by non-updated input file formats.
+                     CALL WrScr('   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.')  ! Specific screen output because errors likely
+                     CALL WrScr('   Ensure row has all 9 columns, including CdA and Ca.')           ! to be caused by non-updated input file formats.
                         CALL SetErrStat( ErrID_Fatal, 'Failed to read connects.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line <<<<<<<<<
                      CALL CleanUp()
                      RETURN
@@ -1104,14 +1159,12 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
-                   ! parse out entries: LineID  LineType  UnstrLen  NumSegs  NodeA  NodeB  Flags/Outputs
+                   ! parse out entries: ID  LineType  AttachA  AttachB     UnstrLen  NumSegs   Outputs  (note: order changed Dec 13, 2021 before MDv2 release) 
                   IF (ErrStat2 == 0) THEN
-                     READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
-                        m%LineList(l)%N, tempString2, tempString3, LineOutString
+                     READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, tempString2, tempString3, &
+                        m%LineList(l)%UnstrLen, m%LineList(l)%N,  LineOutString
                   END IF
-                  
-                  !note: m%LineList(I)%CtrlChan should aready be initialized to zero as per the registry
-                  
+                                    
                   ! identify index of line type
                   DO J = 1,p%nLineTypes
                      IF (trim(tempString1) == trim(m%LineTypeList(J)%name)) THEN

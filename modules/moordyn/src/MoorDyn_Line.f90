@@ -101,6 +101,7 @@ CONTAINS
       END DO
       
       
+      
       ! Specify specific internal damping coefficient (BA) for this line.
       ! Will be equal to inputted BA of LineType if input value is positive.
       ! If input value is negative, it is considered to be desired damping ratio (zeta)
@@ -122,6 +123,12 @@ CONTAINS
       !temp = 2*Line%N / Line%UnstrLen * sqrt( LineProp%EA / LineProp%w) / TwoPi
       !print *, 'Segment natural frequency is ', temp, ' Hz'
       
+      
+      print *, "Line ElasticMod is ", Line%ElasticMod
+      print *, "EA (static value) is", Line%EA
+      print *, "EA_D              is", Line%EA_D 
+      print *, "BA                is", Line%BA 
+      print *, "BA_D              is", Line%BA_D 
       
 
       ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
