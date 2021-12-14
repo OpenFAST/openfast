@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/Current.txt ${CMAKE_CURRENT_LIST_DIR}/src/Current_Types.f90)
   generate_f90_types(src/Waves.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves_Types.f90)
   generate_f90_types(src/Waves2.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves2_Types.f90 -noextrap)
-  generate_f90_types(src/seastate_Interp.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Interp_Types.f90 -noextrap)
+  generate_f90_types(src/SeaState_Interp.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Interp_Types.f90 -noextrap)
   generate_f90_types(src/SeaState.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Types.f90 -noextrap)
 endif()
 
@@ -27,7 +27,7 @@ set(SEAST_SOURCES
   src/Waves.f90
   src/Waves2.f90
   src/UserWaves.f90
-  src/seastate_Interp.f90
+  src/SeaState_Interp.f90
   src/SeaState_Input.f90
   src/SeaState.f90
   src/SeaState_Output.f90

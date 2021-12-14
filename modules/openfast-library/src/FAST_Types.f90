@@ -38,17 +38,6 @@ USE InflowWind_Types
 USE AeroDyn14_Types
 USE AeroDyn_Types
 USE SubDyn_Types
-USE Current_Types
-USE Waves_Types
-USE Waves2_Types
-USE SeaState_Interp_Types
-USE SeaState_Types
-USE Conv_Radiation_Types
-USE SS_Radiation_Types
-USE SS_Excitation_Types
-USE WAMIT_Types
-USE WAMIT2_Types
-USE Morison_Types
 USE HydroDyn_Types
 USE IceFloe_Types
 USE OpenFOAM_Types
