@@ -63,8 +63,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WaveStMod      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     REAL(DbKi)  :: WaveTMax      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
     REAL(SiKi)  :: WaveTp      !< Peak spectral period of incident waves [(sec)]
-    REAL(SiKi)  :: WtrDens      !< Water density [(kg/m^3)]
-    REAL(SiKi)  :: WtrDpth      !< Water depth [(meters)]
+    REAL(ReKi)  :: WtrDens      !< Water density [(kg/m^3)]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [(meters)]
     INTEGER(IntKi)  :: NWaveElev      !< Number of points where the incident wave elevations are computed (the XY grid point locations) [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevxi      !< xi-coordinates for points where the incident wave elevations can be output [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevyi      !< yi-coordinates for points where the incident wave elevations can be output [(meters)]
@@ -795,9 +795,9 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%WaveTp = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-    OutData%WtrDens = REAL(ReKiBuf(Re_Xferred), SiKi)
+    OutData%WtrDens = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%WtrDpth = REAL(ReKiBuf(Re_Xferred), SiKi)
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%NWaveElev = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
