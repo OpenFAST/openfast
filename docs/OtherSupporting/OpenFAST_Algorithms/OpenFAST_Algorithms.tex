@@ -95,7 +95,7 @@ inputs and outputs are neither set nor used.
 % SolveOption2b_Inp2IfW
    \State $\mathit{y\_BD} \gets \Call{BD\_CalcOutput}{\mathit{p\_BD, u\_BD, x\_BD, xd\_BD, z\_BD}}$
    \State $\mathit{u\_AD}($no IfW$)  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED, y\_SED, y\_BD}}$
-   \State $\mathit{u\_ADsk}($no IfW$)  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED, y\_SED, y\_BD}}$
+   \State $\mathit{u\_ADsk}($no IfW$)  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED, y\_SED}}$
    \State $\mathit{u\_IfW} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED, y\_SED} at \mathit{u\_AD} nodes}$
 
 \State
