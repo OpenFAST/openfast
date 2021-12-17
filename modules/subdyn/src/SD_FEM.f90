@@ -370,7 +370,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
                return
             endif
             ! Check that rigid links are not connected to the interface
-            iInterf = FINDLOCI(Init%Joints(:,1), JointID )
+            iInterf = FINDLOCI(p%Nodes_I(:,1), iJoint )
             if (iInterf>=1) then
                CALL WrScr('[WARNING] There might be a bug when rigid links are connected to the interface nodes (mostly if cables are involved). The problematic member is MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is in an interface joint).')
             endif
