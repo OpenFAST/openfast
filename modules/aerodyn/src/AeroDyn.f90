@@ -1077,16 +1077,12 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    CHARACTER(ErrMsgLen)                                               :: ErrMsg2         ! temporary Error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                                                     :: ErrStat2        ! temporary Error status of the operation
    INTEGER(IntKi)                                                     :: k               ! loop counter for blades
-   REAL(ReKi), DIMENSION(RotData%BladeProps(1)%NumBlNds,p%NumBlades)  :: BlCenBntmp      ! Normal offset bewteen blade node aerodynamic center and center of buoyancy, passed to p%BlCenBn
-   REAL(ReKi), DIMENSION(RotData%BladeProps(1)%NumBlNds,p%NumBlades)  :: BlCenBttmp      ! Tangential offset bewteen blade node aerodynamic center and center of buoyancy, passed to p%BlCenBt
    character(*), parameter                                            :: RoutineName = 'SetParameters'
    
       ! Initialize variables for this routine
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
-   BlCenBntmp = 0.0_ReKi
-   BlCenBttmp = 0.0_ReKi
 
    p_AD%DT            = InputFileData%DTAero
    p_AD%WakeMod       = InputFileData%WakeMod
@@ -1113,6 +1109,13 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    else
       p%NumBlNds         = 0
    endif
+
+   if (p%NumBlades>0 .and. p%Buoyancy) then
+      call AllocAry( p%BlCenBn, p%NumBlNds, p%NumBlades, 'BlCenBn', ErrStat2, ErrMsg2 )
+      call AllocAry( p%BlCenBt, p%NumBlNds, p%NumBlades, 'BlCenBt', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   endif
+
    if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. .not. p%Buoyancy ) then
       p%NumTwrNds     = 0
    elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%Buoyancy .and. RotData%NumTwrNds <= 0 ) then
@@ -1135,12 +1138,10 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
 
    if (p%Buoyancy) then
       do k = 1,p%NumBlades
-         BlCenBntmp(:,k) = RotData%BladeProps(k)%BlCenBn
-         BlCenBttmp(:,k) = RotData%BladeProps(k)%BlCenBt
+         p%BlCenBn(:,k) = RotData%BladeProps(k)%BlCenBn
+         p%BlCenBt(:,k) = RotData%BladeProps(k)%BlCenBt
       end do
    end if
-   p%BlCenBn = BlCenBntmp
-   p%BlCenBt = BlCenBttmp
    p%VolHub = RotData%VolHub
    p%HubCenBx = RotData%HubCenBx
    p%VolNac = RotData%VolNac
