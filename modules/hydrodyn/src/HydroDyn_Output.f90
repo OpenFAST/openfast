@@ -1517,13 +1517,13 @@ FUNCTION   HDOut_GetChannels    ( NUserOutputs, UserOutputs, OutList, foundMask,
       CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
    
    
-      Indx =  IndexCharAry( OutListTmp(1:9), ValidParamAry )
+      Indx =  IndexCharAry( OutListTmp(1:11), ValidParamAry )
       
       IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again         
            ! ex, 'MTipDxc1' causes the sign of TipDxc1 to be switched.
          OutListTmp                   = OutListTmp(2:)
          
-         Indx = IndexCharAry( OutListTmp(1:9), ValidParamAry )         
+         Indx = IndexCharAry( OutListTmp(1:11), ValidParamAry )         
       END IF
       
       IF ( Indx > 0 ) THEN     
