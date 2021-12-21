@@ -803,7 +803,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          InputFileData%Morison%WaveAcc   => InitInp%WaveAcc         
          InputFileData%Morison%WaveDynP  => InitInp%WaveDynP        
          InputFileData%Morison%WaveVel   => InitInp%WaveVel  
-         InputFileData%Morison%WaveElev  => InitInp%WaveElev
          InputFileData%Morison%WaveElev1 => InitInp%WaveElev1
          InputFileData%Morison%WaveElev2 => InitInp%WaveElev2
 !         CALL MOVE_ALLOC( Waves_InitOut%nodeInWater,InputFileData%Morison%nodeInWater )  ! moved to Morison%p%nodeInWater in the init routine
@@ -1209,7 +1208,6 @@ CONTAINS
       nullify(InputFileData%Morison%WaveAcc)    
       nullify(InputFileData%Morison%WaveVel)     
       nullify(InputFileData%Morison%WaveTime)
-      nullify(InputFileData%Morison%WaveElev)
       nullify(InputFileData%Morison%WaveElev1)
       nullify(InputFileData%Morison%WaveElev2)
       nullify(InputFileData%WAMIT%WaveElevC0)
@@ -1280,7 +1278,6 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       nullify(p%Morison%WaveDynP)
       nullify(p%Morison%WaveAcc)
       nullify(p%Morison%WaveVel)
-      nullify(p%Morison%WaveElev)
       nullify(p%Morison%WaveElev1)
       nullify(p%Morison%WaveElev2)
       do i = 1,p%NBody

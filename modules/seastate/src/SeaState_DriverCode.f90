@@ -227,6 +227,17 @@ program SeaStateDriver
    end if
 
    
+   ! Nullify these pointers because they are no longer needed
+   nullify(InitOutData%WaveDynP)   
+   nullify(InitOutData%WaveAcc)    
+   nullify(InitOutData%WaveVel)     
+   nullify(InitOutData%WaveTime)
+   !nullify(InitOutData%WaveElevC0)
+   !nullify(InitOutData%WaveDirArr)
+   nullify(InitOutData%WaveElev)
+   nullify(InitOutData%WaveElev1)
+   nullify(InitOutData%WaveElev2)
+   
       ! Destroy initialization data
 
    call SeaSt_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
@@ -654,6 +665,7 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
    character(1024)                                  :: WaveElevFileName     !< Name for the output file for the wave elevation series
    character(128)                                   :: WaveElevFmt          !< Format specifier for the output file for wave elevation series
    real(ReKi)                                       :: xpos, ypos
+   real(SiKi)                                       :: WaveElev
    integer(IntKi)                                   :: i,j,k
 
    WaveElevFmt = "(F14.7,3x,F14.7,3x,F14.7)"
@@ -700,8 +712,13 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
       do j=1,SeaState_p%NGrid(1)
          xpos = -SeaState_p%deltaGrid(1)*(SeaState_p%NGrid(1)-1)/2.0 + (J-1)*SeaState_p%deltaGrid(1)
          do k=1, SeaState_p%NGrid(2)
-            ypos = -SeaState_p%deltaGrid(2)*(SeaState_p%NGrid(2)-1)/2.0 + (K-1)*SeaState_p%deltaGrid(2)  
-            write (WaveElevFileUn,WaveElevFmt, IOSTAT=ErrStatTmp ) xpos, ypos,SeaState_p%WaveElev(I,J,K)
+            ypos = -SeaState_p%deltaGrid(2)*(SeaState_p%NGrid(2)-1)/2.0 + (K-1)*SeaState_p%deltaGrid(2) 
+            if (allocated(SeaState_p%Waves2%WaveElev2)) then
+               WaveElev =  SeaState_p%WaveElev1(I,J,K) + SeaState_p%Waves2%WaveElev2(I,J,K)
+            else
+               WaveElev =  SeaState_p%WaveElev1(I,J,K)
+            end if
+            write (WaveElevFileUn,WaveElevFmt, IOSTAT=ErrStatTmp ) xpos, ypos, WaveElev
          end do       
       end do
    end do

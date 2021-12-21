@@ -127,7 +127,7 @@ typedef     ^                 ^                 INTEGER              NWaveElev  
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 #typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
-typedef     ^                 ^                 SiKi                 WaveElev2         {:}{:}{:}   -        -        "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
+typedef     ^                 ^                 SiKi                 WaveElev2         {*}{*}{*}   -        -        "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
 #typedef     ^                 ^                 SiKi                 WaveElev2D        {:}{:}{:}   -        -        "" (m)
 #                                                                                                                 "Instantaneous 2nd-order difference frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
 #typedef     ^                 ^                 SiKi                 WaveElev2S        {:}{:}{:}   -        -        "" (m)

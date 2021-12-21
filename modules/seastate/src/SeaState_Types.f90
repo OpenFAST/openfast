@@ -108,7 +108,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: WaveDynP => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(N/m^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveVel => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
-    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev => NULL()      !< Total wave elevation [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Second order wave elevation [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
@@ -1624,22 +1623,6 @@ IF (ASSOCIATED(SrcInitOutputData%WaveVel)) THEN
   END IF
     DstInitOutputData%WaveVel = SrcInitOutputData%WaveVel
 ENDIF
-IF (ASSOCIATED(SrcInitOutputData%WaveElev)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WaveElev,1)
-  i1_u = UBOUND(SrcInitOutputData%WaveElev,1)
-  i2_l = LBOUND(SrcInitOutputData%WaveElev,2)
-  i2_u = UBOUND(SrcInitOutputData%WaveElev,2)
-  i3_l = LBOUND(SrcInitOutputData%WaveElev,3)
-  i3_u = UBOUND(SrcInitOutputData%WaveElev,3)
-  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveElev)) THEN 
-    ALLOCATE(DstInitOutputData%WaveElev(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElev.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WaveElev = SrcInitOutputData%WaveElev
-ENDIF
 IF (ASSOCIATED(SrcInitOutputData%WaveElev1)) THEN
   i1_l = LBOUND(SrcInitOutputData%WaveElev1,1)
   i1_u = UBOUND(SrcInitOutputData%WaveElev1,1)
@@ -1758,10 +1741,6 @@ ENDIF
 IF (ASSOCIATED(InitOutputData%WaveVel)) THEN
   DEALLOCATE(InitOutputData%WaveVel)
   InitOutputData%WaveVel => NULL()
-ENDIF
-IF (ASSOCIATED(InitOutputData%WaveElev)) THEN
-  DEALLOCATE(InitOutputData%WaveElev)
-  InitOutputData%WaveElev => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveElev1)) THEN
   DEALLOCATE(InitOutputData%WaveElev1)
@@ -1903,11 +1882,6 @@ ENDIF
   IF ( ASSOCIATED(InData%WaveVel) ) THEN
     Int_BufSz   = Int_BufSz   + 2*5  ! WaveVel upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveVel)  ! WaveVel
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WaveElev allocated yes/no
-  IF ( ASSOCIATED(InData%WaveElev) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! WaveElev upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElev)  ! WaveElev
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! WaveElev1 allocated yes/no
   IF ( ASSOCIATED(InData%WaveElev1) ) THEN
@@ -2270,31 +2244,6 @@ ENDIF
                 Re_Xferred = Re_Xferred + 1
               END DO
             END DO
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ASSOCIATED(InData%WaveElev) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%WaveElev,3), UBOUND(InData%WaveElev,3)
-        DO i2 = LBOUND(InData%WaveElev,2), UBOUND(InData%WaveElev,2)
-          DO i1 = LBOUND(InData%WaveElev,1), UBOUND(InData%WaveElev,1)
-            ReKiBuf(Re_Xferred) = InData%WaveElev(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
           END DO
         END DO
       END DO
@@ -2803,34 +2752,6 @@ ENDIF
                 Re_Xferred = Re_Xferred + 1
               END DO
             END DO
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElev not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%WaveElev)) DEALLOCATE(OutData%WaveElev)
-    ALLOCATE(OutData%WaveElev(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%WaveElev,3), UBOUND(OutData%WaveElev,3)
-        DO i2 = LBOUND(OutData%WaveElev,2), UBOUND(OutData%WaveElev,2)
-          DO i1 = LBOUND(OutData%WaveElev,1), UBOUND(OutData%WaveElev,1)
-            OutData%WaveElev(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
-            Re_Xferred = Re_Xferred + 1
           END DO
         END DO
       END DO
@@ -6051,6 +5972,332 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE SeaSt_UnPackOutput
+
+
+ SUBROUTINE SeaSt_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+!
+!  expressions below based on either
+!
+!  f(t) = a
+!  f(t) = a + b * t, or
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+!
+!..................................................................................................................................
+
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
+ REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
+ TYPE(SeaSt_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
+ INTEGER(IntKi)                             :: ErrStat2        ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'SeaSt_Input_ExtrapInterp'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+ if ( size(t) .ne. size(u)) then
+    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
+    RETURN
+ endif
+ order = SIZE(u) - 1
+ IF ( order .eq. 0 ) THEN
+   CALL SeaSt_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 1 ) THEN
+   CALL SeaSt_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 2 ) THEN
+   CALL SeaSt_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE 
+   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
+   RETURN
+ ENDIF 
+ END SUBROUTINE SeaSt_Input_ExtrapInterp
+
+
+ SUBROUTINE SeaSt_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is 1.
+!
+!  f(t) = a + b * t, or
+!
+!  where a and b are determined as the solution to
+!  f(t1) = u1, f(t2) = u2
+!
+!..................................................................................................................................
+
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u2    ! Input at t2 
+ REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
+ TYPE(SeaSt_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+ REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+ INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+ CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
+ REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'SeaSt_Input_ExtrapInterp1'
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / t(2)
+  b = -(u1%DummyInput - u2%DummyInput)
+  u_out%DummyInput = u1%DummyInput + b * ScaleFactor
+ END SUBROUTINE SeaSt_Input_ExtrapInterp1
+
+
+ SUBROUTINE SeaSt_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is 2.
+!
+!  expressions below based on either
+!
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = u1, f(t2) = u2, f(t3) = u3
+!
+!..................................................................................................................................
+
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(SeaSt_InputType), INTENT(IN)  :: u3      ! Input at t3
+ REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
+ TYPE(SeaSt_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
+ REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+ INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'SeaSt_Input_ExtrapInterp2'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+  b = (t(3)**2*(u1%DummyInput - u2%DummyInput) + t(2)**2*(-u1%DummyInput + u3%DummyInput))* scaleFactor
+  c = ( (t(2)-t(3))*u1%DummyInput + t(3)*u2%DummyInput - t(2)*u3%DummyInput ) * scaleFactor
+  u_out%DummyInput = u1%DummyInput + b  + c * t_out
+ END SUBROUTINE SeaSt_Input_ExtrapInterp2
+
+
+ SUBROUTINE SeaSt_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
+!
+!  expressions below based on either
+!
+!  f(t) = a
+!  f(t) = a + b * t, or
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
+!
+!..................................................................................................................................
+
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
+ REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
+ TYPE(SeaSt_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
+ INTEGER(IntKi)                             :: ErrStat2        ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'SeaSt_Output_ExtrapInterp'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+ if ( size(t) .ne. size(y)) then
+    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(y)',ErrStat,ErrMsg,RoutineName)
+    RETURN
+ endif
+ order = SIZE(y) - 1
+ IF ( order .eq. 0 ) THEN
+   CALL SeaSt_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 1 ) THEN
+   CALL SeaSt_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 2 ) THEN
+   CALL SeaSt_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE 
+   CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
+   RETURN
+ ENDIF 
+ END SUBROUTINE SeaSt_Output_ExtrapInterp
+
+
+ SUBROUTINE SeaSt_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+! values of y (which has values associated with times in t).  Order of the interpolation is 1.
+!
+!  f(t) = a + b * t, or
+!
+!  where a and b are determined as the solution to
+!  f(t1) = y1, f(t2) = y2
+!
+!..................................................................................................................................
+
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y2    ! Output at t2 
+ REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
+ TYPE(SeaSt_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+ REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+ INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+ CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
+ REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'SeaSt_Output_ExtrapInterp1'
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / t(2)
+IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
+  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
+    b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
+    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+      CALL Waves2_Output_ExtrapInterp1( y1%Waves2, y2%Waves2, tin, y_out%Waves2, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ END SUBROUTINE SeaSt_Output_ExtrapInterp1
+
+
+ SUBROUTINE SeaSt_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+! values of y (which has values associated with times in t).  Order of the interpolation is 2.
+!
+!  expressions below based on either
+!
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = y1, f(t2) = y2, f(t3) = y3
+!
+!..................................................................................................................................
+
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(SeaSt_OutputType), INTENT(IN)  :: y3      ! Output at t3
+ REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
+ TYPE(SeaSt_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
+ REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+ INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'SeaSt_Output_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
+IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
+  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
+    b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%WriteOutput(i1) + t(3)*y2%WriteOutput(i1) - t(2)*y3%WriteOutput(i1) ) * scaleFactor
+    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+      CALL Waves2_Output_ExtrapInterp2( y1%Waves2, y2%Waves2, y3%Waves2, tin, y_out%Waves2, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ END SUBROUTINE SeaSt_Output_ExtrapInterp2
 
 END MODULE SeaState_Types
 !ENDOFREGISTRYGENERATEDFILE

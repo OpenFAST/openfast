@@ -847,12 +847,13 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             ! If we calculated wave elevations, it is now stored in p%WaveElev.  So we need to add the corrections.
             IF (p%Waves2%NWaveElev > 0 ) THEN
                   ! Make sure the sizes of the two resulting arrays are identical...
-               IF ( SIZE(p%WaveElev,DIM=1) /= SIZE(p%Waves2%WaveElev2,DIM=1) .OR. &
-                    SIZE(p%WaveElev,DIM=2) /= SIZE(p%Waves2%WaveElev2,DIM=2)) THEN
+               IF ( SIZE(p%WaveElev1,DIM=1) /= SIZE(p%Waves2%WaveElev2,DIM=1) .OR. &
+                    SIZE(p%WaveElev1,DIM=2) /= SIZE(p%Waves2%WaveElev2,DIM=2)) THEN
                   CALL SetErrStat(ErrID_Fatal,' WaveElev(NWaveElev) arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
                   CALL CleanUp()
                   RETURN
-               !ELSE
+               ELSE
+                  InitOut%WaveElev2 =>  p%Waves2%WaveElev2   
                ! 
                !   do k = 1, p%NGrid(2)
                !      do J=1, p%NGrid(1)
@@ -1459,7 +1460,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          WaveElev1(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
         
-         if (allocated(p%Waves2%WaveElev2)) then
+         if (associated(p%Waves2%WaveElev2)) then
             WaveElev2(i) = SeaSt_Interp_3D( Time, positionXY, p%Waves2%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
             WaveElev(i) =  WaveElev1(i) + WaveElev2(i)

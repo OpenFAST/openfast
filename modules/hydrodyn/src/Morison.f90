@@ -1889,7 +1889,11 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%OutSwtch   = InitInp%OutSwtch
    p%MSL2SWL    = InitInp%MSL2SWL
    p%WaveDisp   = InitInp%WaveDisp
-   
+   p%WaveElev1  => InitInp%WaveElev1
+   if (associated(InitInp%WaveElev2)) then
+      p%WaveElev2 => InitInp%WaveElev2
+   end if
+
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat )
    IF ( errStat /= ErrID_None ) THEN
       errMsg  = ' Error allocating space for MOutLst array.'
@@ -2282,6 +2286,9 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    call AllocAry( m%FV           ,    3, NNodes   , 'm%FV'           , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%FA           ,    3, NNodes   , 'm%FA'           , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%FDynP        ,       NNodes   , 'm%FDynP'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%WaveElev     ,       NNodes   , 'm%WaveElev'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%WaveElev1    ,       NNodes   , 'm%WaveElev1'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%WaveElev2    ,       NNodes   , 'm%WaveElev2'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%An_End       ,    3, p%NJoints, 'p%An_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%DragConst_End,       p%NJoints, 'p%DragConst_End', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%F_I_End      ,    3, p%NJoints, 'm%F_I_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -2384,7 +2391,6 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       nullify(p%WaveDynP)
       nullify(p%WaveAcc)
       nullify(p%WaveVel)
-      nullify(p%WaveElev)
       nullify(p%WaveElev1)
       nullify(p%WaveElev2)
       CALL Morison_DestroyParam( p, errStat, errMsg )
@@ -2605,7 +2611,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: a_s2(3)       
    real(ReKi)               :: alpha_s2(3)
    real(ReKi)               :: omega_s2(3)
-   real(ReKi)               :: pos1(3), pos2(3)   
+   real(ReKi)               :: pos1(3), pos2(3), positionXY(2)   
    real(ReKi)               :: Imat(3,3)
    real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal
    real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h
@@ -2647,6 +2653,18 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
          m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+               
+         positionXY = (/pos1(1),pos1(2)/)      
+         m%WaveElev1(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+        
+         if (associated(p%WaveElev2)) then
+            m%WaveElev2(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+            m%WaveElev(j) =  m%WaveElev1(j) + m%WaveElev2(j)
+         else
+            m%WaveElev(j) =  m%WaveElev1(j) 
+         end if      
       else
          m%FV(:,j)  = 0.0
          m%FA(:,j)  = 0.0

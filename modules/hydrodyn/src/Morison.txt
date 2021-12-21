@@ -253,7 +253,6 @@ typedef   ^                            ^                             CHARACTER(1
 typedef   ^                            ^                             INTEGER                  UnOutFile                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveElev                    {*}{*}{*}      -          -         "Total wave elevation"   -
 typedef   ^                            ^                             SiKi                     WaveElev1                   {*}{*}{*}      -          -         "First order wave elevation"        -
 typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation"        -
 typedef   ^                            ^                             SiKi                     WaveAcc                          {*}{*}{*}{*}{*}  -        -         ""    -
@@ -342,7 +341,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     DP_Const_End                   {:}{:}         -         -         "Constant part of Joint dynamic pressure term"   N
 typedef   ^                            ^                             ReKi                     Mass_MG_End                    {:}         -         -         "Joint marine growth mass"   kg
 typedef   ^                            ^                             ReKi                     AM_End                         {:}{:}{:}         -         -         "3x3 Joint added mass matrix, constant for all t"   N
-typedef   ^                            ^                             SiKi                     WaveElev                    {*}{*}{*}      -          -         "Total wave elevation"   m
 typedef   ^                            ^                             SiKi                     WaveElev1                   {*}{*}{*}      -          -         "First order wave elevation"        m
 typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation"        m
 typedef   ^                            ^                             SiKi                     WaveVel                       {*}{*}{*}{*}{*} -         -         ""        -

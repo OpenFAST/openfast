@@ -279,7 +279,6 @@ PROGRAM HydroDynDriver
    InitInData%WaveElevC0     => InitOutData_SeaSt%WaveElevC0
    CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElevC, InitInData%WaveElevC )
    InitInData%WaveDirArr     => InitOutData_SeaSt%WaveDirArr
-   InitInData%WaveElev       => InitOutData_SeaSt%WaveElev
    InitInData%WaveElev1      => InitOutData_SeaSt%WaveElev1
    InitInData%WaveElev2      => InitOutData_SeaSt%WaveElev2
    
@@ -290,7 +289,6 @@ PROGRAM HydroDynDriver
    nullify(InitOutData_SeaSt%WaveTime)
    nullify(InitOutData_SeaSt%WaveElevC0)
    nullify(InitOutData_SeaSt%WaveDirArr)
-   nullify(InitOutData_SeaSt%WaveElev)
    nullify(InitOutData_SeaSt%WaveElev1)
    nullify(InitOutData_SeaSt%WaveElev2)
    
@@ -392,7 +390,6 @@ PROGRAM HydroDynDriver
    nullify(InitInData%WaveAcc)    
    nullify(InitInData%WaveVel)     
    nullify(InitInData%WaveTime)
-   nullify(InitInData%WaveElev)
    nullify(InitInData%WaveElev1)
    nullify(InitInData%WaveElev2)
    
