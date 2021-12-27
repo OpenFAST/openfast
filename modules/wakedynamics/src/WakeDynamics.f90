@@ -741,6 +741,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz            ! indices on y and z
    real(ReKi)                                   :: Ct_avg            ! Rotor-disk averaged Ct
+   real(ReKi)                                   :: vt_min            ! Minimum Eddy viscosity
 
    errStat = ErrID_None
    errMsg  = ""
@@ -793,6 +794,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 
       EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
       EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
+      vt_min    = abs(1.e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt) ! Miminum eddy viscosity
       if (p%Mod_Wake == Mod_Wake_Polar) then
          ! Polar grid
          do j = 0,p%NumRadii-1      
@@ -804,7 +806,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                dvdr = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
             end if
                ! All of the following states are at [n] 
-            m%vt_amb(j,i-1) = EddyTermA
+            m%vt_amb(j,i-1) = max(EddyTermA, vt_min)
             m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(dvdr) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
             m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1) 
 
@@ -830,9 +832,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                endif
             
                dvdr = m%dvx_dy(iy,iz,i-1) * C  + m%dvx_dz(iy,iz,i-1) * S
-               m%vt_amb2(iy,iz,i-1) = EddyTermA
+               m%vt_amb2(iy,iz,i-1) = max(EddyTermA, vt_min)
                m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)* (abs(dvdr) + abs(dvdtheta_r)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-               m%vt_tot2(iy,iz,i-1) = p%k_vCurl * max(m%vt_amb2(iy,iz,i-1)+ m%vt_shr2(iy,iz,i-1), abs(1.e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt))
+               m%vt_tot2(iy,iz,i-1) = m%vt_amb2(iy,iz,i-1) + p%k_vCurl*m%vt_shr2(iy,iz,i-1)
 
             enddo
          enddo
