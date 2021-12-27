@@ -2105,7 +2105,9 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                      
                         end do  
                      else
-                        print*,'>>>FAST Farm Subs: TODO: Vx, Vr, eddy output for cartesian'
+                        !print*,'>>>FAST Farm Subs: TODO: Vx, Vr, eddy output for cartesian'
+                        ! NOTE: Outputs at given distance downstream not implemented for Curl.
+                        ! For now, users can use OutAllPlanes to get the information for each plane
                      endif
 
                   else if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np+1) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np) ) ) then   ! Overlapping wake volumes result in invalid output
