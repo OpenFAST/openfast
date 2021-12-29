@@ -145,7 +145,7 @@ an additional skewed-wake correction. Set ``SkewMod`` to 2 to include
 the Pitt/Peters correction model. **The coupled model ``SkewMod=
 3`` is not available in this version of AeroDyn.**
 
-``SkewModFactor`` is used only when  ``SkewMod = 1``. Enter a scaling factor to use
+``SkewModFactor`` is used only when  ``SkewMod = 2``. Enter a scaling factor to use
 in the Pitt/Peters correction model, or enter ``"default"`` to use the default 
 value of :math:`\frac{15 \pi}{32}`.
 
