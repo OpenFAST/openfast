@@ -1748,7 +1748,6 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
             ! Check that blade nodes do not go beneath the seabed or pierce the free surface
          if ( u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) >= p%WtrDpth + p%MSL2SWL .OR. u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) <= 0.0_ReKi ) &
             call SetErrStat( ErrID_Fatal, 'Blades cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
-               if (ErrStat >= AbortErrLev) return
 
       end do ! j = nodes
 
@@ -1869,7 +1868,6 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
             ! Check that tower nodes do not go beneath the seabed or pierce the free surface
          if ( u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) >= p%WtrDpth + p%MSL2SWL .OR. u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) < 0.0_ReKi ) &
             call SetErrStat( ErrID_Fatal, 'The tower cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
-               if (ErrStat >= AbortErrLev) return
       end do
 
       do j = 1,p%NumTwrNds - 1 ! loop through all nodes, except the last
@@ -1967,7 +1965,6 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          ! Check that hub node does not go beneath the seabed or pierce the free surface
       if ( u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) >= p%WtrDpth + p%MSL2SWL .OR. u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) <= 0.0_ReKi ) &
          call SetErrStat( ErrID_Fatal, 'The hub cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
-            if (ErrStat >= AbortErrLev) return
 
          ! Global position of hub node, adjusted to place the origin at the seabed
       HubtmpPos = u%HubMotion%Position(:,1) + u%HubMotion%TranslationDisp(:,1) - ( p%WtrDpth + p%MSL2SWL )
@@ -2020,7 +2017,6 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          ! Check that nacelle node does not go beneath the seabed or pierce the free surface
       if ( u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) >= p%WtrDpth + p%MSL2SWL .OR. u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) <= 0.0_ReKi ) &
          call SetErrStat( ErrID_Fatal, 'The nacelle cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
-            if (ErrStat >= AbortErrLev) return
 
          ! Global position of nacelle node, adjusted to place the origin at the seabed
       NactmpPos = u%NacelleMotion%Position(:,1) + u%NacelleMotion%TranslationDisp(:,1) - ( p%WtrDpth + p%MSL2SWL )
