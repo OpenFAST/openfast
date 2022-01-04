@@ -293,6 +293,7 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, NumBlNodes, ErrStat, 
    m_FAST%Lin%n_rot           = 0
    m_FAST%Lin%IsConverged     = .false.
    m_FAST%Lin%FoundSteady     = .false.
+   m_FAST%Lin%ForceLin        = .false.
    m_FAST%Lin%AzimIndx        = 1
    
    p_FAST%AzimDelta   = TwoPi / p_FAST%NLinTimes
@@ -5323,6 +5324,10 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
             ! interpolate to find y at the target azimuth
          call FAST_DiffInterpOutputs( m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx), p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
+         ! If linearization is forced
+         if (m_FAST%Lin%ForceLin) then
+            m_FAST%Lin%IsConverged = .True.
+         endif
                    
          if (m_FAST%Lin%IsConverged .or. m_FAST%Lin%n_rot == 0) then ! save this operating point for linearization later
             m_FAST%Lin%LinTimes(m_FAST%Lin%AzimIndx) = t_global  
@@ -5346,6 +5351,12 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
                m_FAST%Lin%AzimIndx = 1
                m_FAST%Lin%CopyOP_CtrlCode = MESH_UPDATECOPY
             end if
+            ! Forcing linearization if time is close to tmax
+            if ((t_global> p_FAST%TMax - 1.5*TwoPi_D/ED%y%RotSpeed) .and. .not.m_FAST%Lin%FoundSteady)  then
+               call WrScr('')
+               call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization')
+               m_FAST%Lin%ForceLin = .True. 
+            endif
          end if
          
       end if
