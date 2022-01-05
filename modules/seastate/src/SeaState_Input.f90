@@ -1334,7 +1334,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
       count = 1
       do k = 0, p%NGrid(3) - 1
          zpos = - ( 1.0 - cos( real((p%NGrid(3) - 1) - k, ReKi) * p%deltaGrid(3) )  ) * InputFileData%Z_Depth
-         print*,zpos
          do j = 0, p%NGrid(2)-1
             ypos = -InputFileData%Y_HalfWidth + p%deltaGrid(2)*j
             do i= 0, p%NGrid(1)-1    
