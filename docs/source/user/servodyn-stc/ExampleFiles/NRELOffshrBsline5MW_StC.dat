@@ -90,7 +90,7 @@ False         Use_F_TBL    - Use spring force from user-defined table (flag)
      0.6433   headLossCoeff_Y - Y TLCD head loss coeff (-)
        1000   rho_Y           - Y TLCD liquid density (kg/m^3)
 ---------------------- PRESCRIBED TIME SERIES --------------------------------- [used only when StC_DOF_MODE=4]
-          0   PrescribedForcesCoord- Prescribed forces are in global or local coordinates (switch) {1: global; 2: local}
+          1   PrescribedForcesCoord- Prescribed forces are in global or local coordinates (switch) {1: global; 2: local}
 "TimeForceSeries.dat"  PrescribedForcesFile   - Time series force and moment (7 columns of time, FX, FY, FZ, MX, MY, MZ)
 -------------------------------------------------------------------------------
 
