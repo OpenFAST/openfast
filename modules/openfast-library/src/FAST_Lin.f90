@@ -5920,11 +5920,21 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
                m_FAST%Lin%AzimIndx = 1
                m_FAST%Lin%CopyOP_CtrlCode = MESH_UPDATECOPY
             end if
-            ! Forcing linearization if time is close to tmax
-            if ((t_global> p_FAST%TMax - 1.5*TwoPi_D/ED%y%RotSpeed) .and. .not.m_FAST%Lin%FoundSteady)  then
-               call WrScr('')
-               call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization')
-               m_FAST%Lin%ForceLin = .True. 
+            ! Forcing linearization if time is close to tmax (with small margin)
+            if (.not.m_FAST%Lin%FoundSteady) then
+               if (ED%p%RotSpeed>0) then
+                  if (t_global >= p_FAST%TMax - 2._DbKi*(TwoPi_D)/ED%p%RotSpeed) then
+                     call WrScr('')
+                     call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization.')
+                     m_FAST%Lin%ForceLin = .True. 
+                  endif
+               else
+                  if (t_global >= p_FAST%TMax - 1.5_DbKi*p_FAST%DT) then
+                     call WrScr('')
+                     call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization.')
+                     m_FAST%Lin%ForceLin = .True. 
+                  endif
+               endif
             endif
          end if
          
