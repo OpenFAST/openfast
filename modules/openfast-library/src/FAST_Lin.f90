@@ -5920,10 +5920,11 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
                m_FAST%Lin%AzimIndx = 1
                m_FAST%Lin%CopyOP_CtrlCode = MESH_UPDATECOPY
             end if
-            ! Forcing linearization if time is close to tmax (with sufficient margin) and error in rotor speed less than 0.1%
+            ! Forcing linearization if time is close to tmax (with sufficient margin) 
             if (.not.m_FAST%Lin%FoundSteady) then
                if (ED%p%RotSpeed>0) then
-                  if (t_global >= p_FAST%TMax - 2._DbKi*(TwoPi_D)/ED%p%RotSpeed) then
+                  ! If simulation is at least 10 revolutions, and error in rotor speed less than 0.1%
+                  if ((p_FAST%TMax>10*(TwoPi_D)/ED%p%RotSpeed) .and. ( t_global >= p_FAST%TMax - 2._DbKi*(TwoPi_D)/ED%p%RotSpeed)) then
                      if (abs(ED%y%RotSpeed-ED%p%RotSpeed)/ED%p%RotSpeed<0.001) then
                         call WrScr('')
                         call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization.')
