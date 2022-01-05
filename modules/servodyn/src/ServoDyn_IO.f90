@@ -2358,7 +2358,7 @@ subroutine InitializeSummaryFile(InputFileData,OutfileRoot,UnSum,ErrStat,ErrMsg)
    ErrMsg   =  ''
    if ( InputFileData%SumPrint ) then
       call GetNewUnit( UnSum )
-      CALL OpenEcho ( UnSum, TRIM(OutFileRoot)//'.Sum', ErrStat2, ErrMsg2 )
+      CALL OpenEcho ( UnSum, TRIM(OutFileRoot)//'.sum', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
    else
