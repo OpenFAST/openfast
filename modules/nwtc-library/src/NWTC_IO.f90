@@ -138,27 +138,30 @@ MODULE NWTC_IO
       !> \copydoc nwtc_io::parsechvar
    INTERFACE ParseVar                                                         ! Parses a character variable name and value from a string.
       MODULE PROCEDURE ParseChVar                                             ! Parses a character string from a string.
-      MODULE PROCEDURE ParseDbVar                                             ! Parses a double-precision REAL from a string.
       MODULE PROCEDURE ParseInVar                                             ! Parses an INTEGER from a string.
       MODULE PROCEDURE ParseLoVar                                             ! Parses an LOGICAL from a string.
       MODULE PROCEDURE ParseSiVar                                             ! Parses a single-precision REAL from a string.
+      MODULE PROCEDURE ParseR8Var                                             ! Parses a double-precision REAL from a string.
+      MODULE PROCEDURE ParseQuVar                                             ! Parses a quad-precision REAL from a string.
    END INTERFACE
 
       !> \copydoc nwtc_io::parsechvarwdefault
    INTERFACE ParseVarWDefault                                                 ! Parses a character variable name and value from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseChVarWDefault                                     ! Parses a character string from a string, potentially sets to a default value if "Default" is parsed.
-      MODULE PROCEDURE ParseDbVarWDefault                                     ! Parses a double-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseInVarWDefault                                     ! Parses an INTEGER from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseLoVarWDefault                                     ! Parses an LOGICAL from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseSiVarWDefault                                     ! Parses a single-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
+      MODULE PROCEDURE ParseR8VarWDefault                                     ! Parses a double-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
+      MODULE PROCEDURE ParseQuVarWDefault                                     ! Parses a quad-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
    END INTERFACE
 
       !> \copydoc nwtc_io::parsedbary
    INTERFACE ParseAry                                                         ! Parse an array of numbers from a string.
-      MODULE PROCEDURE ParseDbAry                                             ! Parse an array of double-precision REAL values.
       MODULE PROCEDURE ParseInAry                                             ! Parse an array of whole numbers.
       MODULE PROCEDURE ParseLoAry                                             ! Parse an array of LOGICAL values.
       MODULE PROCEDURE ParseSiAry                                             ! Parse an array of single-precision REAL values.
+      MODULE PROCEDURE ParseR8Ary                                             ! Parse an array of double-precision REAL values.
+      MODULE PROCEDURE ParseQuAry                                             ! Parse an array of quad-precision REAL values.
       MODULE PROCEDURE ParseChAry
    END INTERFACE
 
@@ -3607,13 +3610,13 @@ END SUBROUTINE CheckR16Var
 !> This subroutine parses the specified line of text for AryLen REAL values.
 !! Generate an error message if the value is the wrong type.
 !! Use ParseAry (nwtc_io::parseary) instead of directly calling a specific routine in the generic interface.   
-   SUBROUTINE ParseDbAry ( FileInfo, LineNum, AryName, Ary, AryLen, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ParseR8Ary ( FileInfo, LineNum, AryName, Ary, AryLen, ErrStat, ErrMsg, UnEc )
 
          ! Arguments declarations.
 
       INTEGER, INTENT(IN)                    :: AryLen                        !< The length of the array to parse.
 
-      REAL(DbKi), INTENT(OUT)                :: Ary       (AryLen)            !< The array to receive the input values.
+      REAL(R8Ki), INTENT(OUT)                :: Ary       (AryLen)            !< The array to receive the input values.
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       !< The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       !< The number of the line to parse.
@@ -3631,7 +3634,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: i                             ! Error status local to this routine.
 
-      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseDbAry'
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseR8Ary'
 
 
       ErrStat = ErrID_None
@@ -3669,14 +3672,14 @@ END SUBROUTINE CheckR16Var
 
       RETURN
 
-   END SUBROUTINE ParseDbAry
+   END SUBROUTINE ParseR8Ary
 !=======================================================================
 !> \copydoc nwtc_io::parsechvar
-   SUBROUTINE ParseDbVar ( FileInfo, LineNum, ExpVarName, Var, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ParseR8Var ( FileInfo, LineNum, ExpVarName, Var, ErrStat, ErrMsg, UnEc )
 
          ! Arguments declarations.
 
-      REAL(DbKi), INTENT(OUT)                :: Var                           ! The double-precision REAL variable to receive the input value.
+      REAL(R8Ki), INTENT(OUT)                :: Var                           ! The double-precision REAL variable to receive the input value.
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
@@ -3696,7 +3699,7 @@ END SUBROUTINE CheckR16Var
 
       CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
-      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseDbVar'
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseR8Var'
 
 
       ErrStat = ErrID_None
@@ -3736,10 +3739,10 @@ END SUBROUTINE CheckR16Var
       LineNum = LineNum + 1
 
       RETURN
-   END SUBROUTINE ParseDbVar
+   END SUBROUTINE ParseR8Var
 !=======================================================================
 !> \copydoc nwtc_io::parsechvarwdefault
-   SUBROUTINE ParseDbVarWDefault ( FileInfo, LineNum, ExpVarName, Var, VarDefault, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ParseR8VarWDefault ( FileInfo, LineNum, ExpVarName, Var, VarDefault, ErrStat, ErrMsg, UnEc )
 
          ! Arguments declarations.
 
@@ -3749,8 +3752,8 @@ END SUBROUTINE CheckR16Var
 
       INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
-      REAL(DbKi), INTENT(OUT)                :: Var                           ! The double-precision REAL variable to receive the input value.
-      REAL(DbKi),     INTENT(IN)             :: VarDefault                    ! The double-precision REAL used as the default.
+      REAL(R8Ki), INTENT(OUT)                :: Var                           ! The double-precision REAL variable to receive the input value.
+      REAL(R8Ki),     INTENT(IN)             :: VarDefault                    ! The double-precision REAL used as the default.
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
       CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
 
@@ -3762,7 +3765,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
 
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
-      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseDbVarDefault'
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseR8VarDefault'
       CHARACTER(20)                          :: defaultStr
       
       ErrStat=ErrID_None
@@ -3782,7 +3785,187 @@ END SUBROUTINE CheckR16Var
       END IF             
       
       RETURN
-   END SUBROUTINE ParseDbVarWDefault
+   END SUBROUTINE ParseR8VarWDefault
+!=======================================================================
+!> This subroutine parses the specified line of text for AryLen REAL values.
+!! Generate an error message if the value is the wrong type.
+!! Use ParseAry (nwtc_io::parseary) instead of directly calling a specific routine in the generic interface.   
+   SUBROUTINE ParseQuAry ( FileInfo, LineNum, AryName, Ary, AryLen, ErrStat, ErrMsg, UnEc )
+
+         ! Arguments declarations.
+
+      INTEGER, INTENT(IN)                    :: AryLen                        !< The length of the array to parse.
+
+      REAL(QuKi), INTENT(OUT)                :: Ary       (AryLen)            !< The array to receive the input values.
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       !< The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       !< The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          !< I/O unit for echo file. If present and > 0, write to UnEc.
+
+      CHARACTER(*),   INTENT(In)             :: AryName                       !< The array name we are trying to fill.
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
+
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      !< The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: i                             ! Error status local to this routine.
+
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseQuAry'
+
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
+      
+      READ (FileInfo%Lines(LineNum),*,IOSTAT=ErrStatLcl)  Ary
+      IF ( ErrStatLcl /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'A fatal error occurred when parsing data from "' &
+                   //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned valid REAL values on line #' &
+                   //TRIM( Num2LStr( FileInfo%FileLine(LineNum) ) )//'.'//NewLine//' >> The text being parsed was :'//NewLine &
+                   //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"',ErrStat,ErrMsg,RoutineName )
+         RETURN
+      ENDIF
+      
+      DO i=1,AryLen
+         call CheckRealVar( Ary(i), AryName, ErrStat, ErrMsg )
+         if (ErrStat>= AbortErrLev) return
+      END DO
+
+
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  TRIM( FileInfo%Lines(LineNum) )
+      END IF
+
+      LineNum = LineNum + 1
+
+      RETURN
+
+   END SUBROUTINE ParseQuAry
+!=======================================================================
+!> \copydoc nwtc_io::parsechvar
+   SUBROUTINE ParseQuVar ( FileInfo, LineNum, ExpVarName, Var, ErrStat, ErrMsg, UnEc )
+
+         ! Arguments declarations.
+
+      REAL(QuKi), INTENT(OUT)                :: Var                           ! The double-precision REAL variable to receive the input value.
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
+
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
+      CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
+
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      ! The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
+
+      CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseQuVar'
+
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
+      CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
+
+      CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
+                        , FileInfo%FileLine(LineNum), NameIndx, ErrStatLcl, ErrMsg2 )
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev )  RETURN
+
+      
+      READ (Words(3-NameIndx),*,IOSTAT=ErrStatLcl)  Var
+      IF ( ErrStatLcl /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//'A fatal error occurred when parsing data from "' &
+                   //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
+                   ' >> The variable "'//TRIM( Words(NameIndx) )//'" was not assigned valid REAL value on line #' &
+                   //TRIM( Num2LStr( LineNum ) )//'.'//NewLine//' >> The text being parsed was :'//&
+                   NewLine//'    "'//TRIM( FileInfo%Lines(LineNum) )//'"', ErrStat, ErrMsg, RoutineName)
+         RETURN
+      ENDIF
+      CALL CheckRealVar( Var, ExpVarName, ErrStatLcl, ErrMsg2)
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+      IF ( PRESENT(UnEc) )  THEN
+         IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
+      END IF
+
+      LineNum = LineNum + 1
+
+      RETURN
+   END SUBROUTINE ParseQuVar
+!=======================================================================
+!> \copydoc nwtc_io::parsechvarwdefault
+   SUBROUTINE ParseQuVarWDefault ( FileInfo, LineNum, ExpVarName, Var, VarDefault, ErrStat, ErrMsg, UnEc )
+
+         ! Arguments declarations.
+
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
+
+      REAL(QuKi), INTENT(OUT)                :: Var                           ! The double-precision REAL variable to receive the input value.
+      REAL(QuKi),     INTENT(IN)             :: VarDefault                    ! The double-precision REAL used as the default.
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
+      CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
+
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      ! The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseQuVarDefault'
+      CHARACTER(20)                          :: defaultStr
+      
+      ErrStat=ErrID_None
+      ErrMsg = ""
+
+         ! First parse this as a string
+      CALL ParseVar ( FileInfo, LineNum, ExpVarName, defaultStr, ErrStatLcl, ErrMsg2, UnEc )
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL Conv2UC( defaultStr )
+      IF ( INDEX(defaultStr, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable
+         LineNum = LineNum - 1  ! back up a line
+         CALL ParseVar ( FileInfo, LineNum, ExpVarName, Var, ErrStatLcl, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ELSE
+         Var = VarDefault  ! "DEFAULT" value
+      END IF             
+      
+      RETURN
+   END SUBROUTINE ParseQuVarWDefault
 !=======================================================================
 !> \copydoc nwtc_io::parsedbary
    SUBROUTINE ParseInAry ( FileInfo, LineNum, AryName, Ary, AryLen, ErrStat, ErrMsg, UnEc )
@@ -4273,7 +4456,7 @@ END SUBROUTINE CheckR16Var
 
       INTEGER, INTENT(IN)                    :: AryLen                        ! The length of the array to parse.
 
-      REAL(ReKi), INTENT(OUT)                :: Ary       (AryLen)            ! The single-precision REAL array to receive the input values.
+      REAL(SiKi), INTENT(OUT)                :: Ary       (AryLen)            ! The single-precision REAL array to receive the input values.
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
@@ -4333,7 +4516,7 @@ END SUBROUTINE CheckR16Var
 
          ! Arguments declarations.
 
-      REAL(ReKi), INTENT(OUT)                :: Var                           ! The single-precision REAL variable to receive the input value.
+      REAL(SiKi), INTENT(OUT)                :: Var                           ! The single-precision REAL variable to receive the input value.
 
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
@@ -4406,8 +4589,8 @@ END SUBROUTINE CheckR16Var
 
       INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
 
-      REAL(ReKi), INTENT(OUT)                :: Var                           ! The single-precision REAL variable to receive the input value.
-      REAL(ReKi),   INTENT(IN)               :: VarDefault                    ! The single-precision REAL used as the default.
+      REAL(SiKi), INTENT(OUT)                :: Var                           ! The single-precision REAL variable to receive the input value.
+      REAL(SiKi),   INTENT(IN)               :: VarDefault                    ! The single-precision REAL used as the default.
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
       CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
 
@@ -6338,7 +6521,7 @@ END SUBROUTINE CheckR16Var
    DO
 
       IF ( PRESENT(UnEc) )  THEN
-         if (UnEc > 0) WRITE(UnEc, '(A)')  FileInfo%Lines(LineNum)
+         if (UnEc > 0) WRITE(UnEc, '(A)')  trim(FileInfo%Lines(LineNum))
       ENDIF
       OutLine = adjustl(trim(FileInfo%Lines(LineNum)))   ! remove leading whitespace
 

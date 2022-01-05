@@ -372,7 +372,7 @@ end subroutine Dvr_CleanUp
 !> Initialize aerodyn module based on driver data
 subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: iCase
-   type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(Dvr_SimData), target,    intent(inout) :: dvr           ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
    real(DbKi),                   intent(inout) :: dt            ! interval
    type(AD_InitOutputType),      intent(  out) :: InitOutData   ! Output data for initialization
@@ -384,7 +384,7 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
    integer(IntKi)                              :: iWT
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
-   type(AD_InitInputType)                      :: InitInData     ! Input data for initialization
+   type(AD_InitInputType)                      :: InitInData    ! Input data for initialization
    type(WTData), pointer :: wt ! Alias to shorten notation
    logical :: needInit
    errStat = ErrID_None
@@ -411,9 +411,17 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
          call Cleanup()
          return
       end if
-      InitInData%InputFile = dvr%AD_InputFile
-      InitInData%RootName  = dvr%out%Root
-      InitInData%Gravity   = 9.80665_ReKi
+      InitInData%InputFile   = dvr%AD_InputFile
+      InitInData%RootName    = dvr%out%Root
+      InitInData%Gravity     = 9.80665_ReKi
+      InitInData%MHK         = dvr%MHK
+      InitInData%defFldDens  = dvr%FldDens
+      InitInData%defKinVisc  = dvr%KinVisc
+      InitInData%defSpdSound = dvr%SpdSound
+      InitInData%defPatm     = dvr%Patm
+      InitInData%defPvap     = dvr%Pvap
+      InitInData%WtrDpth     = dvr%WtrDpth
+      InitInData%MSL2SWL     = dvr%MSL2SWL
       ! Init data per rotor
       do iWT=1,dvr%numTurbines
          wt => dvr%WT(iWT)
@@ -894,7 +902,7 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
             wt%ptMesh%TranslationDisp(wt%degreeofFreedom,1) =                      wt%amplitude * sin(time * wt%frequency)
             wt%ptMesh%TranslationVel (wt%degreeofFreedom,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
             wt%ptMesh%TranslationAcc (wt%degreeofFreedom,1) = -(wt%frequency)**2 * wt%amplitude * sin(time * wt%frequency)
-         elseif (any(wt%degreeOfFreedom==(/4,5,5/))) then
+         elseif (any(wt%degreeOfFreedom==(/4,5,6/))) then
             theta(1:3) = 0.0_ReKi
             theta(wt%degreeofFreedom-3) = wt%amplitude * sin(time * wt%frequency)
             wt%ptMesh%RotationVel (wt%degreeofFreedom-3,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
@@ -1274,10 +1282,21 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       call ParseVar(FileInfo_In, CurLine, 'Echo', echo, errStat2, errMsg2, UnEc); if (Failed()) return
    endif
 
+   call ParseVar(FileInfo_In, CurLine, "MHK"         , dvr%MHK         , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "analysisType", dvr%analysisType, errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "tMax"        , dvr%tMax        , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "dt"          , dvr%dt          , errStat2, errMsg2, unEc); if (Failed()) return
    call ParseVar(FileInfo_In, CurLine, "AeroFile"    , dvr%AD_InputFile, errStat2, errMsg2, unEc); if (Failed()) return
+
+   ! --- Environmental conditions
+   call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "FldDens"     , dvr%FldDens , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "KinVisc"     , dvr%KinVisc , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "SpdSound"    , dvr%SpdSound, errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "Patm"        , dvr%Patm    , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "Pvap"        , dvr%Pvap    , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "WtrDpth"     , dvr%WtrDpth , errStat2, errMsg2, unEc); if (Failed()) return
+   dvr%MSL2SWL = 0.0_ReKi ! pass as zero since not set in AeroDyn driver input file
 
    ! --- Inflow data
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
@@ -1639,6 +1658,10 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
+   if (dvr%MHK /= 0 ) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0. Functionality to model an MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName) ! hkr (4/6/21) Remove after MHK functionality is implemented
+   if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
+   if (dvr%MHK == 2) call SetErrStat(ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName)
+   
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',ErrStat, ErrMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%compInflow) ), 'CompInflow needs to be 0 or 1')) return
 
@@ -1648,6 +1671,7 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
       if (Check( dvr%CompInflow/=0, 'CompInflow needs to be 0 when analysis type is '//trim(Num2LStr(dvr%analysisType)))) return
    endif
 
+   if (dvr%WtrDpth < 0.0_ReKi) call SetErrStat(ErrID_Fatal, 'WtrDpth must not be negative.', ErrStat, ErrMsg, RoutineName)
 
    do iWT=1,dvr%numTurbines
       wt => dvr%WT(iWT)
