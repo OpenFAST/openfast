@@ -2839,6 +2839,10 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
             Msg = 'HGM (continuous state)'
          case (UA_HGMV)
             Msg = 'HGMV (continuous state + vortex)'
+         case (UA_OYE)
+            Msg = 'Stieg Oye dynamic stall model'
+         case (UA_BV)
+            Msg = 'Boeing-Vertol dynamic stall model (e.g. used in CACTUS)'
          case default      
             Msg = 'unknown'      
       end select
