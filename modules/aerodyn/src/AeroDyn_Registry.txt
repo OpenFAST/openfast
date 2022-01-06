@@ -247,7 +247,6 @@ typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pa
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	RotParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
-# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	RotParameterType	IntKi	TwrPotent	-	-	-	"Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
 typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
@@ -278,12 +277,14 @@ typedef	^	RotParameterType	OutParmType	BldNd_OutParam	{:}	-	-	"Names and units (
 typedef  ^  RotParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
 typedef  ^  RotParameterType  IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
 
+# parameters for all rotors:
 typedef  ^  ParameterType  RotParameterType rotors {:} - - "Parameter types for each rotor" -
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
-typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 
 
 # ..... Inputs ....................................................................................................................

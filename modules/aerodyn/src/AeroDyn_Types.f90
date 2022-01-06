@@ -325,11 +325,11 @@ IMPLICIT NONE
 ! =========  AD_ParameterType  =======
   TYPE, PUBLIC :: AD_ParameterType
     TYPE(RotParameterType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< Parameter types for each rotor [-]
+    REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(AFI_ParameterType) , DIMENSION(:), ALLOCATABLE  :: AFI      !< AirfoilInfo parameters [-]
     INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
-    REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  RotInputType  =======
@@ -11149,6 +11149,7 @@ IF (ALLOCATED(SrcParamData%rotors)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+    DstParamData%DT = SrcParamData%DT
     DstParamData%RootName = SrcParamData%RootName
 IF (ALLOCATED(SrcParamData%AFI)) THEN
   i1_l = LBOUND(SrcParamData%AFI,1)
@@ -11170,7 +11171,6 @@ ENDIF
       CALL FVW_CopyParam( SrcParamData%FVW, DstParamData%FVW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-    DstParamData%DT = SrcParamData%DT
  END SUBROUTINE AD_CopyParam
 
  SUBROUTINE AD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -11256,6 +11256,7 @@ ENDIF
       END IF
     END DO
   END IF
+      Db_BufSz   = Db_BufSz   + 1  ! DT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
   Int_BufSz   = Int_BufSz   + 1     ! AFI allocated yes/no
   IF ( ALLOCATED(InData%AFI) ) THEN
@@ -11298,7 +11299,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Db_BufSz   = Db_BufSz   + 1  ! DT
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -11367,6 +11367,8 @@ ENDIF
       ENDIF
     END DO
   END IF
+    DbKiBuf(Db_Xferred) = InData%DT
+    Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(InData%RootName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -11442,8 +11444,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-    DbKiBuf(Db_Xferred) = InData%DT
-    Db_Xferred = Db_Xferred + 1
  END SUBROUTINE AD_PackParam
 
  SUBROUTINE AD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -11529,6 +11529,8 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
+    OutData%DT = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(OutData%RootName)
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
@@ -11631,8 +11633,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    OutData%DT = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
  END SUBROUTINE AD_UnPackParam
 
  SUBROUTINE AD_CopyRotInputType( SrcRotInputTypeData, DstRotInputTypeData, CtrlCode, ErrStat, ErrMsg )
