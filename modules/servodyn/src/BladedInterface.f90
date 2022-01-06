@@ -587,6 +587,7 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
    call WrSumInfoSend(62, 'Maximum number of values which can be returned for logging (-) [set to '//trim(Num2LStr(MaxLoggingChannels))//']')
    call WrSumInfoSend(63, 'Record number for start of logging output (-) [set to '//trim(Num2LStr(R + (2*dll_data%DLL_NumTrq)))//']')
    call WrSumInfoSend(64, 'Maximum number of characters which can be returned in "OUTNAME" (-) [set to '//trim(Num2LStr(p%avcOUTNAME_LEN))//' (including the C NULL CHARACTER)]')
+   call WrSumInfoSend(66, 'Start of Platform motion -- 1001')
    call WrSumInfoSend(69, 'Blade 1 root in-plane bending moment (Nm) [SrvD input]')
    call WrSumInfoSend(70, 'Blade 2 root in-plane bending moment (Nm) [SrvD input]')
    call WrSumInfoSend(71, 'Blade 3 root in-plane bending moment (Nm) [SrvD input]')
@@ -1012,6 +1013,7 @@ END IF
    dll_data%avrSWAP(64) = p%avcOUTNAME_LEN                  !> * Record 64: Maximum number of characters which can be returned in "OUTNAME" (-) [set to bladedinterface::MaxLoggingChannels * (2+nwtc_base::chanlen) + 1 (we add one for the C NULL CHARACTER)]
 ! Record 65 is output [see Retrieve_avrSWAP()]
 ! Records 66-68 are reserved
+   dll_data%avrSWAP(66) = 1001                              !> * Record 66: start index of platform motions
 
    dll_data%avrSWAP(69) = u%RootMxc(1)                      !> * Record 69: Blade 1 root in-plane bending moment (Nm) [SrvD input]
    dll_data%avrSWAP(70) = u%RootMxc(2)                      !> * Record 70: Blade 2 root in-plane bending moment (Nm) [SrvD input]
