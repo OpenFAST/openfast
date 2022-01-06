@@ -117,6 +117,15 @@ function(ad_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ad_regression)
 
+# aerodyn-Py
+function(ad_py_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeAerodynPyRegressionCase.py")
+  set(AERODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodyn")
+  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(ad_py_regression)
+
 # beamdyn
 function(bd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
@@ -230,6 +239,7 @@ ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at 
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
 ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
+ad_py_regression("ad_py_5MW_rigid_turb"     "aerodyn;bem;python")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")

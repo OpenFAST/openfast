@@ -1,0 +1,680 @@
+#**********************************************************************************************************************************
+# LICENSING
+# Copyright (C) 2021 National Renewable Energy Laboratory
+#
+# This file is part of InflowWind.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#**********************************************************************************************************************************
+#
+# This is the Python-C interface library for AeroDyn with InflowWind.  This may
+# be used directly with Python based codes to call and run AeroDyn and
+# InflowWind together.  An example of using this library from Python is given
+# in the accompanying Python driver program.  Additional notes and information
+# on the interfacing is included there.
+#
+#
+from ctypes import (
+    CDLL,
+    POINTER,
+    create_string_buffer,
+    byref,
+    c_byte,
+    c_int,
+    c_double,
+    c_float, 
+    c_char,
+    c_char_p,
+    c_wchar,
+    c_wchar_p,
+    c_bool
+)
+import numpy as np
+import datetime
+
+class AeroDynInflowLib(CDLL):
+    # Human readable error levels from IfW.
+    error_levels = {
+        0: "None",
+        1: "Info",
+        2: "Warning",
+        3: "Severe Error",
+        4: "Fatal Error"
+    }
+
+    #   NOTE:   the error message length in Fortran is controlled by the
+    #           ErrMsgLen variable in the NWTC_Base.f90 file.  If that ever
+    #           changes, it may be necessary to update the corresponding size
+    #           here.
+    error_msg_c_len = 1025
+
+    #   NOTE:   the length of the name used for any output file written by the
+    #           HD Fortran code is 1025.
+    default_str_c_len = 1025
+
+    def __init__(self, library_path):
+        super().__init__(library_path)
+        self.library_path = library_path
+
+        self._initialize_routines()
+        self.ended = False                  # For error handling at end
+
+        # Input file handling
+        self.ADinputPass  = True            # Assume passing of input file as a string
+        self.IfWinputPass = True            # Assume passing of input file as a string
+
+        # Create buffers for class data
+        self.abort_error_level = 4
+        self.error_status_c = c_int(0)
+        self.error_message_c = create_string_buffer(self.error_msg_c_len)
+
+        # This is not sufficient for HD
+        #FIXME: ChanLen may not always be 20 -- could be as much as 256
+        #       Possible fix is to pass this length over to Fortran side.
+        #       Also may want to convert this at some point to C_NULL_CHAR
+        #       delimeter instead of fixed width.  Future problem though.
+        # Number of channel names may exceeed 5000
+        self._channel_names_c = create_string_buffer(20 * 10000)
+        self._channel_units_c = create_string_buffer(20 * 10000)
+
+        # Initial environmental conditions
+        #self.MHK = false    #  MHK turbine type switch -- disabled for now
+        self.gravity     =   9.80665  # Gravitational acceleration (m/s^2)
+        self.defFldDens  =     1.225  # Air density (kg/m^3)
+        self.defKinVisc  = 1.464E-05  # Kinematic viscosity of working fluid (m^2/s)
+        self.defSpdSound =     335.0  # Speed of sound in working fluid (m/s)
+        self.defPatm     =  103500.0  # Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+        self.defPvap     =    1700.0  # Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+        self.WtrDpth     =       0.0  # Water depth (m)
+        self.MSL2SWL     =       0.0  # Offset between still-water level and mean sea level (m) [positive upward]
+
+        # flags 
+        self.storeHHVel  = False
+        self.WrVTK       = 0
+
+        # Interpolation order (must be 1: linear, or 2: quadratic)
+        self.InterpOrder    =   1   # default of linear interpolation
+
+        # Initial time related variables
+        self.dt = 0.1                   # typical default for HD
+        self.t_start = 0.0              # initial time 
+        self.tmax = 600.0               # typical default for HD waves FFT
+        #FIXME: check tmax/total_time and note exactly what is different between them.
+        self.total_time = 0.0           # may be longer than tmax
+        self.numTimeSteps = 0
+
+        self.numChannels = 0                # Number of channels returned
+
+        # Number of bodies and initial reference point
+        #   The initial position is only set as (X,Y).  The Z value and
+        #   orientation is set by HD and will be returned along with the full
+        #   set of numBodies where it is expecting loads inputs.
+        self.ptfmRefPt_x    = 0.0
+        self.ptfmRefPt_y    = 0.0
+
+        # Nodes
+        #   The number of nodes must be constant throughout simulation.  The
+        #   initial position is given in the initNodePos array (resize as
+        #   needed, should be Nx6).
+        #   Rotations are given in radians assuming small angles.  See note at
+        #   top of this file.
+        self.numNodePts     = 1     # Single ptfm attachment point for floating rigid
+        self.initNodePos    = np.zeros(shape=(self.numNodePts,3),dtype=c_float)      # Nx3 array [x,y,z]
+        #FIXME: how to specify orient as double?
+        self.initNodeOrient = np.zeros(shape=(self.numNodePts,9),dtype=c_double)      # Nx9 array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+
+        # OutRootName
+        #   If HD writes a file (echo, summary, or other), use this for the
+        #   root of the file name.
+        self.outRootName = "Output_ADIlib_default"
+
+    # _initialize_routines() ------------------------------------------------------------------------------------------------------------
+    def _initialize_routines(self):
+        self.AeroDyn_Inflow_C_Init.argtypes = [
+            POINTER(c_bool),                    # AD input file passed as string
+            POINTER(c_char_p),                  # AD input file as string
+            POINTER(c_int),                     # AD input file string length
+            POINTER(c_bool),                    # IfW input file passed as string
+            POINTER(c_char_p),                  # IfW input file as string
+            POINTER(c_int),                     # IfW input file string length
+            POINTER(c_char),                    # OutRootName 
+            POINTER(c_float),                   # gravity
+            POINTER(c_float),                   # defFldDens
+            POINTER(c_float),                   # defKinVisc
+            POINTER(c_float),                   # defSpdSound
+            POINTER(c_float),                   # defPatm
+            POINTER(c_float),                   # defPvap
+            POINTER(c_float),                   # WtrDpth
+            POINTER(c_float),                   # MSL2SWL
+            POINTER(c_int),                     # InterpOrder 
+            POINTER(c_double),                  # t_initial 
+            POINTER(c_double),                  # dt
+            POINTER(c_double),                  # tmax 
+            POINTER(c_bool),                    # storeHHVel
+            POINTER(c_int),                     # WrVTK
+            POINTER(c_int),                     # numNodePts
+            POINTER(c_float),                   # initNodePos_flat
+            POINTER(c_double),                  # initNodeOrient_flat
+            POINTER(c_int),                     # number of channels
+            POINTER(c_char),                    # output channel names
+            POINTER(c_char),                    # output channel units
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.AeroDyn_Inflow_C_Init.restype = c_int 
+
+        self.AeroDyn_Inflow_C_ReInit.argtypes = [
+            POINTER(c_double),                  # t_initial 
+            POINTER(c_double),                  # dt
+            POINTER(c_double),                  # tmax 
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.AeroDyn_Inflow_C_ReInit.restype = c_int 
+
+        self.AeroDyn_Inflow_C_CalcOutput.argtypes = [
+            POINTER(c_double),                  # Time_C
+            POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
+            POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeVel -- node velocities     in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeAcc -- node accelerations  in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeFrc -- node forces/moments in flat array of 6*numNodePts
+            POINTER(c_float),                   # Output Channel Values
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.AeroDyn_Inflow_C_CalcOutput.restype = c_int
+
+        self.AeroDyn_Inflow_C_UpdateStates.argtypes = [
+            POINTER(c_double),                  # Time_C
+            POINTER(c_double),                  # TimeNext_C
+            POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
+            POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeVel -- node velocities     in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeAcc -- node accelerations  in flat array of 6*numNodePts
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.AeroDyn_Inflow_C_UpdateStates.restype = c_int
+
+        self.AeroDyn_Inflow_C_End.argtypes = [
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.AeroDyn_Inflow_C_End.restype = c_int
+
+    # aerodyn_inflow_init ------------------------------------------------------------------------------------------------------------
+    def aerodyn_inflow_init(self, AD_input_string_array, IfW_input_string_array):
+        # nodePositions -- N x 6 array  -- position info as [x1,y1,z1,Rx1,Ry1,Rz1]
+
+        # Primary input file will be passed as a single string joined by
+        # C_NULL_CHAR.
+        AD_input_string = '\x00'.join(AD_input_string_array)
+        AD_input_string = AD_input_string.encode('utf-8')
+        AD_input_string_length = len(AD_input_string)
+
+        # Primary input file will be passed as a single string joined by
+        # C_NULL_CHAR.
+        IfW_input_string = '\x00'.join(IfW_input_string_array)
+        IfW_input_string = IfW_input_string.encode('utf-8')
+        IfW_input_string_length = len(IfW_input_string)
+
+        self._numChannels_c = c_int(0)
+
+        # Rootname for ADI output files (echo etc).
+        _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
+
+        # store initial number of node points for error handling at calls
+        self._initNumNodePts = self.numNodePts
+        print("shape of initNodePos       ",   self.initNodePos.shape)
+        print("               size 0      ",   self.initNodePos.shape[0])
+        print("               size 1      ",   self.initNodePos.shape[1])
+        print("shape of initNodeOrient    ",   self.initNodeOrient.shape)
+        print("               size 0      ",   self.initNodeOrient.shape[0])
+        print("               size 1      ",   self.initNodeOrient.shape[1])
+        print("               float       ",   type(self.initNodeOrient[0,0]))
+
+        # initNodePos
+        #   Verify that the shape of initNodePos is correct
+        if self.initNodePos.shape[0] != self.initNodeOrient.shape[0]:
+            raise Exception("\ndifferent number of nodes in inital position and orientation arrays")
+        if self.initNodePos.shape[1] != 3:
+            print("Expecting a Nx3 array of initial node positions (initNodePos) with first index for [x,y,z]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initNodePos.shape[0] != self.numNodePts:
+            print("Expecting a Nx3 array of initial node positions (initNodePos) with second index for node number.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initNodeOrient.shape[1] != 9:
+            print("Expecting a Nx9 array of initial node orientations as DCMs (initNodeOrient) with first index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initNodeOrient.shape[0] != self.numNodePts:
+            print("Expecting a Nx3 array of initial node orientations (initNodeOrient) with second index for node number.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+
+        #   Make a flat 1D array of position info:
+        #       [x2,y1,z1, x2,y2,z2 ...]
+        initNodePos_flat = [pp for p in self.initNodePos for pp in p]
+        initNodePos_flat_c = (c_float * (3 * self.numNodePts))(0.0,)
+        for i, p in enumerate(initNodePos_flat):
+            initNodePos_flat_c[i] = c_float(p)
+        #   Similarly for orientations
+        initNodeOrient_flat = [pp for p in self.initNodeOrient for pp in p]
+        initNodeOrient_flat_c = (c_double * (9 * self.numNodePts))(0.0,)
+        #print("initNodeOrient_flat      ",   type(initNodeOrient_flat[0]))
+        #print("initNodeOrient_flat_c    ",   type(initNodeOrient_flat_c))
+        for i, p in enumerate(initNodeOrient_flat):
+            initNodeOrient_flat_c[i] = c_double(p)
+        #print("initNodeOrient_flat_c    ",   type(initNodeOrient_flat_c))
+
+        
+        #FIXME: debug checks
+#        print('input_string_array')
+#        for x in range(len(input_string_array)):
+#            print(input_string_array[x])
+#        print('Size of input file string: ',input_string_length)
+
+
+        print("AeroDynInflowLib: Call to adi_C_Init") #FIXME: temp
+        # call AeroDyn_Inflow_C_Init
+        self.AeroDyn_Inflow_C_Init(
+            byref(c_bool(self.ADinputPass)),        # IN: AD input file is passed
+            c_char_p(AD_input_string),              # IN: AD input file as string (or filename if ADinputPass is false)
+            byref(c_int(AD_input_string_length)),   # IN: AD input file string length
+            byref(c_bool(self.IfWinputPass)),       # IN: IfW input file is passed
+            c_char_p(IfW_input_string),             # IN: IfW input file as string (or filename if IfWinputPass is false)
+            byref(c_int(IfW_input_string_length)),  # IN: IfW input file string length
+            _outRootName_c,                         # IN: rootname for ADI file writing
+            byref(c_float(self.gravity)),           # IN: gravity
+            byref(c_float(self.defFldDens)),        # IN: defFldDens
+            byref(c_float(self.defKinVisc)),        # IN: defKinVisc
+            byref(c_float(self.defSpdSound)),       # IN: defSpdSound
+            byref(c_float(self.defPatm)),           # IN: defPatm
+            byref(c_float(self.defPvap)),           # IN: defPvap
+            byref(c_float(self.WtrDpth)),           # IN: WtrDpth
+            byref(c_float(self.MSL2SWL)),           # IN: MSL2SWL
+            byref(c_int(self.InterpOrder)),         # IN: InterpOrder (1: linear, 2: quadratic)
+            byref(c_double(self.t_start)),          # IN: time initial 
+            byref(c_double(self.dt)),               # IN: time step (dt)
+            byref(c_double(self.tmax)),             # IN: tmax
+            byref(c_bool(self.storeHHVel)),         # IN: storeHHVel
+            byref(c_int(self.WrVTK)),               # IN: WrVTK
+            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            initNodePos_flat_c,                     # IN: initNodePos -- initial node positions in flat array of 6*numNodePts
+            initNodeOrient_flat_c,                  # IN: initNodeOrient -- initial node positions in flat array of 6*numNodePts
+            byref(self._numChannels_c),             # OUT: number of channels
+            self._channel_names_c,                  # OUT: output channel names
+            self._channel_units_c,                  # OUT: output channel units
+            byref(self.error_status_c),             # OUT: ErrStat_C
+            self.error_message_c                    # OUT: ErrMsg_C
+        )
+
+        print("AeroDynInflowLib: after call to adi_C_Init") #FIXME: temp
+        self.check_error()
+        
+        # Initialize output channels
+        self.numChannels = self._numChannels_c.value
+
+
+    # aerodyn_inflow_reinit ------------------------------------------------------------------------------------------------------------
+    def aerodyn_inflow_Reinit(self):
+        #FIXME: need to pass something in here I think.  Not sure what.
+
+        # call AeroDyn_Inflow_C_Init
+        self.AeroDyn_Inflow_C_Init(
+            byref(c_double(self.t_start)),          # IN: time initial 
+            byref(c_double(self.dt)),               # IN: time step (dt)
+            byref(c_double(self.tmax)),             # IN: tmax
+            byref(self.error_status_c),             # OUT: ErrStat_C
+            self.error_message_c                    # OUT: ErrMsg_C
+        )
+
+        self.check_error()
+
+        #FIXME: anything coming out that needs handling/passing?
+
+
+    # aerodyn_inflow_calcOutput ------------------------------------------------------------------------------------------------------------
+    def aerodyn_inflow_calcOutput(self, time, nodePos, nodeVel, nodeAcc, nodeFrcMom, outputChannelValues):
+
+        # Check input motion info
+        self.check_input_motions(nodePos,nodeVel,nodeAcc)
+
+        # set flat arrays for inputs of motion
+        #   Position -- [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
+        nodePos_flat = [pp for p in nodePos for pp in p]
+        nodePos_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodePos_flat):
+            nodePos_flat_c[i] = c_float(p)
+
+        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
+        nodeVel_flat = [pp for p in nodeVel for pp in p]
+        nodeVel_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeVel_flat):
+            nodeVel_flat_c[i] = c_float(p)
+
+        #   Acceleration -- [Ax1,Ay1,Az1,RAx1,RAy1,RAz1, Ax2,Ay2,Az2,RAx2,RAy2,RAz2 ...]
+        nodeAcc_flat = [pp for p in nodeAcc for pp in p]
+        nodeAcc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeAcc_flat):
+            nodeAcc_flat_c[i] = c_float(p)
+
+        # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
+        nodeFrc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+
+        # Set up output channels
+        outputChannelValues_c = (c_float * self.numChannels)(0.0,)
+
+        # Run AeroDyn_Inflow_C_CalcOutput
+        self.AeroDyn_Inflow_C_CalcOutput(
+            byref(c_double(time)),                  # IN: time at which to calculate output forces 
+            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            nodePos_flat_c,                         # IN: positions - specified by user
+            nodeVel_flat_c,                         # IN: velocities at desired positions
+            nodeAcc_flat_c,                         # IN: accelerations at desired positions
+            nodeFrc_flat_c,                         # OUT: resulting forces/moments array
+            outputChannelValues_c,                  # OUT: output channel values as described in input file
+            byref(self.error_status_c),             # OUT: ErrStat_C
+            self.error_message_c                    # OUT: ErrMsg_C
+        )
+
+        self.check_error()
+
+        ## Reshape Force/Moment into [N,6]
+        count = 0
+        for j in range(0,self.numNodePts):
+            nodeFrcMom[j,0] = nodeFrc_flat_c[count]
+            nodeFrcMom[j,1] = nodeFrc_flat_c[count+1]
+            nodeFrcMom[j,2] = nodeFrc_flat_c[count+2]
+            nodeFrcMom[j,3] = nodeFrc_flat_c[count+3]
+            nodeFrcMom[j,4] = nodeFrc_flat_c[count+4]
+            nodeFrcMom[j,5] = nodeFrc_flat_c[count+5]
+            count = count + 6
+        
+        # Convert output channel values back into python
+        for k in range(0,self.numChannels):
+            outputChannelValues[k] = float(outputChannelValues_c[k])
+
+    # aerodyn_inflow_updateStates ------------------------------------------------------------------------------------------------------------
+    def aerdyn_inflow_updateStates(self, time, timeNext, nodePos, nodeVel, nodeAcc, nodeFrcMom):
+
+        # Check input motion info
+        self.check_input_motions(nodePos,nodeVel,nodeAcc)
+
+        # set flat arrays for inputs of motion
+        #   Position -- [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
+        nodePos_flat = [pp for p in nodePos for pp in p]
+        nodePos_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodePos_flat):
+            nodePos_flat_c[i] = c_float(p)
+
+        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
+        nodeVel_flat = [pp for p in nodeVel for pp in p]
+        nodeVel_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeVel_flat):
+            nodeVel_flat_c[i] = c_float(p)
+
+        #   Acceleration -- [Ax1,Ay1,Az1,RAx1,RAy1,RAz1, Ax2,Ay2,Az2,RAx2,RAy2,RAz2 ...]
+        nodeAcc_flat = [pp for p in nodeAcc for pp in p]
+        nodeAcc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeAcc_flat):
+            nodeAcc_flat_c[i] = c_float(p)
+
+        # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
+        nodeFrc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+
+        # Run AeroDyn_Inflow_UpdateStates_c
+        self.AeroDyn_Inflow_C_UpdateStates(
+            byref(c_double(time)),                  # IN: time at which to calculate output forces 
+            byref(c_double(timeNext)),              # IN: time T+dt we are stepping to 
+            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            nodePos_flat_c,                         # IN: positions - specified by user
+            nodeVel_flat_c,                         # IN: velocities at desired positions
+            nodeAcc_flat_c,                         # IN: accelerations at desired positions
+            byref(self.error_status_c),             # OUT: ErrStat_C
+            self.error_message_c                    # OUT: ErrMsg_C
+        )
+
+        self.check_error()
+
+    # aerodyn_inflow_end ------------------------------------------------------------------------------------------------------------
+    def aerodyn_inflow_end(self):
+        if not self.ended:
+            self.ended = True
+            # Run AeroDyn_Inflow_C_End
+            self.AeroDyn_Inflow_C_End(
+                byref(self.error_status_c),
+                self.error_message_c
+            )
+
+            self.check_error()
+
+    # other functions ----------------------------------------------------------------------------------------------------------
+    def check_error(self):
+        if self.error_status_c.value == 0:
+            return
+        elif self.error_status_c.value < self.abort_error_level:
+            print(f"AeroDyn/InflowWind error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+        else:
+            print(f"AeroDyn/InflowWind error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+
+    def check_input_motions(self,nodePos,nodeVel,nodeAcc):
+        # make sure number of nodes didn't change for some reason
+        if self._initNumNodePts != self.numNodePts:
+            print(f"At time {time}, the number of node points changed from initial value of {self._initNumNodePts}.  This is not permitted during the simulation.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nError in calling AeroDyn/InflowWind library.")
+
+        #   Verify that the shape of positions array is correct
+        if nodePos.shape[1] != 6:
+            print("Expecting a Nx6 array of node positions (nodePos) with second index for [x,y,z,Rx,Ry,Rz]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+        if nodePos.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of node positions (nodePos) with first index for node number.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+
+        #   Verify that the shape of velocities array is correct
+        if nodeVel.shape[1] != 6:
+            print("Expecting a Nx6 array of node velocities (nodeVel) with second index for [x,y,z,Rx,Ry,Rz]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+        if nodeVel.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of node velocities (nodeVel) with first index for node number.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+
+        #   Verify that the shape of accelerations array is correct
+        if nodeAcc.shape[1] != 6:
+            print("Expecting a Nx6 array of node accelerations (nodeAcc) with second index for [x,y,z,Rx,Ry,Rz]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+        if nodeAcc.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of node accelerations (nodeAcc) with first index for node number.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+
+
+    @property
+    def output_channel_names(self):
+        if len(self._channel_names_c.value.split()) == 0:
+             return []
+        output_channel_names = self._channel_names_c.value.split()
+        output_channel_names = [n.decode('UTF-8') for n in output_channel_names]
+        return output_channel_names
+
+    @property
+    def output_channel_units(self):
+        if len(self._channel_units_c.value.split()) == 0:
+            return []
+        output_channel_units = self._channel_units_c.value.split()
+        output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
+        return output_channel_units
+
+
+#===============================================================================
+#   Helper class for debugging the interface.  This will write out all the
+#   input position/orientation, velocities, accelerations, and the resulting
+#   forces and moments at each input node.  If all is functioning correctly,
+#   this will be identical to the corresponding values in the
+#   AeroDyn/InflowWind output
+#   channels.
+
+#FIXME: this is incorrect
+class DriverDbg():
+    """
+    This is only for debugging purposes only.  The input motions and resulting
+    forces can be written to file with this class to verify the data I/O to the
+    Fortran library.
+    When coupled to another code, the force/moment array would be passed back
+    to the calling code for use in the structural solver.
+    """
+    def __init__(self,filename,numNodePts):
+        self.DbgFile=open(filename,'wt')        # open output file and write header info
+        self.numNodePts=numNodePts
+        # write file header
+        t_string=datetime.datetime.now()
+        dt_string=datetime.date.today()
+        self.DbgFile.write(f"## This file was generated by aerodyn_inflow_c_lib on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
+        self.DbgFile.write(f"## This file contains the resulting forces/moments at each of {self.numNodePts} node(s) passed into the aerodyn_inflow_c_lib\n")
+        self.DbgFile.write("#\n")
+        f_string = "{:^25s}"
+        self.DbgFile.write("#        T     ")
+        for i in range(1,self.numNodePts+1):
+            f_num = "N{0:04d}_".format(i)
+            self.DbgFile.write(f_string.format(f_num+"x"  ))
+            self.DbgFile.write(f_string.format(f_num+"y"  ))
+            self.DbgFile.write(f_string.format(f_num+"z"  ))
+            self.DbgFile.write(f_string.format(f_num+"Rx" ))
+            self.DbgFile.write(f_string.format(f_num+"Ry" ))
+            self.DbgFile.write(f_string.format(f_num+"Rz" ))
+            self.DbgFile.write(f_string.format(f_num+"Vx" ))
+            self.DbgFile.write(f_string.format(f_num+"Vy" ))
+            self.DbgFile.write(f_string.format(f_num+"Vz" ))
+            self.DbgFile.write(f_string.format(f_num+"RVx"))
+            self.DbgFile.write(f_string.format(f_num+"RVy"))
+            self.DbgFile.write(f_string.format(f_num+"RVz"))
+            self.DbgFile.write(f_string.format(f_num+"Ax" ))
+            self.DbgFile.write(f_string.format(f_num+"Ay" ))
+            self.DbgFile.write(f_string.format(f_num+"Az" ))
+            self.DbgFile.write(f_string.format(f_num+"RAx"))
+            self.DbgFile.write(f_string.format(f_num+"RAy"))
+            self.DbgFile.write(f_string.format(f_num+"RAz"))
+            self.DbgFile.write(f_string.format(f_num+"Fx" ))
+            self.DbgFile.write(f_string.format(f_num+"Fy" ))
+            self.DbgFile.write(f_string.format(f_num+"Fz" ))
+            self.DbgFile.write(f_string.format(f_num+"Mx" ))
+            self.DbgFile.write(f_string.format(f_num+"My" ))
+            self.DbgFile.write(f_string.format(f_num+"Mz" ))
+        self.DbgFile.write("\n")
+        self.DbgFile.write("#       (s)    ")
+        for i in range(1,self.numNodePts+1):
+            self.DbgFile.write(f_string.format("(m)"      ))
+            self.DbgFile.write(f_string.format("(m)"      ))
+            self.DbgFile.write(f_string.format("(m)"      ))
+            self.DbgFile.write(f_string.format("(rad)"    ))
+            self.DbgFile.write(f_string.format("(rad)"    ))
+            self.DbgFile.write(f_string.format("(rad)"    ))
+            self.DbgFile.write(f_string.format("(m/s)"    ))
+            self.DbgFile.write(f_string.format("(m/s)"    ))
+            self.DbgFile.write(f_string.format("(m/s)"    ))
+            self.DbgFile.write(f_string.format("(rad/s)"  ))
+            self.DbgFile.write(f_string.format("(rad/s)"  ))
+            self.DbgFile.write(f_string.format("(rad/s)"  ))
+            self.DbgFile.write(f_string.format("(m/s^2)"  ))
+            self.DbgFile.write(f_string.format("(m/s^2)"  ))
+            self.DbgFile.write(f_string.format("(m/s^2)"  ))
+            self.DbgFile.write(f_string.format("(rad/s^2)"))
+            self.DbgFile.write(f_string.format("(rad/s^2)"))
+            self.DbgFile.write(f_string.format("(rad/s^2)"))
+            self.DbgFile.write(f_string.format("(N)"      ))
+            self.DbgFile.write(f_string.format("(N)"      ))
+            self.DbgFile.write(f_string.format("(N)"      ))
+            self.DbgFile.write(f_string.format("(N-m)"    ))
+            self.DbgFile.write(f_string.format("(N-m)"    ))
+            self.DbgFile.write(f_string.format("(N-m)"    ))
+        self.DbgFile.write("\n")
+        self.opened = True
+
+    def write(self,t,nodePos,nodeVel,nodeAcc,nodeFrc):
+        t_string = "{:10.4f}"
+        f_string = "{:25.7f}"*6
+        self.DbgFile.write(t_string.format(t))
+        for i in range(0,self.numNodePts):
+            self.DbgFile.write(f_string.format(*nodePos[i,:]))
+            self.DbgFile.write(f_string.format(*nodeVel[i,:]))
+            self.DbgFile.write(f_string.format(*nodeAcc[i,:]))
+            self.DbgFile.write(f_string.format(*nodeFrc[i,:]))
+        self.DbgFile.write("\n")
+
+    def end(self):
+        if self.opened:
+            self.DbgFile.close()
+            self.opened = False
+
+
+#===============================================================================
+#   Helper class for writing channels to file.
+#   for the regression testing to mirror the output from the InfowWind Fortran
+#   driver.  This may also have value for debugging the interfacing to IfW.
+
+class WriteOutChans():
+    """
+    This is only for testing purposes. Since we are not returning the
+    output channels to anything, we will write them to file.  When coupled to
+    another code, this data would be passed back for inclusion the any output
+    file there.
+    """
+    def __init__(self,filename,chan_names,chan_units):
+        chan_names.insert(0,'Time')             # add time index header
+        chan_units.insert(0,'(s)')              # add time index unit
+        self.OutFile=open(filename,'wt')        # open output file and write header info
+        # write file header
+        t_string=datetime.datetime.now()
+        dt_string=datetime.date.today()
+        self.OutFile.write(f"## This file was generated by InflowWind_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
+        self.OutFile.write(f"## This file contains output channels requested from the OutList section of the input file")
+        self.OutFile.write(f"{filename}\n")
+        self.OutFile.write("#\n")
+        self.OutFile.write("#\n")
+        self.OutFile.write("#\n")
+        self.OutFile.write("#\n")
+        l = len(chan_names)
+        f_string = "{:^15s}"+"   {:^20s}  "*(l-1)
+        self.OutFile.write(f_string.format(*chan_names) + '\n')
+        self.OutFile.write(f_string.format(*chan_units) + '\n')
+        self.opened = True
+
+    def write(self,chan_data):
+        l = chan_data.shape[1]
+        f_string = "{:10.4f}"+"{:25.7f}"*(l-1)
+        for i in range(0,chan_data.shape[0]):
+            self.OutFile.write(f_string.format(*chan_data[i,:]) + '\n')
+            #if i==0:
+            #    print(f"{chan_data[i,:]}")
+
+    def end(self):
+        if self.opened:
+            self.OutFile.close()
+            self.opened = False

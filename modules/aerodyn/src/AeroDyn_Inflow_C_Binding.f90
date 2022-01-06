@@ -27,9 +27,18 @@ MODULE AeroDyn_Inflow_C_BINDING
    IMPLICIT NONE
 
    PUBLIC :: AeroDyn_Inflow_C_Init
+   PUBLIC :: AeroDyn_Inflow_C_ReInit
    PUBLIC :: AeroDyn_Inflow_C_CalcOutput
    PUBLIC :: AeroDyn_Inflow_C_UpdateStates
    PUBLIC :: AeroDyn_Inflow_C_End
+
+   !------------------------------------------------------------------------------------
+   !  Debugging: debugverbose
+   !     0  - none
+   !     1  - some summary info
+   !     2  - above + all position/orientation info
+   !     3  - above + input files
+   integer(IntKi),   parameter            :: debugverbose = 1
 
    !------------------------------------------------------------------------------------
    !  Error handling
@@ -142,8 +151,8 @@ MODULE AeroDyn_Inflow_C_BINDING
    real(R8Ki)                             :: theta(3)                ! mesh creation helper data
    !  Motions input (so we don't have to reallocate all the time
    real(ReKi), allocatable                :: tmpNodePos(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpNodeOrient(:,:,:)    ! temp array.  Probably don't need this, but makes conversion from C clearer.
    real(ReKi), allocatable                :: tmpNodeVel(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
-   real(ReKi), allocatable                :: tmpNodeAcc(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
    real(ReKi), allocatable                :: tmpNodeFrc(:,:)         ! temp array.  Probably don't need this, but makes conversion to   C clearer.
    !------------------------------------------------------------------------------------
 
@@ -169,37 +178,55 @@ subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
 end subroutine SetErr
 
 
+!FIXME: initial orientations are all single prec -- need to promote these on both sides of interface
 !===============================================================================================================
 !--------------------------------------------- AeroDyn Init----------------------------------------------------
 !===============================================================================================================
-SUBROUTINE AeroDyn_Inflow_C_Init( OutRootName_C, InputFileString_C, InputFileStringLength_C, &
-               NumNodePts_C,  InitNodePositions_C,                                     &
-               InterpOrder_C, T_initial_C, DT_C, TMax_C,                               &
-               NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,              &
+SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileStringLength_C, &
+               IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
+               gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,                         &
+               defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                                   &
+               InterpOrder_C, T_initial_C, DT_C, TMax_C,                                     &
+               storeHHVel, WrVTK,                                                            &
+               NumNodePts_C,  InitNodePositions_C,  InitNodeOrientations_C,                  &
+               NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,                    &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_Init')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_Init
 #endif
-
+   ! Input file info
+   logical(c_bool),           intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   type(c_ptr),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines deliniated by C_NULL_CHAR
+   integer(c_int),            intent(in   )  :: ADinputFileStringLength_C              !< lenght of the input file string
+   logical(c_bool),           intent(in   )  :: IfWinputFilePassed                     !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
+   integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
-   type(c_ptr),               intent(in   )  :: InputFileString_C                      !< Input file as a single string with lines deliniated by C_NULL_CHAR
-   integer(c_int),            intent(in   )  :: InputFileStringLength_C                !< lenght of the input file string
-!FIXME: other defaults that OF usually passes in
-!!!   real(c_float),             intent(in   )  :: Gravity_C                              !< Gravitational constant (set by calling code)
-!!!   real(c_float),             intent(in   )  :: defWtrDens_C                           !< Default value for water density (may be overridden by input file)
-!!!   real(c_float),             intent(in   )  :: defWtrDpth_C                           !< Default value for water density (may be overridden by input file)
-!!!   real(c_float),             intent(in   )  :: defMSL2SWL_C                           !< Default Offset between still-water level and mean sea level (m) [positive upward] (may be overridden by input file)
-!!!   real(c_float),             intent(in   )  :: PtfmRefPtPositionX_C                   !< Initial position in wave field
-!!!   real(c_float),             intent(in   )  :: PtfmRefPtPositionY_C                   !< Initial position in wave field
+   ! Environmental
+   real(c_float),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
+   real(c_float),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
+   real(c_float),             intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
+   real(c_float),             intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
+   real(c_float),             intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+   real(c_float),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+   real(c_float),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
+   real(c_float),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
+   ! Initial nodes
    integer(c_int),            intent(in   )  :: NumNodePts_C                           !< Number of mesh points we are transfering motions to and output loads to
-!FIXME: how do we handle orientations?
-   real(c_float),             intent(in   )  :: InitNodePositions_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]
-   real(c_double),            intent(in   )  :: T_initial_C
+   real(c_float),             intent(in   )  :: InitNodePositions_C( 3*NumNodePts_C )  !< A 3xNumNodePts_C array [x,y,z]
+   real(c_double),            intent(in   )  :: InitNodeOrientations_C( 9*NumNodePts_C )  !< A 9xNumNodePts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+   ! Interpolation
    integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
+   ! Time
+   real(c_double),            intent(in   )  :: T_initial_C
    real(c_double),            intent(in   )  :: DT_C                                   !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
    real(c_double),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation (used to set arrays for wave kinematics)
+   ! Flags
+   logical(c_bool),           intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
+   integer(c_int),            intent(in   )  :: WrVTK                                  !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   ! Output
    integer(c_int),            intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
    character(kind=c_char),    intent(  out)  :: OutputChannelNames_C(ChanLen*MaxADIOutputs+1)    !< NOTE: if MaxADIOutputs is sufficiently large, we may overrun the buffer on the Python side.
    character(kind=c_char),    intent(  out)  :: OutputChannelUnits_C(ChanLen*MaxADIOutputs+1)
@@ -208,9 +235,12 @@ SUBROUTINE AeroDyn_Inflow_C_Init( OutRootName_C, InputFileString_C, InputFileStr
 
    ! Local Variables
    character(IntfStrLen)                                          :: OutRootName       !< Root name to use for echo files and other
-   character(kind=C_char, len=InputFileStringLength_C), pointer   :: InputFileString   !< Input file as a single string with NULL chracter separating lines
+   character(IntfStrLen)                                          :: TmpFileName       !< Temporary file name if not passing AD or IfW input file contents directly
+   character(kind=C_char, len=ADinputFileStringLength_C), pointer :: ADinputFileString   !< Input file as a single string with NULL chracter separating lines
+   character(kind=C_char, len=IfWinputFileStringLength_C), pointer:: IfWinputFileString   !< Input file as a single string with NULL chracter separating lines
 
    real(DbKi)                                                     :: TimeInterval      !< timestep for AD
+   real(DbKi)                                                     :: TMax              !< maximum time for simulation
    integer(IntKi)                                                 :: ErrStat           !< aggregated error message
    character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
@@ -221,57 +251,105 @@ SUBROUTINE AeroDyn_Inflow_C_Init( OutRootName_C, InputFileString_C, InputFileStr
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+   NumChannels_C = 0_c_int
+   OutputChannelNames_C(:) = ''
+   OutputChannelUnits_C(:) = ''
 
-   ! Sanity checks on values passed
-   InterpOrder = int(InterpOrder_C, IntKi)
-   if ( InterpOrder < 1_IntKi .or. InterpOrder > 2_IntKi ) then
+
+   ! For debugging the interface:
+   if (debugverbose > 0) then
+      call ShowPassedData()
+   endif
+
+
+   !--------------------------
+   ! Input files 
+   !--------------------------
+   ! RootName -- for output of echo or other files
+   OutRootName = TRANSFER( OutRootName_C, OutRootName )
+   i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
+   if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
+
+   ! Get fortran pointer to C_NULL_CHAR deliniated input files as a string
+   call C_F_pointer(ADinputFileString_C,  ADinputFileString)
+   call C_F_pointer(IfWinputFileString_C, IfWinputFileString)
+
+   ! Format AD input file contents 
+   if (ADinputFilePassed) then
+      InitInp%AD%UsePrimaryInputFile   = .FALSE.      ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
+      InitInp%AD%InputFile             = "passed_ad_file"      ! not actually used
+      InitInp%AD%RootName              = OutRootName
+      call InitFileInfo(ADinputFileString, InitInp%AD%PassedPrimaryInputData, ErrStat2, ErrMsg2); if (Failed())  return
+   else
+      InitInp%AD%UsePrimaryInputFile   = .TRUE.       ! Read input info from a primary input file
+      i = min(IntfStrLen,ADinputFileStringLength_C)
+      TmpFileName = ''
+      TmpFileName(1:i) = ADinputFileString(1:i)
+      i = INDEX(TmpFileName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
+      if ( i > 0 ) TmpFileName = TmpFileName(1:I)        ! remove it
+      InitInp%AD%InputFile             = TmpFileName
+      InitInp%AD%RootName              = OutRootName
+print*,'InitInp%AD%InputFile ', trim(InitInp%AD%InputFile)
+print*,'InitInp%AD%RootName  ', trim(InitInp%AD%RootName)
       ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "InterpOrder passed into AeroDyn_Inflow_C_Init must be 1 (linear) or 2 (quadratic)"
+      ErrMsg2  =  "Interface cannot currently handle a filename passed in for AD primary input file.  Expecting string of file contents"
       if (Failed())  return
    endif
 
-   ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string
-   call C_F_pointer(InputFileString_C, InputFileString)
+!   ! Format IfW input file contents 
+!   if (IfWinputFilePassed) then
+!      call InitFileInfo(IfWinputFileString, InitInp%IW_InitInp%PassedFileData, ErrStat2, ErrMsg2); if (Failed())  return
+!   else
+!      ErrStat2 =  ErrID_Fatal
+!      ErrMsg2  =  "Interface cannot currently handle a filename passed in for AD primary input file.  Expecting string of file contents"
+!      if (Failed())  return
+!   endif
 
-   ! Get the data to pass to AD_Init
-   call InitFileInfo(InputFileString, InitInp%AD%PassedPrimaryInputData, ErrStat2, ErrMsg2); if (Failed())  return
-!!!   ! Get the data to pass to InflowWind_Init
-!!!   call InitFileInfo(InputFileString, InitInp%IW_InitInp%PassedFileData, ErrStat2, ErrMsg2);         if (Failed())  return
 
    ! For diagnostic purposes, the following can be used to display the contents
    ! of the InFileInfo data structure.
    !     CU is the screen -- system dependent.
-   !call Print_FileInfo_Struct( CU, InitInp%AD%PassedPrimaryInputData )
-   !call Print_FileInfo_Struct( CU, InitInp%IW_InitInp%PassedFileData )
+   if (debugverbose > 4) then
+      if (ADinputFilePassed)     call Print_FileInfo_Struct( CU, InitInp%AD%PassedPrimaryInputData )
+      !if (IfWinputFilePassed)    call Print_FileInfo_Struct( CU, InitInp%IW_InitInp%PassedFileData )
+   endif
 
-   ! Set other inputs for calling AeroDyn_Inflow_Init
-!!!   InitInp%InputFile             = "passed_hd_file"         ! dummy
-!!!   InitInp%UseInputFile          = .FALSE.                  ! this probably should be passed in
-!!!   InitInp%HasIce                = .FALSE.                  ! Always keep at false unless interfacing to ice modules
    ! Linearization
    !     for now, set linearization to false. Pass this in later when interface supports it
    !     Note: we may want to linearize at T=0 for added mass effects, but that might be
    !        special case
 !!!   InitInp%Linearize             = .FALSE.
 
-   ! RootName -- for output of echo or other files
-   OutRootName = TRANSFER( OutRootName_C, OutRootName )
-   i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
-   if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
 !!!   InitInp%OutRootName = trim(OutRootName)
 
-!!!   ! Values passed in
-!!!   InitInp%Gravity               = REAL(Gravity_C,    ReKi)
-!!!   InitInp%defWtrDens            = REAL(defWtrDens_C, ReKi)
-!!!   InitInp%defWtrDpth            = REAL(defWtrDpth_C, ReKi)
-!!!   InitInp%defMSL2SWL            = REAL(defMSL2SWL_C, ReKi)
-!!!   TimeInterval                  = REAL(DT_C,         DbKi)
-!!!   dT_Global                     = TimeInterval                ! Assume this DT is constant for all simulation
-!!!   N_Global                      = 0_IntKi                     ! Assume we are on timestep 0 at start
-!!!   t_initial                     = REAL(T_Initial_C,  DbKi)
-!!!   InitInp%TMax                  = REAL(TMax_C,       DbKi)
-!!!
-   ! Number of bodies and initial positions
+!FIXME: add some sanity checks to this!!!
+   ! Values passed in
+   InitInp%AD%Gravity     = REAL(gravity_C,     ReKi)
+   InitInp%AD%defFldDens  = REAL(defFldDens_C,  ReKi)
+   InitInp%AD%defKinVisc  = REAL(defKinVisc_C,  ReKi)
+   InitInp%AD%defSpdSound = REAL(defSpdSound_C, ReKi)
+   InitInp%AD%defPatm     = REAL(defPatm_C,     ReKi)
+   InitInp%AD%defPvap     = REAL(defPvap_C,     ReKi)
+   InitInp%AD%WtrDpth     = REAL(WtrDpth_C,     ReKi)
+   InitInp%AD%MSL2SWL     = REAL(MSL2SWL_C,     ReKi)
+
+   ! Set time keeping constants
+   TimeInterval           = REAL(DT_C,          DbKi)
+   dT_Global              = TimeInterval                ! Assume this DT is constant for all simulation
+   N_Global               = 0_IntKi                     ! Assume we are on timestep 0 at start
+   t_initial              = REAL(T_Initial_C,   DbKi)
+   TMax                   = REAL(TMax_C,        DbKi)
+
+   ! Interpolation order
+   InterpOrder            = int(InterpOrder_C, IntKi)
+   if ( InterpOrder < 1_IntKi .or. InterpOrder > 2_IntKi ) then
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  "InterpOrder passed into AeroDyn_Inflow_C_Init must be 1 (linear) or 2 (quadratic)"
+      if (Failed())  return
+   endif
+
+
+   ! Number of blades and initial positions
    !  -  NumNodePts is the number of interface Mesh points we are expecting on the python
    !     side.  Will validate this against what AD reads from the initialization info.
    NumNodePts                    = int(NumNodePts_C, IntKi)
@@ -281,25 +359,12 @@ SUBROUTINE AeroDyn_Inflow_C_Init( OutRootName_C, InputFileString_C, InputFileStr
       if (Failed())  return
    endif
    ! Allocate temporary arrays to simplify data conversions
-   call AllocAry( tmpNodePos, 6, NumNodePts, "tmpNodePos", ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpNodeVel, 6, NumNodePts, "tmpNodeVel", ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpNodeAcc, 6, NumNodePts, "tmpNodeAcc", ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpNodeFrc, 6, NumNodePts, "tmpNodeFrc", ErrStat2, ErrMsg2 );     if (Failed())  return
-   tmpNodePos(1:6,1:NumNodePts)   = reshape( real(InitNodePositions_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
-
-!!!   ! Platform reference position
-!!!   !     The AD model uses this for building the moddel.  This is only specified as an (X,Y)
-!!!   !     position (no Z).
-!!!   InitInp%PtfmLocationX         = REAL(PtfmRefPtPositionX_C, ReKi)
-!!!   InitInp%PtfmLocationY         = REAL(PtfmRefPtPositionY_C, ReKi)
-!!!
-!!!
-!!!   ! Wave eleveation output
-!!!   !     Wave elevations can be exported for a set of points (grid or any other layout).
-!!!   !     This feature is used only in the driver codes for exporting for visualization
-!!!   !     and could be added to this inteface.
-!!!   ! Skipping this for now.  Maybe add later.
-!!!   !InitInp%WaveElevXY
+   call AllocAry( tmpNodePos,       3, NumNodePts, "tmpNodePos",    ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpNodeOrient, 3, 3, NumNodePts, "tmpNodeOrient", ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpNodeVel,       6, NumNodePts, "tmpNodeVel",    ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpNodeFrc,       6, NumNodePts, "tmpNodeFrc",    ErrStat2, ErrMsg2 );     if (Failed())  return
+   tmpNodePos(       1:3,1:NumNodePts) = reshape( real(InitNodePositions_C(   1:3*NumNodePts),ReKi), (/  3,NumNodePts/) )
+   tmpNodeOrient(1:3,1:3,1:NumNodePts) = reshape( real(InitNodeOrientations_C(1:9*NumNodePts),ReKi), (/3,3,NumNodePts/) )
 
 
    !----------------------------------------------------
@@ -320,6 +385,8 @@ SUBROUTINE AeroDyn_Inflow_C_Init( OutRootName_C, InputFileString_C, InputFileStr
    call AllocAry( InputTimes, InterpOrder+1, "InputTimes", ErrStat2, ErrMsg2 );  if (Failed())  return
 
 
+call SetErr(ErrID_Fatal,"Exit early",ErrStat_C,ErrMsg_C)  ! Testing
+return
    ! Call the main subroutine AeroDyn_Inflow_Init
    !     TimeInterval and InitInp are passed into AD_Init, all the rest are set by AD_Init
    !
@@ -384,23 +451,23 @@ SUBROUTINE AeroDyn_Inflow_C_Init( OutRootName_C, InputFileString_C, InputFileStr
    !-------------------------------------------------
 
    ! Number of channels
-   NumChannels_C = size(InitOutData%WriteOutputHdr)
+!   NumChannels_C = size(InitOutData%WriteOutputHdr)
 
    ! transfer the output channel names and units to c_char arrays for returning
    !     Upgrade idea:  use C_NULL_CHAR as delimiters.  Requires rework of Python
    !                    side of code.
-   k=1
-   do i=1,NumChannels_C
-      do j=1,ChanLen    ! max length of channel name.  Same for units
-         OutputChannelNames_C(k)=InitOutData%WriteOutputHdr(i)(j:j)
-         OutputChannelUnits_C(k)=InitOutData%WriteOutputUnt(i)(j:j)
-         k=k+1
-      enddo
-   enddo
-
-   ! null terminate the string
-   OutputChannelNames_C(k) = C_NULL_CHAR
-   OutputChannelUnits_C(k) = C_NULL_CHAR
+!   k=1
+!   do i=1,NumChannels_C
+!      do j=1,ChanLen    ! max length of channel name.  Same for units
+!         OutputChannelNames_C(k)=InitOutData%WriteOutputHdr(i)(j:j)
+!         OutputChannelUnits_C(k)=InitOutData%WriteOutputUnt(i)(j:j)
+!         k=k+1
+!      enddo
+!   enddo
+!
+!   ! null terminate the string
+!   OutputChannelNames_C(k) = C_NULL_CHAR
+!   OutputChannelUnits_C(k) = C_NULL_CHAR
 
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -417,10 +484,59 @@ CONTAINS
 
    subroutine FailCleanup()
       if (allocated(tmpNodePos))    deallocate(tmpNodePos)
+      if (allocated(tmpNodeOrient)) deallocate(tmpNodeOrient)
       if (allocated(tmpNodeVel))    deallocate(tmpNodeVel)
-      if (allocated(tmpNodeAcc))    deallocate(tmpNodeAcc)
       if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
    end subroutine FailCleanup
+
+   !> This subroutine prints out all the variables that are passed in.  Use this only
+   !! for debugging the interface on the Fortran side.
+   subroutine ShowPassedData()
+      character(1) :: TmpFlag
+      integer      :: i,j
+      call WrScr("Interface debugging:  Variables passed in through interface")
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("   FileInfo")
+      TmpFlag="F";   if (ADinputFilePassed) TmpFlag="T"
+      call WrScr("       ADinputFilePassed_C            "//TmpFlag )
+      call WrScr("       ADinputFileString_C (ptr addr) "//trim(Num2LStr(LOC(ADinputFileString_C))) )
+      call WrScr("       ADinputFileStringLength_C      "//trim(Num2LStr( ADinputFileStringLength_C )) )
+      call WrScr("       OutRootName_C                  "//trim(TRANSFER( OutRootName_C, OutRootName )) )
+      call WrScr("   Environment variables")
+      call WrScr("       gravity_C                      "//trim(Num2LStr( gravity_C     )) )
+      call WrScr("       defFldDens_C                   "//trim(Num2LStr( defFldDens_C  )) )
+      call WrScr("       defKinVisc_C                   "//trim(Num2LStr( defKinVisc_C  )) )
+      call WrScr("       defSpdSound_C                  "//trim(Num2LStr( defSpdSound_C )) )
+      call WrScr("       defPatm_C                      "//trim(Num2LStr( defPatm_C     )) )
+      call WrScr("       defPvap_C                      "//trim(Num2LStr( defPvap_C     )) )
+      call WrScr("       WtrDpth_C                      "//trim(Num2LStr( WtrDpth_C     )) )
+      call WrScr("       MSL2SWL_C                      "//trim(Num2LStr( MSL2SWL_C     )) )
+      call WrScr("   Interpolation")
+      call WrScr("       InterpOrder_C                  "//trim(Num2LStr( InterpOrder_C )) )
+      call WrScr("   Time variables")
+      call WrScr("       T_initial_C                    "//trim(Num2LStr( T_initial_C   )) )
+      call WrScr("       DT_C                           "//trim(Num2LStr( DT_C          )) )
+      call WrScr("       TMax_C                         "//trim(Num2LStr( TMax_C        )) )
+      call WrScr("   Flags")
+      TmpFlag="F";   if (storeHHVel) TmpFlag="T"
+      call WrScr("       storeHHVel                     "//TmpFlag )
+      call WrScr("       WrVTK                          "//trim(Num2LStr( WrVTK         )) )
+      call WrScr("   Init Data")
+      call WrScr("       NumNodePts_C                   "//trim(Num2LStr( NumNodePts_C  )) )
+      if (debugverbose > 1) then
+         call WrScr("       Positions")
+         do i=1,NumNodePts_C
+            j=3*(i-1)
+            call WrMatrix(InitNodePositions_C(j+1:j+3),CU,'(3(ES15.7e2))')
+         enddo
+         call WrScr("       Orientations")
+         do i=1,NumNodePts_C
+            j=9*(i-1)
+            call WrMatrix(InitNodeOrientations_C(j+1:j+9),CU,'(9(ES23.15e2))')
+         enddo
+      endif
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowPassedData
 
    !> This subroutine sets the interface meshes to map to the input motions to the AD
    !! meshes for WAMIT and Morison.  This subroutine also sets the meshes for the
@@ -575,6 +691,62 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 
 
 !===============================================================================================================
+!--------------------------------------------- AeroDyn Init----------------------------------------------------
+!===============================================================================================================
+SUBROUTINE AeroDyn_Inflow_C_ReInit( T_initial_C, DT_C, TMax_C,                     &
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_ReInit')
+   implicit none
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_ReInit
+!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_ReInit
+#endif
+
+   real(c_double),            intent(in   )  :: T_initial_C
+   real(c_double),            intent(in   )  :: DT_C              !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
+   real(c_double),            intent(in   )  :: TMax_C            !< Maximum time for simulation (used to set arrays for wave kinematics)
+   integer(c_int),            intent(  out)  :: ErrStat_C                              !< Error status
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)                  !< Error message (C_NULL_CHAR terminated)
+
+   real(DbKi)                                :: TimeInterval      !< timestep for AD
+   integer(IntKi)                            :: ErrStat           !< aggregated error message
+   character(ErrMsgLen)                      :: ErrMsg            !< aggregated error message
+   integer(IntKi)                            :: ErrStat2          !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg2           !< temporary error message from a call
+   character(*), parameter                   :: RoutineName = 'AeroDyn_Inflow_C_ReInit'  !< for error handling
+
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
+
+!FIXME: some stuff must get set, so do that here.  Check what is done in the driver.
+
+   call ADI_ReInit(p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), m, TimeInterval, errStat2, errMsg2)
+      if (Failed())  return
+
+!FIXME: do I need to deal with setting the other states??? (STATE_PREV etc)???
+
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+CONTAINS
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) then
+!         call FailCleanup()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
+   end function Failed
+
+!   subroutine FailCleanup()
+!      if (allocated(tmpNodePos))    deallocate(tmpNodePos)
+!      if (allocated(tmpNodeVel))    deallocate(tmpNodeVel)
+!      if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
+!   end subroutine FailCleanup
+
+END SUBROUTINE AeroDyn_Inflow_C_ReInit
+
+
+!===============================================================================================================
 !--------------------------------------------- AeroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
 
@@ -622,7 +794,6 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_
    ! Reshape position, velocity, acceleration
    tmpNodePos(1:6,1:NumNodePts)   = reshape( real(NodePos_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
    tmpNodeVel(1:6,1:NumNodePts)   = reshape( real(NodeVel_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
-   tmpNodeAcc(1:6,1:NumNodePts)   = reshape( real(NodeAcc_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
 
    ! Transfer motions to input meshes
@@ -765,7 +936,6 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumNodePts_C, Node
    ! Reshape position, velocity, acceleration
    tmpNodePos(1:6,1:NumNodePts)   = reshape( real(NodePos_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
    tmpNodeVel(1:6,1:NumNodePts)   = reshape( real(NodeVel_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
-   tmpNodeAcc(1:6,1:NumNodePts)   = reshape( real(NodeAcc_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
    ! Transfer motions to input meshes
    call Set_MotionMesh( ErrStat2, ErrMsg2 )                    ! update motion mesh with input motion arrays
@@ -846,7 +1016,6 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    ! clear out any globably allocated helper arrays
    if (allocated(tmpNodePos))    deallocate(tmpNodePos)
    if (allocated(tmpNodeVel))    deallocate(tmpNodeVel)
-   if (allocated(tmpNodeAcc))    deallocate(tmpNodeAcc)
    if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
 
 
@@ -931,8 +1100,6 @@ subroutine Set_MotionMesh(ErrStat3, ErrMsg3)
 !!!      AD_MotionMesh%Orientation(1:3,1:3,iNode) = Orient
 !!!      AD_MotionMesh%TranslationVel( 1:3,iNode) = tmpNodeVel(1:3,iNode)
 !!!      AD_MotionMesh%RotationVel(    1:3,iNode) = tmpNodeVel(4:6,iNode)
-!!!      AD_MotionMesh%TranslationAcc( 1:3,iNode) = tmpNodeAcc(1:3,iNode)
-!!!      AD_MotionMesh%RotationAcc(    1:3,iNode) = tmpNodeAcc(4:6,iNode)
 !!!   enddo
 end subroutine Set_MotionMesh
 
