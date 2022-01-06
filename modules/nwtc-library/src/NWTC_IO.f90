@@ -219,6 +219,7 @@ MODULE NWTC_IO
       !> \copydoc nwtc_io::int2lstr
    INTERFACE Num2LStr
       MODULE PROCEDURE Int2LStr        ! default integers
+      MODULE PROCEDURE B8Ki2LStr       ! 8 byte integers
       MODULE PROCEDURE R2LStr4         ! 4-byte  reals
       MODULE PROCEDURE R2LStr8         ! 8-byte  reals
       MODULE PROCEDURE R2LStr16        ! 16-byte reals
@@ -2786,23 +2787,25 @@ END SUBROUTINE CheckR16Var
 !! It eliminates trailing zeroes and even the decimal point if it is not a fraction. \n
 !! Use Num2LStr (nwtc_io::num2lstr) instead of directly calling a specific routine in the generic interface.   
    FUNCTION Int2LStr ( Num )
-
-   CHARACTER(11)                :: Int2LStr                                     !< string representing input number.
-
-
+      CHARACTER(11)                :: Int2LStr                                  !< string representing input number.
       ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: Num                                          !< The number to convert to a left-justified string.
-
-
-
-   WRITE (Int2LStr,'(I11)')  Num
-
-   Int2Lstr = ADJUSTL( Int2LStr )
-
-
-   RETURN
+      INTEGER(IntKi), INTENT(IN)   :: Num                                       !< The number to convert to a left-justified string.
+      WRITE (Int2LStr,'(I11)')  Num
+      Int2Lstr = ADJUSTL( Int2LStr )
+      RETURN
    END FUNCTION Int2LStr
+!=======================================================================
+!> This function returns a left-adjusted string representing the passed numeric value. 
+!! It eliminates trailing zeroes and even the decimal point if it is not a fraction. \n
+!! Use Num2LStr (nwtc_io::num2lstr) instead of directly calling a specific routine in the generic interface.   
+   FUNCTION B8Ki2LStr ( Num )
+      CHARACTER(20)                :: B8Ki2LStr                                 !< string representing input number.
+      ! Argument declarations.
+      INTEGER(B8Ki), INTENT(IN)    :: Num                                       !< The number to convert to a left-justified string.
+      WRITE (B8Ki2LStr,'(I20)')  Num
+      B8Ki2Lstr = ADJUSTL( B8Ki2LStr )
+      RETURN
+   END FUNCTION B8Ki2LStr
 !=======================================================================
 !> This function returns true if and only if the first character of the input StringToCheck matches on the of comment characters
 !! nwtc_io::commchars.
