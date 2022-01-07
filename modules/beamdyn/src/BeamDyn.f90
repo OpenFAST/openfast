@@ -562,6 +562,8 @@ subroutine InitializeNodalLocations(member_total,kp_member,kp_coordinate,p,GLL_n
        else
           qfit = nkp ! if points-per-element more that number of keypoints, fit to LSFE with order (nkp-1)
        endif 
+       
+       if (qfit .gt. 7) qfit = 7
 
        call AllocAry(least_sq_gll, qfit, "least-squares GLL nodes",ErrStat2, ErrMsg2)
 
