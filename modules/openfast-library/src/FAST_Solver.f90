@@ -286,6 +286,9 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
    u_ED%NacelleLoads%Force = 0.0_ReKi
    u_ED%NacelleLoads%Moment = 0.0_ReKi
 
+   u_ED%HubPtLoad%Force = 0.0_ReKi
+   u_ED%HubPtLoad%Moment = 0.0_ReKi
+
       ! ED inputs from ServoDyn
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
 

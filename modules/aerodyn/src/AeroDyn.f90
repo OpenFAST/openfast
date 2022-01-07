@@ -1978,7 +1978,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       HubforceB(3) = p%AirDens * p%Gravity * p%VolHub
       
          ! Buoyant moment in global coordinates, caused by moving buoyant force from center of buoyancy to hub center
-      HubmomentB(1) = 0.0_ReKi
+      HubmomentB(1) = HubglobCB(2) * HubforceB(3)
       HubmomentB(2) = -HubglobCB(1) * HubforceB(3)
       HubmomentB(3) = 0.0_ReKi
 
