@@ -328,7 +328,10 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       ! Module init
       InitInData%InputFileName    = i_IW%InputFile
       InitInData%Linearize        = .false.
-      InitInData%UseInputFile     = .true.
+      InitInData%UseInputFile     = i_IW%UseInputFile
+      if (.not. i_IW%UseInputFile) then
+         call NWTC_Library_Copyfileinfotype( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
+      endif
       InitInData%RootName         = Root
       CALL InflowWind_Init( InitInData, IW%u, IW%p, &
                      IW%x, IW%xd, IW%z, IW%OtherSt, &

@@ -36,6 +36,9 @@ typedef    ^        ^                  IntKi                            CompInfl
 typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
 typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
+typedef    ^        ^                  LOGICAL                          UseInputFile     -    .TRUE.  -   "Should we read everthing from an input file, or is it passed in?"  -
+typedef    ^        ^                  FileInfoType                     PassedFileData   -      -     -   "If we don't use the input file, pass everything through this"      -
+
 
 # ..... InitIn ....................................................................................................................
 typedef    ^    InitInputType          AD_InitInputType                 AD               -      -     -   "AD Init input types"
