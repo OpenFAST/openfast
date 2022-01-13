@@ -4722,6 +4722,10 @@ END SUBROUTINE CheckR16Var
             NullLoc  = idx
          endif 
       enddo
+         ! If the last line is not NULL terminated, might miss the line containing END
+      if (NullLoc < len_trim(FileString)) then
+         NumLines = NumLines + 1
+      endif
 
       if (NumLines == 0) then
          ErrStat2 = ErrID_Fatal
@@ -4748,9 +4752,13 @@ END SUBROUTINE CheckR16Var
          NullLoc = index(FileString(idx:len(FileString)),C_NULL_CHAR)
          ! started indexing at idx, so add that back in for location in FileString
          NullLoc = NullLoc + idx - 1
-         if (NullLoc > 0) then
+         if (NullLoc > idx) then
             FileStringArray(Line) = trim(FileString(idx:NullLoc-1))
          else
+            ! If not NULL terminated
+            if (len_trim(FileString(NullLoc:len_trim(FileString))) > 0) then
+               FileStringArray(Line) = trim(FileString(NullLoc+1:len_trim(FileString)))
+            endif
             exit  ! exit loop as we didn't find any more
          endif
          idx = min(NullLoc + 1,len(FileString))    ! Start next segment of file, but overstep end
@@ -6557,6 +6565,8 @@ END SUBROUTINE CheckR16Var
       END IF
 
       LineNum = LineNum+1
+
+      if (LineNum > FileInfo%NumLines) exit  ! Don't overrun end of file in case no END found
 
    END DO
 
