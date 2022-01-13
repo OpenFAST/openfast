@@ -38,7 +38,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     1  - some summary info
    !     2  - above + all position/orientation info
    !     3  - above + input files
-   integer(IntKi),   parameter            :: debugverbose = 1
+   integer(IntKi),   parameter            :: debugverbose = 4
 
    !------------------------------------------------------------------------------------
    !  Error handling
@@ -132,7 +132,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     one or multiple points.
    !        - 1 point   -- rigid floating body assumption
    !        - N points  -- flexible structure (either floating or fixed bottom)
-   integer(IntKi)                         :: NumNodePts              ! Number of mesh points we are interfacing motions/loads to/from AD
+   integer(IntKi)                         :: NumMeshPts              ! Number of mesh points we are interfacing motions/loads to/from AD
    type(MeshType)                         :: AD_MotionMesh           ! mesh for motions of external nodes
    type(MeshType)                         :: AD_LoadMesh             ! mesh for loads  for external nodes
    type(MeshType)                         :: AD_LoadMesh_tmp         ! mesh for loads  for external nodes -- temporary
@@ -150,10 +150,10 @@ MODULE AeroDyn_Inflow_C_BINDING
    !  Meshes -- helper stuff
    real(R8Ki)                             :: theta(3)                ! mesh creation helper data
    !  Motions input (so we don't have to reallocate all the time
-   real(ReKi), allocatable                :: tmpNodePos(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
-   real(ReKi), allocatable                :: tmpNodeOrient(:,:,:)    ! temp array.  Probably don't need this, but makes conversion from C clearer.
-   real(ReKi), allocatable                :: tmpNodeVel(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
-   real(ReKi), allocatable                :: tmpNodeFrc(:,:)         ! temp array.  Probably don't need this, but makes conversion to   C clearer.
+   real(ReKi), allocatable                :: tmpMeshPos(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpMeshOrient(:,:,:)    ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpMeshVel(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpMeshFrc(:,:)         ! temp array.  Probably don't need this, but makes conversion to   C clearer.
    !------------------------------------------------------------------------------------
 
 
@@ -188,7 +188,9 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                                   &
                InterpOrder_C, T_initial_C, DT_C, TMax_C,                                     &
                storeHHVel, WrVTK,                                                            &
-               NumNodePts_C,  InitNodePositions_C,  InitNodeOrientations_C,                  &
+               HubPosition_C, HubOrientation_C,                                              &
+               NumBlades_C, BladeRootPositions_C, BladeRootOrientations_C,                   &
+               NumMeshPts_C,  InitMeshPositions_C,  InitMeshOrientations_C,                  &
                NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,                    &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_Init')
    implicit none
@@ -213,10 +215,16 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    real(c_float),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
    real(c_float),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
    real(c_float),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
+   ! Initial hub and blade root positions/orientations
+   real(c_float),             intent(in   )  :: HubPosition_C( 3 )                     !< Hub position
+   real(c_double),            intent(in   )  :: HubOrientation_C( 9 )                  !< Hub orientation 
+   integer(c_int),            intent(in   )  :: NumBlades_C                            !< Number of blades
+   real(c_float),             intent(in   )  :: BladeRootPositions_C( 3*NumBlades_C )  !< Blade root positions
+   real(c_double),            intent(in   )  :: BladeRootOrientations_C( 9*NumBlades_C )  !< Blade root orientations 
    ! Initial nodes
-   integer(c_int),            intent(in   )  :: NumNodePts_C                           !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: InitNodePositions_C( 3*NumNodePts_C )  !< A 3xNumNodePts_C array [x,y,z]
-   real(c_double),            intent(in   )  :: InitNodeOrientations_C( 9*NumNodePts_C )  !< A 9xNumNodePts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                           !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: InitMeshPositions_C( 3*NumMeshPts_C )  !< A 3xNumMeshPts_C array [x,y,z]
+   real(c_double),            intent(in   )  :: InitMeshOrientations_C( 9*NumMeshPts_C )  !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
    ! Interpolation
    integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
    ! Time
@@ -275,35 +283,42 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    call C_F_pointer(IfWinputFileString_C, IfWinputFileString)
 
    ! Format AD input file contents 
+   InitInp%AD%RootName                 = OutRootName
    if (ADinputFilePassed) then
-      InitInp%AD%UsePrimaryInputFile   = .FALSE.      ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
-      InitInp%AD%InputFile             = "passed_ad_file"      ! not actually used
-      InitInp%AD%RootName              = OutRootName
+      InitInp%AD%UsePrimaryInputFile   = .FALSE.            ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
+      InitInp%AD%InputFile             = "passed_ad_file"   ! not actually used
       call InitFileInfo(ADinputFileString, InitInp%AD%PassedPrimaryInputData, ErrStat2, ErrMsg2); if (Failed())  return
    else
-      InitInp%AD%UsePrimaryInputFile   = .TRUE.       ! Read input info from a primary input file
+      InitInp%AD%UsePrimaryInputFile   = .TRUE.             ! Read input info from a primary input file
       i = min(IntfStrLen,ADinputFileStringLength_C)
       TmpFileName = ''
       TmpFileName(1:i) = ADinputFileString(1:i)
-      i = INDEX(TmpFileName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
-      if ( i > 0 ) TmpFileName = TmpFileName(1:I)        ! remove it
+      i = INDEX(TmpFileName,C_NULL_CHAR) - 1                ! if this has a c null character at the end...
+      if ( i > 0 ) TmpFileName = TmpFileName(1:I)           ! remove it
       InitInp%AD%InputFile             = TmpFileName
-      InitInp%AD%RootName              = OutRootName
-print*,'InitInp%AD%InputFile ', trim(InitInp%AD%InputFile)
-print*,'InitInp%AD%RootName  ', trim(InitInp%AD%RootName)
       ErrStat2 =  ErrID_Fatal
       ErrMsg2  =  "Interface cannot currently handle a filename passed in for AD primary input file.  Expecting string of file contents"
       if (Failed())  return
    endif
 
-!   ! Format IfW input file contents 
-!   if (IfWinputFilePassed) then
-!      call InitFileInfo(IfWinputFileString, InitInp%IW_InitInp%PassedFileData, ErrStat2, ErrMsg2); if (Failed())  return
-!   else
-!      ErrStat2 =  ErrID_Fatal
-!      ErrMsg2  =  "Interface cannot currently handle a filename passed in for AD primary input file.  Expecting string of file contents"
-!      if (Failed())  return
-!   endif
+   ! Format IfW input file contents
+   !     RootName is set in ADI_Init using AD%RootName
+   if (IfWinputFilePassed) then
+      InitInp%IW_InitInp%UseInputFile   = .FALSE.           ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
+      InitInp%IW_InitInp%InputFile      = "passed_ifw_file" ! not actually used
+      call InitFileInfo(IfWinputFileString, InitInp%IW_InitInp%PassedFileData, ErrStat2, ErrMsg2); if (Failed())  return
+   else
+      InitInp%IW_InitINp%UseInputFile   = .TRUE.            ! Read input info from a primary input file
+      i = min(IntfStrLen,IfWinputFileStringLength_C)
+      TmpFileName = ''
+      TmpFileName(1:i) = IfWinputFileString(1:i)
+      i = INDEX(TmpFileName,C_NULL_CHAR) - 1                ! if this has a c null character at the end...
+      if ( i > 0 ) TmpFileName = TmpFileName(1:I)           ! remove it
+      InitInp%IW_InitInp%InputFile      = TmpFileName
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  "Interface cannot currently handle a filename passed in for IfW primary input file.  Expecting string of file contents"
+      if (Failed())  return
+   endif
 
 
    ! For diagnostic purposes, the following can be used to display the contents
@@ -311,19 +326,17 @@ print*,'InitInp%AD%RootName  ', trim(InitInp%AD%RootName)
    !     CU is the screen -- system dependent.
    if (debugverbose > 4) then
       if (ADinputFilePassed)     call Print_FileInfo_Struct( CU, InitInp%AD%PassedPrimaryInputData )
-      !if (IfWinputFilePassed)    call Print_FileInfo_Struct( CU, InitInp%IW_InitInp%PassedFileData )
+      if (IfWinputFilePassed)    call Print_FileInfo_Struct( CU, InitInp%IW_InitInp%PassedFileData )
    endif
+
 
    ! Linearization
    !     for now, set linearization to false. Pass this in later when interface supports it
-   !     Note: we may want to linearize at T=0 for added mass effects, but that might be
-   !        special case
-!!!   InitInp%Linearize             = .FALSE.
+   InitInp%AD%Linearize          = .FALSE.
+   !InitInp%IW_InitInp%Linearize  = .FALSE.
 
-!!!   InitInp%OutRootName = trim(OutRootName)
 
-!FIXME: add some sanity checks to this!!!
-   ! Values passed in
+   ! AeroDyn values passed in throug interface
    InitInp%AD%Gravity     = REAL(gravity_C,     ReKi)
    InitInp%AD%defFldDens  = REAL(defFldDens_C,  ReKi)
    InitInp%AD%defKinVisc  = REAL(defKinVisc_C,  ReKi)
@@ -350,21 +363,21 @@ print*,'InitInp%AD%RootName  ', trim(InitInp%AD%RootName)
 
 
    ! Number of blades and initial positions
-   !  -  NumNodePts is the number of interface Mesh points we are expecting on the python
+   !  -  NumMeshPts is the number of interface Mesh points we are expecting on the python
    !     side.  Will validate this against what AD reads from the initialization info.
-   NumNodePts                    = int(NumNodePts_C, IntKi)
-   if (NumNodePts < 1) then
+   NumMeshPts                    = int(NumMeshPts_C, IntKi)
+   if (NumMeshPts < 1) then
       ErrStat2 =  ErrID_Fatal
       ErrMsg2  =  "At least one node point must be specified"
       if (Failed())  return
    endif
    ! Allocate temporary arrays to simplify data conversions
-   call AllocAry( tmpNodePos,       3, NumNodePts, "tmpNodePos",    ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpNodeOrient, 3, 3, NumNodePts, "tmpNodeOrient", ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpNodeVel,       6, NumNodePts, "tmpNodeVel",    ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpNodeFrc,       6, NumNodePts, "tmpNodeFrc",    ErrStat2, ErrMsg2 );     if (Failed())  return
-   tmpNodePos(       1:3,1:NumNodePts) = reshape( real(InitNodePositions_C(   1:3*NumNodePts),ReKi), (/  3,NumNodePts/) )
-   tmpNodeOrient(1:3,1:3,1:NumNodePts) = reshape( real(InitNodeOrientations_C(1:9*NumNodePts),ReKi), (/3,3,NumNodePts/) )
+   call AllocAry( tmpMeshPos,       3, NumMeshPts, "tmpMeshPos",    ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpMeshOrient, 3, 3, NumMeshPts, "tmpMeshOrient", ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpMeshVel,       6, NumMeshPts, "tmpMeshVel",    ErrStat2, ErrMsg2 );     if (Failed())  return
+   call AllocAry( tmpMeshFrc,       6, NumMeshPts, "tmpMeshFrc",    ErrStat2, ErrMsg2 );     if (Failed())  return
+   tmpMeshPos(       1:3,1:NumMeshPts) = reshape( real(InitMeshPositions_C(   1:3*NumMeshPts),ReKi), (/  3,NumMeshPts/) )
+   tmpMeshOrient(1:3,1:3,1:NumMeshPts) = reshape( real(InitMeshOrientations_C(1:9*NumMeshPts),ReKi), (/3,3,NumMeshPts/) )
 
 
    !----------------------------------------------------
@@ -483,10 +496,10 @@ CONTAINS
    end function Failed
 
    subroutine FailCleanup()
-      if (allocated(tmpNodePos))    deallocate(tmpNodePos)
-      if (allocated(tmpNodeOrient)) deallocate(tmpNodeOrient)
-      if (allocated(tmpNodeVel))    deallocate(tmpNodeVel)
-      if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
+      if (allocated(tmpMeshPos))    deallocate(tmpMeshPos)
+      if (allocated(tmpMeshOrient)) deallocate(tmpMeshOrient)
+      if (allocated(tmpMeshVel))    deallocate(tmpMeshVel)
+      if (allocated(tmpMeshFrc))    deallocate(tmpMeshFrc)
    end subroutine FailCleanup
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
@@ -522,17 +535,34 @@ CONTAINS
       call WrScr("       storeHHVel                     "//TmpFlag )
       call WrScr("       WrVTK                          "//trim(Num2LStr( WrVTK         )) )
       call WrScr("   Init Data")
-      call WrScr("       NumNodePts_C                   "//trim(Num2LStr( NumNodePts_C  )) )
+      call WrNR("       Hub Position      ")
+      call WrMatrix(HubPosition_C,CU,'(3(ES15.7e2))')
+      call WrNR("       Hub Orientation   ")
+      call WrMatrix(HubOrientation_C,CU,'(9(ES23.15e2))')
+      call WrScr("       NumBlades_C                    "//trim(Num2LStr( NumBlades_C   )) )
       if (debugverbose > 1) then
-         call WrScr("       Positions")
-         do i=1,NumNodePts_C
+         call WrScr("          Root Positions")
+         do i=1,NumBlades_C
             j=3*(i-1)
-            call WrMatrix(InitNodePositions_C(j+1:j+3),CU,'(3(ES15.7e2))')
+            call WrMatrix(BladeRootPositions_C(j+1:j+3),CU,'(3(ES15.7e2))')
          enddo
-         call WrScr("       Orientations")
-         do i=1,NumNodePts_C
+         call WrScr("          Root Orientations")
+         do i=1,NumBlades_C
             j=9*(i-1)
-            call WrMatrix(InitNodeOrientations_C(j+1:j+9),CU,'(9(ES23.15e2))')
+            call WrMatrix(BladeRootOrientations_C(j+1:j+9),CU,'(9(ES23.15e2))')
+         enddo
+      endif
+      call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
+      if (debugverbose > 1) then
+         call WrScr("          Mesh Positions")
+         do i=1,NumMeshPts_C
+            j=3*(i-1)
+            call WrMatrix(InitMeshPositions_C(j+1:j+3),CU,'(3(ES15.7e2))')
+         enddo
+         call WrScr("          Mesh Orientations")
+         do i=1,NumMeshPts_C
+            j=9*(i-1)
+            call WrMatrix(InitMeshOrientations_C(j+1:j+9),CU,'(9(ES23.15e2))')
          enddo
       endif
       call WrScr("-----------------------------------------------------------")
@@ -556,7 +586,7 @@ CONTAINS
 !!!      !     this to the input meshes for WAMIT and Morison.
 !!!      call MeshCreate(  AD_MotionMesh                       ,  &
 !!!                        IOS              = COMPONENT_INPUT  ,  &
-!!!                        Nnodes           = NumNodePts       ,  &
+!!!                        Nnodes           = NumMeshPts       ,  &
 !!!                        ErrStat          = ErrStat3         ,  &
 !!!                        ErrMess          = ErrMsg3          ,  &
 !!!                        TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
@@ -564,10 +594,10 @@ CONTAINS
 !!!                        TranslationAcc   = .TRUE.,    RotationAcc = .TRUE.  )
 !!!         if (ErrStat3 >= AbortErrLev) return
 !!!
-!!!      do iNode=1,NumNodePts
+!!!      do iNode=1,NumMeshPts
 !!!         ! initial position and orientation of node
-!!!         InitPos  = tmpNodePos(1:3,iNode)
-!!!         theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
+!!!         InitPos  = tmpMeshPos(1:3,iNode)
+!!!         theta    = real(tmpMeshPos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
 !!!         CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
 !!!         call MeshPositionNode(  AD_MotionMesh            , &
 !!!                                 iNode                    , &
@@ -667,19 +697,19 @@ CONTAINS
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
-!!!      if ( NumNodePts > 1 ) then
+!!!      if ( NumMeshPts > 1 ) then
 !!!         if ( u(1)%Morison%Mesh%Committed .and. u(1)%WAMITMesh%Committed ) then
-!!!            if ( (u(1)%Morison%Mesh%Nnodes + u(1)%WAMITMesh%Nnodes) < NumNodePts ) then
+!!!            if ( (u(1)%Morison%Mesh%Nnodes + u(1)%WAMITMesh%Nnodes) < NumMeshPts ) then
 !!!               ErrStat3 = ErrID_Fatal
 !!!               ErrMsg3  = "More nodes passed into library than exist in AeroDyn model"
 !!!            endif
 !!!         elseif ( u(1)%Morison%Mesh%Committed ) then     ! No WAMIT
-!!!            if ( u(1)%Morison%Mesh%Nnodes < NumNodePts ) then
+!!!            if ( u(1)%Morison%Mesh%Nnodes < NumMeshPts ) then
 !!!               ErrStat3 = ErrID_Fatal
 !!!               ErrMsg3  = "More nodes passed into library than exist in AeroDyn model Morison mesh"
 !!!            endif
 !!!         elseif ( u(1)%WAMITMesh%Committed    ) then     ! No Morison
-!!!            if ( u(1)%WAMITMesh%Nnodes < NumNodePts ) then
+!!!            if ( u(1)%WAMITMesh%Nnodes < NumMeshPts ) then
 !!!               ErrStat3 = ErrID_Fatal
 !!!               ErrMsg3  = "More nodes passed into library than exist in AeroDyn model WAMIT mesh"
 !!!            endif
@@ -738,9 +768,9 @@ CONTAINS
    end function Failed
 
 !   subroutine FailCleanup()
-!      if (allocated(tmpNodePos))    deallocate(tmpNodePos)
-!      if (allocated(tmpNodeVel))    deallocate(tmpNodeVel)
-!      if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
+!      if (allocated(tmpMeshPos))    deallocate(tmpMeshPos)
+!      if (allocated(tmpMeshVel))    deallocate(tmpMeshVel)
+!      if (allocated(tmpMeshFrc))    deallocate(tmpMeshFrc)
 !   end subroutine FailCleanup
 
 END SUBROUTINE AeroDyn_Inflow_C_ReInit
@@ -750,7 +780,7 @@ END SUBROUTINE AeroDyn_Inflow_C_ReInit
 !--------------------------------------------- AeroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, NodeAcc_C, &
+SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumMeshPts_C, NodePos_C, NodeVel_C, NodeAcc_C, &
                NodeFrc_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_CalcOutput')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
@@ -758,11 +788,11 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_
 !GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_CalcOutput
 #endif
    real(c_double),            intent(in   )  :: Time_C
-   integer(c_int),            intent(in   )  :: NumNodePts_C                 !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: NodePos_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
-   real(c_float),             intent(in   )  :: NodeVel_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
-   real(c_float),             intent(in   )  :: NodeAcc_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
-   real(c_float),             intent(  out)  :: NodeFrc_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                 !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: NodePos_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
+   real(c_float),             intent(in   )  :: NodeVel_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
+   real(c_float),             intent(in   )  :: NodeAcc_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
+   real(c_float),             intent(  out)  :: NodeFrc_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
 !FIXME: make sure to grab both AD and IW outputs
    real(c_float),             intent(  out)  :: OutputChannelValues_C(p%NumOuts)
    integer(c_int),            intent(  out)  :: ErrStat_C
@@ -782,7 +812,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_
    ErrMsg   =  ""
 
    ! Sanity check -- number of node points cannot change
-   if ( NumNodePts /= int(NumNodePts_C, IntKi) ) then
+   if ( NumMeshPts /= int(NumMeshPts_C, IntKi) ) then
       ErrStat2 =  ErrID_Fatal
       ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
       if (Failed())  return
@@ -792,8 +822,8 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_
    Time = REAL(Time_C,DbKi)
 
    ! Reshape position, velocity, acceleration
-   tmpNodePos(1:6,1:NumNodePts)   = reshape( real(NodePos_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
-   tmpNodeVel(1:6,1:NumNodePts)   = reshape( real(NodeVel_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
+   tmpMeshPos(1:6,1:NumMeshPts)   = reshape( real(NodePos_C(1:6*NumMeshPts),ReKi), (/6,NumMeshPts/) )
+   tmpMeshVel(1:6,1:NumMeshPts)   = reshape( real(NodeVel_C(1:6*NumMeshPts),ReKi), (/6,NumMeshPts/) )
 
 
    ! Transfer motions to input meshes
@@ -816,7 +846,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_
    ! Set output force/moment array
    call Set_OutputLoadArray( )
    ! Reshape for return
-   NodeFrc_C(1:6*NumNodePts) = reshape( real(tmpNodeFrc(1:6,1:NumNodePts), c_float), (/6*NumNodePts/) )
+   NodeFrc_C(1:6*NumMeshPts) = reshape( real(tmpMeshFrc(1:6,1:NumMeshPts), c_float), (/6*NumMeshPts/) )
 
    ! Get the output channel info out of y
 !FXIME: need to grab y%AD%WriteOutput and y%IW_WriteOutput
@@ -841,7 +871,7 @@ END SUBROUTINE AeroDyn_Inflow_C_CalcOutput
 !! Since we don't really know if we are doing correction steps or not, we will track the previous state and
 !! reset to those if we are repeating a timestep (normally this would be handled by the OF glue code, but since
 !! the states are not passed across the interface, we must handle them here).
-SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumNodePts_C, NodePos_C, NodeVel_C, NodeAcc_C,   &
+SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumMeshPts_C, NodePos_C, NodeVel_C, NodeAcc_C,   &
                                     ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_UpdateStates')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
@@ -850,10 +880,10 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumNodePts_C, Node
 #endif
    real(c_double),            intent(in   )  :: Time_C
    real(c_double),            intent(in   )  :: TimeNext_C
-   integer(c_int),            intent(in   )  :: NumNodePts_C                 !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: NodePos_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
-   real(c_float),             intent(in   )  :: NodeVel_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
-   real(c_float),             intent(in   )  :: NodeAcc_C( 6*NumNodePts_C )  !< A 6xNumNodePts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                 !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: NodePos_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
+   real(c_float),             intent(in   )  :: NodeVel_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
+   real(c_float),             intent(in   )  :: NodeAcc_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
    integer(c_int),            intent(  out)  :: ErrStat_C
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
 
@@ -872,7 +902,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumNodePts_C, Node
    CorrectionStep = .false.
 
    ! Sanity check -- number of node points cannot change
-   if ( NumNodePts /= int(NumNodePts_C, IntKi) ) then
+   if ( NumMeshPts /= int(NumMeshPts_C, IntKi) ) then
       ErrStat2 =  ErrID_Fatal
       ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
       if (Failed())  return
@@ -934,8 +964,8 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumNodePts_C, Node
    ! Set inputs for time T+dt -- u(1)
    !-------------------------------------------------------
    ! Reshape position, velocity, acceleration
-   tmpNodePos(1:6,1:NumNodePts)   = reshape( real(NodePos_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
-   tmpNodeVel(1:6,1:NumNodePts)   = reshape( real(NodeVel_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
+   tmpMeshPos(1:6,1:NumMeshPts)   = reshape( real(NodePos_C(1:6*NumMeshPts),ReKi), (/6,NumMeshPts/) )
+   tmpMeshVel(1:6,1:NumMeshPts)   = reshape( real(NodeVel_C(1:6*NumMeshPts),ReKi), (/6,NumMeshPts/) )
 
    ! Transfer motions to input meshes
    call Set_MotionMesh( ErrStat2, ErrMsg2 )                    ! update motion mesh with input motion arrays
@@ -1014,9 +1044,9 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    ErrMsg   =  ""
 
    ! clear out any globably allocated helper arrays
-   if (allocated(tmpNodePos))    deallocate(tmpNodePos)
-   if (allocated(tmpNodeVel))    deallocate(tmpNodeVel)
-   if (allocated(tmpNodeFrc))    deallocate(tmpNodeFrc)
+   if (allocated(tmpMeshPos))    deallocate(tmpMeshPos)
+   if (allocated(tmpMeshVel))    deallocate(tmpMeshVel)
+   if (allocated(tmpMeshFrc))    deallocate(tmpMeshFrc)
 
 
    ! Call the main subroutine ADI_End
@@ -1093,13 +1123,13 @@ subroutine Set_MotionMesh(ErrStat3, ErrMsg3)
    real(R8Ki)                                :: theta(3)
    real(R8Ki)                                :: Orient(3,3)
    ! Set mesh corresponding to input motions
-!!!   do iNode=1,NumNodePts
-!!!      theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
+!!!   do iNode=1,NumMeshPts
+!!!      theta    = real(tmpMeshPos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
 !!!      CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat3, ErrMsg3 )
-!!!      AD_MotionMesh%TranslationDisp(1:3,iNode) = tmpNodePos(1:3,iNode) - AD_MotionMesh%Position(1:3,iNode)  ! relative displacement only
+!!!      AD_MotionMesh%TranslationDisp(1:3,iNode) = tmpMeshPos(1:3,iNode) - AD_MotionMesh%Position(1:3,iNode)  ! relative displacement only
 !!!      AD_MotionMesh%Orientation(1:3,1:3,iNode) = Orient
-!!!      AD_MotionMesh%TranslationVel( 1:3,iNode) = tmpNodeVel(1:3,iNode)
-!!!      AD_MotionMesh%RotationVel(    1:3,iNode) = tmpNodeVel(4:6,iNode)
+!!!      AD_MotionMesh%TranslationVel( 1:3,iNode) = tmpMeshVel(1:3,iNode)
+!!!      AD_MotionMesh%RotationVel(    1:3,iNode) = tmpMeshVel(4:6,iNode)
 !!!   enddo
 end subroutine Set_MotionMesh
 
@@ -1150,9 +1180,9 @@ end subroutine AD_TransferLoads
 subroutine Set_OutputLoadArray()
    integer(IntKi)                            :: iNode
    ! Set mesh corresponding to input motions
-!!!   do iNode=1,NumNodePts
-!!!      tmpNodeFrc(1:3,iNode)   = AD_LoadMesh%Force (1:3,iNode)
-!!!      tmpNodeFrc(4:6,iNode)   = AD_LoadMesh%Moment(1:3,iNode)
+!!!   do iNode=1,NumMeshPts
+!!!      tmpMeshFrc(1:3,iNode)   = AD_LoadMesh%Force (1:3,iNode)
+!!!      tmpMeshFrc(4:6,iNode)   = AD_LoadMesh%Moment(1:3,iNode)
 !!!   enddo
 end subroutine Set_OutputLoadArray
 

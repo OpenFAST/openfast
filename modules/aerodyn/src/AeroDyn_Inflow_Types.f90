@@ -61,6 +61,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: PLExp      !< PLExp [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or is it passed in? [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
+    LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
   END TYPE ADI_IW_InputData
 ! =======================
 ! =========  ADI_InitInputType  =======
@@ -1049,6 +1050,7 @@ CONTAINS
       CALL NWTC_Library_Copyfileinfotype( SrcIW_InputDataData%PassedFileData, DstIW_InputDataData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstIW_InputDataData%Linearize = SrcIW_InputDataData%Linearize
  END SUBROUTINE ADI_CopyIW_InputData
 
  SUBROUTINE ADI_DestroyIW_InputData( IW_InputDataData, ErrStat, ErrMsg )
@@ -1122,6 +1124,7 @@ CONTAINS
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Int_BufSz  = Int_BufSz  + 1  ! Linearize
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1191,6 +1194,8 @@ CONTAINS
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_PackIW_InputData
 
  SUBROUTINE ADI_UnPackIW_InputData( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1273,6 +1278,8 @@ CONTAINS
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_UnPackIW_InputData
 
  SUBROUTINE ADI_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )

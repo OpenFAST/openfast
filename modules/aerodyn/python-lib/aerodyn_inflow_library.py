@@ -114,25 +114,26 @@ class AeroDynInflowLib(CDLL):
         self.total_time = 0.0           # may be longer than tmax
         self.numTimeSteps = 0
 
+        # number of output channels
         self.numChannels = 0                # Number of channels returned
 
-        # Number of bodies and initial reference point
-        #   The initial position is only set as (X,Y).  The Z value and
-        #   orientation is set by HD and will be returned along with the full
-        #   set of numBodies where it is expecting loads inputs.
-        self.ptfmRefPt_x    = 0.0
-        self.ptfmRefPt_y    = 0.0
+        # Initial position of hub and blades
+        #   used for setup of AD, not used after init.
+        self.initHubPos     = np.zeros(shape=(3),dtype=c_float)
+        self.initHubOrient  = np.zeros(shape=(9),dtype=c_double)
+        self.numBlades      = 3
+        self.initRootPos    = np.zeros(shape=(self.numBlades,3),dtype=c_float)
+        self.initRootOrient = np.zeros(shape=(self.numBlades,9),dtype=c_double)
 
-        # Nodes
+        # Structural Mesh
         #   The number of nodes must be constant throughout simulation.  The
-        #   initial position is given in the initNodePos array (resize as
+        #   initial position is given in the initMeshPos array (resize as
         #   needed, should be Nx6).
         #   Rotations are given in radians assuming small angles.  See note at
         #   top of this file.
-        self.numNodePts     = 1     # Single ptfm attachment point for floating rigid
-        self.initNodePos    = np.zeros(shape=(self.numNodePts,3),dtype=c_float)      # Nx3 array [x,y,z]
-        #FIXME: how to specify orient as double?
-        self.initNodeOrient = np.zeros(shape=(self.numNodePts,9),dtype=c_double)      # Nx9 array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+        self.numMeshPts     = 1
+        self.initMeshPos    = np.zeros(shape=(self.numMeshPts,3),dtype=c_float )    # Nx3 array [x,y,z]
+        self.initMeshOrient = np.zeros(shape=(self.numMeshPts,9),dtype=c_double)    # Nx9 array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
 
         # OutRootName
         #   If HD writes a file (echo, summary, or other), use this for the
@@ -163,9 +164,14 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_double),                  # tmax 
             POINTER(c_bool),                    # storeHHVel
             POINTER(c_int),                     # WrVTK
-            POINTER(c_int),                     # numNodePts
-            POINTER(c_float),                   # initNodePos_flat
-            POINTER(c_double),                  # initNodeOrient_flat
+            POINTER(c_float),                   # initHubPos
+            POINTER(c_double),                  # initHubOrient_flat
+            POINTER(c_int),                     # numBlades
+            POINTER(c_float),                   # initRootPos_flat
+            POINTER(c_double),                  # initRootOrient_flat
+            POINTER(c_int),                     # numMeshPts
+            POINTER(c_float),                   # initMeshPos_flat
+            POINTER(c_double),                  # initMeshOrient_flat
             POINTER(c_int),                     # number of channels
             POINTER(c_char),                    # output channel names
             POINTER(c_char),                    # output channel units
@@ -185,11 +191,11 @@ class AeroDynInflowLib(CDLL):
 
         self.AeroDyn_Inflow_C_CalcOutput.argtypes = [
             POINTER(c_double),                  # Time_C
-            POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
-            POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
-            POINTER(c_float),                   # nodeVel -- node velocities     in flat array of 6*numNodePts
-            POINTER(c_float),                   # nodeAcc -- node accelerations  in flat array of 6*numNodePts
-            POINTER(c_float),                   # nodeFrc -- node forces/moments in flat array of 6*numNodePts
+            POINTER(c_int),                     # numMeshPts -- number of points expecting motions/loads
+            POINTER(c_float),                   # meshPos -- mesh positions      in flat array of 6*numMeshPts
+            POINTER(c_float),                   # meshVel -- mesh velocities     in flat array of 6*numMeshPts
+            POINTER(c_float),                   # meshAcc -- mesh accelerations  in flat array of 6*numMeshPts
+            POINTER(c_float),                   # meshFrc -- mesh forces/moments in flat array of 6*numMeshPts
             POINTER(c_float),                   # Output Channel Values
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
@@ -199,10 +205,10 @@ class AeroDynInflowLib(CDLL):
         self.AeroDyn_Inflow_C_UpdateStates.argtypes = [
             POINTER(c_double),                  # Time_C
             POINTER(c_double),                  # TimeNext_C
-            POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
-            POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
-            POINTER(c_float),                   # nodeVel -- node velocities     in flat array of 6*numNodePts
-            POINTER(c_float),                   # nodeAcc -- node accelerations  in flat array of 6*numNodePts
+            POINTER(c_int),                     # numMeshPts -- number of points expecting motions/loads
+            POINTER(c_float),                   # meshPos -- mesh positions      in flat array of 6*numMeshPts
+            POINTER(c_float),                   # meshVel -- mesh velocities     in flat array of 6*numMeshPts
+            POINTER(c_float),                   # meshAcc -- mesh accelerations  in flat array of 6*numMeshPts
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
@@ -216,7 +222,10 @@ class AeroDynInflowLib(CDLL):
 
     # aerodyn_inflow_init ------------------------------------------------------------------------------------------------------------
     def aerodyn_inflow_init(self, AD_input_string_array, IfW_input_string_array):
-        # nodePositions -- N x 6 array  -- position info as [x1,y1,z1,Rx1,Ry1,Rz1]
+        # some bookkeeping initialization
+        self._numChannels_c = c_int(0)
+        self._initNumMeshPts = self.numMeshPts
+        self._initNumBlades  = self.numBlades
 
         # Primary input file will be passed as a single string joined by
         # C_NULL_CHAR.
@@ -230,63 +239,30 @@ class AeroDynInflowLib(CDLL):
         IfW_input_string = IfW_input_string.encode('utf-8')
         IfW_input_string_length = len(IfW_input_string)
 
-        self._numChannels_c = c_int(0)
-
-        # Rootname for ADI output files (echo etc).
-        _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
-
-        # store initial number of node points for error handling at calls
-        self._initNumNodePts = self.numNodePts
-        print("shape of initNodePos       ",   self.initNodePos.shape)
-        print("               size 0      ",   self.initNodePos.shape[0])
-        print("               size 1      ",   self.initNodePos.shape[1])
-        print("shape of initNodeOrient    ",   self.initNodeOrient.shape)
-        print("               size 0      ",   self.initNodeOrient.shape[0])
-        print("               size 1      ",   self.initNodeOrient.shape[1])
-        print("               float       ",   type(self.initNodeOrient[0,0]))
-
-        # initNodePos
-        #   Verify that the shape of initNodePos is correct
-        if self.initNodePos.shape[0] != self.initNodeOrient.shape[0]:
-            raise Exception("\ndifferent number of nodes in inital position and orientation arrays")
-        if self.initNodePos.shape[1] != 3:
-            print("Expecting a Nx3 array of initial node positions (initNodePos) with first index for [x,y,z]")
-            self.aerodyn_inflow_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initNodePos.shape[0] != self.numNodePts:
-            print("Expecting a Nx3 array of initial node positions (initNodePos) with second index for node number.")
-            self.aerodyn_inflow_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initNodeOrient.shape[1] != 9:
-            print("Expecting a Nx9 array of initial node orientations as DCMs (initNodeOrient) with first index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
-            self.aerodyn_inflow_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initNodeOrient.shape[0] != self.numNodePts:
-            print("Expecting a Nx3 array of initial node orientations (initNodeOrient) with second index for node number.")
-            self.aerodyn_inflow_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-
-        #   Make a flat 1D array of position info:
-        #       [x2,y1,z1, x2,y2,z2 ...]
-        initNodePos_flat = [pp for p in self.initNodePos for pp in p]
-        initNodePos_flat_c = (c_float * (3 * self.numNodePts))(0.0,)
-        for i, p in enumerate(initNodePos_flat):
-            initNodePos_flat_c[i] = c_float(p)
-        #   Similarly for orientations
-        initNodeOrient_flat = [pp for p in self.initNodeOrient for pp in p]
-        initNodeOrient_flat_c = (c_double * (9 * self.numNodePts))(0.0,)
-        #print("initNodeOrient_flat      ",   type(initNodeOrient_flat[0]))
-        #print("initNodeOrient_flat_c    ",   type(initNodeOrient_flat_c))
-        for i, p in enumerate(initNodeOrient_flat):
-            initNodeOrient_flat_c[i] = c_double(p)
-        #print("initNodeOrient_flat_c    ",   type(initNodeOrient_flat_c))
-
-        
         #FIXME: debug checks
 #        print('input_string_array')
 #        for x in range(len(input_string_array)):
 #            print(input_string_array[x])
 #        print('Size of input file string: ',input_string_length)
+
+        # Rootname for ADI output files (echo etc).
+        _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
+
+        # check hub and root points for initialization
+        self.check_init_hubroot()
+
+        # Check initial mesh positions
+        self.check_init_mesh()
+
+        #   Flatten arrays to pass
+        #       [x2,y1,z1, x2,y2,z2 ...]
+        initHubPos_c    = (c_float  * len(self.initHubPos   ))(*self.initHubPos   )
+        initHubOrient_c = (c_double * len(self.initHubOrient))(*self.initHubOrient)
+        initRootPos_flat_c      = self.flatPosArr(   self._initNumBlades, self.numBlades,self.initRootPos,    'Init','RootPos')
+        initRootOrient_flat_c   = self.flatOrientArr(self._initNumBlades, self.numBlades,self.initRootOrient, 'Init','RootOrient')
+        initMeshPos_flat_c      = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,self.initMeshPos,   'Init','MeshPos')
+        initMeshOrient_flat_c   = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,self.initMeshOrient,'Init','MeshOrient')
+
 
 
         print("AeroDynInflowLib: Call to adi_C_Init") #FIXME: temp
@@ -313,9 +289,14 @@ class AeroDynInflowLib(CDLL):
             byref(c_double(self.tmax)),             # IN: tmax
             byref(c_bool(self.storeHHVel)),         # IN: storeHHVel
             byref(c_int(self.WrVTK)),               # IN: WrVTK
-            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            initNodePos_flat_c,                     # IN: initNodePos -- initial node positions in flat array of 6*numNodePts
-            initNodeOrient_flat_c,                  # IN: initNodeOrient -- initial node positions in flat array of 6*numNodePts
+            initHubPos_c,                           # IN: initHubPos -- initial hub position
+            initHubOrient_c,                        # IN: initHubOrient -- initial hub orientation DCM in flat array of 9 elements
+            byref(c_int(self.numBlades)),           # IN: number of blades (matches number of blade root positions)
+            initRootPos_flat_c,                     # IN: initBladeRootPos -- initial node positions in flat array of 3*numBlades
+            initRootOrient_flat_c,                  # IN: initBladeRootOrient -- initial blade root orientation DCMs in flat array of 9*numBlades
+            byref(c_int(self.numMeshPts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            initMeshPos_flat_c,                     # IN: initMeshPos -- initial node positions in flat array of 3*numMeshPts
+            initMeshOrient_flat_c,                  # IN: initMeshOrient -- initial node orientation DCMs in flat array of 9*numMeshPts
             byref(self._numChannels_c),             # OUT: number of channels
             self._channel_names_c,                  # OUT: output channel names
             self._channel_units_c,                  # OUT: output channel units
@@ -349,32 +330,20 @@ class AeroDynInflowLib(CDLL):
 
 
     # aerodyn_inflow_calcOutput ------------------------------------------------------------------------------------------------------------
-    def aerodyn_inflow_calcOutput(self, time, nodePos, nodeVel, nodeAcc, nodeFrcMom, outputChannelValues):
+    def aerodyn_inflow_calcOutput(self, time, meshPos, meshOrient, meshVel, meshAcc, meshFrcMom, outputChannelValues):
 
         # Check input motion info
-        self.check_input_motions(nodePos,nodeVel,nodeAcc)
+        self.check_input_motions(meshPos,meshVel,meshAcc)
 
-        # set flat arrays for inputs of motion
-        #   Position -- [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
-        nodePos_flat = [pp for p in nodePos for pp in p]
-        nodePos_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
-        for i, p in enumerate(nodePos_flat):
-            nodePos_flat_c[i] = c_float(p)
-
-        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
-        nodeVel_flat = [pp for p in nodeVel for pp in p]
-        nodeVel_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
-        for i, p in enumerate(nodeVel_flat):
-            nodeVel_flat_c[i] = c_float(p)
-
-        #   Acceleration -- [Ax1,Ay1,Az1,RAx1,RAy1,RAz1, Ax2,Ay2,Az2,RAx2,RAy2,RAz2 ...]
-        nodeAcc_flat = [pp for p in nodeAcc for pp in p]
-        nodeAcc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
-        for i, p in enumerate(nodeAcc_flat):
-            nodeAcc_flat_c[i] = c_float(p)
+        #   Make a flat 1D arrays of motion info:
+        #       [x2,y1,z1, x2,y2,z2 ...]
+        meshPos_flat_c    = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,meshPos,   time,'MeshPos')
+        meshOrient_flat_c = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,meshOrient,time,'MeshOrient')
+        meshVel_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshVel,   time,'MeshVel')
+        meshAcc_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshAcc,   time,'MeshAcc')
 
         # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
-        nodeFrc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        meshFrc_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
 
         # Set up output channels
         outputChannelValues_c = (c_float * self.numChannels)(0.0,)
@@ -382,11 +351,11 @@ class AeroDynInflowLib(CDLL):
         # Run AeroDyn_Inflow_C_CalcOutput
         self.AeroDyn_Inflow_C_CalcOutput(
             byref(c_double(time)),                  # IN: time at which to calculate output forces 
-            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            nodePos_flat_c,                         # IN: positions - specified by user
-            nodeVel_flat_c,                         # IN: velocities at desired positions
-            nodeAcc_flat_c,                         # IN: accelerations at desired positions
-            nodeFrc_flat_c,                         # OUT: resulting forces/moments array
+            byref(c_int(self.numMeshPts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            meshPos_flat_c,                         # IN: positions - specified by user
+            meshVel_flat_c,                         # IN: velocities at desired positions
+            meshAcc_flat_c,                         # IN: accelerations at desired positions
+            meshFrc_flat_c,                         # OUT: resulting forces/moments array
             outputChannelValues_c,                  # OUT: output channel values as described in input file
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
@@ -396,13 +365,13 @@ class AeroDynInflowLib(CDLL):
 
         ## Reshape Force/Moment into [N,6]
         count = 0
-        for j in range(0,self.numNodePts):
-            nodeFrcMom[j,0] = nodeFrc_flat_c[count]
-            nodeFrcMom[j,1] = nodeFrc_flat_c[count+1]
-            nodeFrcMom[j,2] = nodeFrc_flat_c[count+2]
-            nodeFrcMom[j,3] = nodeFrc_flat_c[count+3]
-            nodeFrcMom[j,4] = nodeFrc_flat_c[count+4]
-            nodeFrcMom[j,5] = nodeFrc_flat_c[count+5]
+        for j in range(0,self.numMeshPts):
+            meshFrcMom[j,0] = meshFrc_flat_c[count]
+            meshFrcMom[j,1] = meshFrc_flat_c[count+1]
+            meshFrcMom[j,2] = meshFrc_flat_c[count+2]
+            meshFrcMom[j,3] = meshFrc_flat_c[count+3]
+            meshFrcMom[j,4] = meshFrc_flat_c[count+4]
+            meshFrcMom[j,5] = meshFrc_flat_c[count+5]
             count = count + 6
         
         # Convert output channel values back into python
@@ -410,41 +379,29 @@ class AeroDynInflowLib(CDLL):
             outputChannelValues[k] = float(outputChannelValues_c[k])
 
     # aerodyn_inflow_updateStates ------------------------------------------------------------------------------------------------------------
-    def aerdyn_inflow_updateStates(self, time, timeNext, nodePos, nodeVel, nodeAcc, nodeFrcMom):
+    def aerdyn_inflow_updateStates(self, time, timeNext, meshPos, meshVel, meshAcc, meshFrcMom):
 
         # Check input motion info
-        self.check_input_motions(nodePos,nodeVel,nodeAcc)
+        self.check_input_motions(meshPos,meshVel,meshAcc)
 
-        # set flat arrays for inputs of motion
-        #   Position -- [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
-        nodePos_flat = [pp for p in nodePos for pp in p]
-        nodePos_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
-        for i, p in enumerate(nodePos_flat):
-            nodePos_flat_c[i] = c_float(p)
-
-        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
-        nodeVel_flat = [pp for p in nodeVel for pp in p]
-        nodeVel_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
-        for i, p in enumerate(nodeVel_flat):
-            nodeVel_flat_c[i] = c_float(p)
-
-        #   Acceleration -- [Ax1,Ay1,Az1,RAx1,RAy1,RAz1, Ax2,Ay2,Az2,RAx2,RAy2,RAz2 ...]
-        nodeAcc_flat = [pp for p in nodeAcc for pp in p]
-        nodeAcc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
-        for i, p in enumerate(nodeAcc_flat):
-            nodeAcc_flat_c[i] = c_float(p)
+        #   Make a flat 1D arrays of motion info:
+        #       [x2,y1,z1, x2,y2,z2 ...]
+        meshPos_flat_c    = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,meshPos,   time,'MeshPos')
+        meshOrient_flat_c = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,meshOrient,time,'MeshOrient')
+        meshVel_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshVel,   time,'MeshVel')
+        meshAcc_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshAcc,   time,'MeshAcc')
 
         # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
-        nodeFrc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        meshFrc_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
 
         # Run AeroDyn_Inflow_UpdateStates_c
         self.AeroDyn_Inflow_C_UpdateStates(
             byref(c_double(time)),                  # IN: time at which to calculate output forces 
             byref(c_double(timeNext)),              # IN: time T+dt we are stepping to 
-            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            nodePos_flat_c,                         # IN: positions - specified by user
-            nodeVel_flat_c,                         # IN: velocities at desired positions
-            nodeAcc_flat_c,                         # IN: accelerations at desired positions
+            byref(c_int(self.numMeshPts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            meshPos_flat_c,                         # IN: positions - specified by user
+            meshVel_flat_c,                         # IN: velocities at desired positions
+            meshAcc_flat_c,                         # IN: accelerations at desired positions
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
         )
@@ -475,42 +432,155 @@ class AeroDynInflowLib(CDLL):
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
 
 
-    def check_input_motions(self,nodePos,nodeVel,nodeAcc):
-        # make sure number of nodes didn't change for some reason
-        if self._initNumNodePts != self.numNodePts:
-            print(f"At time {time}, the number of node points changed from initial value of {self._initNumNodePts}.  This is not permitted during the simulation.")
+    def flatPosArr(self,initNumMeshPts,numPts,MeshPosArr,time,name):
+        if initNumMeshPts != numPts:
+            print(f"At time {time}, the number of {name} points changed from initial value of {initNumMeshPts}.  This is not permitted during the simulation.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nError in calling AeroDyn/InflowWind library.")
+        meshPos_flat = [pp for p in MeshPosArr for pp in p]
+        meshPos_flat_c = (c_float * (3 * numPts))(0.0,)
+        for i, p in enumerate(meshPos_flat):
+            meshPos_flat_c[i] = c_float(p)
+        return meshPos_flat_c
+
+
+    def flatOrientArr(self,initNumMeshPts,numPts,MeshOrientArr,time,name):
+        if initNumMeshPts != numPts:
+            print(f"At time {time}, the number of {name} points changed from initial value of {initNumMeshPts}.  This is not permitted during the simulation.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nError in calling AeroDyn/InflowWind library.")
+        meshOrient_flat = [pp for p in MeshOrientArr for pp in p]
+        meshOrient_flat_c = (c_double * (9 * numPts))(0.0,)
+        for i, p in enumerate(meshOrient_flat):
+            meshOrient_flat_c[i] = c_double(p)
+        return meshOrient_flat_c
+
+
+    def flatVelAccArr(self,initNumMeshPts,numPts,MeshArr,time,name):
+        if initNumMeshPts != numPts:
+            print(f"At time {time}, the number of {name} points changed from initial value of {initNumMeshPts}.  This is not permitted during the simulation.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nError in calling AeroDyn/InflowWind library.")
+        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
+        meshVel_flat = [pp for p in meshVel for pp in p]
+        meshVel_flat_c = (c_float * (6 * self.numPtsPts))(0.0,)
+        for i, p in enumerate(meshVel_flat):
+            meshVel_flat_c[i] = c_float(p)
+        return meshVel_flat_c
+
+
+    def check_init_hubroot(self):
+        #print("shape of initRootPos       ",   self.initRootPos.shape)
+        #print("               ndim        ",   np.squeeze(self.initRootPos.ndim))
+        #print("               size 0      ",   self.initRootPos.shape[0])
+        #print("               size 1      ",   self.initRootPos.shape[1])
+        #print("shape of initRootOrient    ",   self.initRootOrient.shape)
+        #print("               ndim        ",   np.squeeze(self.initRootPos.ndim))
+        #print("               size 0      ",   self.initRootOrient.shape[0])
+        #print("               size 1      ",   self.initRootOrient.shape[1])
+        #print("               float       ",   type(self.initRootOrient[0,0]))
+        #print("shape of initHubPos        ",   self.initHubPos.shape)
+        #print("               ndim        ",   np.squeeze(self.initHubPos.ndim))
+        #print("               size 0      ",   self.initHubPos.shape[0])
+        #print("shape of initHubOrient     ",   self.initHubOrient.shape)
+        #print("               ndim        ",   np.squeeze(self.initHubOrient.ndim))
+        #print("               size 0      ",   self.initHubOrient.shape[0])
+        if self.numBlades < 1:
+            print("No blades.  Set numBlades to number of AD blades in the model")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initRootPos.shape[1] != 3:
+            print("Expecting a Nx3 array of blade root positions (initRootPos) with second index for [x,y,z]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initRootPos.shape[0] != self.numBlades:
+            print("Expecting a Nx3 array of blade root positions (initRootPos) with first index for blade number")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initRootOrient.shape[1] != 9:
+            print("Expecting a Nx9 array of blade root orientations as DCMs (initRootOrient) with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initRootOrient.shape[0] != self.numBlades:
+            print("Expecting a Nx3 array of blade root orientations (initRootOrient) with first index for blade number")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if np.squeeze(self.initHubPos.ndim) > 1 or self.initHubPos.shape[0] != 3:
+            print("Expecting a 3 element array for initHubPos [x,y,z]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if np.squeeze(self.initHubOrient.ndim) > 1 or self.initHubOrient.shape[0] != 9:
+            print("Expecting a 9 element array for initHubOrient DCM [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+            
+
+    def check_init_mesh(self):
+        #print("shape of initMeshPos       ",   self.initMeshPos.shape)
+        #print("               size 0      ",   self.initMeshPos.shape[0])
+        #print("               size 1      ",   self.initMeshPos.shape[1])
+        #print("shape of initMeshOrient    ",   self.initMeshOrient.shape)
+        #print("               size 0      ",   self.initMeshOrient.shape[0])
+        #print("               size 1      ",   self.initMeshOrient.shape[1])
+        #print("               float       ",   type(self.initMeshOrient[0,0]))
+        # initMeshPos
+        #   Verify that the shape of initMeshPos is correct
+        if self.initMeshPos.shape[0] != self.initMeshOrient.shape[0]:
+            print("Different number of meshs in inital position and orientation arrays")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initMeshPos.shape[1] != 3:
+            print("Expecting a Nx3 array of initial mesh positions (initMeshPos) with second index for [x,y,z]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initMeshPos.shape[0] != self.numMeshPts:
+            print("Expecting a Nx3 array of initial mesh positions (initMeshPos) with first index for mesh number.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initMeshOrient.shape[1] != 9:
+            print("Expecting a Nx9 array of initial mesh orientations as DCMs (initMeshOrient) with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if self.initMeshOrient.shape[0] != self.numMeshPts:
+            print("Expecting a Nx3 array of initial mesh orientations (initMeshOrient) with first index for mesh number.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+
+
+    def check_input_motions(self,meshPos,meshVel,meshAcc):
+        # make sure number of meshs didn't change for some reason
+        if self._initNumNodePts != self.numMeshPts:
+            print(f"At time {time}, the number of mesh points changed from initial value of {self._initNumNodePts}.  This is not permitted during the simulation.")
             self.aerodyn_inflow_end()
             raise Exception("\nError in calling AeroDyn/InflowWind library.")
 
         #   Verify that the shape of positions array is correct
-        if nodePos.shape[1] != 6:
-            print("Expecting a Nx6 array of node positions (nodePos) with second index for [x,y,z,Rx,Ry,Rz]")
+        if meshPos.shape[1] != 6:
+            print("Expecting a Nx6 array of mesh positions (meshPos) with second index for [x,y,z,Rx,Ry,Rz]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
-        if nodePos.shape[0] != self.numNodePts:
-            print("Expecting a Nx6 array of node positions (nodePos) with first index for node number.")
+        if meshPos.shape[0] != self.numMeshPts:
+            print("Expecting a Nx6 array of mesh positions (meshPos) with first index for mesh number.")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
-
 
         #   Verify that the shape of velocities array is correct
-        if nodeVel.shape[1] != 6:
-            print("Expecting a Nx6 array of node velocities (nodeVel) with second index for [x,y,z,Rx,Ry,Rz]")
+        if meshVel.shape[1] != 6:
+            print("Expecting a Nx6 array of mesh velocities (meshVel) with second index for [x,y,z,Rx,Ry,Rz]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
-        if nodeVel.shape[0] != self.numNodePts:
-            print("Expecting a Nx6 array of node velocities (nodeVel) with first index for node number.")
+        if meshVel.shape[0] != self.numMeshPts:
+            print("Expecting a Nx6 array of mesh velocities (meshVel) with first index for mesh number.")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
-
 
         #   Verify that the shape of accelerations array is correct
-        if nodeAcc.shape[1] != 6:
-            print("Expecting a Nx6 array of node accelerations (nodeAcc) with second index for [x,y,z,Rx,Ry,Rz]")
+        if meshAcc.shape[1] != 6:
+            print("Expecting a Nx6 array of mesh accelerations (meshAcc) with second index for [x,y,z,Rx,Ry,Rz]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
-        if nodeAcc.shape[0] != self.numNodePts:
-            print("Expecting a Nx6 array of node accelerations (nodeAcc) with first index for node number.")
+        if meshAcc.shape[0] != self.numMeshPts:
+            print("Expecting a Nx6 array of mesh accelerations (meshAcc) with first index for mesh number.")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
 
@@ -536,10 +606,9 @@ class AeroDynInflowLib(CDLL):
 #===============================================================================
 #   Helper class for debugging the interface.  This will write out all the
 #   input position/orientation, velocities, accelerations, and the resulting
-#   forces and moments at each input node.  If all is functioning correctly,
-#   this will be identical to the corresponding values in the
-#   AeroDyn/InflowWind output
-#   channels.
+#   forces and moments at each input mesh point.  If all is functioning
+#   correctly, this will be identical to the corresponding values in the
+#   AeroDyn/InflowWind output channels.
 
 #FIXME: this is incorrect
 class DriverDbg():
@@ -550,18 +619,18 @@ class DriverDbg():
     When coupled to another code, the force/moment array would be passed back
     to the calling code for use in the structural solver.
     """
-    def __init__(self,filename,numNodePts):
+    def __init__(self,filename,numMeshPts):
         self.DbgFile=open(filename,'wt')        # open output file and write header info
-        self.numNodePts=numNodePts
+        self.numMeshPts=numMeshPts
         # write file header
         t_string=datetime.datetime.now()
         dt_string=datetime.date.today()
         self.DbgFile.write(f"## This file was generated by aerodyn_inflow_c_lib on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
-        self.DbgFile.write(f"## This file contains the resulting forces/moments at each of {self.numNodePts} node(s) passed into the aerodyn_inflow_c_lib\n")
+        self.DbgFile.write(f"## This file contains the resulting forces/moments at each of {self.numMeshPts} mesh points passed into the aerodyn_inflow_c_lib\n")
         self.DbgFile.write("#\n")
         f_string = "{:^25s}"
         self.DbgFile.write("#        T     ")
-        for i in range(1,self.numNodePts+1):
+        for i in range(1,self.numMeshPts+1):
             f_num = "N{0:04d}_".format(i)
             self.DbgFile.write(f_string.format(f_num+"x"  ))
             self.DbgFile.write(f_string.format(f_num+"y"  ))
@@ -589,7 +658,7 @@ class DriverDbg():
             self.DbgFile.write(f_string.format(f_num+"Mz" ))
         self.DbgFile.write("\n")
         self.DbgFile.write("#       (s)    ")
-        for i in range(1,self.numNodePts+1):
+        for i in range(1,self.numMeshPts+1):
             self.DbgFile.write(f_string.format("(m)"      ))
             self.DbgFile.write(f_string.format("(m)"      ))
             self.DbgFile.write(f_string.format("(m)"      ))
@@ -617,15 +686,15 @@ class DriverDbg():
         self.DbgFile.write("\n")
         self.opened = True
 
-    def write(self,t,nodePos,nodeVel,nodeAcc,nodeFrc):
+    def write(self,t,meshPos,meshVel,meshAcc,meshFrc):
         t_string = "{:10.4f}"
         f_string = "{:25.7f}"*6
         self.DbgFile.write(t_string.format(t))
-        for i in range(0,self.numNodePts):
-            self.DbgFile.write(f_string.format(*nodePos[i,:]))
-            self.DbgFile.write(f_string.format(*nodeVel[i,:]))
-            self.DbgFile.write(f_string.format(*nodeAcc[i,:]))
-            self.DbgFile.write(f_string.format(*nodeFrc[i,:]))
+        for i in range(0,self.numMeshPts):
+            self.DbgFile.write(f_string.format(*meshPos[i,:]))
+            self.DbgFile.write(f_string.format(*meshVel[i,:]))
+            self.DbgFile.write(f_string.format(*meshAcc[i,:]))
+            self.DbgFile.write(f_string.format(*meshFrc[i,:]))
         self.DbgFile.write("\n")
 
     def end(self):

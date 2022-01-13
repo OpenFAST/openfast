@@ -38,6 +38,7 @@ typedef    ^        ^                  ReKi                             RefHt   
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
 typedef    ^        ^                  LOGICAL                          UseInputFile     -    .TRUE.  -   "Should we read everthing from an input file, or is it passed in?"  -
 typedef    ^        ^                  FileInfoType                     PassedFileData   -      -     -   "If we don't use the input file, pass everything through this"      -
+typedef    ^        ^                  LOGICAL                          Linearize        -    .FALSE. -   "Flag that tells this module if the glue code wants to linearize." -
 
 
 # ..... InitIn ....................................................................................................................
