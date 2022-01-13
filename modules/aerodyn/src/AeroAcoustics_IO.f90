@@ -8,7 +8,7 @@ MODULE AeroAcoustics_IO
 
    implicit none
 
-   type(ProgDesc), parameter  :: AA_Ver = ProgDesc( 'AeroAcoustics', 'v1.00.00', '18-Aug-2016' )
+   type(ProgDesc), parameter  :: AA_Ver = ProgDesc( 'AeroAcoustics', '', '' )
    character(*),   parameter  :: AA_Nickname = 'AA'
 
 
@@ -58,7 +58,7 @@ MODULE AeroAcoustics_IO
 
 contains
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, OutFileRoot, UnEcho, ErrStat, ErrMsg )
     ! This subroutine reads the input file and stores all the data in the AA_InputFile structure.
     ! It does not perform data validation.
     !..................................................................................................................................
@@ -69,11 +69,9 @@ SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, O
     CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
     TYPE(AA_InputFile),      INTENT(OUT)   :: InputFileData   ! Data stored in the module's input file
     INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
-    INTEGER(IntKi),          INTENT(IN)    :: NumBlades       ! Number of blades for this model
     INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
     CHARACTER(*),            INTENT(OUT)   :: ErrMsg          ! The error message, if an error occurred
     ! local variables
-    INTEGER(IntKi)                         :: I
     INTEGER(IntKi)                         :: ErrStat2        ! The error status code
     CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
     CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
@@ -123,10 +121,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     character(*),       intent(in)      :: OutFileRoot                         ! The rootname of the echo file, possibly opened in this routine
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     ! Local variables:
-    real(ReKi)                    :: TmpAry(3)                                 ! array to help read tower properties table
     integer(IntKi)                :: I                                         ! loop counter
     integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
-    integer(IntKi)                :: loop1                                     ! loop counter
     character(1024)               :: ObserverFile                              ! name of the files containing obesever location
     integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
     logical                       :: Echo                                      ! Determines if an echo file should be written
@@ -134,7 +130,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     character(1024)               :: PriPath                                   ! Path name of the primary file
     character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'ReadPrimaryFile'
-    integer(IntKi)                :: n                                         ! dummy integer
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
@@ -325,24 +320,23 @@ end subroutine
 SUBROUTINE ReadBLTables( InputFile, BL_Files, InputFileData, ErrStat, ErrMsg )
     ! Passed variables
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
-    character(*), dimension(:),       intent(in)      :: BL_Files                           ! Name of the file containing the primary input data
-type(AA_InputFile), intent(inout)       :: InputFileData                       ! All the data in the Noise input file
+    character(*),       intent(in)      :: BL_Files(:)                         ! Name of the file containing the primary input data
+    type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
     character(*),       intent(out)     :: ErrMsg                              ! Error message
+    
     ! Local variables:
-    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
-    character(1024)               :: FileName                              ! name of the files containing obesever location
-    integer(IntKi)                :: ErrStat2                                ! Temporary Error status
-    logical                       :: Echo                                      ! Determines if an echo file should be written
+    integer(IntKi)                :: UnIn                                      ! Unit number for reading file
+    character(1024)               :: FileName                                  ! name of the files containing obesever location
+    integer(IntKi)                :: ErrStat2                                  ! Temporary Error status
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     character(1024)               :: PriPath                                   ! Path name of the primary file
-    character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-    character(*), parameter       :: RoutineName = 'readbltable'
-    integer(IntKi)                :: nRe, nAoA, nAirfoils  !  Number of Reynolds number, angle of attack, and number of airfoils listed
-    integer(IntKi)                :: iAF , iRe, iAoA, iDummy, iBuffer ! loop counters
-    real(DbKi),dimension(:,:),ALLOCATABLE :: Buffer
-    integer                 :: iLine
+    character(*), parameter       :: RoutineName = 'ReadBLTables'
+    integer(IntKi)                :: nRe, nAoA, nAirfoils                      !  Number of Reynolds number, angle of attack, and number of airfoils listed
+    integer(IntKi)                :: iAF , iRe, iAoA                           ! loop counters
+    real(DbKi),  ALLOCATABLE      :: Buffer(:,:)
+    integer                       :: iLine
+    
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
@@ -353,7 +347,7 @@ type(AA_InputFile), intent(inout)       :: InputFileData                       !
 
         FileName = trim(BL_Files(iAF))
 
-        print*,'AeroAcoustics_IO: reading BL table:'//trim(Filename)
+        call WrScr('AeroAcoustics_IO: reading BL table:'//trim(Filename))
 
         CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return
         CALL OpenFInpFile(UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
@@ -440,16 +434,11 @@ SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
     ! Local variables:
-    integer(IntKi)                :: I                                         ! loop counter
-    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
-    integer(IntKi)                :: loop1                                     ! loop counter
-    character(1024)               :: FileName                              ! name of the files containing obesever location
-    integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
-    logical                       :: Echo                                      ! Determines if an echo file should be written
+    integer(IntKi)                :: UnIn                                      ! Unit number for reading file
+    character(1024)               :: FileName                                  ! name of the files containing obesever location
+    integer(IntKi)                :: ErrStat2                                  ! Temporary Error status
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     character(1024)               :: PriPath                                   ! Path name of the primary file
-    character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'REadTICalcTables'
     integer(IntKi)                :: GridY                                     !
     integer(IntKi)                :: GridZ                                    !
@@ -505,8 +494,6 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    integer(IntKi),           intent(out)    :: ErrStat                             !< Error status
    character(*),             intent(out)    :: ErrMsg                              !< Error message
    ! local variables
-   integer(IntKi)                           :: k                                   ! Blade number
-   integer(IntKi)                           :: j                                   ! node number
    character(*), parameter                  :: RoutineName = 'ValidateInputData'
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -553,33 +540,10 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
 END SUBROUTINE ValidateInputData
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AA_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
-    ! This routine generates the summary file, which contains a summary of input file options.
-    ! passed variables
-    TYPE(AA_InputFile),        INTENT(IN)  :: InputFileData                        ! Input-file data
-    TYPE(AA_ParameterType),    INTENT(IN)  :: p                                    ! Parameters
-    TYPE(AA_InputType),        INTENT(IN)  :: u                                    ! inputs
-    TYPE(AA_OutputType),       INTENT(IN)  :: y                                    ! outputs
-    INTEGER(IntKi),            INTENT(OUT) :: ErrStat
-    CHARACTER(*),              INTENT(OUT) :: ErrMsg
-    ! Local variables.
-    INTEGER(IntKi)               :: I                                               ! Index for the nodes.
-    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
-    CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
-    CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
-    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
-    CHARACTER(100)               :: Msg                                             ! temporary string for writing appropriate text to summary file
-    ! Open the summary file and give it a heading.
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-    RETURN
-END SUBROUTINE AA_PrintSum
-!..................................................................................................................................
 !> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
 !! FAST or AeroAcoustics_Driver)
-subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
+subroutine AA_SetInitOut(p, InitOut, errStat, errMsg)
     type(AA_InitOutputType),       intent(  out)  :: InitOut          ! output data
-    type(AA_InputFile),            intent(in   )  :: InputFileData    ! input file data (for setting airfoil shape outputs)
     type(AA_ParameterType),        intent(in   )  :: p                ! Parameters
     integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
     character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
@@ -587,9 +551,7 @@ subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
     integer(intKi)                               :: ErrStat2          ! temporary Error status
     character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
     character(*), parameter                      :: RoutineName = 'AA_SetInitOut'
-    integer(IntKi)                               :: i, j, k,m,oi
-    integer(IntKi)                               :: NumCoords
-    character(500)                               :: chanPrefix
+    integer(IntKi)                               :: i, j, k,oi
     ! Initialize variables for this routine
     errStat = ErrID_None
     errMsg  = ""
@@ -668,8 +630,7 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
    ! locals
    integer(IntKi) :: i
    integer(IntKi) :: numOuts
-   character(200) :: frmt                                      ! A string to hold a format specifier
-   character(15)  :: tmpStr                                    ! temporary string to print the time output as text
+
    ! FIRST FILE
    IF (InputFileData%NrOutFile .gt.0) THEN
       call GetNewUnit( p%unOutFile, ErrStat, ErrMsg )
@@ -880,8 +841,8 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, ErrStat, ErrMsg )
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
    ! local variables
    CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
-   INTEGER(intKi)                            :: ErrStat2
-   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+!   INTEGER(intKi)                            :: ErrStat2
+!   CHARACTER(ErrMsgLen)                      :: ErrMsg2
    INTEGER(IntKi)                            :: j,k,counter,i,oi,III
    ! start routine:
    ErrStat = ErrID_None
