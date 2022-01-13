@@ -3,7 +3,7 @@
 
 .. _AD_UA:
 
-Unsteady aerodynamics
+Unsteady Aerodynamics
 =====================
 
 

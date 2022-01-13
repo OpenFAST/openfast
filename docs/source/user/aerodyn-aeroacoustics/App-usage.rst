@@ -5,11 +5,12 @@ Using the Aeroacoustics Model in AeroDyn
 
 A live version of this documentation is available at
 https://openfast.readthedocs.io/. To run the aeroacoustics model, the
-flag **CompAA** needs to be set to **True** at line 13 of the AeroDyn15 main
+flag **CompAA** needs to be set to **True** at line 14 of the AeroDyn15 main
 input file in the inputs block **General Options**. When the flag is set to
 **True**, the following line must include the name of the file containing
 the inputs to the aeroacoustics model, which is discussed in
-:numref:`aa-sec-BLinputs`.
+:numref:`aa-sec-MainInput`. Currently, this module cannot be used with an MHK
+turbine.
 
 
 .. container::

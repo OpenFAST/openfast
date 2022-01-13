@@ -32,11 +32,24 @@ OpenFAST                                      28   Patm            103500     Pa
 OpenFAST                                      29   Pvap            1700       Pvap              - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
 OpenFAST                                      30   WtrDpth         50         WtrDpth           - Water depth (m)
 OpenFAST                                      31   MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
-AeroDyn 15                                    40   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
-AeroDyn 15                                    41   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+AeroDyn 15                                    13   Buoyancy        True       Buoyancy          - Include buoyancy effects? (flag)
+AeroDyn 15                                    41   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+AeroDyn 15                                    42   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+AeroDyn 15                                         TwrCb           1.0        [additional column in *Tower Influence and Aerodynamics* table]
+AeroDyn 15                                    77   N/A             ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+AeroDyn 15                                    78   VolHub          7.0        VolHub            - Hub volume (m^3)
+AeroDyn 15                                    79   HubCenBx        0.5        HubCenBx          - Hub center of buoyancy x direction offset (m)
+AeroDyn 15                                    80   N/A             ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+AeroDyn 15                                    81   VolNac          32.0       VolNac            - Nacelle volume (m^3)
+AeroDyn 15                                    82   NacCenBx        0.4        NacCenBx          - Nacelle center of buoyancy x direction offset (m)
+AeroDyn 15                                    83   NacCenBy        0.2        NacCenBy          - Nacelle center of buoyancy y direction offset (m)
+AeroDyn 15                                    84   NacCenBz        0.1        NacCenBz          - Nacelle center of buoyancy z direction offset (m)
 AirFoilTables                                 12\* alphaUpper      5.0        alphaUpper        ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
 AirFoilTables                                 13\* alphaLower      \-3.0      alphaLower        ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
 AirFoilTables                                 42\* UACutout_delta  "DEFAULT"  UACutout_delta    ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
+AeroDyn blade                                      BlCb            0.187      [additional column in *Blade Properties* table]
+AeroDyn blade                                      BlCenBn         0.3        [additional column in *Blade Properties* table]
+AeroDyn blade                                      BlCenBt         0.1        [additional column in *Blade Properties* table]
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
@@ -46,11 +59,11 @@ Modified in OpenFAST dev
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-AeroDyn                                       16   AirDens         "default"  AirDens           - Air density (kg/m^3)
-AeroDyn                                       17   KinVisc         "default"  KinVisc           - Kinematic viscosity of working fluid (m^2/s)
-AeroDyn                                       18   SpdSound        "default"  SpdSound          - Speed of sound in air (m/s)
-AeroDyn                                       19   Patm            "default"  Patm              - Atmospheric pressure (Pa) [used only when CavitCheck=True]
-AeroDyn                                       20   Pvap            "default"  Pvap              - Vapour pressure of working fluid (Pa) [used only when CavitCheck=True]
+AeroDyn 15                                    17   AirDens         "default"  AirDens           - Air density (kg/m^3)
+AeroDyn 15                                    18   KinVisc         "default"  KinVisc           - Kinematic viscosity of working fluid (m^2/s)
+AeroDyn 15                                    19   SpdSound        "default"  SpdSound          - Speed of sound in air (m/s)
+AeroDyn 15                                    20   Patm            "default"  Patm              - Atmospheric pressure (Pa) [used only when CavitCheck=True]
+AeroDyn 15                                    21   Pvap            "default"  Pvap              - Vapour pressure of working fluid (Pa) [used only when CavitCheck=True]
 HydroDyn                                      5    WtrDens         "default"  WtrDens           - Water density (kg/m^3)
 HydroDyn                                      6    WtrDpth         "default"  WtrDpth           - Water depth (meters)
 HydroDyn                                      7    MSL2SWL         "default"  MSL2SWL           - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod = 6; must be zero if PotMod=1 or 2]
@@ -61,7 +74,7 @@ Removed in OpenFAST dev
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-AeroDyn                                       21   FluidDepth      0.5        FluidDepth        - Water depth above mid-hub height (m) [used only when CavitCheck=True]
+AeroDyn 15                                    21   FluidDepth      0.5        FluidDepth        - Water depth above mid-hub height (m) [used only when CavitCheck=True]
 ElastoDyn                                     7    N/A             ---------------------- ENVIRONMENTAL CONDITION ---------------------------------
 ElastoDyn                                     8    Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
 ============================================= ==== =============== ========================================================================================================================================================================================================
