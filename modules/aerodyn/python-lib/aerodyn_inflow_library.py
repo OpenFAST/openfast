@@ -85,8 +85,8 @@ class AeroDynInflowLib(CDLL):
         #       Also may want to convert this at some point to C_NULL_CHAR
         #       delimeter instead of fixed width.  Future problem though.
         # Number of channel names may exceeed 5000
-        self._channel_names_c = create_string_buffer(20 * 10000)
-        self._channel_units_c = create_string_buffer(20 * 10000)
+        self._channel_names_c = create_string_buffer(20 * 2000)
+        self._channel_units_c = create_string_buffer(20 * 2000)
 
         # Initial environmental conditions
         #self.MHK = false    #  MHK turbine type switch -- disabled for now
@@ -104,26 +104,28 @@ class AeroDynInflowLib(CDLL):
         self.WrVTK       = 0
 
         # Interpolation order (must be 1: linear, or 2: quadratic)
-        self.InterpOrder    =   1   # default of linear interpolation
+        self.InterpOrder = 1          # default of linear interpolation
 
         # Initial time related variables
-        self.dt = 0.1                   # typical default for HD
-        self.t_start = 0.0              # initial time 
-        self.tmax = 600.0               # typical default for HD waves FFT
+        self.dt          = 0.1        # typical default for HD
+        self.t_start     = 0.0        # initial time 
+        self.tmax        = 600.0      # typical default for HD waves FFT
         #FIXME: check tmax/total_time and note exactly what is different between them.
-        self.total_time = 0.0           # may be longer than tmax
-        self.numTimeSteps = 0
+        self.total_time  = 0.0        # may be longer than tmax
+        self.numTimeSteps= 0
 
         # number of output channels
-        self.numChannels = 0                # Number of channels returned
+        self.numChannels = 0          # Number of channels returned
 
         # Initial position of hub and blades
         #   used for setup of AD, not used after init.
-        self.initHubPos     = np.zeros(shape=(3),dtype=c_float)
-        self.initHubOrient  = np.zeros(shape=(9),dtype=c_double)
-        self.numBlades      = 3
-        self.initRootPos    = np.zeros(shape=(self.numBlades,3),dtype=c_float)
-        self.initRootOrient = np.zeros(shape=(self.numBlades,9),dtype=c_double)
+        self.initHubPos         = np.zeros(shape=(3),dtype=c_float)
+        self.initHubOrient      = np.zeros(shape=(9),dtype=c_double)
+        self.initNacellePos     = np.zeros(shape=(3),dtype=c_float)
+        self.initNacelleOrient  = np.zeros(shape=(9),dtype=c_double)
+        self.numBlades          = 3
+        self.initRootPos        = np.zeros(shape=(self.numBlades,3),dtype=c_float)
+        self.initRootOrient     = np.zeros(shape=(self.numBlades,9),dtype=c_double)
 
         # Structural Mesh
         #   The number of nodes must be constant throughout simulation.  The
@@ -166,6 +168,8 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # WrVTK
             POINTER(c_float),                   # initHubPos
             POINTER(c_double),                  # initHubOrient_flat
+            POINTER(c_float),                   # initNacellePos
+            POINTER(c_double),                  # initNacelleOrient_flat
             POINTER(c_int),                     # numBlades
             POINTER(c_float),                   # initRootPos_flat
             POINTER(c_double),                  # initRootOrient_flat
@@ -256,8 +260,10 @@ class AeroDynInflowLib(CDLL):
 
         #   Flatten arrays to pass
         #       [x2,y1,z1, x2,y2,z2 ...]
-        initHubPos_c    = (c_float  * len(self.initHubPos   ))(*self.initHubPos   )
-        initHubOrient_c = (c_double * len(self.initHubOrient))(*self.initHubOrient)
+        initHubPos_c            = (c_float  * len(self.initHubPos       ))(*self.initHubPos       )
+        initHubOrient_c         = (c_double * len(self.initHubOrient    ))(*self.initHubOrient    )
+        initNacellePos_c        = (c_float  * len(self.initNacellePos   ))(*self.initNacellePos   )
+        initNacelleOrient_c     = (c_double * len(self.initNacelleOrient))(*self.initNacelleOrient)
         initRootPos_flat_c      = self.flatPosArr(   self._initNumBlades, self.numBlades,self.initRootPos,    'Init','RootPos')
         initRootOrient_flat_c   = self.flatOrientArr(self._initNumBlades, self.numBlades,self.initRootOrient, 'Init','RootOrient')
         initMeshPos_flat_c      = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,self.initMeshPos,   'Init','MeshPos')
@@ -291,6 +297,8 @@ class AeroDynInflowLib(CDLL):
             byref(c_int(self.WrVTK)),               # IN: WrVTK
             initHubPos_c,                           # IN: initHubPos -- initial hub position
             initHubOrient_c,                        # IN: initHubOrient -- initial hub orientation DCM in flat array of 9 elements
+            initNacellePos_c,                       # IN: initNacellePos -- initial hub position
+            initNacelleOrient_c,                    # IN: initNacelleOrient -- initial hub orientation DCM in flat array of 9 elements
             byref(c_int(self.numBlades)),           # IN: number of blades (matches number of blade root positions)
             initRootPos_flat_c,                     # IN: initBladeRootPos -- initial node positions in flat array of 3*numBlades
             initRootOrient_flat_c,                  # IN: initBladeRootOrient -- initial blade root orientation DCMs in flat array of 9*numBlades
@@ -485,6 +493,12 @@ class AeroDynInflowLib(CDLL):
         #print("shape of initHubOrient     ",   self.initHubOrient.shape)
         #print("               ndim        ",   np.squeeze(self.initHubOrient.ndim))
         #print("               size 0      ",   self.initHubOrient.shape[0])
+        #print("shape of initNacellePos    ",   self.initNacellePos.shape)
+        #print("               ndim        ",   np.squeeze(self.initNacellePos.ndim))
+        #print("               size 0      ",   self.initNacellePos.shape[0])
+        #print("shape of initNacelleOrient ",   self.initNacelleOrient.shape)
+        #print("               ndim        ",   np.squeeze(self.initNacelleOrient.ndim))
+        #print("               size 0      ",   self.initNacelleOrient.shape[0])
         if self.numBlades < 1:
             print("No blades.  Set numBlades to number of AD blades in the model")
             self.aerodyn_inflow_end()
@@ -511,6 +525,14 @@ class AeroDynInflowLib(CDLL):
             raise Exception("\nAeroDyn terminated prematurely.")
         if np.squeeze(self.initHubOrient.ndim) > 1 or self.initHubOrient.shape[0] != 9:
             print("Expecting a 9 element array for initHubOrient DCM [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if np.squeeze(self.initNacellePos.ndim) > 1 or self.initNacellePos.shape[0] != 3:
+            print("Expecting a 3 element array for initNacellePos [x,y,z]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn terminated prematurely.")
+        if np.squeeze(self.initNacelleOrient.ndim) > 1 or self.initNacelleOrient.shape[0] != 9:
+            print("Expecting a 9 element array for initNacelleOrient DCM [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn terminated prematurely.")
             
