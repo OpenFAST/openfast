@@ -3033,6 +3033,7 @@ CONTAINS
             END IF
          END IF
       END IF
+            
       
       IF ( p_FAST%CompSub == Module_SD ) THEN
       
@@ -4561,6 +4562,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
          CALL MeshMapCreate( AD%y%rotors(1)%HubLoad, ED%Input(1)%HubPtLoad,  MeshMapData%AD_P_2_ED_P_H, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_2_ED_HubLoad' )
 
+         CALL MeshCopy( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_HubPtLoad' )
       END IF
       
       
@@ -4894,15 +4897,13 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    ! initialize the temporary input meshes (for input-output solves in Solve Option 1):
    ! (note that we do this after ResetRemapFlags() so that the copies have remap=false)
    !............................................................................................................................
-   if ( p_FAST%CompAero == Module_AD .or. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1)) then
-      CALL MeshCopy( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_HubPtLoad' )
-   endif
-
    IF ( p_FAST%CompHydro == Module_HD .OR. p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) &
          .or. p_FAST%CompMooring == Module_Orca) THEN
                   
          ! Temporary meshes for transfering inputs to ED, HD, BD, Orca, and SD
+      CALL MeshCopy( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_HubPtLoad' )
+
       CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh' )                 
 
