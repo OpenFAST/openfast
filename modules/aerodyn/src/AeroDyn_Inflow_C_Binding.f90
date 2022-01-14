@@ -142,6 +142,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    integer(IntKi)                         :: WrVTK                   !< Write VTK outputs [0: none, 1: init only, 2: animation]
    integer(IntKi)                         :: VTK_tWidth              !< width of the time field in the VTK
    character(IntfStrLen)                  :: VTK_OutFileRoot         !< Root name to use for echo files, vtk, etc.
+   logical                                :: TransposeDCM            !< Transpose DCMs as passed in -- test the vtk outputs to see if needed
    !------------------------------
    !  Mesh mapping: motions
    !     The mapping of motions from the nodes passed in to the corresponding AD meshes
@@ -190,7 +191,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
                gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,                         &
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                                   &
                InterpOrder_C, T_initial_C, DT_C, TMax_C,                                     &
-               storeHHVel, WrVTK_in,                                                         &
+               storeHHVel, WrVTK_in, TransposeDCM_in,                                        &
                HubPosition_C, HubOrientation_C,                                              &
                NacellePosition_C, NacelleOrientation_C,                                      &
                NumBlades_C, BladeRootPosition_C, BladeRootOrientation_C,                     &
@@ -240,6 +241,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    ! Flags
    logical(c_bool),           intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
    integer(c_int),            intent(in   )  :: WrVTK_in                               !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   logical(c_bool),           intent(in   )  :: TransposeDCM_in                        !< Transpose DCMs as they are passed in
    ! Output
    integer(c_int),            intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
    character(kind=c_char),    intent(  out)  :: OutputChannelNames_C(ChanLen*MaxADIOutputs+1)    !< NOTE: if MaxADIOutputs is sufficiently large, we may overrun the buffer on the Python side.
@@ -355,6 +357,8 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       ErrMsg2  =  "WrVTK option for writing VTK visualization files must be [0: none, 1: init only, 2: animation]"
       if (Failed())  return
    endif
+   ! Transpose DCMs as they are passed in
+   TransposeDCM      = TransposeDCM_in
 
 
    ! Linearization
@@ -372,6 +376,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    InitInp%AD%defPvap     = REAL(defPvap_C,     ReKi)
    InitInp%AD%WtrDpth     = REAL(WtrDpth_C,     ReKi)
    InitInp%AD%MSL2SWL     = REAL(MSL2SWL_C,     ReKi)
+   InitInp%storeHHVel     = storeHHVel
    InitInp%WrVTK          = WrVTK
    ! setup rotors for AD -- interface only supports one rotor at present
    allocate (InitInp%AD%rotors(1),stat=errStat2)
@@ -383,12 +388,19 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    InitInp%AD%rotors(1)%numBlades = NumBlades
    call AllocAry(InitInp%AD%rotors(1)%BladeRootPosition,       3, NumBlades_c, 'BladeRootPosition',    errStat2, errMsg2 ); if (Failed()) return
    call AllocAry(InitInp%AD%rotors(1)%BladeRootOrientation, 3, 3, NumBlades_c, 'BladeRootOrientation', errStat2, errMsg2 ); if (Failed()) return
-   InitInp%AD%rotors(1)%BladeRootPosition    = reshape( real(BladeRootPosition_C(   1:3*NumBlades_c),ReKi), (/  3,NumBlades_c/) )
-   InitInp%AD%rotors(1)%BladeRootOrientation = reshape( real(BladeRootOrientation_C(1:9*NumBlades_c),ReKi), (/3,3,NumBlades_c/) )
    InitInp%AD%rotors(1)%HubPosition          = real(HubPosition_C(   1:3),ReKi)
    InitInp%AD%rotors(1)%HubOrientation       = reshape( real(HubOrientation_C(1:9),ReKi), (/3,3/) )
    !InitInp%AD%rotors(1)%NacellePosition      = real(NacellePosition_C(   1:3),ReKi)      ! FIXME: AD15 uses hub position for this
    InitInp%AD%rotors(1)%NacelleOrientation   = reshape( real(NacelleOrientation_C(1:9),ReKi), (/3,3/) )
+   InitInp%AD%rotors(1)%BladeRootPosition    = reshape( real(BladeRootPosition_C(   1:3*NumBlades_c),ReKi), (/  3,NumBlades_c/) )
+   InitInp%AD%rotors(1)%BladeRootOrientation = reshape( real(BladeRootOrientation_C(1:9*NumBlades_c),ReKi), (/3,3,NumBlades_c/) )
+   if (TransposeDCM) then
+      InitInp%AD%rotors(1)%HubOrientation       = transpose(InitInp%AD%rotors(1)%HubOrientation)
+      InitInp%AD%rotors(1)%NacelleOrientation   = transpose(InitInp%AD%rotors(1)%NacelleOrientation)
+      do i=1,NumBlades
+         InitInp%AD%rotors(1)%BladeRootOrientation(1:3,1:3,i) = transpose(InitInp%AD%rotors(1)%BladeRootOrientation(1:3,1:3,i))
+      enddo
+   endif
 
 !FIXME: add checks and revisions to passed orientations -- just in case they aren't good DCMs
 
@@ -568,6 +580,8 @@ CONTAINS
       TmpFlag="F";   if (storeHHVel) TmpFlag="T"
       call WrScr("       storeHHVel                     "//TmpFlag )
       call WrScr("       WrVTK_in                       "//trim(Num2LStr( WrVTK_in      )) )
+      TmpFlag="F";   if (TransposeDCM_in) TmpFlag="T"
+      call WrScr("       TransposeDCM_in                "//TmpFlag )
       call WrScr("   Init Data")
       call WrNR("       Hub Position         ")
       call WrMatrix(HubPosition_C,CU,'(3(ES15.7e2))')
@@ -635,7 +649,11 @@ CONTAINS
          ! initial position and orientation of node
          InitPos  = tmpBldPtMeshPos(1:3,iNode)
 !FIXME: what if this isn't a good DCM???????
-         Orient   = tmpBldPtMeshOrient(1:3,1:3,iNode)
+         if (TransposeDCM) then
+            Orient   = transpose(tmpBldPtMeshOrient(1:3,1:3,iNode))
+         else
+            Orient   = tmpBldPtMeshOrient(1:3,1:3,iNode)
+         endif
          call MeshPositionNode(  AD_BldPtMotionMesh       , &
                                  iNode                    , &
                                  InitPos                  , &  ! position

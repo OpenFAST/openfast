@@ -102,6 +102,7 @@ class AeroDynInflowLib(CDLL):
         # flags 
         self.storeHHVel  = False
         self.WrVTK       = 0
+        self.transposeDCM= False
 
         # Interpolation order (must be 1: linear, or 2: quadratic)
         self.InterpOrder = 1          # default of linear interpolation
@@ -166,6 +167,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_double),                  # tmax 
             POINTER(c_bool),                    # storeHHVel
             POINTER(c_int),                     # WrVTK
+            POINTER(c_bool),                    # transposeDCM
             POINTER(c_float),                   # initHubPos
             POINTER(c_double),                  # initHubOrient_flat
             POINTER(c_float),                   # initNacellePos
@@ -295,6 +297,7 @@ class AeroDynInflowLib(CDLL):
             byref(c_double(self.tmax)),             # IN: tmax
             byref(c_bool(self.storeHHVel)),         # IN: storeHHVel
             byref(c_int(self.WrVTK)),               # IN: WrVTK
+            byref(c_bool(self.transposeDCM)),       # IN: transposeDCM
             initHubPos_c,                           # IN: initHubPos -- initial hub position
             initHubOrient_c,                        # IN: initHubOrient -- initial hub orientation DCM in flat array of 9 elements
             initNacellePos_c,                       # IN: initNacellePos -- initial hub position
