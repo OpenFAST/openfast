@@ -2262,7 +2262,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 
    type(AD_InitInputType),   intent(in   )  :: InitInp                           !< Input data for initialization routine
    type(AD_InputFile),       intent(in)     :: InputFileData                     !< All the data in the AeroDyn input file
-   integer(IntKi),           intent(in)     :: NumBl(:)                          !< Number of blades
+   integer(IntKi),           intent(in)     :: NumBl(:)                          !< Number of blades: size(NumBl) = number of rotors
    integer(IntKi),           intent(out)    :: ErrStat                           !< Error status
    character(*),             intent(out)    :: ErrMsg                            !< Error message
 
@@ -3515,7 +3515,7 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tow
    REAL(ReKi)                      ,INTENT(  OUT)  :: ybar                          !< local y^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                      ,INTENT(  OUT)  :: zbar                          !< local z^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                      ,INTENT(  OUT)  :: TwrCd                         !< local tower drag coefficient
-   REAL(ReKi)                      ,INTENT(  OUT)  :: TwrTI                         !< local tower TI (for Eeames tower shadow model)
+   REAL(ReKi)                      ,INTENT(  OUT)  :: TwrTI                         !< local tower TI (for Eames tower shadow model)
    REAL(ReKi)                      ,INTENT(  OUT)  :: TwrDiam                       !< local tower diameter
       
       ! local variables

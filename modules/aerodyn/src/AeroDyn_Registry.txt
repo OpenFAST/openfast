@@ -29,11 +29,11 @@ param    ^              -  IntKi    AFAeroMod_BL_unsteady   -  2  -  "Beddoes-Le
 param    ^              -  IntKi    TwrPotent_none          -  0  -  "no tower potential flow"                    -
 param    ^              -  IntKi    TwrPotent_baseline      -  1  -  "baseline tower potential flow"              -
 param    ^              -  IntKi    TwrPotent_Bak           -  2  -  "tower potential flow with Bak correction"   -
- 
+
 param    ^              -  IntKi    TwrShadow_none          -  0  -  "no tower shadow"                            -
 param    ^              -  IntKi    TwrShadow_Powles        -  1  -  "Powles tower shadow model"                  -
 param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames tower shadow model"                   -
- 
+
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -110,8 +110,8 @@ typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
 typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	AD_InputFile	IntKi	AFAeroMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
-typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
-typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
+typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
+typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
@@ -247,8 +247,8 @@ typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pa
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	RotParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
-typedef	^	RotParameterType	IntKi	TwrPotent	-	-	-	"Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
-typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
+typedef	^	RotParameterType	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
+typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
 typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	RotParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	RotParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -

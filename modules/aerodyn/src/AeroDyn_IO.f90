@@ -2215,10 +2215,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! AFAeroMod - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
    call ParseVar( FileInfo_In, CurLine, "AFAeroMod", InputFileData%AFAeroMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      ! TwrPotent - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+      ! TwrPotent - Type of tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
    call ParseVar( FileInfo_In, CurLine, "TwrPotent", InputFileData%TwrPotent, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      ! TwrShadow - Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}
+      ! TwrShadow - Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}
    call ParseVar( FileInfo_In, CurLine, "TwrShadow", InputFileData%TwrShadow, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! TwrAero - Calculate tower aerodynamic loads? (flag)
@@ -2711,7 +2711,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       case default      
          Msg = 'unknown'      
    end select
-   WRITE (UnSu,Ec_IntFrmt) p%TwrPotent, 'TwrPotent', 'Type tower influence on wind based on potential flow around the tower: '//TRIM(Msg)
+   WRITE (UnSu,Ec_IntFrmt) p%TwrPotent, 'TwrPotent', 'Type of tower influence on wind based on potential flow around the tower: '//TRIM(Msg)
    
    
    ! TwrShadow
@@ -2725,7 +2725,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       case default      
          Msg = 'unknown'      
    end select
-   WRITE (UnSu,Ec_IntFrmt) p%TwrShadow, 'TwrShadow', 'Calculate tower influence on wind based on downstream tower shadow: '//TRIM(Msg)
+   WRITE (UnSu,Ec_IntFrmt) p%TwrShadow, 'TwrShadow', 'Type of tower influence on wind based on downstream tower shadow: '//TRIM(Msg)
     
    
    ! TwrAero

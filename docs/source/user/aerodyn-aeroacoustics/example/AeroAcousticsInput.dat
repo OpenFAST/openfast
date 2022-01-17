@@ -1,4 +1,4 @@
-------- AeroAcoustics Module v1.00.* INPUT FILE ------------------------------------------------
+------- AeroAcoustics Module INPUT FILE -------------------------------------------------------------
 IEA task 37 RWT turbine -- https://github.com/IEAWindTask37/IEA-3.4-130-RWT
 ======  General Options  ============================================================================
 False        Echo         - Echo the input to "<rootname>.AD.ech"?  (flag)
