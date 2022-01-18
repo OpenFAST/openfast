@@ -1824,7 +1824,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    end if
       
    
-   if ( p%TurbineType == Type_Offshore_Fixed .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) .or. p%TurbineType == Type_Offshore_Floating .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) ) then
+   if ( (p%TurbineType == Type_Offshore_Fixed .or. p%TurbineType == Type_Offshore_Floating) .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) ) then
     call SetErrStat(ErrID_Fatal, 'Height of turbine location, TurbinePos(3), must be 0 for offshore turbines.', ErrStat, ErrMsg, RoutineName)
    end if
 
