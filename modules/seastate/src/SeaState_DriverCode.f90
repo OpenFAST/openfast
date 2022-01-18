@@ -685,9 +685,9 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
       if ( ErrStat >= AbortErrLev ) return
    end if
 
-   if (associated(SeaState_p%WaveElev2)) then
-      maxWaveVal = MAXVAL(SeaState_p%WaveElev1+SeaState_p%WaveElev2)
-      minWaveVal = MINVAL(SeaState_p%WaveElev1+SeaState_p%WaveElev2)
+   if (associated(SeaState_p%Waves2%WaveElev2)) then
+      maxWaveVal = MAXVAL(SeaState_p%WaveElev1+SeaState_p%Waves2%WaveElev2)
+      minWaveVal = MINVAL(SeaState_p%WaveElev1+SeaState_p%Waves2%WaveElev2)
    else
       maxWaveVal = MAXVAL(SeaState_p%WaveElev1)
       minWaveVal = MINVAL(SeaState_p%WaveElev1)
