@@ -98,7 +98,7 @@ typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and da
 # ..... Input file data ...........................................................................................................
 
 # ..... Primary Input file data ...................................................................................................
-typedef  ^  RotInputFile   IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
+#typedef  ^  RotInputFile   IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
 typedef	^	RotInputFile	AD_BladePropsType	BladeProps	{:}	-	-	"blade property information from blade input files"	-
 typedef	^	RotInputFile	IntKi	NumTwrNds	-	-	-	"Number of tower nodes used in the analysis"	-
 typedef	^	RotInputFile	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m

@@ -124,7 +124,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  RotInputFile  =======
   TYPE, PUBLIC :: RotInputFile
-    INTEGER(IntKi)  :: BldNd_BladesOut      !< The blades to output (AD_AllBldNdOuts) [-]
     TYPE(AD_BladePropsType) , DIMENSION(:), ALLOCATABLE  :: BladeProps      !< blade property information from blade input files [-]
     INTEGER(IntKi)  :: NumTwrNds      !< Number of tower nodes used in the analysis [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrElev      !< Elevation at tower node [m]
@@ -139,8 +138,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: DTAero      !< Time interval for aerodynamic calculations {or "default"} [s]
     INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     INTEGER(IntKi)  :: AFAeroMod      !< Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
-    INTEGER(IntKi)  :: TwrPotent      !< Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
-    INTEGER(IntKi)  :: TwrShadow      !< Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
+    INTEGER(IntKi)  :: TwrPotent      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
+    INTEGER(IntKi)  :: TwrShadow      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero      !< Calculate tower aerodynamic loads? [flag]
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
@@ -293,8 +292,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: TwrPotent      !< Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
-    INTEGER(IntKi)  :: TwrShadow      !< Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
+    INTEGER(IntKi)  :: TwrPotent      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
+    INTEGER(IntKi)  :: TwrShadow      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero      !< Calculate tower aerodynamic loads? [flag]
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
@@ -3269,7 +3268,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstRotInputFileData%BldNd_BladesOut = SrcRotInputFileData%BldNd_BladesOut
 IF (ALLOCATED(SrcRotInputFileData%BladeProps)) THEN
   i1_l = LBOUND(SrcRotInputFileData%BladeProps,1)
   i1_u = UBOUND(SrcRotInputFileData%BladeProps,1)
@@ -3401,7 +3399,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! BldNd_BladesOut
   Int_BufSz   = Int_BufSz   + 1     ! BladeProps allocated yes/no
   IF ( ALLOCATED(InData%BladeProps) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BladeProps upper/lower bounds for each dimension
@@ -3474,8 +3471,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%BldNd_BladesOut
-    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%BladeProps) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -3608,8 +3603,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%BldNd_BladesOut = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeProps not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
