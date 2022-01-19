@@ -137,8 +137,10 @@ MODULE AeroDyn_Inflow_C_BINDING
    integer(IntKi)                         :: NumBlades               ! Number of blades (only one rotor allowed at present)
    integer(IntKi)                         :: NumMeshPts              ! Number of mesh points we are interfacing motions/loads to/from AD
    type(MeshType)                         :: AD_BldPtMotionMesh      ! mesh for motions of external nodes
+   type(MeshType)                         :: AD_NacMotionMesh        ! mesh for motion  of nacelle
    type(MeshType)                         :: AD_BldPtLoadMesh        ! mesh for loads  for external nodes
    type(MeshType)                         :: AD_BldPtLoadMesh_tmp    ! mesh for loads  for external nodes -- temporary
+   type(MeshType)                         :: AD_NacLoadMesh          ! mesh for loads  for nacelle loads
    integer(IntKi)                         :: WrVTK                   !< Write VTK outputs [0: none, 1: init only, 2: animation]
    integer(IntKi)                         :: VTK_tWidth              !< width of the time field in the VTK
    character(IntfStrLen)                  :: VTK_OutFileRoot         !< Root name to use for echo files, vtk, etc.
@@ -146,11 +148,13 @@ MODULE AeroDyn_Inflow_C_BINDING
    !------------------------------
    !  Mesh mapping: motions
    !     The mapping of motions from the nodes passed in to the corresponding AD meshes
-   type(MeshMapType)                      :: Map_BldPtMotion_2_AD_Blade ! Mesh mapping between input motion mesh for blade
+   type(MeshMapType),   allocatable       :: Map_BldPtMotion_2_AD_Blade(:)    ! Mesh mapping between input motion mesh for blade
+   type(MeshMapType)                      :: Map_AD_Nac_2_NacPtLoad           ! Mesh mapping between input motion mesh for nacelle 
    !------------------------------
    !  Mesh mapping: loads
    !     The mapping of loads from the AD meshes to the corresponding external nodes
-   type(MeshMapType)                      :: Map_AD_BldLoad_P_2_BldPtLoad      ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
+   type(MeshMapType),   allocatable       :: Map_AD_BldLoad_P_2_BldPtLoad(:)  ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
+   type(MeshMapType)                      :: Map_NacPtMotion_2_AD_Nac         ! Mesh mapping between AD output nacelle pt  load to NacLoad   for return
    !  Meshes -- helper stuff
    real(R8Ki)                             :: theta(3)                ! mesh creation helper data
    !  Motions input (so we don't have to reallocate all the time
@@ -357,7 +361,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       ErrMsg2  =  "WrVTK option for writing VTK visualization files must be [0: none, 1: init only, 2: animation]"
       if (Failed())  return
    endif
-   ! Transpose DCMs as they are passed in
+   ! Flag to transpose DCMs as they are passed in
    TransposeDCM      = TransposeDCM_in
 
 
@@ -402,9 +406,12 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       enddo
    endif
 
-!FIXME: add checks and revisions to passed orientations -- just in case they aren't good DCMs
-
-
+   ! Remap the orientation DCM just in case there is some issue with passed 
+   call OrientRemap(InitInp%AD%rotors(1)%HubOrientation)
+   call OrientRemap(InitInp%AD%rotors(1)%NacelleOrientation)
+   do i=1,NumBlades
+      call OrientRemap(InitInp%AD%rotors(1)%BladeRootOrientation(1:3,1:3,i))
+   enddo
 
 
    ! Number of blades and initial positions
@@ -627,15 +634,12 @@ CONTAINS
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
       integer(IntKi)          :: iNode
       real(ReKi)              :: InitPos(3)
-      real(R8Ki)              :: theta(3)
       real(R8Ki)              :: Orient(3,3)
       !-------------------------------------------------------------
       ! Set the interface  meshes for motion inputs and loads output
       !-------------------------------------------------------------
-      ! Motion mesh
-      !     This point mesh may contain more than one point. Mapping will be used to map
-      !     this to the input meshes for WAMIT and Morison.
-      call MeshCreate(  AD_BldPtMotionMesh                       ,  &
+      ! Motion mesh for blades
+      call MeshCreate(  AD_BldPtMotionMesh                  ,  &
                         IOS              = COMPONENT_INPUT  ,  &
                         Nnodes           = NumMeshPts       ,  &
                         ErrStat          = ErrStat3         ,  &
@@ -648,40 +652,70 @@ CONTAINS
       do iNode=1,NumMeshPts
          ! initial position and orientation of node
          InitPos  = tmpBldPtMeshPos(1:3,iNode)
-!FIXME: what if this isn't a good DCM???????
          if (TransposeDCM) then
             Orient   = transpose(tmpBldPtMeshOrient(1:3,1:3,iNode))
          else
             Orient   = tmpBldPtMeshOrient(1:3,1:3,iNode)
          endif
+         call OrientRemap(Orient)
          call MeshPositionNode(  AD_BldPtMotionMesh       , &
                                  iNode                    , &
                                  InitPos                  , &  ! position
                                  ErrStat3, ErrMsg3        , &
                                  Orient                     )  ! orientation
             if (ErrStat3 >= AbortErrLev) return
-
-!FIXME: if we need to swithc to line2 instead of point, do that here.
+!FIXME: if we need to switch to line2 instead of point, do that here.
          call MeshConstructElement ( AD_BldPtMotionMesh, ELEMENT_POINT, ErrStat3, ErrMsg3, iNode )
             if (ErrStat3 >= AbortErrLev) return
       enddo
 
       call MeshCommit ( AD_BldPtMotionMesh, ErrStat3, ErrMsg3 )
          if (ErrStat3 >= AbortErrLev) return
-
       AD_BldPtMotionMesh%RemapFlag  = .TRUE.
 
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
       if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_BldPtMotionMesh )
 
+
       !-------------------------------------------------------------
-      ! Load mesh
-      !     This point mesh may contain more than one point. Mapping will be used to map
-      !     the loads from output meshes for WAMIT and Morison.
-      ! Output mesh for loads at each WAMIT body
-      CALL MeshCopy( SrcMesh  = AD_BldPtMotionMesh      ,&
-                     DestMesh = AD_BldPtLoadMesh        ,&
+      ! Motion mesh for nacelle
+      call MeshCreate(  AD_NacMotionMesh                    ,  &
+                        IOS              = COMPONENT_INPUT  ,  &
+                        Nnodes           = 1                ,  &
+                        ErrStat          = ErrStat3         ,  &
+                        ErrMess          = ErrMsg3          ,  &
+                        TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
+                        TranslationVel   = .TRUE.,    RotationVel = .TRUE., &
+                        TranslationAcc   = .TRUE.,    RotationAcc = .FALSE. )
+         if (ErrStat3 >= AbortErrLev) return
+
+      InitPos = real(HubPosition_C(   1:3),ReKi)      ! Nacelle uses hub location in AD at present
+      Orient  = reshape( real(NacelleOrientation_C(1:9),ReKi), (/3,3/) )
+      call OrientRemap(Orient)
+      call MeshPositionNode(  AD_NacMotionMesh         , &
+                              1                        , &
+                              InitPos                  , &  ! position
+                              ErrStat3, ErrMsg3        , &
+                              Orient                     )  ! orientation
+         if (ErrStat3 >= AbortErrLev) return
+
+      call MeshConstructElement ( AD_NacMotionMesh, ELEMENT_POINT, ErrStat3, ErrMsg3, p1=1 )
+         if (ErrStat3 >= AbortErrLev) return
+
+      call MeshCommit ( AD_NacMotionMesh, ErrStat3, ErrMsg3 )
+         if (ErrStat3 >= AbortErrLev) return
+      AD_NacMotionMesh%RemapFlag    = .TRUE.
+
+      ! For checking the mesh, uncomment this.
+      !     note: CU is is output unit (platform dependent).
+      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_NacMotionMesh )
+
+
+      !-------------------------------------------------------------
+      ! Load mesh for blades
+      CALL MeshCopy( SrcMesh  = AD_BldPtMotionMesh ,&
+                     DestMesh = AD_BldPtLoadMesh   ,&
                      CtrlCode = MESH_SIBLING       ,&
                      IOS      = COMPONENT_OUTPUT   ,&
                      ErrStat  = ErrStat3           ,&
@@ -698,28 +732,46 @@ CONTAINS
 
 
       !-------------------------------------------------------------
+      ! Load mesh for nacelle 
+      CALL MeshCopy( SrcMesh  = AD_NacMotionMesh   ,&
+                     DestMesh = AD_NacLoadMesh     ,&
+                     CtrlCode = MESH_SIBLING       ,&
+                     IOS      = COMPONENT_OUTPUT   ,&
+                     ErrStat  = ErrStat3           ,&
+                     ErrMess  = ErrMsg3            ,&
+                     Force    = .TRUE.             ,&
+                     Moment   = .TRUE.             )
+         if (ErrStat3 >= AbortErrLev) return
+
+      AD_NacLoadMesh%RemapFlag  = .TRUE.
+
+      ! For checking the mesh, uncomment this.
+      !     note: CU is is output unit (platform dependent).
+      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_NacLoadMesh )
+
+
+      !-------------------------------------------------------------
       ! Set the mapping meshes
-!!!      !     PRP - principle reference point
-!!!      call MeshMapCreate( AD_BldPtMotionMesh, u(1)%PRPMesh, Map_Motion_2_AD_PRP_P, ErrStat3, ErrMsg3 )
-!!!         if (ErrStat3 >= AbortErrLev) return
-!!!      !     WAMIT - floating bodies using potential flow
-!!!      if ( u(1)%WAMITMesh%Committed ) then      ! input motions
-!!!         call MeshMapCreate( AD_BldPtMotionMesh, u(1)%WAMITMesh, Map_Motion_2_AD_WB_P, ErrStat3, ErrMsg3 )
-!!!            if (ErrStat3 >= AbortErrLev) return
-!!!      endif
-!!!      if (    y%WAMITMesh%Committed ) then      ! output loads
-!!!         call MeshMapCreate( y%WAMITMesh, AD_BldPtLoadMesh, Map_AD_WB_P_2_Load, ErrStat3, ErrMsg3 )
-!!!            if (ErrStat3 >= AbortErrLev) return
-!!!      endif
-!!!      !     Morison - nodes for strip theory
-!!!      if ( u(1)%Morison%Mesh%Committed ) then  ! input motions
-!!!         call MeshMapCreate( AD_BldPtMotionMesh, u(1)%Morison%Mesh, Map_Motion_2_AD_Mo_P, ErrStat3, ErrMsg3 )
-!!!            if (ErrStat3 >= AbortErrLev) return
-!!!      endif
-!!!      if (    y%Morison%Mesh%Committed ) then   ! output loads
-!!!         call MeshMapCreate( y%Morison%Mesh, AD_BldPtLoadMesh, Map_AD_Mo_P_2_Load, ErrStat3, ErrMsg3 )
-!!!            if (ErrStat3 >= AbortErrLev) return
-!!!      endif
+      ! blades
+      allocate(Map_BldPtMotion_2_AD_Blade(NumBlades),Map_AD_BldLoad_P_2_BldPtLoad(NumBlades),STAT=ErrStat3)
+         if (ErrStat3 /= 0) then
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = "Could not allocate Map_BldPtMotion_2_AD_Blade"
+            return
+         endif
+      do i=1,NumBlades
+         call MeshMapCreate( AD_BldPtMotionMesh, u(1)%AD%rotors(1)%BladeMotion(i), Map_BldPtMotion_2_AD_Blade(i), ErrStat3, ErrMsg3 )
+            if (ErrStat3 >= AbortErrLev) return
+         call MeshMapCreate( y%AD%rotors(1)%BladeLoad(i), AD_BldPtLoadMesh, Map_AD_BldLoad_P_2_BldPtLoad(i), ErrStat3, ErrMsg3 )
+            if (ErrStat3 >= AbortErrLev) return
+      enddo
+      ! nacelle
+      if ( y%AD%rotors(1)%NacelleLoad%Committed ) then
+         call MeshMapCreate( AD_NacMotionMesh, u(1)%AD%rotors(1)%NacelleMotion, Map_NacPtMotion_2_AD_Nac, ErrStat3, ErrMsg3 )
+            if (ErrStat3 >= AbortErrLev) return
+         call MeshMapCreate( y%AD%rotors(1)%NacelleLoad, AD_NacLoadMesh, Map_AD_Nac_2_NacPtLoad, ErrStat3, ErrMsg3 )
+            if (ErrStat3 >= AbortErrLev) return
+      endif
 
    end subroutine SetMotionLoadsInterfaceMeshes
 
@@ -759,6 +811,16 @@ CONTAINS
             endif
          enddo
       endif
+      ! Nacelle meshes
+      if ( AD_NacMotionMesh%Committed ) then
+         call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), AD_NacMotionMesh, trim(VTK_OutFileRoot)//'.NacMotionMesh', ErrStat3, ErrMsg3)
+            if (ErrStat3 >= AbortErrLev) return
+      endif
+      if (u(1)%AD%rotors(1)%BladeMotion(i)%Committed) then
+         call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%NacelleMotion, trim(VTK_OutFileRoot)//'.AD_Nacelle'//trim(num2lstr(i)), ErrStat3, ErrMsg3 )
+            if (ErrStat3 >= AbortErrLev) return
+      endif
+
    end subroutine WrVTK_refMeshes
 
 
@@ -772,24 +834,9 @@ CONTAINS
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
-!!!      if ( NumMeshPts > 1 ) then
-!!!         if ( u(1)%Morison%Mesh%Committed .and. u(1)%WAMITMesh%Committed ) then
-!!!            if ( (u(1)%Morison%Mesh%Nnodes + u(1)%WAMITMesh%Nnodes) < NumMeshPts ) then
-!!!               ErrStat3 = ErrID_Fatal
-!!!               ErrMsg3  = "More nodes passed into library than exist in AeroDyn model"
-!!!            endif
-!!!         elseif ( u(1)%Morison%Mesh%Committed ) then     ! No WAMIT
-!!!            if ( u(1)%Morison%Mesh%Nnodes < NumMeshPts ) then
-!!!               ErrStat3 = ErrID_Fatal
-!!!               ErrMsg3  = "More nodes passed into library than exist in AeroDyn model Morison mesh"
-!!!            endif
-!!!         elseif ( u(1)%WAMITMesh%Committed    ) then     ! No Morison
-!!!            if ( u(1)%WAMITMesh%Nnodes < NumMeshPts ) then
-!!!               ErrStat3 = ErrID_Fatal
-!!!               ErrMsg3  = "More nodes passed into library than exist in AeroDyn model WAMIT mesh"
-!!!            endif
-!!!         endif
-!!!      endif
+      ! FIXME: this is a placeholder in case we think of some sanity checks to perform.
+      !     - some check that nodes make some sense -- might be caught in meshmapping
+      !     - some checks on hub/nacelle being near middle of the rotor?  Not sure if that matters
    end subroutine CheckNodes
 
 END SUBROUTINE AeroDyn_Inflow_C_Init
@@ -1144,20 +1191,19 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
       if (allocated(u))             deallocate(u)
    endif
 
-!!!   ! Destroy any other copies of states (rerun on (STATE_CURR) is ok)
-!!!   call ADI_DestroyContState(   x(          STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyDiscState(   xd(         STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyConstrState( z(          STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyOtherState(  OtherStates(STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyContState(   x(          STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyDiscState(   xd(         STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyConstrState( z(          STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyOtherState(  OtherStates(STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyContState(   x(          STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyDiscState(   xd(         STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyConstrState( z(          STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!   call ADI_DestroyOtherState(  OtherStates(STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+   ! Destroy any other copies of states (rerun on (STATE_CURR) is ok)
+   call ADI_DestroyContState(   x(          STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyContState(   x(          STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyContState(   x(          STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyDiscState(   xd(         STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyDiscState(   xd(         STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyDiscState(   xd(         STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyConstrState( z(          STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyConstrState( z(          STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyConstrState( z(          STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyOtherState(  OtherStates(STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyOtherState(  OtherStates(STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyOtherState(  OtherStates(STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ! if deallocate other items now
    if (allocated(InputTimes))    deallocate(InputTimes)
@@ -1169,22 +1215,36 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
 CONTAINS
    !> Don't leave junk in memory.  So destroy meshes and mappings.
    subroutine ClearMesh()
-      ! Destroy connection meshes
+      ! Blade
       call MeshDestroy( AD_BldPtMotionMesh, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       call MeshDestroy( AD_BldPtLoadMesh, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!      ! Destroy mesh mappings
-!!!      call NWTC_Library_Destroymeshmaptype( Map_Motion_2_AD_PRP_P, ErrStat2, ErrMsg2 )
-!!!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!      call NWTC_Library_Destroymeshmaptype( Map_Motion_2_AD_WB_P , ErrStat2, ErrMsg2 )
-!!!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!      call NWTC_Library_Destroymeshmaptype( Map_Motion_2_AD_Mo_P , ErrStat2, ErrMsg2 )
-!!!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!      call NWTC_Library_Destroymeshmaptype( Map_AD_WB_P_2_Load   , ErrStat2, ErrMsg2 )
-!!!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!      call NWTC_Library_Destroymeshmaptype( Map_AD_Mo_P_2_Load   , ErrStat2, ErrMsg2 )
-!!!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ! Destroy mesh mappings
+      if (allocated(Map_BldPtMotion_2_AD_Blade)) then
+         do i=1,NumBlades
+            call NWTC_Library_Destroymeshmaptype( Map_BldPtMotion_2_AD_Blade(i), ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         enddo
+         deallocate(Map_BldPtMotion_2_AD_Blade)
+      endif
+      if (allocated(Map_AD_BldLoad_P_2_BldPtLoad)) then
+         do i=1,NumBlades
+            call NWTC_Library_Destroymeshmaptype( Map_AD_BldLoad_P_2_BldPtLoad(i), ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         enddo
+         deallocate(Map_AD_BldLoad_P_2_BldPtLoad)
+      endif
+      ! Nacelle
+      call MeshDestroy( AD_NacMotionMesh, ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call MeshDestroy( AD_NacLoadMesh, ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call NWTC_Library_Destroymeshmaptype( Map_AD_Nac_2_NacPtLoad   , ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call NWTC_Library_Destroymeshmaptype( Map_NacPtMotion_2_AD_Nac   , ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
    end subroutine ClearMesh
 END SUBROUTINE AeroDyn_Inflow_C_End
 
@@ -1259,5 +1319,18 @@ subroutine Set_OutputLoadArray()
 !!!      tmpBldPtMeshFrc(4:6,iNode)   = AD_BldPtLoadMesh%Moment(1:3,iNode)
 !!!   enddo
 end subroutine Set_OutputLoadArray
+
+!> take DCM passed in, do logrithmic mapping, then exponential mapping back to DCM.  Idea here is we can account
+!! for minor accuracy issues in the passed DCM
+subroutine OrientRemap(DCM)
+   real(R8Ki), intent(inout)  :: DCM(3,3)
+   real(R8Ki)                 :: logMap(3)
+   integer(IntKi)             :: TmpErrStat  ! DCM_logMapD requires this output, but doesn't use it at all
+   character(ErrMsgLen)       :: TmpErrMsg   ! DCM_logMapD requires this output, but doesn't use it at all
+   !write(200,*)   reshape(DCM,(/9/))
+   call DCM_logMap(DCM,logMap,TmpErrStat,TmpErrMsg)
+   DCM = DCM_Exp(logMap)
+   !write(201,*)   reshape(DCM,(/9/))
+end subroutine OrientRemap
 
 END MODULE AeroDyn_Inflow_C_BINDING
