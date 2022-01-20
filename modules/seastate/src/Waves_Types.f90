@@ -77,6 +77,11 @@ IMPLICIT NONE
     REAL(SiKi)  :: PCurrVxiPz0      !< xi-component of the partial derivative of the current velocity at elevation near mean sea level [(m/s)]
     REAL(SiKi)  :: PCurrVyiPz0      !< yi-component of the partial derivative of the current velocity at elevation near mean sea level [(m/s)]
     TYPE(NWTC_RandomNumber_ParameterType)  :: RNG      !< Parameters for the pseudo random number generator [-]
+    INTEGER(IntKi)  :: ConstWaveMod      !< Mode of the constrained wave [-]
+    REAL(SiKi)  :: CrestHmax      !< crest height or double the crest elevation [m]
+    REAL(SiKi)  :: CrestTime      !< time of the wave crest [sec]
+    REAL(SiKi)  :: CrestXi      !< xi-coordinate for the wave crest [m]
+    REAL(SiKi)  :: CrestYi      !< yi-coordinate for the wave crest [m]
   END TYPE Waves_InitInputType
 ! =======================
 ! =========  Waves_InitOutputType  =======
@@ -289,6 +294,11 @@ ENDIF
       CALL NWTC_Library_Copynwtc_randomnumber_parametertype( SrcInitInputData%RNG, DstInitInputData%RNG, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstInitInputData%ConstWaveMod = SrcInitInputData%ConstWaveMod
+    DstInitInputData%CrestHmax = SrcInitInputData%CrestHmax
+    DstInitInputData%CrestTime = SrcInitInputData%CrestTime
+    DstInitInputData%CrestXi = SrcInitInputData%CrestXi
+    DstInitInputData%CrestYi = SrcInitInputData%CrestYi
  END SUBROUTINE Waves_CopyInitInput
 
  SUBROUTINE Waves_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -446,6 +456,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Int_BufSz  = Int_BufSz  + 1  ! ConstWaveMod
+      Re_BufSz   = Re_BufSz   + 1  ! CrestHmax
+      Re_BufSz   = Re_BufSz   + 1  ! CrestTime
+      Re_BufSz   = Re_BufSz   + 1  ! CrestXi
+      Re_BufSz   = Re_BufSz   + 1  ! CrestYi
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -688,6 +703,16 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    IntKiBuf(Int_Xferred) = InData%ConstWaveMod
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CrestHmax
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CrestTime
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CrestXi
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%CrestYi
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Waves_PackInitInput
 
  SUBROUTINE Waves_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -973,6 +998,16 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%ConstWaveMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%CrestHmax = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CrestTime = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CrestXi = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CrestYi = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Waves_UnPackInitInput
 
  SUBROUTINE Waves_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

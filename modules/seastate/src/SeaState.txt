@@ -21,7 +21,7 @@ usefrom   SeaState_Interp.txt
 #
 param     SeaState/SeaSt     unused                 INTEGER                  MaxSeaStOutputs   -       90     -  "The maximum number of output channels supported by this module"    -
 #
-typedef   SeaState/SeaSt     SeaSt_InputFile      LOGICAL                  EchoFlag          -     -     -     "Echo the input file"   
+typedef   SeaState/SeaSt     SeaSt_InputFile        LOGICAL                  EchoFlag          -       -      -  "Echo the input file"   
 typedef   ^                  ^                      ReKi                     MSL2SWL           -       -      -  "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                  ^                      ReKi                     X_HalfWidth       -       -      -  "Half-width of the domain in the X direction" m
 typedef   ^                  ^                      ReKi                     Y_HalfWidth       -       -      -  "Half-width of the domain in the Y direction" m

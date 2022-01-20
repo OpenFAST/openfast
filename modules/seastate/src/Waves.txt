@@ -60,7 +60,12 @@ typedef     ^                 ^                 SiKi                 CurrVxi    
 typedef     ^                 ^                 SiKi                 CurrVyi           {:}      -        -        "yi-component of the current velocity at elevation i" (m/s)
 typedef     ^                 ^                 SiKi                 PCurrVxiPz0       -        -        -        "xi-component of the partial derivative of the current velocity at elevation near mean sea level"  (m/s)
 typedef     ^                 ^                 SiKi                 PCurrVyiPz0       -        -        -        "yi-component of the partial derivative of the current velocity at elevation near mean sea level"  (m/s)
-typedef     ^                 ^                NWTC_RandomNumber_ParameterType RNG               -        -        -        "Parameters for the pseudo random number generator"  -
+typedef     ^                 ^                NWTC_RandomNumber_ParameterType RNG     -        -        -        "Parameters for the pseudo random number generator"  -
+typedef     ^                 ^                 INTEGER              ConstWaveMod      -        -        -        "Mode of the constrained wave" -
+typedef     ^                 ^                 SiKi                 CrestHmax         -        -        -        "crest height or double the crest elevation" m
+typedef     ^                 ^                 SiKi                 CrestTime         -        -        -        "time of the wave crest" sec
+typedef     ^                 ^                 SiKi                 CrestXi           -        -        -        "xi-coordinate for the wave crest" m
+typedef     ^                 ^                 SiKi                 CrestYi           -        -        -        "yi-coordinate for the wave crest" m
 
 
 # Define outputs from the initialization routine here:
