@@ -36,10 +36,11 @@ MODULE SeaState_Interp
    PUBLIC                                    :: SeaSt_Interp_Init
    PUBLIC                                    :: SeaSt_Interp_End
    PUBLIC                                    :: SeaSt_Interp_3D
+   PUBLIC                                    :: SeaSt_Interp_3D_Vec
+   PUBLIC                                    :: SeaSt_Interp_3D_Vec6
    PUBLIC                                    :: SeaSt_Interp_4D
    PUBLIC                                    :: SeaSt_Interp_4D_Vec
-   PUBLIC                                    :: SeaSt_Interp_3D_Vec6
-   public                                    :: SeaSt_Interp_Setup
+   PUBLIC                                    :: SeaSt_Interp_Setup
 
 CONTAINS
 
