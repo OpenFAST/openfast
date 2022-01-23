@@ -807,6 +807,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          InputFileData%Morison%WaveElev2 => InitInp%WaveElev2
 !         CALL MOVE_ALLOC( Waves_InitOut%nodeInWater,InputFileData%Morison%nodeInWater )  ! moved to Morison%p%nodeInWater in the init routine
 
+         InputFileData%Morison%WaveStMod = InitInp%WaveStMod
 
                ! If we did some second order wave kinematics corrections to the acceleration, velocity or
                ! dynamic pressure using the Waves2 module, then we need to add these to the values that we

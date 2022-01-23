@@ -683,8 +683,8 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
          ! TODO: We are only implementing WaveStMod = 0 (No stretching) at this point in time. 1 Mar 2013 GJH
 
-   if ( InputFileData%Waves%WaveStMod /= 0 ) then
-      call SetErrStat( ErrID_Fatal,'WaveStMod must be 0. Future versions of SeaState will once again support other wave stretching models.',ErrStat,ErrMsg,RoutineName)
+   if ( InputFileData%Waves%WaveStMod /= 0 .AND. InputFileData%Waves%WaveStMod /= 1 .AND. InputFileData%Waves%WaveStMod /= 1) then
+      call SetErrStat( ErrID_Fatal,'WaveStMod must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
       return
    end if
    !

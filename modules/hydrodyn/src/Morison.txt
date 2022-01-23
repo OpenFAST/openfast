@@ -207,7 +207,7 @@ typedef   ^                            InitInputType                 ReKi       
 typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
-typedef   ^                            ^                             INTEGER                  WaveDisp                -          -        -                  "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
+typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
 typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
 typedef   ^                            ^                             INTEGER                  NNodes                           -          -        -         "Total number of nodes in the final software model"    -
 typedef   ^                            ^                             Morison_JointType        InpJoints                        {:}        -        -         "Array of user-specified joints"    -
@@ -228,11 +228,11 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     SimplAxCaMG                      -          -        -         "Simple model Axial Ca for marine growth"    -
 typedef   ^                            ^                             ReKi                     SimplAxCp                        -          -        -         "Simple model Axial Cp"    -
 typedef   ^                            ^                             ReKi                     SimplAxCpMG                      -          -        -         "Simple model Axial Cp for marine growth"    -
-typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         "" -
+typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_CoefDpths        CoefDpths                        {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NCoefMembers                     -          -        -         ""    -
 typedef   ^                            ^                             Morison_CoefMembers      CoefMembers                      {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NMembers                       -          -        -         "Number of user-specified members in the input file"    -
+typedef   ^                            ^                             INTEGER                  NMembers                         -          -        -         "Number of user-specified members in the input file"    -
 typedef   ^                            ^                             Morison_MemberInputType  InpMembers                       {:}        -        -         "Array of user-specified members"    -
 typedef   ^                            ^                             INTEGER                  NFillGroups                      -          -        -         ""    -
 typedef   ^                            ^                             Morison_FilledGroupType  FilledGroups                     {:}        -        -         ""    -
@@ -253,14 +253,15 @@ typedef   ^                            ^                             CHARACTER(1
 typedef   ^                            ^                             INTEGER                  UnOutFile                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveElev1                   {*}{*}{*}      -          -         "First order wave elevation"        -
-typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation"        -
-typedef   ^                            ^                             SiKi                     WaveAcc                          {*}{*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveElev1                        {*}{*}{*}  -        -         "First order wave elevation"        -
+typedef   ^                            ^                             SiKi                     WaveElev2                        {*}{*}{*}  -        -         "Second order wave elevation"        -
+typedef   ^                            ^                             SiKi                     WaveAcc                    {*}{*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveTime                         {*}        -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveDynP                         {*}{*}{*}{*}     -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveVel                          {*}{*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveVel                    {*}{*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
-typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
+typedef   ^                            ^                      SeaSt_Interp_ParameterType      SeaSt_Interp_p                   -          -        -  "parameter information from the SeaState Interpolation module"   -
+typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
 #
 #
 # Define outputs from the initialization routine here:
@@ -365,6 +366,7 @@ typedef   ^                            ^                             CHARACTER(2
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                           -          -         -         ""        -
 typedef   ^                            ^                      SeaSt_Interp_ParameterType   SeaSt_Interp_p                    -          -         -       "parameter information from the SeaState Interpolation module"   -
+typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
 #
 #
 # ..... Inputs ....................................................................................................................
