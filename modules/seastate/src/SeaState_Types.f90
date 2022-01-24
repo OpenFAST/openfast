@@ -168,6 +168,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NGridPts      !< Number of data points in the wave kinematics grid [-]
     INTEGER(IntKi) , DIMENSION(1:3)  :: NGrid      !< Number of grid entries in x, y, and z [-]
     REAL(ReKi) , DIMENSION(1:3)  :: deltaGrid      !< delta between grid points in x, y, and theta (for z) [m,m,rad]
+    REAL(ReKi)  :: X_HalfWidth      !< Half-width of the domain in the X direction [m]
+    REAL(ReKi)  :: Y_HalfWidth      !< Half-width of the domain in the Y direction [m]
+    REAL(ReKi)  :: Z_Depth      !< Depth of the domain the Z direction [m]
     INTEGER(IntKi)  :: NStepWave      !< Number of data points in the wave kinematics arrays [-]
     INTEGER(IntKi)  :: NWaveElev      !< Number of wave elevation outputs [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevxi      !< xi-coordinates for points where the incident wave elevations can be output [(meters)]
@@ -4199,6 +4202,9 @@ ENDIF
     DstParamData%NGridPts = SrcParamData%NGridPts
     DstParamData%NGrid = SrcParamData%NGrid
     DstParamData%deltaGrid = SrcParamData%deltaGrid
+    DstParamData%X_HalfWidth = SrcParamData%X_HalfWidth
+    DstParamData%Y_HalfWidth = SrcParamData%Y_HalfWidth
+    DstParamData%Z_Depth = SrcParamData%Z_Depth
     DstParamData%NStepWave = SrcParamData%NStepWave
     DstParamData%NWaveElev = SrcParamData%NWaveElev
 IF (ALLOCATED(SrcParamData%WaveElevxi)) THEN
@@ -4523,6 +4529,9 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NGridPts
       Int_BufSz  = Int_BufSz  + SIZE(InData%NGrid)  ! NGrid
       Re_BufSz   = Re_BufSz   + SIZE(InData%deltaGrid)  ! deltaGrid
+      Re_BufSz   = Re_BufSz   + 1  ! X_HalfWidth
+      Re_BufSz   = Re_BufSz   + 1  ! Y_HalfWidth
+      Re_BufSz   = Re_BufSz   + 1  ! Z_Depth
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Int_BufSz  = Int_BufSz  + 1  ! NWaveElev
   Int_BufSz   = Int_BufSz   + 1     ! WaveElevxi allocated yes/no
@@ -4713,6 +4722,12 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%deltaGrid(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    ReKiBuf(Re_Xferred) = InData%X_HalfWidth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Y_HalfWidth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Z_Depth
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NStepWave
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NWaveElev
@@ -5171,6 +5186,12 @@ ENDIF
       OutData%deltaGrid(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    OutData%X_HalfWidth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Y_HalfWidth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Z_Depth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%NStepWave = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NWaveElev = IntKiBuf(Int_Xferred)
