@@ -245,12 +245,6 @@ class AeroDynInflowLib(CDLL):
         IfW_input_string = IfW_input_string.encode('utf-8')
         IfW_input_string_length = len(IfW_input_string)
 
-        #FIXME: debug checks
-#        print('input_string_array')
-#        for x in range(len(input_string_array)):
-#            print(input_string_array[x])
-#        print('Size of input file string: ',input_string_length)
-
         # Rootname for ADI output files (echo etc).
         _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
 

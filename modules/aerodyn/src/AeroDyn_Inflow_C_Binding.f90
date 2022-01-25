@@ -471,9 +471,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    call SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2);    if (Failed())  return
    if (WrVTK > 0_IntKi)    call WrVTK_refMeshes(ErrStat2,ErrMsg2)
 
-call SetErr(ErrID_Fatal,"Exit early",ErrStat_C,ErrMsg_C)  ! Testing
-return
-
    !-------------------------------------------------------------
    ! Setup other prior timesteps
    !     We fill InputTimes with negative times, but the Input values are identical for each of those times; this allows
@@ -507,9 +504,8 @@ return
    CALL ADI_CopyConstrState( z(          STATE_CURR), z(          STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
    CALL ADI_CopyOtherState ( OtherStates(STATE_CURR), OtherStates(STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
 
-!TODO
-!  Is there any other InitOutData should be returned
-!  Any additional warnings or error handling necessary
+
+   !TODO: Is there any other InitOutData should be returned?
 
 
    !-------------------------------------------------
@@ -517,26 +513,29 @@ return
    !-------------------------------------------------
 
    ! Number of channels
-!   NumChannels_C = size(InitOutData%WriteOutputHdr)
+   NumChannels_C = size(InitOutData%WriteOutputHdr)
 
    ! transfer the output channel names and units to c_char arrays for returning
    !     Upgrade idea:  use C_NULL_CHAR as delimiters.  Requires rework of Python
    !                    side of code.
-!   k=1
-!   do i=1,NumChannels_C
-!      do j=1,ChanLen    ! max length of channel name.  Same for units
-!         OutputChannelNames_C(k)=InitOutData%WriteOutputHdr(i)(j:j)
-!         OutputChannelUnits_C(k)=InitOutData%WriteOutputUnt(i)(j:j)
-!         k=k+1
-!      enddo
-!   enddo
-!
-!   ! null terminate the string
-!   OutputChannelNames_C(k) = C_NULL_CHAR
-!   OutputChannelUnits_C(k) = C_NULL_CHAR
+   k=1
+   do i=1,NumChannels_C
+      do j=1,ChanLen    ! max length of channel name.  Same for units
+         OutputChannelNames_C(k)=InitOutData%WriteOutputHdr(i)(j:j)
+         OutputChannelUnits_C(k)=InitOutData%WriteOutputUnt(i)(j:j)
+         k=k+1
+      enddo
+   enddo
+
+   ! null terminate the string
+   OutputChannelNames_C(k) = C_NULL_CHAR
+   OutputChannelUnits_C(k) = C_NULL_CHAR
 
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+call SetErr(ErrID_Fatal,"Exit early",ErrStat_C,ErrMsg_C)  ! Testing
+return
 
 CONTAINS
    logical function Failed()
