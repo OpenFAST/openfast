@@ -2111,7 +2111,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
          
    !FIXME: add options for passing the blade files.  This routine will need restructuring to handle that.
       DO I=1,NumBlades(iR)
-         CALL ReadBladeInputs ( InputFileData%ADBlFile(I), InputFileData%rotors(iR)%BladeProps(I), UnEcho, ErrStat2, ErrMsg2 )
+         CALL ReadBladeInputs ( InputFileData%ADBlFile(iBld), InputFileData%rotors(iR)%BladeProps(I), UnEcho, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL Cleanup()
