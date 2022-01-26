@@ -1520,13 +1520,12 @@ end subroutine AD_CavtCrit
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
-subroutine AD_CalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
+subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    REAL(DbKi),                   INTENT(IN   )   :: Time        !< Current simulation time in seconds
    TYPE(AD_InputType),           INTENT(IN   )   :: u           !< Inputs at Time
    TYPE(AD_ParameterType),       INTENT(IN   )   :: p           !< Parameters
-   TYPE(AD_ParameterType),       INTENT(IN   )   :: p_AD        !< Parameters
    TYPE(AD_ContinuousStateType), INTENT(IN   )   :: x           !< Continuous states at Time
    TYPE(AD_DiscreteStateType),   INTENT(IN   )   :: xd          !< Discrete states at Time
    TYPE(AD_ConstraintStateType), INTENT(IN   )   :: z           !< Constraint states at Time (possibly a guess)
@@ -1550,7 +1549,7 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m
    
 
    do iR=1, size(p%rotors)
-      call RotCalcConstrStateResidual( Time, u%rotors(iR), p%rotors(iR), p_AD, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), m%rotors(iR), z_residual%rotors(iR), ErrStat, ErrMsg )
+      call RotCalcConstrStateResidual( Time, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), m%rotors(iR), z_residual%rotors(iR), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    enddo
    
