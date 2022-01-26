@@ -1116,7 +1116,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
       
-  !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
+  !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier so it could be used   
    
    p%numOuts          = InputFileData%NumOuts  
    p%NBlOuts          = InputFileData%NBlOuts      
