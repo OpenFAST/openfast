@@ -3361,9 +3361,24 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
               h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
            ELSE
-              ! This node is a fully submerged interior node
-              deltal = mem%dl
-              h_c    = 0.0_ReKi
+              ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
+              pos1 =   u%Mesh%Position(:, mem%NodeIndx(i))
+              pos1(3) = pos1(3) - p%MSL2SWL
+              pos2 =   u%Mesh%Position(:, mem%NodeIndx(i+1))
+              pos2(3) = pos2(3) - p%MSL2SWL
+              if (pos1(3) <= 0.0 .and. 0.0 < pos2(3) ) then ! This node is just below the free surface !TODO: Needs to be augmented for wave stretching
+                 ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
+                 !TODO: Fix this one
+                 pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
+                 pos1(3) = pos1(3) - p%MSL2SWL
+                 h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
+                 deltal = mem%dl/2.0 + h
+                 h_c    = 0.5*(h-mem%dl/2.0)
+              else
+                 ! This node is a fully submerged interior node
+                 deltal = mem%dl
+                 h_c    = 0.0_ReKi
+              end if
            END IF
 
            IF (i == 1) THEN
