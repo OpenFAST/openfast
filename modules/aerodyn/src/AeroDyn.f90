@@ -1366,7 +1366,9 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
    ! SetInputs, Calc BEM Outputs and Twr Outputs 
    do iR=1,size(p%rotors)
-      call RotCalcOutput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), ErrStat, ErrMsg)
+      call RotCalcOutput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat2, ErrMsg2, .false.)
+         call SetErrStat(ErrStat2, ErrMSg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
    enddo
 
    if (p%WakeMod == WakeMod_FVW) then
@@ -1387,59 +1389,42 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    !-------------------------------------------------------   
    if (CalcWriteOutput) then
       do iR = 1,size(p%rotors)
-         if (p%rotors(iR)%NumOuts > 0) then
-            call Calc_WriteOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), xd%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   
-               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      
-            !...............................................................................................................................   
-            ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
-            !...............................................................................................................................   
-
-            do i = 1,p%rotors(iR)%NumOuts  ! Loop through all selected output channels
-               y%rotors(iR)%WriteOutput(i) = p%rotors(iR)%OutParam(i)%SignM * m%rotors(iR)%AllOuts( p%rotors(iR)%OutParam(i)%Indx )
-            end do             ! i - All selected output channels
-
-          end if
-       
-         y%rotors(iR)%WriteOutput(p%rotors(iR)%NumOuts+1:) = 0.0_ReKi
-
-            ! Now we need to populate the blade node outputs here
-         if (p%rotors(iR)%NumBlades > 0) then
-            call Calc_WriteAllBldNdOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         endif
-      enddo
+         call RotWriteOutputs(t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMSg2, ErrStat, ErrMsg, RoutineName)
+      end do
    end if
-      
 
 end subroutine AD_CalcOutput
 
-
-subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, NeedWriteOutput)
 ! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
 
-   REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
-   TYPE(RotInputType),           INTENT(IN   )  :: u           !< Inputs at Time t
-   TYPE(RotParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD        !< Parameters
-   TYPE(RotContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
-   TYPE(RotDiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
-   TYPE(RotConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
-   TYPE(RotOtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-   TYPE(RotOutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
-                                                               !!   nectivity information does not have to be recalculated)
-   type(RotMiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                   INTENT(IN   )  :: t                  !< Current simulation time in seconds
+   TYPE(RotInputType),           INTENT(IN   )  :: u                  !< Inputs at Time t
+   TYPE(RotParameterType),       INTENT(IN   )  :: p                  !< Parameters
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD               !< Parameters
+   TYPE(RotContinuousStateType), INTENT(IN   )  :: x                  !< Continuous states at t
+   TYPE(RotDiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
+   TYPE(RotConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
+   TYPE(RotOtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
+   TYPE(RotOutputType),          INTENT(INOUT)  :: y                  !< Outputs computed at t (Input only so that mesh con-
+                                                                      !!   nectivity information does not have to be recalculated)
+   type(RotMiscVarType),         intent(inout)  :: m                  !< Misc/optimization variables
+   TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m_AD               !< misc variables
+   INTEGER,                      INTENT(IN   )  :: iRot               !< Rotor index, needed for OLAF
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   LOGICAL,          OPTIONAL,   INTENT(IN   )  :: NeedWriteOutput    !< Flag to determine if WriteOutput values need to be calculated in this call
 
+   
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                               :: i
    integer(intKi)                               :: j
-   integer(intKi)                               :: iR ! Loop on rotors
 
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
@@ -1448,6 +1433,12 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, Er
    
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
+   if (present(NeedWriteOutput)) then
+      CalcWriteOutput = NeedWriteOutput
+   else
+      CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
+   end if
 
    call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1479,8 +1470,79 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, Er
    call AD_CavtCrit(u, p, m, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)    
    
+   
+   !-------------------------------------------------------   
+   !     get values to output to file:  
+   !-------------------------------------------------------   
+   if (CalcWriteOutput) then
+      call RotWriteOutputs(t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg)
+   end if   
+   
 end subroutine RotCalcOutput
+!----------------------------------------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg)
+! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
+! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
+! placed in the y%WriteOutput(:) array.
+!..................................................................................................................................
 
+   REAL(DbKi),                   INTENT(IN   )  :: t                  !< Current simulation time in seconds
+   TYPE(RotInputType),           INTENT(IN   )  :: u                  !< Inputs at Time t
+   TYPE(RotParameterType),       INTENT(IN   )  :: p                  !< Parameters
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD               !< Parameters
+   TYPE(RotContinuousStateType), INTENT(IN   )  :: x                  !< Continuous states at t
+   TYPE(RotDiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
+   TYPE(RotConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
+   TYPE(RotOtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
+   TYPE(RotOutputType),          INTENT(INOUT)  :: y                  !< Outputs computed at t (Input only so that mesh con-
+                                                                      !!   nectivity information does not have to be recalculated)
+   type(RotMiscVarType),         intent(inout)  :: m                  !< Misc/optimization variables
+   TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m_AD               !< misc variables
+   INTEGER,                      INTENT(IN   )  :: iRot               !< Rotor index, needed for OLAF
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+
+   
+      ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
+   integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
+   integer(intKi)                               :: i
+   integer(intKi)                               :: j
+
+   integer(intKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   character(*), parameter                      :: RoutineName = 'RotCalcOutput'
+   LOGICAL                                      :: CalcWriteOutput   
+   !-------------------------------------------------------   
+   !     get values to output to file:  
+   !-------------------------------------------------------   
+   if (p%NumOuts > 0) then
+      call Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, iRot, ErrStat2, ErrMsg2 )   
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+      
+      !...............................................................................................................................   
+      ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
+      !...............................................................................................................................   
+
+      do i = 1,p%NumOuts  ! Loop through all selected output channels
+         y%WriteOutput(i) = p%OutParam(i)%SignM * m%AllOuts( p%OutParam(i)%Indx )
+      end do             ! i - All selected output channels
+
+   end if
+       
+   if (p%BldNd_TotNumOuts > 0) then
+      y%WriteOutput(p%NumOuts+1:) = 0.0_ReKi
+
+      ! Now we need to populate the blade node outputs here
+      if (p%NumBlades > 0) then
+         call Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, indx, iRot, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+   end if
+
+   
+end subroutine RotWriteOutputs
+!----------------------------------------------------------------------------------------------------------------------------------
 
 subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
    TYPE(RotInputType),           INTENT(IN   )  :: u           !< Inputs at Time t
@@ -2473,7 +2535,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          !end if
       end if
       
-      if (InputFileData%WakeMod == WakeMod_FVW) then
+      if (InputFileData%WakeMod == WakeMod_FVW) then !bjj: note: among other things, WriteOutput values will not be calculated properly in AD Jacobians if FVW this is allowed
          call SetErrStat( ErrID_Fatal, 'FVW cannot currently be used for linearization. Set WakeMod=0 or WakeMod=1.', ErrStat, ErrMsg, RoutineName )
       else if (InputFileData%WakeMod == WakeMod_DBEMT) then
 !bjj: when linearization has been tested
@@ -3662,14 +3724,14 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       return
    endif
 
-   call Rot_JacobianPInput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   call Rot_JacobianPInput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 
 END SUBROUTINE AD_JacobianPInput
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
 
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -3685,6 +3747,8 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
                                                                                !!   available here so that mesh parameter information (i.e.,
                                                                                !!   connectivity) does not have to be recalculated for dYdu.
    TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
+   INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
@@ -3812,7 +3876,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
 
             ! compute y at u_op + delta_p u
-         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_p, m, ErrStat2, ErrMsg2 ) 
+         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          
             
@@ -3835,7 +3899,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
             
             ! compute y at u_op - delta_m u
-         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_m, m, ErrStat2, ErrMsg2 ) 
+         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          
             
@@ -3975,7 +4039,7 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       return
    endif
 
-   call RotJacobianPContState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+   call RotJacobianPContState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 
 
 END SUBROUTINE AD_JacobianPContState
@@ -3983,7 +4047,7 @@ END SUBROUTINE AD_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -3999,6 +4063,8 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, Err
                                                                                !!   available here so that mesh parameter information (i.e.,
                                                                                !!   connectivity) does not have to be recalculated for dYdx.
    TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
+   INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
@@ -4104,7 +4170,7 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, Err
 
             ! compute y at x_op + delta_p x
          ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
-         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_p, m, ErrStat2, ErrMsg2 ) 
+         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
@@ -4115,7 +4181,7 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, Err
          
             ! compute y at x_op - delta_m x
          ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
-         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_m, m, ErrStat2, ErrMsg2 ) 
+         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
@@ -4344,13 +4410,13 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
       return
    endif
 
-   call RotJacobianPConstrState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), errStat, errMsg, dYdz, dXdz, dXddz, dZdz )
+   call RotJacobianPConstrState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, errStat, errMsg, dYdz, dXdz, dXddz, dZdz )
 
 END SUBROUTINE AD_JacobianPConstrState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and dZ/dz are returned.
-SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -4366,6 +4432,8 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, E
                                                                                !!   available here so that mesh parameter information (i.e.,
                                                                                !!   connectivity) does not have to be recalculated for dYdz.
    TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
+   INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
@@ -4472,7 +4540,7 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, E
                z_perturb%BEMT%phi(j,k) = z%BEMT%phi(j,k) + delta_p
             
                   ! compute y at z_op + delta_p z
-               call RotCalcOutput( t, u, p, p_AD, x, xd, z_perturb, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
+               call RotCalcOutput( t, u, p, p_AD, x, xd, z_perturb, OtherState, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
             
             
@@ -4480,7 +4548,7 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, E
                z_perturb%BEMT%phi(j,k) = z%BEMT%phi(j,k) - delta_m
             
                   ! compute y at z_op - delta_m z
-               call RotCalcOutput( t, u, p, p_AD, x, xd, z_perturb, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
+               call RotCalcOutput( t, u, p, p_AD, x, xd, z_perturb, OtherState, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
             
 
