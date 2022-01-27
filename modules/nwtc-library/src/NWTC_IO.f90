@@ -4985,7 +4985,8 @@ END SUBROUTINE CheckR16Var
          ENDIF
 
       IF ( AryInd /= FileInfo%NumLines ) THEN ! This would happen if there is a mis-match between ScanComFile and ReadComFile
-         CALL SetErrStat( ErrID_Fatal, "Error processing files: number of lines read does not match array size.", ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrID_Fatal, "Error processing files: number of lines read ("//trim(num2lstr(AryInd))// &
+                  ") does not match array size ("//trim(num2lstr(fileInfo%NumLines))//").", ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
          RETURN
       END IF
