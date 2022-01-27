@@ -693,7 +693,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       DO IBody = 1,p%NBody
 
             ! Set orientation and position for each body in mesh
-         theta       = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(IBody)/)      ! angle in radians
+         theta = (/ 0.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki /)
          orientation = EulerConstruct(theta)
          XYZloc      = (/InitInp%PtfmRefxt(IBody), InitInp%PtfmRefyt(IBody), InitInp%PtfmRefzt(IBody)/)
 

@@ -2460,18 +2460,18 @@ END SUBROUTINE Alloc_CoordSys
 SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(ED_ParameterType),        INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
-   TYPE(BladeInputData),          INTENT(IN)     :: BladeInData(:)                      !< Program input data for all blades
-   TYPE(ED_BladeMeshInputData),   INTENT(IN)     :: BladeMeshData(:)                    !< Program input mesh data for all blades
-   INTEGER(IntKi),                INTENT(OUT)    :: ErrStat                             !< Error status
-   CHARACTER(*),                  INTENT(OUT)    :: ErrMsg                              !< Error message
+   TYPE(ED_ParameterType),                      INTENT(INOUT)  :: p                 !< The parameters of the structural dynamics module
+   TYPE(BladeInputData),         ALLOCATABLE,   INTENT(IN)     :: BladeInData(:)    !< Program input data for all blades
+   TYPE(ED_BladeMeshInputData),  ALLOCATABLE,   INTENT(IN)     :: BladeMeshData(:)  !< Program input mesh data for all blades
+   INTEGER(IntKi),                              INTENT(OUT)    :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(OUT)    :: ErrMsg            !< Error message
 
       ! Local variables:
-   REAL(ReKi)                                    :: x                                   ! Fractional location between two points in linear interpolation
-   INTEGER(IntKi )                               :: K                                   ! Blade number
-   INTEGER(IntKi )                               :: J                                   ! Index for the node arrays
-   INTEGER(IntKi)                                :: InterpInd                           ! Index for the interpolation routine
-   LOGICAL                                       :: SetAdmVals                          ! Logical to determine if Adams inputs should be set
+   REAL(ReKi)                                                  :: x                 ! Fractional location between two points in linear interpolation
+   INTEGER(IntKi )                                             :: K                 ! Blade number
+   INTEGER(IntKi )                                             :: J                 ! Index for the node arrays
+   INTEGER(IntKi)                                              :: InterpInd         ! Index for the interpolation routine
+   LOGICAL                                                     :: SetAdmVals        ! Logical to determine if Adams inputs should be set
 
       ! initialize variables
    ErrStat = ErrID_None

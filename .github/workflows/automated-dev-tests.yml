@@ -106,7 +106,7 @@ jobs:
             install_deps: brew install gcovr
           - os: ubuntu-20.04
             FORTRAN_COMPILER: gfortran-10
-            install_deps: sudo apt-get install -y gcovr
+            install_deps: sudo apt-get update && sudo apt-get install -y gcovr
 
     name: regression-test-debug-${{ matrix.os }}-${{ matrix.FORTRAN_COMPILER }}
     steps:
@@ -137,7 +137,6 @@ jobs:
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
-            -DCODECOV:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
 
@@ -167,35 +166,26 @@ jobs:
         with:
           test-target: regression
 
-      - name: Generate coverage report
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
-          cd ..
-          gcovr -g -k -r . --xml regressioncov.xml  # --html --html-details -o regressioncov.html # -v
-
-          # cp `find . -name *.gcno` .
-          # cp `find . -name *.gcda` .
-          # ${{env.GCOV_EXE}} -b -l -p -c *.gcno
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          dry_run: false
-          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./regressioncov.xml # optional
-          flags: regtests # optional
-          # name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
-          directory: ${{runner.workspace}}/openfast
-
-      - name: Success artifacts
-        uses: actions/upload-artifact@v2
-        if: success()
-        with:
-          name: regression-tests-debug
-          path: |
-            ${{runner.workspace}}/openfast/regressioncov.xml
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details -o regressioncov.html # -v
+      #     # cp `find . -name *.gcno` .
+      #     # cp `find . -name *.gcda` .
+      #     # ${{env.GCOV_EXE}} -b -l -p -c *.gcno
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: regression-tests-debug
+      #     path: |
+      #       ${{runner.workspace}}/openfast/regressioncov.html
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
         if: failure()
@@ -288,7 +278,6 @@ jobs:
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
-            -DCODECOV:BOOL=ON \
             ${GITHUB_WORKSPACE}
 
       - name: Build unit tests
@@ -310,31 +299,23 @@ jobs:
         with:
           test-target: unit
 
-      - name: Generate coverage report
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
-          cd ..
-          gcovr -g -k -r . --xml unitcov.xml
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          dry_run: false
-          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./unitcov.xml # optional
-          flags: unittests # optional
-          # name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
-          directory: ${{runner.workspace}}/openfast
-
-      - name: Success artifacts
-        uses: actions/upload-artifact@v2
-        if: success()
-        with:
-          name: unit-tests
-          path: |
-            ${{runner.workspace}}/openfast/unitcov.xml
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details unitcov.html
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: unit-tests
+      #     path: |
+      #       ${{runner.workspace}}/openfast/unitcov.html
 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
@@ -411,7 +392,6 @@ jobs:
             -DBUILD_SHARED_LIBS:BOOL=ON \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DCODECOV:BOOL=ON \
             ${GITHUB_WORKSPACE}
 
       - name: Build OpenFAST C-Interfaces
@@ -432,31 +412,23 @@ jobs:
         run: |
           ctest -VV -L python
 
-      - name: Generate coverage report
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
-          cd ..
-          gcovr -g -k -r . --xml regressioncov.xml
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          dry_run: false
-          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./regressioncov.xml # optional
-          flags: regtests # optional
-          # name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
-          directory: ${{runner.workspace}}/openfast
-
-      - name: Success artifacts
-        uses: actions/upload-artifact@v2
-        if: success()
-        with:
-          name: c-interface-reg-tests
-          path: |
-            ${{runner.workspace}}/openfast/regressioncov.xml
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details regressioncov.html
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: c-interface-reg-tests
+      #     path: |
+      #       ${{runner.workspace}}/openfast/regressioncov.html
 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
