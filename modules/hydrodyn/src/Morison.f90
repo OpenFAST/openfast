@@ -2679,7 +2679,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          pos1(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
       END IF
       
-      IF (p%WaveStMod > 0) THEN ! Wave stretching enabled
+      IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
         pos1(3) = u%Mesh%Position(3,j) + u%Mesh%TranslationDisp(3,j) - p%MSL2SWL  ! Use the current Z location.
       ELSE ! Wave stretching disabled
         pos1(3) = u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
@@ -3126,7 +3126,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       z1 = u%Mesh%Position(3, mem%NodeIndx(1))   - p%MSL2SWL
       z2 = u%Mesh%Position(3, mem%NodeIndx(N+1)) - p%MSL2SWL
-      IF ( z2 > 0.0_SiKi .AND. z1 < 0.0_SiKi .AND. p%WaveStMod > 0) THEN 
+      IF ( z2 > 0.0_SiKi .AND. z1 <= 0.0_SiKi .AND. p%WaveStMod > 0) THEN 
       
       !----------------------------Surface Piercing Member with Wave Stretching-----------------------------!
                 
@@ -3336,7 +3336,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         DO i = mem%i_floor+1,N+1    ! loop through member nodes
            ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
            ! Using the initial z-position to be consistent with the evaluation of wave kinematics
-           IF (p%WaveStMod > 0) THEN
+           IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN
               z1 = u%Mesh%Position(3, mem%NodeIndx(i)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i)) - p%MSL2SWL
            ELSE
               z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL 
@@ -3346,7 +3346,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
            IF (z1 > Zeta1 .AND. p%WaveStMod > 0) THEN
               CALL SetErrStat(ErrID_Fatal, 'An initially fully submerged member cannot pierce the free surface.  This has happend for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+              RETURN
            END IF
+           
            
            ! TODO: Note that for computational efficiency, we could precompute h_c and deltal for each element when we are NOT using wave stretching
            ! We would still need to test at time marching for nodes just below the free surface because that uses the current locations not the reference locations
@@ -3361,7 +3363,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
               h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
            ELSE
-              ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
+              ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
               pos1 =   u%Mesh%Position(:, mem%NodeIndx(i))
               pos1(3) = pos1(3) - p%MSL2SWL
               pos2 =   u%Mesh%Position(:, mem%NodeIndx(i+1))
