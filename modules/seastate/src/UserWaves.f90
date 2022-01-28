@@ -653,8 +653,8 @@ END SUBROUTINE UserWaves_Init
 SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
 
    IMPLICIT NONE
-   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp              !< Input data for initialization routine
-   TYPE(Waves_InitOutputType),      INTENT(IN   )  :: InitOut              !< Output data for initialization routine
+   TYPE(Waves_InitInputType),       INTENT(INOUT)  :: InitInp              !< Input data for initialization routine
+   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut              !< Output data for initialization routine
    TYPE(WaveCompInputDataFile),     INTENT(  OUT)  :: WaveCompData         !< Wave component file data
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat              !< Error Status at return
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
@@ -678,6 +678,11 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER                         :: RoutineName = 'WaveComp_ReadFile'
    REAL(SiKi),   PARAMETER                         :: WaveDOmega_RelTol  =  0.001_SiKi   !< Allowable relative difference in WaveDOmega values
    REAL(SiKi)                                      :: OmegaRatio
+   
+   CHARACTER(1024)                                 :: StrRead           !< String containing the first word read in
+   REAL(SiKi)                                      :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
+   INTEGER(IntKi)                                  :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
+   LOGICAL                                         :: IsRealNum         !< Flag indicating if the first word on the line was a real number
 
    LOGICAL                                         :: USESEAFormat
 
@@ -723,30 +728,47 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       CALL WrScr1 ( ' Reading "'//TRIM(InitInp%WvKinFile)//'" following the .SEA format: Wave Frequency (Hz), Wave Amplitude (m), Wave Direction (rad), Wave Phase (rad).' )
       UseSEAFormat = .TRUE.
       ErrStatTmp = ErrID_None
-      ! Make sure the wave direction convention is not nautial, which is not supported
+   
+      ! Go through the SEA headerlines
       DO I = 2,NumHeaderLines   
          CALL ReadLine( WaveCompUnit, '', TextLine, LineLen, ErrStatTmp )
          CALL GetWords( TextLine, Words, 20 )
+         
+         ! Make sure the wave direction convention is not nautial, which is not supported
          IF (TRIM(Words(1)) == 'dconv:' .AND. TRIM(Words(2)) == 'naut') THEN
             CALL SetErrStat( ErrID_Fatal, 'Nautical (naut) convention for wave direction is not supported. Must use cartesian (cart) convention.', ErrStat, ErrMsg, RoutineName)
             CLOSE ( WaveCompUnit )
             CALL CleanUp()
             RETURN
          END IF
+         
+         ! Override WaveTMax from SeaState input with the "duration" specified in the SEA file header if available
+         IF (TRIM(Words(1)) == 'duration: ') THEN
+            CALL ReadRealNumberFromString( Words(2), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )
+            IF ( IsRealNum ) THEN
+               InitInp%WaveTMax = RealRead
+               CALL WrScr1(' WaveTMax overriden based on "' //TRIM(WaveCompData%FileName)// '" to ' // TRIM(Num2Lstr(InitInp%WaveTMax)) // ' sec.' )
+            END IF
+         END IF
       END DO
+      
    ELSE
-      CALL WrScr1 ( ' Reading "'//TRIM(InitInp%WvKinFile)//'" following the OpenFAST format: Wave Angular Frequency (rad/s), Wave Height (m), Wave Direction (deg), Wave Phase (deg).' )   
+      UseSEAFormat = .FALSE.
+      CALL WrScr1 ( ' Reading "'//TRIM(InitInp%WvKinFile)//'" following the OpenFAST format: Wave Angular Frequency (rad/s), Wave Height (m), Wave Direction (deg), Wave Phase (deg).' )
    END IF
    REWIND( WaveCompUnit )
 
    ! Check that we read in four columns
    IF ( NumDataColumns /= 4_IntKi ) THEN
       CALL SetErrStat( ErrID_Fatal, ' Wave component files should contain four columns of data: (angular) frequency, wave height/amplitude, wave direction, wave phase. '// &
-               'Found '//TRIM(Num2LStr(NumDataColumns))//' of data in '//TRIM(WaveCompData%FileName)//'.', ErrStat, ErrMsg, RoutineName)
+               'Found '//TRIM(Num2LStr(NumDataColumns))//' of data in "'//TRIM(WaveCompData%FileName)//'".', ErrStat, ErrMsg, RoutineName)
       CLOSE ( WaveCompUnit )
       CALL CleanUp() 
       RETURN
    END IF
+
+   ! Compute the frequency step for incident wave calculations.
+   InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax 
 
    !--------------------------------------------------
    ! Read in the data
@@ -803,7 +825,6 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
          RETURN
       END IF
 
-
       WaveAngFreq = TmpWaveCompRow(1)
       IF (UseSEAFormat) THEN
           WaveAngFreq = TwoPi * WaveAngFreq
@@ -824,16 +845,16 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       END IF
       
       ! Copy the data to the appropriate places
-      IF (UseSEAFormat) THEN ! SEA format
-          WaveCompData%WaveAngFreq(I)  =  TmpWaveCompRow(1) * TwoPi  ! Convert to angular frequency
-          WaveCompData%WaveAmp(I)      =  TmpWaveCompRow(2)
-          WaveCompData%WaveDir(I)      =  TmpWaveCompRow(3)
-          WaveCompData%WavePhase(I)    =  TmpWaveCompRow(4)
-      ELSE ! OpenFAST format 
-          WaveCompData%WaveAngFreq(I)  =  TmpWaveCompRow(1)
+      IF (UseSEAFormat) THEN ! SEA format - Frequency (Hz), Amplitude (m), Direction (rad), Phase (rad)
+          WaveCompData%WaveAngFreq(I)  =  TmpWaveCompRow(1) * TwoPi       ! Convert to angular frequency
+          WaveCompData%WaveAmp(I)      =  TmpWaveCompRow(2)               ! Already wave amplitude
+          WaveCompData%WaveDir(I)      =  TmpWaveCompRow(3) * 180_ReKi/PI ! Convert to degrees
+          WaveCompData%WavePhase(I)    =  TmpWaveCompRow(4)               ! Aleady in radians
+      ELSE  ! OpenFAST format - Angular Frequency (rad/s), Wave Height (m), Direction (deg), Phase (deg) 
+          WaveCompData%WaveAngFreq(I)  =  TmpWaveCompRow(1)               ! Already angular frequency
           WaveCompData%WaveAmp(I)      =  TmpWaveCompRow(2) * 0.5_ReKi    ! Convert wave height to wave amplitude
-          WaveCompData%WaveDir(I)      =  TmpWaveCompRow(3) * 180_ReKi/Pi ! Convert to radians
-          WaveCompData%WavePhase(I)    =  TmpWaveCompRow(4) * 180_ReKi/Pi ! Convert to radians
+          WaveCompData%WaveDir(I)      =  TmpWaveCompRow(3)               ! Already in degrees
+          WaveCompData%WavePhase(I)    =  TmpWaveCompRow(4) * PI/180_ReKi ! Convert to radians
       END IF
       
    ENDDO
@@ -887,13 +908,8 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ! Statement to user
       CALL WrScr1 ( ' Reading in wave component data from wave kinematics files with root name "'//TRIM(InitInp%WvKinFile)//'".' )
-
-
-      ! Set new value for NStepWave so that the FFT algorithms are efficient. We will use the values passed in rather than what is read from the file
-      ! NOTE: This method is what is used in the VariousWaves_Init routine in Waves.f90
-      InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax                                               ! Compute the frequency step for incident wave calculations.
       
-      ! Read in the wave elevation data
+      ! Read in the wave component data
       CALL WaveComp_ReadFile (InitInp, InitOut, WaveCompData, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
