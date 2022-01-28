@@ -1018,13 +1018,15 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
 
 
-         ! Set new value for NStepWave so that the FFT algorithms are efficient.  Note that if this method is changed, the method
-         ! used to calculate the number of multidirectional wave directions (WaveNDir) and the UserWaveElevations_Init subroutine
-         ! will need to be updated.
+      ! Set new value for NStepWave so that the FFT algorithms are efficient.  Note that if this method is changed, the method
+      ! used to calculate the number of multidirectional wave directions (WaveNDir) and the UserWaveElevations_Init subroutine
+      ! will need to be updated.
 
-            ! NOTE:  For WaveMod = 5, NStepWave and several other things were already set in the UserWaveElevations_Init routine
-            !        using file information (an FFT was performed there, so the information was needed before now).
-      IF (InitInp%WaveMod /= 5 ) THEN
+      ! NOTE:  For WaveMod = 5, NStepWave and several other things were already set in the UserWaveElevations_Init routine
+      !        using file information (an FFT was performed there, so the information was needed before now).
+      !        Same with WaveMod = 7. With WaveMod = 7, WaveDirArr is also populated in UserWaveComponents_Init routine. 
+      !        Need to make sure the wave-direction in formation is not overwritten later. 
+      IF (InitInp%WaveMod /= 5 .AND. InitInp%WaveMod /= 7) THEN
          InitOut%NStepWave    = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )               ! Set NStepWave to an even integer
          IF ( MOD(InitOut%NStepWave,2) == 1 )  InitOut%NStepWave = InitOut%NStepWave + 1  !   larger or equal to WaveTMax/WaveDT.
          InitOut%NStepWave2   = MAX( InitOut%NStepWave/2, 1 )                             ! Make sure that NStepWave is an even product of small factors (PSF) that is
@@ -1040,10 +1042,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       SQRTNStepWave2          = SQRT( REAL( InitOut%NStepWave2, SiKi ) )                  ! Compute SQRT( NStepWave/2 ).
       I_WaveTp                = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )        ! Compute the index of the frequency component nearest to WaveTp.
 
-
-         ! Allocate all the arrays we need.
-
-      IF ( InitInp%WaveMod /= 5 ) THEN    ! For WaveMod == 5, these are allocated and populated in UserWaveElevations_Init
+      ! Allocate all the arrays we need.
+      IF ( InitInp%WaveMod /= 5 .AND. InitInp%WaveMod /= 7) THEN    ! For WaveMod == 5 and 7, these are allocated and populated in UserWaveElevations_Init or UserWaveComponents_Init
          ALLOCATE ( InitOut%WaveElevC0(2, 0:InitOut%NStepWave2                ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'VariousWaves_Init')
       ENDIF
@@ -1193,9 +1193,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ! Wave direction associated with each frequency
-      ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,'VariousWaves_Init')
+      IF ( InitInp%WaveMod /= 7) THEN    ! For WaveMod == 7, these are allocated and populated in UserWaveComponents_Init
+         ! Wave direction associated with each frequency
+         ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,'VariousWaves_Init')
+      END IF
 
       ! Arrays for the Sin and Cos of the wave direction for each frequency.  Used in calculating wave elevation, velocity, acceleration etc.
       ALLOCATE ( CosWaveDir( 0:InitOut%NStepWave2                          ), STAT=ErrStatTmp )
@@ -1223,8 +1225,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          RETURN
       END IF
 
-
-
       ! We now need to establish the nodeInWater flag values for all the simulation node for all timesteps, this is an extension which is needed to
       ! support user input wave data.  TODO:  THIS ASSUMES NO WAVE STRETCHING!!!!!!!! GJH 18 Mar 2015
       DO J = 1,InitInp%NWaveKin ! Loop through all points where the incident wave kinematics will be computed without stretching
@@ -1236,21 +1236,16 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             InitOut%nodeInWater(:, J) = 0
          END IF
 
-      END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+      END DO ! J - All points where the incident wave kinematics will be computed without stretching
 
-
-!FIXME: Is this piece still needed?  If so, why is it commented out?
-     ! Calculate the factors needed by the discrete time inverse Fourier
+      !FIXME: Is this piece still needed?  If so, why is it commented out?
+      ! Calculate the factors needed by the discrete time inverse Fourier
       !   transform in the calculations of the White Gaussian Noise (WGN) and
       !   the two-sided power spectral density of the wave spectrum per unit time:
 
-         ! This factor is needed by the discrete time inverse Fourier transform to ensure that the time series WGN
-         ! process has unit variance
-    !  WGNC_Fact = SQRT( Pi/(InitOut%WaveDOmega*InitInp%WaveDT) )
-
-
-
-
+      ! This factor is needed by the discrete time inverse Fourier transform to ensure that the time series WGN
+      ! process has unit variance
+      !  WGNC_Fact = SQRT( Pi/(InitOut%WaveDOmega*InitInp%WaveDT) )
 
       !--------------------------------------------------------------------------------
       !> #  Multi Directional Waves
@@ -1274,7 +1269,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !!          (NStepWave2 - 1) is often a prime number due to how NStepWave is calculated above to be a product
       !!          of smallish numbers.
 
-      IF ( InitInp%WaveMultiDir ) THEN    ! Multi-directional waves in use
+      IF ( InitInp%WaveMultiDir  .AND. InitInp%WaveMod /= 7 ) THEN    ! Multi-directional waves in use
 
             ! Check that the number of wave directions is a positive odd number.  In theory this has been
             ! done before the Waves module was called.  We repeat it here in the event that the Waves module
@@ -1498,6 +1493,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             RETURN
          END IF
 
+      ELSE IF (InitInp%WaveMod == 7) THEN
+         
+         InitOut%WaveDirMin   = MINVAL(InitOut%WaveDirArr)
+         InitOut%WaveDirMax   = MAXVAL(InitOut%WaveDirArr)
+
       ELSE     ! Multi-directional waves not used
 
          InitOut%WaveDirMin   = InitInp%WaveDir
@@ -1601,9 +1601,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          ENDSELECT
 
 
-         IF ( InitInp%WaveMod == 5 ) THEN    ! Wave Elevation data read in
+         IF ( InitInp%WaveMod == 5 .OR. InitInp%WaveMod == 7) THEN    ! Wave elevation or frequency component data read in
 
-               ! Apply limits to the existing WaveElevC0 arrays if outside frequency range
+            ! Apply limits to the existing WaveElevC0 arrays if outside frequency range
             IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN
                InitOut%WaveElevC0(:,I) = 0.0_SiKi
             ENDIF
@@ -1643,7 +1643,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !!
       !!  When complete, we deallocate the _WvSpreadThetas_ array that was used to store the assigned directions.
 
-      IF ( InitInp%WaveMultiDir .AND. InitInp%WaveNDir > 1 )   THEN     ! Multi-directional waves in use
+      IF ( InitInp%WaveMultiDir .AND. InitInp%WaveNDir > 1 .AND. InitInp%WaveMod /= 7)   THEN     ! Multi-directional waves in use
 
 
             ! Allocate the index array for each group of frequencies.  This array is used to randomize the directions
@@ -1706,7 +1706,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             !  Deallocate it here after we have completed all the calculations involving it.
          IF(ALLOCATED( WvTheta ))            DEALLOCATE( WvTheta )
 
-      ELSE     ! Not really multi-directional waves
+      ELSE IF (InitInp%WaveMod /= 7) THEN     ! Not really multi-directional waves
 
             ! Since we do not have multi-directional waves, we must set the wave direction array to the single wave heading.
          InitOut%WaveDirArr   = InitInp%WaveDir
@@ -1875,11 +1875,10 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ! Calculate the array of simulation times at which the instantaneous
       !   elevation of, velocity of, acceleration of, and loads associated with
       !   the incident waves are to be determined:
-
       DO I = 0,InitOut%NStepWave ! Loop through all time steps
          InitOut%WaveTime(I) = I*REAL(InitInp%WaveDT,SiKi)
       END DO                ! I - All time steps
-
+      
       DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
          tmpComplexArr(I)    =  CMPLX(InitOut%WaveElevC0(1,I), InitOut%WaveElevC0(2,I))
       END DO
@@ -2399,6 +2398,19 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          CALL UserWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
          IF ( ErrStat >= AbortErrLev ) RETURN
+         
+      CASE ( 7 )
+         
+         ! Get the wave frequency information from the file (by reading in wave frequency components)
+         CALL UserWaveComponents_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+         ! Now call VariousWaves to continue using the wave frequency information from the file
+         CALL VariousWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+         IF ( ErrStat >= AbortErrLev ) RETURN 
+         
       ENDSELECT
 
 

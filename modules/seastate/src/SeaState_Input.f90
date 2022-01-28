@@ -657,8 +657,8 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
 
 !TODO: THese tests need to be done by HD GJH 7/11/21
-   if ( WaveModIn < 0 .OR. WaveModIn > 6 ) then
-         call SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, 5, or 6.',ErrStat,ErrMsg,RoutineName)
+   if ( WaveModIn < 0 .OR. WaveModIn > 7 ) then
+         call SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, 5, 6, or 7',ErrStat,ErrMsg,RoutineName)
          return
    end if
 
@@ -955,7 +955,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
       ! WvKinFile
 
-   if ( InputFileData%Waves%WaveMod == 5 .OR. InputFileData%Waves%WaveMod == 6 ) then      ! .TRUE if we are to read user-supplied wave elevation or wave kinematics file(s).
+   if ( InputFileData%Waves%WaveMod == 5 .OR. InputFileData%Waves%WaveMod == 6 .OR. InputFileData%Waves%WaveMod == 7) then      ! .TRUE if we are to read user-supplied wave elevation or wave kinematics file(s).
 
       if ( LEN_TRIM( InputFileData%Waves%WvKinFile ) == 0 )  then
          call SetErrStat( ErrID_Fatal,'WvKinFile must not be an empty string.',ErrStat,ErrMsg,RoutineName)
