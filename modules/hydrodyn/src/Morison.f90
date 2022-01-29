@@ -2635,19 +2635,23 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h
    real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_A(6), F_I(6), F_D(6), F_B1(6), F_B2(6)
 
+   ! Local variables needed for wave stretching and load smoothing/redistribution
    INTEGER(IntKi)           :: FSElem
    REAL(ReKi)               :: SubRatio
    REAL(ReKi)               :: Zeta1
    REAL(ReKi)               :: Zeta2
    REAL(ReKi)               :: FSInt(3)
    REAL(ReKi)               :: F_D0(3)
-   REAL(ReKi)               :: F_DS(3)
-   REAL(ReKi)               :: F_A0(3)
-   REAL(ReKi)               :: F_AS(3)
+   REAL(ReKi)               :: F_A0(3)   
    REAL(ReKi)               :: F_I0(3)
+   REAL(ReKi)               :: F_0(3)
+   REAL(ReKi)               :: F_DS(3)
+   REAL(ReKi)               :: F_AS(3)
    REAL(ReKi)               :: F_IS(3)
+   REAL(ReKi)               :: F_S(3)
    REAL(ReKi)               :: f_redist
    REAL(ReKi)               :: Df_hydro(3)
+   REAL(ReKi)               :: DM_hydro(3)
    REAL(ReKi)               :: Df_hydro_lumped(6)
    REAL(ReKi)               :: FVFSInt(3)
    REAL(ReKi)               :: FAFSInt(3)
@@ -3124,6 +3128,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
       !-----------------------------------------------------------------------------------------------------!
+      ! Get the initial z-positions of the two end nodes of the member to determine whether the member should 
+      ! be surface piercing
       z1 = u%Mesh%Position(3, mem%NodeIndx(1))   - p%MSL2SWL
       z2 = u%Mesh%Position(3, mem%NodeIndx(N+1)) - p%MSL2SWL
       IF ( z2 > 0.0_SiKi .AND. z1 <= 0.0_SiKi .AND. p%WaveStMod > 0) THEN 
@@ -3132,26 +3138,37 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                 
         FSElem = -1 ! Initialize the No. of the partially wetted element as -1
       
-        DO i = mem%i_floor+1,N    ! loop through member nodes - skip the last node which should not be submerged anyways
+        DO i = mem%i_floor+1,N ! loop through member nodes starting from the first node above seabed, but skip the last node which should not be submerged anyways
+           
+           ! Get positions of node i and i+1
+           IF (p%WaveDisp /= 0) THEN ! Use current position
+              pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i))  
+              pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1))
+           ELSE ! Use initial position
+              pos1    = u%Mesh%Position(:, mem%NodeIndx(i))  
+              pos2    = u%Mesh%Position(:, mem%NodeIndx(i+1))
+           END if
            ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
-           pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
            pos1(3) = pos1(3) - p%MSL2SWL
-           pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
            pos2(3) = pos2(3) - p%MSL2SWL 
+           
+           ! Free surface elevation above or below node i and i+1
            Zeta1 = m%WaveElev(mem%NodeIndx(i))
            Zeta2 = m%WaveElev(mem%NodeIndx(i+1))
 
-           IF ( i == 1 ) THEN
+           ! Compute deltal and h_c
+           IF ( i == 1 ) THEN ! First node
               deltal = mem%dl/2.0_ReKi
               h_c    = mem%dl/4.0_ReKi
-           ELSE IF ( mem%i_floor == i+1 ) THEN ! This node is the upper node of an element which crosses the seabed
-              deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
+           ELSE IF ( i == mem%i_floor + 1 ) THEN ! This node is the upper node of an element which crosses the seabed
+              ! Superceded by i==1 above if mem%i_floor = 0
+              deltal = mem%dl/2.0_ReKi - mem%h_floor
               h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
            ELSE
               ! This node is an interior node. Note: Element crossing the free surface will be handled at the end in conjunction with wave stretching
               deltal = mem%dl
               h_c    = 0.0_ReKi           
-           END IF
+           END IF ! Note: No need to consider i==N+1 because we do not allow the top node to become submerged. The loop also does not reach N+1.
            
            IF ( pos1(3) <= Zeta1 .AND. pos2(3) > Zeta2 ) THEN ! element is partially wetted
              ! Record the number of the partially wetted element
@@ -3210,10 +3227,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
         END DO ! i =1,N+1    ! loop through member nodes  
 
-        IF (FSElem < 0) THEN
-          CALL SetErrStat(ErrID_Fatal, 'An initially surface-piercing member cannot become fully submerged.  This has happend for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-        ELSE IF (FSElem < 3) THEN
+        IF (FSElem < 0) THEN ! No partially wetted element identified - Bad!
+          CALL SetErrStat(ErrID_Fatal, 'No partially wetted element identified for an initially surface-piercing member.  This has happend to Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+          RETURN
+        ELSE IF (FSElem < 3) THEN ! Only one or no element is fully submerged - Bad!
           CALL SetErrStat(ErrID_Fatal, 'For each surface-piercing member, at least two elements must remain fully submerged.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+          RETURN
         END IF
 
         !----------------------------------------------------------------------------------------------------!
@@ -3272,12 +3291,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         END IF
         
         !----------------------------------------------------------------------------------------------------!
-        !                      Compute the load redistribution for smooth time series                        !
+        !                         Perform the load redistribution for smooth time series                     !
         !----------------------------------------------------------------------------------------------------!
         ! Evaluate the load redistribution function
         f_redist = 2.0_ReKi * SubRatio**3 - 3.5_ReKi * SubRatio**2 + SubRatio + 0.5_ReKi
         
-        ! The load redistribution is designed with deltal = mem%dl and h_c = 0. Moment correction will be applied separately
+        ! deltal = mem%dl and h_c = 0 should always be used here by design. Moment correction will be applied separately
         deltal = mem%dl
         h_c    = 0.0_ReKi
         
@@ -3331,58 +3350,78 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
         END IF
 
+        !----------------------------------------------------------------------------------------------------!
+        !                     Perform moment correction to compensate for load redistribution                !
+        !----------------------------------------------------------------------------------------------------!
+        ! Moment correction to the first node below the free surface
+        F_S = F_DS
+        IF ( .NOT. mem%PropPot) THEN
+           F_S = F_S + F_AS + F_IS
+        END IF
+        DM_hydro = 0.5_ReKi * SubRatio**2 * deltal * cross_product(mem%k, F_S)
+        y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + DM_hydro * deltal
+        
+        ! Moment correction to the second node below the free surface
+        F_0 = F_D0
+        IF ( .NOT. mem%PropPot) THEN
+           F_0 = F_0 + F_A0 + F_I0
+        END IF
+        DM_hydro =               f_redist * deltal * cross_product(mem%k, F_0)
+        y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
+
+
       ELSE !-------------------------------Fully Submerged Member or No Wave Stretching-------------------------------!
       
-        DO i = mem%i_floor+1,N+1    ! loop through member nodes
+        DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
            ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
            ! Using the initial z-position to be consistent with the evaluation of wave kinematics
            IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN
+              ! Use current z-position
               z1 = u%Mesh%Position(3, mem%NodeIndx(i)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i)) - p%MSL2SWL
            ELSE
+              ! Use initial z-position
               z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL 
            END IF
            
-           Zeta1 = m%WaveElev(mem%NodeIndx(i))
-           
-           IF (z1 > Zeta1 .AND. p%WaveStMod > 0) THEN
-              CALL SetErrStat(ErrID_Fatal, 'An initially fully submerged member cannot pierce the free surface.  This has happend for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+           ! When wave stretching is enabled, we do not allow an initially fully submerged member to breach the free surface during the simulation
+           IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
+              CALL SetErrStat(ErrID_Fatal, 'An initially fully submerged member cannot pierce the free surface.  This has happend for Member ID ' & 
+                                     //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
               RETURN
            END IF
+                      
+           !---------------------------------------------Compute deltal and h_c------------------------------------------!
+           ! Default value for fully submerged interior node
+           deltal = mem%dl
+           h_c    = 0.0_ReKi
            
-           
-           ! TODO: Note that for computational efficiency, we could precompute h_c and deltal for each element when we are NOT using wave stretching
-           ! We would still need to test at time marching for nodes just below the free surface because that uses the current locations not the reference locations
-           ! see table in Section 7.1.1
-           IF ( i == 1 ) THEN
-              deltal = mem%dl/2.0_ReKi
-              h_c    = mem%dl/4.0_ReKi
-           ELSE IF (i == N+1) THEN
+           ! Special cases
+           IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
+              deltal =  mem%dl/2.0_ReKi
+              h_c    =  mem%dl/4.0_ReKi
+           ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
+              ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
+              !       This is the correct behavior.
+              deltal =  mem%dl/2.0_ReKi - mem%h_floor
+              h_c    =  0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
+           ELSE IF ( i == N+1 ) THEN ! Last node
               deltal =  mem%dl/2.0_ReKi
               h_c    = -mem%dl/4.0_ReKi
-           ELSE IF ( mem%i_floor == i+1 ) THEN ! This node is the upper node of an element which crosses the seabed
-              deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
-              h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
-           ELSE
-              ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
-              pos1 =   u%Mesh%Position(:, mem%NodeIndx(i))
-              pos1(3) = pos1(3) - p%MSL2SWL
-              pos2 =   u%Mesh%Position(:, mem%NodeIndx(i+1))
-              pos2(3) = pos2(3) - p%MSL2SWL
-              if (pos1(3) <= 0.0 .and. 0.0 < pos2(3) ) then ! This node is just below the free surface !TODO: Needs to be augmented for wave stretching
-                 ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-                 !TODO: Fix this one
-                 pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
-                 pos1(3) = pos1(3) - p%MSL2SWL
-                 h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
-                 deltal = mem%dl/2.0 + h
-                 h_c    = 0.5*(h-mem%dl/2.0)
-              else
-                 ! This node is a fully submerged interior node
-                 deltal = mem%dl
-                 h_c    = 0.0_ReKi
-              end if
+           ELSE ! Interior node
+              ! Need to check if element crosses the SWL, but only if WaveStMod == 0
+              ! With wave stretching, will error out anyway unless all nodes are submerged
+              IF (p%WaveStMod==0) THEN ! No wave stretching
+                 ! Initial z position will always be used
+                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
+                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
+                    deltal = mem%dl/2.0 + h
+                    h_c    = 0.5*(h-mem%dl/2.0)
+                 END IF
+              END IF
            END IF
-
+           
+           ! Compute the slope of the member radius
            IF (i == 1) THEN
               dRdl_p  = abs(mem%dRdl_mg(i))
               dRdl_pp = mem%dRdl_mg(i)   
