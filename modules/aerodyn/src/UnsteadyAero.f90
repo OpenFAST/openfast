@@ -3008,6 +3008,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    real(ReKi)                                   :: cn_circ, tau_vl, tV_ratio
    real(ReKi)                                   :: delta_c_df_primeprime
    real(ReKi), parameter                        :: delta_c_mf_primeprime = 0.0_ReKi
+   real(ReKi)                                   :: cl_circ, cd_tors
    TYPE(UA_ElementContinuousStateType)          :: x_in        ! Continuous states at t
    ! for BV
    real(ReKi)                                   :: alphaE_L, alphaE_D  ! effective angle of attack for lift and drag
@@ -3141,10 +3142,12 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          delta_c_df_primeprime = 0.5_ReKi * (sqrt(fs_aE) - sqrt(x4)) - 0.25_ReKi * (fs_aE - x4)                   ! Eq. 81
       
    ! bjj: do we need to check that u%alpha is between -pi and + pi?
-         y%Cl = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs  + pi * Tu * u%omega                                        ! Eq. 78
+         cl_circ = x4 * cl_fa  + (1.0_ReKi - x4) * cl_fs
+         y%Cl = cl_circ  + pi * Tu * u%omega                                        ! Eq. 78
 
          call AddOrSub2Pi(u%alpha, alphaE)
-         y%Cd = AFI_interp%Cd + (u%alpha - alphaE) * y%Cl + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime    ! Eq. 79
+         cd_tors = cl_circ * Tu  * u%omega
+         y%Cd = AFI_interp%Cd + (alpha_34 - alphaE) * cl_circ + (AFI_interp%Cd - BL_p%Cd0) * delta_c_df_primeprime  + cd_tors  ! Eq. 79
       
          if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
             y%Cm          = 0.0_ReKi
