@@ -289,18 +289,47 @@ program UnsteadyAero_Driver
    real(ReKi),             intent(in)           :: OmegaArr(:)
    integer                                      :: indx
    real(ReKi)                                   :: phase
+   real(ReKi)                                   :: d_ref2AC
+   real(ReKi)                                   :: alpha_ref
+   real(ReKi)                                   :: U_ref
+   real(ReKi)                                   :: v_ref(2)
+   real(ReKi)                                   :: v_34(2)
+   logical, parameter :: OscillationAtMidChord=.true.  ! for legacy, use false
+   logical, parameter :: VelocityAt34         =.true.  ! for legacy, use false
 
       u%UserProp = 0
       u%Re       = dvrInitInp%Re
    
       if ( dvrInitInp%SimMod == 1 ) then
+         if (OscillationAtMidChord) then
+            d_ref2AC =-0.25_ReKi  ! -0.25: oscillations at mid_chord
+         else
+            d_ref2AC = 0.0_ReKi   ! 0: oscillations at AC
+         endif
+         U_ref = dvrInitInp%InflowVel  ! m/s
+
          t       = (n-1)*dt
          phase = (n+dvrInitInp%Phase-1)*2*pi/dvrInitInp%StepsPerCycle
-         u%alpha = (dvrInitInp%Amplitude * sin(phase) + dvrInitInp%Mean)*D2R   ! This needs to be in radians
- !        u%omega =  dvrInitInp%Amplitude * cos(phase) * dvrInitInp%Frequency * pi**2 / 90.0   ! This needs to be in radians derivative: d_alpha /d_t
+         alpha_ref = (dvrInitInp%Amplitude * sin(phase) + dvrInitInp%Mean)*D2R   ! This needs to be in radians
+         v_ref(1) = sin(alpha_ref)*U_ref
+         v_ref(2) = cos(alpha_ref)*U_ref
          u%omega =  dvrInitInp%Amplitude * cos(phase) * 2*pi/dvrInitInp%StepsPerCycle / dt * D2R  ! This needs to be in radians derivative: d_alpha /d_t
-         
-         u%U     = dvrInitInp%InflowVel  ! m/s
+
+         u%v_ac(1) = v_ref(1) + u%omega * d_ref2AC* dvrInitInp%Chord
+         u%v_ac(2) = v_ref(2)
+
+         v_34(1) = u%v_ac(1) + u%omega * 0.5* dvrInitInp%Chord
+         v_34(2) = u%v_ac(2)
+
+
+         u%alpha = atan2(u%v_ac(1), u%v_ac(2) )  ! 
+         if (VelocityAt34) then
+            u%U =  sqrt(v_34(1)**2 + v_34(2)**2) ! Using U at 3/4
+         else
+            u%U =  sqrt(u%v_ac(1)**2 + u%v_ac(2)**2) ! Using U at 1/4
+         endif
+
+
       else
          indx = min(n,size(timeArr))
          indx = max(1, indx) ! use constant data at initialization
@@ -315,9 +344,9 @@ program UnsteadyAero_Driver
          elseif (n < 1) then
             t = (n-1)*dt
          end if
+         u%v_ac(1) = sin(u%alpha)*u%U
+         u%v_ac(2) = cos(u%alpha)*u%U
       end if
-      u%v_ac(1) = sin(u%alpha)*u%U
-      u%v_ac(2) = cos(u%alpha)*u%U
    
    end subroutine setUAinputs
    !----------------------------------------------------------------------------------------------------  
