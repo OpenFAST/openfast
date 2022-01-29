@@ -944,8 +944,9 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
    if( allocated(u%Vx_elast_dot)) then ! only for DBEMT_Mod=DBEMT_cont_tauConst
       do j = 1,p%numBlades
          do i = 1,p%numBladeNodes
-            u_DBEMT%element(i,j)%vind_s_dot(1)  =   axInduction( i,j)*u%Vx_elast_dot(i,j) - u%omega_z(i,j)*tanInduction(i,j)*u%Vy(i,j) ! Eq. 41
-            u_DBEMT%element(i,j)%vind_s_dot(2)  =  -tanInduction(i,j)*u%Vy_elast_dot(i,j) - u%omega_z(i,j)*axInduction( i,j)*u%Vx(i,j) ! Eq. 41
+            ! TODO temporarily turning off velocity
+            u_DBEMT%element(i,j)%vind_s_dot(1)  = 0 ! axInduction( i,j)*u%Vx_elast_dot(i,j) - u%omega_z(i,j)*tanInduction(i,j)*u%Vy(i,j) ! Eq. 41
+            u_DBEMT%element(i,j)%vind_s_dot(2)  = 0 !-tanInduction(i,j)*u%Vy_elast_dot(i,j) - u%omega_z(i,j)*axInduction( i,j)*u%Vx(i,j) ! Eq. 41
          end do
       end do
    end if

@@ -568,7 +568,7 @@ SUBROUTINE DBEMT_CalcContStateDeriv( i, j, t, u, p, x, OtherState, m, dxdt, ErrS
       return
    end if
 
-   tau1 = p%tau1_const
+   tau1 = p%tau1_const/2 ! TODO Temporarily changing tau 1
    !call ComputeTau1( u, p, m, tau1, errStat, errMsg)
    call ComputeTau2(i, j, u, p, tau1, tau2)
 
