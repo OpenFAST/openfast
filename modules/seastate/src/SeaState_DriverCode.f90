@@ -226,11 +226,7 @@ program SeaStateDriver
       call SeaSt_DvrCleanup()
    end if
 
-   ! Write Wave Kinematics File
-   call SeaStOut_WriteWvKinFiles( InitInData%OutRootName, version, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
-                                  p%Z_Depth, p%deltaGrid, p%NGrid, InitOutData%WaveElev1, InitOutData%WaveElev1, &
-                                    InitOutData%WaveTime, InitOutData%WaveVel, InitOutData%WaveAcc, InitOutData%WaveDynP, ErrStat, ErrMsg )
-
+   
    
    ! Nullify these pointers because they are no longer needed
    nullify(InitOutData%WaveDynP)   

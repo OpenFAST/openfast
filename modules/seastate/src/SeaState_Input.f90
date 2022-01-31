@@ -756,10 +756,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
          return
       end if
 
-      if ( (InputFileData%Waves%WaveMod == 6) .AND. (.NOT. EqualRealNos(InputFileData%Waves%WaveDT, Interval)) ) then
-         call SetErrStat( ErrID_Fatal,'WaveDT must equal the simulation DT value when WaveMod = 6.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
    else
 
       InputFileData%Waves%WaveDT = 0.0
@@ -967,23 +963,19 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
          InputFileData%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InputFileData%Waves%WvKinFile)
       end if
       InputFileData%Waves%WriteWvKin = .FALSE.
-   else !don't use this one
 
-#ifdef WRITE_WV_KIN
+   else
+
       if ( LEN_TRIM( InputFileData%Waves%WvKinFile ) == 0 )  then
          InputFileData%Waves%WriteWvKin = .FALSE.
       else
-         InputFileData%Waves%WriteWvKin = .TRUE.
          if ( PathIsRelative( InputFileData%Waves%WvKinFile ) ) then
-            call GetPath( TRIM(InputFileData%InputFile), TmpPath )
+            call GetPath( TRIM(InitInp%InputFile), TmpPath )
             InputFileData%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InputFileData%Waves%WvKinFile)
          end if
+         InputFileData%Waves%WriteWvKin = .TRUE.
       end if
 
-#else
-      InputFileData%Waves%WvKinFile = ""
-      InputFileData%Waves%WriteWvKin = .FALSE.
-#endif
    end if
 
 
@@ -1316,9 +1308,9 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
 
 !TODO: This is now set with the grid points? GJH 7/11/21
-
-      p%NGrid(1) = InputFileData%NX*2+1
-      p%NGrid(2) = InputFileData%NY*2+1
+      
+      p%NGrid(1) = InputFileData%NX*2-1
+      p%NGrid(2) = InputFileData%NY*2-1
       p%NGrid(3) = InputFileData%NZ
       p%NGridPts = p%NGrid(1) * p%NGrid(2) * p%NGrid(3)
       InputFileData%Waves%NGrid = p%NGrid
@@ -1366,8 +1358,8 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
       p%X_HalfWidth  = InputFileData%X_HalfWidth
       p%Y_HalfWidth  = InputFileData%Y_HalfWidth
       p%Z_Depth = InputFileData%Z_Depth
-      p%deltaGrid(1) = InputFileData%X_HalfWidth/(InputFileData%NX)
-      p%deltaGrid(2)= InputFileData%Y_HalfWidth/(InputFileData%NY)
+      p%deltaGrid(1) = InputFileData%X_HalfWidth/(InputFileData%NX-1)
+      p%deltaGrid(2)= InputFileData%Y_HalfWidth/(InputFileData%NY-1)
       p%deltaGrid(3) = PI / ( 2*(InputFileData%NZ-1) )
       count = 1
       do k = 0, p%NGrid(3) - 1
