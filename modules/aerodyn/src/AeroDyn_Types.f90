@@ -57,6 +57,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubOrientation      !< DCM reference orientation of hub [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootPosition      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: NacellePosition      !< X-Y-Z reference position of hub [m]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation      !< DCM reference orientation of nacelle [-]
     INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
   END TYPE RotInitInputType
@@ -455,6 +456,7 @@ IF (ALLOCATED(SrcRotInitInputTypeData%BladeRootOrientation)) THEN
   END IF
     DstRotInitInputTypeData%BladeRootOrientation = SrcRotInitInputTypeData%BladeRootOrientation
 ENDIF
+    DstRotInitInputTypeData%NacellePosition = SrcRotInitInputTypeData%NacellePosition
     DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
     DstRotInitInputTypeData%AeroProjMod = SrcRotInitInputTypeData%AeroProjMod
  END SUBROUTINE AD_CopyRotInitInputType
@@ -524,6 +526,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! BladeRootOrientation upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%BladeRootOrientation)  ! BladeRootOrientation
   END IF
+      Db_BufSz   = Db_BufSz   + SIZE(InData%NacellePosition)  ! NacellePosition
       Db_BufSz   = Db_BufSz   + SIZE(InData%NacelleOrientation)  ! NacelleOrientation
       Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -610,6 +613,10 @@ ENDIF
         END DO
       END DO
   END IF
+    DO i1 = LBOUND(InData%NacellePosition,1), UBOUND(InData%NacellePosition,1)
+      DbKiBuf(Db_Xferred) = InData%NacellePosition(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     DO i2 = LBOUND(InData%NacelleOrientation,2), UBOUND(InData%NacelleOrientation,2)
       DO i1 = LBOUND(InData%NacelleOrientation,1), UBOUND(InData%NacelleOrientation,1)
         DbKiBuf(Db_Xferred) = InData%NacelleOrientation(i1,i2)
@@ -719,6 +726,12 @@ ENDIF
         END DO
       END DO
   END IF
+    i1_l = LBOUND(OutData%NacellePosition,1)
+    i1_u = UBOUND(OutData%NacellePosition,1)
+    DO i1 = LBOUND(OutData%NacellePosition,1), UBOUND(OutData%NacellePosition,1)
+      OutData%NacellePosition(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%NacelleOrientation,1)
     i1_u = UBOUND(OutData%NacelleOrientation,1)
     i2_l = LBOUND(OutData%NacelleOrientation,2)

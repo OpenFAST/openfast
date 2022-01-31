@@ -1045,7 +1045,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
       if (errStat >= AbortErrLev) return
             
          ! set node initial position/orientation
-      position = InitInp%HubPosition
+      position = InitInp%NacellePosition
       position(1:2) = 0
       call MeshPositionNode(u%NacelleMotion, 1, position, errStat2, errMsg2, orient=InitInp%NacelleOrientation)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
