@@ -383,7 +383,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
       
       call WriteWvKinHeader( UnWv, iFile, Delim, SeaSt_Prog, waveDT, -z_gridPts(1), NGrid, deltaGrid )
    
-      DO m= 0,NStepWave
+      DO m= 0,NStepWave-1
          DO k = 1, NGrid(3)
             do j = 1, NGrid(2)
                do i = 1, NGrid(1)

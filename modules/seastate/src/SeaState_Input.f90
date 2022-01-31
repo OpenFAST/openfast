@@ -720,11 +720,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
          call SetErrStat( ErrID_Fatal,'WaveDT must be greater than zero.',ErrStat,ErrMsg,RoutineName)
          return
       end if
-      
-      if ( (InputFileData%Waves%WaveMod == 6) .AND. (.NOT. EqualRealNos(InputFileData%Waves%WaveDT, Interval)) ) then
-         call SetErrStat( ErrID_Fatal,'WaveDT must equal the simulation DT value when WaveMod = 6.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
+
    else
 
       InputFileData%Waves%WaveDT = 0.0
@@ -932,23 +928,16 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
          InputFileData%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InputFileData%Waves%WvKinFile)
       end if
       InputFileData%Waves%WriteWvKin = .FALSE.
-   else !don't use this one
-      
-#ifdef WRITE_WV_KIN
+   else
       if ( LEN_TRIM( InputFileData%Waves%WvKinFile ) == 0 )  then
          InputFileData%Waves%WriteWvKin = .FALSE.
       else
-         InputFileData%Waves%WriteWvKin = .TRUE.
          if ( PathIsRelative( InputFileData%Waves%WvKinFile ) ) then
-            call GetPath( TRIM(InputFileData%InputFile), TmpPath )
+            call GetPath( TRIM(InitInp%InputFile), TmpPath )
             InputFileData%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InputFileData%Waves%WvKinFile)
          end if
+         InputFileData%Waves%WriteWvKin = .TRUE.
       end if
-      
-#else
-      InputFileData%Waves%WvKinFile = ""
-      InputFileData%Waves%WriteWvKin = .FALSE.
-#endif
    end if
 
 
