@@ -320,22 +320,26 @@ SUBROUTINE SeaStOut_OpenSum( UnSum, SummaryName, SeaSt_Prog, ErrStat, ErrMsg )
 END SUBROUTINE SeaStOut_OpenSum 
 
 !====================================================================================================
-SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, NNodes, NWaveElev, nodeInWater, WaveElev, WaveKinzi, &
+SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_HalfWidth, Y_HalfWidth, &
+                                     Z_Depth, deltaGrid, NGrid, WaveElev1, WaveElev2, &
                                     WaveTime, WaveVel, WaveAcc, WaveDynP, ErrStat, ErrMsg )
-!TODO: Modifiy for writing grid instead of nodes
+
       ! Passed variables
    CHARACTER(*),                  INTENT( IN    )   :: Rootname             ! filename including full path, minus any file extension.
    TYPE(ProgDesc),                INTENT( IN    )   :: SeaSt_Prog           ! the name/version/date of the SeaState program
    INTEGER,                       INTENT( IN    )   :: NStepWave            ! Number of time steps for the wave kinematics arrays
-   INTEGER,                       INTENT( IN    )   :: NNodes               ! Number of simulation nodes for the wave kinematics arrays
-   INTEGER,                       INTENT( IN    )   :: NWaveElev            ! Number of locations where wave elevations were requested
-   INTEGER,                       INTENT( IN    )   :: nodeInWater(0:,: )     !
-   REAL(SiKi),                    INTENT( IN    )   :: WaveElev  (0:,: )     ! Instantaneous wave elevations at requested locations
-   REAL(SiKi),                    INTENT( IN    )   :: WaveKinzi(:    )     ! The z-location of all the nodes
-   REAL(SiKi),                    INTENT( IN    )   :: WaveTime (0:    )     ! The time values for the wave kinematics  (time)
-   REAL(SiKi),                    INTENT( IN    )   :: WaveVel (0:,:,:)     ! The wave velocities (time,node,component)
-   REAL(SiKi),                    INTENT( IN    )   :: WaveAcc (0:,:,:)     ! The wave accelerations (time,node,component)
-   REAL(SiKi),                    INTENT( IN    )   :: WaveDynP(0:,:)       ! The wave dynamic pressure (time,node)
+   real(DbKi),                    intent( in    )   :: WaveDT
+   real(ReKi),                    intent( in    )   :: X_HalfWidth
+   real(ReKi),                    intent( in    )   :: Y_HalfWidth
+   real(ReKi),                    intent( in    )   :: Z_Depth
+   real(ReKi),                    intent( in    )   :: deltaGrid(3)
+   INTEGER,                       INTENT( IN    )   :: NGrid(3)             ! Number of grid points for the wave kinematics arrays
+   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev1 (:,:,: )     ! Instantaneous wave elevations at requested locations - 1st order
+   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev2 (:,:,: )     ! Instantaneous wave elevations at requested locations - 2nd order
+   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveTime (:    )     ! The time values for the wave kinematics  (time)
+   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveVel (:,:,:,:,:)     ! The wave velocities (time,node,component)
+   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveAcc (:,:,:,:,:)     ! The wave accelerations (time,node,component)
+   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveDynP(:,:,:,:)       ! The wave dynamic pressure (time,node)
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
       
@@ -343,9 +347,10 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, NNodes, NW
    INTEGER                                    :: UnWv                       ! file unit for writing the various wave kinematics files
    CHARACTER(1024)                            :: WvName                     ! complete filename for one of the output files
    CHARACTER(5)                               :: extension(7)     
-   INTEGER                                    :: i, j, iFile
-   CHARACTER(64)                              :: Frmt, Sfrmt
+   INTEGER                                    :: i, j, k, m, iFile
+   CHARACTER(64)                              :: Frmt, Frmt2, Sfrmt
    CHARACTER(ChanLen)                         :: Delim
+   real(ReKi)                                 :: x_gridPts(NGrid(1)), y_gridPts(NGrid(2)), z_gridPts(NGrid(3))
       ! Initialize ErrStat      
    ErrStat = ErrID_None         
    ErrMsg  = ""       
@@ -353,54 +358,64 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, NNodes, NW
    extension  = (/'.Vxi ','.Vyi ','.Vzi ','.Axi ','.Ayi ','.Azi ','.DynP'/)
    Delim         = ''
    !Frmt = '('//TRIM(Int2LStr(NNodes))//'(:,A,ES11.4e2))'
-   Frmt  = '(:,A,ES11.4e2)'
-   Sfrmt = '(:,A,A11)'
+   Frmt  = '(A1,ES11.4e2)'
+   Sfrmt = '(A1,A11)'
    
+   ! Create grid point locations
+
+   do i = 0, NGrid(1)-1
+      x_gridPts(i+1) = -X_HalfWidth + deltaGrid(1)*i
+   end do
+   do i = 0, NGrid(2)-1
+      y_gridPts(i+1) = -Y_HalfWidth + deltaGrid(2)*i
+   end do
+   do i = 0, NGrid(3)-1
+      z_gridPts(i+1) =  - ( 1.0 - cos( real((NGrid(3) - 1) - i, ReKi) * deltaGrid(3) )  ) * Z_Depth
+   end do
    
-         
    DO iFile = 1,7
       
       CALL GetNewUnit( UnWv )
 
-      WvName = Rootname // TRIM(extension(iFile))
+      WvName = TRIM(Rootname) // TRIM(extension(iFile))
       CALL OpenFOutFile ( UnWv, WvName, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) RETURN
       
-      
-      
-            ! Write the summary file header    
-     ! WRITE (UnWv,'(/,A/)', IOSTAT=ErrStat)  'This wave kinematics file was generated by '//TRIM( HD_Prog%Name )//&
-      WRITE (UnWv,'(A)', IOSTAT=ErrStat)  'This wave kinematics file was generated by '//TRIM( SeaSt_Prog%Name )//&
-                        ' '//TRIM( SeaSt_Prog%Ver )//' on '//CurDate()//' at '//CurTime()//'.'
-        
-      
-      DO i= 0,NStepWave-1
-         DO j = 1, NNodes
-            IF ( nodeInWater(i,j) == 0 )  THEN
-               WRITE(UnWv,Sfrmt,ADVANCE='no')   Delim,  '##########'
-            ELSE
+      call WriteWvKinHeader( UnWv, iFile, Delim, SeaSt_Prog, waveDT, -z_gridPts(1), NGrid, deltaGrid )
+   
+      DO m= 0,NStepWave-1
+         DO k = 1, NGrid(3)
+            do j = 1, NGrid(2)
+               do i = 1, NGrid(1)
                   
-               SELECT CASE (iFile)
-                  CASE (1)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (i,j,1)  
-                  CASE (2)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (i,j,2)  
-                  CASE (3)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (i,j,3)  
-                  CASE (4)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (i,j,1)  
-                  CASE (5)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (i,j,2)  
-                  CASE (6)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (i,j,3)  
-                  CASE (7)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveDynP(i,j  )  
+            !IF ( nodeInWater(i,j) == 0 )  THEN
+            !   WRITE(UnWv,Sfrmt,ADVANCE='no')   Delim,  '##########'
+            !ELSE
+                  
+                  SELECT CASE (iFile)
+                     CASE (1)              
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,1)  
+                     CASE (2)              
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,2)  
+                     CASE (3)              
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,3)  
+                     CASE (4)              
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,1) 
+                     CASE (5)              
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,2) 
+                     CASE (6)              
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,3) 
+                     CASE (7)              
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveDynP(m,i,j,k  )  
                   END SELECT
-            END IF
-         END DO
-         WRITE (UnWv,'()', IOSTAT=ErrStat)          ! write the line return   
-      END DO
-      
+            !END IF
+               END DO  ! for i
+               WRITE (UnWv,'(A)', IOSTAT=ErrStat)   ' ! All X grid locations at Y = '//TRIM(num2lstr(y_gridPts(j)))// &
+                                                   ', Z = '//TRIM(num2lstr(z_gridPts(k)))// &
+                                                   ', WaveTime =  '//TRIM(num2lstr(waveDT*m))      ! write the line return   
+            END DO  ! for j
+         END DO  ! for k
+      END DO  ! for m
       CLOSE( UnWv, IOSTAT=ErrStat )
       IF (ErrStat /= 0) THEN
          ErrStat = ErrID_Fatal
@@ -409,36 +424,97 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, NNodes, NW
       END IF      
    END DO
    
-   IF ( NWaveElev > 0 ) THEN
+   ! WaveElevation Grid
    
-      CALL GetNewUnit( UnWv )
+   CALL GetNewUnit( UnWv )
 
-      WvName = Rootname // '.Elev'
-      CALL OpenFOutFile ( UnWv, WvName, ErrStat, ErrMsg ) 
-         IF (ErrStat >=AbortErrLev) RETURN
+   WvName = TRIM(Rootname) // '.Elev'
+   CALL OpenFOutFile ( UnWv, WvName, ErrStat, ErrMsg ) 
+      IF (ErrStat >=AbortErrLev) RETURN
       
       
+  call WriteWvKinHeader( UnWv, 8, Delim, SeaSt_Prog, waveDT, -z_gridPts(1), NGrid, deltaGrid )
+   
+   
+   DO m= 0,NStepWave-1
+      do j = 1, NGrid(2)
+         do i = 1, NGrid(1)   
+         !Frmt = '('//TRIM(Int2LStr(NWaveElev))//'(:,A,ES11.4e2))'
+         !WRITE(UnWv,Frmt)   ( Delim,  WaveElev(i,j)  , j=1,NWaveElev )
+            if ( associated(WaveElev2) ) then
+               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveElev1(m,i,j) + WaveElev2(m,i,j)
+            else
+               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveElev1(m,i,j)
+            end if
+         end do
+         WRITE (UnWv,'()', IOSTAT=ErrStat)          ! write the line return 
+      end do
+      
+   END DO
+      
+   CLOSE( UnWv, IOSTAT=ErrStat )
+   IF (ErrStat /= 0) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Problem closing wave elevations file'
+      RETURN
+   END IF     
+      
+   contains
+   
+   subroutine WriteWvKinHeader( UnWv, fileType, Delim, SeaSt_Prog, waveDT, Z_Depth, NGrid, deltaGrid )
+            ! Passed variables
+      INTEGER,                       INTENT( IN    )   :: UnWv
+      integer,                       intent( in    )   :: fileType
+      CHARACTER(ChanLen),            intent( in    )   :: Delim
+      TYPE(ProgDesc),                INTENT( IN    )   :: SeaSt_Prog           ! the name/version/date of the SeaState program
+      real(DbKi),                    intent( in    )   :: WaveDT
+      real(ReKi),                    intent( in    )   :: Z_Depth
+      real(ReKi),                    intent( in    )   :: deltaGrid(3)
+      INTEGER,                       INTENT( IN    )   :: NGrid(3)             ! Number of grid points for the wave kinematics arrays
+
+      integer(IntKi)               :: i
+      CHARACTER(64)                :: Frmt, Frmt2
       
             ! Write the summary file header    
+     ! WRITE (UnWv,'(/,A/)', IOSTAT=ErrStat)  'This wave kinematics file was generated by '//TRIM( HD_Prog%Name )//&
       WRITE (UnWv,'(A)', IOSTAT=ErrStat)  'This wave kinematics file was generated by '//TRIM( SeaSt_Prog%Name )//&
                         ' '//TRIM( SeaSt_Prog%Ver )//' on '//CurDate()//' at '//CurTime()//'.'
-        
-      
-      DO i= 0,NStepWave-1
-         
-         Frmt = '('//TRIM(Int2LStr(NWaveElev))//'(:,A,ES11.4e2))'
-         WRITE(UnWv,Frmt)   ( Delim,  WaveElev(i,j)  , j=1,NWaveElev )   
-         
-      END DO
-      
-      CLOSE( UnWv, IOSTAT=ErrStat )
-      IF (ErrStat /= 0) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Problem closing wave elevations file'
-         RETURN
-      END IF     
-      
-   END IF
+      SELECT CASE (fileType)
+         CASE (1)              
+            WRITE(UnWv, '(A)',  IOSTAT=ErrStat)   'Fluid Velocity along the X-direction (m/s)'
+         CASE (2)              
+            WRITE(UnWv, '(A)',  IOSTAT=ErrStat)   'Fluid Velocity along the Y-direction (m/s)'
+         CASE (3)              
+            WRITE(UnWv, '(A)',  IOSTAT=ErrStat)   'Fluid Velocity along the Z-direction (m/s)'
+         CASE (4)              
+            WRITE(UnWv, '(A)',  IOSTAT=ErrStat)   'Fluid Acceleration along the X-direction (m/s^2)'
+         CASE (5)              
+            WRITE(UnWv, '(A)',  IOSTAT=ErrStat)   'Fluid Acceleration along the Y-direction (m/s^2)'
+         CASE (6)              
+            WRITE(UnWv, '(A)',  IOSTAT=ErrStat)   'Fluid Acceleration along the Z-direction (m/s^2)'
+         CASE (7)              
+            WRITE(UnWv, '(A)',  IOSTAT=ErrStat)   'Fluid Dynamic Pressure (Pa)'
+         CASE (8)
+            WRITE(UnWv, '(A)',  IOSTAT=ErrStat)   'Wave Elevation (m)'
+      END SELECT
+      Frmt = '(A1,ES11.4e2,A)'
+      Frmt2 = '(A1,I11,A)'
+      write (UnWv,Frmt,  IOSTAT=ErrStat)  '!' ,  waveDT         , '  - WaveDT (s)'
+      write (UnWv,Frmt2,  IOSTAT=ErrStat)  '!' ,  NGrid(1)       , '  - Number of X grid points [NX*2 - 1]'
+      write (UnWv,Frmt2,  IOSTAT=ErrStat)  '!' ,  NGrid(2)       , '  - Number of Y grid points [NY*2 - 1]'
+      write (UnWv,Frmt2,  IOSTAT=ErrStat)  '!' ,  NGrid(3)       , '  - Number of Z grid points [NZ]'
+      write (UnWv,Frmt,  IOSTAT=ErrStat)  '!' ,  deltaGrid(1)   , '  - X grid spacing (m) [dX]'
+      write (UnWv,Frmt,  IOSTAT=ErrStat)  '!' ,  deltaGrid(2)   , '  - Y grid spacing (m) [dY]'
+      write (UnWv,Frmt,  IOSTAT=ErrStat)  '!' ,  Z_Depth        , '  - Lowest Z Depth (m) [Z_Depth]'
+      write (UnWv,Frmt,  IOSTAT=ErrStat)  '!' ,  deltaGrid(3)   , '  - Z grid spacing (radians) [dthetaZ, where Z coordinates are found using: Z[nZ] = ( COS( nZ*dthetaZ ) - 1 )*Z_Depth, where nZ = {NZ-1, NZ-2, ..., 1,0} and dthetaZ = pi/( 2*(NZ-1) ) and 0 < Z_Depth <= WtrDpth+MSL2SWL ]'
+
+      Frmt = '(A1,'//TRIM(Int2LStr(NGrid(1)))//'(A1,ES11.4e2),A)'
+      write(UnWv,Frmt)   '!', ( Delim,  x_gridPts(i)  , i=1,NGrid(1) ), ' - X-Locations (m)'
+      Frmt = '(A1,'//TRIM(Int2LStr(NGrid(2)))//'(A1,ES11.4e2),A)'
+      write(UnWv,Frmt)   '!', ( Delim,  y_gridPts(i)  , i=1,NGrid(2) ), ' - Y-Locations (m)'
+      Frmt = '(A1,'//TRIM(Int2LStr(NGrid(3)))//'(A1,ES11.4e2),A)'
+      write(UnWv,Frmt)   '!', ( Delim,  z_gridPts(i)  , i=1,NGrid(3) ), ' - Z-Locations (m)'
+   end subroutine WriteWvKinHeader
    
    
 END SUBROUTINE SeaStOut_WriteWvKinFiles 

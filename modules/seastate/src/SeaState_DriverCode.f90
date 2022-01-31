@@ -227,6 +227,7 @@ program SeaStateDriver
    end if
 
    
+   
    ! Nullify these pointers because they are no longer needed
    nullify(InitOutData%WaveDynP)   
    nullify(InitOutData%WaveAcc)    
@@ -244,7 +245,10 @@ program SeaStateDriver
    call SeaSt_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
 
-  
+   if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+      call SeaSt_DvrCleanup()
+   end if
       
   
    

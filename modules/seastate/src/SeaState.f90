@@ -1029,75 +1029,63 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 !===============================================
           
       IF ( InputFileData%UnSum > 0 ) THEN
-      versionStr = GetVersion(SeaSt_ProgDesc)
-      WRITE( InputFileData%UnSum, '(A/)') versionStr
-      Delim         = ' '
-         IF (InputFileData%Waves%WaveMod /= 0 .AND. InputFileData%Waves%WaveMod /= 6)  THEN
+         versionStr = GetVersion(SeaSt_ProgDesc)
+         WRITE( InputFileData%UnSum, '(A/)') versionStr
+         Delim         = ' '
+         IF (InputFileData%Waves%WaveMod /= 0 .and. InputFileData%Waves%WaveMod /= 6)  THEN
             
-             WRITE( InputFileData%UnSum, '(1X,A61,F8.2,A4/)' )   'The Mean Sea Level to Still Water Level (MSL2SWL) Offset is :',InitOut%MSL2SWL,' (m)'
-           !  WRITE( InputFileData%UnSum, '(1X,A/)' ) 'Note: The Water Depth and Z_Depth in this summary file are offset from the input file data by MSL2SWL' !, and Z coordinate(s) of the user-requested output location(s) 
-             WRITE( InputFileData%UnSum, '(1X,A15,F8.2,A8)' )  'Water Density: ', InitOut%WtrDens, '(kg/m^3)'
-             WRITE( InputFileData%UnSum, '(1X,A15,F8.2,A20,F8.2,A19)' )  'Water Depth  : ', p%WtrDpth - InitOut%MSL2SWL, '(m) relative to MSL; ', p%WtrDpth, '(m) relative to SWL'
-             WRITE( InputFileData%UnSum, '(1X,A15,F8.2,A20,F8.2,A19/)' ) 'Grid Z_Depth : ', InputFileData%Z_Depth - InitOut%MSL2SWL, '(m) relative to MSL; ', InputFileData%Z_Depth, '(m) relative to SWL'
-            Frmt  = '(1X,ES18.4e2,A,ES18.4e2,A,ES18.4e2,A,ES18.4e2)'
-            
-               ! Write Kinematics grid point locations 
-           ! WRITE( InputFileData%UnSum,  '(/)' )         
-            WRITE( InputFileData%UnSum, '(1X,A31/)' )   'Wave Kinematics Grid Points (m)'
-           ! WRITE( InputFileData%UnSum,  '(/)' ) 
-            WRITE( InputFileData%UnSum, '(1X,A78)' )   '            Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
-            do i= 1, p%NGridPts
-               ! NOTE: The Waves%WaveKinxi, yi, zi arrays hold all the grid point locations
-               WRITE(InputFileData%UnSum,Frmt)   InputFileData%Waves%WaveKinxi(i),Delim,  InputFileData%Waves%WaveKinyi(i),Delim,  InputFileData%Waves%WaveKinzi(i) + InitOut%MSL2SWL,Delim,  InputFileData%Waves%WaveKinzi(i)
+               WRITE( InputFileData%UnSum, '(1X,A61,F8.2,A4/)' )   'The Mean Sea Level to Still Water Level (MSL2SWL) Offset is :',InitOut%MSL2SWL,' (m)'
+               WRITE( InputFileData%UnSum, '(1X,A15,F8.2,A8)' )  'Water Density: ', InitOut%WtrDens, '(kg/m^3)'
+               WRITE( InputFileData%UnSum, '(1X,A15,F8.2,A20,F8.2,A19)' )  'Water Depth  : ', p%WtrDpth - InitOut%MSL2SWL, '(m) relative to MSL; ', p%WtrDpth, '(m) relative to SWL'
+               WRITE( InputFileData%UnSum, '(1X,A15,F8.2,A20,F8.2,A19/)' ) 'Grid Z_Depth : ', InputFileData%Z_Depth - InitOut%MSL2SWL, '(m) relative to MSL; ', InputFileData%Z_Depth, '(m) relative to SWL'
+         end if   
+         Frmt  = '(1X,ES18.4e2,A,ES18.4e2,A,ES18.4e2,A,ES18.4e2)'
+            ! Write Kinematics grid point locations 
+         WRITE( InputFileData%UnSum, '(1X,A31/)' )   'Wave Kinematics Grid Points (m)' 
+         WRITE( InputFileData%UnSum, '(1X,A78)' )   '            Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
+         do i= 1, p%NGridPts
+            ! NOTE: The Waves%WaveKinxi, yi, zi arrays hold all the grid point locations
+            WRITE(InputFileData%UnSum,Frmt)   InputFileData%Waves%WaveKinxi(i),Delim,  InputFileData%Waves%WaveKinyi(i),Delim,  InputFileData%Waves%WaveKinzi(i) + InitOut%MSL2SWL,Delim,  InputFileData%Waves%WaveKinzi(i)
+         end do
+ 
+         !   ! Write User-requested Wave Kinematics locations
+         WRITE( InputFileData%UnSum,  '(/)' ) 
+         if (p%NWaveKin > 0) then
+            WRITE( InputFileData%UnSum, '(1X,A51/)' )   'User-Requested Wave Kinematics Output Locations (m)'
+            !  WRITE( InputFileData%UnSum,  '(/)' ) 
+            WRITE( InputFileData%UnSum, '(2X,A84)' )   'Index                Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
+            Frmt  = '(1X,I5, 2X,ES18.4e2,A,ES18.4e2,A,ES18.4e2,A,ES18.4e2)'
+            do i= 1, p%NWaveKin
+               ! NOTE: The InputFileData%WaveKinxi, yi, zi arrays hold the User-request kinematics output locations
+               WRITE(InputFileData%UnSum,Frmt)   i, InputFileData%WaveKinxi(i),Delim,  InputFileData%WaveKinyi(i),Delim,  InputFileData%WaveKinzi(i) + InitOut%MSL2SWL,Delim,  InputFileData%WaveKinzi(i)
             end do
-           
-            !WRITE( InputFileData%UnSum, '(1X,A11)' )   'Y-locations'
-            !do i= 1, p%NGrid(2)
-            !   WRITE(InputFileData%UnSum,Frmt,ADVANCE='no')   Delim,  InputFileData%Waves%WaveKinyi(i)
-            !end do
-            !WRITE (InputFileData%UnSum,'()', IOSTAT=ErrStat)          ! write the line return   
-            !WRITE( InputFileData%UnSum, '(1X,A11)' )   'Z-locations'
-            !do i= 1, p%NGrid(3)
-            !   WRITE(InputFileData%UnSum,Frmt,ADVANCE='no')   Delim,  InputFileData%Waves%WaveKinzi(i)
-            !end do
-            !WRITE (InputFileData%UnSum,'()', IOSTAT=ErrStat)          ! write the line return   
-            !   ! Write User-requested Wave Kinematics locations
-            WRITE( InputFileData%UnSum,  '(/)' ) 
-            if (p%NWaveKin > 0) then
-               WRITE( InputFileData%UnSum, '(1X,A51/)' )   'User-Requested Wave Kinematics Output Locations (m)'
-             !  WRITE( InputFileData%UnSum,  '(/)' ) 
-               WRITE( InputFileData%UnSum, '(2X,A84)' )   'Index                Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
-               Frmt  = '(1X,I5, 2X,ES18.4e2,A,ES18.4e2,A,ES18.4e2,A,ES18.4e2)'
-               do i= 1, p%NWaveKin
-                  ! NOTE: The InputFileData%WaveKinxi, yi, zi arrays hold the User-request kinematics output locations
-                  WRITE(InputFileData%UnSum,Frmt)   i, InputFileData%WaveKinxi(i),Delim,  InputFileData%WaveKinyi(i),Delim,  InputFileData%WaveKinzi(i) + InitOut%MSL2SWL,Delim,  InputFileData%WaveKinzi(i)
-               end do
                
-            else
-               WRITE( InputFileData%UnSum, '(1X,A50)' )   'No User-Requested Wave Kinematics Output Channels'
-            end if
+         else
+            WRITE( InputFileData%UnSum, '(1X,A50)' )   'No User-Requested Wave Kinematics Output Channels'
+         end if
             
-               ! Write User-requested Wave Elevations
-            WRITE( InputFileData%UnSum,  '(/)' ) 
-            if (p%NWaveElev > 0) then
-               WRITE( InputFileData%UnSum, '(1X,A50/)' )   'User-Requested Wave Elevation Output Locations (m)'
-              ! WRITE( InputFileData%UnSum,  '(/)' ) 
-               WRITE( InputFileData%UnSum, '(2X,A25)' )   'Index     Xi           Yi'
-               Frmt  = '(1X,I5, 2X, ES11.4e2,A,ES11.4e2)'
-               do i= 1, p%NWaveElev
-                  WRITE(InputFileData%UnSum,Frmt)   i, InputFileData%WaveElevxi(i), Delim,  InputFileData%WaveElevyi(i)
-               end do
+            ! Write User-requested Wave Elevations
+         WRITE( InputFileData%UnSum,  '(/)' ) 
+         if (p%NWaveElev > 0) then
+            WRITE( InputFileData%UnSum, '(1X,A50/)' )   'User-Requested Wave Elevation Output Locations (m)'
+            ! WRITE( InputFileData%UnSum,  '(/)' ) 
+            WRITE( InputFileData%UnSum, '(2X,A25)' )   'Index     Xi           Yi'
+            Frmt  = '(1X,I5, 2X, ES11.4e2,A,ES11.4e2)'
+            do i= 1, p%NWaveElev
+               WRITE(InputFileData%UnSum,Frmt)   i, InputFileData%WaveElevxi(i), Delim,  InputFileData%WaveElevyi(i)
+            end do
                
-            else
-               WRITE( InputFileData%UnSum, '(1X,A50)' )   'No User-Requested Wave Elevation Output Channels'
-            end if
-            if (p%NumOuts > 0) then
-               WRITE( InputFileData%UnSum, '(//1X,A/)' )   'Requested Output Channels'
-               do i = 1, p%NumOuts
-                  WRITE( InputFileData%UnSum, '(4X,A)' ) InputFileData%OutList(i)
-               end do
-            end if
-            
+         else
+            WRITE( InputFileData%UnSum, '(1X,A50)' )   'No User-Requested Wave Elevation Output Channels'
+         end if
+         if (p%NumOuts > 0) then
+            WRITE( InputFileData%UnSum, '(//1X,A/)' )   'Requested Output Channels'
+            do i = 1, p%NumOuts
+               WRITE( InputFileData%UnSum, '(4X,A)' ) InputFileData%OutList(i)
+            end do
+         end if
+         
+         IF (InputFileData%Waves%WaveMod /= 6)  THEN   
                ! Write wave kinematics at (0,0)
             WRITE( InputFileData%UnSum,  '(/)' )         
             WRITE( InputFileData%UnSum, '(1X,A28/)' )   'Wave Kinematics DFT at (0,0)'
@@ -1140,11 +1128,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       END IF
       
 
-         
+      
      
          
       ! Setup the 4D grid information for the Interpolatin Module
-      SeaSt_Interp_InitInp%n        = (/p%NStepWave+1,p%nGrid(1),p%nGrid(2),p%nGrid(3)/)
+      SeaSt_Interp_InitInp%n        = (/p%NStepWave,p%nGrid(1),p%nGrid(2),p%nGrid(3)/)
       SeaSt_Interp_InitInp%delta    = (/real(p%WaveDT,ReKi),p%deltaGrid(1),p%deltaGrid(2),p%deltaGrid(3)/)
       SeaSt_Interp_InitInp%pZero(2) = -InputFileData%X_HalfWidth
       SeaSt_Interp_InitInp%pZero(3) = -InputFileData%Y_HalfWidth
@@ -1200,24 +1188,13 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       
       
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
+         ! Write Wave Kinematics?
+      if ( InputFileData%Waves%WriteWvKin ) then
+         call SeaStOut_WriteWvKinFiles( InputFileData%Waves%WvKinFile, SeaSt_ProgDesc, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
+            p%Z_Depth, p%deltaGrid, p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
+            InitOut%WaveTime, InitOut%WaveVel, InitOut%WaveAcc, InitOut%WaveDynP, ErrStat, ErrMsg )   
+      end if
+
          ! Destroy the local initialization data
       CALL CleanUp()
          

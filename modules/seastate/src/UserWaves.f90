@@ -680,13 +680,12 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    
    INTEGER                                    :: UnWv                       ! file unit for writing the various wave kinematics files
    CHARACTER(1024)                            :: FileName                     ! complete filename for one of the output files
-   INTEGER                      :: I                                               ! Generic index
-   INTEGER                      :: J                                               ! Generic index
+   INTEGER                      :: i, j, k, m, icount                                    ! Generic index
    INTEGER                      :: iFile                                               ! Generic index
    CHARACTER(64)                :: Frmt, Sfrmt
    CHARACTER(10)                :: Delim
-   CHARACTER(64), ALLOCATABLE     :: WaveDataStr(:,:)
-   REAL(SiKi), ALLOCATABLE       :: WaveData(:,:)
+   CHARACTER(64), ALLOCATABLE     :: WaveDataStr(:)
+   REAL(SiKi), ALLOCATABLE       :: WaveData(:)
   
       ! Temporary error handling variables
    INTEGER(IntKi)                :: ErrStatTmp                    ! Temporarary error status for procesing
@@ -721,25 +720,25 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    InitOut%NStepWave2 = InitOut%NStepWave/2
          
-   ALLOCATE ( WaveDataStr  (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDataStr.',  ErrStat,ErrMsg,RoutineName)
+   ALLOCATE ( WaveDataStr  ( InitInp%NGrid(1) ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDataStr.',  ErrStat,ErrMsg,RoutineName)
    
    ALLOCATE ( InitOut%nodeInWater  (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array outOfWaterFlag.',  ErrStat,ErrMsg,RoutineName)
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array outOfWaterFlag.',  ErrStat,ErrMsg,RoutineName)
    InitOut%nodeInWater = 1
    
-   ALLOCATE ( WaveData     (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveData.',  ErrStat,ErrMsg,RoutineName)
+   ALLOCATE ( WaveData     ( InitInp%NGrid(1) ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveData.',  ErrStat,ErrMsg,RoutineName)
    WaveData = 0.0_SiKi
    
    ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,RoutineName)
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( InitOut%WaveElev (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2) ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,RoutineName)
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,RoutineName)
    InitOut%WaveElev = 0.0_SiKi
    
-  ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)   ), STAT=ErrStatTmp )
+   ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'VariousWaves_Init')
 
    ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
@@ -748,65 +747,14 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-   
-   
       ! Now check if all the allocations worked properly
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
       RETURN
    END IF
 
-
-
-
    ! Read the first file and set the initial values of the 
-   
-   CALL GetNewUnit( UnWv )
-
-   FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(1))
-   
-   CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
-   IF ( ErrStat /= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Failed to open wave kinematics file, ' //  TRIM(FileName) 
-      RETURN
-   END IF
-
-   
-   
-   CALL ReadCom( UnWv, FileName, 'HydroDyn wave kinematics file header line 1', ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup() 
-         RETURN
-      END IF
-   
-   DO i = 0,InitOut%NStepWave-1
-      ! Extract fields from current line
-      IF (.not. ExtractFields(UnWv, WaveDataStr(i,:), InitInp%NWaveKin)) THEN
-          call Cleanup()
-          RETURN
-      END IF
-      DO j = 1, InitInp%NWaveKin
-            
-         isNumeric = is_numeric(WaveDataStr(i,j), WaveData(i,j))
-         IF (.NOT. isNumeric )THEN
-            InitOut%nodeInWater(i,j) = 0
-            WaveData(i,j)            = 0.0
-         ELSE              
-            InitOut%nodeInWater(i,j) = 1
-         END IF
-            
-              
-      END DO
-      
-   END DO
- !TODO: Rework onto grid  
- !  InitOut%WaveVel (:,:,1)  = WaveData(:,:)
-   
-   ! Now read the remaining files and check that the elements are consistent with the first file
-   DO iFile = 2,7
-      
+   DO iFile = 1,7
       CALL GetNewUnit( UnWv )
 
       FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(iFile))
@@ -818,67 +766,103 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          RETURN
       END IF
 
-   
-   
-      CALL ReadCom( UnWv, FileName, 'HydroDyn wave kinematics file header line 1', ErrStatTmp, ErrMsgTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup() 
-            RETURN
-         END IF
-     
-      DO i = 0,InitOut%NStepWave-1
-         ! Extract fields from current line
-         IF (.not. ExtractFields(UnWv, WaveDataStr(i,:), InitInp%NWaveKin)) THEN
-             call Cleanup()
-             RETURN
-         END IF
-         DO j = 1, InitInp%NWaveKin
-            isNumeric = is_numeric(WaveDataStr(i,j), WaveData(i,j))
-            IF ( ( isNumeric .AND. (InitOut%nodeInWater(i,j) == 0) ) .OR. ( .NOT. isNumeric .AND. ( InitOut%nodeInWater(i,j) == 1 ) ) ) THEN  
-                  ErrStatTmp = ErrID_Fatal
-                  ErrMsgTmp  = 'Element of wave kinematics file must be numerical or non-numerical across all files.  Problem was found in ' // TRIM(FileName) // ' on row ' // Num2LStr(i+1) // ' and column ' // Num2LStr(j)
-                  CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
-                  CALL CleanUp()
-                  RETURN
+      do i = 1, 13
+         CALL ReadCom( UnWv, FileName, 'HydroDyn wave kinematics file header line', ErrStatTmp, ErrMsgTmp )
+            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup() 
+               RETURN
             END IF
+      end do
+   
+      DO m = 0,InitOut%NStepWave-1
+         icount = 1
+         do k = 1, InitInp%NGrid(3)
+            do j = 1, InitInp%NGrid(2)
+               ! Extract fields from current line
+               IF (.not. ExtractFields(UnWv, WaveDataStr(:), InitInp%NGrid(1))) THEN
+                   call Cleanup()
+                   RETURN
+               END IF
+               DO i = 1, InitInp%NGrid(1)
             
-            IF (.NOT. isNumeric ) THEN
-               InitOut%nodeInWater(i,j) = 0
-               WaveData(i,j)            = 0.0
-            ELSE              
-               InitOut%nodeInWater(i,j) = 1
-            END IF
-         END DO
-      
-      END DO
-      SELECT CASE (iFile)
-      !TODO: Rework onto grid points
-         !CASE (1)              
-         !   InitOut%WaveVel (:,:,1)  = WaveData(:,:)
-         !CASE (2)             
-         !   InitOut%WaveVel (:,:,2)  = WaveData(:,:)
-         !CASE (3)             
-         !   InitOut%WaveVel (:,:,3)  = WaveData(:,:) 
-         !CASE (4)             
-         !   InitOut%WaveAcc (:,:,1)  = WaveData(:,:)
-         !CASE (5)             
-         !   InitOut%WaveAcc (:,:,2)  = WaveData(:,:)
-         !CASE (6)             
-         !   InitOut%WaveAcc (:,:,3)  = WaveData(:,:) 
-         !CASE (7)              
-         !   InitOut%WaveDynP         = WaveData
-      END SELECT
+                  isNumeric = is_numeric(WaveDataStr(i), WaveData(i))
+                  IF (.NOT. isNumeric ) THEN
+                     InitOut%nodeInWater(m,icount) = 0
+                     WaveData(i)            = 0.0
+                  ELSE              
+                     InitOut%nodeInWater(m,icount) = 1
+                  END IF
                   
-      CLOSE(UnWv)
-   END DO
-   
+                  SELECT CASE (iFile)
+                     CASE (1)              
+                        InitOut%WaveVel (m,i,j,k,1)  = WaveData(i)
+                     CASE (2)
+                        InitOut%WaveVel (m,i,j,k,2)  = WaveData(i)
+                     CASE (3)
+                        InitOut%WaveVel (m,i,j,k,3)  = WaveData(i)
+                     CASE (4)
+                        InitOut%WaveAcc (m,i,j,k,1)  = WaveData(i)
+                     CASE (5)
+                        InitOut%WaveAcc (m,i,j,k,2)  = WaveData(i)
+                     CASE (6)
+                        InitOut%WaveAcc (m,i,j,k,3)  = WaveData(i)
+                     CASE (7)              
+                        InitOut%WaveDynP(m,i,j,k  )  = WaveData(i)
+                  END SELECT
+                  icount = icount + 1
+               END DO
+            end do
+         end do
+      END DO
+   end do
+  
    ! WaveTime
    DO i = 0,InitOut%NStepWave
       InitOut%WaveTime(i) = i*InitInp%WaveDT
    END DO
    
    ! WaveElev
+   CALL GetNewUnit( UnWv )
+
+   FileName = TRIM(InitInp%WvKinFile) // '.Elev'
+   
+   CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Failed to open wave elevation file, ' //  TRIM(FileName) 
+      RETURN
+   END IF
+
+   do i = 1, 13
+      CALL ReadCom( UnWv, FileName, 'HydroDyn wave elevation file header line', ErrStatTmp, ErrMsgTmp )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup() 
+            RETURN
+         END IF
+   end do
+   
+   DO m = 0,InitOut%NStepWave-1
+      do j = 1, InitInp%NGrid(2)
+         ! Extract fields from current line
+         IF (.not. ExtractFields(UnWv, WaveDataStr(:), InitInp%NGrid(1))) THEN
+               call Cleanup()
+               RETURN
+         END IF
+         DO i = 1, InitInp%NGrid(1)
+            
+            isNumeric = is_numeric(WaveDataStr(i), WaveData(i))
+            IF (.NOT. isNumeric ) THEN
+               InitOut%WaveElev(m,i,j )  = 0.0
+            ELSE              
+               InitOut%WaveElev(m,i,j )  = WaveData(i)
+            END IF
+         END DO
+      end do
+  
+   END DO
+
 !TODO FIX for new grid of XY wave elevations
 !   IF ( InitInp%NWaveElev > 0 ) THEN
 !      CALL GetNewUnit( UnWv )

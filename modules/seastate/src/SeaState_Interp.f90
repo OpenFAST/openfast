@@ -293,7 +293,7 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
-   integer(IntKi)                                              :: i
+   integer(IntKi)                                              :: i, mult
    real(ReKi)                                                  :: Tmp
    
    ErrStat = ErrID_None
@@ -306,19 +306,16 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
       CALL SetErrStat(ErrID_Fatal,'Time value must be greater than or equal to zero!',ErrStat,ErrMsg,'SetTimeLoIndex') !error out if time is outside the lower bounds
       RETURN
    end if
-
-   Tmp =  Time / deltaT
-   Indx_Lo = INT( Tmp )     ! convert REAL to INTEGER
    
-   if (Indx_Lo >= (nMax-1)) then  ! Wrap the time series back to the beginning of the signal
-
-      ! NOTE: nMax is the total number of time values in the grid, since this is zero-based indexing, the max index is nMax-1
-      !       for example: in a time grid with 11 grid points, the indices run from 0,1,2,3,4,5,6,7,8,9,10
-      !                    for the repeating waves feature, index 10 is the same as index 0, so if Indx_Lo = 10 then we want to 
-      !                    wrap it back to index 0, if Indx_Lo = 11 we want to wrap back to index 1.
-      Indx_Lo = Indx_Lo - (nMax - 1)
-      Tmp = Tmp - real(nMax - 1, ReKi)
-   end if
+! NOTE: nMax is the total number of time values in the grid, since this is zero-based indexing, the max index is nMax-1
+!       for example: in a time grid with 11 grid points, the indices run from 0,1,2,3,4,5,6,7,8,9,10
+!                    for the repeating waves feature, index 10 is the same as index 0, so if Indx_Lo = 10 then we want to 
+!                    wrap it back to index 0, if Indx_Lo = 11 we want to wrap back to index 1.
+   
+   Tmp =  Time / deltaT
+   Tmp =  MOD(Tmp,real((nMax), DbKi))
+   Indx_Lo = INT( Tmp )     ! convert REAL to INTEGER
+ 
    isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo , ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
    
    !-------------------------------------------------------------------------------------------------
@@ -327,7 +324,7 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
    isopc = min( 1.0_SiKi, isopc )
    isopc = max(-1.0_SiKi, isopc )
    
-   Indx_Hi = min( Indx_Lo + 1, nMax - 1 )     ! make sure it's a valid index, zero-based
+   Indx_Hi = min( Indx_Lo + 1, nMax  )     ! make sure it's a valid index, zero-based
    
 end subroutine SetTimeIndex
    
