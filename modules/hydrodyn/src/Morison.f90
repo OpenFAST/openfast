@@ -3462,17 +3462,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
            END IF
 
-        END DO ! i =1,N+1    ! loop through member nodes       
+        END DO ! i = 1,N+1    ! loop through member nodes       
       
       END IF ! Check if the member is surface piercing
       !-----------------------------------------------------------------------------------------------------!
       !                                External Hydrodynamic Side Loads - End                               !
       !-----------------------------------------------------------------------------------------------------!
-      
-      
-      
+            
       !-----------------------------------------------------------------------------------------------------!
-      !                      Any end plate loads that are modeled on a per-member basis                     !
+      !             Any end plate loads that are modeled on a per-member basis: F_B and F_BF                !
       !-----------------------------------------------------------------------------------------------------!
       ! reassign convenience variables to correspond to member ends
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
@@ -3496,6 +3494,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          pos2(3) = pos2(3) - p%MSL2SWL
          call GetOrientationAngles( pos1, pos2, phi2, sinPhi2, cosPhi2, tanPhi, sinBeta2, cosBeta2, k_hat2, errStat2, errMsg2 )
       end if
+      
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
       pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
       pos2(3) = pos2(3) - p%MSL2SWL
@@ -3511,10 +3510,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          end if
       end if
 
-! TODO: Do the equations below still work if z1 > z2 ?
- !TODO, should not have to test seabed crossing in time-marching loop
-
-      
+      !TODO: Do the equations below still work if z1 > z2 ?
+      !TODO: Should not have to test seabed crossing in time-marching loop
       if ( mem%i_floor == 0 ) then   ! both ends are above seabed
          !--- Water ballast buoyancy ---
          ! if member is fully flooded
@@ -3604,79 +3601,83 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !   END DO  ! 
    !end do
  
-
    !---------------------------------------------------------------------------------------------------------------!
-   !                                       Hydrodynamic drag loads: joints                                         !
-   !---------------------------------------------------------------------------------------------------------------!
+   !                                     External Hydrodynamic Joint Loads - Start                                 !
+   !                                        F_D_End, F_I_End, F_A_End, F_IMG_End                                   !
+   !---------------------------------------------------------------------------------------------------------------!      
+   ! NOTE:  All wave kinematics have already been zeroed out above the SWL or instantaneous wave height (for WaveStMod > 0), 
+   ! so loads derived from the kinematics will be correct without the use of a nodeInWater value, but other loads need to be 
+   ! multiplied by nodeInWater to zero them out above the SWL or instantaneous wave height.
+   !TODO: Where's F_WMF_End computed?
       
-      ! NOTE:  All wave kinematics have already been zeroed out above the SWL or instantaneous wave height (for WaveStMod > 0), so loads derived from the kinematics will be correct
-      !        without the use of a nodeInWater value, but other loads need to be multiplied by nodeInWater to zero them out above the SWL or instantaneous wave height.
-      
-      DO J = 1, p%NJoints
-         
-            ! Obtain the node index because WaveVel, WaveAcc, and WaveDynP are defined in the node indexing scheme, not the markers
-
-         
-            ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
-         vmag =  m%nodeInWater(j) * ( m%vrel(1,j)*p%An_End(1,J) + m%vrel(2,j)*p%An_End(2,J) + m%vrel(3,j)*p%An_End(3,J) )
-         
-  !NOTE: The PropPot values are only for members, and when the p%AM_End, p%DP_Const_End, p%Mass_MG_End, and p%I_MG_End are computed at init,
-  !      contributions to these values are added only if the member connecting to the joint is NOT modeled with potential flow theory
-  !      However, the p%An_End term used data from ALL members attached to a node, regardless of the PropPot setting.
-         
-            ! Lumped added mass loads
-         qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
-         m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( p%AM_End(:,:,J) , ( - qdotdot(1:3)) )
-         
-         ! TODO: The original code did not multiply by nodeInWater, but should we? GJH
-         m%F_I_End(:,J) =   (p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j)))
-         
-         ! Marine growth inertia: ends: Section 4.2.2  
-         m%F_IMG_End(1:3,j) = -m%nodeInWater(j) * p%Mass_MG_End(j)*qdotdot(1:3)
-         m%F_IMG_End(4:6,j) = -m%nodeInWater(j) * (matmul(p%I_MG_End(:,:,j),qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(p%I_MG_End(:,:,j),u%Mesh%RotationVel(:,J))))
-         
-         DO I=1,6
-                        
-            ! We are now combining the dynamic pressure term into the inertia term
-            
-            
-            IF (I < 4 ) THEN
-              
-              
-               m%F_D_End(i,j) =  p%An_End(i,j)*p%DragConst_End(j)*abs(vmag)*vmag  ! Note: vmag is zero if node is not in the water
-               y%Mesh%Force(i,j)    = y%Mesh%Force(i,j)    + m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
-            ELSE
-               y%Mesh%Moment(i-3,j) = y%Mesh%Moment(i-3,j) + m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
-            END IF
-         END DO      ! I=1,6
-      ENDDO          ! J = 1, p%NJoints
+   DO J = 1, p%NJoints
      
-         ! OutSwtch determines whether or not to actually output results via the WriteOutput array
-         ! 1 = Morison will generate an output file of its own.  2 = the caller will handle the outputs, but
-         ! Morison needs to provide them.  3 = Both 1 and 2, 0 = No one needs the Morison outputs provided
-         ! via the WriteOutput array.
-         
-      IF ( p%OutSwtch > 0 ) THEN
-     
-            ! Map calculated results into the AllOuts Array
-         CALL MrsnOut_MapOutputs(Time, y, p, u, m, AllOuts, errStat, errMsg)
-               
-      
-            ! Put the output data in the WriteOutput array
-   
-         DO I = 1,p%NumOuts
-
-            y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      
-         END DO
-         
-         
-            ! Generate output into the output file
+      ! Obtain the node index because WaveVel, WaveAcc, and WaveDynP are defined in the node indexing scheme, not the markers (No longer relevant?)
+      ! The first NJoints nodes are all the joints with the rest being the internal nodes. See Morison_GenerateSimulationNodes.
             
-         IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
-            CALL MrsnOut_WriteOutputs( p%UnOutFile, Time, y, p, errStat, errMsg )         
+      ! NOTE: 
+      ! The PropPot values are only for members, and when the p%AM_End, p%DP_Const_End, p%Mass_MG_End, and p%I_MG_End are computed at init,
+      ! contributions to these values are added only if the member connecting to the joint is NOT modeled with potential flow theory
+      ! However, the p%An_End term used data from ALL members attached to a node, regardless of the PropPot setting, because the drag force is alway on.
+      ! Therefore, no need to check PropPot here.
+      
+      ! Effect of wave stretching already baked into m%FDynP, m%FA, and m%vrel. No additional modification needed.
+         
+      ! Lumped added mass loads
+      qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
+      m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( p%AM_End(:,:,J) , ( - qdotdot(1:3)) )
+         
+      ! TODO: The original code did not multiply by nodeInWater, but should we? GJH
+      ! Should be ok because m%FDynP and m%FA are both zeroed above the SWL (when WaveStMod=0) or the instantaneous free surface (when WaveStMod>0)
+      m%F_I_End(:,J) =   (p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j)))
+         
+      ! Marine growth inertia: ends: Section 4.2.2
+      ! With wave stretching, m%nodeInWater is based on the instantaneous free surface and the current body position if (WaveDisp/=0).
+      ! This should still be ok because with wave stretching, we do not allow joints to come out of water if initially submerged or 
+      ! enter water if initially out of water. This is enforced when computing the side loads above.
+      m%F_IMG_End(1:3,j) = -m%nodeInWater(j) * p%Mass_MG_End(j)*qdotdot(1:3)
+      m%F_IMG_End(4:6,j) = -m%nodeInWater(j) * (matmul(p%I_MG_End(:,:,j),qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(p%I_MG_End(:,:,j),u%Mesh%RotationVel(:,J))))
+
+      ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
+      ! m%nodeInWater(j) is probably not necessary because m%vrel is zeroed when the node is out of water
+      vmag =  m%nodeInWater(j) * ( m%vrel(1,j)*p%An_End(1,J) + m%vrel(2,j)*p%An_End(2,J) + m%vrel(3,j)*p%An_End(3,J) )
+         
+      ! Evaluate drag force and combine all per-joint loads
+      DO I=1,6
+         IF (I < 4 ) THEN ! Three force components
+            m%F_D_End(i,j)       = p%An_End(i,j) * p%DragConst_End(j) * abs(vmag)*vmag  ! Note: vmag is zero if node is not in the water
+            y%Mesh%Force(i,j)    = y%Mesh%Force(i,j)    + m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
+         ELSE ! Three moment components
+            y%Mesh%Moment(i-3,j) = y%Mesh%Moment(i-3,j) + m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
          END IF
+      END DO  ! I=1,6
+         
+   END DO  ! J = 1, p%NJoints
+   
+   !---------------------------------------------------------------------------------------------------------------!
+   !                                      External Hydrodynamic Joint Loads - End                                  !
+   !---------------------------------------------------------------------------------------------------------------!    
+        
+   ! OutSwtch determines whether or not to actually output results via the WriteOutput array
+   ! 1 = Morison will generate an output file of its own.  2 = the caller will handle the outputs, but
+   ! Morison needs to provide them.  3 = Both 1 and 2, 0 = No one needs the Morison outputs provided
+   ! via the WriteOutput array.
+   IF ( p%OutSwtch > 0 ) THEN
+     
+      ! Map calculated results into the AllOuts Array
+      CALL MrsnOut_MapOutputs(Time, y, p, u, m, AllOuts, errStat, errMsg)
+        
+      ! Put the output data in the WriteOutput array
+      DO I = 1,p%NumOuts
+         y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+      END DO
+
+      ! Generate output into the output file
+      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
+         CALL MrsnOut_WriteOutputs( p%UnOutFile, Time, y, p, errStat, errMsg )         
       END IF
+      
+   END IF
    
 END SUBROUTINE Morison_CalcOutput
 
