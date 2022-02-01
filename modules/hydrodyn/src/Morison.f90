@@ -2715,16 +2715,19 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
           m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
           m%vrel(:,j) = m%FV(:,j) - u%Mesh%TranslationVel(:,j)
+          m%nodeInWater(j) = 1_IntKi
         ELSE ! Node is above the SWL
           m%FV(:,j)  = 0.0
           m%FA(:,j)  = 0.0
           m%FDynP(j) = 0.0
           m%vrel(:,j) = 0.0  
+          m%nodeInWater(j) = 0_IntKi
         END IF
       
       ELSE ! Wave stretching enabled
       
         IF ( pos1(3) <= m%WaveElev(j)) THEN ! Node is submerged
+          m%nodeInWater(j) = 1_IntKi
           IF ( pos1(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
             ! Use location to obtain interpolated values of kinematics         
             call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
@@ -2752,7 +2755,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
           m%FV(:,j)  = 0.0
           m%FA(:,j)  = 0.0
           m%FDynP(j) = 0.0
-          m%vrel(:,j) = 0.0   
+          m%vrel(:,j) = 0.0 
+          m%nodeInWater(j) = 0_IntKi  
         END IF
 
       END IF
