@@ -1007,8 +1007,8 @@ SUBROUTINE SD_Compute_dY(p, y_p, y_m, delta, dY)
    INTEGER(IntKi) :: indx_first     ! index indicating next value of dY to be filled
    indx_first = 1
    call PackLoadMesh_dY(  y_p%Y1Mesh, y_m%Y1Mesh, dY, indx_first)
-   call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first) ! all 6 motion fields
-   call PackMotionMesh_dY(y_p%Y3Mesh, y_m%Y3Mesh, dY, indx_first) ! all 6 motion fields
+   call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first, UseLogMaps=.true.) ! all 6 motion fields
+   call PackMotionMesh_dY(y_p%Y3Mesh, y_m%Y3Mesh, dY, indx_first, UseLogMaps=.true.) ! all 6 motion fields
    do i=1,p%NumOuts
       dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
    end do

@@ -3176,22 +3176,25 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    END SUBROUTINE PackMotionMesh
 !...............................................................................................................................
 !> This subroutine computes the differences of two meshes and packs that value into appropriate locations in the dY array.
-   SUBROUTINE PackMotionMesh_dY(M_p, M_m, dY, indx_first, FieldMask)
+   SUBROUTINE PackMotionMesh_dY(M_p, M_m, dY, indx_first, FieldMask, UseLogMaps)
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M_p                        !< ED outputs on given mesh at \f$ u + \Delta u \f$ (p=plus)
       TYPE(MeshType)                    , INTENT(IN   ) :: M_m                        !< ED outputs on given mesh at \f$ u - \Delta u \f$ (m=minus)   
       REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ 
       INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into dY array; gives location of next array position to fill
       LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
+      LOGICAL, OPTIONAL                 , INTENT(IN   ) :: UseLogMaps                 !< flag to determine if the orientation should be packed as a DCM or a log map
    
          ! local variables:
       INTEGER(IntKi)                :: ErrStat2 ! we're ignoring the errors about small angles
       CHARACTER(ErrMsgLen)          :: ErrMsg2  
    
       INTEGER(IntKi)                :: i, indx_last
+      LOGICAL                       :: OutputLogMap
       REAL(R8Ki)                    :: lambda_m(3)
       REAL(R8Ki)                    :: lambda_p(3)
       REAL(R8Ki)                    :: smallAngles(3)
+      REAL(R8Ki)                    :: orientation(3,3)
       LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
 
       if (present(FieldMask)) then
@@ -3210,16 +3213,35 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       end if
    
       if (Mask(MASKID_ORIENTATION)) then
-         do i=1,M_p%NNodes
-            call DCM_logMap( M_m%Orientation(:,:,i), lambda_m, ErrStat2, ErrMsg2 )
-            call DCM_logMap( M_p%Orientation(:,:,i), lambda_p, ErrStat2, ErrMsg2 )
+         if (present(UseLogMaps)) then
+            OutputLogMap = UseLogMaps
+         else
+            OutputLogMap = .false.
+         end if
 
-            smallAngles = lambda_p - lambda_m
+         if (OutputLogMap) then
+            do i=1,M_p%NNodes
+               call DCM_logMap( M_m%Orientation(:,:,i), lambda_m, ErrStat2, ErrMsg2 )
+               call DCM_logMap( M_p%Orientation(:,:,i), lambda_p, ErrStat2, ErrMsg2 )
 
-            indx_last  = indx_first + 2 
-            dY(indx_first:indx_last) = smallAngles
-            indx_first = indx_last + 1
-         end do
+               smallAngles = lambda_p - lambda_m
+
+               indx_last  = indx_first + 2
+               dY(indx_first:indx_last) = smallAngles
+               indx_first = indx_last + 1
+            end do
+         else
+            do i=1,M_p%NNodes
+               orientation = transpose(M_m%Orientation(:,:,i))
+               orientation = matmul(orientation, M_p%Orientation(:,:,i))
+
+               smallAngles = GetSmllRotAngs( orientation, ErrStat2, ErrMsg2 )
+
+               indx_last  = indx_first + 2
+               dY(indx_first:indx_last) = smallAngles
+               indx_first = indx_last + 1
+            end do
+         endif
       end if
       
       if (Mask(MASKID_TRANSLATIONVEL)) then

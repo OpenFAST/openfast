@@ -6417,7 +6417,7 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
                   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
                call BD_GetOP( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
-                           BD%y_interp(k), BD%m(k), ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_y, NeedLogMap=.true.)
+                           BD%y_interp(k), BD%m(k), ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_y, NeedLogMap=.false.)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             END DO ! k=p_FAST%nBeams
          
