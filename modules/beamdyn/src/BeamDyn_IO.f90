@@ -2467,13 +2467,8 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    
 
    ! local variables
-   integer(intKi)                                      :: ErrStat2
-   character(ErrMsgLen)                                :: ErrMsg2
-   
    INTEGER                                             :: fieldIndx
    INTEGER                                             :: node
-   REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
       
    fieldIndx = p%Jac_u_indx(n,2)
    node      = p%Jac_u_indx(n,3)
@@ -2486,11 +2481,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%RootMotion%TranslationDisp = 1;
       u%RootMotion%TranslationDisp( fieldIndx,node) = u%RootMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%RootMotion%Orientation = 2;
-      !CALL PerturbOrientationMatrix( u%RootMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
-      angles = 0.0_R8Ki
-      angles(fieldIndx) = du * perturb_sign
-      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
-      u%RootMotion%Orientation(:,:,node) = matmul(u%RootMotion%Orientation(:,:,node), orientation)
+      CALL PerturbOrientationMatrix( u%RootMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )   ! NOTE: call not using DCM_logmap
    CASE ( 3) !Module/Mesh/Field: u%RootMotion%TranslationVel = 3;
       u%RootMotion%TranslationVel( fieldIndx,node) = u%RootMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4) !Module/Mesh/Field: u%RootMotion%RotationVel = 4;
@@ -2559,9 +2550,6 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
    character(ErrMsgLen)                                :: ErrMsg2
    
    REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: oldRotation(3,3)
-   REAL(R8Ki)                                          :: newRotation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
    REAL(R8Ki)                                          :: rotation(3,3)
    
    dx = p%dx(dof)
@@ -2570,25 +2558,13 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
       if (dof < 4) then ! translational displacement
          x%q( dof, node ) = x%q( dof, node ) + dx * perturb_sign
       else ! w-m parameters
-         !call BD_CrvMatrixR( x%q( 4:6, node ), rotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
-         !orientation = transpose(rotation)
-         !
-         !CALL PerturbOrientationMatrix( orientation, dx * perturb_sign, dof-3 )
-         !
-         !rotation = transpose(orientation)
-         !call BD_CrvExtractCrv( rotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
-         !
-         ! 
-         angles = 0.0_R8Ki
-         angles(dof-3) = dx * perturb_sign
-         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         call BD_CrvMatrixR( x%q( 4:6, node ), rotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
+         orientation = transpose(rotation)
          
-         call BD_CrvMatrixR( x%q( 4:6, node ), oldRotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
+         CALL PerturbOrientationMatrix( orientation, dx * perturb_sign, dof-3 )   ! NOTE: call not using DCM_logmap
          
-         !newRotation = transpose( matmul(transpose(oldRotation), orientation) )
-         newRotation = matmul( transpose(orientation), oldRotation)
-         call BD_CrvExtractCrv( newRotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
-         
+         rotation = transpose(orientation)
+         call BD_CrvExtractCrv( rotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
       end if
    else
       x%dqdt( dof, node ) = x%dqdt( dof, node ) + dx * perturb_sign

@@ -978,7 +978,7 @@ SUBROUTINE SD_Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%TPMesh%TranslationDisp = 1;
       u%TPMesh%TranslationDisp( fieldIndx,node) = u%TPMesh%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%TPMesh%Orientation = 2;
-      CALL PerturbOrientationMatrix( u%TPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      CALL PerturbOrientationMatrix( u%TPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseLogMaps=.true. )
    CASE ( 3) !Module/Mesh/Field: u%TPMesh%TranslationVel = 3;
       u%TPMesh%TranslationVel( fieldIndx,node) = u%TPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4) !Module/Mesh/Field: u%TPMesh%RotationVel = 4;

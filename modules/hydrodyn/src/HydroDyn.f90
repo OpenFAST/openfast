@@ -3450,7 +3450,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
          CASE ( 1) !Module/Mesh/Field: u%Morison%Mesh%TranslationDisp = 1      
             u%Morison%Mesh%TranslationDisp (fieldIndx,node) = u%Morison%Mesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
          CASE ( 2) !Module/Mesh/Field: u%Morison%Mesh%Orientation = 2
-            CALL PerturbOrientationMatrix( u%Morison%Mesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CALL PerturbOrientationMatrix( u%Morison%Mesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseLogMaps=.true. )
          CASE ( 3) !Module/Mesh/Field: u%Morison%Mesh%TranslationVel = 3
             u%Morison%Mesh%TranslationVel( fieldIndx,node) = u%Morison%Mesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
          CASE ( 4) !Module/Mesh/Field: u%Morison%Mesh%RotationVel = 4
@@ -3465,7 +3465,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
             CASE ( 7) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 7     
                u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
             CASE ( 8) !Module/Mesh/Field: u%WAMITMesh%Orientation = 8
-               CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+               CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseLogMaps=.true. )
             CASE ( 9) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 9
                u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
             CASE (10) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 10
@@ -3479,7 +3479,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
             CASE (13) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 13    
                u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
             CASE (14) !Module/Mesh/Field: u%PRPMesh%Orientation = 14
-               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseLogMaps=.true. )
             CASE (15) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 15
                u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
             CASE (16) !Module/Mesh/Field: u%PRPMesh%RotationVel = 16
@@ -3494,7 +3494,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
             CASE ( 7) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 7     
                u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
             CASE ( 8) !Module/Mesh/Field: u%PRPMesh%Orientation = 8
-               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+               CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseLogMaps=.true. )
             CASE ( 9) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 9
                u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
             CASE (10) !Module/Mesh/Field: u%PRPMesh%RotationVel = 10
@@ -3510,7 +3510,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
          CASE (1) !Module/Mesh/Field: u%WAMITMesh%TranslationDisp = 1     
             u%WAMITMesh%TranslationDisp (fieldIndx,node) = u%WAMITMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
          CASE (2) !Module/Mesh/Field: u%WAMITMesh%Orientation = 2
-            CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CALL PerturbOrientationMatrix( u%WAMITMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseLogMaps=.true. )
          CASE (3) !Module/Mesh/Field: u%WAMITMesh%TranslationVel = 3
             u%WAMITMesh%TranslationVel( fieldIndx,node) = u%WAMITMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
          CASE (4) !Module/Mesh/Field: u%WAMITMesh%RotationVel = 4
@@ -3524,7 +3524,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
          CASE ( 7) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 7     
             u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
          CASE ( 8) !Module/Mesh/Field: u%PRPMesh%Orientation = 8
-            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseLogMaps=.true. )
          CASE ( 9) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 9
             u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
          CASE (10) !Module/Mesh/Field: u%PRPMesh%RotationVel = 10
@@ -3539,7 +3539,7 @@ SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
          CASE ( 1) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 1     
             u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
          CASE ( 2) !Module/Mesh/Field: u%PRPMesh%Orientation = 2
-            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+            CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseLogMaps=.true. )
          CASE ( 3) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 3
             u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
          CASE ( 4) !Module/Mesh/Field: u%PRPMesh%RotationVel = 4
