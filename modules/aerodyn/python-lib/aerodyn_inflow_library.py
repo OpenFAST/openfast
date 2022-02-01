@@ -186,14 +186,14 @@ class AeroDynInflowLib(CDLL):
         ]
         self.AeroDyn_Inflow_C_Init.restype = c_int 
 
-        self.AeroDyn_Inflow_C_ReInit.argtypes = [
-            POINTER(c_double),                  # t_initial 
-            POINTER(c_double),                  # dt
-            POINTER(c_double),                  # tmax 
-            POINTER(c_int),                     # ErrStat_C
-            POINTER(c_char)                     # ErrMsg_C
-        ]
-        self.AeroDyn_Inflow_C_ReInit.restype = c_int 
+        #self.AeroDyn_Inflow_C_ReInit.argtypes = [
+        #    POINTER(c_double),                  # t_initial 
+        #    POINTER(c_double),                  # dt
+        #    POINTER(c_double),                  # tmax 
+        #    POINTER(c_int),                     # ErrStat_C
+        #    POINTER(c_char)                     # ErrMsg_C
+        #]
+        #self.AeroDyn_Inflow_C_ReInit.restype = c_int 
 
         self.AeroDyn_Inflow_C_CalcOutput.argtypes = [
             POINTER(c_double),                  # Time_C
@@ -316,22 +316,21 @@ class AeroDynInflowLib(CDLL):
         self.numChannels = self._numChannels_c.value
 
 
-    # aerodyn_inflow_reinit ------------------------------------------------------------------------------------------------------------
-    def aerodyn_inflow_Reinit(self):
-        #FIXME: need to pass something in here I think.  Not sure what.
-
-        # call AeroDyn_Inflow_C_Init
-        self.AeroDyn_Inflow_C_Init(
-            byref(c_double(self.t_start)),          # IN: time initial 
-            byref(c_double(self.dt)),               # IN: time step (dt)
-            byref(c_double(self.tmax)),             # IN: tmax
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-        )
-
-        self.check_error()
-
-        #FIXME: anything coming out that needs handling/passing?
+    ## aerodyn_inflow_reinit ------------------------------------------------------------------------------------------------------------
+    #def aerodyn_inflow_reinit(self):
+    #    #FIXME: need to pass something in here I think.  Not sure what.
+    #
+    #    # call AeroDyn_Inflow_C_ReInit
+    #    self.AeroDyn_Inflow_C_ReInit(
+    #        byref(c_double(self.t_start)),          # IN: time initial 
+    #        byref(c_double(self.dt)),               # IN: time step (dt)
+    #        byref(c_double(self.tmax)),             # IN: tmax
+    #        byref(self.error_status_c),             # OUT: ErrStat_C
+    #        self.error_message_c                    # OUT: ErrMsg_C
+    #    )
+    #
+    #    self.check_error()
+    #    #FIXME: anything coming out that needs handling/passing?
 
 
     # aerodyn_inflow_calcOutput ------------------------------------------------------------------------------------------------------------

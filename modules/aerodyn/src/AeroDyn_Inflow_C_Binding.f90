@@ -27,7 +27,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    IMPLICIT NONE
 
    PUBLIC :: AeroDyn_Inflow_C_Init
-   PUBLIC :: AeroDyn_Inflow_C_ReInit
+   !PUBLIC :: AeroDyn_Inflow_C_ReInit
    PUBLIC :: AeroDyn_Inflow_C_CalcOutput
    PUBLIC :: AeroDyn_Inflow_C_UpdateStates
    PUBLIC :: AeroDyn_Inflow_C_End
@@ -841,59 +841,52 @@ CONTAINS
 END SUBROUTINE AeroDyn_Inflow_C_Init
 
 
-!===============================================================================================================
-!--------------------------------------------- AeroDyn Init----------------------------------------------------
-!===============================================================================================================
-SUBROUTINE AeroDyn_Inflow_C_ReInit( T_initial_C, DT_C, TMax_C,                     &
-               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_ReInit')
-   implicit none
-#ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_ReInit
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_ReInit
-#endif
-
-   real(c_double),            intent(in   )  :: T_initial_C
-   real(c_double),            intent(in   )  :: DT_C              !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
-   real(c_double),            intent(in   )  :: TMax_C            !< Maximum time for simulation (used to set arrays for wave kinematics)
-   integer(c_int),            intent(  out)  :: ErrStat_C                              !< Error status
-   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)                  !< Error message (C_NULL_CHAR terminated)
-
-   integer(IntKi)                            :: ErrStat           !< aggregated error message
-   character(ErrMsgLen)                      :: ErrMsg            !< aggregated error message
-   integer(IntKi)                            :: ErrStat2          !< temporary error status  from a call
-   character(ErrMsgLen)                      :: ErrMsg2           !< temporary error message from a call
-   character(*), parameter                   :: RoutineName = 'AeroDyn_Inflow_C_ReInit'  !< for error handling
-
-   ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
-
-!FIXME: some stuff must get set, so do that here.  Check what is done in the driver.
-
-   call ADI_ReInit(p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), m, dT_Global, errStat2, errMsg2)
-      if (Failed())  return
-
-!FIXME: do I need to deal with setting the other states??? (STATE_PREV etc)???
-
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-
-CONTAINS
-   logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed) then
-!         call FailCleanup()
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-      endif
-   end function Failed
-
-!   subroutine FailCleanup()
-!      if (allocated(tmpBldPtMeshPos))    deallocate(tmpBldPtMeshPos)
-!      if (allocated(tmpBldPtMeshVel))    deallocate(tmpBldPtMeshVel)
-!      if (allocated(tmpBldPtMeshFrc))    deallocate(tmpBldPtMeshFrc)
-!   end subroutine FailCleanup
-
-END SUBROUTINE AeroDyn_Inflow_C_ReInit
+!!===============================================================================================================
+!!--------------------------------------------- AeroDyn Init----------------------------------------------------
+!!===============================================================================================================
+!!TODO: finish this routine so it is usable
+!SUBROUTINE AeroDyn_Inflow_C_ReInit( T_initial_C, DT_C, TMax_C,                     &
+!               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_ReInit')
+!   implicit none
+!#ifndef IMPLICIT_DLLEXPORT
+!!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_ReInit
+!!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_ReInit
+!#endif
+!
+!   real(c_double),            intent(in   )  :: T_initial_C
+!   real(c_double),            intent(in   )  :: DT_C              !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
+!   real(c_double),            intent(in   )  :: TMax_C            !< Maximum time for simulation (used to set arrays for wave kinematics)
+!   integer(c_int),            intent(  out)  :: ErrStat_C                              !< Error status
+!   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)                  !< Error message (C_NULL_CHAR terminated)
+!
+!   integer(IntKi)                            :: ErrStat           !< aggregated error message
+!   character(ErrMsgLen)                      :: ErrMsg            !< aggregated error message
+!   integer(IntKi)                            :: ErrStat2          !< temporary error status  from a call
+!   character(ErrMsgLen)                      :: ErrMsg2           !< temporary error message from a call
+!   character(*), parameter                   :: RoutineName = 'AeroDyn_Inflow_C_ReInit'  !< for error handling
+!
+!   ! Initialize error handling
+!   ErrStat  =  ErrID_None
+!   ErrMsg   =  ""
+!
+!ErrStat  =  ErrID_Fatal
+!ErrMsg   =  "AeroDyn_Inflo_C_ReInit is not currently functional. Aborting."
+!call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+!
+!   call ADI_ReInit(p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), m, dT_Global, errStat2, errMsg2)
+!      if (Failed())  return
+!
+!   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+!
+!CONTAINS
+!   logical function Failed()
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!      Failed = ErrStat >= AbortErrLev
+!      if (Failed) then
+!         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+!      endif
+!   end function Failed
+!END SUBROUTINE AeroDyn_Inflow_C_ReInit
 
 
 !===============================================================================================================
