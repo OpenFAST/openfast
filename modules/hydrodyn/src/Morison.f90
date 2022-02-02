@@ -2350,11 +2350,13 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    p%AM_End        = 0.0
    
 
-   p%WaveVel  => InitInp%WaveVel      
-   p%WaveAcc  => InitInp%WaveAcc
-   p%WaveDynP => InitInp%WaveDynP    
-   p%WaveTime => InitInp%WaveTime   
-   
+   p%WaveVel    => InitInp%WaveVel      
+   p%WaveAcc    => InitInp%WaveAcc
+   p%WaveDynP   => InitInp%WaveDynP    
+   p%WaveTime   => InitInp%WaveTime   
+   p%PWaveVel0  => InitInp%PWaveVel0      
+   p%PWaveAcc0  => InitInp%PWaveAcc0
+   p%PWaveDynP0 => InitInp%PWaveDynP0  
    
 END SUBROUTINE AllocateNodeLoadVariables
 
@@ -2409,6 +2411,9 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       nullify(p%WaveDynP)
       nullify(p%WaveAcc)
       nullify(p%WaveVel)
+      nullify(p%PWaveDynP0)
+      nullify(p%PWaveAcc0)
+      nullify(p%PWaveVel0)
       nullify(p%WaveElev1)
       nullify(p%WaveElev2)
       CALL Morison_DestroyParam( p, errStat, errMsg )
@@ -2757,9 +2762,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                         m%FDynP(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
                       ELSE IF (p%WaveStMod == 2) THEN ! Extrapoled wave stretching
-              
-              
-              
+                        m%FV(:,j) = SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveVel0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        m%FA(:,j) = SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAcc0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        m%FDynP(j) = SeaSt_Interp_3D( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
                       END IF
           
                   END IF ! Node is submerged
@@ -3298,9 +3306,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                 FDynPFSInt = SeaSt_Interp_3D( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
               ELSE IF (p%WaveStMod == 2) THEN ! Extrapolated wave stretching
-                
-                
-                
+                FVFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveVel0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                FAFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAcc0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                FDynPFSInt = SeaSt_Interp_3D( Time, FSInt(1:2), p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
               END IF
            END IF
         ELSE ! Wheeler stretching

@@ -259,6 +259,9 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     WaveTime                         {*}        -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveVel                    {*}{*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*}     -        -         ""    -
+typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                      SeaSt_Interp_ParameterType      SeaSt_Interp_p                   -          -        -  "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
@@ -351,6 +354,9 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     WaveAcc0                      {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveDynP0                     {*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveTime                      {*}        -         -         "Times for which the wave kinematics are pre-computed"  s
+typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             INTEGER                  nodeInWater                   {:}{:}     -        -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NMOutputs                       -          -         -         ""        -

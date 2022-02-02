@@ -665,13 +665,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    COMPLEX(SiKi), PARAMETER     :: ImagNmbr = (0.0,1.0)                            ! The imaginary number, SQRT(-1.0)
    COMPLEX(SiKi)                :: ImagOmega                                       ! = ImagNmbr*Omega (rad/s)
  !  REAL(SiKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the platform reference point (meters)
-   !COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HxiPz0 (:,:)                            ! Partial derivative of WaveAccC0Hxi(:) with respect to zi at zi = 0 (1/s^2)
-   !COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HyiPz0 (:,:)                            ! Partial derivative of WaveAccC0Hyi(:) with respect to zi at zi = 0 (1/s^2)
-   !COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0VPz0 (:,:)                              ! Partial derivative of WaveAccC0V  (:) with respect to zi at zi = 0 (1/s^2)
-   !COMPLEX(SiKi), ALLOCATABLE   :: PWaveDynPC0BPz0(:,:)                              ! Partial derivative of WaveDynPC0B (:) with respect to zi at zi = 0 (N/m  )
-   !COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0HxiPz0 (:,:)                            ! Partial derivative of WaveVelC0Hxi(:) with respect to zi at zi = 0 (1/s  )
-   !COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0HyiPz0 (:,:)                            ! Partial derivative of WaveVelC0Hyi(:) with respect to zi at zi = 0 (1/s  )
-   !COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0VPz0 (:,:)                              ! Partial derivative of WaveVelC0V  (:) with respect to zi at zi = 0 (1/s  )
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HxiPz0 (:,:)                            ! Partial derivative of WaveAccC0Hxi(:) with respect to zi at zi = 0 (1/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HyiPz0 (:,:)                            ! Partial derivative of WaveAccC0Hyi(:) with respect to zi at zi = 0 (1/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0VPz0 (:,:)                              ! Partial derivative of WaveAccC0V  (:) with respect to zi at zi = 0 (1/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveDynPC0BPz0(:,:)                              ! Partial derivative of WaveDynPC0B (:) with respect to zi at zi = 0 (N/m  )
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0HxiPz0 (:,:)                            ! Partial derivative of WaveVelC0Hxi(:) with respect to zi at zi = 0 (1/s  )
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0HyiPz0 (:,:)                            ! Partial derivative of WaveVelC0Hyi(:) with respect to zi at zi = 0 (1/s  )
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0VPz0 (:,:)                              ! Partial derivative of WaveVelC0V  (:) with respect to zi at zi = 0 (1/s  )
    COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0Hxi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
    COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
    COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
@@ -698,13 +698,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 !UNUSED:   !REAL(SiKi)                   :: OmegaCutOff                                     ! Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s)
 !UNUSED:   !   REAL(SiKi)                   :: PCurrVxiPz0                                     ! Partial derivative of CurrVxi        with respect to zi at zi = 0 (1/s  )
 !UNUSED:   !   REAL(SiKi)                   :: PCurrVyiPz0                                     ! Partial derivative of CurrVyi        with respect to zi at zi = 0 (1/s  )
-   !REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HxiPz0(:,:)                              ! Partial derivative of WaveAcc0Hxi(:) with respect to zi at zi = 0 (1/s^2)
-   !REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HyiPz0(:,:)                              ! Partial derivative of WaveAcc0Hyi(:) with respect to zi at zi = 0 (1/s^2)
-   !REAL(SiKi), ALLOCATABLE      :: PWaveAcc0VPz0  (:,:)                              ! Partial derivative of WaveAcc0V  (:) with respect to zi at zi = 0 (1/s^2)
-   !REAL(SiKi), ALLOCATABLE      :: PWaveDynP0BPz0 (:,:)                              ! Partial derivative of WaveDynP0B (:) with respect to zi at zi = 0 (N/m  )
-   !REAL(SiKi), ALLOCATABLE      :: PWaveVel0HxiPz0(:,:)                              ! Partial derivative of WaveVel0Hxi(:) with respect to zi at zi = 0 (1/s  )
-   !REAL(SiKi), ALLOCATABLE      :: PWaveVel0HyiPz0(:,:)                              ! Partial derivative of WaveVel0Hyi(:) with respect to zi at zi = 0 (1/s  )
-   !REAL(SiKi), ALLOCATABLE      :: PWaveVel0VPz0  (:,:)                              ! Partial derivative of WaveVel0V  (:) with respect to zi at zi = 0 (1/s  )
+   REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HxiPz0(:,:)                              ! Partial derivative of WaveAcc0Hxi(:) with respect to zi at zi = 0 (1/s^2)
+   REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HyiPz0(:,:)                              ! Partial derivative of WaveAcc0Hyi(:) with respect to zi at zi = 0 (1/s^2)
+   REAL(SiKi), ALLOCATABLE      :: PWaveAcc0VPz0  (:,:)                              ! Partial derivative of WaveAcc0V  (:) with respect to zi at zi = 0 (1/s^2)
+   REAL(SiKi), ALLOCATABLE      :: PWaveDynP0BPz0 (:,:)                              ! Partial derivative of WaveDynP0B (:) with respect to zi at zi = 0 (N/m  )
+   REAL(SiKi), ALLOCATABLE      :: PWaveVel0HxiPz0(:,:)                              ! Partial derivative of WaveVel0Hxi(:) with respect to zi at zi = 0 (1/s  )
+   REAL(SiKi), ALLOCATABLE      :: PWaveVel0HyiPz0(:,:)                              ! Partial derivative of WaveVel0Hyi(:) with respect to zi at zi = 0 (1/s  )
+   REAL(SiKi), ALLOCATABLE      :: PWaveVel0VPz0  (:,:)                              ! Partial derivative of WaveVel0V  (:) with respect to zi at zi = 0 (1/s  )
 !   REAL(SiKi)                   :: Slope                                           ! Miscellanous slope used in an interpolation (-)
    REAL(SiKi), PARAMETER        :: SmllNmbr  = 9.999E-4                            ! A small number representing epsilon for taking numerical derivatives.  !bjj: how about using SQRT(EPSILON())?
    REAL(SiKi)                   :: SQRTNStepWave2                                  ! SQRT( NStepWave/2 )
@@ -1078,26 +1078,26 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( WaveAccC0V        (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0V.',        ErrStat,ErrMsg,'VariousWaves_Init')
 
-      !ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2 ,InitInp%NWaveKin   ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynPC0BPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveVelC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveKin   ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveVelC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveVelC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveAccC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveAccC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+      ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2 ,InitInp%NWaveKin   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynPC0BPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveVelC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveKin   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveVelC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveVelC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveAccC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveAccC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
 
       ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'VariousWaves_Init')
@@ -1129,26 +1129,26 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( WaveAcc0V         (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0V.',         ErrStat,ErrMsg,'VariousWaves_Init')
 
-      !ALLOCATE ( PWaveDynP0BPz0    (0:InitOut%NStepWave-1,InitInp%NWaveKin   ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynP0BPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveVel0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HxiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveVel0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HyiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveVel0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0Pz0.',      ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveAcc0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HxiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveAcc0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveKin ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HyiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveKin ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VPz0.',     ErrStat,ErrMsg,'VariousWaves_Init')
+      ALLOCATE ( PWaveDynP0BPz0    (0:InitOut%NStepWave-1,InitInp%NWaveKin   ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynP0BPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveVel0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HxiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveVel0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HyiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveVel0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0Pz0.',      ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveAcc0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveKin  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HxiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveAcc0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveKin ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HyiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveKin ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VPz0.',     ErrStat,ErrMsg,'VariousWaves_Init')
 
 !TODO: These InitOut arrays now need to be organized for the grid points
 
@@ -1161,14 +1161,14 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
-      !ALLOCATE ( InitOut%PWaveDynP0 (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveDynP0.', ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( InitOut%PWaveVel0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveVel0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !ALLOCATE ( InitOut%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      ALLOCATE ( InitOut%PWaveDynP0 (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveDynP0.', ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( InitOut%PWaveVel0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveVel0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      ALLOCATE ( InitOut%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       !
       !ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NWaveKin  ), STAT=ErrStatTmp )
       !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'VariousWaves_Init')
@@ -1852,23 +1852,23 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
-!===================================
-! Wave stretching
-   !     DO J = 1,InitInp%NWaveKin
-   !         WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinxi(J)*CosWaveDir(I) + &
-   !                                                      InitInp%WaveKinyi(J)*SinWaveDir(I) ))
-   !! Partial derivatives at zi = 0
-   !         PWaveDynPC0BPz0 (I,J) = InitOut%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
-   !         PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
-   !         PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
-   !         PWaveVelC0VPz0  (I,J) =           ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr*COTH ( WaveNmbr*InitInp%WtrDpth )
-   !         PWaveAccC0HxiPz0(I,J) =           ImagOmega*PWaveVelC0HxiPz0(I,J)
-   !         PWaveAccC0HyiPz0(I,J) =           ImagOmega*PWaveVelC0HyiPz0(I,J)
-   !         PWaveAccC0VPz0  (I,J) =           ImagOmega*PWaveVelC0VPz0  (I,J)
-   !
-   !
-   !     END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
-!===================================
+         !===================================
+         ! Extrapoalted wave stretching
+         DO J = 1,InitInp%NWaveElev ! Loop through all points on the SWL
+            WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveElevxi(J)*CosWaveDir(I) + &
+                                                         InitInp%WaveElevyi(J)*SinWaveDir(I) ))
+            ! Partial derivatives at zi = 0
+            PWaveDynPC0BPz0 (I,J) = InitOut%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
+            PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
+            PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
+            PWaveVelC0VPz0  (I,J) =           ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr*COTH ( WaveNmbr*InitInp%WtrDpth )
+            PWaveAccC0HxiPz0(I,J) =           ImagOmega*PWaveVelC0HxiPz0(I,J)
+            PWaveAccC0HyiPz0(I,J) =           ImagOmega*PWaveVelC0HyiPz0(I,J)
+            PWaveAccC0VPz0  (I,J) =           ImagOmega*PWaveVelC0VPz0  (I,J)
+   
+   
+        END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+        !===================================
 
       END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transforms
 
@@ -1947,36 +1947,36 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
-!===================================
-      !DO J = 1,InitInp%NWaveKin ! Loop through all points where the incident wave kinematics will be computed without stretching
-      !   ! FFT's of the partial derivatives
-      !   CALL  ApplyFFT_cx (         PWaveDynP0BPz0(:,J  ),         PWaveDynPC0BPz0(:,J  ), FFT_Data, ErrStatTmp )
-      !   CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveDynP0BPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !   CALL  ApplyFFT_cx (         PWaveVel0HxiPz0 (:,J  ),       PWaveVelC0HxiPz0( :,J ),FFT_Data, ErrStatTmp )
-      !   CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !   CALL  ApplyFFT_cx (         PWaveVel0HyiPz0 (:,J  ),       PWaveVelC0HyiPz0( :,J ),FFT_Data, ErrStatTmp )
-      !   CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !   CALL  ApplyFFT_cx (         PWaveVel0VPz0 (:,J  ),         PWaveVelC0VPz0 (:,J  ), FFT_Data, ErrStatTmp )
-      !   CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !   CALL  ApplyFFT_cx (         PWaveAcc0HxiPz0 (:,J  ),       PWaveAccC0HxiPz0(:,J  ),FFT_Data, ErrStatTmp )
-      !   CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !   CALL  ApplyFFT_cx (         PWaveAcc0HyiPz0 (:,J  ),       PWaveAccC0HyiPz0(:,J  ),FFT_Data, ErrStatTmp )
-      !   CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !   CALL  ApplyFFT_cx (         PWaveAcc0VPz0 (:,J  ),         PWaveAccC0VPz0( :,J  ), FFT_Data, ErrStatTmp )
-      !   CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
-      !
-      !   IF ( ErrStat >= AbortErrLev ) THEN
-      !      CALL CleanUp()
-      !      RETURN
-      !   END IF
-      !
-      !END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+      !===================================
+      DO J = 1,InitInp%NWaveElev ! Loop through all points on the SWL where z-partial derivatives will be computed for extrapolated stretching
+         ! FFT's of the partial derivatives
+         CALL  ApplyFFT_cx (         PWaveDynP0BPz0(:,J  ),         PWaveDynPC0BPz0(:,J  ), FFT_Data, ErrStatTmp )
+         CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveDynP0BPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         CALL  ApplyFFT_cx (         PWaveVel0HxiPz0 (:,J  ),       PWaveVelC0HxiPz0( :,J ),FFT_Data, ErrStatTmp )
+         CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         CALL  ApplyFFT_cx (         PWaveVel0HyiPz0 (:,J  ),       PWaveVelC0HyiPz0( :,J ),FFT_Data, ErrStatTmp )
+         CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         CALL  ApplyFFT_cx (         PWaveVel0VPz0 (:,J  ),         PWaveVelC0VPz0 (:,J  ), FFT_Data, ErrStatTmp )
+         CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveVel0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         CALL  ApplyFFT_cx (         PWaveAcc0HxiPz0 (:,J  ),       PWaveAccC0HxiPz0(:,J  ),FFT_Data, ErrStatTmp )
+         CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         CALL  ApplyFFT_cx (         PWaveAcc0HyiPz0 (:,J  ),       PWaveAccC0HyiPz0(:,J  ),FFT_Data, ErrStatTmp )
+         CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         CALL  ApplyFFT_cx (         PWaveAcc0VPz0 (:,J  ),         PWaveAccC0VPz0( :,J  ), FFT_Data, ErrStatTmp )
+         CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+      
+      END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 !===================================
 
 
@@ -2009,6 +2009,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
+         ! Commented out - We do not extrapolate the current profile with extrapolated wave stretching
          !PWaveVel0HxiPz0(:  ) =  PWaveVel0HxiPz0(:  ) + InitInp%PCurrVxiPz0  ! xi-direction
          !PWaveVel0HyiPz0(:  ) =  PWaveVel0HyiPz0(:  ) + InitInp%PCurrVyiPz0  ! yi-direction
 
@@ -2073,6 +2074,29 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          end do
       end do
 
+
+
+      primeCount = 1
+      DO j = 1, InitInp%NGrid(2)  ! Loop through all points on the SWL where partial derivatives about z were computed
+         DO i = 1, InitInp%NGrid(1)
+            InitOut%PWaveDynP0(0:InitOut%NStepWave-1,i,j  ) = PWaveDynP0BPz0( 0:InitOut%NStepWave-1,primeCount)
+            InitOut%PWaveVel0 (0:InitOut%NStepWave-1,i,j,1) = PWaveVel0HxiPz0(0:InitOut%NStepWave-1,primeCount)
+            InitOut%PWaveVel0 (0:InitOut%NStepWave-1,i,j,2) = PWaveVel0HyiPz0(0:InitOut%NStepWave-1,primeCount)
+            InitOut%PWaveVel0 (0:InitOut%NStepWave-1,i,j,3) = PWaveVel0VPz0(  0:InitOut%NStepWave-1,primeCount)
+            InitOut%PWaveAcc0 (0:InitOut%NStepWave-1,i,j,1) = pWaveAcc0HxiPz0(0:InitOut%NStepWave-1,primeCount)
+            InitOut%PWaveAcc0 (0:InitOut%NStepWave-1,i,j,2) = pWaveAcc0HyiPz0(0:InitOut%NStepWave-1,primeCount)
+            InitOut%PWaveAcc0 (0:InitOut%NStepWave-1,i,j,3) = PWaveAcc0VPz0(  0:InitOut%NStepWave-1,primeCount)
+            primeCount = primeCount + 1
+         END DO
+      END DO
+
+
+
+
+
+
+
+
     !  END DO                   ! J - All points where the incident wave kinematics will be computed
 
     !  CASE ( 1 )                 ! Vertical stretching.
@@ -2122,15 +2146,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
   !    ENDSELECT
 
       ! Set the ending timestep to the same as the first timestep
-      InitOut%WaveDynP(InitOut%NStepWave,:,:,:  )  = InitOut%WaveDynP(0,:,:,:  )
-      InitOut%WaveVel (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveVel (0,:,:,:,:)
-      InitOut%WaveAcc (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveAcc (0,:,:,:,:)
-  !    InitOut%PWaveDynP0(InitOut%NStepWave,:,:,:  )  = InitOut%PWaveDynP0(0,:,:,:  )
-  !    InitOut%PWaveVel0 (InitOut%NStepWave,:,:,:,:)  = InitOut%PWaveVel0 (0,:,:,:,:)
-  !    InitOut%PWaveAcc0 (InitOut%NStepWave,:,:,:,:)  = InitOut%PWaveAcc0 (0,:,:,:,:)
-      InitOut%WaveElev0 (InitOut%NStepWave)      = InitOut%WaveElev0 (0    )
-
-
+      InitOut%WaveElev0 (InitOut%NStepWave)          = InitOut%WaveElev0 (0    )
+      InitOut%WaveDynP  (InitOut%NStepWave,:,:,:  )  = InitOut%WaveDynP  (0,:,:,:  )
+      InitOut%WaveVel   (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveVel   (0,:,:,:,:)
+      InitOut%WaveAcc   (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveAcc   (0,:,:,:,:)
+      InitOut%PWaveDynP0(InitOut%NStepWave,:,:  )    = InitOut%PWaveDynP0(0,:,:  )
+      InitOut%PWaveVel0 (InitOut%NStepWave,:,:,:)    = InitOut%PWaveVel0 (0,:,:,:)
+      InitOut%PWaveAcc0 (InitOut%NStepWave,:,:,:)    = InitOut%PWaveAcc0 (0,:,:,:)
 
    CALL CleanUp ( )
 
@@ -2189,20 +2211,20 @@ CONTAINS
       IF (ALLOCATED( GHWaveDynP ))        DEALLOCATE( GHWaveDynP,       STAT=ErrStatTmp)
       IF (ALLOCATED( GHWaveVel ))         DEALLOCATE( GHWaveVel,        STAT=ErrStatTmp)
       IF (ALLOCATED( GHWvDpth ))          DEALLOCATE( GHWvDpth,         STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveAcc0HxiPz0 ))   DEALLOCATE( PWaveAcc0HxiPz0,  STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveAcc0HyiPz0 ))   DEALLOCATE( PWaveAcc0HyiPz0,  STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveAcc0VPz0 ))     DEALLOCATE( PWaveAcc0VPz0,    STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveAccC0HxiPz0 ))  DEALLOCATE( PWaveAccC0HxiPz0, STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveAccC0HyiPz0 ))  DEALLOCATE( PWaveAccC0HyiPz0, STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveAccC0VPz0 ))    DEALLOCATE( PWaveAccC0VPz0,   STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveDynP0BPz0 ))    DEALLOCATE( PWaveDynP0BPz0,   STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveDynPC0BPz0 ))   DEALLOCATE( PWaveDynPC0BPz0,  STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveVel0HxiPz0 ))   DEALLOCATE( PWaveVel0HxiPz0,  STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveVel0HyiPz0 ))   DEALLOCATE( PWaveVel0HyiPz0,  STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveVel0VPz0 ))     DEALLOCATE( PWaveVel0VPz0,    STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveVelC0HxiPz0 ))  DEALLOCATE( PWaveVelC0HxiPz0, STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveVelC0HyiPz0 ))  DEALLOCATE( PWaveVelC0HyiPz0, STAT=ErrStatTmp)
-      !IF (ALLOCATED( PWaveVelC0VPz0 ))    DEALLOCATE( PWaveVelC0VPz0,   STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0HxiPz0 ))   DEALLOCATE( PWaveAcc0HxiPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0HyiPz0 ))   DEALLOCATE( PWaveAcc0HyiPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0VPz0 ))     DEALLOCATE( PWaveAcc0VPz0,    STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0HxiPz0 ))  DEALLOCATE( PWaveAccC0HxiPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0HyiPz0 ))  DEALLOCATE( PWaveAccC0HyiPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0VPz0 ))    DEALLOCATE( PWaveAccC0VPz0,   STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveDynP0BPz0 ))    DEALLOCATE( PWaveDynP0BPz0,   STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveDynPC0BPz0 ))   DEALLOCATE( PWaveDynPC0BPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVel0HxiPz0 ))   DEALLOCATE( PWaveVel0HxiPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVel0HyiPz0 ))   DEALLOCATE( PWaveVel0HyiPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVel0VPz0 ))     DEALLOCATE( PWaveVel0VPz0,    STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVelC0HxiPz0 ))  DEALLOCATE( PWaveVelC0HxiPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVelC0HyiPz0 ))  DEALLOCATE( PWaveVelC0HyiPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveVelC0VPz0 ))    DEALLOCATE( PWaveVelC0VPz0,   STAT=ErrStatTmp)
       IF (ALLOCATED( WaveAcc0Hxi ))       DEALLOCATE( WaveAcc0Hxi,      STAT=ErrStatTmp)
       IF (ALLOCATED( WaveAcc0Hyi ))       DEALLOCATE( WaveAcc0Hyi,      STAT=ErrStatTmp)
       IF (ALLOCATED( WaveAcc0V ))         DEALLOCATE( WaveAcc0V,        STAT=ErrStatTmp)
