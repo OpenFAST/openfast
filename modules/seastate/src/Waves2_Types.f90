@@ -39,7 +39,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UnSum      !< The unit number for the HydroDyn summary file [-]
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [(m/s^2)]
     REAL(ReKi)  :: WtrDens      !< Water density [(kg/m^3)]
-    REAL(SiKi)  :: WtrDpth      !< Water depth [(meters)]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [(meters)]
     INTEGER(IntKi)  :: NStepWave      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2      !< NStepWave / 2 [-]
     REAL(SiKi)  :: WaveDOmega      !< Frequency step for incident wave calculations [(rad/s)]
@@ -661,7 +661,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%WtrDens = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%WtrDpth = REAL(ReKiBuf(Re_Xferred), SiKi)
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%NStepWave = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
