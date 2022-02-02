@@ -353,7 +353,7 @@ The input parameters in this section pertain to the calculation of buoyant loads
 on the hub and are only used when ``Buoyancy = TRUE``.
 
 ``VolHub`` is the volume of the hub and ``HubCenBx`` is the x offset of the hub
-center of buoyancy from the hub reference position in local hub coordinates;
+center of buoyancy from the hub center in local hub coordinates;
 offsets in the y and z directions are assumed to be zero. To neglect buoyant 
 loads on the hub, set ``VolHub`` to 0.
 
@@ -364,7 +364,7 @@ on the nacelle and are only used when ``Buoyancy = TRUE``.
 
 ``VolNac`` is the volume of the nacelle and ``NacCenBx``, ``NacCenBy``, and 
 ``NacCenBz`` are the x, y, and z offsets of the nacelle center of buoyancy from
-the nacelle reference position in local nacelle coordinates. To neglect buoyant 
+the yaw bearing in local nacelle coordinates. To neglect buoyant 
 loads on the nacelle, set ``VolNac`` to 0.
 
 .. _AD-Outputs:
