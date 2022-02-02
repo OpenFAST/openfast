@@ -242,8 +242,8 @@ An example of inputs for a sinusoidal surge motion is given below:
     ----- Turbine(1) Motion [used only when AnalysisType=1] --------------------------
     1         BaseMotionType(1)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
     1         DegreeOfFreedom(1)     - {1:xg, 2:yg, 3:zg, 4:theta_xg, 5:theta_yg, 6:theta_zg} [used only when BaseMotionType=1] (flag)
-    5.0       Amplitude(1)           - Amplitude of sinusoidal motion   [used only when BaseMotionType=1]
-    0.1       Frequency(1)           - Frequency of sinusoidal motion   [used only when BaseMotionType=1] (Hz)
+    5.0       Amplitude(1)           - Amplitude of sinusoidal motion  [used only when BaseMotionType=1] (m or rad)
+    0.1       Frequency(1)           - Frequency of sinusoidal motion  [used only when BaseMotionType=1] (Hz)
     "unused"  BaseMotionFileName(1)  - Filename containing arbitrary base motion (19 columns: Time, x, y, z, theta_x, ..., alpha_z)  [used only when BaseMotionType=2]
 
 
@@ -313,7 +313,7 @@ When `DOF=0`, the turbine base is fixed.
     ----- Combined-Case Analysis [used only when AnalysisType=3 and numTubines=1] ------
              4  NumCases     - Number of cases to run
     HWndSpeed  PLExp   RotSpd   Pitch   Yaw    dT      Tmax   DOF   Amplitude  Frequency 
-    (m/s)      (-)     (rpm)    (deg)  (deg)   (s)     (s)    (-)    (-)       (Hz)
+    (m/s)      (-)     (rpm)    (deg)  (deg)   (s)     (s)    (-)  (m or rad)  (Hz)
        8.      0.0       6.     0.      0.     1.0     100     0      0         0.0
        8.      0.0       6.     0.      0.     1.0     100     0      0         0.0
        9.      0.1       7.     1.      0.     0.5      50     1      5.0       0.1 
@@ -481,8 +481,8 @@ An example of an AeroDyn driver for a basic inflow, basic HAWT, and combined cas
     ----- Turbine(1) Motion [used only when AnalysisType=1] ---------------------------------
     1               BaseMotionType(1)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
     1               DegreeOfFreedom(1)     - {1:xg, 2:yg, 3:zg, 4:theta_xg, 5:theta_yg, 6:theta_zg} [used only when BaseMotionType=1] (flag)
-    5.0             Amplitude(1)           - Amplitude of sinusoidal motion   [used only when BaseMotionType=1]
-    0.1             Frequency(1)           - Frequency of sinusoidal motion   [used only when BaseMotionType=1]
+    5.0             Amplitude(1)           - Amplitude of sinusoidal motion  [used only when BaseMotionType=1] (m or rad)
+    0.1             Frequency(1)           - Frequency of sinusoidal motion  [used only when BaseMotionType=1] (Hz)
     ""              BaseMotionFileName(1)  - Filename containing arbitrary base motion (19 columns: Time, x, y, z, theta_x, ..., alpha_z)  [used only when BaseMotionType=2]
     0               NacYaw(1)              - Yaw angle (about z_t) of the nacelle (deg)
     7               RotSpeed(1)            - Rotational speed of rotor in rotor coordinates (rpm)
