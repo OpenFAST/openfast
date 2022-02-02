@@ -1161,6 +1161,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WaveDynP     => Waves_InitOut%WaveDynP            ! For Morison
        InitOut%WaveAcc      => Waves_InitOut%WaveAcc             ! For Morison
        InitOut%WaveVel      => Waves_InitOut%WaveVel             ! For Morison
+       InitOut%PWaveDynP0   => Waves_InitOut%PWaveDynP0          ! For Morison
+       InitOut%PWaveAcc0    => Waves_InitOut%PWaveAcc0           ! For Morison
+       InitOut%PWaveVel0    => Waves_InitOut%PWaveVel0           ! For Morison
        !InitOut%WaveElev     => Waves_InitOut%WaveElev            ! Not needed
        !InitOut%WaveElev0    => Waves_InitOut%WaveElev0           ! For WAMIT for use in SS_Excitation
        call MOVE_ALLOC(Waves_InitOut%WaveElev0, InitOut%WaveElev0 )

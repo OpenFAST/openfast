@@ -276,6 +276,11 @@ PROGRAM HydroDynDriver
    InitInData%WaveDynP       => InitOutData_SeaSt%WaveDynP  
    InitInData%WaveAcc        => InitOutData_SeaSt%WaveAcc   
    InitInData%WaveVel        => InitOutData_SeaSt%WaveVel   
+   
+   InitInData%PWaveDynP0     => InitOutData_SeaSt%PWaveDynP0  
+   InitInData%PWaveAcc0      => InitOutData_SeaSt%PWaveAcc0   
+   InitInData%PWaveVel0      => InitOutData_SeaSt%PWaveVel0   
+   
    InitInData%WaveElevC0     => InitOutData_SeaSt%WaveElevC0
    CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElevC, InitInData%WaveElevC )
    InitInData%WaveDirArr     => InitOutData_SeaSt%WaveDirArr
@@ -285,7 +290,10 @@ PROGRAM HydroDynDriver
    ! Nullify these pointers because they are no longer needed
    nullify(InitOutData_SeaSt%WaveDynP)   
    nullify(InitOutData_SeaSt%WaveAcc)    
-   nullify(InitOutData_SeaSt%WaveVel)     
+   nullify(InitOutData_SeaSt%WaveVel)
+   nullify(InitOutData_SeaSt%PWaveDynP0)   
+   nullify(InitOutData_SeaSt%PWaveAcc0)    
+   nullify(InitOutData_SeaSt%PWaveVel0)     
    nullify(InitOutData_SeaSt%WaveTime)
    nullify(InitOutData_SeaSt%WaveElevC0)
    nullify(InitOutData_SeaSt%WaveDirArr)
@@ -388,7 +396,10 @@ PROGRAM HydroDynDriver
    nullify(InitInData%WaveDirArr)
    nullify(InitInData%WaveDynP)   
    nullify(InitInData%WaveAcc)    
-   nullify(InitInData%WaveVel)     
+   nullify(InitInData%WaveVel)
+   nullify(InitInData%PWaveDynP0)   
+   nullify(InitInData%PWaveAcc0)    
+   nullify(InitInData%PWaveVel0)     
    nullify(InitInData%WaveTime)
    nullify(InitInData%WaveElev1)
    nullify(InitInData%WaveElev2)
