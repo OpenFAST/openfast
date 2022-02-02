@@ -23,7 +23,7 @@ typedef     Waves2/Waves2     InitInputType     INTEGER              UnSum      
 
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Gravitational acceleration"  (m/s^2)
 typedef     ^                 ^                 ReKi                 WtrDens           -        -        -        "Water density"   (kg/m^3)
-typedef     ^                 ^                 SiKi                 WtrDpth           -        -        -        "Water depth"  (meters)
+typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth"  (meters)
 
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave"    -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2"                                       -
