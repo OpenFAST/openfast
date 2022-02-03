@@ -832,22 +832,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          !   DEALLOCATE(WaveDynP0)
          !END IF
 !==============================================================================
-         ! In this version, this can only be TRUE if the precomiler flag WRITE_WV_KIN set and WaveMod not equal to 5 or 6 and WvKinFile is a valid string  
-         !TODO: Where does this belong now GJH 9/24/2021
-         !IF ( ( InputFileData%Waves%WaveMod == 5 .OR. InputFileData%Waves%WaveMod == 6 ) .AND.  InputFileData%Echo ) THEN
-         !   call HDOut_WriteWvKinFiles( TRIM(InputFileData%Waves%WvKinFile)//'_ech', HydroDyn_ProgDesc, InputFileData%Morison%NStepWave, InputFileData%Morison%NNodes,  &
-         !                                    p%NWaveElev, InputFileData%Morison%nodeInWater, p%WaveElev, InputFileData%Waves%WaveKinzi, InputFileData%Morison%WaveTime, &
-         !                               InputFileData%Morison%WaveVel, InputFileData%Morison%WaveAcc, InputFileData%Morison%WaveDynP, &
-         !                               ErrStat, ErrMsg )  
-         !ELSE IF (InputFileData%Waves%WriteWvKin ) THEN
-         !   call HDOut_WriteWvKinFiles( TRIM(InputFileData%Waves%WvKinFile), HydroDyn_ProgDesc, InputFileData%Morison%NStepWave, InputFileData%Morison%NNodes,  &
-         !                                    p%NWaveElev, InputFileData%Morison%nodeInWater, p%WaveElev, InputFileData%Waves%WaveKinzi, InputFileData%Morison%WaveTime, &
-         !                               InputFileData%Morison%WaveVel, InputFileData%Morison%WaveAcc, InputFileData%Morison%WaveDynP, &
-         !                               ErrStat, ErrMsg )  
-         !END IF
-
-
-
+      
          InputFileData%Morison%seast_interp_p = InitInp%seast_interp_p
 
             ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array

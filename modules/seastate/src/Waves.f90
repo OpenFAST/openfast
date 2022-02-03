@@ -299,7 +299,7 @@ CONTAINS
          ! Passed Variables:
 
       REAL(ReKi), INTENT(IN )      :: g                                               ! Gravitational acceleration (m/s^2)
-      REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth (meters)
+      REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth (meters)
       REAL(SiKi), INTENT(IN )      :: Omega                                           ! Wave frequency (rad/s)
       REAL(SiKi)                   :: WaveNumber                                      ! This function = wavenumber, k (1/m)
 
@@ -328,7 +328,7 @@ CONTAINS
       ELSE                       ! Omega > 0.0; solve for the wavenumber as usual.
 
 
-         C  = Omega*Omega*h/REAL(g,SiKi)
+         C  = Omega*Omega*REAL(h,SiKi)/REAL(g,SiKi)
          CC = C*C
 
 
@@ -355,11 +355,11 @@ CONTAINS
             A  = 1.0/( C - C2 )
             B  = A*( ( 0.5*LOG( ( X0 + C )/( X0 - C ) ) ) - X0 )
 
-            WaveNumber = ( X0 - ( B*C2*( 1.0 + (A*B*C*X0) ) ) )/h
+            WaveNumber = ( X0 - ( B*C2*( 1.0 + (A*B*C*X0) ) ) )/REAL(h,SiKi)
 
          ELSE
 
-            WaveNumber = X0/h
+            WaveNumber = X0/REAL(h,SiKi)
 
          END IF
 
@@ -389,7 +389,7 @@ CONTAINS
          ! Passed Variables:
 
       REAL(SiKi)                   :: COSHNumOvrCOSHDen                               ! This function = COSH( k*( z + h ) )/COSH( k*h ) (-)
-      REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
+      REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
       REAL(SiKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
       REAL(SiKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
 
@@ -399,11 +399,11 @@ CONTAINS
 
       IF ( k*h  > 89.4_SiKi )  THEN   ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, COSH( k*( z + h ) )/COSH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
 
-         COSHNumOvrCOSHDen = EXP( k*z ) + EXP( -k*( z + 2.0_SiKi*h ) )
+         COSHNumOvrCOSHDen = EXP( k*z ) + EXP( -k*( z + 2.0_SiKi*REAL(h,SiKi) ) )
 
       ELSE                       ! 0 < k*h <= 89.4; use the shallow water formulation.
 
-         COSHNumOvrCOSHDen =REAL( COSH( k*( z + h ) ),R8Ki)/COSH( k*h )
+         COSHNumOvrCOSHDen =REAL( COSH( k*( z + REAL(h,SiKi) ) ),R8Ki)/COSH( k*REAL(h,SiKi) )
 
       END IF
 
@@ -431,7 +431,7 @@ CONTAINS
          ! Passed Variables:
 
       REAL(SiKi)                   :: COSHNumOvrSINHDen                               ! This function = COSH( k*( z + h ) )/SINH( k*h ) (-)
-      REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
+      REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
       REAL(SiKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
       REAL(SiKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
 
@@ -444,13 +444,13 @@ CONTAINS
 
          COSHNumOvrSINHDen = HUGE( k )
 
-      ELSEIF ( k*h  > 89.4_SiKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, COSH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
+      ELSEIF ( k*REAL(h,SiKi)  > 89.4_SiKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, COSH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
 
-         COSHNumOvrSINHDen = EXP( k*z ) + EXP( -k*( z + 2*h ) )
+         COSHNumOvrSINHDen = EXP( k*z ) + EXP( -k*( z + 2*REAL(h,SiKi) ) )
 
       ELSE                          ! 0 < k*h <= 89.4; use the shallow water formulation.
 
-         COSHNumOvrSINHDen = COSH( k*( z + h ) )/SINH( k*h )
+         COSHNumOvrSINHDen = COSH( k*( z + REAL(h,SiKi) ) )/SINH( k*REAL(h,SiKi) )
 
       END IF
 
@@ -515,7 +515,7 @@ CONTAINS
          ! Passed Variables:
 
       REAL(SiKi)                   :: SINHNumOvrSINHDen                               ! This function = SINH( k*( z + h ) )/SINH( k*h ) (-)
-      REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
+      REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
       REAL(SiKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
       REAL(SiKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
 
@@ -527,13 +527,13 @@ CONTAINS
 
          SINHNumOvrSINHDen = 1.0
 
-      ELSEIF ( k*h >  89.4_SiKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, SINH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) - EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
+      ELSEIF ( k*REAL(h,SiKi) >  89.4_SiKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, SINH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) - EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
 
          SINHNumOvrSINHDen = EXP( k*z ) - EXP( -k*( z + 2.0_SiKi*h ) )
 
       ELSE                          ! 0 < k*h <= 89.4; use the shallow water formulation.
 
-         SINHNumOvrSINHDen = SINH( k*( z + h ) )/SINH( k*h )
+         SINHNumOvrSINHDen = SINH( k*( z + REAL(h,SiKi) ) )/SINH( k*REAL(h,SiKi) )
 
       END IF
 
@@ -1150,8 +1150,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveKin ), STAT=ErrStatTmp )
       !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VPz0.',     ErrStat,ErrMsg,'VariousWaves_Init')
 
-!TODO: These InitOut arrays now need to be organized for the grid points
 
+      
       ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'VariousWaves_Init')
 
@@ -1900,7 +1900,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          CALL CleanUp()
          RETURN
       END IF
-!TODO: FIX ME For generating grid elevations
+!NOTE:  For all grid points
       DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
          i = mod(k-1, InitInp%NGrid(1)) + 1
@@ -2166,7 +2166,7 @@ CONTAINS
 
       CALL ApplyFFT_cx (   WaveElevAtXY(0:InitOut%NStepWave-1),   tmpComplexArr, FFT_Data,   ErrStatLcl2  )
       CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStatLcl,ErrMsgLcl,'WaveElevTimeSeriesAtXY')
-!TODO: Why is tmpComplexArr 0:NStepWave2 long?  why not NStepWave2-1  ??  GJH
+
       WaveElevCAtXY( 1,: ) = REAL(tmpComplexArr(:))
       WaveElevCAtXY( 2,: ) = IMAG(tmpComplexArr(:))
          ! Append first datpoint as the last as aid for repeated wave data
@@ -2538,7 +2538,7 @@ FUNCTION WheelerStretching ( zOrzPrime, Zeta, h, ForwardOrBackward, ErrStat, Err
 
       ! Passed Variables:
 
-   REAL(SiKi),     INTENT(IN )    :: h                                               ! Water depth (meters)
+   REAL(ReKi),     INTENT(IN )    :: h                                               ! Water depth (meters)
    REAL(SiKi)                     :: WheelerStretching                               ! This function = zPrime [forward] or z [backward] (meters)
    REAL(SiKi),     INTENT(IN )    :: Zeta                                            ! Instantaneous elevation of incident waves (meters)
    REAL(SiKi),     INTENT(IN )    :: zOrzPrime                                       ! Elevations where the wave kinematics are to be applied using Wheeler stretching, z, [forward] or elevations where the wave kinematics are computed before applying Wheeler stretching, zPrime, [backward] (meters)
@@ -2558,12 +2558,12 @@ FUNCTION WheelerStretching ( zOrzPrime, Zeta, h, ForwardOrBackward, ErrStat, Err
 
    CASE ( 'F'  )  ! Forward
 
-      WheelerStretching = ( 1.0 + Zeta/h )*zOrzPrime + Zeta
+      WheelerStretching = ( 1.0 + Zeta/REAL(h,SiKi) )*zOrzPrime + Zeta
 
 
    CASE ( 'B' )   ! Backward
 
-      WheelerStretching = ( zOrzPrime - Zeta )/( 1.0 + Zeta/h )
+      WheelerStretching = ( zOrzPrime - Zeta )/( 1.0 + Zeta/REAL(h,SiKi) )
 
 
    CASE DEFAULT

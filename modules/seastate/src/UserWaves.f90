@@ -126,6 +126,10 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    ! Adjust the number of steps since we index from zero
    WaveElevData%NStepWave  =  WaveElevData%NStepWave - 1_IntKi
 
+   ! Even though for OpenFAST data, NStepWave time increment data equals the 0 time increment data, 
+   ! we cannot assume that is true for arbitrary user data.  Therefore, we read the entire [0, NStepWave] data from file.
+   ! As a result for WaveMod=5,6 we shouldn't assume periodic waves over the period WaveTMax
+
    !--------------------------------------------------
    ! Read in the data
    !--------------------------------------------------
@@ -431,6 +435,11 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       RETURN
    END IF
 
+   ! Even though for OpenFAST data, NStepWave time increment data equals the 0 time increment data, 
+   ! we cannot assume that is true for arbitrary user data.  Therefore, we read the entire [0, NStepWave] data from file.
+   ! As a result for WaveMod=5,6 we shouldn't assume periodic waves over the period WaveTMax
+
+   
    ! Read the first file and set the initial values of the 
    DO iFile = 1,7
       CALL GetNewUnit( UnWv )
@@ -453,7 +462,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             END IF
       end do
    
-      DO m = 0,InitOut%NStepWave-1
+      DO m = 0,InitOut%NStepWave
          icount = 1
          do k = 1, InitInp%NGrid(3)
             do j = 1, InitInp%NGrid(2)
@@ -521,7 +530,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          END IF
    end do
    
-   DO m = 0,InitOut%NStepWave-1
+   DO m = 0,InitOut%NStepWave
       do j = 1, InitInp%NGrid(2)
          ! Extract fields from current line
          IF (.not. ExtractFields(UnWv, WaveDataStr(:), InitInp%NGrid(1))) THEN
@@ -541,42 +550,11 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
   
    END DO
 
-!TODO FIX for new grid of XY wave elevations
-!   IF ( InitInp%NWaveElev > 0 ) THEN
-!      CALL GetNewUnit( UnWv )
-!
-!      FileName = TRIM(InitInp%WvKinFile) // '.Elev'
-!   
-!      CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
-!      IF ( ErrStat /= 0 ) THEN
-!         ErrStat = ErrID_Fatal
-!         ErrMsg  = 'Failed to open wave elevations file, ' //  TRIM(FileName) 
-!         RETURN
-!      END IF
-!
-!      Frmt = '('//TRIM(Int2LStr(InitInp%NWaveElev))//'(:,A,ES11.4e2))'
-!   
-!      CALL ReadCom( UnWv, FileName, 'HydroDyn wave elevations file header line 1', ErrStatTmp, ErrMsgTmp )
-!         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
-!         IF (ErrStat >= AbortErrLev) THEN
-!            CALL Cleanup() 
-!            RETURN
-!         END IF
-!!TODO: FIX WaveElev based on grid now.         
-!      !DO t = 0,InitOut%NStepWave-1        
-!      !   Read(UnWv,Frmt)   ( Delim,  InitOut%WaveElev(t,i,j)  , j=1,InitInp%NWaveElev ) 
-!      !END DO
-!      CLOSE(UnWv)
-!   END IF
    CALL CleanUp( )
    
-   ! Need to append the first time step record to the end of each array for periodic waves
-   InitOut%WaveVel (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveVel (0,:,:,:,:)
-   InitOut%WaveAcc (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveAcc (0,:,:,:,:)
-   InitOut%WaveDynP(InitOut%NStepWave,:,:,:)    = InitOut%WaveDynP(0,:,:,:  )
-   InitOut%WaveElev(InitOut%NStepWave,:,:)     = InitOut%WaveElev(0,:,:)
-   InitOut%nodeInWater(InitOut%NStepWave,:)  = InitOut%nodeInWater(0,:)
-  
+   
+
+   
 CONTAINS
 
    !> Sub function to extract n fields on the current line of the file unit FU
