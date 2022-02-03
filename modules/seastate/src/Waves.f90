@@ -1861,7 +1861,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             PWaveDynPC0BPz0 (I,J) = InitOut%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
             PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
             PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
-            PWaveVelC0VPz0  (I,J) =           ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr*COTH ( WaveNmbr*InitInp%WtrDpth )
+            
+            IF (I == 0_IntKi) THEN ! Zero frequency component
+              PWaveVelC0VPz0  (I,J) =         0.0_ReKi
+            ELSE
+              PWaveVelC0VPz0  (I,J) =         ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr/TANH ( WaveNmbr*InitInp%WtrDpth )
+            END IF
+            
             PWaveAccC0HxiPz0(I,J) =           ImagOmega*PWaveVelC0HxiPz0(I,J)
             PWaveAccC0HyiPz0(I,J) =           ImagOmega*PWaveVelC0HyiPz0(I,J)
             PWaveAccC0VPz0  (I,J) =           ImagOmega*PWaveVelC0VPz0  (I,J)
@@ -2435,7 +2441,7 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
       ENDSELECT
 
-
+   InitOut%WaveMultiDir = InitInp%WaveMultiDir
    u%DummyInput = 0.0
    p%DT = Interval
    p%WaveMultiDir = InitOut%WaveMultiDir     ! Flag to indicate multidirectional waves
