@@ -39,7 +39,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     2  - above + all position/orientation info
    !     3  - above + input files (if direct passed)
    !     4  - above + meshes
-   integer(IntKi),   parameter            :: debugverbose = 3
+   integer(IntKi),   parameter            :: debugverbose = 1
 
    !------------------------------------------------------------------------------------
    !  Error handling
@@ -534,8 +534,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
-call SetErr(ErrID_Fatal,"Exit early",ErrStat_C,ErrMsg_C)  ! Testing
-return
 
 CONTAINS
    logical function Failed()
@@ -815,8 +813,8 @@ CONTAINS
          call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), AD_NacMotionMesh, trim(VTK_OutFileRoot)//'.NacMotionMesh', ErrStat3, ErrMsg3)
             if (ErrStat3 >= AbortErrLev) return
       endif
-      if (u(1)%AD%rotors(1)%BladeMotion(i)%Committed) then
-         call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%NacelleMotion, trim(VTK_OutFileRoot)//'.AD_Nacelle'//trim(num2lstr(i)), ErrStat3, ErrMsg3 )
+      if (u(1)%AD%rotors(1)%NacelleMotion%Committed) then
+         call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%NacelleMotion, trim(VTK_OutFileRoot)//'.AD_Nacelle', ErrStat3, ErrMsg3 )
             if (ErrStat3 >= AbortErrLev) return
       endif
 
@@ -893,20 +891,35 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 !--------------------------------------------- AeroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
 
-SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumMeshPts_C, NodePos_C, NodeVel_C, NodeAcc_C, &
-               NodeFrc_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_CalcOutput')
+SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, HubPosition_C, HubOrientation_C, HubVel_C, HubAcc_C, &
+               NumMeshPts_C,  &
+               MeshFrc_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_CalcOutput')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_CalcOutput
 !GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_CalcOutput
 #endif
    real(c_double),            intent(in   )  :: Time_C
-   integer(c_int),            intent(in   )  :: NumMeshPts_C                 !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: NodePos_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
-   real(c_float),             intent(in   )  :: NodeVel_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
-   real(c_float),             intent(in   )  :: NodeAcc_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
-   real(c_float),             intent(  out)  :: NodeFrc_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
-!FIXME: make sure to grab both AD and IW outputs
+   real(c_float),             intent(in   )  :: HubPosition_C( 3 )                     !< Hub position
+   real(c_double),            intent(in   )  :: HubOrientation_C( 9 )                  !< Hub orientation
+   real(c_float),             intent(in   )  :: HubVel_C( 6 )                          !< Hub velocity
+   real(c_float),             intent(in   )  :: HubAcc_C( 6 )                          !< Hub acceleration
+!   real(c_float),             intent(in   )  :: NacellePosition_C( 3 )                 !< Nacelle position
+!   real(c_double),            intent(in   )  :: NacelleOrientation_C( 9 )              !< Nacelle orientation
+!   real(c_float),             intent(in   )  :: NacelleVel_C( 6 )                      !< Nacelle velocity
+!   real(c_float),             intent(in   )  :: NacelleAcc_C( 6 )                      !< Nacelle acceleration
+!   real(c_float),             intent(in   )  :: BladeRootPosition_C( 3*NumBlades )     !< Blade root positions
+!   real(c_double),            intent(in   )  :: BladeRootOrientation_C( 9*NumBlades )  !< Blade root orientations
+!   real(c_float),             intent(in   )  :: BladeRootVel_C( 6*NumBlades )          !< Blade root velocities
+!   real(c_float),             intent(in   )  :: BladeRootAcc_C( 6*NumBlades )          !< Blade root accelerations
+   ! Blade mesh nodes
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                           !< Number of mesh points we are transfering motions to and output loads to
+!   real(c_float),             intent(in   )  :: MeshPosition_C( 3*NumMeshPts_C )       !< A 3xNumMeshPts_C array [x,y,z]
+!   real(c_double),            intent(in   )  :: MeshOrientation_C( 9*NumMeshPts_C )    !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+!   real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )            !< A 6xNumMeshPts_C array [x,y,z]
+!   real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )            !< A 6xNumMeshPts_C array [x,y,z]
+   real(c_float),             intent(  out)  :: MeshFrc_C( 6*NumMeshPts_C )            !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
+!FIXME: make sure to grab both AD and IW outputs -- how are these stored?
    real(c_float),             intent(  out)  :: OutputChannelValues_C(p%NumOuts)
    integer(c_int),            intent(  out)  :: ErrStat_C
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
@@ -930,13 +943,16 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumMeshPts_C, NodePos_C, NodeVel_
       ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
       if (Failed())  return
    endif
+ErrMsg2="AeroDyn_Inflow_C_CalcOutput: Exit early"
+call SetErr(ErrID_Fatal,ErrMsg2,ErrStat_C,ErrMsg_C)  ! Testing
+return
 
    ! Convert the inputs from C to Fortrn
    Time = REAL(Time_C,DbKi)
 
    ! Reshape position, velocity, acceleration
-   tmpBldPtMeshPos(1:6,1:NumMeshPts)   = reshape( real(NodePos_C(1:6*NumMeshPts),ReKi), (/6,NumMeshPts/) )
-   tmpBldPtMeshVel(1:6,1:NumMeshPts)   = reshape( real(NodeVel_C(1:6*NumMeshPts),ReKi), (/6,NumMeshPts/) )
+!   tmpBldPtMeshPos(1:6,1:NumMeshPts)   = reshape( real(NodePos_C(1:6*NumMeshPts),ReKi), (/6,NumMeshPts/) )
+!   tmpBldPtMeshVel(1:6,1:NumMeshPts)   = reshape( real(NodeVel_C(1:6*NumMeshPts),ReKi), (/6,NumMeshPts/) )
 
 
    ! Transfer motions to input meshes
@@ -959,7 +975,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, NumMeshPts_C, NodePos_C, NodeVel_
    ! Set output force/moment array
    call Set_OutputLoadArray( )
    ! Reshape for return
-   NodeFrc_C(1:6*NumMeshPts) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts), c_float), (/6*NumMeshPts/) )
+!   NodeFrc_C(1:6*NumMeshPts) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts), c_float), (/6*NumMeshPts/) )
 
    ! Get the output channel info out of y
 !FXIME: need to grab y%AD%WriteOutput and y%IW_WriteOutput

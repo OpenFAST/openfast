@@ -197,10 +197,11 @@ class AeroDynInflowLib(CDLL):
 
         self.AeroDyn_Inflow_C_CalcOutput.argtypes = [
             POINTER(c_double),                  # Time_C
-            POINTER(c_int),                     # numMeshPts -- number of points expecting motions/loads
-            POINTER(c_float),                   # meshPos -- mesh positions      in flat array of 6*numMeshPts
-            POINTER(c_float),                   # meshVel -- mesh velocities     in flat array of 6*numMeshPts
-            POINTER(c_float),                   # meshAcc -- mesh accelerations  in flat array of 6*numMeshPts
+            POINTER(c_float),                   # HubPos
+            POINTER(c_double),                  # HubOrient_flat
+            POINTER(c_float),                   # HubVel
+            POINTER(c_float),                   # HubAcc
+            POINTER(c_int),                     # numMeshPts
             POINTER(c_float),                   # meshFrc -- mesh forces/moments in flat array of 6*numMeshPts
             POINTER(c_float),                   # Output Channel Values
             POINTER(c_int),                     # ErrStat_C
@@ -266,8 +267,6 @@ class AeroDynInflowLib(CDLL):
         initMeshOrient_flat_c   = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,self.initMeshOrient,'Init','MeshOrient')
 
 
-
-        print("AeroDynInflowLib: Call to adi_C_Init") #FIXME: temp
         # call AeroDyn_Inflow_C_Init
         self.AeroDyn_Inflow_C_Init(
             byref(c_bool(self.ADinputPass)),        # IN: AD input file is passed
@@ -309,7 +308,6 @@ class AeroDynInflowLib(CDLL):
             self.error_message_c                    # OUT: ErrMsg_C
         )
 
-        print("AeroDynInflowLib: after call to adi_C_Init") #FIXME: temp
         self.check_error()
         
         # Initialize output channels
@@ -334,32 +332,47 @@ class AeroDynInflowLib(CDLL):
 
 
     # aerodyn_inflow_calcOutput ------------------------------------------------------------------------------------------------------------
-    def aerodyn_inflow_calcOutput(self, time, meshPos, meshOrient, meshVel, meshAcc, meshFrcMom, outputChannelValues):
+    def aerodyn_inflow_calcOutput(self, time, hubPos, hubOrient, hubVel, hubAcc, \
+                            #nacPos, nacOrient, nacVel, nacAcc, \
+                            #meshPos, meshOrient, meshVel, meshAcc, \
+                            meshFrcMom, outputChannelValues):
 
         # Check input motion info
-        self.check_input_motions(meshPos,meshVel,meshAcc)
+        self.check_input_motions_hubNac(hubPos,hubOrient,hubVel,hubAcc,'hub')
+        #self.check_input_motions_nacNac(nacPos,nacOrient,nacVel,nacAcc,'nacelle')
+        #self.check_input_motions_mesh(meshPos,meshOrient,meshVel,meshAcc)
 
+        _hubPos_c    = (c_float  * len(np.squeeze(hubPos)   ))(*np.squeeze(hubPos)   )
+        _hubOrient_c = (c_double * len(np.squeeze(hubOrient)))(*np.squeeze(hubOrient))
+        _hubVel_c    = (c_float  * len(np.squeeze(hubVel)   ))(*np.squeeze(hubVel)   )
+        _hubAcc_c    = (c_float  * len(np.squeeze(hubAcc)   ))(*np.squeeze(hubAcc)   )
         #   Make a flat 1D arrays of motion info:
         #       [x2,y1,z1, x2,y2,z2 ...]
-        meshPos_flat_c    = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,meshPos,   time,'MeshPos')
-        meshOrient_flat_c = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,meshOrient,time,'MeshOrient')
-        meshVel_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshVel,   time,'MeshVel')
-        meshAcc_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshAcc,   time,'MeshAcc')
+        #meshPos_flat_c    = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,meshPos,   time,'MeshPos')
+        #meshOrient_flat_c = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,meshOrient,time,'MeshOrient')
+        #meshVel_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshVel,   time,'MeshVel')
+        #meshAcc_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshAcc,   time,'MeshAcc')
 
         # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
-        meshFrc_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
+        _meshFrc_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
 
         # Set up output channels
         outputChannelValues_c = (c_float * self.numChannels)(0.0,)
 
+        print("Attempt call")
         # Run AeroDyn_Inflow_C_CalcOutput
         self.AeroDyn_Inflow_C_CalcOutput(
             byref(c_double(time)),                  # IN: time at which to calculate output forces 
+            _hubPos_c,                              # IN: hub positions
+            _hubOrient_c,                           # IN: hub orientations
+            _hubVel_c,                              # IN: hub velocity [TVx,TVy,TVz,RVx,RVy,RVz]
+            _hubAcc_c,                              # IN: hub acclerations [TAx,TAy,TAz,RAx,RAy,RAz]
             byref(c_int(self.numMeshPts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            meshPos_flat_c,                         # IN: positions - specified by user
-            meshVel_flat_c,                         # IN: velocities at desired positions
-            meshAcc_flat_c,                         # IN: accelerations at desired positions
-            meshFrc_flat_c,                         # OUT: resulting forces/moments array
+            #meshPos_flat_c,                         # IN: positions
+            #meshOrient_flat_c,                      # IN: Orientations (DCM)
+            #meshVel_flat_c,                         # IN: velocities at desired positions
+            #meshAcc_flat_c,                         # IN: accelerations at desired positions
+            _meshFrc_flat_c,                        # OUT: resulting forces/moments array
             outputChannelValues_c,                  # OUT: output channel values as described in input file
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
@@ -383,10 +396,10 @@ class AeroDynInflowLib(CDLL):
             outputChannelValues[k] = float(outputChannelValues_c[k])
 
     # aerodyn_inflow_updateStates ------------------------------------------------------------------------------------------------------------
-    def aerdyn_inflow_updateStates(self, time, timeNext, meshPos, meshVel, meshAcc, meshFrcMom):
+    def aerdyn_inflow_updateStates(self, time, timeNext, meshPos, meshOrient, meshVel, meshAcc, meshFrcMom):
 
         # Check input motion info
-        self.check_input_motions(meshPos,meshVel,meshAcc)
+        self.check_input_motions_mesh(meshPos,meshOrient,meshVel,meshAcc)
 
         #   Make a flat 1D arrays of motion info:
         #       [x2,y1,z1, x2,y2,z2 ...]
@@ -565,7 +578,34 @@ class AeroDynInflowLib(CDLL):
             raise Exception("\nAeroDyn terminated prematurely.")
 
 
-    def check_input_motions(self,meshPos,meshVel,meshAcc):
+    def check_input_motions_hubNac(self,meshPos,meshOrient,meshVel,meshAcc,_name):
+        #   Verify that the shape of positions array is correct
+        if meshPos.size != 3:
+            print("Expecting a Nx3 array of "+_name+" positions with second index for [x,y,z]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+        #   Verify that the shape of orientations array is correct
+        if meshOrient.size != 9:
+            print("Expecting a Nx9 array of "+_name+" orientations with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+        #   Verify that the shape of velocities array is correct
+        if meshVel.size != 6:
+            print("Expecting a Nx6 array of "+_name+" velocities with second index for [x,y,z,Rx,Ry,Rz]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+        #   Verify that the shape of accelerations array is correct
+        if meshAcc.size != 6:
+            print("Expecting a Nx6 array of "+_name+" accelerations with second index for [x,y,z,Rx,Ry,Rz]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+
+
+    def check_input_motions_mesh(self,meshPos,meshOrient,meshVel,meshAcc):
         # make sure number of meshs didn't change for some reason
         if self._initNumNodePts != self.numMeshPts:
             print(f"At time {time}, the number of mesh points changed from initial value of {self._initNumNodePts}.  This is not permitted during the simulation.")
@@ -573,12 +613,22 @@ class AeroDynInflowLib(CDLL):
             raise Exception("\nError in calling AeroDyn/InflowWind library.")
 
         #   Verify that the shape of positions array is correct
-        if meshPos.shape[1] != 6:
-            print("Expecting a Nx6 array of mesh positions (meshPos) with second index for [x,y,z,Rx,Ry,Rz]")
+        if meshPos.shape[1] != 3:
+            print("Expecting a Nx3 array of mesh positions (meshOrient) with second index for [x,y,z]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
         if meshPos.shape[0] != self.numMeshPts:
-            print("Expecting a Nx6 array of mesh positions (meshPos) with first index for mesh number.")
+            print("Expecting a Nx3 array of mesh positions (meshOrient) with first index for mesh number.")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+
+        #   Verify that the shape of orientations array is correct
+        if meshOrient.shape[1] != 9:
+            print("Expecting a Nx9 array of mesh orientations (meshPos) with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
+            self.aerodyn_inflow_end()
+            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+        if meshOrient.shape[0] != self.numMeshPts:
+            print("Expecting a Nx9 array of mesh orientations (meshPos) with first index for mesh number.")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
 
@@ -723,8 +773,9 @@ class DriverDbg():
 
 #===============================================================================
 #   Helper class for writing channels to file.
-#   for the regression testing to mirror the output from the InfowWind Fortran
-#   driver.  This may also have value for debugging the interfacing to IfW.
+#   for the regression testing to mirror the output from the AD15 and InfowWind
+#   from an OpenFAST simulation.  This may also have value for debugging
+#   interfacing to the AeroDyn_Inflow_C_Binding library
 
 class WriteOutChans():
     """
@@ -740,8 +791,8 @@ class WriteOutChans():
         # write file header
         t_string=datetime.datetime.now()
         dt_string=datetime.date.today()
-        self.OutFile.write(f"## This file was generated by InflowWind_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
-        self.OutFile.write(f"## This file contains output channels requested from the OutList section of the input file")
+        self.OutFile.write(f"## This file was generated by AeroDyn_Inflow_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
+        self.OutFile.write(f"## This file contains output channels requested from the OutList section of the AD15 and IfW input files")
         self.OutFile.write(f"{filename}\n")
         self.OutFile.write("#\n")
         self.OutFile.write("#\n")
