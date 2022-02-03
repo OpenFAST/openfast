@@ -52,7 +52,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WaveDOmega      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(ReKi)  :: WtrDens      !< Water density [(kg/m^3)]
     REAL(ReKi)  :: Gravity      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
-    REAL(SiKi)  :: WtrDpth      !< Water depth (positive-valued) [(m)]
+    REAL(ReKi)  :: WtrDpth      !< Water depth (positive-valued) [(m)]
     REAL(SiKi) , DIMENSION(:,:), POINTER  :: WaveElevC0 => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi)  :: WaveDir      !< Mean incident wave propagation heading direction [(degrees)]
     LOGICAL  :: WaveMultiDir      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
@@ -710,7 +710,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%Gravity = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%WtrDpth = REAL(ReKiBuf(Re_Xferred), SiKi)
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElevC0 not allocated
     Int_Xferred = Int_Xferred + 1

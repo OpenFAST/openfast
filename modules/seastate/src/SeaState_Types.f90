@@ -85,6 +85,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
+    INTEGER(IntKi)  :: WrWvKinMod = 0      !< 0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname] [-]
   END TYPE SeaSt_InitInputType
 ! =======================
 ! =========  SeaSt_InitOutputType  =======
@@ -1155,6 +1156,7 @@ IF (ALLOCATED(SrcInitInputData%WaveElevXY)) THEN
 ENDIF
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
+    DstInitInputData%WrWvKinMod = SrcInitInputData%WrWvKinMod
  END SUBROUTINE SeaSt_CopyInitInput
 
  SUBROUTINE SeaSt_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1240,6 +1242,7 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
+      Int_BufSz  = Int_BufSz  + 1  ! WrWvKinMod
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1339,6 +1342,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PtfmLocationY
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WrWvKinMod
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SeaSt_PackInitInput
 
  SUBROUTINE SeaSt_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1456,6 +1461,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%WrWvKinMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SeaSt_UnPackInitInput
 
  SUBROUTINE SeaSt_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

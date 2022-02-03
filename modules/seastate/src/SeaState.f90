@@ -677,22 +677,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveKinxi = InputFileData%WaveKinxi
       p%WaveKinyi = InputFileData%WaveKinyi
       p%WaveKinzi = InputFileData%WaveKinzi
-      
-     ! CALL MOVE_ALLOC( Waves_InitOut%WaveTime, p%WaveTime  ) 
-     ! CALL MOVE_ALLOC( Waves_InitOut%WaveElev, p%WaveElev1 ) ! allocate p%WaveElev1, set p%WaveElev1 = Waves_InitOut%WaveElev, and deallocate Waves_InitOut%WaveElev
-      
-         ! Copy the first order wave elevation information to p%WaveElev1 so that we can output the total, first, and second order wave elevation separately
-      !ALLOCATE ( p%WaveElev   (0:p%NStepWave, p%NGrid(1), p%NGrid(2) ) , STAT=ErrStat2 )
-      !IF ( ErrStat2 /= 0 )  THEN
-      !   CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElev array.',ErrStat,ErrMsg,RoutineName)
-      !   CALL CleanUp()
-      !   RETURN         
-      !END IF
-      !! Need to loop over all the elements and copy
-      !! TODO: This can create a stack overflowstory error
-      !p%WaveElev(:,:,:) = p%WaveElev1(:,:,:)
-
-
 
       m%LastIndWave = 1
 
@@ -1105,17 +1089,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
          
       END IF
-
-!==========================================
-!TODO: FIX ME      
-         ! Deallocate any remaining Waves Output data
-!      IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
-!      IF(ALLOCATED( Waves_InitOut%WaveAcc   ))  DEALLOCATE( Waves_InitOut%WaveAcc   )
-!      IF(ALLOCATED( Waves_InitOut%WaveDynP  ))  DEALLOCATE( Waves_InitOut%WaveDynP  )
-!      IF(ALLOCATED( Waves_InitOut%WaveTime   ))  DEALLOCATE( Waves_InitOut%WaveTime   )
-!      IF(ALLOCATED( Waves_InitOut%WaveVel   ))  DEALLOCATE( Waves_InitOut%WaveVel   )
-!      IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
-      !IF(ALLOCATED( InputFileData%WAMIT%WaveElevC0 ))  DEALLOCATE( InputFileData%WAMIT%WaveElevC0)
       
          ! Close the summary file
       IF ( InputFileData%SeaStSum ) THEN
@@ -1188,14 +1161,18 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%SeaSt_Interp_p =  p%seast_interp_p
 
       
-      
-      
-      
          ! Write Wave Kinematics?
-      if ( InputFileData%Waves%WriteWvKin ) then
-         call SeaStOut_WriteWvKinFiles( InputFileData%Waves%WvKinFile, SeaSt_ProgDesc, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
-            p%Z_Depth, p%deltaGrid, p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
-            InitOut%WaveTime, InitOut%WaveVel, InitOut%WaveAcc, InitOut%WaveDynP, ErrStat, ErrMsg )   
+      if ( InputFileData%Waves%WaveMod /= 6 ) then
+         if ( InitInp%WrWvKinMod == 2 ) then
+            call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
+               p%Z_Depth, p%deltaGrid, p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
+               InitOut%WaveTime, InitOut%WaveVel, InitOut%WaveAcc, InitOut%WaveDynP, ErrStat, ErrMsg )   
+         else if ( InitInp%WrWvKinMod == 1 ) then
+            call SeaStOut_WriteWaveElev0(InitInp%OutRootname, SeaSt_ProgDesc, p%NStepWave, p%WaveDT, &
+               p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
+               InitOut%WaveTime, ErrStat, ErrMsg ) 
+         end if
+         
       end if
 
          ! Destroy the local initialization data
@@ -1434,9 +1411,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
    
       do i = 1, p%NWaveElev
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
-         ! TODO: Why interp the WaveElev.  Instead just add 1 + 2 if Waves2 is being used?
-         !WaveElev(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev, p%sea_interp_p, ErrStat2, ErrMsg2 )
-         !   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+
          WaveElev1(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
         

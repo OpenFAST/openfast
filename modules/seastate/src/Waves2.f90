@@ -938,7 +938,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
          !! that point.  The results are added to the wave elevation results from the diff
          !! frequency calculations earlier in the code.
          !--------------------------------------------------------------------------------
-!TODO: This is all grid points
+!NOTE: This is all grid points
              ! Step through the requested points
          DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.

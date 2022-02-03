@@ -39,6 +39,7 @@ program SeaStateDriver
       real(ReKi)              :: MSL2SWL
       character(1024)         :: SeaStateInputFile
       character(1024)         :: OutRootName
+      integer                 :: WrWvKinMod
       integer                 :: NSteps
       real(DbKi)              :: TimeInterval    
       logical                 :: WaveElevSeriesFlag      !< Should we put together a wave elevation series and save it to file?
@@ -174,7 +175,7 @@ program SeaStateDriver
      ! figure out how many time steps we should go before writing screen output:      
    n_SttsTime = MAX( 1, NINT( SttsTime / drvrInitInp%TimeInterval ) ) ! this may not be the final TimeInterval, though!!! GJH 8/14/14
   
-
+   InitInData%WrWvKinMod = drvrInitInp%WrWvKinMod
 !-------------------------------------------------------------------------------------
 !       Begin Simulation Setup
 !-------------------------------------------------------------------------------------
@@ -589,7 +590,26 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       return
    end if   
      
-  
+     ! WrWvKinMod - Write Kinematics?
+      
+   call ReadVar ( UnIn, FileName, InitInp%WrWvKinMod, 'WrWvKinMod', 'WrWvKinMod', ErrStat, ErrMsg, UnEchoLocal )
+
+   if ( ErrStat /= ErrID_None ) then
+      ErrMsg  = ' Failed to read WrWvKinMod parameter.'
+      ErrStat = ErrID_Fatal
+      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      close( UnIn )
+      return
+   end if
+   if ( InitInp%WrWvKinMod < 0 .or. InitInp%WrWvKinMod > 2 ) then
+      ErrMsg  = ' WrWvKinMod parameter must be 0, 1, or 2'
+      ErrStat = ErrID_Fatal
+      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      close( UnIn )
+      return
+   end if
+   
+   
       ! NSteps
    
    call ReadVar ( UnIn, FileName, InitInp%NSteps, 'NSteps', &

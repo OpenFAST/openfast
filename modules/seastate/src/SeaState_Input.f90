@@ -576,15 +576,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
       return
    end if
 
-!TODO: This is now a HD input check only
-   !   ! MSL2SWL - Mean sea level to still water level
-   !
-   !if ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InputFileData%MSL2SWL, 0.0_ReKi) ) then
-   !   call SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)
-   !   return
-   !end if
-
-
       ! X_HalfWidth - Half-width of the domain in the X direction (m)
    if ( InputFileData%X_HalfWidth <= 0.0_ReKi ) then
       call SetErrStat( ErrID_Fatal,'X_HalfWidth must be greater than zero.',ErrStat,ErrMsg,RoutineName)
@@ -598,8 +589,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
    end if
 
        ! Z_Depth - Depth of the domain the Z direction (m)
-   !TODO: I'm not sure we want to offset this grid depth value.  Check with Jason.
-   !InputFileData%Z_Depth = InputFileData%Z_Depth + InputFileData%MSL2SWL
+
    if ( ( InputFileData%Z_Depth <= 0.0_ReKi ) .or. ( InputFileData%Z_Depth > InputFileData%Waves%WtrDpth ) ) then
       call SetErrStat( ErrID_Fatal,'Z_Depth must be greater than zero and less than or equal to the WtrDpth + MSL2SWL.',ErrStat,ErrMsg,RoutineName)
       return
@@ -655,8 +645,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
    end if ! LEN_TRIM(InputFileData%Waves%WaveModChr)
 
-
-!TODO: THese tests need to be done by HD GJH 7/11/21
+   
    if ( WaveModIn < 0 .OR. WaveModIn > 6 ) then
          call SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, 5, or 6.',ErrStat,ErrMsg,RoutineName)
          return
@@ -852,13 +841,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
       call SetErrSTat( ErrID_Fatal,'WvLowCOff must be less than WvHiCOff.',ErrStat,ErrMsg,RoutineName)
       return
    end if
-
-!TODO: THis needs to be done by HD   : Does that mean the WvLowCOff and WvHiCOff need to be InitOut now?
-   !     ! Copy over the first order frequency limits to the WAMIT2 module which needs them.
-   !InputFileData%WAMIT2%WvLowCOff  = InputFileData%Waves%WvLowCOff
-   !InputFileData%WAMIT2%WvHiCOff   = InputFileData%Waves%WvHiCOff
-
-
+   
       ! WaveDir - Wave heading direction.
 
    if ( ( InputFileData%Waves%WaveMod > 0 ) .AND. ( InputFileData%Waves%WaveMod /= 6 ) )  then   ! .TRUE if we have incident waves, but not user input wave data.
@@ -968,20 +951,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
          call GetPath( TRIM(InitInp%InputFile), TmpPath )
          InputFileData%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InputFileData%Waves%WvKinFile)
       end if
-      InputFileData%Waves%WriteWvKin = .FALSE.
-
-   else
-
-      if ( LEN_TRIM( InputFileData%Waves%WvKinFile ) == 0 )  then
-         InputFileData%Waves%WriteWvKin = .FALSE.
-      else
-         if ( PathIsRelative( InputFileData%Waves%WvKinFile ) ) then
-            call GetPath( TRIM(InitInp%InputFile), TmpPath )
-            InputFileData%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InputFileData%Waves%WvKinFile)
-         end if
-         InputFileData%Waves%WriteWvKin = .TRUE.
-      end if
-
+   
    end if
 
 
@@ -1029,15 +999,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
       call SetErrStat( ErrID_Fatal,'WvLowCOffS must be less than WvHiCOffS.',ErrStat,ErrMsg,RoutineName)
       return
    end if
-
-!TODO: This needs to be handled by HD
-   !     ! Copy over the 2nd order limits to the WAMIT2 module which needs them.
-   !InputFileData%WAMIT2%WvLowCOffD  = InputFileData%Waves2%WvLowCOffD
-   !InputFileData%WAMIT2%WvHiCOffD   = InputFileData%Waves2%WvHiCOffD
-   !InputFileData%WAMIT2%WvLowCOffS  = InputFileData%Waves2%WvLowCOffS
-   !InputFileData%WAMIT2%WvHiCOffS   = InputFileData%Waves2%WvHiCOffS
-
-
 
       !-------------------------------------------------------------------------
       ! Check Current section
@@ -1189,60 +1150,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
    end if
 
-   !TODO: Move these to HD
-   !..................
-   ! check for linearization
-   !..................
-   !if (InitInp%Linearize) then
-   !
-   !   if ( InputFileData%Waves%WaveMod /= 0 ) then
-   !      call SetErrStat( ErrID_Fatal, 'Still water conditions must be used for linearization. Set WaveMod=0.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%Waves%WaveDirMod /= 0 ) then
-   !      call SetErrStat( ErrID_Fatal, 'No directional spreading must be used for linearization. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%Waves2%WvDiffQTFF ) then
-   !      call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics for linearization. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%Waves2%WvSumQTFF ) then
-   !      call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics for linearization. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%PotMod > 1 ) then
-   !      call SetErrStat( ErrID_Fatal, 'Potential-flow model cannot be set to FIT for linearization. Set PotMod= 0 or 1.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( (InputFileData%WAMIT%ExctnMod == 1) ) then
-   !      call SetErrStat( ErrID_Fatal, 'Cannot set wave excitation model to DFT for linearization. Set ExctnMod=0 or 2.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%WAMIT%RdtnMod == 1 ) then
-   !      call SetErrStat( ErrID_Fatal, 'Cannot set wave radiation model to convolution for linearization. Set RdtnMod=0 or 2.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%WAMIT2%MnDrift /= 0 ) then
-   !      call SetErrStat( ErrID_Fatal, 'Mean-drift 2nd-order forces cannot be used for linearization. Set MnDrift=0.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%WAMIT2%NewmanApp /= 0 ) then
-   !      call SetErrStat( ErrID_Fatal, "Mean- and slow-drift 2nd-order forces computed with Newman's approximation cannot be used for linearization. Set NewmanApp=0.", ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%WAMIT2%DiffQTF /= 0 ) then
-   !      call SetErrStat( ErrID_Fatal, 'Full difference-frequency 2nd-order forces computed with full QTF cannot be used for linearization. Set DiffQTF=0.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !   if ( InputFileData%WAMIT2%SumQTF /= 0 ) then
-   !      call SetErrStat( ErrID_Fatal, 'Full summation-frequency 2nd-order forces computed with full QTF cannot be used for linearization. Set SumQTF=0.', ErrStat, ErrMsg, RoutineName )
-   !   end if
-   !
-   !end if
-
-
-
+   
    !-------------------------------------------------------------------------------------------------
    ! Data section for OUTPUT
    !-------------------------------------------------------------------------------------------------
@@ -1329,7 +1237,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
       end if
 
 
-!TODO: This is now set with the grid points? GJH 7/11/21
+!NOTE: This is now set with the grid points? GJH 7/11/21
          ! Establish the number and locations where the wave kinematics will be computed
       InputFileData%Waves%NWaveKin   = p%NGridPts                          ! Number of points where the incident wave kinematics will be computed (-)
       InputFileData%Waves%NWaveElev  = p%NGrid(1)*p%NGrid(2)               ! Number of XY grid points where the wave elevations are computed

@@ -1163,7 +1163,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
       ! MSL2SWL - Mean sea level to still water level
    
-!TODO: Add check for InputFileData%Morison%MSL2SWL
+
    IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InputFileData%Morison%MSL2SWL, 0.0_ReKi) ) THEN
       CALL SetErrStat( ErrID_Fatal,'SeaState MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
       RETURN
@@ -1175,7 +1175,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
      
    
       ! WaveMod - Wave kinematics model switch.
-!TODO: Verify this check
+
    IF ( InputFileData%PotMod > 0 .and. InitInp%WaveMod == 6 ) THEN
          CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, or 5 when PotMod is not 0',ErrStat,ErrMsg,RoutineName)
          RETURN
