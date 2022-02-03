@@ -910,7 +910,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveTime       => Init%OutData_SeaSt%WaveTime  
          Init%InData_HD%WaveDynP       => Init%OutData_SeaSt%WaveDynP  
          Init%InData_HD%WaveAcc        => Init%OutData_SeaSt%WaveAcc   
-         Init%InData_HD%WaveVel        => Init%OutData_SeaSt%WaveVel   
+         Init%InData_HD%WaveVel        => Init%OutData_SeaSt%WaveVel 
+         Init%InData_HD%PWaveDynP0     => Init%OutData_SeaSt%PWaveDynP0  
+         Init%InData_HD%PWaveAcc0      => Init%OutData_SeaSt%PWaveAcc0   
+         Init%InData_HD%PWaveVel0      => Init%OutData_SeaSt%PWaveVel0   
          Init%InData_HD%WaveElevC0     => Init%OutData_SeaSt%WaveElevC0
          CALL MOVE_ALLOC( Init%OutData_SeaSt%WaveElevC, Init%InData_HD%WaveElevC )
          Init%InData_HD%WaveDirArr     => Init%OutData_SeaSt%WaveDirArr
@@ -928,7 +931,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ! NOTE: this may need to change once other modules start using SeaState
       nullify(Init%OutData_SeaSt%WaveDynP)   
       nullify(Init%OutData_SeaSt%WaveAcc)    
-      nullify(Init%OutData_SeaSt%WaveVel)     
+      nullify(Init%OutData_SeaSt%WaveVel)  
+      nullify(Init%OutData_SeaSt%PWaveDynP0)   
+      nullify(Init%OutData_SeaSt%PWaveAcc0)    
+      nullify(Init%OutData_SeaSt%PWaveVel0)  
       nullify(Init%OutData_SeaSt%WaveTime)
       nullify(Init%OutData_SeaSt%WaveElevC0)
       nullify(Init%OutData_SeaSt%WaveDirArr)
@@ -992,7 +998,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          nullify(Init%InData_HD%WaveDirArr)
          nullify(Init%InData_HD%WaveDynP)   
          nullify(Init%InData_HD%WaveAcc)    
-         nullify(Init%InData_HD%WaveVel)      
+         nullify(Init%InData_HD%WaveVel) 
+         nullify(Init%InData_HD%PWaveDynP0)   
+         nullify(Init%InData_HD%PWaveAcc0)    
+         nullify(Init%InData_HD%PWaveVel0)      
          nullify(Init%InData_HD%WaveTime)
          nullify(Init%InData_HD%WaveElev1)
          nullify(Init%InData_HD%WaveElev2)

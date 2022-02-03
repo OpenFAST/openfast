@@ -1846,7 +1846,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
    TYPE(Morison_MemberType) :: member    ! the current member
    type(Morison_MemberInputType) :: inpMember ! current input file-based member
-   INTEGER                  :: N, i, j, count
+   INTEGER                  :: N, i, j, k, count
    REAL(ReKi)               :: dl
    REAL(ReKi)               :: vec(3),v2D(3,1), pos(3)
    REAL(ReKi)               :: phi    ! member tilt angle
@@ -1931,14 +1931,11 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(i), InitInp%MSL2SWL, InitInp%Nodes(i)%tMG, InitInp%Nodes(i)%MGDensity )
    end do
 
-      ! allocate and copy in node-based load and hydrodynamic arrays
+   ! allocate and copy in node-based load and hydrodynamic arrays
    call AllocateNodeLoadVariables(InitInp, p, m, p%NNodes, errStat, errMsg )
    call MOVE_ALLOC( InitInp%nodeInWater, p%nodeInWater )   
-
- 
    
-   ! Create the input and output meshes associated with loads at the nodes
-      
+   ! Create the input and output meshes associated with loads at the nodes     
    CALL MeshCreate( BlankMesh      = u%Mesh          &
                      ,IOS          = COMPONENT_INPUT        &
                      ,Nnodes       = p%NNodes      &
@@ -2165,10 +2162,31 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! Define initialization-routine output here:
          
    
-    ! Setup the 4D grid information for the Interpolatin Module
+   ! Setup the 4D grid information for the Interpolatin Module
    p%seast_interp_p = InitInp%seast_interp_p
-      
-         ! Initialize the outputs      
+
+   p%WaveStMod = InitInp%WaveStMod
+
+   ! allocate and variables for the wave dynamics at the SWL - Needed for wave stretching
+   ALLOCATE ( p%WaveDynP0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3)), STAT=errStat )
+      IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveDynP0.', ErrStat,ErrMsg,'Morison_Init')
+   ALLOCATE ( p%WaveVel0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
+      IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveVel0.', ErrStat,ErrMsg,'Morison_Init')
+   ALLOCATE ( p%WaveAcc0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
+      IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAcc0.', ErrStat,ErrMsg,'Morison_Init')
+   
+   ! Copy the wave dynamic data at the SWL
+   DO i = 1,p%seast_interp_p%n(2)
+     DO j = 1,p%seast_interp_p%n(3)
+       p%WaveDynP0(:,i,j) = p%WaveDynP(:,i,j,p%seast_interp_p%n(4))
+       DO k = 1,3
+         p%WaveVel0(:,i,j,k) = p%WaveVel(:,i,j,p%seast_interp_p%n(4),k)
+         p%WaveAcc0(:,i,j,k) = p%WaveAcc(:,i,j,p%seast_interp_p%n(4),k)
+       END DO
+     END DO
+   END DO
+   
+   ! Initialize the outputs      
    IF ( p%OutSwtch > 0) then  !@mhall: moved this "if" to after allocations
    
       CALL MrsnOUT_Init( InitInp, y, p, InitOut, errStat, errMsg )
@@ -2332,11 +2350,13 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    p%AM_End        = 0.0
    
 
-   p%WaveVel  => InitInp%WaveVel      
-   p%WaveAcc  => InitInp%WaveAcc
-   p%WaveDynP => InitInp%WaveDynP    
-   p%WaveTime => InitInp%WaveTime   
-   
+   p%WaveVel    => InitInp%WaveVel      
+   p%WaveAcc    => InitInp%WaveAcc
+   p%WaveDynP   => InitInp%WaveDynP    
+   p%WaveTime   => InitInp%WaveTime   
+   p%PWaveVel0  => InitInp%PWaveVel0      
+   p%PWaveAcc0  => InitInp%PWaveAcc0
+   p%PWaveDynP0 => InitInp%PWaveDynP0  
    
 END SUBROUTINE AllocateNodeLoadVariables
 
@@ -2391,6 +2411,9 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       nullify(p%WaveDynP)
       nullify(p%WaveAcc)
       nullify(p%WaveVel)
+      nullify(p%PWaveDynP0)
+      nullify(p%PWaveAcc0)
+      nullify(p%PWaveVel0)
       nullify(p%WaveElev1)
       nullify(p%WaveElev2)
       CALL Morison_DestroyParam( p, errStat, errMsg )
@@ -2410,7 +2433,7 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       CALL Morison_DestroyOutput( y, errStat, errMsg )
 
 
-      
+      print *, 'Morison_End executed'
 
 END SUBROUTINE Morison_End
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2617,63 +2640,174 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h
    real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_A(6), F_I(6), F_D(6), F_B1(6), F_B2(6)
 
-      ! Initialize errStat
-         
+   ! Local variables needed for wave stretching and load smoothing/redistribution
+   INTEGER(IntKi)           :: FSElem
+   REAL(ReKi)               :: SubRatio
+   REAL(ReKi)               :: Zeta1
+   REAL(ReKi)               :: Zeta2
+   REAL(ReKi)               :: FSInt(3)
+   REAL(ReKi)               :: F_D0(3)
+   REAL(ReKi)               :: F_A0(3)   
+   REAL(ReKi)               :: F_I0(3)
+   REAL(ReKi)               :: F_0(3)
+   REAL(ReKi)               :: F_DS(3)
+   REAL(ReKi)               :: F_AS(3)
+   REAL(ReKi)               :: F_IS(3)
+   REAL(ReKi)               :: F_S(3)
+   REAL(ReKi)               :: f_redist
+   REAL(ReKi)               :: Df_hydro(3)
+   REAL(ReKi)               :: DM_hydro(3)
+   REAL(ReKi)               :: Df_hydro_lumped(6)
+   REAL(ReKi)               :: FVFSInt(3)
+   REAL(ReKi)               :: FAFSInt(3)
+   REAL(ReKi)               :: FDynPFSInt
+   REAL(ReKi)               :: vrelFSInt(3)
+   REAL(ReKi)               :: pos1Prime(3)
+   REAL(ReKi)               :: WtrDpth
+   
+
+   ! Initialize errStat
    errStat = ErrID_None         
    errMsg  = ""               
    Imat    = 0.0_ReKi   
    g       = p%Gravity
+   WtrDpth = p%WtrDpth + p%MSL2SWL ! Water depth measured from the free surface
    
    !InterpolationSlope = GetInterpolationSlope(Time, p, m, IntWrapIndx)
 
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
-   
-   do j = 1, p%NNodes
+      
+   DO j = 1, p%NNodes
       !m%nodeInWater(j) = REAL( p%nodeInWater(IntWrapIndx,j), ReKi )
-! TODO: Update for Wave Kinematics grid  
-      if (p%WaveDisp == 0 ) then
-         ! use the initial  X,Y location and initial Z location
+      !TODO: Update for Wave Kinematics grid  
+      IF (p%WaveDisp == 0 ) THEN
+         ! use the initial X,Y location
          pos1(1) = u%Mesh%Position(1,j)
          pos1(2) = u%Mesh%Position(2,j)
-      else        
-         ! Use current X,Y location and initial Z location
+      ELSE
+         ! Use current X,Y location
          pos1(1) = u%Mesh%TranslationDisp(1,j) + u%Mesh%Position(1,j)
          pos1(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
-      end if
+      END IF
       
-      pos1(3) =                               u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
-      if ( pos1(3) <= 0.0 ) then
-         ! Use location to obtain interpolated values of kinematics
-         call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
-         m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
-         m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
-         m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
-               
-         positionXY = (/pos1(1),pos1(2)/)      
-         m%WaveElev1(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+      IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
+        pos1(3) = u%Mesh%Position(3,j) + u%Mesh%TranslationDisp(3,j) - p%MSL2SWL  ! Use the current Z location.
+      ELSE ! Wave stretching disabled
+        pos1(3) = u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
+      END IF
+            
+      ! Compute the free surface elevation at the x/y position of all nodes
+      positionXY = (/pos1(1),pos1(2)/)      
+      m%WaveElev1(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+      IF (associated(p%WaveElev2)) THEN
+        m%WaveElev2(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+        m%WaveElev(j) =  m%WaveElev1(j) + m%WaveElev2(j)
+      ELSE
+        m%WaveElev(j) =  m%WaveElev1(j) 
+      END IF      
+      
+      
+      IF (p%WaveStMod == 0) THEN ! No wave stretching
+    
+          IF ( pos1(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
+              ! Use location to obtain interpolated values of kinematics         
+              call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              m%vrel(:,j) = m%FV(:,j) - u%Mesh%TranslationVel(:,j)
+              m%nodeInWater(j) = 1_IntKi
+          ELSE ! Node is above the SWL
+              m%FV(:,j)  = 0.0
+              m%FA(:,j)  = 0.0
+              m%FDynP(j) = 0.0
+              m%vrel(:,j) = 0.0  
+              m%nodeInWater(j) = 0_IntKi
+          END IF
+      
+      ELSE ! Wave stretching enabled
+      
+          IF ( pos1(3) <= m%WaveElev(j)) THEN ! Node is submerged
+          
+              m%nodeInWater(j) = 1_IntKi
+ 
+              IF (p%WaveStMod <3) THEN ! Vertical or extrapolated wave stretching
+          
+                  IF ( pos1(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
+          
+                      ! Use location to obtain interpolated values of kinematics         
+                      call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                      m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                      m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                      m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+          
+                  ELSE ! Node is above SWL - need wave stretching
+          
+                      ! Vertical wave stretching
+                      m%FV(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveVel0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                      m%FA(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAcc0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                      m%FDynP(j) = SeaSt_Interp_3D    ( Time, positionXY, p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                      
+                      ! Extrapoled wave stretching
+                      IF (p%WaveStMod == 2) THEN 
+                        m%FV(:,j)  = m%FV(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        m%FA(:,j)  = m%FA(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        m%FDynP(j) = m%FDynP(j) + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                      END IF
+          
+                  END IF ! Node is submerged
+ 
+              ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
+                  
+                  ! Map the node z-position linearly from [-WtrDpth,m%WaveElev(j)] to [-WtrDpth,0] 
+                  pos1Prime = pos1
+                  pos1Prime(3) = WtrDpth*(WtrDpth+pos1(3))/(WtrDpth+m%WaveElev(j))-WtrDpth
+                  
+                  ! Obtain the wave-field variables by interpolation with the mapped position.
+                  call SeaSt_Interp_Setup( Time, pos1Prime, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                  m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                  m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                  m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              
+              END IF
+          
+              m%vrel(:,j) = m%FV(:,j) - u%Mesh%TranslationVel(:,j)
         
-         if (associated(p%WaveElev2)) then
-            m%WaveElev2(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
-            m%WaveElev(j) =  m%WaveElev1(j) + m%WaveElev2(j)
-         else
-            m%WaveElev(j) =  m%WaveElev1(j) 
-         end if      
-      else
-         m%FV(:,j)  = 0.0
-         m%FA(:,j)  = 0.0
-         m%FDynP(j) = 0.0   
-      end if
+          ELSE ! Node is out of water - zero-out all wave dynamics
+          
+              m%nodeInWater(j) = 0_IntKi  
+              m%FV(:,j)  = 0.0
+              m%FA(:,j)  = 0.0
+              m%FDynP(j) = 0.0
+              m%vrel(:,j) = 0.0 
+          
+          END IF ! If node is in or out of water
       
-      m%vrel(:,j) = m%FV(:,j) - u%Mesh%TranslationVel(:,j)
-      
-   end do
+      END IF ! If wave stretching is on or off
+
+   END DO ! j = 1, p%NNodes
+   
    
    ! ==============================================================================================
    ! Calculate instantaneous loads on each member except for the hydrodynamic loads on member ends.
@@ -2711,7 +2845,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
       DO i =1,N    ! loop through member elements
 
-            ! calculate isntantaneous incline angle and heading, and related trig values
+         ! calculate isntantaneous incline angle and heading, and related trig values
          ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
 
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
@@ -3036,98 +3170,379 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
          end if
         
-           
-         
-   
       END DO ! i =1,N    ! loop through member elements       
 
        
-      ! External Hydrodynamic Side Loads
-         ! NOTE: All geometry-related calculations are based on the undisplaced configuration of the structure
+       
+      !-----------------------------------------------------------------------------------------------------!
+      !                               External Hydrodynamic Side Loads - Start                              !
+      !-----------------------------------------------------------------------------------------------------!
+      ! Get the initial z-positions of the two end nodes of the member to determine whether the member should 
+      ! be surface piercing
+      z1 = u%Mesh%Position(3, mem%NodeIndx(1))   - p%MSL2SWL
+      z2 = u%Mesh%Position(3, mem%NodeIndx(N+1)) - p%MSL2SWL
+      IF ( z2 > 0.0_SiKi .AND. z1 <= 0.0_SiKi .AND. p%WaveStMod > 0) THEN 
       
-      DO i =1,N+1    ! loop through member nodes
-         ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
-         z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL
-         if ( i > mem%i_floor .and. z1 <= 0.0 ) then  ! node is above (or at? TODO: check) seabed and below or at free-surface)
-            ! TODO: Note that for computational efficiency, we could precompute h_c and deltal for each element when we are NOT using wave stretching
-            ! We would still need to test at time marching for nodes just below the free surface because that uses the current locations not the reference locations
-            ! see table in Section 7.1.1
-            if ( i == 1 ) then
-               deltal = mem%dl/2.0_ReKi
-               h_c    = mem%dl/4.0_ReKi
-            elseif (i == N+1) then
-               deltal =  mem%dl/2.0_ReKi
-               h_c    = -mem%dl/4.0_ReKi
-            elseif ( mem%i_floor == i+1 ) then ! This node is the upper node of an element which crosses the seabed
-               deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
-               h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
-            else
-               ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-               pos1 =   u%Mesh%Position(:, mem%NodeIndx(i))
-               pos1(3) = pos1(3) - p%MSL2SWL
-               pos2 =   u%Mesh%Position(:, mem%NodeIndx(i+1))
-               pos2(3) = pos2(3) - p%MSL2SWL
-               if (pos1(3) <= 0.0 .and. 0.0 < pos2(3) ) then ! This node is just below the free surface !TODO: Needs to be augmented for wave stretching
-                  ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-                  !TODO: Fix this one
-                  pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
-                  pos1(3) = pos1(3) - p%MSL2SWL
-                  h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
-                  deltal = mem%dl/2.0 + h
-                  h_c    = 0.5*(h-mem%dl/2.0)
-               else
-                  ! This node is a fully submerged interior node
-                  deltal = mem%dl
-                  h_c    = 0.0_ReKi
-               end if
-            
-            end if
+      !----------------------------Surface Piercing Member with Wave Stretching-----------------------------!
+                
+        FSElem = -1 ! Initialize the No. of the partially wetted element as -1
+      
+        DO i = mem%i_floor+1,N ! loop through member nodes starting from the first node above seabed, but skip the last node which should not be submerged anyways
+           
+           ! Get positions of node i and i+1
+           IF (p%WaveDisp /= 0) THEN ! Use current position
+              pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i))  
+              pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1))
+           ELSE ! Use initial position
+              pos1    = u%Mesh%Position(:, mem%NodeIndx(i))  
+              pos2    = u%Mesh%Position(:, mem%NodeIndx(i+1))
+           END if
+           ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
+           pos1(3) = pos1(3) - p%MSL2SWL
+           pos2(3) = pos2(3) - p%MSL2SWL 
+           
+           ! Free surface elevation above or below node i and i+1
+           Zeta1 = m%WaveElev(mem%NodeIndx(i))
+           Zeta2 = m%WaveElev(mem%NodeIndx(i+1))
 
-            if (i == 1) then
-               dRdl_p  = abs(mem%dRdl_mg(i))
-               dRdl_pp = mem%dRdl_mg(i)   
-            elseif ( i > 1 .and. i < (N+1)) then
-               dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
-               dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
-            else 
-               dRdl_p  = abs(mem%dRdl_mg(N))
-               dRdl_pp = mem%dRdl_mg(N)
-            end if
+           ! Compute deltal and h_c
+           IF ( i == 1 ) THEN ! First node
+              deltal = mem%dl/2.0_ReKi
+              h_c    = mem%dl/4.0_ReKi
+           ELSE IF ( i == mem%i_floor + 1 ) THEN ! This node is the upper node of an element which crosses the seabed
+              ! Superceded by i==1 above if mem%i_floor = 0
+              deltal = mem%dl/2.0_ReKi - mem%h_floor
+              h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
+           ELSE
+              ! This node is an interior node. Note: Element crossing the free surface will be handled at the end in conjunction with wave stretching
+              deltal = mem%dl
+              h_c    = 0.0_ReKi           
+           END IF ! Note: No need to consider i==N+1 because we do not allow the top node to become submerged. The loop also does not reach N+1.
+           
+           IF ( pos1(3) <= Zeta1 .AND. pos2(3) > Zeta2 ) THEN ! element is partially wetted
+             ! Record the number of the partially wetted element
+             FSElem = i
+             ! Calculate submergence ratio
+             SubRatio = ( Zeta1-pos1(3) ) / ( (Zeta1-pos1(3)) - (Zeta2-pos2(3)) )
+             ! Calculate the position of the intersection between the free surface and the element
+             FSInt = SubRatio * (pos2-pos1) + pos1
+           END IF
          
-            ! ------------------- hydrodynamic drag loads: sides: Section 7.1.2 ------------------------ 
-            vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
-            f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
-                      0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
-!            call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%F_D(:, mem%NodeIndx(i)) )
-            call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
-            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
-            y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(4:6, i)
+           ! Compute the slope of member radius
+           IF (i == 1) THEN
+              dRdl_p  = abs(mem%dRdl_mg(i))
+              dRdl_pp = mem%dRdl_mg(i)   
+           ELSE IF ( i > 1 .AND. i < (N+1)) THEN
+              dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
+              dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
+           ELSE
+              dRdl_p  = abs(mem%dRdl_mg(N))
+              dRdl_pp = mem%dRdl_mg(N)
+           END IF
+       
+           !-------------------- hydrodynamic drag loads: sides: Section 7.1.2 ------------------------!
+           vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
+           f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
+                     0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+           CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
+           y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
+           y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(4:6, i)
+           IF (i == FSElem) THEN ! Save the distributed load at the first node below the free surface
+             F_D0 = f_hydro
+           END IF
+           
+           IF ( .NOT. mem%PropPot ) THEN
+              !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
+              Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
+              f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
+              CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+              y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
+              y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
+              IF (i == FSElem) THEN ! Save the distributed load at the first node below the free surface
+                 F_A0 = f_hydro
+              END IF
+           
+              !--------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
+              f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
+                           2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                           2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
+              y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
+              y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
+              IF (i == FSElem) THEN ! Save the distributed load at the first node below the free surface
+                 F_I0 = f_hydro
+              END IF
+           END IF
+           
+        END DO ! i =1,N+1    ! loop through member nodes  
+
+        IF (FSElem < 0) THEN ! No partially wetted element identified - Bad!
+          CALL SetErrStat(ErrID_Fatal, 'No partially wetted element identified for an initially surface-piercing member.  This has happend to Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+          RETURN
+        ELSE IF (FSElem < 3) THEN ! Only one or no element is fully submerged - Bad!
+          CALL SetErrStat(ErrID_Fatal, 'For each surface-piercing member, at least two elements must remain fully submerged.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+          RETURN
+        END IF
+
+        !----------------------------------------------------------------------------------------------------!
+        ! Compute the distributed loads at the point of intersection between the member and the free surface !
+        !----------------------------------------------------------------------------------------------------!   
+        ! Get wave dynamics at the free surface intersection
+        IF (p%WaveStMod <3) THEN ! Vertical or extrapolated stretching
+           
+           IF ( FSInt(3) <= 0.0_ReKi) THEN ! Intersection is below SWL - evaluate wave dynamics as usual
+              
+              ! Use location to obtain interpolated values of kinematics
+              CALL SeaSt_Interp_Setup( Time, FSInt, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              FVFSInt = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              FAFSInt = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              FDynPFSInt = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+           
+           ELSE ! Intersection is above SWL - need wave stretching
+              
+              ! Vertical wave stretching
+              FVFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+              FAFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+              FDynPFSInt = SeaSt_Interp_3D    ( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+              
+              ! Extrapolated wave stretching
+              IF (p%WaveStMod == 2) THEN 
+                FVFSInt    = FVFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                FAFSInt    = FAFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                FDynPFSInt = FDynPFSInt + SeaSt_Interp_3D    ( Time, FSInt(1:2), p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+              END IF
+              
+           END IF
+           
+        ELSE ! Wheeler stretching
+           
+           ! Points on the free surface is always mapped back to z=0 of the unstretched wave field
+           ! Can evaluate the wave-field variables in the same way as vertical stretching
+           FVFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+           FAFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+           FDynPFSInt = SeaSt_Interp_3D( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+           
+        END IF
+
+        ! Viscous drag:
+        ! Compute relative velocity at the free surface intersection. 
+        ! Linear interpolation between the two nodes of the element is used to estimate velocity of the structure
+        vrelFSInt = FVFSInt - ( & 
+               SubRatio  * u%Mesh%TranslationVel(:,mem%NodeIndx(FSElem+1)) + &
+          (1.0-SubRatio) * u%Mesh%TranslationVel(:,mem%NodeIndx(FSElem  ))   &
+        )
+        dRdl_p  = 0.5*( abs(mem%dRdl_mg(FSElem-1)) + abs(mem%dRdl_mg(FSElem)) )
+        vec = matmul( mem%Ak,vrelFSInt )
+        F_DS = mem%Cd(FSElem)*p%WtrDens*mem%RMG(FSElem)*TwoNorm(vec)*vec  +  &
+                  0.5*mem%AxCd(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*dRdl_p * & 
+                  matmul( dot_product( mem%k, vrelFSInt )*mem%kkt, vrelFSInt )
+        
+        ! Hydrodynamic added mass and inertia loads
+        IF ( .NOT. mem%PropPot ) THEN
+           ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
+           Am =      mem%Ca(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*mem%Ak + &
+               2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p*mem%kkt
+           F_AS = -matmul( Am, &
+                      SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
+                 (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
+         
+           ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
+           F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)   * matmul( mem%Ak,  FAFSInt ) + &
+                        2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                        2.0*mem%AxCp(FSElem)          *pi*mem%RMG(FSElem)                *dRdl_pp * FDynPFSInt*mem%k
+        END IF
+        
+        !----------------------------------------------------------------------------------------------------!
+        !                         Perform the load redistribution for smooth time series                     !
+        !----------------------------------------------------------------------------------------------------!
+        ! Evaluate the load redistribution function
+        f_redist = 2.0_ReKi * SubRatio**3 - 3.5_ReKi * SubRatio**2 + SubRatio + 0.5_ReKi
+        
+        ! deltal = mem%dl and h_c = 0 should always be used here by design. Moment correction will be applied separately
+        deltal = mem%dl
+        h_c    = 0.0_ReKi
+        
+        ! Viscous drag
+        ! Apply load redistribution to the first node below the free surface
+        Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_D0 + SubRatio/2.0_ReKi*F_DS
+        CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+        m%memberLoads(im)%F_D(:, FSElem) = m%memberLoads(im)%F_D(:, FSElem) + Df_hydro_lumped
+        y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
+        y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(4:6)
+        
+        ! Apply load redistribution to the second node below the free surface
+        Df_hydro = f_redist * F_D0
+        CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+        m%memberLoads(im)%F_D(:, FSElem-1) = m%memberLoads(im)%F_D(:, FSElem-1) + Df_hydro_lumped
+        y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
+        y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+
+        ! Hydrodynamic added mass and inertia loads
+        IF ( .NOT. mem%PropPot ) THEN
+        
+           !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
+           ! Apply load redistribution to the first node below the free surface
+           Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
+           CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+           m%memberLoads(im)%F_A(:, FSElem) = m%memberLoads(im)%F_A(:, FSElem) + Df_hydro_lumped
+           y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
+           y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(4:6)
+        
+           ! Apply load redistribution to the second node below the free surface
+           Df_hydro = f_redist * F_A0
+           CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+           m%memberLoads(im)%F_A(:, FSElem-1) = m%memberLoads(im)%F_A(:, FSElem-1) + Df_hydro_lumped
+           y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
+           y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+           
+           !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
+           ! Apply load redistribution to the first node below the free surface
+           Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_I0 + SubRatio/2.0_ReKi*F_IS
+           CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+           m%memberLoads(im)%F_I(:, FSElem) = m%memberLoads(im)%F_I(:, FSElem) + Df_hydro_lumped
+           y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
+           y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(4:6)
+        
+           ! Apply load redistribution to the second node below the free surface
+           Df_hydro = f_redist * F_I0
+           CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+           m%memberLoads(im)%F_I(:, FSElem-1) = m%memberLoads(im)%F_I(:, FSElem-1) + Df_hydro_lumped
+           y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
+           y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+           
+        END IF
+
+        !----------------------------------------------------------------------------------------------------!
+        !                     Perform moment correction to compensate for load redistribution                !
+        !----------------------------------------------------------------------------------------------------!
+        ! Moment correction to the first node below the free surface
+        F_S = F_DS
+        IF ( .NOT. mem%PropPot) THEN
+           F_S = F_S + F_AS + F_IS
+        END IF
+        DM_hydro = 0.5_ReKi * SubRatio**2 * deltal * cross_product(mem%k, F_S)
+        y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + DM_hydro * deltal
+        
+        ! Moment correction to the second node below the free surface
+        F_0 = F_D0
+        IF ( .NOT. mem%PropPot) THEN
+           F_0 = F_0 + F_A0 + F_I0
+        END IF
+        DM_hydro =               f_redist * deltal * cross_product(mem%k, F_0)
+        y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
+
+
+      ELSE !-------------------------------Fully Submerged Member or No Wave Stretching-------------------------------!
+      
+        DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
+           ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
+           ! Using the initial z-position to be consistent with the evaluation of wave kinematics
+           IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN
+              ! Use current z-position
+              z1 = u%Mesh%Position(3, mem%NodeIndx(i)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i)) - p%MSL2SWL
+           ELSE
+              ! Use initial z-position
+              z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL 
+           END IF
+           
+           ! When wave stretching is enabled, we do not allow an initially fully submerged member to breach the free surface during the simulation
+           IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
+              CALL SetErrStat(ErrID_Fatal, 'An initially fully submerged member cannot pierce the free surface.  This has happend for Member ID ' & 
+                                     //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+              RETURN
+           END IF
+                      
+           !---------------------------------------------Compute deltal and h_c------------------------------------------!
+           ! Default value for fully submerged interior node
+           deltal = mem%dl
+           h_c    = 0.0_ReKi
+           
+           ! Special cases
+           IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
+              deltal =  mem%dl/2.0_ReKi
+              h_c    =  mem%dl/4.0_ReKi
+           ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
+              ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
+              !       This is the correct behavior.
+              deltal =  mem%dl/2.0_ReKi - mem%h_floor
+              h_c    =  0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
+           ELSE IF ( i == N+1 ) THEN ! Last node
+              deltal =  mem%dl/2.0_ReKi
+              h_c    = -mem%dl/4.0_ReKi
+           ELSE ! Interior node
+              ! Need to check if element crosses the SWL, but only if WaveStMod == 0
+              ! With wave stretching, will error out anyway unless all nodes are submerged
+              IF (p%WaveStMod==0) THEN ! No wave stretching
+                 ! Initial z position will always be used
+                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
+                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
+                    deltal = mem%dl/2.0 + h
+                    h_c    = 0.5*(h-mem%dl/2.0)
+                 END IF
+              END IF
+           END IF
+           
+           ! Compute the slope of the member radius
+           IF (i == 1) THEN
+              dRdl_p  = abs(mem%dRdl_mg(i))
+              dRdl_pp = mem%dRdl_mg(i)   
+           ELSE IF ( i > 1 .AND. i < (N+1)) THEN
+              dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
+              dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
+           ELSE
+              dRdl_p  = abs(mem%dRdl_mg(N))
+              dRdl_pp = mem%dRdl_mg(N)
+           END IF
+         
+           !--------------------- hydrodynamic drag loads: sides: Section 7.1.2 --------------------------------! 
+           vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
+           f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
+                     0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+           CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
+           y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
+           y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(4:6, i)
             
-            if ( .not. mem%PropPot ) then
-               ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
-               Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
-               f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
-               !call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%F_A(:, mem%NodeIndx(i)) )
-               call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
-               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
-               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
-         
-               ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
-               f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
-                            2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
-                            2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
-               !call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%F_I(:, mem%NodeIndx(i)) )
-               call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
-               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
-               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
-            end if
-         end if ! ( i > mem%i_floor .and. Zi <= 0.0 )
-         
-      END DO ! i =1,N+1    ! loop through member nodes       
+           IF ( .NOT. mem%PropPot ) THEN
+              !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
+              Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
+              f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
+              CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+              y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
+              y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
+           
+              !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ---------------------------!
+              f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
+                           2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                           2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
+              y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
+              y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
+           END IF
+
+        END DO ! i = 1,N+1    ! loop through member nodes       
       
-      
-      ! Any end plate loads that are modeled on a per-member basis
-      
+      END IF ! Check if the member is surface piercing
+      !-----------------------------------------------------------------------------------------------------!
+      !                                External Hydrodynamic Side Loads - End                               !
+      !-----------------------------------------------------------------------------------------------------!
+            
+      !-----------------------------------------------------------------------------------------------------!
+      !             Any end plate loads that are modeled on a per-member basis: F_B and F_BF                !
+      !-----------------------------------------------------------------------------------------------------!
       ! reassign convenience variables to correspond to member ends
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
       pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1)) + u%Mesh%Position(:, mem%NodeIndx(1)) 
@@ -3150,6 +3565,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          pos2(3) = pos2(3) - p%MSL2SWL
          call GetOrientationAngles( pos1, pos2, phi2, sinPhi2, cosPhi2, tanPhi, sinBeta2, cosBeta2, k_hat2, errStat2, errMsg2 )
       end if
+      
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
       pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
       pos2(3) = pos2(3) - p%MSL2SWL
@@ -3165,10 +3581,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          end if
       end if
 
-! TODO: Do the equations below still work if z1 > z2 ?
- !TODO, should not have to test seabed crossing in time-marching loop
-
-      
+      !TODO: Do the equations below still work if z1 > z2 ?
+      !TODO: Should not have to test seabed crossing in time-marching loop
       if ( mem%i_floor == 0 ) then   ! both ends are above seabed
          !--- Water ballast buoyancy ---
          ! if member is fully flooded
@@ -3258,78 +3672,83 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !   END DO  ! 
    !end do
  
-
-   ! --- Hydrodynamic drag loads: joints
+   !---------------------------------------------------------------------------------------------------------------!
+   !                                     External Hydrodynamic Joint Loads - Start                                 !
+   !                                        F_D_End, F_I_End, F_A_End, F_IMG_End                                   !
+   !---------------------------------------------------------------------------------------------------------------!      
+   ! NOTE:  All wave kinematics have already been zeroed out above the SWL or instantaneous wave height (for WaveStMod > 0), 
+   ! so loads derived from the kinematics will be correct without the use of a nodeInWater value, but other loads need to be 
+   ! multiplied by nodeInWater to zero them out above the SWL or instantaneous wave height.
+   !TODO: Where's F_WMF_End computed?
       
-      ! NOTE:  All wave kinematics have already been zeroed out above the SWL or instantaneous wave height (for WaveStMod > 0), so loads derived from the kinematics will be correct
-      !        without the use of a nodeInWater value, but other loads need to be multiplied by nodeInWater to zero them out above the SWL or instantaneous wave height.
-      
-      DO J = 1, p%NJoints
-         
-            ! Obtain the node index because WaveVel, WaveAcc, and WaveDynP are defined in the node indexing scheme, not the markers
-
-         
-            ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
-         vmag =  m%nodeInWater(j) * ( m%vrel(1,j)*p%An_End(1,J) + m%vrel(2,j)*p%An_End(2,J) + m%vrel(3,j)*p%An_End(3,J) )
-         
-  !NOTE: The PropPot values are only for members, and when the p%AM_End, p%DP_Const_End, p%Mass_MG_End, and p%I_MG_End are computed at init,
-  !      contributions to these values are added only if the member connecting to the joint is NOT modeled with potential flow theory
-  !      However, the p%An_End term used data from ALL members attached to a node, regardless of the PropPot setting.
-         
-            ! Lumped added mass loads
-         qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
-         m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( p%AM_End(:,:,J) , ( - qdotdot(1:3)) )
-         
-         ! TODO: The original code did not multiply by nodeInWater, but should we? GJH
-         m%F_I_End(:,J) =   (p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j)))
-         
-         ! Marine growth inertia: ends: Section 4.2.2  
-         m%F_IMG_End(1:3,j) = -m%nodeInWater(j) * p%Mass_MG_End(j)*qdotdot(1:3)
-         m%F_IMG_End(4:6,j) = -m%nodeInWater(j) * (matmul(p%I_MG_End(:,:,j),qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(p%I_MG_End(:,:,j),u%Mesh%RotationVel(:,J))))
-         
-         DO I=1,6
-                        
-            ! We are now combining the dynamic pressure term into the inertia term
-            
-            
-            IF (I < 4 ) THEN
-              
-              
-               m%F_D_End(i,j) =  p%An_End(i,j)*p%DragConst_End(j)*abs(vmag)*vmag  ! Note: vmag is zero if node is not in the water
-               y%Mesh%Force(i,j)    = y%Mesh%Force(i,j)    + m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
-            ELSE
-               y%Mesh%Moment(i-3,j) = y%Mesh%Moment(i-3,j) + m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
-            END IF
-         END DO      ! I=1,6
-      ENDDO          ! J = 1, p%NJoints
+   DO J = 1, p%NJoints
      
-         ! OutSwtch determines whether or not to actually output results via the WriteOutput array
-         ! 1 = Morison will generate an output file of its own.  2 = the caller will handle the outputs, but
-         ! Morison needs to provide them.  3 = Both 1 and 2, 0 = No one needs the Morison outputs provided
-         ! via the WriteOutput array.
-         
-      IF ( p%OutSwtch > 0 ) THEN
-     
-            ! Map calculated results into the AllOuts Array
-         CALL MrsnOut_MapOutputs(Time, y, p, u, m, AllOuts, errStat, errMsg)
-               
-      
-            ! Put the output data in the WriteOutput array
-   
-         DO I = 1,p%NumOuts
-
-            y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      
-         END DO
-         
-         
-            ! Generate output into the output file
+      ! Obtain the node index because WaveVel, WaveAcc, and WaveDynP are defined in the node indexing scheme, not the markers (No longer relevant?)
+      ! The first NJoints nodes are all the joints with the rest being the internal nodes. See Morison_GenerateSimulationNodes.
             
-         IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
-            CALL MrsnOut_WriteOutputs( p%UnOutFile, Time, y, p, errStat, errMsg )         
+      ! NOTE: 
+      ! The PropPot values are only for members, and when the p%AM_End, p%DP_Const_End, p%Mass_MG_End, and p%I_MG_End are computed at init,
+      ! contributions to these values are added only if the member connecting to the joint is NOT modeled with potential flow theory
+      ! However, the p%An_End term used data from ALL members attached to a node, regardless of the PropPot setting, because the drag force is alway on.
+      ! Therefore, no need to check PropPot here.
+      
+      ! Effect of wave stretching already baked into m%FDynP, m%FA, and m%vrel. No additional modification needed.
+         
+      ! Lumped added mass loads
+      qdotdot                 = reshape((/u%Mesh%TranslationAcc(:,J),u%Mesh%RotationAcc(:,J)/),(/6/)) 
+      m%F_A_End(:,J)          = m%nodeInWater(j) * matmul( p%AM_End(:,:,J) , ( - qdotdot(1:3)) )
+         
+      ! TODO: The original code did not multiply by nodeInWater, but should we? GJH
+      ! Should be ok because m%FDynP and m%FA are both zeroed above the SWL (when WaveStMod=0) or the instantaneous free surface (when WaveStMod>0)
+      m%F_I_End(:,J) =   (p%DP_Const_End(:,j) * m%FDynP(j) + matmul(p%AM_End(:,:,j),m%FA(:,j)))
+         
+      ! Marine growth inertia: ends: Section 4.2.2
+      ! With wave stretching, m%nodeInWater is based on the instantaneous free surface and the current body position if (WaveDisp/=0).
+      ! This should still be ok because with wave stretching, we do not allow joints to come out of water if initially submerged or 
+      ! enter water if initially out of water. This is enforced when computing the side loads above.
+      m%F_IMG_End(1:3,j) = -m%nodeInWater(j) * p%Mass_MG_End(j)*qdotdot(1:3)
+      m%F_IMG_End(4:6,j) = -m%nodeInWater(j) * (matmul(p%I_MG_End(:,:,j),qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(p%I_MG_End(:,:,j),u%Mesh%RotationVel(:,J))))
+
+      ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
+      ! m%nodeInWater(j) is probably not necessary because m%vrel is zeroed when the node is out of water
+      vmag =  m%nodeInWater(j) * ( m%vrel(1,j)*p%An_End(1,J) + m%vrel(2,j)*p%An_End(2,J) + m%vrel(3,j)*p%An_End(3,J) )
+         
+      ! Evaluate drag force and combine all per-joint loads
+      DO I=1,6
+         IF (I < 4 ) THEN ! Three force components
+            m%F_D_End(i,j)       = p%An_End(i,j) * p%DragConst_End(j) * abs(vmag)*vmag  ! Note: vmag is zero if node is not in the water
+            y%Mesh%Force(i,j)    = y%Mesh%Force(i,j)    + m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
+         ELSE ! Three moment components
+            y%Mesh%Moment(i-3,j) = y%Mesh%Moment(i-3,j) + m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
          END IF
+      END DO  ! I=1,6
+         
+   END DO  ! J = 1, p%NJoints
+   
+   !---------------------------------------------------------------------------------------------------------------!
+   !                                      External Hydrodynamic Joint Loads - End                                  !
+   !---------------------------------------------------------------------------------------------------------------!    
+        
+   ! OutSwtch determines whether or not to actually output results via the WriteOutput array
+   ! 1 = Morison will generate an output file of its own.  2 = the caller will handle the outputs, but
+   ! Morison needs to provide them.  3 = Both 1 and 2, 0 = No one needs the Morison outputs provided
+   ! via the WriteOutput array.
+   IF ( p%OutSwtch > 0 ) THEN
+     
+      ! Map calculated results into the AllOuts Array
+      CALL MrsnOut_MapOutputs(Time, y, p, u, m, AllOuts, errStat, errMsg)
+        
+      ! Put the output data in the WriteOutput array
+      DO I = 1,p%NumOuts
+         y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+      END DO
+
+      ! Generate output into the output file
+      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
+         CALL MrsnOut_WriteOutputs( p%UnOutFile, Time, y, p, errStat, errMsg )         
       END IF
       
+   END IF
    
 END SUBROUTINE Morison_CalcOutput
 

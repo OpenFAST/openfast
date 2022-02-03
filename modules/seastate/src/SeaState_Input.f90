@@ -668,15 +668,21 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
    !end if
 
 
-         ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
+   ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
 
-         ! TODO: We are only implementing WaveStMod = 0 (No stretching) at this point in time. 1 Mar 2013 GJH
+   ! TODO: We are only implementing WaveStMod = 0 (No stretching) at this point in time. 1 Mar 2013 GJH
+   ! All three methods of wave stretching tentatively implemented.
 
-   if ( InputFileData%Waves%WaveStMod /= 0 ) then
-      call SetErrStat( ErrID_Fatal,'WaveStMod must be 0. Future versions of SeaState will once again support other wave stretching models.',ErrStat,ErrMsg,RoutineName)
-      return
-   end if
-   !
+   IF ( InputFileData%Waves%WaveMod /= 0 .AND. InputFileData%Waves%WaveMod /= 6 ) THEN
+      IF ( (InputFileData%Waves%WaveStMod /= 0) .AND. (InputFileData%Waves%WaveStMod /= 1) .AND. &
+           (InputFileData%Waves%WaveStMod /= 2) .AND. (InputFileData%Waves%WaveStMod /= 3) ) THEN
+         CALL SetErrStat( ErrID_Fatal,'WaveStMod must be 0, 1, 2, or 3.',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      END IF
+   ELSE ! Wave stretching is not supported when WaveMod = 0 or 6.
+      InputFileData%Waves%WaveStMod = 0_IntKi
+   END IF
+   
    !if ( InputFileData%Waves%WaveMod /= 6 .AND. InputFileData%Morison%NMembers > 0 .AND. InputFileData%Waves%WaveMod > 0 ) then
    !
    !   if ( ( InputFileData%Waves%WaveStMod /= 0 ) .AND. ( InputFileData%Waves%WaveStMod /= 1 ) .AND. &
@@ -836,7 +842,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
       return
    end if
    
-
       ! WaveDir - Wave heading direction.
 
    if ( ( InputFileData%Waves%WaveMod > 0 ) .AND. ( InputFileData%Waves%WaveMod /= 6 ) )  then   ! .TRUE if we have incident waves, but not user input wave data.

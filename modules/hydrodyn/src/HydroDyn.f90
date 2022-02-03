@@ -800,13 +800,17 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          InputFileData%Morison%WaveTime  => InitInp%WaveTime
          
             ! Permanently move these wave values to Morison init input (and note they are potentially modified by 2nd order stuff before being sent to Morison)
-         InputFileData%Morison%WaveAcc   => InitInp%WaveAcc         
-         InputFileData%Morison%WaveDynP  => InitInp%WaveDynP        
-         InputFileData%Morison%WaveVel   => InitInp%WaveVel  
-         InputFileData%Morison%WaveElev1 => InitInp%WaveElev1
-         InputFileData%Morison%WaveElev2 => InitInp%WaveElev2
+         InputFileData%Morison%WaveAcc    => InitInp%WaveAcc         
+         InputFileData%Morison%WaveDynP   => InitInp%WaveDynP        
+         InputFileData%Morison%WaveVel    => InitInp%WaveVel  
+         InputFileData%Morison%PWaveAcc0  => InitInp%PWaveAcc0       
+         InputFileData%Morison%PWaveDynP0 => InitInp%PWaveDynP0        
+         InputFileData%Morison%PWaveVel0  => InitInp%PWaveVel0  
+         InputFileData%Morison%WaveElev1  => InitInp%WaveElev1
+         InputFileData%Morison%WaveElev2  => InitInp%WaveElev2
 !         CALL MOVE_ALLOC( Waves_InitOut%nodeInWater,InputFileData%Morison%nodeInWater )  ! moved to Morison%p%nodeInWater in the init routine
 
+         InputFileData%Morison%WaveStMod = InitInp%WaveStMod
 
                ! If we did some second order wave kinematics corrections to the acceleration, velocity or
                ! dynamic pressure using the Waves2 module, then we need to add these to the values that we
@@ -1191,7 +1195,10 @@ CONTAINS
    
       nullify(InputFileData%Morison%WaveDynP)   
       nullify(InputFileData%Morison%WaveAcc)    
-      nullify(InputFileData%Morison%WaveVel)     
+      nullify(InputFileData%Morison%WaveVel) 
+      nullify(InputFileData%Morison%PWaveDynP0)   
+      nullify(InputFileData%Morison%PWaveAcc0)    
+      nullify(InputFileData%Morison%PWaveVel0)     
       nullify(InputFileData%Morison%WaveTime)
       nullify(InputFileData%Morison%WaveElev1)
       nullify(InputFileData%Morison%WaveElev2)
@@ -1263,6 +1270,9 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       nullify(p%Morison%WaveDynP)
       nullify(p%Morison%WaveAcc)
       nullify(p%Morison%WaveVel)
+      nullify(p%Morison%PWaveDynP0)
+      nullify(p%Morison%PWaveAcc0)
+      nullify(p%Morison%PWaveVel0)
       nullify(p%Morison%WaveElev1)
       nullify(p%Morison%WaveElev2)
       do i = 1,p%NBody
@@ -1664,7 +1674,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                                 z%Morison, OtherState%Morison, y%Morison, m%Morison, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       END IF
-      
       
          ! Integrate all the mesh loads onto the platfrom reference Point (PRP) at (0,0,0)
       m%F_Hydro = CalcLoadsAtWRP( y, u, m%AllHdroOrigin, u%PRPMesh, m%MrsnMesh_position, m%HD_MeshMap, ErrStat2, ErrMsg2 )

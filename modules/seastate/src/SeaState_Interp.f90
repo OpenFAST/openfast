@@ -36,10 +36,11 @@ MODULE SeaState_Interp
    PUBLIC                                    :: SeaSt_Interp_Init
    PUBLIC                                    :: SeaSt_Interp_End
    PUBLIC                                    :: SeaSt_Interp_3D
+   PUBLIC                                    :: SeaSt_Interp_3D_Vec
+   PUBLIC                                    :: SeaSt_Interp_3D_Vec6
    PUBLIC                                    :: SeaSt_Interp_4D
    PUBLIC                                    :: SeaSt_Interp_4D_Vec
-   PUBLIC                                    :: SeaSt_Interp_3D_Vec6
-   public                                    :: SeaSt_Interp_Setup
+   PUBLIC                                    :: SeaSt_Interp_Setup
 
 CONTAINS
 
@@ -588,12 +589,85 @@ FUNCTION SeaSt_Interp_3D( Time, Position, pKinXX, p, ErrStat, ErrMsg )
 
 END FUNCTION SeaSt_Interp_3D    
 
+FUNCTION SeaSt_Interp_3D_VEC ( Time, Position, pKinXX, p, ErrStat, ErrMsg )    
+    ! I/O variables
+   REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
+   REAL(ReKi),                                  INTENT(IN   )  :: Position(2)       !< Array of XYZ coordinates, 3
+   real(SiKi),                                  INTENT(in   )  :: pKinXX(0:,:,:,:)  !< 3D Wave excitation data (SiKi for storage space reasons)
+   TYPE(SeaSt_Interp_ParameterType),            INTENT(IN   )  :: p                 !< Parameters
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+   
+   CHARACTER(*), PARAMETER                                     :: RoutineName = 'SeaSt_Interp_3D_VEC'   
+   Real(SiKi) :: SeaSt_Interp_3D_VEC(3)
+      ! Local variables
+
+   REAL(SiKi)                           :: u(8)                                     ! size 2^n
+   real(ReKi)                           :: N3D(8)
+   integer(IntKi)                       :: Indx_Lo(3), Indx_Hi(3)
+   INTEGER(IntKi)                       :: i                                        ! loop counter
+   INTEGER(IntKi)                       :: ic                                       ! wind-component counter   
+   REAL(SiKi)                           :: isopc(3)                                 ! isoparametric coordinates 
+   REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
+   integer(IntKi)                       :: ErrStat2
+   character(ErrMsgLen)                 :: ErrMsg2
+
+   SeaSt_Interp_3D_VEC = 0.0_SiKi
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+
+   !-------------------------------------------------------------------------------------------------
+   ! Find the bounding indices for time 
+   !-------------------------------------------------------------------------------------------------
+   call SetTimeIndex(Time, p%delta(1), p%n(1), Indx_Lo(1), Indx_Hi(1), isopc(1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !warning if time is outside the bounds
+      if (ErrStat >= AbortErrLev ) return
+      
+   !-------------------------------------------------------------------------------------------------
+   ! Find the bounding indices for XY position
+   !-------------------------------------------------------------------------------------------------
+   do i=2,3
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !warning if x,y is outside the bounds
+   end do
+      if (ErrStat >= AbortErrLev ) return
+      
+                          
+   
+   N3D(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
+   N3D(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
+   N3D(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
+   N3D(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
+   N3D(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
+   N3D(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
+   N3D(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
+   N3D(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
+   N3D     = N3D / REAL( SIZE(N3D), ReKi )  ! normalize
+   
+   !-------------------------------------------------------------------------------------------------
+   ! interpolate
+   !-------------------------------------------------------------------------------------------------
+   do i = 1,3
+      u(1)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Lo(3), i )
+      u(2)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Lo(3), i )
+      u(3)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Lo(3), i )
+      u(4)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Lo(3), i )
+      u(5)  = pKinXX( Indx_Hi(1), Indx_Lo(2), Indx_Hi(3), i )
+      u(6)  = pKinXX( Indx_Hi(1), Indx_Hi(2), Indx_Hi(3), i )
+      u(7)  = pKinXX( Indx_Lo(1), Indx_Hi(2), Indx_Hi(3), i )
+      u(8)  = pKinXX( Indx_Lo(1), Indx_Lo(2), Indx_Hi(3), i )   
+      
+      SeaSt_Interp_3D_VEC(i) = SUM ( N3D * u )
+   end do
+END FUNCTION SeaSt_Interp_3D_VEC    
+
 FUNCTION SeaSt_Interp_3D_VEC6 ( Time, Position, pKinXX, p, ErrStat, ErrMsg )    
     ! I/O variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: Position(2)       !< Array of XYZ coordinates, 3
-   real(SiKi),                                  intent(in   )  :: pKinXX(0:,:,:,:)     !< 3D Wave excitation data (SiKi for storage space reasons)
-   TYPE(SeaSt_Interp_ParameterType),         INTENT(IN   )  :: p                 !< Parameters
+   real(SiKi),                                  INTENT(in   )  :: pKinXX(0:,:,:,:)  !< 3D Wave excitation data (SiKi for storage space reasons)
+   TYPE(SeaSt_Interp_ParameterType),            INTENT(IN   )  :: p                 !< Parameters
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -602,11 +676,11 @@ FUNCTION SeaSt_Interp_3D_VEC6 ( Time, Position, pKinXX, p, ErrStat, ErrMsg )
    Real(SiKi) :: SeaSt_Interp_3D_VEC6(6)
       ! Local variables
 
-   REAL(SiKi)                           :: u(8)                                    ! size 2^n
+   REAL(SiKi)                           :: u(8)                                     ! size 2^n
    real(ReKi)                           :: N3D(8)
    integer(IntKi)                       :: Indx_Lo(3), Indx_Hi(3)
-   INTEGER(IntKi)                       :: i                                         ! loop counter
-   INTEGER(IntKi)                       :: ic                                        ! wind-component counter   
+   INTEGER(IntKi)                       :: i                                        ! loop counter
+   INTEGER(IntKi)                       :: ic                                       ! wind-component counter   
    REAL(SiKi)                           :: isopc(3)                                 ! isoparametric coordinates 
    REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
    integer(IntKi)                       :: ErrStat2
