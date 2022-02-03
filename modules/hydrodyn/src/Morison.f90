@@ -1663,13 +1663,13 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
          
          if (Zb < -WtrDepth) then
             ! fully buried element, do not add these volume contributions to totals
-         else if (0.0 > Zb) then 
+         else if (0.0 >= Zb) then   ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
             ! fully submerged elements.  
             ! NOTE: For an element which is fractionaly in the seabed, the entire element volume is added to totals
             member%Vinner = member%Vinner + Vinner_l + Vinner_u
             member%Vouter = member%Vouter + Vouter_l + Vouter_u
             member%Vsubmerged = member%Vsubmerged + Vouter_l + Vouter_u
-         else if ((0.0 > Za) .AND. (0.0 <= Zb)) then
+         else if ((0.0 > Za) .AND. (0.0 < Zb)) then ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
             if (i == 1) then
                call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
             end if
@@ -2870,7 +2870,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          alpha_s2= u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
          omega_s2= u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
         
-         if ( .not. mem%PropPot )  then ! Member is NOT modeled with Potential Flow Theory
+         if ( (.not. mem%PropPot) .and. (i >= mem%i_floor) )  then ! Member is NOT modeled with Potential Flow Theory and not completely buried in the seabed. Bug fix for OpenFast issue #847 GJH 2/3/2022
          
             ! should i_floor theshold be applied to below calculations to avoid wasting time on computing zero-valued things? <<<<<
             ! should lumped half-element coefficients get combined at initialization? <<<
@@ -2943,8 +2943,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
 
-!TODO: What about elements which are buried in the seabed?  This doesn't seem to be tested for
-            if (z1 < 0.0_ReKi) then   ! if segment is at least partially submerged ...
+            if ( z1 < 0.0_ReKi ) then   ! if segment is at least partially submerged 
               
     
                if (z2 >= 0) then ! special calculation if the slice is partially submerged
