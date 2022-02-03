@@ -311,8 +311,8 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
 !                    for the repeating waves feature, index 10 is the same as index 0, so if Indx_Lo = 10 then we want to 
 !                    wrap it back to index 0, if Indx_Lo = 11 we want to wrap back to index 1.
    
-   Tmp =  Time / deltaT
-   Tmp =  MOD(Tmp,real((nMax), DbKi))
+   Tmp =  real(Time,ReKi) / deltaT
+   Tmp =  MOD(Tmp,real((nMax), ReKi))
    Indx_Lo = INT( Tmp )     ! convert REAL to INTEGER
  
    isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo , ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
