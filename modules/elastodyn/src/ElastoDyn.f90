@@ -11643,8 +11643,8 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
       end do      
    end if
    
-   call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseLogMaps=.true.)
-   call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseLogMaps=.true.)
+   call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.true.)
+   call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.true.)
    call PackMotionMesh_dY(y_p%HubPtMotion,    y_m%HubPtMotion,    dY, indx_first, FieldMask=Mask)
    do k=1,p%NumBl
       call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)                  
@@ -11781,16 +11781,16 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       index = 1
       if (allocated(y%BladeLn2Mesh)) then
          do k=1,p%NumBl
-            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, UseLogMaps=ReturnLogMap)
+            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, UseSmlAngle=.false.)
          end do      
       end if
-      call PackMotionMesh(y%PlatformPtMesh, y_op, index, UseLogMaps=ReturnLogMap)
-      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, UseLogMaps=ReturnLogMap)
-      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%PlatformPtMesh, y_op, index, UseSmlAngle=ReturnLogMap)
+      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, UseSmlAngle=ReturnLogMap)
+      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, UseSmlAngle=.false.)
       do k=1,p%NumBl
-         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, UseLogMaps=ReturnLogMap)
+         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, UseSmlAngle=.false.)
       end do   
-      call PackMotionMesh(y%NacelleMotion, y_op, index, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%NacelleMotion, y_op, index, UseSmlAngle=.false.)
       
       y_op(index) = y%Yaw     ; index = index + 1    
       y_op(index) = y%YawRate ; index = index + 1    

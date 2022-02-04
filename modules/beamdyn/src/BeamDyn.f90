@@ -6609,7 +6609,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, UseSmlAngle=ReturnLogMap)
    
       index = index - 1
       do i=1,p%NumOuts + p%BldNd_TotNumOuts
