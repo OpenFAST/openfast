@@ -77,6 +77,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: DpthAxCaMG      !< Depth-based Axial Ca for marine growth [-]
     REAL(ReKi)  :: DpthAxCp      !< Depth-based Axial Cp [-]
     REAL(ReKi)  :: DpthAxCpMG      !< Depth-based Axial Cp for marine growth [-]
+    LOGICAL  :: DpthMCF      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
   END TYPE Morison_CoefDpths
 ! =======================
 ! =========  Morison_AxialCoefType  =======
@@ -104,6 +105,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MmbrCoefIDIndx      !< Index into the appropriate coefs table for this member's properties [-]
     INTEGER(IntKi)  :: MmbrFilledIDIndx      !< Index into the filled group table if this is a filled member [-]
     LOGICAL  :: PropPot      !< Flag T/F for whether the member is modeled with potential flow theory [-]
+    LOGICAL  :: PropMCF      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
     INTEGER(IntKi)  :: NElements      !< number of elements in this member [-]
     REAL(ReKi)  :: RefLength      !< the reference total length for this member [m]
     REAL(ReKi)  :: dl      !< the reference element length for this member (may be less than MDivSize to achieve uniform element lengths) [m]
@@ -191,6 +193,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: FillFSLoc      !< Z-location of the filled free-surface [m]
     REAL(ReKi)  :: FillDens      !< Filled fluid density [kg/m^3]
     LOGICAL  :: PropPot      !< Is this element/member modeled with potential flow theory T/F [-]
+    LOGICAL  :: PropMCF      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
     LOGICAL  :: Flipped      !< Was the member flipped in a reordering event?  Need to know this to get the correct normal vector to the ends [-]
   END TYPE Morison_MemberType
 ! =======================
@@ -236,6 +239,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: MemberAxCp2      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
     REAL(ReKi)  :: MemberAxCpMG1      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
     REAL(ReKi)  :: MemberAxCpMG2      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    LOGICAL  :: MemberMCF      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
   END TYPE Morison_CoefMembers
 ! =======================
 ! =========  Morison_MGDepthsType  =======
@@ -291,6 +295,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: SimplAxCaMG      !< Simple model Axial Ca for marine growth [-]
     REAL(ReKi)  :: SimplAxCp      !< Simple model Axial Cp [-]
     REAL(ReKi)  :: SimplAxCpMG      !< Simple model Axial Cp for marine growth [-]
+    LOGICAL  :: SimplMCF      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
     INTEGER(IntKi)  :: NCoefDpth      !<  [-]
     TYPE(Morison_CoefDpths) , DIMENSION(:), ALLOCATABLE  :: CoefDpths      !<  [-]
     INTEGER(IntKi)  :: NCoefMembers      !<  [-]
@@ -987,6 +992,7 @@ ENDIF
     DstCoefDpthsData%DpthAxCaMG = SrcCoefDpthsData%DpthAxCaMG
     DstCoefDpthsData%DpthAxCp = SrcCoefDpthsData%DpthAxCp
     DstCoefDpthsData%DpthAxCpMG = SrcCoefDpthsData%DpthAxCpMG
+    DstCoefDpthsData%DpthMCF = SrcCoefDpthsData%DpthMCF
  END SUBROUTINE Morison_CopyCoefDpths
 
  SUBROUTINE Morison_DestroyCoefDpths( CoefDpthsData, ErrStat, ErrMsg )
@@ -1048,6 +1054,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! DpthAxCaMG
       Re_BufSz   = Re_BufSz   + 1  ! DpthAxCp
       Re_BufSz   = Re_BufSz   + 1  ! DpthAxCpMG
+      Int_BufSz  = Int_BufSz  + 1  ! DpthMCF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1101,6 +1108,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%DpthAxCpMG
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%DpthMCF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Morison_PackCoefDpths
 
  SUBROUTINE Morison_UnPackCoefDpths( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1155,6 +1164,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%DpthAxCpMG = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%DpthMCF = TRANSFER(IntKiBuf(Int_Xferred), OutData%DpthMCF)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Morison_UnPackCoefDpths
 
  SUBROUTINE Morison_CopyAxialCoefType( SrcAxialCoefTypeData, DstAxialCoefTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -1341,6 +1352,7 @@ ENDIF
     DstMemberInputTypeData%MmbrCoefIDIndx = SrcMemberInputTypeData%MmbrCoefIDIndx
     DstMemberInputTypeData%MmbrFilledIDIndx = SrcMemberInputTypeData%MmbrFilledIDIndx
     DstMemberInputTypeData%PropPot = SrcMemberInputTypeData%PropPot
+    DstMemberInputTypeData%PropMCF = SrcMemberInputTypeData%PropMCF
     DstMemberInputTypeData%NElements = SrcMemberInputTypeData%NElements
     DstMemberInputTypeData%RefLength = SrcMemberInputTypeData%RefLength
     DstMemberInputTypeData%dl = SrcMemberInputTypeData%dl
@@ -1414,6 +1426,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! MmbrCoefIDIndx
       Int_BufSz  = Int_BufSz  + 1  ! MmbrFilledIDIndx
       Int_BufSz  = Int_BufSz  + 1  ! PropPot
+      Int_BufSz  = Int_BufSz  + 1  ! PropMCF
       Int_BufSz  = Int_BufSz  + 1  ! NElements
       Re_BufSz   = Re_BufSz   + 1  ! RefLength
       Re_BufSz   = Re_BufSz   + 1  ! dl
@@ -1486,6 +1499,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%MmbrFilledIDIndx
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%PropPot, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%PropMCF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NElements
     Int_Xferred = Int_Xferred + 1
@@ -1567,6 +1582,8 @@ ENDIF
     OutData%MmbrFilledIDIndx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%PropPot = TRANSFER(IntKiBuf(Int_Xferred), OutData%PropPot)
+    Int_Xferred = Int_Xferred + 1
+    OutData%PropMCF = TRANSFER(IntKiBuf(Int_Xferred), OutData%PropMCF)
     Int_Xferred = Int_Xferred + 1
     OutData%NElements = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -2268,6 +2285,7 @@ ENDIF
     DstMemberTypeData%FillFSLoc = SrcMemberTypeData%FillFSLoc
     DstMemberTypeData%FillDens = SrcMemberTypeData%FillDens
     DstMemberTypeData%PropPot = SrcMemberTypeData%PropPot
+    DstMemberTypeData%PropMCF = SrcMemberTypeData%PropMCF
     DstMemberTypeData%Flipped = SrcMemberTypeData%Flipped
  END SUBROUTINE Morison_CopyMemberType
 
@@ -2640,6 +2658,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! FillFSLoc
       Re_BufSz   = Re_BufSz   + 1  ! FillDens
       Int_BufSz  = Int_BufSz  + 1  ! PropPot
+      Int_BufSz  = Int_BufSz  + 1  ! PropMCF
       Int_BufSz  = Int_BufSz  + 1  ! Flipped
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -3286,6 +3305,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%FillDens
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%PropPot, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%PropMCF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Flipped, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -4058,6 +4079,8 @@ ENDIF
     OutData%FillDens = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%PropPot = TRANSFER(IntKiBuf(Int_Xferred), OutData%PropPot)
+    Int_Xferred = Int_Xferred + 1
+    OutData%PropMCF = TRANSFER(IntKiBuf(Int_Xferred), OutData%PropMCF)
     Int_Xferred = Int_Xferred + 1
     OutData%Flipped = TRANSFER(IntKiBuf(Int_Xferred), OutData%Flipped)
     Int_Xferred = Int_Xferred + 1
@@ -4940,6 +4963,7 @@ ENDIF
     DstCoefMembersData%MemberAxCp2 = SrcCoefMembersData%MemberAxCp2
     DstCoefMembersData%MemberAxCpMG1 = SrcCoefMembersData%MemberAxCpMG1
     DstCoefMembersData%MemberAxCpMG2 = SrcCoefMembersData%MemberAxCpMG2
+    DstCoefMembersData%MemberMCF = SrcCoefMembersData%MemberMCF
  END SUBROUTINE Morison_CopyCoefMembers
 
  SUBROUTINE Morison_DestroyCoefMembers( CoefMembersData, ErrStat, ErrMsg )
@@ -5013,6 +5037,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! MemberAxCp2
       Re_BufSz   = Re_BufSz   + 1  ! MemberAxCpMG1
       Re_BufSz   = Re_BufSz   + 1  ! MemberAxCpMG2
+      Int_BufSz  = Int_BufSz  + 1  ! MemberMCF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -5090,6 +5115,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%MemberAxCpMG2
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%MemberMCF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Morison_PackCoefMembers
 
  SUBROUTINE Morison_UnPackCoefMembers( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -5168,6 +5195,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%MemberAxCpMG2 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%MemberMCF = TRANSFER(IntKiBuf(Int_Xferred), OutData%MemberMCF)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Morison_UnPackCoefMembers
 
  SUBROUTINE Morison_CopyMGDepthsType( SrcMGDepthsTypeData, DstMGDepthsTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -5999,6 +6028,7 @@ ENDIF
     DstInitInputData%SimplAxCaMG = SrcInitInputData%SimplAxCaMG
     DstInitInputData%SimplAxCp = SrcInitInputData%SimplAxCp
     DstInitInputData%SimplAxCpMG = SrcInitInputData%SimplAxCpMG
+    DstInitInputData%SimplMCF = SrcInitInputData%SimplMCF
     DstInitInputData%NCoefDpth = SrcInitInputData%NCoefDpth
 IF (ALLOCATED(SrcInitInputData%CoefDpths)) THEN
   i1_l = LBOUND(SrcInitInputData%CoefDpths,1)
@@ -6583,6 +6613,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! SimplAxCaMG
       Re_BufSz   = Re_BufSz   + 1  ! SimplAxCp
       Re_BufSz   = Re_BufSz   + 1  ! SimplAxCpMG
+      Int_BufSz  = Int_BufSz  + 1  ! SimplMCF
       Int_BufSz  = Int_BufSz  + 1  ! NCoefDpth
   Int_BufSz   = Int_BufSz   + 1     ! CoefDpths allocated yes/no
   IF ( ALLOCATED(InData%CoefDpths) ) THEN
@@ -7067,6 +7098,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%SimplAxCpMG
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%SimplMCF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NCoefDpth
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%CoefDpths) ) THEN
@@ -8008,6 +8041,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%SimplAxCpMG = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%SimplMCF = TRANSFER(IntKiBuf(Int_Xferred), OutData%SimplMCF)
+    Int_Xferred = Int_Xferred + 1
     OutData%NCoefDpth = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CoefDpths not allocated

@@ -1797,6 +1797,7 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
       p%Members(i)%dl        = InitInp%InpMembers(i)%dl
       p%Members(i)%NElements = InitInp%InpMembers(i)%NElements
       p%Members(i)%PropPot   = InitInp%InpMembers(i)%PropPot
+      ! p%Members(i)%MCF       = InitInp%InpMembers(i)%MCF
       
       call AllocateMemberDataArrays(p%Members(i), m%MemberLoads(i), errStat2, errMsg2) ; call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
         

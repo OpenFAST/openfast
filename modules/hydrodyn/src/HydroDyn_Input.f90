@@ -190,6 +190,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2
    CHARACTER(*),  PARAMETER                     :: RoutineName = 'HydroDyn_ParaseInput'
+
    
       ! Initialize local data
    UnEc     = -1
@@ -601,10 +602,14 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Simple hydrodynamic coefficients table header line 2: '//NewLine//trim(FileInfo_In%Lines(CurLine))
    CurLine = CurLine + 1
 
+
    CALL AllocAry( tmpReArray, 12, 'temporary array for Simple hydrodynamic coefficients', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
-   call ParseAry( FileInfo_In, CurLine, 'Simple hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
+      if (Failed())  return
+   ! call ParseAry( FileInfo_In, CurLine, 'Simple hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
+   !    if (Failed())  return;
+   CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Simple hydrodynamic coefficients table row '//trim( Int2LStr(1_IntKi)), tmpReArray, size(tmpReArray), &
+                         'MCF', 1.0_ReKi, (/5,6/), InputFileData%Morison%SimplMCF, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return
 
    InputFileData%Morison%SimplCd       = tmpReArray( 1)
    InputFileData%Morison%SimplCdMG     = tmpReArray( 2)
@@ -620,7 +625,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    InputFileData%Morison%SimplAxCpMG   = tmpReArray(12)
 
    if (allocated(tmpReArray))      deallocate(tmpReArray)
-
 
    !-------------------------------------------------------------------------------------------------
    ! Depth-based Hydrodynamic Coefficients Section
@@ -652,8 +656,12 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
       END IF
                   
       DO I = 1,InputFileData%Morison%NCoefDpth
-         call ParseAry( FileInfo_In, CurLine, ' CoefDpths coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
-            if (Failed())  return;
+         ! call ParseAry( FileInfo_In, CurLine, ' CoefDpths coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
+         !    if (Failed())  return;
+         CALL ParseRAryWKywrd( FileInfo_In, CurLine, ' CoefDpths coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
+                         'MCF', 1.0_ReKi, (/6,7/), InputFileData%Morison%CoefDpths(I)%DpthMCF, ErrStat2, ErrMsg2, UnEc )
+            if (Failed())  return
+
 
          InputFileData%Morison%CoefDpths(I)%Dpth         = tmpReArray( 1)
          InputFileData%Morison%CoefDpths(I)%DpthCd       = tmpReArray( 2)
@@ -668,6 +676,14 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          InputFileData%Morison%CoefDpths(I)%DpthAxCaMG   = tmpReArray(11)
          InputFileData%Morison%CoefDpths(I)%DpthAxCp     = tmpReArray(12)
          InputFileData%Morison%CoefDpths(I)%DpthAxCpMG   = tmpReArray(13)
+      END DO
+      
+      DO I = 2,InputFileData%Morison%NCoefDpth
+         IF (InputFileData%Morison%CoefDpths(I)%DpthMCF .NEQV. InputFileData%Morison%CoefDpths(1)%DpthMCF) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2 = 'In the depth-based hydrodynamic coefficients, MCF is specified for some depth but not others.'
+            if (Failed()) RETURN
+         END IF
       END DO
 
       if (allocated(tmpReArray))      deallocate(tmpReArray)
@@ -704,8 +720,12 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
       END IF
 
       DO I = 1,InputFileData%Morison%NCoefMembers
-         call ParseAry( FileInfo_In, CurLine, 'Member-based hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
-            if (Failed())  return;
+         !call ParseAry( FileInfo_In, CurLine, 'Member-based hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
+         !   if (Failed())  return;
+            
+         CALL ParseRAryWKywrd( FileInfo_In, CurLine, 'Member-based hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), &
+                      'MCF', 1.0_ReKi, (/10,11,12,13/), InputFileData%Morison%CoefMembers(I)%MemberMCF, ErrStat2, ErrMsg2, UnEc )
+            if (Failed())  return
 
          InputFileData%Morison%CoefMembers(I)%MemberID         = NINT(tmpReArray( 1))
          InputFileData%Morison%CoefMembers(I)%MemberCd1        =      tmpReArray( 2)
@@ -1072,6 +1092,81 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    RETURN
 
 CONTAINS
+   
+   SUBROUTINE ParseRAryWKywrd( FileInfo, LineNum, AryName, Ary, AryLen, Kywrd, KywrdVal, KywrdEntry, HasKywrd, ErrStat, ErrMsg, UnEc )
+    
+      ! Arguments declarations.
+      INTEGER,             INTENT(IN)             :: AryLen                        !< The length of the array to parse.
+      TYPE (FileInfoType), INTENT(IN)             :: FileInfo                      !< The derived type for holding the file information.
+      INTEGER(IntKi),      INTENT(INOUT)          :: LineNum                       !< The number of the line to parse.
+      CHARACTER(*),        INTENT(IN)             :: AryName                       !< The array name we are trying to fill.
+      REAL(ReKi),          INTENT(OUT)            :: Ary(AryLen)                   !< The array to receive the input values.
+      CHARACTER(*),        INTENT(IN)             :: Kywrd                         !< The keyword to look for
+      REAL(ReKi),          INTENT(IN)             :: KywrdVal                      !< Value to be used when the keyword is encountered
+      INTEGER(IntKi),      INTENT(IN)             :: KywrdEntry(:)                 !< Entries where the provided keyword is allowed
+      LOGICAL,             INTENT(OUT)            :: HasKywrd                      !< T/F to indicate whether keyword is present
+      INTEGER(IntKi),      INTENT(OUT)            :: ErrStat                       !< The error status.
+      CHARACTER(*),        INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
+      INTEGER,             INTENT(IN), OPTIONAL   :: UnEc                          !< I/O unit for echo file. If present and > 0, write to UnEc.
+
+      ! Local declarations.
+      INTEGER(IntKi)                         :: i,j                           ! Local counter.
+      CHARACTER(25), ALLOCATABLE             :: tmpChrArray(:)                ! Temporary character array storage
+      
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseRAryWKywrd'
+
+      hasKywrd = .FALSE.
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+       
+      CALL AllocAry( tmpChrArray, AryLen, 'temporary array for ParseRAryWKywrd', ErrStat, ErrMsg )
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg = 'Error allocating temporary array for ParseRAryWKywrd ' // ' when parsing ' // AryName
+            RETURN
+         END IF
+      
+      CALL ParseAry( FileInfo, LineNum, AryName, tmpChrArray, size(tmpChrArray), ErrStat, ErrMsg, UnEc )
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg = 'Error parsing ' // AryName
+            RETURN
+         END IF
+      
+      DO j = 1,size(KywrdEntry)
+         i = KywrdEntry(j)
+         IF ( TRIM(tmpChrArray(i)) == Kywrd ) THEN
+            hasKywrd = .TRUE.
+         END IF
+      END DO
+      
+      IF ( hasKywrd ) THEN
+         DO j = 1,size(KywrdEntry)
+            i = KywrdEntry(j)  
+            IF ( TRIM(tmpChrArray(i)) == Kywrd ) THEN
+               tmpChrArray(i) = Num2Lstr(KywrdVal)
+            ELSE 
+               ErrStat = ErrID_Fatal
+               ErrMsg  = 'When parsing ' // AryName // ', ' // kywrd // ' is used at some but not all relevant places.'
+               RETURN
+            END IF
+         END DO
+      END IF
+      
+      DO i=1,AryLen
+         READ(tmpChrArray(i),*,IOSTAT=ErrStat)   Ary(i)
+         IF (ErrStat /= 0) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'When parsing ' // AryName // ', nonnumerical entry is encountered where numerical entry is expected.'
+            RETURN;
+         END IF
+      END DO
+      
+      IF (ALLOCATED(tmpChrArray))   DEALLOCATE(tmpChrArray)
+      
+   END SUBROUTINE ParseRAryWKywrd
+   
+   
    !..............................
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
