@@ -120,6 +120,7 @@ PROGRAM MoorDyn_Driver
    UnEcho=-1
    UnIn  =-1
   
+   ! TODO: Sort out error handling (two sets of flags currently used)
   
    CALL NWTC_Init( ProgNameIn=version%Name )
 
@@ -140,7 +141,7 @@ PROGRAM MoorDyn_Driver
    CALL CPU_TIME ( ProgStrtCPU )                                    ! Initial time (this zeros the start time when used as a MATLAB function)
    
 
-   CALL WrScr( ' MD Driver updated 2021-11-15')
+   CALL WrScr( ' MD Driver updated 2022-01-12')
 
    ! Parse the driver input file and run the simulation based on that file
    CALL get_command_argument(1, drvrFilename)
@@ -190,7 +191,7 @@ PROGRAM MoorDyn_Driver
       MD_InitInp%PtfmInit(6,J)      = drvrInitInp%FarmPositions(8,J)*3.14159265/180.0
    end do
    
-   MD_interp_order = 0
+   MD_interp_order = 1
   
    ! allocate Input and Output arrays; used for interpolation and extrapolation
    Allocate(MD_uTimes(MD_interp_order + 1)) 
@@ -228,10 +229,10 @@ PROGRAM MoorDyn_Driver
    OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
   
    ! call the initialization routine
-   CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat2, ErrMsg2 ); call AbortIfFailed()
+   CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat, ErrMsg2 ); call AbortIfFailed()
    
-   CALL MD_DestroyInitInput  ( MD_InitInp , ErrStat2, ErrMsg2 ); call AbortIfFailed()
-   CALL MD_DestroyInitOutput ( MD_InitOut , ErrStat2, ErrMsg2 ); call AbortIfFailed()
+   CALL MD_DestroyInitInput  ( MD_InitInp , ErrStat, ErrMsg ); call AbortIfFailed()
+   CALL MD_DestroyInitOutput ( MD_InitOut , ErrStat, ErrMsg ); call AbortIfFailed()
       
    CALL DispNVD( MD_InitOut%Ver ) 
    
@@ -250,8 +251,8 @@ PROGRAM MoorDyn_Driver
    if (drvrInitInp%InputsMod == 1 ) then
 
       if ( LEN( TRIM(drvrInitInp%InputsFile) ) < 1 ) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = ' ERROR: MoorDyn Driver InputFile cannot be empty if InputsMode is 2.'
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' ERROR: MoorDyn Driver InputFile cannot be empty if InputsMode is 2.'
          CALL AbortIfFailed()
       end if
    
@@ -274,15 +275,17 @@ PROGRAM MoorDyn_Driver
 
       ! rewind to start of input file to re-read things now that we know how long it is
       REWIND(UnPtfmMotIn)      
-
+      
+      ErrStat2 = 0   ! reset the error state after it may be used to exit the loop above
+      
       ntIn = i-3     ! save number of lines of file
       
 
       ! allocate space for input motion array (including time column)
       ALLOCATE ( PtfmMotIn(ntIn, ncIn+1), STAT=ErrStat2)
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = '  Error allocating space for PtfmMotIn array.'
+      IF ( ErrStat2 /= ErrID_None ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = '  Error allocating space for PtfmMotIn array.'
          call AbortIfFailed()
       END IF
 
@@ -294,8 +297,8 @@ PROGRAM MoorDyn_Driver
          READ (UnPtfmMotIn, *, IOSTAT=ErrStat2) (PtfmMotIn (i,J), J=1,ncIn+1)
             
          IF ( ErrStat2 /= 0 ) THEN
-            ErrStat2 = ErrID_Fatal
-            ErrMsg2 = ' Error reading the input time-series file. Expecting '//TRIM(Int2LStr(ncIn))//' channels plus time.'
+            ErrStat = ErrID_Fatal
+            ErrMsg = ' Error reading the input time-series file. Expecting '//TRIM(Int2LStr(ncIn))//' channels plus time.'
             call AbortIfFailed()
          END IF 
       END DO  
@@ -321,7 +324,7 @@ PROGRAM MoorDyn_Driver
       ALLOCATE ( r_in(nt, ncIn), r_in2(nt, ncIn), rd_in(nt, ncIn), rd_in2(nt, ncIn), rdd_in(nt, ncIn), rdd_in2(nt, ncIn), STAT=ErrStat2)
       IF ( ErrStat2 /= ErrID_None ) THEN
          ErrStat2 = ErrID_Fatal
-         ErrMsg2  = '  Error allocating space for r_in or rd_in array.'
+         ErrMsg  = '  Error allocating space for r_in or rd_in array.'
          call AbortIfFailed()
       END IF 
 
@@ -363,7 +366,7 @@ PROGRAM MoorDyn_Driver
             if (i==1) then
                r_in2(i, J) = r_in(i, J)
             else
-               r_in2(i, J) = 0.2*r_in(i, J) + 0.8*r_in2(i-1, J)
+               r_in2(i, J) = 0.1*r_in(i, J) + 0.9*r_in2(i-1, J)
             end if
          END DO
       END DO
@@ -373,7 +376,7 @@ PROGRAM MoorDyn_Driver
             if (i==nt) then
                r_in(i, J) = r_in2(i, J)
             else
-               r_in(i, J) = 0.2*r_in2(i, J) + 0.8*r_in(i+1, J)
+               r_in(i, J) = 0.1*r_in2(i, J) + 0.9*r_in(i+1, J)
             end if
          END DO
       END DO
@@ -404,7 +407,7 @@ PROGRAM MoorDyn_Driver
             if (i==1) then
                rd_in2(i, J) = rd_in(i, J)
             else
-               rd_in2(i, J) = 0.2*rd_in(i, J) + 0.8*rd_in2(i-1, J)
+               rd_in2(i, J) = 0.1*rd_in(i, J) + 0.9*rd_in2(i-1, J)
             end if
          END DO
       END DO
@@ -414,7 +417,7 @@ PROGRAM MoorDyn_Driver
             if (i==nt) then
                rd_in(i, J) = rd_in2(i, J)
             else
-               rd_in(i, J) = 0.2*rd_in2(i, J) + 0.8*rd_in(i+1, J)
+               rd_in(i, J) = 0.1*rd_in2(i, J) + 0.9*rd_in(i+1, J)
             end if
          END DO
       END DO
@@ -485,7 +488,7 @@ PROGRAM MoorDyn_Driver
 !   ! now add some current in x for testing
 !   MD_u(1)%U(1,:) = 1.0
    
-   ! copy inputs to initialize input arrays for higher interp orders if applicable (it's not)
+   ! copy inputs to initialize input arrays for higher interp orders if applicable
    DO i = 2, MD_interp_order + 1  
       CALL MD_CopyInput( MD_u(1), MD_u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call AbortIfFailed()
    END DO  
@@ -517,9 +520,11 @@ PROGRAM MoorDyn_Driver
       if ( MOD( i, 20 ) == 0 ) THEN         
          CALL SimStatus( PrevSimTime, PrevClockTime, t, tMax )
       end if
-                  
+      
+      ! shift older inputs back in the buffer
+      CALL MD_CopyInput( MD_u(1), MD_u(2), MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call AbortIfFailed()  ! copy from 1 to 2 before 1 is updated with latest.
       MD_uTimes(1) = t + dtC
-      !MD_uTimes(2) = MD_uTimes(1) - dtC 
+      MD_uTimes(2) = MD_uTimes(1) - dtC 
       !MD_uTimes(3) = MD_uTimes(2) - dtC
 
       ! update coupled object kinematics iff we're reading input time series
@@ -561,7 +566,7 @@ PROGRAM MoorDyn_Driver
                
                MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = rdd_in(i, J:J+2)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = 0.0_DbKi !rdd_in(i, J:J+2)
                
                !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
                !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
@@ -575,8 +580,8 @@ PROGRAM MoorDyn_Driver
          ! also provide any active tensioning commands
          do l = 1, size(MD_u(1)%DeltaL) 
          
-            MD_u(1)%DeltaL(   l) =  r_in(i, J)
-            MD_u(1)%DeltaLdot(l) = rd_in(i, J)
+            MD_u(1)%DeltaL(   l) = 0.0_DbKi ! r_in(i, J)
+            MD_u(1)%DeltaLdot(l) = 0.0_DbKi !rd_in(i, J)
 
             J = J + 1         
          end do

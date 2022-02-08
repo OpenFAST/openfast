@@ -796,6 +796,27 @@ CONTAINS
    END SUBROUTINE calculate2Dinterpolation
 
 
+   SUBROUTINE calculate1Dinterpolation(f, ix0, fx, c)
+      REAL(DbKi),     INTENT (IN   )        :: f(:)                      ! data array
+      INTEGER(IntKi), INTENT (IN   )        :: ix0                       ! indices for interpolation
+      REAL(DbKi),     INTENT (IN   )        :: fx                        ! interpolation fractions
+      REAL(DbKi),     INTENT (  OUT)        :: c                         ! the output value
+      
+      INTEGER(IntKi)                        :: ix1                       ! second index
+      REAL(DbKi)                            :: c0, c1  
+
+      ! handle end case conditions
+      IF (fx == 0) THEN
+         ix1 = ix0
+      ELSE
+         ix1 = min(ix0+1,size(f,1))  ! don't overstep bounds
+      END IF
+
+      c0 = f(ix0)
+      c1 = f(ix1)
+      c   = c0*(1.0-fx) + c1*fx
+   END SUBROUTINE calculate1Dinterpolation
+
 
 
 
@@ -893,7 +914,8 @@ CONTAINS
       Real(DbKi),            INTENT (INOUT)       :: PDyn
 
 
-      INTEGER(IntKi)             :: ix, iy, iz, it        ! indeces for interpolation      
+      INTEGER(IntKi)             :: ix, iy, iz, it        ! indices for interpolation      
+      INTEGER(IntKi)             :: iz0, iz1              ! special indices for currrent interpolation  
       INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
       Real(ReKi)                 :: fx, fy, fz, ft        ! interpolation fractions
       !Real(DbKi)                 :: qt                    ! used in time step interpolation
@@ -906,8 +928,8 @@ CONTAINS
          CALL getInterpNumsSiKi(p%pyWave   , REAL(y),  1, iy, fy)
          CALL getInterpNumsSiKi(p%pzWave   , REAL(z),  1, iz, fz)
          !CALL getInterpNums(p%tWave, t, tindex, it, ft)
-         it = floor(t/ p%dtWave)
-         ft = (t - it*p%dtWave)/p%dtWave
+         it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
+         ft = (t - (it-1)*p%dtWave)/p%dtWave
          tindex = it
          
          CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)
@@ -923,16 +945,24 @@ CONTAINS
       else
          U  = 0.0_DbKi
          Ud = 0.0_DbKi
+         zeta = 0.0_DbKi
+         PDyn = 0.0_DbKi
       end if
       
       
       ! if current kinematics enabled, add interpolated current values from profile
       if (p%Current > 0) then      
       
-         CALL getInterpNumsSiKi(p%pzCurrent, REAL(z), 1, iz, fz)
+         CALL getInterpNumsSiKi(p%pzCurrent, REAL(z), 1, iz0, fz)
+                  
+         IF (fz == 0) THEN  ! handle end case conditions
+            iz1 = iz0
+         ELSE
+            iz1 = min(iz0+1,size(p%pzCurrent))  ! don't overstep bounds
+         END IF
          
-         U(1) = U(1) + p%uxCurrent(iz) + fz*(p%uxCurrent(iz+1)-p%uxCurrent(iz))/(p%pzCurrent(iz+1)-p%pzCurrent(iz))
-         U(2) = U(2) + p%uyCurrent(iz) + fz*(p%uyCurrent(iz+1)-p%uyCurrent(iz))/(p%pzCurrent(iz+1)-p%pzCurrent(iz))
+         U(1) = U(1) + (1.0-fz)*p%uxCurrent(iz0) + fz*p%uxCurrent(iz1)
+         U(2) = U(2) + (1.0-fz)*p%uyCurrent(iz0) + fz*p%uyCurrent(iz1)
       end if
       
    END SUBROUTINE getWaterKin
@@ -1033,7 +1063,7 @@ CONTAINS
               p%axWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,1)
               p%ayWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,2)
               p%azWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,3)
-              p%PDyn(:,I,J,K) = InitInp%WavePDyn(:,Itemp)
+              p%PDyn(   :,I,J,K) = InitInp%WavePDyn(:,Itemp)
            END DO
         END DO
      END DO
@@ -1229,6 +1259,7 @@ CONTAINS
    END SUBROUTINE WriteWaveData  
 
 
+   ! ----- process WaterKin input value, potentially reading wave inputs and generating wave field -----
    SUBROUTINE SetupWaterKin(WaterKinString, p, Tmax, ErrStat, ErrMsg)
 
       CHARACTER(40),           INTENT(IN   )  :: WaterKinString      ! string describing water kinematics filename
@@ -1241,7 +1272,7 @@ CONTAINS
       INTEGER(IntKi)                   :: ntIn   ! number of time series inputs from file      
       INTEGER(IntKi)                   :: UnIn   ! unit number for coefficient input file
       INTEGER(IntKi)                   :: UnEcho       
-      REAL(SiKi)                       :: pzCurrentTemp(100)
+      REAL(SiKi)                       :: pzCurrentTemp(100)   ! current depth increments read in from input file (positive-down at this stage)
       REAL(SiKi)                       :: uxCurrentTemp(100)
       REAL(SiKi)                       :: uyCurrentTemp(100)
       
@@ -1328,15 +1359,15 @@ CONTAINS
       CALL ReadVar( UnIn, FileName, WaveDir    , 'WaveDir'    , 'wave direction', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
       ! X grid points
       READ(UnIn,*, IOSTAT=ErrStat2)	coordtype         ! get the entry type
-      READ(UnIn,*, IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
+      READ(UnIn,'(A)', IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
       ! Y grid points
       READ(UnIn,*, IOSTAT=ErrStat2)	coordtype         ! get the entry type		
-      READ(UnIn,*, IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
+      READ(UnIn,'(A)', IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
       ! Z grid points
       READ(UnIn,*, IOSTAT=ErrStat2)	coordtype         ! get the entry type		
-      READ(UnIn,*, IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
+      READ(UnIn,'(A)', IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
       ! ----- current -----
       CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
@@ -1448,8 +1479,10 @@ CONTAINS
 
          
          ! allocate space for processed reference wave elevation time series
-         CALL AllocAry(WaveElev0, p%ntWave, 'WaveElev0', ErrStat2, ErrMsg2 ); if(Failed()) return
-
+         ALLOCATE ( WaveElev0( 0:p%ntWave ), STAT=ErrStatTmp )  ! this has an extra entry of zero in case it needs to be padded to be even
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',ErrStat,ErrMsg,RoutineName)
+         WaveElev0 = 0.0_SiKi
+         
          ! go through and interpolate (should replace with standard function)
          DO i = 1, p%ntWave       
             t = p%dtWave*(i-1)
@@ -1458,7 +1491,7 @@ CONTAINS
             DO iIn = 1,ntIn-1      
                IF (WaveTimeIn(iIn+1) > t) THEN   ! find the right two points to interpolate between (remember that the first column of PtfmMotIn is time)
                   frac = (t - WaveTimeIn(iIn) )/( WaveTimeIn(iIn+1) - WaveTimeIn(iIn) )  ! interpolation fraction (0-1) between two interpolation points
-                  WaveElev0(i) = WaveElevIn(iIn) + frac*(WaveElevIn(iIn+1) - WaveElevIn(iIn))  ! get interpolated wave elevation
+                  WaveElev0(i-1) = WaveElevIn(iIn) + frac*(WaveElevIn(iIn+1) - WaveElevIn(iIn))  ! get interpolated wave elevation
                   EXIT   ! break out of the loop for this time step once we've done its interpolation
                END IF
             END DO      
@@ -1502,7 +1535,7 @@ CONTAINS
 
 
          ! Copy values over
-         DO I=0,MIN(p%ntWave, NStepWave-1)
+         DO I=0, MIN(SIZE(WaveElev0), NStepWave)-1
             TmpFFTWaveElev(I) = WaveElev0(I)
          ENDDO
 
@@ -1568,22 +1601,23 @@ CONTAINS
                do iz = 1,p%nzWave
                  
                   ! Compute the discrete Fourier transform of the incident wave kinematics
-                  do I = 0, NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+                  do i = 0, NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
 
-                     Omega = I*WaveDOmega
+                     Omega = i*WaveDOmega
                      ImagOmega = ImagNmbr*Omega
 
-                     WaveElevC (i) = EXP( -ImagNmbr*WaveNmbr(i)*( p%pxWave(ix)*CosWaveDir + p%pyWave(iy)*SinWaveDir ))                                                                 
-                     WaveDynPC (i) = p%rhoW*p%g*      tmpComplex(i)* WaveElevC(i) * COSHNumOvrCOSHDen( WaveNmbr(i), p%WtrDpth, DBLE(p%pzWave(iz)) )       
-                     WaveVelCHx(i) = CosWaveDir*Omega*tmpComplex(i)* WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, DBLE(p%pzWave(iz)) )
-                     WaveVelCHy(i) = SinWaveDir*Omega*tmpComplex(i)* WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, DBLE(p%pzWave(iz)) )             
-                     WaveVelCV (i) =        ImagOmega*tmpComplex(i)* WaveElevC(i) * SINHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, DBLE(p%pzWave(iz)) )
-                     WaveAccCHx(i) = ImagOmega*WaveVelCHx(I)
-                     WaveAccCHy(i) = ImagOmega*WaveVelCHy(I)
-                     WaveAccCV (i) = ImagOmega*WaveVelCV (I)
+                     WaveElevC (i) = tmpComplex(i) * EXP( -ImagNmbr*WaveNmbr(i)*( p%pxWave(ix)*CosWaveDir + p%pyWave(iy)*SinWaveDir ))                                                                 
+                     WaveDynPC (i) = p%rhoW*p%g* WaveElevC(i) * COSHNumOvrCOSHDen( WaveNmbr(i), p%WtrDpth, DBLE(p%pzWave(iz)) )       
+                     WaveVelCHx(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, DBLE(p%pzWave(iz)) ) *CosWaveDir
+                     WaveVelCHy(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, DBLE(p%pzWave(iz)) ) *SinWaveDir             
+                     WaveVelCV (i) =   ImagOmega*WaveElevC(i) * SINHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, DBLE(p%pzWave(iz)) )
+                     WaveAccCHx(i) =   ImagOmega*WaveVelCHx(i)
+                     WaveAccCHy(i) =   ImagOmega*WaveVelCHy(i)
+                     WaveAccCV (i) =   ImagOmega*WaveVelCV (i)
                   end do  ! I, frequencies
                   
                   ! now IFFT all the wave kinematics except surface elevation and save it into the grid of data
+                  print *, 'a'
                   CALL ApplyFFT_cx( p%PDyn  (:,iz,iy,ix), WaveDynPC , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveDynP.', ErrStat,ErrMsg,RoutineName)
                   CALL ApplyFFT_cx( p%uxWave(:,iz,iy,ix), WaveVelCHx, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelHx.',ErrStat,ErrMsg,RoutineName)
                   CALL ApplyFFT_cx( p%uyWave(:,iz,iy,ix), WaveVelCHy, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelHy.',ErrStat,ErrMsg,RoutineName)
@@ -1595,8 +1629,9 @@ CONTAINS
                end do ! iz
                  
                ! IFFT wave elevation here because it's only at the surface
+               print *, 'b'
                CALL ApplyFFT_cx( p%zeta(:,iy,ix) , WaveElevC , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveElev.', ErrStat,ErrMsg,RoutineName)
-                  
+               print *, 'c'
             end do ! iy
          end do ! ix
 
@@ -1616,11 +1651,11 @@ CONTAINS
          CALL AllocAry( p%uxCurrent, p%nzCurrent, 'uxCurrent', ErrStat2, ErrMsg2 ); if(Failed()) return
          CALL AllocAry( p%uyCurrent, p%nzCurrent, 'uyCurrent', ErrStat2, ErrMsg2 ); if(Failed()) return
          
-         ! copy over data
+         ! copy over data, flipping sign of depth values (to be positive-up) and reversing order
          do i = 1,p%nzCurrent
-            p%pzCurrent(i) = pzCurrentTemp(i)
-            p%uxCurrent(i) = uxCurrentTemp(i) 
-            p%uyCurrent(i) = uyCurrentTemp(i)
+            p%pzCurrent(i) = -pzCurrentTemp(p%nzCurrent + 1 - i)  ! flip sign so depth is positive-up
+            p%uxCurrent(i) =  uxCurrentTemp(p%nzCurrent + 1 - i) 
+            p%uyCurrent(i) =  uyCurrentTemp(p%nzCurrent + 1 - i)
          end do
       
       end if  ! p%Current == 1
@@ -1943,7 +1978,7 @@ CONTAINS
 
       IF (   k  < EPSILON(0.0_DbKi)  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, HUGE(k) is returned to approximate the known value of infinity.
 
-         COSHNumOvrSINHDen = HUGE( k )
+         COSHNumOvrSINHDen = 1.0E20   ! HUGE( k )
 
       ELSEIF ( k*h  > 89.4_DbKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, COSH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
 

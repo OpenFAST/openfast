@@ -35,7 +35,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a17', '13 December 2021 (input format changes + friction)' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a19', '6 January 2022 (input format changes)' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -414,7 +414,7 @@ CONTAINS
                      read (OptValue,*) p%g
                   else if ( OptString == 'RHOW') then
                      read (OptValue,*) p%rhoW
-                  else if ( OptString == 'WTRDPTH') then
+                  else if (( OptString == 'WTRDPTH') .or. ( OptString == 'DEPTH') .or. ( OptString == 'WATERDEPTH')) then
                      read (OptValue,*) DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
                   else if ( OptString == 'KBOT')  then
                      read (OptValue,*) p%kBot
@@ -688,7 +688,7 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
-                  ! parse out entries: ID   Attachment  X0   Y0   Z0   r0    p0    y0         M      CG*     I*      V    CdA*    Ca*
+                  ! parse out entries: ID   Attachment  X0  Y0  Z0  r0  p0  y0    M  CG*  I*    V  CdA*  Ca*
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%BodyList(l)%IdNum, tempString1, &
                         tempArray(1), tempArray(2), tempArray(3), tempArray(4), tempArray(5), tempArray(6), &
@@ -769,7 +769,7 @@ CONTAINS
                   else if ((let1 == "COUPLED") .or. (let1 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
                      
                      m%BodyList(l)%typeNum = -1
-                     p%nCpldBodies(1)=p%nCpldBodies(1)+1  ! add this rod to coupled list                          
+                     p%nCpldBodies(1)=p%nCpldBodies(1)+1  ! add this body to coupled list                          
                      m%CpldBodyIs(p%nCpldBodies(1),1) = l
 
                      ! body initial position due to coupling will be adjusted later
@@ -779,7 +779,7 @@ CONTAINS
                   else if (let1 == "FREE") then    ! if a free body
                      m%BodyList(l)%typeNum = 0
                      
-                     p%nFreeBodies=p%nFreeBodies+1             ! add this pinned rod to the free list because it is half free
+                     p%nFreeBodies=p%nFreeBodies+1
                      
                      m%BodyStateIs1(p%nFreeBodies) = Nx+1
                      m%BodyStateIsN(p%nFreeBodies) = Nx+12
@@ -2617,8 +2617,7 @@ CONTAINS
             a_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
             CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), r_in, rd_in, a_in, t, m)
             
-            !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
-            !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
+            !print "(f8.5, f12.6, f12.6, f8.4, f8.4, f8.4, f8.4)", t, r_in(1), r_in(3), rd_in(1), rd_in(3), a_in(1), a_in(3)
             
          END DO
          

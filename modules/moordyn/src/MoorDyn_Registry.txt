@@ -194,6 +194,8 @@ typedef  ^            ^                DbKi               Aq           {:}{:}   
 typedef  ^            ^                DbKi               B            {:}{:}    -  -   "node bottom contact force"  "[N]"
 typedef  ^            ^                DbKi               Fnet         {:}{:}    -  -   "total force on node"  "[N]"
 typedef  ^            ^                DbKi               M            {:}{:}{:} -  -   "node mass matrix"  "[kg]"
+typedef  ^            ^                DbKi               FextA        {3}       -  -   "external forces from attached lines on/about end A " -
+typedef  ^            ^                DbKi               FextB        {3}       -  -   "external forces from attached lines on/about end A " -
 typedef  ^            ^                DbKi               Mext         {3}       -  -   "external moment vector holding sum of any externally applied moments i.e. bending lines" -
 typedef  ^            ^                DbKi               r6           {6}       -  -   "6 DOF position vector" -
 typedef  ^            ^                DbKi               v6           {6}       -  -   "6 DOF velocity vector" -

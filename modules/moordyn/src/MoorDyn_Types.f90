@@ -214,6 +214,8 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< node bottom contact force [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Fnet      !< total force on node [[N]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextA      !< external forces from attached lines on/about end A  [-]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextB      !< external forces from attached lines on/about end A  [-]
     REAL(DbKi) , DIMENSION(1:3)  :: Mext      !< external moment vector holding sum of any externally applied moments i.e. bending lines [-]
     REAL(DbKi) , DIMENSION(1:6)  :: r6      !< 6 DOF position vector [-]
     REAL(DbKi) , DIMENSION(1:6)  :: v6      !< 6 DOF velocity vector [-]
@@ -3009,6 +3011,8 @@ IF (ALLOCATED(SrcRodData%M)) THEN
   END IF
     DstRodData%M = SrcRodData%M
 ENDIF
+    DstRodData%FextA = SrcRodData%FextA
+    DstRodData%FextB = SrcRodData%FextB
     DstRodData%Mext = SrcRodData%Mext
     DstRodData%r6 = SrcRodData%r6
     DstRodData%v6 = SrcRodData%v6
@@ -3253,6 +3257,8 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! M upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%M)  ! M
   END IF
+      Db_BufSz   = Db_BufSz   + SIZE(InData%FextA)  ! FextA
+      Db_BufSz   = Db_BufSz   + SIZE(InData%FextB)  ! FextB
       Db_BufSz   = Db_BufSz   + SIZE(InData%Mext)  ! Mext
       Db_BufSz   = Db_BufSz   + SIZE(InData%r6)  ! r6
       Db_BufSz   = Db_BufSz   + SIZE(InData%v6)  ! v6
@@ -3710,6 +3716,14 @@ ENDIF
         END DO
       END DO
   END IF
+    DO i1 = LBOUND(InData%FextA,1), UBOUND(InData%FextA,1)
+      DbKiBuf(Db_Xferred) = InData%FextA(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%FextB,1), UBOUND(InData%FextB,1)
+      DbKiBuf(Db_Xferred) = InData%FextB(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     DO i1 = LBOUND(InData%Mext,1), UBOUND(InData%Mext,1)
       DbKiBuf(Db_Xferred) = InData%Mext(i1)
       Db_Xferred = Db_Xferred + 1
@@ -4273,6 +4287,18 @@ ENDIF
         END DO
       END DO
   END IF
+    i1_l = LBOUND(OutData%FextA,1)
+    i1_u = UBOUND(OutData%FextA,1)
+    DO i1 = LBOUND(OutData%FextA,1), UBOUND(OutData%FextA,1)
+      OutData%FextA(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%FextB,1)
+    i1_u = UBOUND(OutData%FextB,1)
+    DO i1 = LBOUND(OutData%FextB,1), UBOUND(OutData%FextB,1)
+      OutData%FextB(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%Mext,1)
     i1_u = UBOUND(OutData%Mext,1)
     DO i1 = LBOUND(OutData%Mext,1), UBOUND(OutData%Mext,1)

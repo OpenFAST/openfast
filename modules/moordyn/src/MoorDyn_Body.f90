@@ -74,14 +74,14 @@ CONTAINS
 
       ! set up body initial mass matrix (excluding any rods or attachements)
       DO J=1,3
-         Mtemp(J,J) = Body%bodyM          ! fill in mass
-         Mtemp(3+J,3+J) = Body%bodyI(J)   ! fill in inertia   
+         Mtemp(J,J) = Body%BodyM          ! fill in mass
+         Mtemp(3+J,3+J) = Body%BodyI(J)   ! fill in inertia   
       END DO
       
       CALL TranslateMass6to6DOF(Body%rCG, Mtemp, Body%M0)  ! account for potential CG offset <<< is the direction right? <<<
         
-      DO J=1,6
-         Body%M0(J,J) = Body%M0(J,J) + Body%bodyV*Body%bodyCa(1) ! add added mass in each direction about ref point (so only diagonals) <<< eventually expand to multi D
+      DO J=1,3
+         Body%M0(J,J) = Body%M0(J,J) + Body%BodyV*Body%BodyCa(J) ! add added mass in each direction about ref point (so only diagonals) <<< eventually expand to multi D
       END DO
    
       ! --------------- if this is an independent body (not coupled) ----------

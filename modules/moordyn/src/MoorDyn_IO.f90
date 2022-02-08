@@ -1261,6 +1261,12 @@ CONTAINS
                      y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(2) ! y velocity
                   CASE (VelZ)
                      y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(3) ! z velocity
+                  CASE (AccX)
+                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(1) ! x acceleration
+                  CASE (AccY)
+                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(2) ! y acceleration
+                  CASE (AccZ)
+                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(3) ! z acceleration
                   CASE (Ten)
                      y%WriteOutput(I) = TwoNorm(m%ConnectList(p%OutParam(I)%ObjID)%Fnet)  ! total force magnitude on a connect (used eg. for fairlead and anchor tensions)
                   CASE (FX)
@@ -1289,7 +1295,13 @@ CONTAINS
                   CASE (VelY)
                      y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
                   CASE (VelZ)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity                     
+                  CASE (AccX)
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(1) ! x acceleration <<< should this become distributed for each node?
+                  CASE (AccY)
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(2) ! y acceleration
+                  CASE (AccZ)
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(3) ! z acceleration
                   CASE (FX)
                      y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(1)  ! total force in x - added Nov 24
                   CASE (FY)

@@ -1028,6 +1028,7 @@ CONTAINS
       Real(DbKi)                       :: nvec(3)        ! local seabed surface normal vector (positive out)
       Real(DbKi)                       :: Fn(3)          ! seabed contact normal force vector
       Real(DbKi)                       :: Vn(3)          ! normal velocity of a line node relative to the seabed slope [m/s]
+      Real(DbKi)                       :: Vsb(3)         ! tangent velocity of a line node relative to the seabed slope [m/s]
       Real(DbKi)                       :: Va(3)          ! velocity of a line node in the axial or "in-line" direction [m/s]
       Real(DbKi)                       :: Vt(3)          ! velocity of a line node in the transverse direction [m/s]
       Real(DbKi)                       :: VtMag          ! magnitude of the transverse velocity of a line node [m/s]
@@ -1085,13 +1086,10 @@ CONTAINS
       CALL UnitVector(Line%r(:,N-1), Line%r(:,N), Line%q(:,N), dummyLength)     ! compute unit vector q
 
 
-      ! --------------------------------- apply wave kinematics ------------------------------------
-
-      !   IF (p%WaterKin > 0)  THEN ! wave kinematics interpolated from global grid in Waves object
-      !      DO i=0,N
-      !         CALL getWaveKin(p, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, m%WaveTi, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i))
-      !      END DO
-      !   END IF
+      ! apply wave kinematics (if there are any) 
+      DO i=0,N
+         CALL getWaterKin(p, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, m%WaveTi, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i))
+      END DO
 
 
       ! --------------- calculate mass (including added mass) matrix for each node -----------------
@@ -1300,9 +1298,9 @@ CONTAINS
             Line%W(3,I) = pi/8.0*d*d* (Line%l(I)*(rho - p%rhoW) + Line%l(I+1)*(rho - p%rhoW) )*(-p%g)  ! left in this form for future free surface handling
          END IF
 
-         !relative flow velocities
+         ! relative flow velocities
          DO J = 1, 3
-            Vi(J) = 0.0 - Line%rd(J,I)                               ! relative flow velocity over node -- this is where wave velicites would be added
+            Vi(J) = Line%U(J,I) - Line%rd(J,I)                               ! relative flow velocity over node -- this is where wave velicites would be added
          END DO
 
          ! decomponse relative flow into components
@@ -1338,10 +1336,11 @@ CONTAINS
          CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Line%r(1,I), Line%r(2,I), depth, nvec)
 
          IF (Line%r(3,I) < -depth) THEN   ! for every line node at or below the seabed
-            ! calculate the velocity of the node in the normal direction of the seabed slope
-            DO J = 1, 3
-               Vn(J) = DOT_PRODUCT( Line%rd(:,I), nvec) * nvec(J)
-            END DO
+         
+            ! calculate the velocity components of the node relative to the seabed
+            Vn = DOT_PRODUCT( Line%rd(:,I), nvec) * nvec  ! velocity component normal to the local seabed slope
+            Vsb = Line%rd(:,I) - Vn                       ! velocity component along (tangent to) the seabed
+            
             ! calculate the normal contact force on the line node
             IF (I==0) THEN
                Fn = ( (-depth - Line%r(3,I))*nvec(3)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(            Line%l(I+1) )
@@ -1351,11 +1350,10 @@ CONTAINS
                Fn = ( (-depth - Line%r(3,I))*nvec(3)*nvec*p%kBot - Vn*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) )
             END IF
          
-            ! calculate the axial and transverse components of the total node velocity vector (q can now have a z-component from seabed slope)
-            DO J = 1, 3
-               Va(J) = DOT_PRODUCT( Line%rd(:,I) , Line%q(:,I) ) * Line%q(J,I)
-               Vt(J) = Line%rd(J,I) - Va(J)
-            END DO
+            ! calculate the axial and transverse components of the node velocity vector along the seabed
+            Va = DOT_PRODUCT( Vsb , Line%q(:,I) ) * Line%q(:,I)
+            Vt = Vsb - Va
+            
             ! calculate the magnitudes of each velocity
             VaMag = SQRT(Va(1)**2+Va(2)**2+Va(3)**2)
             VtMag = SQRT(Vt(1)**2+Vt(2)**2+Vt(3)**2)
@@ -1396,12 +1394,13 @@ CONTAINS
 
             ! the total friction force is along the plane of the seabed slope, which is just the vector sum of the transverse and axial components
             Ff = FfT + FfA
-         
+            
          ELSE
             Fn = 0.0_DbKi
             Ff = 0.0_DbKi
          END IF
-
+         
+         
          ! the total force from bottom contact on the line node is the sum of the normal contact force and the friction force
          Line%B(:,I) = Fn + Ff
 
@@ -1421,7 +1420,7 @@ CONTAINS
          DO J=1,3
 
             ! calculate RHS constant (premultiplying force vector by inverse of mass matrix  ... i.e. rhs = S*Forces)
-            Sum1 = 0.0_DbKi                               ! reset temporary accumulator
+            Sum1 = 0.0_DbKi                               ! reset temporary accumulator <<< could turn this into a Line%a array to save and output node accelerations
             DO K = 1, 3
               Sum1 = Sum1 + Line%S(K,J,I) * Line%Fnet(K,I)   ! matrix-vector multiplication [S i]{Forces i}  << double check indices
             END DO ! K
@@ -1429,6 +1428,10 @@ CONTAINS
             ! update states
             Xd(3*N-3 + 3*I-3 + J) = Line%rd(J,I);       ! dxdt = V  (velocities)
             Xd(        3*I-3 + J) = Sum1                ! dVdt = RHS * A  (accelerations)
+            
+            !if ((Line%Time > 100) .and. (Line%IdNum == 1) .and. (I==19) .and. (J==3)) then
+            !   print *, Line%Time, Line%r(J,I), Line%rd(J,I), Sum1
+            !end if
 
          END DO ! J
       END DO  ! I

@@ -587,31 +587,18 @@ CONTAINS
       DO i=1,N-1
          Rod%r( :,i) =  Rod%r( :,0) + (Rod%r( :,N) - Rod%r( :,0)) * (REAL(i)/REAL(N))
          Rod%rd(:,i) =  Rod%rd(:,0) + (Rod%rd(:,N) - Rod%rd(:,0)) * (REAL(i)/REAL(N))
-         
       
          Rod%V(i) = 0.25*pi * Rod%d*Rod%d * Rod%l(i) ! volume attributed to segment
       END DO
 
 
-   ! --------------------------------- apply wave kinematics ------------------------------------
+      ! apply wave kinematics (if there are any)
 
-    !  IF (p%WaterKin == 1)  THEN ! wave kinematics interpolated from global grid in Waves object
-    !     DO i=0,N
-    !        CALL getWaveKin(p, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, m%WaveTi, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i))
-    !        !F(i) = 1.0 ! set VOF value to one for now (everything submerged - eventually this should be element-based!!!) <<<<
-    !        ! <<<< currently F is not being used and instead a VOF variable is used within the node loop
-    !     END DO
-    !  END IF
-
-
-    !  ! wave kinematics not implemented yet <<<
-    !  ap = 0.0_DbKi
-    !  aq = 0.0_DbKi
-    !  ! set U and Ud herem as well as pDyn and zeta...
-    !  Rod%U    = 0.0_DbKi
-    !  Rod%Ud   = 0.0_DbKi
-    !  pDyn = 0.0_DbKi
-    !  zeta = 0.0_DbKi
+      DO i=0,N
+         CALL getWaterKin(p, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, m%WaveTi, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i))
+         !F(i) = 1.0 ! set VOF value to one for now (everything submerged - eventually this should be element-based!!!) <<<<
+         ! <<<< currently F is not being used and instead a VOF variable is used within the node loop
+      END DO
       
       ! >>> remember to check for violated conditions, if there are any... <<<
            
@@ -713,34 +700,22 @@ CONTAINS
             ! fluid acceleration components for current node
             aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
             ap = Rod%Ud(:,I) - aq                         ! normal component of fluid acceleration
-            ! transverse Froude-Krylov force
+            ! transverse and axial Froude-Krylov force
             Rod%Ap(:,I) = VOF * p%rhoW*(1.0+Rod%Can)* v_i * ap  ! 
-            ! axial Froude-Krylov force
             Rod%Aq(:,I) = 0.0_DbKi  ! p%rhoW*(1.0+Rod%Cat)* v_i * aq  ! <<< just put a taper-based term here eventually?
 
             ! dynamic pressure
             Rod%Pd(:,I) = 0.0_DbKi  ! assuming zero for sides for now, until taper comes into play
             
-            ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
+            ! seabed contact (stiffness and damping, vertical-only for now)
             ! interpolate the local depth from the bathymetry grid
             CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, Rod%r(1,I), Rod%r(2,I), depth, nvec)
             
             IF (Rod%r(3,I) < -depth) THEN
-               IF (I==0) THEN
-                  Rod%B(3,I) = ( (-depth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(            Rod%l(I+1) ) 
-               ELSE IF (I==N) THEN
-                  Rod%B(3,I) = ( (-depth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I)               ) 
-               ELSE
-                  Rod%B(3,I) = ( (-depth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I) + Rod%l(I+1) ) 
-               END IF
-               ! IF (I==0) THEN
-               !    Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(            Rod%l(I+1) ) 
-               ! ELSE IF (I==N) THEN
-               !    Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I)               ) 
-               ! ELSE
-               !    Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I) + Rod%l(I+1) ) 
-               ! END IF
+               Rod%B(3,I) = ( (-depth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * Rod%d*dL 
             ELSE
+               Rod%B(1,I) = 0.0_DbKi
+               Rod%B(2,I) = 0.0_DbKi
                Rod%B(3,I) = 0.0_DbKi
             END IF
             
@@ -752,9 +727,11 @@ CONTAINS
             Rod%W  = 0.0_DbKi
             Rod%Bo = 0.0_DbKi
             Rod%Dp = 0.0_DbKi
-            Rod%Dq= 0.0_DbKi
-            Rod%B = 0.0_DbKi
+            Rod%Dq = 0.0_DbKi
+            Rod%Ap = 0.0_DbKi
+            Rod%Aq = 0.0_DbKi
             Rod%Pd = 0.0_DbKi
+            Rod%B  = 0.0_DbKi
             
          END IF
          
@@ -777,7 +754,6 @@ CONTAINS
             ! axial drag
             Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
          
-         
             ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
 
             ! Froud-Krylov force
@@ -789,11 +765,7 @@ CONTAINS
             ! added mass
             DO J=1,3
                DO K=1,3
-                  IF (J==K) THEN
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
-                  ELSE
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
-                  END IF
+                  Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                END DO
             END DO
          
@@ -821,11 +793,7 @@ CONTAINS
             ! added mass
             DO J=1,3
                DO K=1,3
-                  IF (J==K) THEN
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
-                  ELSE
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
-                  END IF
+                  Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* Rod%CaEnd* (2.0/3.0*Pi*Rod%d**3 /8.0) *Rod%q(J)*Rod%q(K) 
                END DO
             END DO
             
@@ -850,25 +818,31 @@ CONTAINS
    
       ! ---------------- now add in forces on end nodes from attached lines ------------------
          
+      ! zero the external force/moment sums (important!)
+         
       ! loop through lines attached to end A
+      Rod%FextA = 0.0_DbKi
       DO l=1,Rod%nAttachedA
          
          CALL Line_GetEndStuff(m%LineList(Rod%attachedA(l)), Fnet_i, Mnet_i, Mass_i, Rod%TopA(l))
          
          ! sum quantitites
          Rod%Fnet(:,0)= Rod%Fnet(:,0) + Fnet_i    ! total force
+         Rod%FextA    = Rod%FextA     + Fnet_i    ! a copy for outputting totalled line loads
          Rod%Mext     = Rod%Mext      + Mnet_i    ! externally applied moment
          Rod%M(:,:,0) = Rod%M(:,:,0)  + Mass_i    ! mass at end node
          
       END DO
    
       ! loop through lines attached to end B
+      Rod%FextB = 0.0_DbKi 
       DO l=1,Rod%nAttachedB
          
          CALL Line_GetEndStuff(m%LineList(Rod%attachedB(l)), Fnet_i, Mnet_i, Mass_i, Rod%TopB(l))
          
          ! sum quantitites
          Rod%Fnet(:,N)= Rod%Fnet(:,N) + Fnet_i    ! total force
+         Rod%FextB    = Rod%FextB     + Fnet_i    ! a copy for outputting totalled line loads
          Rod%Mext     = Rod%Mext      + Mnet_i    ! externally applied moment
          Rod%M(:,:,N) = Rod%M(:,:,N)  + Mass_i    ! mass at end node
          
