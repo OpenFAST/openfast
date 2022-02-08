@@ -1115,7 +1115,7 @@ END SUBROUTINE SetDepthBasedCoefs
 !====================================================================================================
 !SUBROUTINE SetExternalHydroCoefs
 SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
-                                   SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, CoefMembers,    &
+                                   SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplMCF, CoefMembers,    &
                                    NCoefDpth, CoefDpths, numNodes, nodes, member )   
 !     This private subroutine generates the Cd, Ca, Cp, CdMG, CaMG and CpMG coefs for the member based on
 !     the input data.  
@@ -1135,6 +1135,7 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
    real(ReKi),                             intent(in   )  :: SimplAxCaMG 
    real(ReKi),                             intent(in   )  :: SimplAxCp
    real(ReKi),                             intent(in   )  :: SimplAxCpMG 
+   logical,                                intent(in   )  :: SimplMCF
    type(Morison_CoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
    integer(IntKi),                         intent(in   )  :: NCoefDpth
    type(Morison_CoefDpths),   allocatable, intent(in   )  :: CoefDpths(:)
@@ -1166,13 +1167,13 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
             member%AxCp  (i) = SimplAxCp
          end if
       end do
-         
+      member%PropMCF = SimplMCF
    CASE (2) ! Depth-based model: coefficients are set using depth-based table data
       do i = 1, member%NElements + 1
          CALL SetDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
                                     member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i) )
       end do
-         
+      member%PropMCF = CoefDpths(1)%DpthMCF
    CASE (3) ! Member-based model: coefficients set using member-specific coefficient tables
        do i = 1, member%NElements + 1
          ! Pull member  end-node data from the tables and then linearly interpolate it onto the interior member nodes    
@@ -1193,6 +1194,7 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
             member%AxCp  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCp1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCp2  *s
          end if
       end do
+      member%propMCF = CoefMembers(MmbrCoefIDIndx)%MemberMCF
    end select
   
 end subroutine SetExternalHydroCoefs
@@ -1483,8 +1485,8 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    end do
 
    call SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
-                                   InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, InitInp%CoefMembers,    &
-                                   InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%NNodes, InitInp%Nodes, member )       
+                                   InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, InitInp%SimplMCF, & 
+                                   InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%NNodes, InitInp%Nodes, member )       
    
    ! calculate reference incline angle and heading, and related trig values.  Note: members are straight to start
    Za = InitInp%Nodes(member%NodeIndx(1  ))%Position(3) 

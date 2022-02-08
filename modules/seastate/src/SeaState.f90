@@ -658,6 +658,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveVel   => Waves_InitOut%WaveVel
       p%WaveAcc   => Waves_InitOut%WaveAcc
       p%WaveDynP  => Waves_InitOut%WaveDynP
+      p%WaveAccMCF => Waves_InitOut%WaveAccMCF
       ! Store user-requested wave elevation locations
       ALLOCATE ( p%WaveElevxi (InputFileData%NWaveElev), STAT=ErrStat2 )
          IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevxi.', ErrStat, ErrMsg, RoutineName)
@@ -906,6 +907,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                ELSE
                   p%WaveAcc = p%WaveAcc + InitOut%Waves2%WaveAcc2D
                   !IF (InputFileData%Waves%WaveStMod > 0 ) WaveAcc0 = WaveAcc0 + WaveAcc2D0
+                  IF (InputFileData%Waves%MCFD > 0) THEN
+                     p%WaveAccMCF = p%WaveAccMCF + InitOut%Waves2%WaveAcc2D
+                  END IF
+                  
                ENDIF
 
             ENDIF ! second order wave kinematics difference frequency results
@@ -964,6 +969,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                ELSE
                   p%WaveAcc = p%WaveAcc + InitOut%Waves2%WaveAcc2S
                   !IF (InputFileData%Waves%WaveStMod > 0 ) WaveAcc0 = WaveAcc0 + WaveAcc2S0
+                  IF (InputFileData%Waves%MCFD > 0) THEN
+                     p%WaveAccMCF = p%WaveAccMCF + InitOut%Waves2%WaveAcc2S
+                  END IF
                ENDIF
 
             ENDIF ! second order wave kinematics sum frequency results
@@ -1137,6 +1145,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%PWaveDynP0   => Waves_InitOut%PWaveDynP0          ! For Morison
        InitOut%PWaveAcc0    => Waves_InitOut%PWaveAcc0           ! For Morison
        InitOut%PWaveVel0    => Waves_InitOut%PWaveVel0           ! For Morison
+       InitOut%WaveAccMCF   => Waves_InitOut%WaveAccMCF          ! For Morison (MacCamy-Fuchs)
+       InitOut%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0        ! For Morison (MacCamy-Fuchs)
        !InitOut%WaveElev     => Waves_InitOut%WaveElev            ! Not needed
        !InitOut%WaveElev0    => Waves_InitOut%WaveElev0           ! For WAMIT for use in SS_Excitation
        call MOVE_ALLOC(Waves_InitOut%WaveElev0, InitOut%WaveElev0 )

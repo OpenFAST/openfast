@@ -108,9 +108,11 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDOmega      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: WaveDynP => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(N/m^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(m/s^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAccMCF => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveVel => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: PWaveDynP0 => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(N/m^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAcc0 => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(m/s^2)]
+    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAccMCF0 => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveVel0 => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Second order wave elevation [-]
@@ -185,6 +187,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: WaveDynP => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin points where the incident wave kinematics will be computed [(N/m^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveVel => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAccMCF => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin points where the incident wave kinematics will be computed [(m/s^2)]
     INTEGER(IntKi)  :: NWaveKin      !< Number of points where the incident wave kinematics can be output [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinxi      !< xi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinyi      !< yi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level [(meters)]
@@ -1616,6 +1619,26 @@ IF (ASSOCIATED(SrcInitOutputData%WaveAcc)) THEN
   END IF
     DstInitOutputData%WaveAcc = SrcInitOutputData%WaveAcc
 ENDIF
+IF (ASSOCIATED(SrcInitOutputData%WaveAccMCF)) THEN
+  i1_l = LBOUND(SrcInitOutputData%WaveAccMCF,1)
+  i1_u = UBOUND(SrcInitOutputData%WaveAccMCF,1)
+  i2_l = LBOUND(SrcInitOutputData%WaveAccMCF,2)
+  i2_u = UBOUND(SrcInitOutputData%WaveAccMCF,2)
+  i3_l = LBOUND(SrcInitOutputData%WaveAccMCF,3)
+  i3_u = UBOUND(SrcInitOutputData%WaveAccMCF,3)
+  i4_l = LBOUND(SrcInitOutputData%WaveAccMCF,4)
+  i4_u = UBOUND(SrcInitOutputData%WaveAccMCF,4)
+  i5_l = LBOUND(SrcInitOutputData%WaveAccMCF,5)
+  i5_u = UBOUND(SrcInitOutputData%WaveAccMCF,5)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%WaveAccMCF)) THEN 
+    ALLOCATE(DstInitOutputData%WaveAccMCF(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveAccMCF.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%WaveAccMCF = SrcInitOutputData%WaveAccMCF
+ENDIF
 IF (ASSOCIATED(SrcInitOutputData%WaveVel)) THEN
   i1_l = LBOUND(SrcInitOutputData%WaveVel,1)
   i1_u = UBOUND(SrcInitOutputData%WaveVel,1)
@@ -1669,6 +1692,24 @@ IF (ASSOCIATED(SrcInitOutputData%PWaveAcc0)) THEN
     END IF
   END IF
     DstInitOutputData%PWaveAcc0 = SrcInitOutputData%PWaveAcc0
+ENDIF
+IF (ASSOCIATED(SrcInitOutputData%PWaveAccMCF0)) THEN
+  i1_l = LBOUND(SrcInitOutputData%PWaveAccMCF0,1)
+  i1_u = UBOUND(SrcInitOutputData%PWaveAccMCF0,1)
+  i2_l = LBOUND(SrcInitOutputData%PWaveAccMCF0,2)
+  i2_u = UBOUND(SrcInitOutputData%PWaveAccMCF0,2)
+  i3_l = LBOUND(SrcInitOutputData%PWaveAccMCF0,3)
+  i3_u = UBOUND(SrcInitOutputData%PWaveAccMCF0,3)
+  i4_l = LBOUND(SrcInitOutputData%PWaveAccMCF0,4)
+  i4_u = UBOUND(SrcInitOutputData%PWaveAccMCF0,4)
+  IF (.NOT. ASSOCIATED(DstInitOutputData%PWaveAccMCF0)) THEN 
+    ALLOCATE(DstInitOutputData%PWaveAccMCF0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%PWaveAccMCF0.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%PWaveAccMCF0 = SrcInitOutputData%PWaveAccMCF0
 ENDIF
 IF (ASSOCIATED(SrcInitOutputData%PWaveVel0)) THEN
   i1_l = LBOUND(SrcInitOutputData%PWaveVel0,1)
@@ -1803,6 +1844,10 @@ IF (ASSOCIATED(InitOutputData%WaveAcc)) THEN
   DEALLOCATE(InitOutputData%WaveAcc)
   InitOutputData%WaveAcc => NULL()
 ENDIF
+IF (ASSOCIATED(InitOutputData%WaveAccMCF)) THEN
+  DEALLOCATE(InitOutputData%WaveAccMCF)
+  InitOutputData%WaveAccMCF => NULL()
+ENDIF
 IF (ASSOCIATED(InitOutputData%WaveVel)) THEN
   DEALLOCATE(InitOutputData%WaveVel)
   InitOutputData%WaveVel => NULL()
@@ -1814,6 +1859,10 @@ ENDIF
 IF (ASSOCIATED(InitOutputData%PWaveAcc0)) THEN
   DEALLOCATE(InitOutputData%PWaveAcc0)
   InitOutputData%PWaveAcc0 => NULL()
+ENDIF
+IF (ASSOCIATED(InitOutputData%PWaveAccMCF0)) THEN
+  DEALLOCATE(InitOutputData%PWaveAccMCF0)
+  InitOutputData%PWaveAccMCF0 => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%PWaveVel0)) THEN
   DEALLOCATE(InitOutputData%PWaveVel0)
@@ -1955,6 +2004,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*5  ! WaveAcc upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveAcc)  ! WaveAcc
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveAccMCF allocated yes/no
+  IF ( ASSOCIATED(InData%WaveAccMCF) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*5  ! WaveAccMCF upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveAccMCF)  ! WaveAccMCF
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! WaveVel allocated yes/no
   IF ( ASSOCIATED(InData%WaveVel) ) THEN
     Int_BufSz   = Int_BufSz   + 2*5  ! WaveVel upper/lower bounds for each dimension
@@ -1969,6 +2023,11 @@ ENDIF
   IF ( ASSOCIATED(InData%PWaveAcc0) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! PWaveAcc0 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PWaveAcc0)  ! PWaveAcc0
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! PWaveAccMCF0 allocated yes/no
+  IF ( ASSOCIATED(InData%PWaveAccMCF0) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! PWaveAccMCF0 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PWaveAccMCF0)  ! PWaveAccMCF0
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! PWaveVel0 allocated yes/no
   IF ( ASSOCIATED(InData%PWaveVel0) ) THEN
@@ -2305,6 +2364,41 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveAccMCF) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,4)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,5)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,5)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i5 = LBOUND(InData%WaveAccMCF,5), UBOUND(InData%WaveAccMCF,5)
+        DO i4 = LBOUND(InData%WaveAccMCF,4), UBOUND(InData%WaveAccMCF,4)
+          DO i3 = LBOUND(InData%WaveAccMCF,3), UBOUND(InData%WaveAccMCF,3)
+            DO i2 = LBOUND(InData%WaveAccMCF,2), UBOUND(InData%WaveAccMCF,2)
+              DO i1 = LBOUND(InData%WaveAccMCF,1), UBOUND(InData%WaveAccMCF,1)
+                ReKiBuf(Re_Xferred) = InData%WaveAccMCF(i1,i2,i3,i4,i5)
+                Re_Xferred = Re_Xferred + 1
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ASSOCIATED(InData%WaveVel) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2389,6 +2483,36 @@ ENDIF
           DO i2 = LBOUND(InData%PWaveAcc0,2), UBOUND(InData%PWaveAcc0,2)
             DO i1 = LBOUND(InData%PWaveAcc0,1), UBOUND(InData%PWaveAcc0,1)
               ReKiBuf(Re_Xferred) = InData%PWaveAcc0(i1,i2,i3,i4)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%PWaveAccMCF0) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PWaveAccMCF0,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PWaveAccMCF0,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PWaveAccMCF0,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PWaveAccMCF0,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PWaveAccMCF0,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PWaveAccMCF0,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PWaveAccMCF0,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PWaveAccMCF0,4)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i4 = LBOUND(InData%PWaveAccMCF0,4), UBOUND(InData%PWaveAccMCF0,4)
+        DO i3 = LBOUND(InData%PWaveAccMCF0,3), UBOUND(InData%PWaveAccMCF0,3)
+          DO i2 = LBOUND(InData%PWaveAccMCF0,2), UBOUND(InData%PWaveAccMCF0,2)
+            DO i1 = LBOUND(InData%PWaveAccMCF0,1), UBOUND(InData%PWaveAccMCF0,1)
+              ReKiBuf(Re_Xferred) = InData%PWaveAccMCF0(i1,i2,i3,i4)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -2895,6 +3019,44 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveAccMCF not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i5_l = IntKiBuf( Int_Xferred    )
+    i5_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveAccMCF)) DEALLOCATE(OutData%WaveAccMCF)
+    ALLOCATE(OutData%WaveAccMCF(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveAccMCF.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i5 = LBOUND(OutData%WaveAccMCF,5), UBOUND(OutData%WaveAccMCF,5)
+        DO i4 = LBOUND(OutData%WaveAccMCF,4), UBOUND(OutData%WaveAccMCF,4)
+          DO i3 = LBOUND(OutData%WaveAccMCF,3), UBOUND(OutData%WaveAccMCF,3)
+            DO i2 = LBOUND(OutData%WaveAccMCF,2), UBOUND(OutData%WaveAccMCF,2)
+              DO i1 = LBOUND(OutData%WaveAccMCF,1), UBOUND(OutData%WaveAccMCF,1)
+                OutData%WaveAccMCF(i1,i2,i3,i4,i5) = REAL(ReKiBuf(Re_Xferred), SiKi)
+                Re_Xferred = Re_Xferred + 1
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveVel not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -2988,6 +3150,39 @@ ENDIF
           DO i2 = LBOUND(OutData%PWaveAcc0,2), UBOUND(OutData%PWaveAcc0,2)
             DO i1 = LBOUND(OutData%PWaveAcc0,1), UBOUND(OutData%PWaveAcc0,1)
               OutData%PWaveAcc0(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PWaveAccMCF0 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%PWaveAccMCF0)) DEALLOCATE(OutData%PWaveAccMCF0)
+    ALLOCATE(OutData%PWaveAccMCF0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PWaveAccMCF0.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i4 = LBOUND(OutData%PWaveAccMCF0,4), UBOUND(OutData%PWaveAccMCF0,4)
+        DO i3 = LBOUND(OutData%PWaveAccMCF0,3), UBOUND(OutData%PWaveAccMCF0,3)
+          DO i2 = LBOUND(OutData%PWaveAccMCF0,2), UBOUND(OutData%PWaveAccMCF0,2)
+            DO i1 = LBOUND(OutData%PWaveAccMCF0,1), UBOUND(OutData%PWaveAccMCF0,1)
+              OutData%PWaveAccMCF0(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -4605,6 +4800,26 @@ IF (ASSOCIATED(SrcParamData%WaveVel)) THEN
   END IF
     DstParamData%WaveVel = SrcParamData%WaveVel
 ENDIF
+IF (ASSOCIATED(SrcParamData%WaveAccMCF)) THEN
+  i1_l = LBOUND(SrcParamData%WaveAccMCF,1)
+  i1_u = UBOUND(SrcParamData%WaveAccMCF,1)
+  i2_l = LBOUND(SrcParamData%WaveAccMCF,2)
+  i2_u = UBOUND(SrcParamData%WaveAccMCF,2)
+  i3_l = LBOUND(SrcParamData%WaveAccMCF,3)
+  i3_u = UBOUND(SrcParamData%WaveAccMCF,3)
+  i4_l = LBOUND(SrcParamData%WaveAccMCF,4)
+  i4_u = UBOUND(SrcParamData%WaveAccMCF,4)
+  i5_l = LBOUND(SrcParamData%WaveAccMCF,5)
+  i5_u = UBOUND(SrcParamData%WaveAccMCF,5)
+  IF (.NOT. ASSOCIATED(DstParamData%WaveAccMCF)) THEN 
+    ALLOCATE(DstParamData%WaveAccMCF(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveAccMCF.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%WaveAccMCF = SrcParamData%WaveAccMCF
+ENDIF
     DstParamData%NWaveKin = SrcParamData%NWaveKin
 IF (ALLOCATED(SrcParamData%WaveKinxi)) THEN
   i1_l = LBOUND(SrcParamData%WaveKinxi,1)
@@ -4716,6 +4931,10 @@ ENDIF
 IF (ASSOCIATED(ParamData%WaveVel)) THEN
   DEALLOCATE(ParamData%WaveVel)
   ParamData%WaveVel => NULL()
+ENDIF
+IF (ASSOCIATED(ParamData%WaveAccMCF)) THEN
+  DEALLOCATE(ParamData%WaveAccMCF)
+  ParamData%WaveAccMCF => NULL()
 ENDIF
 IF (ALLOCATED(ParamData%WaveKinxi)) THEN
   DEALLOCATE(ParamData%WaveKinxi)
@@ -4841,6 +5060,11 @@ ENDIF
   IF ( ASSOCIATED(InData%WaveVel) ) THEN
     Int_BufSz   = Int_BufSz   + 2*5  ! WaveVel upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveVel)  ! WaveVel
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveAccMCF allocated yes/no
+  IF ( ASSOCIATED(InData%WaveAccMCF) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*5  ! WaveAccMCF upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveAccMCF)  ! WaveAccMCF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NWaveKin
   Int_BufSz   = Int_BufSz   + 1     ! WaveKinxi allocated yes/no
@@ -5198,6 +5422,41 @@ ENDIF
             DO i2 = LBOUND(InData%WaveVel,2), UBOUND(InData%WaveVel,2)
               DO i1 = LBOUND(InData%WaveVel,1), UBOUND(InData%WaveVel,1)
                 ReKiBuf(Re_Xferred) = InData%WaveVel(i1,i2,i3,i4,i5)
+                Re_Xferred = Re_Xferred + 1
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ASSOCIATED(InData%WaveAccMCF) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,4)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveAccMCF,5)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveAccMCF,5)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i5 = LBOUND(InData%WaveAccMCF,5), UBOUND(InData%WaveAccMCF,5)
+        DO i4 = LBOUND(InData%WaveAccMCF,4), UBOUND(InData%WaveAccMCF,4)
+          DO i3 = LBOUND(InData%WaveAccMCF,3), UBOUND(InData%WaveAccMCF,3)
+            DO i2 = LBOUND(InData%WaveAccMCF,2), UBOUND(InData%WaveAccMCF,2)
+              DO i1 = LBOUND(InData%WaveAccMCF,1), UBOUND(InData%WaveAccMCF,1)
+                ReKiBuf(Re_Xferred) = InData%WaveAccMCF(i1,i2,i3,i4,i5)
                 Re_Xferred = Re_Xferred + 1
               END DO
             END DO
@@ -5686,6 +5945,44 @@ ENDIF
             DO i2 = LBOUND(OutData%WaveVel,2), UBOUND(OutData%WaveVel,2)
               DO i1 = LBOUND(OutData%WaveVel,1), UBOUND(OutData%WaveVel,1)
                 OutData%WaveVel(i1,i2,i3,i4,i5) = REAL(ReKiBuf(Re_Xferred), SiKi)
+                Re_Xferred = Re_Xferred + 1
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveAccMCF not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i5_l = IntKiBuf( Int_Xferred    )
+    i5_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ASSOCIATED(OutData%WaveAccMCF)) DEALLOCATE(OutData%WaveAccMCF)
+    ALLOCATE(OutData%WaveAccMCF(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveAccMCF.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i5 = LBOUND(OutData%WaveAccMCF,5), UBOUND(OutData%WaveAccMCF,5)
+        DO i4 = LBOUND(OutData%WaveAccMCF,4), UBOUND(OutData%WaveAccMCF,4)
+          DO i3 = LBOUND(OutData%WaveAccMCF,3), UBOUND(OutData%WaveAccMCF,3)
+            DO i2 = LBOUND(OutData%WaveAccMCF,2), UBOUND(OutData%WaveAccMCF,2)
+              DO i1 = LBOUND(OutData%WaveAccMCF,1), UBOUND(OutData%WaveAccMCF,1)
+                OutData%WaveAccMCF(i1,i2,i3,i4,i5) = REAL(ReKiBuf(Re_Xferred), SiKi)
                 Re_Xferred = Re_Xferred + 1
               END DO
             END DO
