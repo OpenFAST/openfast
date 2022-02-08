@@ -201,7 +201,19 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_double),                  # HubOrient_flat
             POINTER(c_float),                   # HubVel
             POINTER(c_float),                   # HubAcc
+            POINTER(c_float),                   # NacPos
+            POINTER(c_double),                  # NacOrient_flat
+            POINTER(c_float),                   # NacVel
+            POINTER(c_float),                   # NacAcc
+            POINTER(c_float),                   # RootPos
+            POINTER(c_double),                  # RootOrient_flat
+            POINTER(c_float),                   # RootVel
+            POINTER(c_float),                   # RootAcc
             POINTER(c_int),                     # numMeshPts
+            POINTER(c_float),                   # MeshPos
+            POINTER(c_double),                  # MeshOrient_flat
+            POINTER(c_float),                   # MeshVel
+            POINTER(c_float),                   # MeshAcc
             POINTER(c_float),                   # meshFrc -- mesh forces/moments in flat array of 6*numMeshPts
             POINTER(c_float),                   # Output Channel Values
             POINTER(c_int),                     # ErrStat_C
@@ -333,25 +345,38 @@ class AeroDynInflowLib(CDLL):
 
     # aerodyn_inflow_calcOutput ------------------------------------------------------------------------------------------------------------
     def aerodyn_inflow_calcOutput(self, time, hubPos, hubOrient, hubVel, hubAcc, \
-                            #nacPos, nacOrient, nacVel, nacAcc, \
-                            #meshPos, meshOrient, meshVel, meshAcc, \
+                            nacPos, nacOrient, nacVel, nacAcc, \
+                            rootPos, rootOrient, rootVel, rootAcc, \
+                            meshPos, meshOrient, meshVel, meshAcc, \
                             meshFrcMom, outputChannelValues):
 
         # Check input motion info
         self.check_input_motions_hubNac(hubPos,hubOrient,hubVel,hubAcc,'hub')
-        #self.check_input_motions_nacNac(nacPos,nacOrient,nacVel,nacAcc,'nacelle')
+        self.check_input_motions_hubNac(nacPos,nacOrient,nacVel,nacAcc,'nacelle')
+#FIXME: add roots check
+        #self.check_input_motions_root(rootPos,rootOrient,rootVel,rootAcc)
         #self.check_input_motions_mesh(meshPos,meshOrient,meshVel,meshAcc)
 
         _hubPos_c    = (c_float  * len(np.squeeze(hubPos)   ))(*np.squeeze(hubPos)   )
         _hubOrient_c = (c_double * len(np.squeeze(hubOrient)))(*np.squeeze(hubOrient))
         _hubVel_c    = (c_float  * len(np.squeeze(hubVel)   ))(*np.squeeze(hubVel)   )
         _hubAcc_c    = (c_float  * len(np.squeeze(hubAcc)   ))(*np.squeeze(hubAcc)   )
+        _nacPos_c    = (c_float  * len(np.squeeze(nacPos)   ))(*np.squeeze(nacPos)   )
+        _nacOrient_c = (c_double * len(np.squeeze(nacOrient)))(*np.squeeze(nacOrient))
+        _nacVel_c    = (c_float  * len(np.squeeze(nacVel)   ))(*np.squeeze(nacVel)   )
+        _nacAcc_c    = (c_float  * len(np.squeeze(nacAcc)   ))(*np.squeeze(nacAcc)   )
         #   Make a flat 1D arrays of motion info:
         #       [x2,y1,z1, x2,y2,z2 ...]
-        #meshPos_flat_c    = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,meshPos,   time,'MeshPos')
-        #meshOrient_flat_c = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,meshOrient,time,'MeshOrient')
-        #meshVel_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshVel,   time,'MeshVel')
-        #meshAcc_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshAcc,   time,'MeshAcc')
+        _rootPos_flat_c    = self.flatPosArr(   self._initNumBlades,self.numBlades,rootPos,   time,'MeshPos')
+        _rootOrient_flat_c = self.flatOrientArr(self._initNumBlades,self.numBlades,rootOrient,time,'MeshOrient')
+        _rootVel_flat_c    = self.flatVelAccArr(self._initNumBlades,self.numBlades,rootVel,   time,'MeshVel')
+        _rootAcc_flat_c    = self.flatVelAccArr(self._initNumBlades,self.numBlades,rootAcc,   time,'MeshAcc')
+        #   Make a flat 1D arrays of motion info:
+        #       [x2,y1,z1, x2,y2,z2 ...]
+        _meshPos_flat_c    = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,meshPos,   time,'MeshPos')
+        _meshOrient_flat_c = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,meshOrient,time,'MeshOrient')
+        _meshVel_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshVel,   time,'MeshVel')
+        _meshAcc_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshAcc,   time,'MeshAcc')
 
         # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
         _meshFrc_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
@@ -359,7 +384,6 @@ class AeroDynInflowLib(CDLL):
         # Set up output channels
         outputChannelValues_c = (c_float * self.numChannels)(0.0,)
 
-        print("Attempt call")
         # Run AeroDyn_Inflow_C_CalcOutput
         self.AeroDyn_Inflow_C_CalcOutput(
             byref(c_double(time)),                  # IN: time at which to calculate output forces 
@@ -367,11 +391,19 @@ class AeroDynInflowLib(CDLL):
             _hubOrient_c,                           # IN: hub orientations
             _hubVel_c,                              # IN: hub velocity [TVx,TVy,TVz,RVx,RVy,RVz]
             _hubAcc_c,                              # IN: hub acclerations [TAx,TAy,TAz,RAx,RAy,RAz]
+            _nacPos_c,                              # IN: nac positions
+            _nacOrient_c,                           # IN: nac orientations
+            _nacVel_c,                              # IN: nac velocity [TVx,TVy,TVz,RVx,RVy,RVz]
+            _nacAcc_c,                              # IN: nac acclerations [TAx,TAy,TAz,RAx,RAy,RAz]
+            _rootPos_flat_c,                        # IN: positions
+            _rootOrient_flat_c,                     # IN: Orientations (DCM)
+            _rootVel_flat_c,                        # IN: velocities at desired positions
+            _rootAcc_flat_c,                        # IN: accelerations at desired positions
             byref(c_int(self.numMeshPts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            #meshPos_flat_c,                         # IN: positions
-            #meshOrient_flat_c,                      # IN: Orientations (DCM)
-            #meshVel_flat_c,                         # IN: velocities at desired positions
-            #meshAcc_flat_c,                         # IN: accelerations at desired positions
+            _meshPos_flat_c,                        # IN: positions
+            _meshOrient_flat_c,                     # IN: Orientations (DCM)
+            _meshVel_flat_c,                        # IN: velocities at desired positions
+            _meshAcc_flat_c,                        # IN: accelerations at desired positions
             _meshFrc_flat_c,                        # OUT: resulting forces/moments array
             outputChannelValues_c,                  # OUT: output channel values as described in input file
             byref(self.error_status_c),             # OUT: ErrStat_C
@@ -479,8 +511,8 @@ class AeroDynInflowLib(CDLL):
             self.aerodyn_inflow_end()
             raise Exception("\nError in calling AeroDyn/InflowWind library.")
         #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
-        meshVel_flat = [pp for p in meshVel for pp in p]
-        meshVel_flat_c = (c_float * (6 * self.numPtsPts))(0.0,)
+        meshVel_flat = [pp for p in MeshArr for pp in p]
+        meshVel_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
         for i, p in enumerate(meshVel_flat):
             meshVel_flat_c[i] = c_float(p)
         return meshVel_flat_c
@@ -578,32 +610,32 @@ class AeroDynInflowLib(CDLL):
             raise Exception("\nAeroDyn terminated prematurely.")
 
 
-    def check_input_motions_hubNac(self,meshPos,meshOrient,meshVel,meshAcc,_name):
+    def check_input_motions_hubNac(self,nodePos,nodeOrient,nodeVel,nodeAcc,_name):
         #   Verify that the shape of positions array is correct
-        if meshPos.size != 3:
+        if nodePos.size != 3:
             print("Expecting a Nx3 array of "+_name+" positions with second index for [x,y,z]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
 
         #   Verify that the shape of orientations array is correct
-        if meshOrient.size != 9:
+        if nodeOrient.size != 9:
             print("Expecting a Nx9 array of "+_name+" orientations with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
 
         #   Verify that the shape of velocities array is correct
-        if meshVel.size != 6:
+        if nodeVel.size != 6:
             print("Expecting a Nx6 array of "+_name+" velocities with second index for [x,y,z,Rx,Ry,Rz]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
 
         #   Verify that the shape of accelerations array is correct
-        if meshAcc.size != 6:
+        if nodeAcc.size != 6:
             print("Expecting a Nx6 array of "+_name+" accelerations with second index for [x,y,z,Rx,Ry,Rz]")
             self.aerodyn_inflow_end()
             raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
 
-
+#add check for roots
 
     def check_input_motions_mesh(self,meshPos,meshOrient,meshVel,meshAcc):
         # make sure number of meshs didn't change for some reason
