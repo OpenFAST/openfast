@@ -2087,7 +2087,6 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    INTEGER(IntKi)                         :: ErrStat2        ! The error status code
    CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
 
-   CHARACTER(1024)                        :: ADBlFile(MaxBl) ! File that contains the blade information (specified in the primary input file)
    CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
    
    
