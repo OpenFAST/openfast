@@ -281,6 +281,9 @@ PROGRAM HydroDynDriver
    InitInData%PWaveAcc0      => InitOutData_SeaSt%PWaveAcc0   
    InitInData%PWaveVel0      => InitOutData_SeaSt%PWaveVel0   
    
+   InitInData%WaveAccMCF     => InitOutData_SeaSt%WaveAccMCF
+   InitInData%PWaveAccMCF0   => InitOutData_SeaSt%PWaveAccMCF0
+   
    InitInData%WaveElevC0     => InitOutData_SeaSt%WaveElevC0
    CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElevC, InitInData%WaveElevC )
    InitInData%WaveDirArr     => InitOutData_SeaSt%WaveDirArr
@@ -299,6 +302,8 @@ PROGRAM HydroDynDriver
    nullify(InitOutData_SeaSt%WaveDirArr)
    nullify(InitOutData_SeaSt%WaveElev1)
    nullify(InitOutData_SeaSt%WaveElev2)
+   nullify(InitOutData_SeaSt%WaveAccMCF)
+   nullify(InitOutData_SeaSt%PWaveAccMCF0)
    
    call SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData%SeaSt_Interp_p, 0, ErrStat, ErrMsg )
    
@@ -403,6 +408,9 @@ PROGRAM HydroDynDriver
    nullify(InitInData%WaveTime)
    nullify(InitInData%WaveElev1)
    nullify(InitInData%WaveElev2)
+   
+   nullify(InitInData%WaveAccMCF)
+   nullify(InitInData%PWaveAccMCF0)
    
    if (errStat >= AbortErrLev) then
          ! Clean up and exit 

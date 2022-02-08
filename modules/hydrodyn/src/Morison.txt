@@ -261,10 +261,12 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             SiKi                     WaveElev1                        {*}{*}{*}  -        -         "First order wave elevation"        -
 typedef   ^                            ^                             SiKi                     WaveElev2                        {*}{*}{*}  -        -         "Second order wave elevation"        -
 typedef   ^                            ^                             SiKi                     WaveAcc                    {*}{*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveAccMCF                 {*}{*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveTime                         {*}        -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveVel                    {*}{*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*}     -        -         ""    -
 typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
@@ -354,13 +356,16 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation"        m
 typedef   ^                            ^                             SiKi                     WaveVel                       {*}{*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveAcc                       {*}{*}{*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAccMCF                    {*}{*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveVel0                      {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveAcc0                      {*}{*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAccMCF0                   {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveDynP0                     {*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveTime                      {*}        -         -         "Times for which the wave kinematics are pre-computed"  s
 typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             INTEGER                  nodeInWater                   {:}{:}     -        -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
