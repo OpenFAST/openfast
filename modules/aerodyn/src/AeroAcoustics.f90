@@ -69,7 +69,7 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%RootName  = TRIM(InitInp%RootName)//'.NN'
    
    ! Read the primary AeroAcoustics input file in AeroAcoustics_IO
-   call ReadInputFiles( InitInp%InputFile, InitInp%AFInfo%BL_file, InputFileData, interval, p%RootName, UnEcho, ErrStat2, ErrMsg2 )
+   call ReadInputFiles( InitInp%InputFile, InitInp%AFInfo, InputFileData, interval, p%RootName, UnEcho, ErrStat2, ErrMsg2 )
    if (Failed()) return
       
    ! Validate the inputs

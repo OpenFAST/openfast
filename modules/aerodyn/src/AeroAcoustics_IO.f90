@@ -58,14 +58,14 @@ MODULE AeroAcoustics_IO
 
 contains
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, OutFileRoot, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, AFI, InputFileData, Default_DT, OutFileRoot, UnEcho, ErrStat, ErrMsg )
     ! This subroutine reads the input file and stores all the data in the AA_InputFile structure.
     ! It does not perform data validation.
     !..................................................................................................................................
     ! Passed variables
     REAL(DbKi),              INTENT(IN)    :: Default_DT      ! The default DT (from glue code)
     CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the aeroacoustics input file
-    CHARACTER(*), dimension(:),            INTENT(IN)    :: BL_Files         ! Name of the BL input file
+    TYPE(AFI_ParameterType), INTENT(IN)    :: AFI(:)          ! airfoil array: contains names of the BL input file
     CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
     TYPE(AA_InputFile),      INTENT(OUT)   :: InputFileData   ! Data stored in the module's input file
     INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
@@ -86,7 +86,7 @@ SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, O
     if(Failed()) return
 
     ! get the blade input-file data
-    ALLOCATE( InputFileData%BladeProps( size(BL_Files) ), STAT = ErrStat2 )
+    ALLOCATE( InputFileData%BladeProps( size(AFI) ), STAT = ErrStat2 )
     IF (ErrStat2 /= 0) THEN
         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
         return
@@ -94,7 +94,7 @@ SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, O
 
     if ((InputFileData%ITURB==2) .or. (InputFileData%X_BLMethod==2) .or. (InputFileData%IBLUNT==1)) then
         ! We need to read the BL tables
-        CALL ReadBLTables( InputFileName, BL_Files, InputFileData, ErrStat2, ErrMsg2 )
+        CALL ReadBLTables( InputFileName, AFI, InputFileData, ErrStat2, ErrMsg2 )
         if (Failed())return
     endif
 
@@ -317,10 +317,10 @@ end subroutine
 
 
 
-SUBROUTINE ReadBLTables( InputFile, BL_Files, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE ReadBLTables( InputFile, AFI, InputFileData, ErrStat, ErrMsg )
     ! Passed variables
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
-    character(*),       intent(in)      :: BL_Files(:)                         ! Name of the file containing the primary input data
+    TYPE(AFI_ParameterType), INTENT(IN) :: AFI(:)                              ! airfoil array: contains names of the BL input file
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
     character(*),       intent(out)     :: ErrMsg                              ! Error message
@@ -342,10 +342,10 @@ SUBROUTINE ReadBLTables( InputFile, BL_Files, InputFileData, ErrStat, ErrMsg )
     ErrMsg  = ""
 
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-    nAirfoils = size(BL_Files)
+    nAirfoils = size(AFI)
     do iAF=1,nAirfoils
 
-        FileName = trim(BL_Files(iAF))
+        FileName = trim(AFI(iAF)%BL_file)
 
         call WrScr('AeroAcoustics_IO: reading BL table:'//trim(Filename))
 
