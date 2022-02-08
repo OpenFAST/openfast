@@ -262,6 +262,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor input/outputs', errStat, errMsg, RoutineName )
    allocate(p%rotors(nRotors), m%rotors(nRotors), stat=errStat) 
    if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor params/misc', errStat, errMsg, RoutineName )
+   allocate(NumBlades(nRotors), stat=errStat ) ! temp array to pass NumBlades
+   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor params/misc', errStat, errMsg, RoutineName )
    if (errStat/=ErrID_None) then
       call Cleanup()
       return
@@ -270,7 +272,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
 
       ! set a few parameters needed while reading the input file
-   allocate(NumBlades(nRotors))
    do iR = 1, nRotors
       call ValidateNumBlades( InitInp%rotors(iR)%NumBlades, ErrStat2, ErrMsg2 )
       if (Failed()) return;
