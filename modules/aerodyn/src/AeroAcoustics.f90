@@ -200,7 +200,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     ! Check 2
     ! if passed the first check and if tno, turn on boundary layer calculation
     IF( (p%ITURB.eq.2)) then
-        p%X_BLMethod=2
+        p%X_BLMethod=X_BLMethod_Tables
     ENDIF
     
     ! Check 3
@@ -305,7 +305,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         ENDDO
     ENDDO
 
-    if (p%X_BLMethod.eq.2) then
+    if (p%X_BLMethod .eq. X_BLMethod_Tables) then
 
         ! Copying inputdata list of AOA and Reynolds to parameters
         call AllocAry( p%AOAListBL, size(InputFileData%AOAListBL), 'p%AOAListBL', errStat2, errMsg2); if(Failed()) return
@@ -1047,7 +1047,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 
             !--------Read in Boundary Layer Data-------------------------!
-            IF (p%X_BLMethod .EQ. 2) THEN
+            IF (p%X_BLMethod .EQ. X_BLMethod_Tables) THEN
                 call BL_Param_Interp(p,m,Unoise,AlphaNoise,p%BlChord(J,I),p%BlAFID(J,I), errStat2, errMsg2)
                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                 temp_dispthick(J,I) = m%d99Var(1)
@@ -1315,7 +1315,7 @@ SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,
     M          = U  / p%SpdSound        ! MACH NUMBER
     RC         = U  * C/p%KinVisc       ! REYNOLDS NUMBER BASED ON  CHORD
     ! compute boundary layer thicknesses
-    IF (p%X_BLMethod .eq. 2) THEN
+    IF (p%X_BLMethod .eq. X_BLMethod_Tables) THEN
         DELTAP = d99Var2
         DSTRS  = dstarVar1
         DSTRP  = dstarVar2
@@ -1457,7 +1457,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,StallVa
     M          = U  / p%SpdSound
     RC         = U  * C/p%KinVisc
     ! Compute boundary layer thicknesses
-    IF (p%X_BLMethod .eq. 2) THEN
+    IF (p%X_BLMethod .eq. X_BLMethod_Tables) THEN
         DELTAP = d99Var2
         DSTRS  = dstarVar1
         DSTRP  = dstarVar2
@@ -1955,7 +1955,7 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
         M          = U  / p%SpdSound
         RC         = U  * C/p%KinVisc
     ! Compute boundary layer thicknesses
-    IF (p%X_BLMethod .eq. 2) THEN
+    IF (p%X_BLMethod .eq. X_BLMethod_Tables) THEN
         DELTAP = d99Var2
         DSTRS  = dstarVar1
         DSTRP  = dstarVar2
