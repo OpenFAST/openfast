@@ -1492,8 +1492,8 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    Za = InitInp%Nodes(member%NodeIndx(1  ))%Position(3) 
    Zb = InitInp%Nodes(member%NodeIndx(N+1))%Position(3)
 
-   ! Check if members with the MacCamy-Fuchs diffraction model satisfy the necessary criteria.
-   IF (member%PropMCF) THEN
+   ! Check if members with the MacCamy-Fuchs diffraction model and not modeled by potential flow satisfy the necessary criteria.
+   IF ( member%PropMCF .AND. ( .NOT. member%PropPot )) THEN
       ! Check if surface piercing
       IF ( (Za-MSL2SWL)*(Zb-MSL2SWL) > 0 ) THEN ! Two end joints of the member on the same side of the SWL
          CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
@@ -2195,39 +2195,44 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ! Setup the 4D grid information for the Interpolatin Module
    p%seast_interp_p = InitInp%seast_interp_p
 
+   ! Setup 3D SWL grids needed for wave stretching
    p%WaveStMod = InitInp%WaveStMod
-
-   ! allocate and variables for the wave dynamics at the SWL - Needed for wave stretching
-   ALLOCATE ( p%WaveDynP0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3)), STAT=errStat )
-      IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveDynP0.', ErrStat,ErrMsg,'Morison_Init')
-   ALLOCATE ( p%WaveVel0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
-      IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveVel0.', ErrStat,ErrMsg,'Morison_Init')
-   ALLOCATE ( p%WaveAcc0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
-      IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAcc0.', ErrStat,ErrMsg,'Morison_Init')
-   ALLOCATE ( p%WaveAccMCF0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errstat )
-      IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAccMCF0.', ErrStat,ErrMsg,'Morison_Init')
+   IF (p%WaveStMod > 0_IntKi) THEN ! Wave stretching enabled
+      
+      ! Allocate variables for the wave dynamics at the SWL - Needed for wave stretching
+      ALLOCATE ( p%WaveDynP0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3)), STAT=errStat )
+         IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveDynP0.', ErrStat,ErrMsg,'Morison_Init')
+      ALLOCATE ( p%WaveVel0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
+         IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveVel0.', ErrStat,ErrMsg,'Morison_Init')
+      ALLOCATE ( p%WaveAcc0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
+         IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAcc0.', ErrStat,ErrMsg,'Morison_Init')
+      ALLOCATE ( p%WaveAccMCF0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errstat )
+         IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAccMCF0.', ErrStat,ErrMsg,'Morison_Init')
    
-   ! Copy the wave dynamic data at the SWL
-   DO i = 1,p%seast_interp_p%n(2)
-     DO j = 1,p%seast_interp_p%n(3)
-       p%WaveDynP0(:,i,j) = p%WaveDynP(:,i,j,p%seast_interp_p%n(4))
-       DO k = 1,3
-         p%WaveVel0(:,i,j,k) = p%WaveVel(:,i,j,p%seast_interp_p%n(4),k)
-         p%WaveAcc0(:,i,j,k) = p%WaveAcc(:,i,j,p%seast_interp_p%n(4),k)
-       END DO
-     END DO
-   END DO
-   
-   IF (ASSOCIATED(p%WaveAccMCF)) THEN
+      ! Copy the wave data at the SWL
       DO i = 1,p%seast_interp_p%n(2)
         DO j = 1,p%seast_interp_p%n(3)
+          p%WaveDynP0(:,i,j) = p%WaveDynP(:,i,j,p%seast_interp_p%n(4))
           DO k = 1,3
-            p%WaveAccMCF0(:,i,j,k) = p%WaveAccMCF(:,i,j,p%seast_interp_p%n(4),k)
+            p%WaveVel0(:,i,j,k) = p%WaveVel(:,i,j,p%seast_interp_p%n(4),k)
+            p%WaveAcc0(:,i,j,k) = p%WaveAcc(:,i,j,p%seast_interp_p%n(4),k)
           END DO
         END DO
       END DO
+   
+      ! Also copy the MacCamy-Fuchs scaled wave acceleration at the SWL if available
+      IF (ASSOCIATED(p%WaveAccMCF)) THEN
+        DO i = 1,p%seast_interp_p%n(2)
+          DO j = 1,p%seast_interp_p%n(3)
+            DO k = 1,3
+              p%WaveAccMCF0(:,i,j,k) = p%WaveAccMCF(:,i,j,p%seast_interp_p%n(4),k)
+            END DO
+          END DO
+        END DO
+      END IF
+   
    END IF
-      
+   
    ! Initialize the outputs      
    IF ( p%OutSwtch > 0) then  !@mhall: moved this "if" to after allocations
    
