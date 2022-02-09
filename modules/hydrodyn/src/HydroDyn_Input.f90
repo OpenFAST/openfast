@@ -1293,43 +1293,24 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !end if
         
    
-         ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-
-         ! TODO: We are only implementing WaveStMod = 0 (No stretching) at this point in time. 1 Mar 2013 GJH
-
-   IF ( InitInp%WaveMod /= 0 .AND. InitInp%WaveMod /= 6 .AND. InputFileData%Morison%NMembers > 0 ) THEN
-      
-      IF ( ( InitInp%WaveStMod /= 0 ) .AND. ( InitInp%WaveStMod /= 1 ) .AND. &
-           ( InitInp%WaveStMod /= 2 ) .AND. ( InitInp%WaveStMod /= 3 ) ) THEN
-         ErrMsg  = ' WaveStMod must be 0, 1, 2, or 3.'
-         ErrStat = ErrID_Fatal
-         RETURN
+   ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
+   IF ( InitInp%WaveMod /= 0 .AND. InputFileData%Morison%NMembers > 0 ) THEN
+      IF ( InitInp%WaveMod /= 6 ) THEN 
+         IF ( ( InitInp%WaveStMod /= 0 ) .AND. ( InitInp%WaveStMod /= 1 ) .AND. &
+              ( InitInp%WaveStMod /= 2 ) .AND. ( InitInp%WaveStMod /= 3 ) ) THEN
+            ErrMsg  = ' WaveStMod must be 0, 1, 2, or 3.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+      ELSE
+         IF ( ( InitInp%WaveStMod /= 0 ) .AND. ( InitInp%WaveStMod /= 1 ) .AND. &
+              ( InitInp%WaveStMod /= 3 ) ) THEN
+            ErrMsg  = ' WaveStMod must be 0, 1, or 3 when WaveMod = 6.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
       END IF
-   
-      !IF ( ( InitInp%WaveStMod /= 3 ) .AND. ( InitInp%WaveMod == 5 ) )  THEN
-      !   ErrMsg  = ' WaveStMod must be set to 3 when WaveMod is set to 5.'
-      !   ErrStat = ErrID_Fatal
-      !
-      !   RETURN
-      !END IF
-      
-   ELSE !don't use this one
-   
-         ! NOTE: Do not read in WaveStMod for floating platforms since it is
-         !       inconsistent to use stretching (which is a nonlinear correction) for
-         !       the viscous drag term in Morison's equation while not accounting for
-         !       stretching in the diffraction and radiation problems (according to
-         !       Paul Sclavounos, there are such corrections).  Instead, the viscous
-         !       drag term from Morison's equation is computed by integrating up to
-         !       the MSL, regardless of the instantaneous free surface elevation.
-     ! TODO: The following can no longer be set because it is part of InitInp and SeaState Parameters.  GJH 9/24/2021
-     ! Should be ok now because wave stretching is now carried out in HydroDyn.
-     ! InitInp%WaveStMod = 0
-   
    END IF
-
-
-
 
    
         ! Copy over the first order frequency limits to the WAMIT2 module which needs them.
