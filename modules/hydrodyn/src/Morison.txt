@@ -272,6 +272,7 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                      SeaSt_Interp_ParameterType      SeaSt_Interp_p                   -          -        -  "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
+typedef   ^                            ^                             SiKi                     MCFD                             -          -        -         "Diameter of the MacCamy-Fuchs member."    -
 #
 #
 # Define outputs from the initialization routine here:

@@ -116,6 +116,7 @@ typedef     ^                 ^                 SiKi                 WvHiCOffS  
 typedef     ^                 ^                 LOGICAL              WvDiffQTFF        -        -        -        "Full difference QTF second order forces flag" (-)
 typedef     ^                 ^                 LOGICAL              WvSumQTFF         -        -        -        "Full sum QTF second order forces flag" (-)
 typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
+typedef   ^                  ^                  SiKi                 MCFD              -        -        -         "Diameter of MacCamy-Fuchs member" (meters)
 #                            
 #                            
 # ..... States ....................................................................................................................

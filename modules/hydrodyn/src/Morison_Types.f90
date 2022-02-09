@@ -335,6 +335,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: nodeInWater      !< Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated [-]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     INTEGER(IntKi)  :: WaveStMod      !<  [-]
+    REAL(SiKi)  :: MCFD      !< Diameter of the MacCamy-Fuchs member. [-]
   END TYPE Morison_InitInputType
 ! =======================
 ! =========  Morison_InitOutputType  =======
@@ -6386,6 +6387,7 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
+    DstInitInputData%MCFD = SrcInitInputData%MCFD
  END SUBROUTINE Morison_CopyInitInput
 
  SUBROUTINE Morison_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -6927,6 +6929,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! WaveStMod
+      Re_BufSz   = Re_BufSz   + 1  ! MCFD
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -7869,6 +7872,8 @@ ENDIF
       ENDIF
     IntKiBuf(Int_Xferred) = InData%WaveStMod
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MCFD
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Morison_PackInitInput
 
  SUBROUTINE Morison_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -9035,6 +9040,8 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%WaveStMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%MCFD = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Morison_UnPackInitInput
 
  SUBROUTINE Morison_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

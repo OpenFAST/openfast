@@ -906,6 +906,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveDir        =  Init%OutData_SeaSt%WaveDir     
          Init%InData_HD%WaveMultiDir   =  Init%OutData_SeaSt%WaveMultiDir
          Init%InData_HD%WaveDOmega     =  Init%OutData_SeaSt%WaveDOmega  
+         Init%InData_HD%MCFD           =  Init%OutData_SeaSt%MCFD
          CALL MOVE_ALLOC(  Init%OutData_SeaSt%WaveElev0, Init%InData_HD%WaveElev0 )  
          Init%InData_HD%WaveTime       => Init%OutData_SeaSt%WaveTime  
          Init%InData_HD%WaveDynP       => Init%OutData_SeaSt%WaveDynP  

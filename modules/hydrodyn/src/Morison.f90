@@ -1492,6 +1492,33 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    Za = InitInp%Nodes(member%NodeIndx(1  ))%Position(3) 
    Zb = InitInp%Nodes(member%NodeIndx(N+1))%Position(3)
 
+   ! Check if members with the MacCamy-Fuchs diffraction model satisfy the necessary criteria.
+   IF (member%PropMCF) THEN
+      ! Check if surface piercing
+      IF ( (Za-MSL2SWL)*(Zb-MSL2SWL) > 0 ) THEN ! Two end joints of the member on the same side of the SWL
+         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         RETURN
+      END IF
+      ! Check inclination
+      If ( ABS(phi) .GE. 0.174533 ) THEN ! If inclination from vertical is greater than 10 deg
+         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be within 10 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         RETURN
+      END IF
+      ! Check radius
+      DO i = 1, member%NElements+1
+         IF ( .NOT. EqualRealNos(member%RMG(i),REAL(0.5_SiKi*InitInp%MCFD)) ) THEN
+            ! Error because MacCamy-Fuchs members must have uniform diameter equal to MCFD specified in seastate.
+            CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must have a uniform diameter equal to MCFD specified in the SeaState input file.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+            RETURN
+         END IF
+      END DO
+      ! Check draft-to-radius ratio
+      IF ( (-InitInp%Nodes(member%NodeIndx(1))%Position(3)) < 0.5_SiKi*InitInp%MCFD ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'Initial draft of MacCamy-Fuchs members should be at least as large as their radius.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         RETURN
+      END IF
+   END IF
+
    ! find fill location of member (previously in SetElementFillProps)
    member%MmbrFilledIDIndx = MmbrFilledIDIndx ! Set this to the parameter version of this member data
    if ( MmbrFilledIDIndx > 0 ) then    

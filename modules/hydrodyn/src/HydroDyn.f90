@@ -809,6 +809,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          InputFileData%Morison%WaveElev1  => InitInp%WaveElev1
          InputFileData%Morison%WaveElev2  => InitInp%WaveElev2
          
+         InputFileData%Morison%MCFD          =  InitInp%MCFD
          InputFileData%Morison%WaveAccMCF    => InitInp%WaveAccMCF
          InputFileData%Morison%PWaveAccMCF0  => InitInp%PWaveAccMCF0
          

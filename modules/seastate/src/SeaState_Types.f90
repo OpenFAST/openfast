@@ -134,6 +134,7 @@ IMPLICIT NONE
     LOGICAL  :: WvDiffQTFF      !< Full difference QTF second order forces flag [(-)]
     LOGICAL  :: WvSumQTFF      !< Full sum QTF second order forces flag [(-)]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
+    REAL(SiKi)  :: MCFD      !< Diameter of MacCamy-Fuchs member [(meters)]
   END TYPE SeaSt_InitOutputType
 ! =======================
 ! =========  SeaSt_ContinuousStateType  =======
@@ -1803,6 +1804,7 @@ ENDIF
       CALL SeaSt_Interp_CopyParam( SrcInitOutputData%SeaSt_Interp_p, DstInitOutputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstInitOutputData%MCFD = SrcInitOutputData%MCFD
  END SUBROUTINE SeaSt_CopyInitOutput
 
  SUBROUTINE SeaSt_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -2086,6 +2088,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Re_BufSz   = Re_BufSz   + 1  ! MCFD
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2687,6 +2690,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    ReKiBuf(Re_Xferred) = InData%MCFD
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SeaSt_PackInitOutput
 
  SUBROUTINE SeaSt_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3384,6 +3389,8 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%MCFD = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SeaSt_UnPackInitOutput
 
  SUBROUTINE SeaSt_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )

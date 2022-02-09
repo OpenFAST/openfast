@@ -270,6 +270,7 @@ PROGRAM HydroDynDriver
    InitInData%WaveDir        =  InitOutData_SeaSt%WaveDir     
    InitInData%WaveMultiDir   =  InitOutData_SeaSt%WaveMultiDir
    InitInData%WaveDOmega     =  InitOutData_SeaSt%WaveDOmega  
+   InitInData%MCFD           =  InitOutData_SeaSt%MCFD
    !InitInData%WaveElev0      => InitOutData_SeaSt%WaveElev0 
    CALL MOVE_ALLOC(  InitOutData_SeaSt%WaveElev0, InitInData%WaveElev0 )  
    InitInData%WaveTime       => InitOutData_SeaSt%WaveTime  
