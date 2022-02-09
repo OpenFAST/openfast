@@ -907,9 +907,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                ELSE
                   p%WaveAcc = p%WaveAcc + InitOut%Waves2%WaveAcc2D
                   !IF (InputFileData%Waves%WaveStMod > 0 ) WaveAcc0 = WaveAcc0 + WaveAcc2D0
-                  IF (InputFileData%Waves%MCFD > 0) THEN
-                     p%WaveAccMCF = p%WaveAccMCF + InitOut%Waves2%WaveAcc2D
-                  END IF
+                  ! MacCamy-Fuchs scaled acceleration should not contain second-order contributions
+                  !IF (InputFileData%Waves%MCFD > 0) THEN
+                  !   p%WaveAccMCF = p%WaveAccMCF + InitOut%Waves2%WaveAcc2D
+                  !END IF
                   
                ENDIF
 
@@ -969,9 +970,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                ELSE
                   p%WaveAcc = p%WaveAcc + InitOut%Waves2%WaveAcc2S
                   !IF (InputFileData%Waves%WaveStMod > 0 ) WaveAcc0 = WaveAcc0 + WaveAcc2S0
-                  IF (InputFileData%Waves%MCFD > 0) THEN
-                     p%WaveAccMCF = p%WaveAccMCF + InitOut%Waves2%WaveAcc2S
-                  END IF
+                  ! MacCamy-Fuchs scaled accleration should not contain second-order contributions
+                  !IF (InputFileData%Waves%MCFD > 0) THEN
+                  !   p%WaveAccMCF = p%WaveAccMCF + InitOut%Waves2%WaveAcc2S
+                  !END IF
                ENDIF
 
             ENDIF ! second order wave kinematics sum frequency results

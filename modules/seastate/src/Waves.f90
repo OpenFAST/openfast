@@ -1138,7 +1138,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
       
-      IF (InitInp%MCFD > 0.0_ReKi) THEN ! MacCamy-Fuchs model
+      IF (InitInp%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs model
        
          ALLOCATE ( WaveAccC0HxiMCF(0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0HxiMCF.',      ErrStat,ErrMsg,'VariousWaves_Init')
@@ -1882,7 +1882,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
 
       ! Wavenumber-dependent acceleration scaling for MacCamy-Fuchs model
-      IF (InitInp%MCFD>0) THEN
+      MCFC = 0.0_ReKi
+      IF (InitInp%MCFD > 0.0_SiKi .AND. I>0_IntKi) THEN
          ka = 0.5_ReKi * WaveNmbr * InitInp%MCFD
          JPrime = BESSEL_JN(1,ka) / ka - BESSEL_JN(2,ka)
          YPrime = BESSEL_YN(1,ka) / ka - BESSEL_YN(2,ka)
@@ -1910,7 +1911,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             WaveAccC0Hyi (I,J)   = ImagOmega*        WaveVelC0Hyi (I,J)
             WaveAccC0V (I,J)     = ImagOmega*        WaveVelC0V   (I,J)
 
-            IF (InitInp%MCFD>0) THEN
+            IF (InitInp%MCFD > 0.0_SiKi) THEN
                WaveAccC0HxiMCF(I,J) = WaveAccC0Hxi(I,J) * MCFC
                WaveAccC0HyiMCF(I,J) = WaveAccC0Hyi(I,J) * MCFC
                WaveAccC0VMCF(I,J)   = WaveAccC0V(I,J)   * MCFC
@@ -1940,7 +1941,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                PWaveAccC0VPz0  (I,J) =           ImagOmega*PWaveVelC0VPz0  (I,J)
                
                
-               IF (InitInp%MCFD>0) THEN
+               IF (InitInp%MCFD > 0.0_SiKi) THEN
                   PWaveAccC0HxiMCFPz0(I,J) = PWaveAccC0HxiPz0(I,J) * MCFC
                   PWaveAccC0HyiMCFPz0(I,J) = PWaveAccC0HyiPz0(I,J) * MCFC
                   PWaveAccC0VMCFPz0(I,J)   = PWaveAccC0VPz0(I,J)   * MCFC
@@ -2302,11 +2303,17 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%WaveDynP  (InitOut%NStepWave,:,:,:  )  = InitOut%WaveDynP  (0,:,:,:  )
       InitOut%WaveVel   (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveVel   (0,:,:,:,:)
       InitOut%WaveAcc   (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveAcc   (0,:,:,:,:)
+      IF (InitInp%MCFD > 0.0_SiKi) THEN
+         InitOut%WaveAccMCF (InitOut%NStepWave,:,:,:,:) = InitOut%WaveAccMCF(0,:,:,:,:)
+      END IF
       
       IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
          InitOut%PWaveDynP0(InitOut%NStepWave,:,:  )    = InitOut%PWaveDynP0(0,:,:  )
          InitOut%PWaveVel0 (InitOut%NStepWave,:,:,:)    = InitOut%PWaveVel0 (0,:,:,:)
          InitOut%PWaveAcc0 (InitOut%NStepWave,:,:,:)    = InitOut%PWaveAcc0 (0,:,:,:)
+         IF (InitInp%MCFD > 0.0_SiKi) THEN
+            InitOut%PWaveAccMCF0 (InitOut%NStepWave,:,:,:) = InitOut%PWaveAccMCF0(0,:,:,:)
+         END IF
       END IF
 
    CALL CleanUp ( )

@@ -507,10 +507,10 @@ PROGRAM HydroDynDriver
    maxAngle = 0.0
    
    DO n = 1, drvrInitInp%NSteps
-
+      
       Time = (n-1) * drvrInitInp%TimeInterval
       InputTime(1) = Time
-      
+
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
       
       ! PRPInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
@@ -662,7 +662,7 @@ PROGRAM HydroDynDriver
 
       ! Write output to a file which is managed by the driver program and not the individual modules
       ! TODO
-      
+
    END DO
 
    
@@ -704,7 +704,7 @@ subroutine HD_DvrCleanup()
       errStat2 = ErrID_None
       errMsg2  = ""
       
-      
+      print *, 'Start Clean'
       call SeaSt_End( u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2 )

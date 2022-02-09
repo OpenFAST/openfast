@@ -2177,6 +2177,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveVel0.', ErrStat,ErrMsg,'Morison_Init')
    ALLOCATE ( p%WaveAcc0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
       IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAcc0.', ErrStat,ErrMsg,'Morison_Init')
+   ALLOCATE ( p%WaveAccMCF0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errstat )
+      IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAccMCF0.', ErrStat,ErrMsg,'Morison_Init')
    
    ! Copy the wave dynamic data at the SWL
    DO i = 1,p%seast_interp_p%n(2)
@@ -2189,6 +2191,16 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
      END DO
    END DO
    
+   IF (ASSOCIATED(p%WaveAccMCF)) THEN
+      DO i = 1,p%seast_interp_p%n(2)
+        DO j = 1,p%seast_interp_p%n(3)
+          DO k = 1,3
+            p%WaveAccMCF0(:,i,j,k) = p%WaveAccMCF(:,i,j,p%seast_interp_p%n(4),k)
+          END DO
+        END DO
+      END DO
+   END IF
+      
    ! Initialize the outputs      
    IF ( p%OutSwtch > 0) then  !@mhall: moved this "if" to after allocations
    
@@ -2306,6 +2318,7 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    !call AllocAry( m%F_IMG        ,    6, NNodes   , 'm%F_IMG'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%FV           ,    3, NNodes   , 'm%FV'           , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%FA           ,    3, NNodes   , 'm%FA'           , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%FAMCF        ,    3, NNodes   , 'm%FAMCF'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%FDynP        ,       NNodes   , 'm%FDynP'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%WaveElev     ,       NNodes   , 'm%WaveElev'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%WaveElev1    ,       NNodes   , 'm%WaveElev1'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -2359,7 +2372,10 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    p%WaveTime   => InitInp%WaveTime   
    p%PWaveVel0  => InitInp%PWaveVel0      
    p%PWaveAcc0  => InitInp%PWaveAcc0
-   p%PWaveDynP0 => InitInp%PWaveDynP0  
+   p%PWaveDynP0 => InitInp%PWaveDynP0
+   
+   p%WaveAccMCF => InitInp%WaveAccMCF
+   p%PWaveAccMCF0 => InitInp%PWaveAccMCF0
    
 END SUBROUTINE AllocateNodeLoadVariables
 
@@ -2419,6 +2435,8 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       nullify(p%PWaveVel0)
       nullify(p%WaveElev1)
       nullify(p%WaveElev2)
+      nullify(p%WaveAccMCF)
+      nullify(p%PWaveAccMCF0)
       CALL Morison_DestroyParam( p, errStat, errMsg )
 
 
@@ -2667,7 +2685,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: vrelFSInt(3)
    REAL(ReKi)               :: pos1Prime(3)
    REAL(ReKi)               :: WtrDpth
-   
+   REAL(ReKi)               :: FAMCFFSInt(3)
 
    ! Initialize errStat
    errStat = ErrID_None         
@@ -2680,7 +2698,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
-      
+
    DO j = 1, p%NNodes
       !m%nodeInWater(j) = REAL( p%nodeInWater(IntWrapIndx,j), ReKi )
       !TODO: Update for Wave Kinematics grid  
@@ -2811,7 +2829,98 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END DO ! j = 1, p%NNodes
    
-   
+   ! Scaled fluid acceleration for the MacCamy-Fuchs model
+   IF ( ASSOCIATED(p%WaveAccMCF) ) THEN
+      DO im = 1,p%NMembers
+         IF ( p%Members(im)%PropMCF ) THEN
+            DO i = 1,p%Members(im)%NElements+1
+               j = p%Members(im)%NodeIndx(i)
+               
+               IF (p%WaveDisp == 0 ) THEN
+                  ! use the initial X,Y location
+                  pos1(1) = u%Mesh%Position(1,j)
+                  pos1(2) = u%Mesh%Position(2,j)
+               ELSE
+                  ! Use current X,Y location
+                  pos1(1) = u%Mesh%TranslationDisp(1,j) + u%Mesh%Position(1,j)
+                  pos1(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
+               END IF
+      
+               IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
+                  pos1(3) = u%Mesh%Position(3,j) + u%Mesh%TranslationDisp(3,j) - p%MSL2SWL  ! Use the current Z location.
+               ELSE ! Wave stretching disabled
+                  pos1(3) = u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
+               END IF
+            
+               ! Compute the free surface elevation at the x/y position of all nodes
+               positionXY = (/pos1(1),pos1(2)/)
+               
+               IF (p%WaveStMod == 0) THEN ! No wave stretching
+    
+                  IF ( pos1(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
+                     ! Use location to obtain interpolated values of kinematics         
+                     call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                     m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                  ELSE ! Node is above the SWL
+                     m%FAMCF(:,j)  = 0.0
+                  END IF
+      
+               ELSE ! Wave stretching enabled
+      
+                  IF ( pos1(3) <= m%WaveElev(j)) THEN ! Node is submerged
+      
+                     IF (p%WaveStMod <3) THEN ! Vertical or extrapolated wave stretching
+
+                        IF ( pos1(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
+                           ! Use location to obtain interpolated values of kinematics         
+                           call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                           m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                        ELSE ! Node is above SWL - need wave stretching
+                           
+                           
+                           ! Vertical wave stretching
+                           m%FAMCF(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAccMCF0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                           
+                           ! Extrapoled wave stretching
+                           IF (p%WaveStMod == 2) THEN 
+                              m%FAMCF(:,j)  = m%FAMCF(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAccMCF0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                                 call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                           END IF
+          
+                        END IF ! Node is submerged
+ 
+                     ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
+                  
+                        ! Map the node z-position linearly from [-WtrDpth,m%WaveElev(j)] to [-WtrDpth,0] 
+                        pos1Prime = pos1
+                        pos1Prime(3) = WtrDpth*(WtrDpth+pos1(3))/(WtrDpth+m%WaveElev(j))-WtrDpth
+                  
+                        ! Obtain the wave-field variables by interpolation with the mapped position.
+                        call SeaSt_Interp_Setup( Time, pos1Prime, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                        m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              
+                    END IF
+        
+                  ELSE ! Node is out of water - zero-out all wave dynamics
+          
+                     m%FAMCF(:,j)  = 0.0
+          
+                  END IF ! If node is in or out of water
+      
+               END IF ! If wave stretching is on or off
+
+            END DO
+         END IF
+      END DO
+   END IF
+
    ! ==============================================================================================
    ! Calculate instantaneous loads on each member except for the hydrodynamic loads on member ends.
    ! This covers aspects of the load calculations previously in CreateDistributedMesh.  
@@ -3265,9 +3374,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               END IF
            
               !--------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
-              f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
-                           2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
-                           2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              IF (mem%PropMCF) THEN
+                 f_hydro=                     p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
+                              2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                              2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              ELSE
+                 f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
+                              2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                              2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              END IF
+              
               CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
@@ -3339,6 +3455,41 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
         END IF
 
+
+        IF ( mem%PropMCF ) THEN
+           IF (p%WaveStMod <3) THEN ! Vertical or extrapolated stretching
+           
+              IF ( FSInt(3) <= 0.0_ReKi) THEN ! Intersection is below SWL - evaluate wave dynamics as usual
+              
+              ! Use location to obtain interpolated values of kinematics
+              CALL SeaSt_Interp_Setup( Time, FSInt, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+              FAMCFFSInt = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+
+              ELSE ! Intersection is above SWL - need wave stretching
+              
+                 ! Vertical wave stretching
+                 FAMCFFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+
+                 ! Extrapolated wave stretching
+                 IF (p%WaveStMod == 2) THEN 
+                    FAMCFFSInt    = FAMCFFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAccMCF0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                 END IF
+              
+              END IF
+           
+           ELSE ! Wheeler stretching
+           
+              ! Points on the free surface is always mapped back to z=0 of the unstretched wave field
+              ! Can evaluate the wave-field variables in the same way as vertical stretching
+              FAMCFFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+           END IF
+        END IF
+
         ! Viscous drag:
         ! Compute relative velocity at the free surface intersection. 
         ! Linear interpolation between the two nodes of the element is used to estimate velocity of the structure
@@ -3362,9 +3513,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
          
            ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
-           F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)   * matmul( mem%Ak,  FAFSInt ) + &
-                        2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
-                        2.0*mem%AxCp(FSElem)          *pi*mem%RMG(FSElem)                *dRdl_pp * FDynPFSInt*mem%k
+           IF ( mem%PropMCF) THEN
+              F_IS=                             p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)   * matmul( mem%Ak,  FAMCFFSInt ) + &
+                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                           2.0*mem%AxCp(FSElem)          *pi*mem%RMG(FSElem)                *dRdl_pp * FDynPFSInt*mem%k
+           ELSE
+              F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)   * matmul( mem%Ak,  FAFSInt ) + &
+                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                           2.0*mem%AxCp(FSElem)          *pi*mem%RMG(FSElem)                *dRdl_pp * FDynPFSInt*mem%k
+           END IF
         END IF
         
         !----------------------------------------------------------------------------------------------------!
@@ -3527,9 +3684,18 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
            
               !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ---------------------------!
-              f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
-                           2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
-                           2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              
+              IF ( mem%PropMCF ) THEN
+                 f_hydro=                     p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
+                              2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                              2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              ELSE
+                 f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
+                              2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                              2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              END IF
+                           
+                           
               CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
@@ -3751,7 +3917,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
       
    END IF
-   
+
 END SUBROUTINE Morison_CalcOutput
 
 subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )

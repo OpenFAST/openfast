@@ -808,6 +808,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          InputFileData%Morison%PWaveVel0  => InitInp%PWaveVel0  
          InputFileData%Morison%WaveElev1  => InitInp%WaveElev1
          InputFileData%Morison%WaveElev2  => InitInp%WaveElev2
+         
+         InputFileData%Morison%WaveAccMCF    => InitInp%WaveAccMCF
+         InputFileData%Morison%PWaveAccMCF0  => InitInp%PWaveAccMCF0
+         
 !         CALL MOVE_ALLOC( Waves_InitOut%nodeInWater,InputFileData%Morison%nodeInWater )  ! moved to Morison%p%nodeInWater in the init routine
 
          InputFileData%Morison%WaveStMod = InitInp%WaveStMod
@@ -1208,6 +1212,8 @@ CONTAINS
       nullify(InputFileData%WAMIT%WaveTime)
       nullify(InputFileData%WAMIT2%WaveElevC0)
       nullify(InputFileData%WAMIT2%WaveDirArr)      
+      nullify(InputFileData%Morison%WaveAccMCF)
+      nullify(InputFileData%Morison%PWaveAccMCF0)
       
       CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
@@ -1275,6 +1281,8 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       nullify(p%Morison%PWaveVel0)
       nullify(p%Morison%WaveElev1)
       nullify(p%Morison%WaveElev2)
+      nullify(p%Morison%WaveAccMCF)
+      nullify(p%Morison%PWaveAccMCF0)
       do i = 1,p%NBody
          nullify(p%WAMIT(i)%SS_Exctn%WaveElev1)
          nullify(p%WAMIT(i)%SS_Exctn%WaveTime)
