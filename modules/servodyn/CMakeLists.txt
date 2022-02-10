@@ -35,7 +35,7 @@ add_library(servodynlib ${SrvD_SOURCES})
 target_link_libraries(servodynlib nwtclibs)
 
 add_library(servodynlib_obj OBJECT ${SrvD_SOURCES})
-target_link_libraries(servodynlib nwtclibs)
+target_link_libraries(servodynlib_obj nwtclibs_obj)
 
 add_executable(servodyn_driver src/ServoDyn_Driver.f90)
 target_link_libraries(servodyn_driver servodynlib nwtclibs ${CMAKE_DL_LIBS})
