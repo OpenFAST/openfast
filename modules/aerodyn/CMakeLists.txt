@@ -94,6 +94,7 @@ add_library(aerodynlib ${AD_LIBS_SOURCES})
 target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs aeroacoustics)
 
 add_library(aerodynlib_obj OBJECT ${AD_LIBS_SOURCES} ${UA_LIBS_SOURCES} ${AFINFO_LIBS_SOURCES} ${FVW_LIBS_SOURCES} ${AEROACOUSTIC_SOURCES})
+target_link_libraries(aerodynlib_obj nwtclibs_obj)
 
 # AeroDyn driver
 set(AD_DRIVER_SOURCES

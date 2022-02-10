@@ -33,6 +33,7 @@ add_library(aerodyn14lib ${AD14_LIBS_SOURCES})
 target_link_libraries(aerodyn14lib ifwlib nwtclibs)
 
 add_library(aerodyn14lib_obj OBJECT ${AD14_LIBS_SOURCES})
+target_link_libraries(aerodyn14lib_obj ifwlib_obj nwtclibs_obj)
 
 install(TARGETS aerodyn14lib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

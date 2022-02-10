@@ -52,6 +52,7 @@ add_library(ifwlib ${IFW_SOURCES})
 target_link_libraries(ifwlib nwtclibs)
 
 add_library(ifwlib_obj OBJECT ${IFW_SOURCES})
+target_link_libraries(ifwlib_obj nwtclibs_obj)
 
 # C-bound interface library
 add_library(ifw_c_binding SHARED src/IfW_C_Binding.f90)

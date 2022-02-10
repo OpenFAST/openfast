@@ -23,8 +23,6 @@ if (GENERATE_TYPES)
 endif()
 
 add_library(openfast_prelib src/FAST_Types.f90)
-add_library(openfast_prelib_obj OBJECT src/FAST_Types.f90)
-
 target_link_libraries(openfast_prelib
   nwtclibs
   ifwlib
@@ -44,6 +42,29 @@ target_link_libraries(openfast_prelib
   icedynlib
   icefloelib
   maplib
+)
+
+add_library(openfast_prelib_obj OBJECT src/FAST_Types.f90)
+
+target_link_libraries(openfast_prelib_obj
+  nwtclibs_obj
+  ifwlib_obj
+  aerodynlib_obj
+  aerodyn14lib_obj
+  servodynlib_obj
+  elastodynlib_obj
+  beamdynlib_obj
+  subdynlib_obj
+  hydrodynlib_obj
+  orcaflexlib_obj
+  extptfm_mckflib_obj
+  openfoamtypeslib_obj
+  scdataextypeslib_obj
+  feamlib_obj
+  moordynlib_obj
+  icedynlib_obj
+  icefloelib_obj
+  maplib_obj
 )
 
 set(OPENFAST_POSTLIB_SOURCES
