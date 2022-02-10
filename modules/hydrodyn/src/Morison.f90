@@ -2864,7 +2864,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    ! Scaled fluid acceleration for the MacCamy-Fuchs model
    IF ( ASSOCIATED(p%WaveAccMCF) ) THEN
       DO im = 1,p%NMembers
-         IF ( p%Members(im)%PropMCF ) THEN
+         IF ( p%Members(im)%PropMCF .AND. ( .NOT. p%Members(im)%PropPot ) ) THEN
             DO i = 1,p%Members(im)%NElements+1
                j = p%Members(im)%NodeIndx(i)
                
@@ -3488,7 +3488,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         END IF
 
 
-        IF ( mem%PropMCF ) THEN
+        IF ( mem%PropMCF .AND. ( .NOT. mem%PropPot ) ) THEN
            IF (p%WaveStMod <3) THEN ! Vertical or extrapolated stretching
            
               IF ( FSInt(3) <= 0.0_ReKi) THEN ! Intersection is below SWL - evaluate wave dynamics as usual
