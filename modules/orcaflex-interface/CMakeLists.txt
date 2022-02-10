@@ -24,11 +24,15 @@ else (ORCA_DLL_LOAD)
   add_definitions(-DNO_LibLoad)
 endif (ORCA_DLL_LOAD)
 
-add_library(orcaflexlib
+set(ORCAFLEX_SOURCES
   src/OrcaFlexInterface.f90
   src/OrcaFlexInterface_Types.f90
 )
+
+add_library(orcaflexlib ${ORCAFLEX_SOURCES})
 target_link_libraries(orcaflexlib nwtclibs)
+
+add_library(orcaflexlib_obj OBJECT ${ORCAFLEX_SOURCES})
 
 add_executable(orca_driver
   src/OrcaDriver_Subs.f90

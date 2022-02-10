@@ -33,6 +33,8 @@ set(SUBDYN_SOURCES
 add_library(subdynlib ${SUBDYN_SOURCES})
 target_link_libraries(subdynlib nwtclibs)
 
+add_library(subdynlib_obj OBJECT ${SUBDYN_SOURCES})
+
 set(SUBDYN_DRIVER_SOURCES
   src/SubDyn_Driver.f90)
 

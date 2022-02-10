@@ -38,12 +38,17 @@ target_include_directories(mapcpplib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 target_link_libraries(mapcpplib nwtclibs)
 
-add_library(maplib
+set(MAP_F_SOURCES
   src/map.f90
   src/MAP_Types.f90
   src/MAP_Fortran_Types.f90
 )
+
+add_library(maplib ${MAP_F_SOURCES})
 target_link_libraries(maplib mapcpplib)
+
+add_library(maplib_obj OBJECT ${MAP_CLIB_SOURCES} ${MAP_F_SOURCES})
+target_link_libraries(maplib_obj nwtclibs)
 
 install(TARGETS maplib mapcpplib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

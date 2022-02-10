@@ -29,6 +29,8 @@ set(BD_SOURCES
 add_library(beamdynlib ${BD_SOURCES})
 target_link_libraries(beamdynlib nwtclibs)
 
+add_library(beamdynlib_obj OBJECT ${BD_SOURCES})
+
 install(TARGETS beamdynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin

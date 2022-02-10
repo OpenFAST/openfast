@@ -23,6 +23,7 @@ if (GENERATE_TYPES)
 endif()
 
 add_library(openfast_prelib src/FAST_Types.f90)
+add_library(openfast_prelib_obj OBJECT src/FAST_Types.f90)
 
 target_link_libraries(openfast_prelib
   nwtclibs
@@ -45,16 +46,52 @@ target_link_libraries(openfast_prelib
   maplib
 )
 
-add_library(openfast_postlib
+set(OPENFAST_POSTLIB_SOURCES
   src/FAST_Lin.f90
   src/FAST_Mods.f90
   src/FAST_Subs.f90
   src/FAST_Solver.f90
-  )
+)
+add_library(openfast_postlib ${OPENFAST_POSTLIB_SOURCES})
 target_link_libraries(openfast_postlib openfast_prelib scdataexlib foamfastlib versioninfolib)
 
-add_library(openfastlib src/FAST_Library.f90)
-target_link_libraries(openfastlib openfast_postlib openfast_prelib scdataexlib foamfastlib)
+add_library(openfast_postlib_obj OBJECT ${OPENFAST_POSTLIB_SOURCES})
+target_link_libraries(openfast_postlib_obj openfast_prelib_obj scdataexlib_obj foamfastlib_obj versioninfolib_obj)
+
+#add_library(openfastlib src/FAST_Library.f90)
+#target_link_libraries(openfastlib -Wl,--whole-archive openfast_postlib openfast_prelib scdataexlib foamfastlib -Wl,--no-whole-archive)
+#target_link_libraries(openfastlib
+#  openfast_prelib_obj
+#  nwtclibs_obj
+#  ifwlib_obj
+#  aerodynlib_obj
+#  aerodyn14lib_obj
+#  servodynlib_obj
+#  elastodynlib_obj
+#  beamdynlib_obj
+#  subdynlib_obj
+#  hydrodynlib_obj
+#  orcaflexlib_obj
+#  extptfm_mckflib_obj
+#  openfoamtypeslib_obj
+#  foamfastlib_obj
+#  scdataextypeslib_obj
+#  feamlib_obj
+#  moordynlib_obj
+#  icedynlib_obj
+#  icefloelib_obj
+#  maplib_obj
+#  openfast_postlib_obj
+#  versioninfolib_obj
+#  ${LAPACK_LIBRARIES} 
+#  ${CMAKE_DL_LIBS}
+#)
+#
+#if(BUILD_OPENFAST_SIMULINK_API)
+#  find_package(Matlab REQUIRED)
+#  target_link_libraries(openfastlib ${Matlab_MEX_LIBRARY})
+#endif()
+
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
@@ -70,7 +107,13 @@ if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
   )
 endif()
 
-install(TARGETS openfastlib openfast_prelib openfast_postlib
+#install(TARGETS openfastlib openfast_prelib openfast_postlib
+#  EXPORT ${CMAKE_PROJECT_NAME}Libraries
+#  RUNTIME DESTINATION lib
+#  ARCHIVE DESTINATION lib
+#  LIBRARY DESTINATION lib)
+
+install(TARGETS openfast_prelib openfast_postlib
   EXPORT ${CMAKE_PROJECT_NAME}Libraries
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib

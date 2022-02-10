@@ -29,6 +29,8 @@ set(ED_SOURCES
 add_library(elastodynlib ${ED_SOURCES})
 target_link_libraries(elastodynlib servodynlib nwtclibs)
 
+add_library(elastodynlib_obj OBJECT ${ED_SOURCES})
+
 install(TARGETS elastodynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin

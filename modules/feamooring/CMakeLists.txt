@@ -26,6 +26,8 @@ set(FEAM_LIBS_SOURCES
 add_library(feamlib ${FEAM_LIBS_SOURCES})
 target_link_libraries(feamlib nwtclibs)
 
+add_library(feamlib_obj OBJECT ${FEAM_LIBS_SOURCES})
+
 install(TARGETS feamlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib

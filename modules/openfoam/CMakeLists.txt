@@ -24,10 +24,18 @@ configure_file(src/OpenFOAM_Types.h ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 add_library(openfoamtypeslib src/OpenFOAM_Types.f90)
 target_link_libraries(openfoamtypeslib nwtclibs)
 
+add_library(openfoamtypeslib_obj OBJECT src/OpenFOAM_Types.f90)
+
 add_library(foamfastlib
   src/OpenFOAM.f90
 )
 target_link_libraries(foamfastlib openfoamtypeslib openfast_prelib nwtclibs)
+
+add_library(foamfastlib_obj OBJECT
+  src/OpenFOAM.f90
+  src/OpenFOAM_Types.f90
+)
+target_link_libraries(foamfastlib_obj openfast_prelib_obj nwtclibs_obj)
 
 install(TARGETS openfoamtypeslib foamfastlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

@@ -123,6 +123,8 @@ endif (NWTC_SYS_FILE)
 
 add_library(nwtclibs ${NWTCLIBS_SOURCES})
 
+add_library(nwtclibs_obj OBJECT ${NWTCLIBS_SOURCES})
+
 if(BUILD_OPENFAST_SIMULINK_API)
   find_package(Matlab REQUIRED)
   target_link_libraries(nwtclibs versioninfolib ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS} ${Matlab_MEX_LIBRARY})

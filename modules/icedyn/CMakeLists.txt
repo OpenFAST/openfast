@@ -25,6 +25,11 @@ add_library(icedynlib
 
 target_link_libraries(icedynlib nwtclibs)
 
+add_library(icedynlib_obj OBJECT
+  src/IceDyn.f90
+  src/IceDyn_Types.f90
+)
+
 install(TARGETS icedynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
