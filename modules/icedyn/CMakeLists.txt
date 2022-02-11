@@ -18,19 +18,18 @@ if (GENERATE_TYPES)
   generate_f90_types(src/Registry_IceDyn.txt ${CMAKE_CURRENT_LIST_DIR}/src/IceDyn_Types.f90)
 endif()
 
-add_library(icedynlib
+set(ICEDYN_SOURCES
   src/IceDyn.f90
   src/IceDyn_Types.f90
 )
 
+add_library(icedynlib ${ICEDYN_SOURCES})
 target_link_libraries(icedynlib nwtclibs)
 
-add_library(icedynlib_obj OBJECT
-  src/IceDyn.f90
-  src/IceDyn_Types.f90
-)
+add_library(icedynlib_obj OBJECT ${ICEDYN_SOURCES})
+target_link_libraries(icedynlib_obj nwtclibs_obj)
 
-install(TARGETS icedynlib
+install(TARGETS icedynlib icedynlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib

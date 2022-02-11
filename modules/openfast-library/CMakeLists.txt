@@ -45,7 +45,6 @@ target_link_libraries(openfast_prelib
 )
 
 add_library(openfast_prelib_obj OBJECT src/FAST_Types.f90)
-
 target_link_libraries(openfast_prelib_obj
   nwtclibs_obj
   ifwlib_obj
@@ -79,40 +78,67 @@ target_link_libraries(openfast_postlib openfast_prelib scdataexlib foamfastlib v
 add_library(openfast_postlib_obj OBJECT ${OPENFAST_POSTLIB_SOURCES})
 target_link_libraries(openfast_postlib_obj openfast_prelib_obj scdataexlib_obj foamfastlib_obj versioninfolib_obj)
 
-#add_library(openfastlib src/FAST_Library.f90)
-#target_link_libraries(openfastlib -Wl,--whole-archive openfast_postlib openfast_prelib scdataexlib foamfastlib -Wl,--no-whole-archive)
-#target_link_libraries(openfastlib
-#  openfast_prelib_obj
-#  nwtclibs_obj
-#  ifwlib_obj
-#  aerodynlib_obj
-#  aerodyn14lib_obj
-#  servodynlib_obj
-#  elastodynlib_obj
-#  beamdynlib_obj
-#  subdynlib_obj
-#  hydrodynlib_obj
-#  orcaflexlib_obj
-#  extptfm_mckflib_obj
-#  openfoamtypeslib_obj
-#  foamfastlib_obj
-#  scdataextypeslib_obj
-#  feamlib_obj
-#  moordynlib_obj
-#  icedynlib_obj
-#  icefloelib_obj
-#  maplib_obj
-#  openfast_postlib_obj
-#  versioninfolib_obj
-#  ${LAPACK_LIBRARIES} 
-#  ${CMAKE_DL_LIBS}
-#)
-#
-#if(BUILD_OPENFAST_SIMULINK_API)
-#  find_package(Matlab REQUIRED)
-#  target_link_libraries(openfastlib ${Matlab_MEX_LIBRARY})
-#endif()
+add_library(openfastlib STATIC
+  src/FAST_Library.f90
+  $<TARGET_OBJECTS:openfast_prelib_obj>
+  $<TARGET_OBJECTS:maplib_obj>
+  $<TARGET_OBJECTS:nwtclibs_obj>
+  $<TARGET_OBJECTS:ifwlib_obj>
+  $<TARGET_OBJECTS:aerodynlib_obj>
+  $<TARGET_OBJECTS:aerodyn14lib_obj>
+  $<TARGET_OBJECTS:servodynlib_obj>
+  $<TARGET_OBJECTS:elastodynlib_obj>
+  $<TARGET_OBJECTS:beamdynlib_obj>
+  $<TARGET_OBJECTS:subdynlib_obj>
+  $<TARGET_OBJECTS:hydrodynlib_obj>
+  $<TARGET_OBJECTS:orcaflexlib_obj>
+  $<TARGET_OBJECTS:extptfm_mckflib_obj>
+  $<TARGET_OBJECTS:openfoamtypeslib_obj>
+  $<TARGET_OBJECTS:foamfastlib_obj>
+  $<TARGET_OBJECTS:scdataextypeslib_obj>
+  $<TARGET_OBJECTS:scdataexlib_obj>
+  $<TARGET_OBJECTS:feamlib_obj>
+  $<TARGET_OBJECTS:moordynlib_obj>
+  $<TARGET_OBJECTS:icedynlib_obj>
+  $<TARGET_OBJECTS:icefloelib_obj>
+  $<TARGET_OBJECTS:openfast_postlib_obj>
+  $<TARGET_OBJECTS:versioninfolib_obj>
+)
 
+target_link_libraries(openfastlib
+  versioninfolib_obj
+  openfast_prelib_obj
+  maplib_obj
+  nwtclibs_obj
+  ifwlib_obj
+  aerodynlib_obj
+  aerodyn14lib_obj
+  servodynlib_obj
+  elastodynlib_obj
+  beamdynlib_obj
+  subdynlib_obj
+  hydrodynlib_obj
+  orcaflexlib_obj
+  extptfm_mckflib_obj
+  openfoamtypeslib_obj
+  foamfastlib_obj
+  scdataextypeslib_obj
+  scdataexlib_obj
+  feamlib_obj
+  moordynlib_obj
+  icedynlib_obj
+  icefloelib_obj
+  openfast_postlib_obj
+  versioninfolib_obj
+  #${LAPACK_LIBRARIES}
+  ${LAPACK_LIBRARIES}
+  ${CMAKE_DL_LIBS}
+)
+
+if(BUILD_OPENFAST_SIMULINK_API)
+  find_package(Matlab REQUIRED)
+  target_link_libraries(openfastlib ${Matlab_MEX_LIBRARY})
+endif()
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
@@ -128,13 +154,7 @@ if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
   )
 endif()
 
-#install(TARGETS openfastlib openfast_prelib openfast_postlib
-#  EXPORT ${CMAKE_PROJECT_NAME}Libraries
-#  RUNTIME DESTINATION lib
-#  ARCHIVE DESTINATION lib
-#  LIBRARY DESTINATION lib)
-
-install(TARGETS openfast_prelib openfast_postlib
+install(TARGETS openfastlib openfast_prelib openfast_postlib openfast_postlib_obj openfast_prelib_obj
   EXPORT ${CMAKE_PROJECT_NAME}Libraries
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib

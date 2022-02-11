@@ -21,23 +21,27 @@ endif()
 # copy the header files to their build location
 configure_file(src/OpenFOAM_Types.h ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
-add_library(openfoamtypeslib src/OpenFOAM_Types.f90)
-target_link_libraries(openfoamtypeslib nwtclibs)
-
-add_library(openfoamtypeslib_obj OBJECT src/OpenFOAM_Types.f90)
-
-add_library(foamfastlib
-  src/OpenFOAM.f90
-)
-target_link_libraries(foamfastlib openfoamtypeslib openfast_prelib nwtclibs)
-
-add_library(foamfastlib_obj OBJECT
-  src/OpenFOAM.f90
+set(OFTYPES_SOURCES
   src/OpenFOAM_Types.f90
 )
-target_link_libraries(foamfastlib_obj openfast_prelib_obj nwtclibs_obj)
+add_library(openfoamtypeslib ${OFTYPES_SOURCES})
+target_link_libraries(openfoamtypeslib nwtclibs)
 
-install(TARGETS openfoamtypeslib foamfastlib
+add_library(openfoamtypeslib_obj OBJECT ${OFTYPES_SOURCES})
+target_link_libraries(openfoamtypeslib_obj nwtclibs_obj)
+
+set(FOAMFAST_SOURCES
+  src/OpenFOAM.f90
+)
+
+add_library(foamfastlib ${FOAMFAST_SOURCES})
+target_link_libraries(foamfastlib openfoamtypeslib openfast_prelib nwtclibs)
+
+add_library(foamfastlib_obj OBJECT ${FOAMFAST_SOURCES})
+target_link_libraries(foamfastlib_obj openfoamtypeslib_obj openfast_prelib_obj nwtclibs_obj)
+
+
+install(TARGETS openfoamtypeslib openfoamtypeslib_obj foamfastlib foamfastlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

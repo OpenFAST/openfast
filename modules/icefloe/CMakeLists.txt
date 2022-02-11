@@ -43,7 +43,7 @@ target_link_libraries(icefloelib nwtclibs)
 add_library(icefloelib_obj OBJECT ${ICEFLOE_LIBS_SOURCES})
 target_link_libraries(icefloelib_obj nwtclibs_obj)
 
-install(TARGETS icefloelib
+install(TARGETS icefloelib icefloelib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib

@@ -104,6 +104,7 @@ if (MKL_FOUND)
   set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "ifport;ifcore;imf;svml;m;ipgo;intlc;c;irc_s;dl;c")
 else()
   find_package(BLAS REQUIRED)
+  #set(BLA_STATIC ON)
   find_package(LAPACK REQUIRED)
 endif()
 
@@ -159,163 +160,6 @@ endforeach(IDIR IN ITEMS ${OPENFAST_MODULES})
 
 add_subdirectory(glue-codes)
 
-#add_library(openfastlib STATIC
-#  ${CMAKE_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
-#  $<TARGET_OBJECTS:openfast_prelib_obj>
-#  $<TARGET_OBJECTS:maplib_obj>
-#  $<TARGET_OBJECTS:nwtclibs_obj>
-#  $<TARGET_OBJECTS:ifwlib_obj>
-#  $<TARGET_OBJECTS:aerodynlib_obj>
-#  $<TARGET_OBJECTS:aerodyn14lib_obj>
-#  $<TARGET_OBJECTS:servodynlib_obj>
-#  $<TARGET_OBJECTS:elastodynlib_obj>
-#  $<TARGET_OBJECTS:beamdynlib_obj>
-#  $<TARGET_OBJECTS:subdynlib_obj>
-#  $<TARGET_OBJECTS:hydrodynlib_obj>
-#  $<TARGET_OBJECTS:orcaflexlib_obj>
-#  $<TARGET_OBJECTS:extptfm_mckflib_obj>
-#  $<TARGET_OBJECTS:openfoamtypeslib_obj>
-#  $<TARGET_OBJECTS:foamfastlib_obj>
-#  $<TARGET_OBJECTS:scdataextypeslib_obj>
-#  $<TARGET_OBJECTS:feamlib_obj>
-#  $<TARGET_OBJECTS:moordynlib_obj>
-#  $<TARGET_OBJECTS:icedynlib_obj>
-#  $<TARGET_OBJECTS:icefloelib_obj>
-#  $<TARGET_OBJECTS:openfast_postlib_obj>
-#  $<TARGET_OBJECTS:versioninfolib_obj>
-#)
-#
-
-#add_library(openfastlib STATIC
-#  ${CMAKE_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
-#  $<TARGET_OBJECTS:openfast_prelib_obj>
-#  $<TARGET_OBJECTS:maplib_obj>
-#  $<TARGET_OBJECTS:nwtclibs_obj>
-#  $<TARGET_OBJECTS:ifwlib_obj>
-#  $<TARGET_OBJECTS:aerodynlib_obj>
-#  $<TARGET_OBJECTS:aerodyn14lib_obj>
-#  $<TARGET_OBJECTS:servodynlib_obj>
-#  $<TARGET_OBJECTS:elastodynlib_obj>
-#  $<TARGET_OBJECTS:beamdynlib_obj>
-#  $<TARGET_OBJECTS:subdynlib_obj>
-#  $<TARGET_OBJECTS:hydrodynlib_obj>
-#  $<TARGET_OBJECTS:orcaflexlib_obj>
-#  $<TARGET_OBJECTS:extptfm_mckflib_obj>
-#  $<TARGET_OBJECTS:openfoamtypeslib_obj>
-#  $<TARGET_OBJECTS:foamfastlib_obj>
-#  $<TARGET_OBJECTS:scdataextypeslib_obj>
-#  $<TARGET_OBJECTS:feamlib_obj>
-#  $<TARGET_OBJECTS:moordynlib_obj>
-#  $<TARGET_OBJECTS:icedynlib_obj>
-#  $<TARGET_OBJECTS:icefloelib_obj>
-#  $<TARGET_OBJECTS:openfast_postlib_obj>
-#  $<TARGET_OBJECTS:versioninfolib_obj>
-#)
-
-add_library(openfastlib STATIC
-  ${CMAKE_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
-  $<TARGET_OBJECTS:openfast_prelib_obj>
-  $<TARGET_OBJECTS:maplib_obj>
-  $<TARGET_OBJECTS:nwtclibs_obj>
-  $<TARGET_OBJECTS:ifwlib_obj>
-  $<TARGET_OBJECTS:aerodynlib_obj>
-  $<TARGET_OBJECTS:aerodyn14lib_obj>
-  $<TARGET_OBJECTS:servodynlib_obj>
-  $<TARGET_OBJECTS:elastodynlib_obj>
-  $<TARGET_OBJECTS:beamdynlib_obj>
-  $<TARGET_OBJECTS:subdynlib_obj>
-  $<TARGET_OBJECTS:hydrodynlib_obj>
-  $<TARGET_OBJECTS:orcaflexlib_obj>
-  $<TARGET_OBJECTS:extptfm_mckflib_obj>
-  $<TARGET_OBJECTS:openfoamtypeslib_obj>
-  $<TARGET_OBJECTS:foamfastlib_obj>
-  $<TARGET_OBJECTS:scdataextypeslib_obj>
-  $<TARGET_OBJECTS:scdataexlib_obj>
-  $<TARGET_OBJECTS:feamlib_obj>
-  $<TARGET_OBJECTS:moordynlib_obj>
-  $<TARGET_OBJECTS:icedynlib_obj>
-  $<TARGET_OBJECTS:icefloelib_obj>
-  $<TARGET_OBJECTS:openfast_postlib_obj>
-  $<TARGET_OBJECTS:versioninfolib_obj>
-)
-
-
-#add_library(openfastlib STATIC
-#  $<TARGET_OBJECTS:openfast_prelib_obj>
-#  $<TARGET_OBJECTS:elastodynlib_obj>
-#  #$<JOIN:${CMAKE_SOURCE_DIR}/modules/openfast-library/,$<TARGET_PROPERTY:openfast_prelib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/map/,$<TARGET_PROPERTY:maplib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/nwtc-library/,$<TARGET_PROPERTY:nwtclibs_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/inflowwind/,$<TARGET_PROPERTY:ifwlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/aerodyn/,$<TARGET_PROPERTY:aerodynlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/aerodyn14/,$<TARGET_PROPERTY:aerodyn14lib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/servodyn/,$<TARGET_PROPERTY:servodynlib_obj,SOURCES>>
-#  #$<JOIN:${CMAKE_SOURCE_DIR}/modules/elastodyn/,$<TARGET_PROPERTY:elastodynlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/beamdyn/,$<TARGET_PROPERTY:beamdynlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/subdyn/,$<TARGET_PROPERTY:subdynlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/hydrodyn/,$<TARGET_PROPERTY:hydrodynlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/orcaflex-interface/,$<TARGET_PROPERTY:orcaflexlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/extptfm/,$<TARGET_PROPERTY:extptfm_mckflib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/openfoam/,$<TARGET_PROPERTY:openfoamtypeslib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/openfoam/,$<TARGET_PROPERTY:foamfastlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/supercontroller/,$<TARGET_PROPERTY:scdataextypeslib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/feamooring/,$<TARGET_PROPERTY:feamlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/moordyn/,$<TARGET_PROPERTY:moordynlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/icedyn/,$<TARGET_PROPERTY:icedynlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/icefloe/,$<TARGET_PROPERTY:icefloelib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/openfast-library/,$<TARGET_PROPERTY:openfast_postlib_obj,SOURCES>>
-#  $<JOIN:${CMAKE_SOURCE_DIR}/modules/version/,$<TARGET_PROPERTY:versioninfolib_obj,SOURCES>>
-#  ${CMAKE_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
-#)
-#
-#target_include_directories(openfastlib PUBLIC 
-#  $<TARGET_PROPERTY:versioninfolib_obj,Fortran_MODULE_DIRECTORY>
-#  $<TARGET_PROPERTY:nwtclibs_obj,Fortran_MODULE_DIRECTORY>
-#  $<TARGET_PROPERTY:maplib_obj,Fortran_MODULE_DIRECTORY>
-#)
-
-#include_directories(openfastlib ${CMAKE_SOURCE_DIR}/build/ftnmods)
-
-#target_include_directories(openfastlib PUBLIC "/usr/local/rad_v2.0.0/include")
-
-target_link_libraries(openfastlib 
-  versioninfolib_obj
-  openfast_prelib_obj
-  maplib_obj
-  nwtclibs_obj
-  ifwlib_obj
-  aerodynlib_obj
-  aerodyn14lib_obj
-  servodynlib_obj
-  elastodynlib_obj
-  beamdynlib_obj
-  subdynlib_obj
-  hydrodynlib_obj
-  orcaflexlib_obj
-  extptfm_mckflib_obj
-  openfoamtypeslib_obj
-  foamfastlib_obj
-  scdataextypeslib_obj
-  scdataexlib_obj
-  feamlib_obj
-  moordynlib_obj
-  icedynlib_obj
-  icefloelib_obj
-  openfast_postlib_obj
-  versioninfolib_obj
-  ${LAPACK_LIBRARIES} 
-  ${CMAKE_DL_LIBS}
-)
-
-if(BUILD_OPENFAST_SIMULINK_API)
-  find_package(Matlab REQUIRED)
-  target_link_libraries(openfastlib ${Matlab_MEX_LIBRARY})
-endif()
-
-
-###############################
-
-
 # Install fortran .mod files also to installation directory
 install(CODE
   "EXECUTE_PROCESS (COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"${CMAKE_Fortran_MODULE_DIRECTORY}\" \"${CMAKE_INSTALL_PREFIX}/include/openfast/\")")
@@ -362,16 +206,4 @@ option(BUILD_DOCUMENTATION "Build documentation." OFF)
 if(BUILD_DOCUMENTATION)
   add_subdirectory(docs)
 endif()
-
-
-
-
-###############
-
-
-#install(TARGETS openfastlib
-#  EXPORT ${CMAKE_PROJECT_NAME}Libraries
-#  RUNTIME DESTINATION lib
-#  ARCHIVE DESTINATION lib
-#  LIBRARY DESTINATION lib)
 

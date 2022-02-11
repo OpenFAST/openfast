@@ -122,17 +122,19 @@ else (NWTC_SYS_FILE)
 endif (NWTC_SYS_FILE)
 
 add_library(nwtclibs ${NWTCLIBS_SOURCES})
+target_link_libraries(nwtclibs versioninfolib ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
 
 add_library(nwtclibs_obj OBJECT ${NWTCLIBS_SOURCES})
+target_link_libraries(nwtclibs_obj versioninfolib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
 
 if(BUILD_OPENFAST_SIMULINK_API)
+  # Append the matlab mex libraries to the target
   find_package(Matlab REQUIRED)
-  target_link_libraries(nwtclibs versioninfolib ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS} ${Matlab_MEX_LIBRARY})
-else()
-  target_link_libraries(nwtclibs versioninfolib ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+  target_link_libraries(nwtclibs ${Matlab_MEX_LIBRARY})
+  target_link_libraries(nwtclibs_obj ${Matlab_MEX_LIBRARY})
 endif()
 
-install(TARGETS nwtclibs
+install(TARGETS nwtclibs nwtclibs_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

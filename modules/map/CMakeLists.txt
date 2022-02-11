@@ -50,7 +50,7 @@ target_link_libraries(maplib mapcpplib)
 add_library(maplib_obj OBJECT ${MAP_CLIB_SOURCES} ${MAP_F_SOURCES})
 target_link_libraries(maplib_obj nwtclibs)
 
-install(TARGETS maplib mapcpplib
+install(TARGETS maplib mapcpplib maplib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib

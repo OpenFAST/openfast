@@ -31,7 +31,7 @@ add_library(versioninfolib src/VersionInfo.f90)
 
 add_library(versioninfolib_obj OBJECT src/VersionInfo.f90)
 
-install(TARGETS versioninfolib
+install(TARGETS versioninfolib versioninfolib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

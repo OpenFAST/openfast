@@ -28,8 +28,9 @@ add_library(extptfm_mckflib ${EXTPTFM_SOURCES})
 target_link_libraries(extptfm_mckflib nwtclibs)
 
 add_library(extptfm_mckflib_obj OBJECT ${EXTPTFM_SOURCES})
+target_link_libraries(extptfm_mckflib_obj nwtclibs_obj)
 
-install(TARGETS extptfm_mckflib
+install(TARGETS extptfm_mckflib extptfm_mckflib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
