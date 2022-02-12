@@ -29,8 +29,7 @@ typedef   ^             ^               ReKi              rLocal               {
 typedef   ^   InitOutputType   ProgDesc             Ver                -   -   -   "This module's name, version, and date"   -
 
 typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind                   {2}      -        -        "The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a')"   m/s
-typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind_dot               {2}      -        -        "Time derivative of the filtered induced velocity, x%vind in CCSD"   "m/s^2"
-typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind_1                 {2}      -        -        "The filtered intermediate induced velocity"   "m/s"
+typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind_1                 {2}      -        -        "The filtered reduced or intermediate induced velocity"   "m/s"
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -73,7 +72,6 @@ typedef   ^             ParameterType   IntKi             DBEMT_Mod             
 
 # ..... Inputs ....................................................................................................................
 typedef   ^   DBEMT_ElementInputType     ReKi    vind_s                   {2}      -        -        "The unfiltered induced velocity, [1] is the axial induced velocity (-Vx*a) and [2] is the tangential induced velocity (Vy*a') at node i on blade j. Note that the inputs are used only operated on at a particular node and blade, so we don't store all elements"   "m/s"
-typedef   ^   DBEMT_ElementInputType     ReKi    vind_s_dot               {2}      -        -        "The first time derivative of the unfiltered induced velocity, u%vind_s" "m/s^2"
 typedef   ^   DBEMT_ElementInputType     ReKi    spanRatio                 -       -        -        "Normalized span location of blade node" -
 # Define inputs that are contained on the mesh here:
 #

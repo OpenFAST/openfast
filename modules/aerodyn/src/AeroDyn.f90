@@ -1764,13 +1764,6 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%Vx(j,k) = dot_product( tmp, x_hat ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, y_hat ) ! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
-         
-         !jmj says omega_z and PitchRate are the same things
-         ! inputs for DBEMT (DBEMT_Mod == DBEMT_cont_tauConst)
-         if (allocated(m%BEMT_u(indx)%Vx_elast_dot)) then
-            m%BEMT_u(indx)%Vx_elast_dot(j,k)  = dot_product( u%BladeMotion(k)%TranslationAcc(:,j), x_hat ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
-            m%BEMT_u(indx)%Vy_elast_dot(j,k)  = dot_product( u%BladeMotion(k)%TranslationAcc(:,j), y_hat ) ! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
-         end if
          ! inputs for CUA (and CDBEMT):
          m%BEMT_u(indx)%omega_z(j,k)       = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
          
@@ -4806,8 +4799,8 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    
          do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2)
             do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
-               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind_dot)
-                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind_dot(k)
+               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind_1)
+                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind_1(k)
                   index = index + 1
                end do
             end do
@@ -4859,8 +4852,8 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    
          do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2)
             do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1)
-               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind_dot)
-                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind_dot(k)
+               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind_1)
+                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind_1(k)
                   index = index + 1
                end do
             end do
@@ -5556,12 +5549,12 @@ SUBROUTINE Perturb_x( p, n, perturb_sign, x, dx )
    
    if (n <= p%BEMT%DBEMT%lin_nx) then
 
-      if (n <= p%BEMT%DBEMT%lin_nx/2) then ! x_p%BEMT%DBEMT%element(i,j)%vind, else x_p%BEMT%DBEMT%element(i,j)%vind_dot
+      if (n <= p%BEMT%DBEMT%lin_nx/2) then ! x_p%BEMT%DBEMT%element(i,j)%vind, else x_p%BEMT%DBEMT%element(i,j)%vind_1
          call GetStateIndices( n, size(x%BEMT%DBEMT%element,2), size(x%BEMT%DBEMT%element,1), size(x%BEMT%DBEMT%element(1,1)%vind), Blade, BladeNode, StateIndex )
          x%BEMT%DBEMT%element(BladeNode,Blade)%vind(StateIndex) = x%BEMT%DBEMT%element(BladeNode,Blade)%vind(StateIndex) + dx * perturb_sign
       else
-         call GetStateIndices( n - p%BEMT%DBEMT%lin_nx/2, size(x%BEMT%DBEMT%element,2), size(x%BEMT%DBEMT%element,1), size(x%BEMT%DBEMT%element(1,1)%vind_dot), Blade, BladeNode, StateIndex )
-         x%BEMT%DBEMT%element(BladeNode,Blade)%vind_dot(StateIndex) = x%BEMT%DBEMT%element(BladeNode,Blade)%vind_dot(StateIndex) + dx * perturb_sign
+         call GetStateIndices( n - p%BEMT%DBEMT%lin_nx/2, size(x%BEMT%DBEMT%element,2), size(x%BEMT%DBEMT%element,1), size(x%BEMT%DBEMT%element(1,1)%vind_1), Blade, BladeNode, StateIndex )
+         x%BEMT%DBEMT%element(BladeNode,Blade)%vind_1(StateIndex) = x%BEMT%DBEMT%element(BladeNode,Blade)%vind_1(StateIndex) + dx * perturb_sign
       endif
    
    else
@@ -5660,8 +5653,8 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
    
       do j=1,size(x_p%BEMT%DBEMT%element,2) ! number of blades
          do i=1,size(x_p%BEMT%DBEMT%element,1) ! number of nodes per blade
-            dX(indx_first:indx_first+1) = x_p%BEMT%DBEMT%element(i,j)%vind_dot - x_m%BEMT%DBEMT%element(i,j)%vind_dot
-            indx_first = indx_first + size(x_p%BEMT%DBEMT%element(i,j)%vind_dot) !+=2
+            dX(indx_first:indx_first+1) = x_p%BEMT%DBEMT%element(i,j)%vind_1 - x_m%BEMT%DBEMT%element(i,j)%vind_1
+            indx_first = indx_first + size(x_p%BEMT%DBEMT%element(i,j)%vind_1) !+=2
          end do
       end do
       
