@@ -705,7 +705,6 @@ subroutine HD_DvrCleanup()
       errStat2 = ErrID_None
       errMsg2  = ""
       
-      print *, 'Start Clean'
       call SeaSt_End( u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2 )
