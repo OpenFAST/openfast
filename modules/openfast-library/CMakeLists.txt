@@ -78,7 +78,7 @@ target_link_libraries(openfast_postlib openfast_prelib scdataexlib foamfastlib v
 add_library(openfast_postlib_obj OBJECT ${OPENFAST_POSTLIB_SOURCES})
 target_link_libraries(openfast_postlib_obj openfast_prelib_obj scdataexlib_obj foamfastlib_obj versioninfolib_obj)
 
-add_library(openfastlib STATIC
+add_library(openfastlib
   src/FAST_Library.f90
   $<TARGET_OBJECTS:openfast_prelib_obj>
   $<TARGET_OBJECTS:maplib_obj>
@@ -106,34 +106,13 @@ add_library(openfastlib STATIC
 )
 
 target_link_libraries(openfastlib
-  versioninfolib_obj
-  openfast_prelib_obj
-  maplib_obj
-  nwtclibs_obj
-  ifwlib_obj
-  aerodynlib_obj
-  aerodyn14lib_obj
-  servodynlib_obj
-  elastodynlib_obj
-  beamdynlib_obj
-  subdynlib_obj
-  hydrodynlib_obj
-  orcaflexlib_obj
-  extptfm_mckflib_obj
-  openfoamtypeslib_obj
-  foamfastlib_obj
-  scdataextypeslib_obj
-  scdataexlib_obj
-  feamlib_obj
-  moordynlib_obj
-  icedynlib_obj
-  icefloelib_obj
-  openfast_postlib_obj
-  versioninfolib_obj
-  #${LAPACK_LIBRARIES}
   ${LAPACK_LIBRARIES}
   ${CMAKE_DL_LIBS}
 )
+
+if (USE_LOCAL_STATIC_LAPACK)
+  add_dependencies(openfastlib lapack)
+endif()
 
 if(BUILD_OPENFAST_SIMULINK_API)
   find_package(Matlab REQUIRED)
