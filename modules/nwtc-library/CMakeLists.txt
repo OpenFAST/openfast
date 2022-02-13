@@ -123,9 +123,15 @@ endif (NWTC_SYS_FILE)
 
 add_library(nwtclibs ${NWTCLIBS_SOURCES})
 target_link_libraries(nwtclibs versioninfolib ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+if (USE_LOCAL_STATIC_LAPACK)
+  add_dependencies(nwtclibs lapack)
+endif()
 
 add_library(nwtclibs_obj OBJECT ${NWTCLIBS_SOURCES})
 target_link_libraries(nwtclibs_obj versioninfolib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+if (USE_LOCAL_STATIC_LAPACK)
+  add_dependencies(nwtclibs_obj lapack)
+endif()
 
 if(BUILD_OPENFAST_SIMULINK_API)
   # Append the matlab mex libraries to the target
