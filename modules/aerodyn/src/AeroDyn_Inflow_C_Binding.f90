@@ -155,14 +155,12 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     The mapping of loads from the AD meshes to the corresponding external nodes
    type(MeshMapType),   allocatable       :: Map_AD_BldLoad_P_2_BldPtLoad(:)  ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
    type(MeshMapType)                      :: Map_NacPtMotion_2_AD_Nac         ! Mesh mapping between AD output nacelle pt  load to NacLoad   for return
-   !  Meshes -- helper stuff
-   real(R8Ki)                             :: theta(3)                ! mesh creation helper data
    !  Motions input (so we don't have to reallocate all the time
-   real(ReKi), allocatable                :: tmpBldPtMeshPos(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
-   real(ReKi), allocatable                :: tmpBldPtMeshOrient(:,:,:)    ! temp array.  Probably don't need this, but makes conversion from C clearer.
-   real(ReKi), allocatable                :: tmpBldPtMeshVel(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
-   real(ReKi), allocatable                :: tmpBldPtMeshAcc(:,:)         ! temp array.  Probably don't need this, but makes conversion from C clearer.
-   real(ReKi), allocatable                :: tmpBldPtMeshFrc(:,:)         ! temp array.  Probably don't need this, but makes conversion to   C clearer.
+   real(ReKi), allocatable                :: tmpBldPtMeshPos(:,:)       ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpBldPtMeshOri(:,:,:)     ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpBldPtMeshVel(:,:)       ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpBldPtMeshAcc(:,:)       ! temp array.  Probably don't need this, but makes conversion from C clearer.
+   real(ReKi), allocatable                :: tmpBldPtMeshFrc(:,:)       ! temp array.  Probably don't need this, but makes conversion to   C clearer.
    !------------------------------------------------------------------------------------
 
 
@@ -193,15 +191,15 @@ end subroutine SetErr
 !===============================================================================================================
 SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileStringLength_C, &
                IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
-               gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,                         &
-               defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                                   &
-               InterpOrder_C, T_initial_C, DT_C, TMax_C,                                     &
-               storeHHVel, WrVTK_in, TransposeDCM_in,                                        &
-               HubPosition_C, HubOrientation_C,                                              &
-               NacellePosition_C, NacelleOrientation_C,                                      &
-               NumBlades_C, BladeRootPosition_C, BladeRootOrientation_C,                     &
-               NumMeshPts_C,  InitMeshPosition_C,  InitMeshOrientation_C,                    &
-               NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C,                    &
+               gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,      &
+               defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
+               InterpOrder_C, T_initial_C, DT_C, TMax_C,                  &
+               storeHHVel, WrVTK_in, TransposeDCM_in,                     &
+               HubPos_C, HubOri_C,                                        &
+               NacPos_C, NacOri_C,                                        &
+               NumBlades_C, BldRootPos_C, BldRootOri_C,                   &
+               NumMeshPts_C,  InitMeshPos_C,  InitMeshOri_C,              &
+               NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_Init')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
@@ -226,17 +224,17 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    real(c_float),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
    real(c_float),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
    ! Initial hub and blade root positions/orientations
-   real(c_float),             intent(in   )  :: HubPosition_C( 3 )                     !< Hub position
-   real(c_double),            intent(in   )  :: HubOrientation_C( 9 )                  !< Hub orientation
-   real(c_float),             intent(in   )  :: NacellePosition_C( 3 )                 !< Nacelle position
-   real(c_double),            intent(in   )  :: NacelleOrientation_C( 9 )              !< Nacelle orientation
+   real(c_float),             intent(in   )  :: HubPos_C( 3 )                          !< Hub position
+   real(c_double),            intent(in   )  :: HubOri_C( 9 )                          !< Hub orientation
+   real(c_float),             intent(in   )  :: NacPos_C( 3 )                          !< Nacelle position
+   real(c_double),            intent(in   )  :: NacOri_C( 9 )                          !< Nacelle orientation
    integer(c_int),            intent(in   )  :: NumBlades_C                            !< Number of blades
-   real(c_float),             intent(in   )  :: BladeRootPosition_C( 3*NumBlades_C )   !< Blade root positions
-   real(c_double),            intent(in   )  :: BladeRootOrientation_C( 9*NumBlades_C )   !< Blade root orientations
+   real(c_float),             intent(in   )  :: BldRootPos_C( 3*NumBlades_C )          !< Blade root positions
+   real(c_double),            intent(in   )  :: BldRootOri_C( 9*NumBlades_C )          !< Blade root orientations
    ! Initial nodes
    integer(c_int),            intent(in   )  :: NumMeshPts_C                           !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: InitMeshPosition_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
-   real(c_double),            intent(in   )  :: InitMeshOrientation_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+   real(c_float),             intent(in   )  :: InitMeshPos_C( 3*NumMeshPts_C )        !< A 3xNumMeshPts_C array [x,y,z]
+   real(c_double),            intent(in   )  :: InitMeshOri_C( 9*NumMeshPts_C )        !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
    ! Interpolation
    integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
    ! Time
@@ -257,8 +255,8 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    ! Local Variable4
    character(IntfStrLen)                                          :: OutRootName       !< Root name to use for echo files and other
    character(IntfStrLen)                                          :: TmpFileName       !< Temporary file name if not passing AD or IfW input file contents directly
-   character(kind=C_char, len=ADinputFileStringLength_C), pointer :: ADinputFileString   !< Input file as a single string with NULL chracter separating lines
-   character(kind=C_char, len=IfWinputFileStringLength_C), pointer:: IfWinputFileString   !< Input file as a single string with NULL chracter separating lines
+   character(kind=C_char, len=ADinputFileStringLength_C), pointer :: ADinputFileString !< Input file as a single string with NULL chracter separating lines
+   character(kind=C_char, len=IfWinputFileStringLength_C), pointer:: IfWinputFileString !< Input file as a single string with NULL chracter separating lines
 
    integer(IntKi)                                                 :: ErrStat           !< aggregated error message
    character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
@@ -391,14 +389,14 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       if (Failed())  return
    end if
    InitInp%AD%rotors(1)%numBlades = NumBlades
-   call AllocAry(InitInp%AD%rotors(1)%BladeRootPosition,       3, NumBlades_c, 'BladeRootPosition',    errStat2, errMsg2 ); if (Failed()) return
-   call AllocAry(InitInp%AD%rotors(1)%BladeRootOrientation, 3, 3, NumBlades_c, 'BladeRootOrientation', errStat2, errMsg2 ); if (Failed()) return
-   InitInp%AD%rotors(1)%HubPosition          = real(HubPosition_C(   1:3),ReKi)
-   InitInp%AD%rotors(1)%HubOrientation       = reshape( real(HubOrientation_C(1:9),ReKi), (/3,3/) )
-   !InitInp%AD%rotors(1)%NacellePosition      = real(NacellePosition_C(   1:3),ReKi)      ! FIXME: AD15 uses hub position for this
-   InitInp%AD%rotors(1)%NacelleOrientation   = reshape( real(NacelleOrientation_C(1:9),ReKi), (/3,3/) )
-   InitInp%AD%rotors(1)%BladeRootPosition    = reshape( real(BladeRootPosition_C(   1:3*NumBlades_c),ReKi), (/  3,NumBlades_c/) )
-   InitInp%AD%rotors(1)%BladeRootOrientation = reshape( real(BladeRootOrientation_C(1:9*NumBlades_c),ReKi), (/3,3,NumBlades_c/) )
+   call AllocAry(InitInp%AD%rotors(1)%BladeRootPosition,       3, NumBlades_c, 'BldRootPos', errStat2, errMsg2 ); if (Failed()) return
+   call AllocAry(InitInp%AD%rotors(1)%BladeRootOrientation, 3, 3, NumBlades_c, 'BldRootOri', errStat2, errMsg2 ); if (Failed()) return
+   InitInp%AD%rotors(1)%HubPosition          = real(HubPos_C(1:3),ReKi)
+   InitInp%AD%rotors(1)%HubOrientation       = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
+   !InitInp%AD%rotors(1)%NacellePosition      = real(NacPos_C(1:3),ReKi)      ! FIXME: AD15 uses hub position for this
+   InitInp%AD%rotors(1)%NacelleOrientation   = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
+   InitInp%AD%rotors(1)%BladeRootPosition    = reshape( real(BldRootPos_C(1:3*NumBlades_c),ReKi), (/  3,NumBlades_c/) )
+   InitInp%AD%rotors(1)%BladeRootOrientation = reshape( real(BldRootOri_C(1:9*NumBlades_c),R8Ki), (/3,3,NumBlades_c/) )
    if (TransposeDCM) then
       InitInp%AD%rotors(1)%HubOrientation       = transpose(InitInp%AD%rotors(1)%HubOrientation)
       InitInp%AD%rotors(1)%NacelleOrientation   = transpose(InitInp%AD%rotors(1)%NacelleOrientation)
@@ -425,13 +423,13 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       if (Failed())  return
    endif
    ! Allocate temporary arrays to simplify data conversions
-   call AllocAry( tmpBldPtMeshPos,       3, NumMeshPts, "tmpBldPtMeshPos",    ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpBldPtMeshOrient, 3, 3, NumMeshPts, "tmpBldPtMeshOrient", ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpBldPtMeshVel,       6, NumMeshPts, "tmpBldPtMeshVel",    ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpBldPtMeshAcc,       6, NumMeshPts, "tmpBldPtMeshAcc",    ErrStat2, ErrMsg2 );     if (Failed())  return
-   call AllocAry( tmpBldPtMeshFrc,       6, NumMeshPts, "tmpBldPtMeshFrc",    ErrStat2, ErrMsg2 );     if (Failed())  return
-   tmpBldPtMeshPos(       1:3,1:NumMeshPts) = reshape( real(InitMeshPosition_C(   1:3*NumMeshPts),ReKi), (/  3,NumMeshPts/) )
-   tmpBldPtMeshOrient(1:3,1:3,1:NumMeshPts) = reshape( real(InitMeshOrientation_C(1:9*NumMeshPts),ReKi), (/3,3,NumMeshPts/) )
+   call AllocAry( tmpBldPtMeshPos,    3, NumMeshPts, "tmpBldPtMeshPos", ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AllocAry( tmpBldPtMeshOri, 3, 3, NumMeshPts, "tmpBldPtMeshOri", ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AllocAry( tmpBldPtMeshVel,    6, NumMeshPts, "tmpBldPtMeshVel", ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AllocAry( tmpBldPtMeshAcc,    6, NumMeshPts, "tmpBldPtMeshAcc", ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AllocAry( tmpBldPtMeshFrc,    6, NumMeshPts, "tmpBldPtMeshFrc", ErrStat2, ErrMsg2 );    if (Failed())  return
+   tmpBldPtMeshPos(    1:3,1:NumMeshPts) = reshape( real(InitMeshPos_C(1:3*NumMeshPts),ReKi), (/  3,NumMeshPts/) )
+   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts) = reshape( real(InitMeshOri_C(1:9*NumMeshPts),ReKi), (/3,3,NumMeshPts/) )
 
 
    !----------------------------------------------------
@@ -548,11 +546,11 @@ CONTAINS
    end function Failed
 
    subroutine FailCleanup()
-      if (allocated(tmpBldPtMeshPos))    deallocate(tmpBldPtMeshPos)
-      if (allocated(tmpBldPtMeshOrient)) deallocate(tmpBldPtMeshOrient)
-      if (allocated(tmpBldPtMeshVel))    deallocate(tmpBldPtMeshVel)
-      if (allocated(tmpBldPtMeshAcc))    deallocate(tmpBldPtMeshAcc)
-      if (allocated(tmpBldPtMeshFrc))    deallocate(tmpBldPtMeshFrc)
+      if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
+      if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
+      if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
+      if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
+      if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
    end subroutine FailCleanup
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
@@ -591,24 +589,24 @@ CONTAINS
       call WrScr("       TransposeDCM_in                "//TmpFlag )
       call WrScr("   Init Data")
       call WrNR("       Hub Position         ")
-      call WrMatrix(HubPosition_C,CU,'(3(ES15.7e2))')
+      call WrMatrix(HubPos_C,CU,'(3(ES15.7e2))')
       call WrNR("       Hub Orientation      ")
-      call WrMatrix(HubOrientation_C,CU,'(9(ES23.15e2))')
+      call WrMatrix(HubOri_C,CU,'(9(ES23.15e2))')
       call WrNR("       Nacelle Position     ")
-      call WrMatrix(NacellePosition_C,CU,'(3(ES15.7e2))')
+      call WrMatrix(NacPos_C,CU,'(3(ES15.7e2))')
       call WrNR("       Nacelle Orientation  ")
-      call WrMatrix(NacelleOrientation_C,CU,'(9(ES23.15e2))')
+      call WrMatrix(NacOri_C,CU,'(9(ES23.15e2))')
       call WrScr("       NumBlades_C                    "//trim(Num2LStr( NumBlades_C   )) )
       if (debugverbose > 1) then
          call WrScr("          Root Positions")
          do i=1,NumBlades_C
             j=3*(i-1)
-            call WrMatrix(BladeRootPosition_C(j+1:j+3),CU,'(3(ES15.7e2))')
+            call WrMatrix(BldRootPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
          enddo
          call WrScr("          Root Orientations")
          do i=1,NumBlades_C
             j=9*(i-1)
-            call WrMatrix(BladeRootOrientation_C(j+1:j+9),CU,'(9(ES23.15e2))')
+            call WrMatrix(BldRootOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
          enddo
       endif
       call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
@@ -616,12 +614,12 @@ CONTAINS
          call WrScr("          Mesh Positions")
          do i=1,NumMeshPts_C
             j=3*(i-1)
-            call WrMatrix(InitMeshPosition_C(j+1:j+3),CU,'(3(ES15.7e2))')
+            call WrMatrix(InitMeshPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
          enddo
          call WrScr("          Mesh Orientations")
          do i=1,NumMeshPts_C
             j=9*(i-1)
-            call WrMatrix(InitMeshOrientation_C(j+1:j+9),CU,'(9(ES23.15e2))')
+            call WrMatrix(InitMeshOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
          enddo
       endif
       call WrScr("-----------------------------------------------------------")
@@ -653,9 +651,9 @@ CONTAINS
          ! initial position and orientation of node
          InitPos  = tmpBldPtMeshPos(1:3,iNode)
          if (TransposeDCM) then
-            Orient   = transpose(tmpBldPtMeshOrient(1:3,1:3,iNode))
+            Orient   = transpose(tmpBldPtMeshOri(1:3,1:3,iNode))
          else
-            Orient   = tmpBldPtMeshOrient(1:3,1:3,iNode)
+            Orient   = tmpBldPtMeshOri(1:3,1:3,iNode)
          endif
          call OrientRemap(Orient)
          call MeshPositionNode(  AD_BldPtMotionMesh       , &
@@ -690,8 +688,8 @@ CONTAINS
                         TranslationAcc   = .TRUE.,    RotationAcc = .FALSE. )
          if (ErrStat3 >= AbortErrLev) return
 
-      InitPos = real(HubPosition_C(   1:3),ReKi)      ! Nacelle uses hub location in AD at present
-      Orient  = reshape( real(NacelleOrientation_C(1:9),ReKi), (/3,3/) )
+      InitPos = real(HubPos_C(   1:3),ReKi)      ! Nacelle uses hub location in AD at present
+      Orient  = reshape( real(NacOri_C(1:9),ReKi), (/3,3/) )
       call OrientRemap(Orient)
       call MeshPositionNode(  AD_NacMotionMesh         , &
                               1                        , &
@@ -895,11 +893,11 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 !===============================================================================================================
 
 SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
-               HubPosition_C, HubOrientation_C, HubVel_C, HubAcc_C, &
-               NacellePosition_C, NacelleOrientation_C, NacelleVel_C, NacelleAcc_C, &
-               BladeRootPosition_C, BladeRootOrientation_C, BladeRootVel_C, BladeRootAcc_C, &
+               HubPos_C,       HubOri_C,       HubVel_C,         HubAcc_C,         &
+               NacPos_C,   NacOri_C,   NacVel_C,     NacAcc_C,     &
+               BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
                NumMeshPts_C,  &
-               MeshPos_C, MeshOri_C, MeshVel_C, MeshAcc_C, &
+               MeshPos_C,  MeshOri_C,  MeshVel_C,  MeshAcc_C,  &
                MeshFrc_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_CalcOutput')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
@@ -907,25 +905,25 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
 !GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_CalcOutput
 #endif
    real(c_double),            intent(in   )  :: Time_C
-   real(c_float),             intent(in   )  :: HubPosition_C( 3 )                     !< Hub position
-   real(c_double),            intent(in   )  :: HubOrientation_C( 9 )                  !< Hub orientation
-   real(c_float),             intent(in   )  :: HubVel_C( 6 )                          !< Hub velocity
-   real(c_float),             intent(in   )  :: HubAcc_C( 6 )                          !< Hub acceleration
-   real(c_float),             intent(in   )  :: NacellePosition_C( 3 )                 !< Nacelle position
-   real(c_double),            intent(in   )  :: NacelleOrientation_C( 9 )              !< Nacelle orientation
-   real(c_float),             intent(in   )  :: NacelleVel_C( 6 )                      !< Nacelle velocity
-   real(c_float),             intent(in   )  :: NacelleAcc_C( 6 )                      !< Nacelle acceleration
-   real(c_float),             intent(in   )  :: BladeRootPosition_C( 3*NumBlades )     !< Blade root positions
-   real(c_double),            intent(in   )  :: BladeRootOrientation_C( 9*NumBlades )  !< Blade root orientations
-   real(c_float),             intent(in   )  :: BladeRootVel_C( 6*NumBlades )          !< Blade root velocities
-   real(c_float),             intent(in   )  :: BladeRootAcc_C( 6*NumBlades )          !< Blade root accelerations
+   real(c_float),             intent(in   )  :: HubPos_C( 3 )                 !< Hub position
+   real(c_double),            intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
+   real(c_float),             intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
+   real(c_float),             intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
+   real(c_float),             intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
+   real(c_double),            intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
+   real(c_float),             intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
+   real(c_float),             intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
+   real(c_float),             intent(in   )  :: BldRootPos_C( 3*NumBlades )   !< Blade root positions
+   real(c_double),            intent(in   )  :: BldRootOri_C( 9*NumBlades )   !< Blade root orientations
+   real(c_float),             intent(in   )  :: BldRootVel_C( 6*NumBlades )   !< Blade root velocities
+   real(c_float),             intent(in   )  :: BldRootAcc_C( 6*NumBlades )   !< Blade root accelerations
    ! Blade mesh nodes
-   integer(c_int),            intent(in   )  :: NumMeshPts_C                           !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )            !< A 3xNumMeshPts_C array [x,y,z]
-   real(c_double),            intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )            !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
-   real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )            !< A 6xNumMeshPts_C array [x,y,z]
-   real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )            !< A 6xNumMeshPts_C array [x,y,z]
-   real(c_float),             intent(  out)  :: MeshFrc_C( 6*NumMeshPts_C )            !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
+   real(c_double),            intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+   real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+   real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+   real(c_float),             intent(  out)  :: MeshFrc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
 !FIXME: make sure to grab both AD and IW outputs -- how are these stored?
    real(c_float),             intent(  out)  :: OutputChannelValues_C(p%NumOuts)
    integer(c_int),            intent(  out)  :: ErrStat_C
@@ -956,25 +954,29 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    Time = REAL(Time_C,DbKi)
 
    ! Reshape mesh position, orientation, velocity, acceleration
-   tmpBldPtMeshPos(1:3,1:NumMeshPts)         = reshape( real(MeshPos_C(1:3*NumMeshPts),ReKi), (/3,  NumMeshPts/) )
-   tmpBldPtMeshOrient(1:3,1:3,1:NumMeshPts)  = reshape( real(MeshOri_C(1:9*NumMeshPts),ReKi), (/3,3,NumMeshPts/) )
-   tmpBldPtMeshVel(1:6,1:NumMeshPts)         = reshape( real(MeshVel_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
-   tmpBldPtMeshAcc(1:6,1:NumMeshPts)         = reshape( real(MeshAcc_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
+   tmpBldPtMeshPos(1:3,1:NumMeshPts)      = reshape( real(MeshPos_C(1:3*NumMeshPts),ReKi), (/3,  NumMeshPts/) )
+   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts)  = reshape( real(MeshOri_C(1:9*NumMeshPts),R8Ki), (/3,3,NumMeshPts/) )
+   tmpBldPtMeshVel(1:6,1:NumMeshPts)      = reshape( real(MeshVel_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
+   tmpBldPtMeshAcc(1:6,1:NumMeshPts)      = reshape( real(MeshAcc_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
 
 
    ! Transfer motions to input meshes
    call Set_MotionMesh( ErrStat2, ErrMsg2 )           ! update motion mesh with input motion arrays
       if (Failed())  return
-   call AD_SetInputMotion( u(1), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+   call AD_SetInputMotion( u(1), &
+            HubPos_C,       HubOri_C,       HubVel_C,         HubAcc_C,         &
+            NacPos_C,   NacOri_C,   NacVel_C,     NacAcc_C,     &
+            BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
+            ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+      if (Failed())  return
+
+   ! Call the main subroutine ADI_CalcOutput to get the resulting forces and moments at time T
+   CALL ADI_CalcOutput( Time, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
 ErrMsg2="AeroDyn_Inflow_C_CalcOutput: Exit early"
 call SetErr(ErrID_Fatal,ErrMsg2,ErrStat_C,ErrMsg_C)  ! Testing
 return
-
-   ! Call the main subroutine ADI_CalcOutput to get the resulting forces and moments at time T
-   CALL ADI_CalcOutput( Time, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
-      if (Failed())  return
 
 
    ! Transfer resulting load meshes to intermediate mesh
@@ -1010,8 +1012,9 @@ END SUBROUTINE AeroDyn_Inflow_C_CalcOutput
 !! Since we don't really know if we are doing correction steps or not, we will track the previous state and
 !! reset to those if we are repeating a timestep (normally this would be handled by the OF glue code, but since
 !! the states are not passed across the interface, we must handle them here).
-SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumMeshPts_C, MeshPos_C, MeshVel_C, MeshAcc_C,   &
-                                    ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_UpdateStates')
+SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
+                  NumMeshPts_C, MeshPos_C, MeshOri_C, MeshVel_C, MeshAcc_C,   &
+                  ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_UpdateStates')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_UpdateStates
@@ -1021,6 +1024,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumMeshPts_C, Mesh
    real(c_double),            intent(in   )  :: TimeNext_C
    integer(c_int),            intent(in   )  :: NumMeshPts_C                 !< Number of mesh points we are transfering motions to and output loads to
    real(c_float),             intent(in   )  :: MeshPos_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
+   real(c_double),            intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )  !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
    real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
    real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
    integer(c_int),            intent(  out)  :: ErrStat_C
@@ -1103,15 +1107,20 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, NumMeshPts_C, Mesh
    ! Set inputs for time T+dt -- u(1)
    !-------------------------------------------------------
    ! Reshape mesh position, orientation, velocity, acceleration
-   tmpBldPtMeshPos(1:3,1:NumMeshPts)         = reshape( real(MeshPos_C(1:3*NumMeshPts),ReKi), (/3,  NumMeshPts/) )
-   tmpBldPtMeshOrient(1:3,1:3,1:NumMeshPts)  = reshape( real(MeshPos_C(1:9*NumMeshPts),ReKi), (/3,3,NumMeshPts/) )
-   tmpBldPtMeshVel(1:6,1:NumMeshPts)         = reshape( real(MeshVel_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
-   tmpBldPtMeshAcc(1:6,1:NumMeshPts)         = reshape( real(MeshAcc_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
+   tmpBldPtMeshPos(1:3,1:NumMeshPts)      = reshape( real(MeshPos_C(1:3*NumMeshPts),ReKi), (/3,  NumMeshPts/) )
+   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts)  = reshape( real(MeshOri_C(1:9*NumMeshPts),R8Ki), (/3,3,NumMeshPts/) )
+   tmpBldPtMeshVel(1:6,1:NumMeshPts)      = reshape( real(MeshVel_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
+   tmpBldPtMeshAcc(1:6,1:NumMeshPts)      = reshape( real(MeshAcc_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
 
    ! Transfer motions to input meshes
    call Set_MotionMesh( ErrStat2, ErrMsg2 )                    ! update motion mesh with input motion arrays
       if (Failed())  return
-   call AD_SetInputMotion( u(INPUT_PRED), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+!FIXME:
+!   call AD_SetInputMotion( u(1), &
+!            HubPos_C,       HubOri_C,       HubVel_C,         HubAcc_C,         &
+!            NacPos_C,   NacOri_C,   NacVel_C,     NacAcc_C,     &
+!            BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
+!            ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
       if (Failed())  return
 
 
@@ -1185,11 +1194,11 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    ErrMsg   =  ""
 
    ! clear out any globably allocated helper arrays
-   if (allocated(tmpBldPtMeshPos))    deallocate(tmpBldPtMeshPos)
-   if (allocated(tmpBldPtMeshOrient)) deallocate(tmpBldPtMeshOrient)
-   if (allocated(tmpBldPtMeshVel))    deallocate(tmpBldPtMeshVel)
-   if (allocated(tmpBldPtMeshAcc))    deallocate(tmpBldPtMeshAcc)
-   if (allocated(tmpBldPtMeshFrc))    deallocate(tmpBldPtMeshFrc)
+   if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
+   if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
+   if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
+   if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
+   if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
 
 
    ! Call the main subroutine ADI_End
@@ -1281,7 +1290,7 @@ subroutine Set_MotionMesh(ErrStat3, ErrMsg3)
    ! Set mesh corresponding to input motions
    do iNode=1,NumMeshPts
       AD_BldPtMotionMesh%TranslationDisp(1:3,iNode) = tmpBldPtMeshPos(1:3,iNode)
-      AD_BldPtMotionMesh%Orientation(1:3,1:3,iNode) = tmpBldPtMeshOrient(1:3,1:3,iNode)
+      AD_BldPtMotionMesh%Orientation(1:3,1:3,iNode) = tmpBldPtMeshOri(1:3,1:3,iNode)
       AD_BldPtMotionMesh%TranslationVel( 1:3,iNode) = tmpBldPtMeshVel(1:3,iNode)
       AD_BldPtMotionMesh%RotationVel(    1:3,iNode) = tmpBldPtMeshVel(4:6,iNode)
       AD_BldPtMotionMesh%TranslationAcc( 1:3,iNode) = tmpBldPtMeshAcc(1:3,iNode)
@@ -1291,12 +1300,53 @@ end subroutine Set_MotionMesh
 
 !> Map the motion of the intermediate input mesh over to the input meshes
 !! This routine is operating on module level data, hence few inputs
-subroutine AD_SetInputMotion( u_local, ErrStat3, ErrMsg3 )
-   type(ADI_InputType),       intent(inout)  :: u_local           ! Only one input (probably at T)
+subroutine AD_SetInputMotion( u_local,             &
+         HubPos_C, HubOri_C, HubVel_C, HubAcc_C,   &
+         NacPos_C, NacOri_C, NacVel_C, NacAcc_C,   &
+         BldRootPos_C, BldRootOri_C, BldRootVel_C, BldRootAcc_C,  &
+         ErrStat3, ErrMsg3 )
+   type(ADI_InputType),       intent(inout)  :: u_local                       ! Only one input (probably at T)
+   real(c_float),             intent(in   )  :: HubPos_C( 3 )                 !< Hub position
+   real(c_double),            intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
+   real(c_float),             intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
+   real(c_float),             intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
+   real(c_float),             intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
+   real(c_double),            intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
+   real(c_float),             intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
+   real(c_float),             intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
+   real(c_float),             intent(in   )  :: BldRootPos_C( 3*NumBlades )   !< Blade root positions
+   real(c_double),            intent(in   )  :: BldRootOri_C( 9*NumBlades )   !< Blade root orientations
+   real(c_float),             intent(in   )  :: BldRootVel_C( 6*NumBlades )   !< Blade root velocities
+   real(c_float),             intent(in   )  :: BldRootAcc_C( 6*NumBlades )   !< Blade root accelerations
    integer(IntKi),            intent(  out)  :: ErrStat3
    character(ErrMsgLen),      intent(  out)  :: ErrMsg3
    integer(IntKi)                            :: i
-!FIXME: hub, nacelle, roots
+   ! Hub -- NOTE: RotationalAcc not present in the mesh
+   if ( u_local%AD%rotors(1)%HubMotion%Committed ) then
+      u_local%AD%rotors(1)%HubMotion%TranslationDisp(1:3,1) = real(HubPos_C(1:3),R8Ki) - real(u_local%AD%rotors(1)%HubMotion%Position(1:3,1), R8Ki)
+      u_local%AD%rotors(1)%HubMotion%Orientation(1:3,1:3,1) = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
+      u_local%AD%rotors(1)%HubMotion%TranslationVel(1:3,1)  = real(HubVel_C(1:3), ReKi)
+      u_local%AD%rotors(1)%HubMotion%RotationVel(1:3,1)     = real(HubVel_C(4:6), ReKi)
+      u_local%AD%rotors(1)%HubMotion%TranslationAcc(1:3,1)  = real(HubAcc_C(1:3), ReKi)
+   endif
+   ! Nacelle -- NOTE: RotationalVel and RotationalAcc not present in the mesh
+   if ( u_local%AD%rotors(1)%NacelleMotion%Committed ) then
+      u_local%AD%rotors(1)%NacelleMotion%TranslationDisp(1:3,1) = real(NacPos_C(1:3),R8Ki) - real(u_local%AD%rotors(1)%NacelleMotion%Position(1:3,1), R8Ki)
+      u_local%AD%rotors(1)%NacelleMotion%Orientation(1:3,1:3,1) = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
+      u_local%AD%rotors(1)%NacelleMotion%TranslationVel(1:3,1)  = real(NacVel_C(1:3), ReKi)
+      u_local%AD%rotors(1)%NacelleMotion%TranslationAcc(1:3,1)  = real(NacAcc_C(1:3), ReKi)
+   endif
+   ! Blade root
+   do i=0,numBlades-1
+      if ( u_local%AD%rotors(1)%BladeRootMotion(i+1)%Committed ) then
+         u_local%AD%rotors(1)%BladeRootMotion(i+1)%TranslationDisp(1:3,1) = real(BldRootPos_C(3*i+1:3*i+3),R8Ki) - real(u_local%AD%rotors(1)%BladeRootMotion(i+1)%Position(1:3,1), R8Ki)
+         u_local%AD%rotors(1)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1) = reshape( real(BldRootOri_C(9*i+1:9*i+9),R8Ki), (/3,3/) )
+         u_local%AD%rotors(1)%BladeRootMotion(i+1)%TranslationVel(1:3,1)  = real(BldRootVel_C(6*i+1:6*i+3), ReKi)
+         u_local%AD%rotors(1)%BladeRootMotion(i+1)%RotationVel(1:3,1)     = real(BldRootVel_C(6*i+4:6*i+6), ReKi)
+         u_local%AD%rotors(1)%BladeRootMotion(i+1)%TranslationAcc(1:3,1)  = real(BldRootAcc_C(6*i+1:6*i+3), ReKi)
+         u_local%AD%rotors(1)%BladeRootMotion(i+1)%RotationAcc(1:3,1)     = real(BldRootAcc_C(6*i+4:6*i+6), ReKi)
+      endif
+   enddo
    ! Blade mesh
    do i=1,numBlades
       if ( u_local%AD%rotors(1)%BladeMotion(i)%Committed ) then
