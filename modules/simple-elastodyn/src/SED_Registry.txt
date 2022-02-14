@@ -1,0 +1,117 @@
+###################################################################################################################################
+# Registry for Simplified ElastoDyn in the FAST Modularization Framework
+# This Registry file is used to create MODULE SED_Types  which contains all of the user-defined types needed in Simplified ElastoDyn.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>   <ModuleName/ModName>   <TypeName>   <FieldType>   <FieldName>   <Dims>   <IO>   <DNAME>   <DESCRIP>   <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include   Registry_NWTC_Library.txt
+
+
+# ..... Initialization data .......................................................................................................
+# SED input file
+typedef  SED/SED  SED_InputFile     LOGICAL              EchoFlag          -  - -   "Echo the input file"                    -
+typedef  ^        SED_InputFile     R8Ki                 DeltaT            -  - -   "Time step for module time integration" s
+typedef  ^        SED_InputFile     IntKi                IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
+typedef  ^        SED_InputFile     LOGICAL              GenDOF            -  - -   "whether the generator is fixed or free" -
+typedef  ^        SED_InputFile     R8Ki                 Azimuth           -  - -   "Initial azimuth angle for blade 1" deg
+typedef  ^        SED_InputFile     ReKi                 BlPitch           -  - -   "Initial blade pitch angles" radians
+typedef  ^        SED_InputFile     ReKi                 RotSpeed          -  - -   "Initial or fixed rotor speed" RPM
+typedef  ^        SED_InputFile     ReKi                 PtfmPitch         -  - -   "Fixed pitch tilt rotational displacement of platform" deg
+typedef  ^        SED_InputFile     IntKi                NumBl             -  - -   "Number of blades on the turbine" -
+typedef  ^        SED_InputFile     ReKi                 TipRad            -  - -   "Preconed blade-tip radius (distance from the rotor apex to the blade tip)" m
+typedef  ^        SED_InputFile     ReKi                 HubRad            -  - -   "Preconed hub radius (distance from the rotor apex to the blade root)" m
+typedef  ^        SED_InputFile     ReKi                 PreCone           -  - -   "Rotor precone angles" deg
+typedef  ^        SED_InputFile     ReKi                 OverHang          -  - -   "Distance from yaw axis to rotor apex or teeter pin" m
+typedef  ^        SED_InputFile     ReKi                 ShftTilt          -  - -   "Rotor shaft tilt angle" deg
+typedef  ^        SED_InputFile     ReKi                 Twr2Shft          -  - -   "Vertical distance from the tower-top to the rotor shaft" m
+typedef  ^        SED_InputFile     ReKi                 TowerHt           -  - -   "Height of tower above ground level [onshore] or MSL [offshore]" m
+typedef  ^        SED_InputFile     ReKi                 RotIner           -  - -   "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)" "kg m^2"
+typedef  ^        SED_InputFile     ReKi                 GenIner           -  - -   "Generator inertia about HSS" "kg m^2"
+typedef  ^        SED_InputFile     ReKi                 GBEff             -  - -   "Gearbox efficiency" "percent"
+typedef  ^        SED_InputFile     ReKi                 GBRatio           -  - -   "Gearbox ratio" -
+typedef  ^        SED_InputFile     LOGICAL              SumPrint          -  - -   "Print summary data to <RootName>.sum" -
+typedef  ^        SED_InputFile     CHARACTER(ChanLen)   OutList           :  - -   "List of user-requested output channels" -
+
+
+# ..... Initialization data .......................................................................................................
+# inputs for initialization:
+typedef  SED/SED  InitInputType     CHARACTER(1024)      InputFile         -  - -   "Name of the input file"   -
+typedef  ^        InitInputType     CHARACTER(1024)      RootName          -  - -   "RootName for writing output files" -
+
+
+# outputs from initialization:
+typedef  ^        InitOutputType    CHARACTER(ChanLen)   WriteOutputHdr   {:} - -   "Names of the output-to-file channels"   -
+typedef  ^        InitOutputType    CHARACTER(ChanLen)   WriteOutputUnt   {:} - -   "Units of the output-to-file channels"   -
+typedef  ^        InitOutputType    ProgDesc             Ver               -  - -   "This module's name, version, and date"   -
+typedef  ^        InitOutputType    IntKi                NumBl             -  - -   "Number of blades on the turbine"   -
+typedef  ^        InitOutputType    ReKi                 BlPitch          {:} - -   "Initial blade pitch angles"   radians
+typedef  ^        InitOutputType    ReKi                 BladeLength       -  - -   "Blade length (for AeroDyn)"   meters
+typedef  ^        InitOutputType    ReKi                 TowerHeight       -  - -   "Tower Height"   meters
+typedef  ^        InitOutputType    ReKi                 HubHt             -  - -   "Height of the hub"   meters
+typedef  ^        InitOutputType    ReKi                 PlatformPos      {6} - -   "Initial platform position (6 DOFs)"
+typedef  ^        InitOutputType    ReKi                 HubRad            -  - -   "Preconed hub radius (distance from the rotor apex to the blade root)"   m
+typedef  ^        InitOutputType    ReKi                 RotSpeed          -  - -   "Initial or fixed rotor speed"   rad/s
+typedef  ^        InitOutputType    LOGICAL              isFixed_GenDOF    -  - -   "whether the generator is fixed or free" -
+
+
+# ..... Inputs ....................................................................................................................
+# inputs on meshes: NONE
+# inputs not on meshes:
+typedef  ^        InputType         ReKi                 AeroTrq           -  - -   "Aerodynamic torque"             N-m
+typedef  ^        InputType         ReKi                 HSSBrTrqC         -  - -   "Commanded HSS brake torque"     N-m
+typedef  ^        InputType         ReKi                 GenTrq            -  - -   "Electrical generator torque"    N-m
+typedef  ^        InputType         ReKi                 BlPitchCom       {:} - 2pi "Commanded blade pitch angles"   radians
+typedef  ^        InputType         ReKi                 Yaw               -  - -   "Yaw angle"                      rad
+typedef  ^        InputType         ReKi                 YawRate           -  - -   "Yaw rate"                       rad/s
+
+
+# ..... Outputs ...................................................................................................................
+# outputs not meshes:
+typedef  ^        OutputType        MeshType             BladeRootMotion  {:} - -   "For AeroDyn/BeamDyn: motions at the blade roots" -
+typedef  ^        OutputType        MeshType             HubPtMotion       -  - -   "For AeroDyn and Lidar(InflowWind): motions of the hub" -
+typedef  ^        OutputType        MeshType             NacelleMotion     -  - -   "For AeroDyn14 & ServoDyn/TMD: motions of the nacelle." -
+typedef  ^        OutputType        MeshType             TowerLn2Mesh      -  - -   "Tower line2 mesh with positions/orientations/velocities/accelerations"   -
+typedef  ^        OutputType        MeshType             PlatformPtMesh    -  - -   "Platform reference point positions/orientations/velocities/accelerations"   -
+# outputs not on meshes:
+typedef  ^        OutputType        ReKi                 LSSTipPxa         -  - 2pi "Rotor azimuth angle (position)"   radians
+typedef  ^        OutputType        ReKi                 RotSpeed          -  - -   "Rotor azimuth angular speed"   rad/s
+typedef  ^        OutputType        ReKi                 HSS_Spd           -  - -   "High-speed shaft (HSS) speed"   rad/s
+typedef  ^        OutputType        ReKi                 WriteOutput      {:} - -   "Data to be written to an output file: see WriteOutputHdr for names of each variable"   "see WriteOutputUnt"
+
+
+# ..... States ....................................................................................................................
+# continuous (differentiable) states:
+typedef  ^       ContinuousStateType   R8Ki              QT               {:} - -   "Current estimate of Q (displacement matrix) for each degree of freedom"   -
+typedef  ^       ContinuousStateType   ^                 QDT              {:} - -   "Current estimate of QD (velocity matrix) for each degree of freedom"
+
+# Define discrete (nondifferentiable) states here:
+typedef  ^       DiscreteStateType     ReKi             DummyDiscreteState -  - -   "" -
+
+# Define constraint states here:
+typedef  ^       ConstraintStateType   ReKi              DummyConstrState  -  - -   "" -
+
+# any other states
+typedef  ^       OtherStateType        IntKi             DummyOtherState   -  - -   "" -
+
+
+# ..... Parameters.................................................................................................................
+# unchanging parameters:
+typedef  ^       ParameterType         DbKi              DeltaT            -  - -   "Time step for module time integration" s
+typedef  ^       ParameterType         IntKi             IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
+typedef  ^       ParameterType         ReKi              J_DT              -  - -   "Drivetrain inertia (blades+hub+shaft+generator)" "kgm^2"
+typedef  ^       ParameterType         ReKi              PtfmPitch         -  - -   "Static platform tilt angle" rad
+typedef  ^       ParameterType         MeshMapType       mapPtf2Twr        -  - -   "Mesh mapping from Ptfm to Tower line" -
+typedef  ^       ParameterType         MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
+typedef  ^       ParameterType         MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
+typedef  ^       ParameterType         LOGICAL           isFixed_GenDOF    -  - -   "whether the generator is fixed or free" -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+typedef  ^       MiscVarType           IntKi             DummyMiscVar      -  - -   "" -
+
