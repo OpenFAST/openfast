@@ -143,6 +143,7 @@ set(OPENFAST_MODULES
   wakedynamics
   awae
   simple-elastodyn
+  aerodisk
 )
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
