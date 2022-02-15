@@ -4089,18 +4089,18 @@ SUBROUTINE Linear_MD_InputSolve_du( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-   IF (u_MD%CoupledKinematics%Committed) THEN 
+   IF (u_MD%CoupledKinematics(1)%Committed) THEN 
          !...................................
          ! FairLead Mesh
          !...................................
 
       if ( p_FAST%CompSub == Module_SD ) THEN
          ! dU^{MD}/du^{MD}
-         call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MD%CoupledKinematics, MeshMapData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+         call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MD%CoupledKinematics(1), MeshMapData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2 )
 
          ! MD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
          MD_Start_td = y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-         MD_Start_tr = MD_Start_td + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         MD_Start_tr = MD_Start_td + u_MD%CoupledKinematics(1)%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
          
             ! translational velocity:
          if (allocated(MeshMapData%SDy3_P_2_Mooring_P%dM%tv_uD )) then             
@@ -4108,18 +4108,18 @@ SUBROUTINE Linear_MD_InputSolve_du( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
          end if
          
             ! translational acceleration:
-         MD_Start_tr = MD_Start_tr + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
+         MD_Start_tr = MD_Start_tr + u_MD%CoupledKinematics(1)%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
          if (allocated(MeshMapData%SDy3_P_2_Mooring_P%dM%ta_uD )) then            
             call SetBlockMatrix( dUdu, MeshMapData%SDy3_P_2_Mooring_P%dM%ta_ud, MD_Start_tr, MD_Start_td )
          end if
 
       else if ( p_FAST%CompSub == Module_None ) THEN
          ! dU^{MD}/du^{MD}
-         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MD%CoupledKinematics, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
+         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MD%CoupledKinematics(1), MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
 
          ! MD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
          MD_Start_td = y_FAST%Lin%Modules(MODULE_MD)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-         MD_Start_tr = MD_Start_td + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         MD_Start_tr = MD_Start_td + u_MD%CoupledKinematics(1)%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
          
             ! translational velocity:
          if (allocated(MeshMapData%ED_P_2_Mooring_P%dM%tv_uD )) then             
@@ -4127,7 +4127,7 @@ SUBROUTINE Linear_MD_InputSolve_du( p_FAST, y_FAST, u_MD, y_ED, y_SD, MeshMapDat
          end if
          
             ! translational acceleration:
-         MD_Start_tr = MD_Start_tr + u_MD%CoupledKinematics%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         MD_Start_tr = MD_Start_tr + u_MD%CoupledKinematics(1)%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
          if (allocated(MeshMapData%ED_P_2_Mooring_P%dM%ta_uD )) then            
             call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_Mooring_P%dM%ta_ud, MD_Start_tr, MD_Start_td )
          end if
