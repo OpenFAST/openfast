@@ -19,6 +19,7 @@ project(OpenFAST CXX C Fortran)
 
 include(${CMAKE_SOURCE_DIR}/cmake/OpenfastCmakeUtils.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/OpenfastFortranOptions.cmake)
+include (FindPackageHandleStandardArgs)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -111,14 +112,16 @@ else(MKL_FOUND)
       ExternalProject_Add(
 		lapack
 		URL http://www.netlib.org/lapack/lapack.tgz
-		CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}
+		CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/install
         PREFIX ${CMAKE_BINARY_DIR}/dependencies
       )
 	  if (UNIX)
-         set(LAPACK_LIBRARIES ${CMAKE_BINARY_DIR}/lib/liblapack.a ${CMAKE_BINARY_DIR}/lib/libblas.a CACHE STRING "LAPACK library" FORCE)
+         set(LAPACK_LIBRARIES ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/liblapack.a ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/libblas.a CACHE STRING "LAPACK library" FORCE)
 	  else (UNIX) # On Windows
-         set(LAPACK_LIBRARIES ${CMAKE_BINARY_DIR}/lib/liblapack.lib ${CMAKE_BINARY_DIR}/lib/libblas.lib CACHE STRING "LAPACK library" FORCE)
+         set(LAPACK_LIBRARIES ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/libliblapack.lib ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/libblas.lib CACHE STRING "LAPACK library" FORCE)
       endif (UNIX)
+
+      install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
 
   else(USE_LOCAL_STATIC_LAPACK)
 
