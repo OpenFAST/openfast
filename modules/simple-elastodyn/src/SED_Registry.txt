@@ -43,6 +43,7 @@ typedef  ^        SED_InputFile     CHARACTER(ChanLen)   OutList           :  - 
 # inputs for initialization:
 typedef  SED/SED  InitInputType     CHARACTER(1024)      InputFile         -  - -   "Name of the input file"   -
 typedef  ^        InitInputType     CHARACTER(1024)      RootName          -  - -   "RootName for writing output files" -
+typedef  ^        InitInputType     LOGICAL              Linearize         -  .false. -   "Linearization not currently enabled" -
 
 
 # outputs from initialization:
@@ -72,12 +73,13 @@ typedef  ^        InputType         ReKi                 YawRate           -  - 
 
 
 # ..... Outputs ...................................................................................................................
-# outputs not meshes:
+# outputs on meshes:
 typedef  ^        OutputType        MeshType             BladeRootMotion  {:} - -   "For AeroDyn/BeamDyn: motions at the blade roots" -
 typedef  ^        OutputType        MeshType             HubPtMotion       -  - -   "For AeroDyn and Lidar(InflowWind): motions of the hub" -
 typedef  ^        OutputType        MeshType             NacelleMotion     -  - -   "For AeroDyn14 & ServoDyn/TMD: motions of the nacelle." -
 typedef  ^        OutputType        MeshType             TowerLn2Mesh      -  - -   "Tower line2 mesh with positions/orientations/velocities/accelerations"   -
 typedef  ^        OutputType        MeshType             PlatformPtMesh    -  - -   "Platform reference point positions/orientations/velocities/accelerations"   -
+#TODO: any mesh for visualization of blades/rotor disk?
 # outputs not on meshes:
 typedef  ^        OutputType        ReKi                 LSSTipPxa         -  - 2pi "Rotor azimuth angle (position)"   radians
 typedef  ^        OutputType        ReKi                 RotSpeed          -  - -   "Rotor azimuth angular speed"   rad/s

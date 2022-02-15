@@ -63,6 +63,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SED_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    LOGICAL  :: Linearize = .false.      !< Linearization not currently enabled [-]
   END TYPE SED_InitInputType
 ! =======================
 ! =========  SED_InitOutputType  =======
@@ -463,6 +464,7 @@ ENDIF
    ErrMsg  = ""
     DstInitInputData%InputFile = SrcInitInputData%InputFile
     DstInitInputData%RootName = SrcInitInputData%RootName
+    DstInitInputData%Linearize = SrcInitInputData%Linearize
  END SUBROUTINE SED_CopyInitInput
 
  SUBROUTINE SED_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -513,6 +515,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InputFile)  ! InputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
+      Int_BufSz  = Int_BufSz  + 1  ! Linearize
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -548,6 +551,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SED_PackInitInput
 
  SUBROUTINE SED_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -584,6 +589,8 @@ ENDIF
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SED_UnPackInitInput
 
  SUBROUTINE SED_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
