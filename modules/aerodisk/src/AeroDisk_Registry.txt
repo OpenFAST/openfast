@@ -45,6 +45,7 @@ typedef  ^        InitInputType     ReKi                 RotorRad          -  - 
 typedef  ^        InitInputType     ReKi                 HubPosition      {3} - -   "Hub position -- center of rotor" m
 typedef  ^        InitInputType     R8Ki                 HubOrientation   {3}{3} - - "Hub orientation" -
 typedef  ^        InitInputType     ReKi                 defPatm           -  - -   "Default atmospheric pressure from the driver; may be overwritten" Pa
+typedef  ^        InitInputType     LOGICAL              Linearize         - .false. - "this module cannot be linearized at present" -
 
 
 # outputs from initialization:

@@ -20,14 +20,23 @@ endif()
 
 set(ADSK_SOURCES
   src/AeroDisk_Types.f90
+  src/AeroDisk_Output_Params.f90
+  src/AeroDisk_IO.f90
+  src/AeroDisk.f90
   )
-  #src/AeroDisk.f90
-  #src/AeroDisk_IO.f90
 
 add_library(aerodisklib ${ADSK_SOURCES})
 target_link_libraries(aerodisklib nwtclibs)
 
-install(TARGETS aerodisklib
+set(AERODISK_DRIVER_SOURCES
+  src/driver/AeroDisk_Driver_Types.f90
+  src/driver/AeroDisk_Driver_Subs.f90
+  src/driver/AeroDisk_Driver.f90
+)
+add_executable(aerodisk_driver ${AERODISK_DRIVER_SOURCES})
+target_link_libraries(aerodisk_driver aerodisklib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+
+install(TARGETS aerodisklib aerodisk_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

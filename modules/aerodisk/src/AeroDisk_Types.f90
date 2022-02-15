@@ -64,6 +64,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: HubPosition      !< Hub position -- center of rotor [m]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubOrientation      !< Hub orientation [-]
     REAL(ReKi)  :: defPatm      !< Default atmospheric pressure from the driver; may be overwritten [Pa]
+    LOGICAL  :: Linearize = .false.      !< this module cannot be linearized at present [-]
   END TYPE ADsk_InitInputType
 ! =======================
 ! =========  ADsk_InitOutputType  =======
@@ -1189,6 +1190,7 @@ ENDIF
     DstInitInputData%HubPosition = SrcInitInputData%HubPosition
     DstInitInputData%HubOrientation = SrcInitInputData%HubOrientation
     DstInitInputData%defPatm = SrcInitInputData%defPatm
+    DstInitInputData%Linearize = SrcInitInputData%Linearize
  END SUBROUTINE ADsk_CopyInitInput
 
  SUBROUTINE ADsk_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1243,6 +1245,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%HubPosition)  ! HubPosition
       Db_BufSz   = Db_BufSz   + SIZE(InData%HubOrientation)  ! HubOrientation
       Re_BufSz   = Re_BufSz   + 1  ! defPatm
+      Int_BufSz  = Int_BufSz  + 1  ! Linearize
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1292,6 +1295,8 @@ ENDIF
     END DO
     ReKiBuf(Re_Xferred) = InData%defPatm
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADsk_PackInitInput
 
  SUBROUTINE ADsk_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1350,6 +1355,8 @@ ENDIF
     END DO
     OutData%defPatm = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADsk_UnPackInitInput
 
  SUBROUTINE ADsk_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
