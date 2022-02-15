@@ -435,6 +435,8 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
          endif
          InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
          InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+         InitInData%rotors(iWT)%NacellePosition    = wt%nac%ptMesh%Position(:,1)
+         InitInData%rotors(iWT)%NacelleOrientation = wt%nac%ptMesh%RefOrientation(:,:,1)
          do k=1,wt%numBlades
             InitInData%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
             InitInData%rotors(iWT)%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
