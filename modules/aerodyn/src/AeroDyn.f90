@@ -277,7 +277,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (Failed()) return;
       NumBlades(iR)          = InitInp%rotors(iR)%NumBlades
       p%rotors(iR)%NumBlades = InitInp%rotors(iR)%NumBlades
-      if (size(InitInp%rotors)>1) then
+      if (nRotors>1) then
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD.R'//trim(num2lstr(iR))
       else
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD'
@@ -1088,7 +1088,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
 
    p%CompAA = InputFileData%CompAA
    
-   ! NOTE: In the following we use InputFileData%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, 
+   ! NOTE: In the following we use RotData%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, 
    !       but if AD changes this, then it must be handled in the Glue-code linearization code, too (and elsewhere?) !
    if (p%NumBlades>0) then
       p%NumBlNds         = RotData%BladeProps(1)%NumBlNds
@@ -1481,7 +1481,6 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot,
    
 end subroutine RotCalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------------------------------------------------------
 subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg)
 ! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
@@ -1617,7 +1616,7 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_re
    enddo
    
 end subroutine AD_CalcConstrStateResidual
-
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
 subroutine RotCalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -1638,7 +1637,6 @@ subroutine RotCalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m
    
       ! Local variables   
    integer, parameter                            :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                                :: iR ! rotor index
    integer(intKi)                                :: ErrStat2
    character(ErrMsgLen)                          :: ErrMsg2
    character(*), parameter                       :: RoutineName = 'RotCalcConstrStateResidual'
@@ -1681,7 +1679,6 @@ subroutine RotCalcContStateDeriv( t, u, p, p_AD, x, xd, z, OtherState, m, dxdt, 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-   INTEGER(IntKi)                                 :: iR          ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                                 :: ErrStat2    ! temporary Error status of the operation
    CHARACTER(*), PARAMETER                        :: RoutineName = 'RotCalcContStateDeriv'
@@ -1987,6 +1984,9 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
          end do !j=nodes
       end do !k=blades
    else if (p%AeroProjMod==1) then
+   
+      m%AllOuts( BPitch(  k) ) = 0.0_ReKi  ! save this value of pitch for potential output; ill-defined, TODO
+   
       ! Generic blade, we don't assume where the axes are, and we keep the default orientation
       do k=1,p%NumBlades
          m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined, TODO
@@ -2123,16 +2123,12 @@ subroutine SetInputsForAA(p, u, m, errStat, errMsg)
    end do
 end subroutine SetInputsForAA
 !----------------------------------------------------------------------------------------------------------------------------------
-
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
 subroutine SetOutputsFromBEMT(p, m, y )
 
    type(RotParameterType),  intent(in   )  :: p                               !< AD parameters
    type(RotOutputType),     intent(inout)  :: y                               !< AD outputs 
    type(RotMiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
-   !type(BEMT_OutputType),   intent(in   )  :: BEMT_y                          ! BEMT outputs
-   !real(ReKi),              intent(in   )  :: WithoutSweepPitchTwist(:,:,:,:) ! modified orientation matrix
 
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
