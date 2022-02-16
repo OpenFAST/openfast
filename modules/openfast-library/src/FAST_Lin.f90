@@ -293,6 +293,7 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, NumBlNodes, ErrStat, 
    m_FAST%Lin%n_rot           = 0
    m_FAST%Lin%IsConverged     = .false.
    m_FAST%Lin%FoundSteady     = .false.
+   m_FAST%Lin%ForceLin        = .false.
    m_FAST%Lin%AzimIndx        = 1
    
    p_FAST%AzimDelta   = TwoPi / p_FAST%NLinTimes
@@ -5878,12 +5879,25 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
          ! this is the 2pi boundary, so we are either larger than the last target azimuth or less than the next one
          NextAzimuth = psi >= m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx) .and. psi < m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx-1)
       end if
+
+      ! Forcing linearization if it's the last step
+      if (t_global >= p_FAST%TMax - 0.5_DbKi*p_FAST%DT) then
+         call WrScr('')
+         call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization.')
+         m_FAST%Lin%ForceLin = .True.
+         m_FAST%Lin%AzimIndx = 1
+         NextAzimuth         = .True.
+      endif
       
       if (NextAzimuth) then
       
             ! interpolate to find y at the target azimuth
          call FAST_DiffInterpOutputs( m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx), p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
+         ! If linearization is forced
+         if (m_FAST%Lin%ForceLin) then
+            m_FAST%Lin%IsConverged = .True.
+         endif
                    
          if (m_FAST%Lin%IsConverged .or. m_FAST%Lin%n_rot == 0) then ! save this operating point for linearization later
             m_FAST%Lin%LinTimes(m_FAST%Lin%AzimIndx) = t_global  
@@ -5910,6 +5924,10 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
          end if
          
       end if
+      if (m_FAST%Lin%ForceLin) then
+         m_FAST%Lin%IsConverged=.true.
+         m_FAST%Lin%FoundSteady=.true.
+      endif
          
 
 END SUBROUTINE FAST_CalcSteady

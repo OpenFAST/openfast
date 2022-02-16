@@ -284,6 +284,11 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Er
          ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
       end if
       
+      ! NOTE: if there is ever more than one turbine, this logic will need to be revisited
+      IF ( Turbine(iTurb)%m_FAST%Lin%FoundSteady) THEN
+         ErrStat = ErrID_Fatal + 1 ! it's not really "fatal", but we do want to end prematurely; FAST_SFunc.c will look to see that it's larger than AbortErrLev
+         ErrMsg  = TRIM(ErrMsg)//NewLine//"Ending because steady-state trim solution was successfully found."
+      END IF
       
       ! set the outputs for external code here...
       ! return y_FAST%ChannelNames
