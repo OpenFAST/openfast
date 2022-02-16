@@ -1062,6 +1062,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
 
       p%NdIndx(1) = 1
+      p%NdIndxInverse(1) = 1
       p%OutNd2NdElem(:,1) = 1 ! note this is an array
       indx = 2
       DO i=1,p%elem_total
@@ -1119,6 +1120,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
             if (ErrStat >= AbortErrLev) return
          
          p%NdIndx(1) = 1
+         p%NdIndxInverse(1) = 1
          p%OutNd2NdElem(:,1) = 1 ! note this is an array 
          indx = 2   
          DO i=1,p%elem_total
