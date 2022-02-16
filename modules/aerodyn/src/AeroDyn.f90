@@ -1985,10 +1985,10 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
       end do !k=blades
    else if (p%AeroProjMod==1) then
    
-      m%AllOuts( BPitch(  k) ) = 0.0_ReKi  ! save this value of pitch for potential output; ill-defined, TODO
-   
       ! Generic blade, we don't assume where the axes are, and we keep the default orientation
       do k=1,p%NumBlades
+         m%AllOuts( BPitch(  k) ) = 0.0_ReKi  ! save this value of pitch for potential output; ill-defined, TODO
+   
          m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined, TODO
          do j=1,p%NumBlNds
             thetaBladeNds(j,k) = 0.0_ReKi ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
