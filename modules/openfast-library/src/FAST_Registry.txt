@@ -325,6 +325,7 @@ typedef  ^  FAST_MiscLinType  IntKi    CopyOP_CtrlCode -  -  -  "mesh control co
 typedef  ^  FAST_MiscLinType  DbKi     AzimTarget     {:} -  -  "target azimuth positions in CalcSteady algorithm" rad
 typedef  ^  FAST_MiscLinType  logical  IsConverged     -  -  -  "whether the error calculation in the CalcSteady algorithm is converged" -
 typedef  ^  FAST_MiscLinType  logical  FoundSteady     -  -  -  "whether the CalcSteady algorithm found a steady-state solution" -
+typedef  ^  FAST_MiscLinType  logical  ForceLin        -  -  -  "whether the CalcSteady algorithm found a steady-state solution" -
 typedef  ^  FAST_MiscLinType  IntKi    n_rot           -  -  -  "number of rotations completed in CalcSteady algorithm" -
 typedef  ^  FAST_MiscLinType  IntKi    AzimIndx        -  -  -  "index into target azimuth array in CalcSteady algorithm" -
 typedef  ^  FAST_MiscLinType  IntKi    NextLinTimeIndx -  -  -  "index for next time in LinTimes where linearization should occur" -

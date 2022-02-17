@@ -6136,6 +6136,9 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       if (Turbine%m_FAST%Lin%FoundSteady) then
+         if (Turbine%m_FAST%Lin%ForceLin) then
+            Turbine%p_FAST%NLinTimes=1
+         endif
 
          do iLinTime=1,Turbine%p_FAST%NLinTimes
             t_global = Turbine%m_FAST%Lin%LinTimes(iLinTime)
@@ -6166,6 +6169,12 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
          end do
 
          if (Turbine%p_FAST%WrVTK == VTK_ModeShapes) CALL WrVTKCheckpoint()
+
+         if (Turbine%m_FAST%Lin%ForceLin) then
+            ErrStat2 = ErrID_Warn
+            ErrMsg2  = 'Linearization was forced at simulation end. The linearized model may not be sufficiently representative of the solution in steady state.'
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         endif
 
       end if
 

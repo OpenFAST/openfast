@@ -325,6 +325,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: AzimTarget      !< target azimuth positions in CalcSteady algorithm [rad]
     LOGICAL  :: IsConverged      !< whether the error calculation in the CalcSteady algorithm is converged [-]
     LOGICAL  :: FoundSteady      !< whether the CalcSteady algorithm found a steady-state solution [-]
+    LOGICAL  :: ForceLin      !< whether the CalcSteady algorithm found a steady-state solution [-]
     INTEGER(IntKi)  :: n_rot      !< number of rotations completed in CalcSteady algorithm [-]
     INTEGER(IntKi)  :: AzimIndx      !< index into target azimuth array in CalcSteady algorithm [-]
     INTEGER(IntKi)  :: NextLinTimeIndx      !< index for next time in LinTimes where linearization should occur [-]
@@ -14770,6 +14771,7 @@ IF (ALLOCATED(SrcMiscLinTypeData%AzimTarget)) THEN
 ENDIF
     DstMiscLinTypeData%IsConverged = SrcMiscLinTypeData%IsConverged
     DstMiscLinTypeData%FoundSteady = SrcMiscLinTypeData%FoundSteady
+    DstMiscLinTypeData%ForceLin = SrcMiscLinTypeData%ForceLin
     DstMiscLinTypeData%n_rot = SrcMiscLinTypeData%n_rot
     DstMiscLinTypeData%AzimIndx = SrcMiscLinTypeData%AzimIndx
     DstMiscLinTypeData%NextLinTimeIndx = SrcMiscLinTypeData%NextLinTimeIndx
@@ -14902,6 +14904,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! IsConverged
       Int_BufSz  = Int_BufSz  + 1  ! FoundSteady
+      Int_BufSz  = Int_BufSz  + 1  ! ForceLin
       Int_BufSz  = Int_BufSz  + 1  ! n_rot
       Int_BufSz  = Int_BufSz  + 1  ! AzimIndx
       Int_BufSz  = Int_BufSz  + 1  ! NextLinTimeIndx
@@ -14987,6 +14990,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%IsConverged, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FoundSteady, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%ForceLin, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%n_rot
     Int_Xferred = Int_Xferred + 1
@@ -15130,6 +15135,8 @@ ENDIF
     OutData%IsConverged = TRANSFER(IntKiBuf(Int_Xferred), OutData%IsConverged)
     Int_Xferred = Int_Xferred + 1
     OutData%FoundSteady = TRANSFER(IntKiBuf(Int_Xferred), OutData%FoundSteady)
+    Int_Xferred = Int_Xferred + 1
+    OutData%ForceLin = TRANSFER(IntKiBuf(Int_Xferred), OutData%ForceLin)
     Int_Xferred = Int_Xferred + 1
     OutData%n_rot = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
