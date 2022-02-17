@@ -801,6 +801,26 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    REAL(SiKi), ALLOCATABLE      :: WaveElevC0Re(:)                                 !< Real part of the partially modified wave DFT amplitude (m)
    REAL(SiKi), ALLOCATABLE      :: OmegaArr(:)                                     !< Array of all non-negative angular frequencies (rad/s)
    REAL(SiKi), ALLOCATABLE      :: tmpArr(:)                                       !< A temporary array of real numbers of constrained wave (-)
+   
+   ! Variables for MacCamy-Fuchs model
+   REAL(SiKi)                   :: ka
+   REAL(SiKi)                   :: JPrime
+   REAL(SiKi)                   :: YPrime
+   REAL(SiKi)                   :: HPrime
+   REAL(SiKi)                   :: MCFC
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0HxiMCF(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0HyiMCF(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0VMCF(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HxiMCFPz0(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HyiMCFPz0(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0VMCFPz0(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   REAL(SiKi), ALLOCATABLE   :: WaveAcc0HxiMCF(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   REAL(SiKi), ALLOCATABLE   :: WaveAcc0HyiMCF(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   REAL(SiKi), ALLOCATABLE   :: WaveAcc0VMCF(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   REAL(SiKi), ALLOCATABLE   :: PWaveAcc0HxiMCFPz0(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   REAL(SiKi), ALLOCATABLE   :: PWaveAcc0HyiMCFPz0(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   REAL(SiKi), ALLOCATABLE   :: PWaveAcc0VMCFPz0(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+      
 
    ! Variables for error handling
    INTEGER(IntKi)               :: ErrStatTmp                                      !< Temporary error status
@@ -1116,7 +1136,33 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+      
+      IF (InitInp%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs model
+       
+         ALLOCATE ( WaveAccC0HxiMCF(0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0HxiMCF.',      ErrStat,ErrMsg,'VariousWaves_Init')
 
+         ALLOCATE ( WaveAccC0HyiMCF(0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0HyiMCF.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+         ALLOCATE ( WaveAccC0VMCF  (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0VMCF.',        ErrStat,ErrMsg,'VariousWaves_Init')
+  
+         ALLOCATE ( WaveAcc0HxiMCF (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0HxiMCF.',       ErrStat,ErrMsg,'VariousWaves_Init')
+
+         ALLOCATE ( WaveAcc0HyiMCF (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0HyiMCF.',       ErrStat,ErrMsg,'VariousWaves_Init')
+
+         ALLOCATE ( WaveAcc0VMCF   (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0VMCF.',         ErrStat,ErrMsg,'VariousWaves_Init')
+      
+         ALLOCATE ( InitOut%WaveAccMCF  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAccMCF.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      END IF
+      
+      
       IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
 
          ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
@@ -1169,6 +1215,31 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       
          ALLOCATE ( InitOut%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+         
+         IF (InitInp%MCFD > 0.0_ReKi) THEN ! MacCamy-Fuchs model
+         
+            ALLOCATE ( PWaveAccC0HxiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+            IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiMCFPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+            ALLOCATE ( PWaveAccC0HyiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+            IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HyiMCFPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+            ALLOCATE ( PWaveAccC0VMCFPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+            IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VMCFPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+
+            ALLOCATE ( PWaveAcc0HxiMCFPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+            IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HxiMCFPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+      
+            ALLOCATE ( PWaveAcc0HyiMCFPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+            IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HyiMCFPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
+      
+            ALLOCATE ( PWaveAcc0VMCFPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+            IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VMCFPz0.',     ErrStat,ErrMsg,'VariousWaves_Init')
+         
+            ALLOCATE ( InitOut%PWaveAccMCF0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
+            IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAccMCF0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+         
+         END IF
 
       END IF
 
@@ -1810,6 +1881,15 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
          WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
 
+      ! Wavenumber-dependent acceleration scaling for MacCamy-Fuchs model
+      MCFC = 0.0_ReKi
+      IF (InitInp%MCFD > 0.0_SiKi .AND. I>0_IntKi) THEN
+         ka = 0.5_ReKi * WaveNmbr * InitInp%MCFD
+         JPrime = BESSEL_JN(1,ka) / ka - BESSEL_JN(2,ka)
+         YPrime = BESSEL_YN(1,ka) / ka - BESSEL_YN(2,ka)
+         HPrime = SQRT(JPrime*JPrime + YPrime*YPrime)
+         MCFC = 4.0_ReKi/( PI * ka * ka * HPrime )
+      END IF
 
       ! Compute the discrete Fourier transform of the incident wave kinematics
       !   before applying stretching at the zi-coordinates for the WAMIT reference point, and all
@@ -1831,7 +1911,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             WaveAccC0Hyi (I,J)   = ImagOmega*        WaveVelC0Hyi (I,J)
             WaveAccC0V (I,J)     = ImagOmega*        WaveVelC0V   (I,J)
 
-
+            IF (InitInp%MCFD > 0.0_SiKi) THEN
+               WaveAccC0HxiMCF(I,J) = WaveAccC0Hxi(I,J) * MCFC
+               WaveAccC0HyiMCF(I,J) = WaveAccC0Hyi(I,J) * MCFC
+               WaveAccC0VMCF(I,J)   = WaveAccC0V(I,J)   * MCFC
+            END IF
 
 
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
@@ -1855,8 +1939,16 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                PWaveAccC0HxiPz0(I,J) =           ImagOmega*PWaveVelC0HxiPz0(I,J)
                PWaveAccC0HyiPz0(I,J) =           ImagOmega*PWaveVelC0HyiPz0(I,J)
                PWaveAccC0VPz0  (I,J) =           ImagOmega*PWaveVelC0VPz0  (I,J)
-           END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
-        END IF
+               
+               
+               IF (InitInp%MCFD > 0.0_SiKi) THEN
+                  PWaveAccC0HxiMCFPz0(I,J) = PWaveAccC0HxiPz0(I,J) * MCFC
+                  PWaveAccC0HyiMCFPz0(I,J) = PWaveAccC0HyiPz0(I,J) * MCFC
+                  PWaveAccC0VMCFPz0(I,J)   = PWaveAccC0VPz0(I,J)   * MCFC
+               END IF
+               
+            END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+         END IF
         !===================================
 
       END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transforms
@@ -1935,6 +2027,24 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
+      IF (InitInp%MCFD > 0.0_SiKi) THEN
+         DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
+            CALL ApplyFFT_cx (          WaveAcc0HxiMCF  (:,J),          WaveAccC0HxiMCF  (:,J), FFT_Data, ErrStatTmp )
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveAcc0HxiMCF.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+            CALL ApplyFFT_cx (          WaveAcc0HyiMCF  (:,J),          WaveAccC0HyiMCF  (:,J), FFT_Data, ErrStatTmp )
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveAcc0HyiMCF.',      ErrStat,ErrMsg,'VariousWaves_Init')
+
+            CALL ApplyFFT_cx (          WaveAcc0VMCF    (:,J),          WaveAccC0VMCF    (:,J), FFT_Data, ErrStatTmp )
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveAcc0VMCF.',        ErrStat,ErrMsg,'VariousWaves_Init')
+        
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL CleanUp()
+               RETURN
+            END IF
+         END DO
+      END IF
+
       !===================================
       IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
          DO J = 1,InitInp%NWaveElev ! Loop through all points on the SWL where z-partial derivatives will be computed for extrapolated stretching
@@ -1966,6 +2076,27 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             END IF
       
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+         
+         IF (InitInp%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs scaled acceleration field
+            DO J = 1,InitInp%NWaveElev 
+      
+               CALL  ApplyFFT_cx (         PWaveAcc0HxiMCFPz0 (:,J  ),       PWaveAccC0HxiMCFPz0(:,J  ),FFT_Data, ErrStatTmp )
+               CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HxiMCFPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+               CALL  ApplyFFT_cx (         PWaveAcc0HyiMCFPz0 (:,J  ),       PWaveAccC0HyiMCFPz0(:,J  ),FFT_Data, ErrStatTmp )
+               CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HyiMCFPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
+               CALL  ApplyFFT_cx (         PWaveAcc0VMCFPz0 (:,J  ),         PWaveAccC0VMCFPz0( :,J  ), FFT_Data, ErrStatTmp )
+               CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0VMCFPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
+            
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  CALL CleanUp()
+                  RETURN
+               END IF
+            
+            END DO
+         END IF
+         
       END IF
 !===================================
 
@@ -2064,8 +2195,32 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          end do
       end do
 
+      ! MacCamy-Fuchs scaled fluid acceleration
+      IF (InitInp%MCFD > 0.0_SiKi) THEN
+         primeCount = 1
+         count = 1
+         do k = 1, InitInp%NGrid(3)
+            do j = 1, InitInp%NGrid(2)
+               do i = 1, InitInp%NGrid(1)
+                  IF (   ( InitInp%WaveKinzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinzi(count) > 0.0 ) ) THEN
+                     ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
+                     ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+                     InitOut%WaveAccMCF(:,i,j,k,:)  = 0.0
+                  ELSE
+                     ! The elevation of the point defined by WaveKinzi(J) must lie between the seabed and the mean sea level (inclusive)
+                     InitOut%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,1) = WaveAcc0HxiMCF(0:InitOut%NStepWave-1,primeCount)
+                     InitOut%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,2) = WaveAcc0HyiMCF(0:InitOut%NStepWave-1,primeCount)
+                     InitOut%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,3) = WaveAcc0VMCF(  0:InitOut%NStepWave-1,primeCount)
+                     primeCount = primeCount + 1
+                  END IF
+                  count = count + 1
+               end do
+            end do
+         end do
+      END IF
 
       IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+         
          primeCount = 1
          DO j = 1, InitInp%NGrid(2)  ! Loop through all points on the SWL where partial derivatives about z were computed
             DO i = 1, InitInp%NGrid(1)
@@ -2079,6 +2234,19 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                primeCount = primeCount + 1
             END DO
          END DO
+         
+         IF (InitInp%MCFD > 0.0_SiKi) THEN
+            primeCount = 1
+            DO j = 1, InitInp%NGrid(2)  ! Loop through all points on the SWL where partial derivatives about z were computed
+               DO i = 1, InitInp%NGrid(1)
+                  InitOut%PWaveAccMCF0 (0:InitOut%NStepWave-1,i,j,1) = pWaveAcc0HxiMCFPz0(0:InitOut%NStepWave-1,primeCount)
+                  InitOut%PWaveAccMCF0 (0:InitOut%NStepWave-1,i,j,2) = pWaveAcc0HyiMCFPz0(0:InitOut%NStepWave-1,primeCount)
+                  InitOut%PWaveAccMCF0 (0:InitOut%NStepWave-1,i,j,3) = PWaveAcc0VMCFPz0(  0:InitOut%NStepWave-1,primeCount)
+                  primeCount = primeCount + 1
+               END DO
+            END DO
+         END IF
+
       END IF
 
 
@@ -2135,11 +2303,17 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%WaveDynP  (InitOut%NStepWave,:,:,:  )  = InitOut%WaveDynP  (0,:,:,:  )
       InitOut%WaveVel   (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveVel   (0,:,:,:,:)
       InitOut%WaveAcc   (InitOut%NStepWave,:,:,:,:)  = InitOut%WaveAcc   (0,:,:,:,:)
+      IF (InitInp%MCFD > 0.0_SiKi) THEN
+         InitOut%WaveAccMCF (InitOut%NStepWave,:,:,:,:) = InitOut%WaveAccMCF(0,:,:,:,:)
+      END IF
       
       IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
          InitOut%PWaveDynP0(InitOut%NStepWave,:,:  )    = InitOut%PWaveDynP0(0,:,:  )
          InitOut%PWaveVel0 (InitOut%NStepWave,:,:,:)    = InitOut%PWaveVel0 (0,:,:,:)
          InitOut%PWaveAcc0 (InitOut%NStepWave,:,:,:)    = InitOut%PWaveAcc0 (0,:,:,:)
+         IF (InitInp%MCFD > 0.0_SiKi) THEN
+            InitOut%PWaveAccMCF0 (InitOut%NStepWave,:,:,:) = InitOut%PWaveAccMCF0(0,:,:,:)
+         END IF
       END IF
 
    CALL CleanUp ( )
@@ -2236,6 +2410,20 @@ CONTAINS
       IF (ALLOCATED( WaveElevC0Re ))      DEALLOCATE( WaveElevC0Re,     STAT=ErrStatTmp)
       IF (ALLOCATED( OmegaArr ))          DEALLOCATE( OmegaArr,         STAT=ErrStatTmp)
       IF (ALLOCATED( tmpArr ))            DEALLOCATE( tmpArr,           STAT=ErrStatTmp)
+
+      IF (ALLOCATED( WaveAccC0HxiMCF ))     DEALLOCATE( WaveAccC0HxiMCF,     STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAccC0HyiMCF ))     DEALLOCATE( WaveAccC0HyiMCF,     STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAccC0VMCF ))       DEALLOCATE( WaveAccC0VMCF,       STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAcc0HxiMCF ))      DEALLOCATE( WaveAcc0HxiMCF,      STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAcc0HyiMCF ))      DEALLOCATE( WaveAcc0HyiMCF,      STAT=ErrStatTmp)
+      IF (ALLOCATED( WaveAcc0VMCF ))        DEALLOCATE( WaveAcc0VMCF,        STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0HxiMCFPz0 )) DEALLOCATE( PWaveAccC0HxiMCFPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0HyiMCFPz0 )) DEALLOCATE( PWaveAccC0HyiMCFPz0, STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAccC0VMCFPz0 ))   DEALLOCATE( PWaveAccC0VMCFPz0,   STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0HxiMCFPz0 ))  DEALLOCATE( PWaveAcc0HxiMCFPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0HyiMCFPz0 ))  DEALLOCATE( PWaveAcc0HyiMCFPz0,  STAT=ErrStatTmp)
+      IF (ALLOCATED( PWaveAcc0VMCFPz0 ))    DEALLOCATE( PWaveAcc0VMCFPz0,    STAT=ErrStatTmp)
+
 
       RETURN
 

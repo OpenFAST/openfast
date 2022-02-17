@@ -906,6 +906,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveDir        =  Init%OutData_SeaSt%WaveDir     
          Init%InData_HD%WaveMultiDir   =  Init%OutData_SeaSt%WaveMultiDir
          Init%InData_HD%WaveDOmega     =  Init%OutData_SeaSt%WaveDOmega  
+         Init%InData_HD%MCFD           =  Init%OutData_SeaSt%MCFD
          CALL MOVE_ALLOC(  Init%OutData_SeaSt%WaveElev0, Init%InData_HD%WaveElev0 )  
          Init%InData_HD%WaveTime       => Init%OutData_SeaSt%WaveTime  
          Init%InData_HD%WaveDynP       => Init%OutData_SeaSt%WaveDynP  
@@ -919,6 +920,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveDirArr     => Init%OutData_SeaSt%WaveDirArr
          Init%InData_HD%WaveElev1      => Init%OutData_SeaSt%WaveElev1
          Init%InData_HD%WaveElev2      => Init%OutData_SeaSt%WaveElev2
+         
+         Init%InData_HD%WaveAccMCF     => Init%OutData_SeaSt%WaveAccMCF
+         Init%InData_HD%PWaveAccMCF0   => Init%OutData_SeaSt%PWaveAccMCF0
          
          call SeaSt_Interp_CopyParam(Init%OutData_SeaSt%SeaSt_Interp_p, Init%InData_HD%SeaSt_Interp_p, 0, ErrStat, ErrMsg )
          
@@ -940,6 +944,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       nullify(Init%OutData_SeaSt%WaveDirArr)
       nullify(Init%OutData_SeaSt%WaveElev1)
       nullify(Init%OutData_SeaSt%WaveElev2)
+      nullify(Init%OutData_SeaSt%WaveAccMCF)
+      nullify(Init%OutData_SeaSt%PWaveAccMCF0)
       
    end if
    
@@ -1005,7 +1011,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          nullify(Init%InData_HD%WaveTime)
          nullify(Init%InData_HD%WaveElev1)
          nullify(Init%InData_HD%WaveElev2)
-
+         nullify(Init%InData_HD%WaveAccMCF)
+         nullify(Init%InData_HD%PWaveAccMCF0)
    
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()

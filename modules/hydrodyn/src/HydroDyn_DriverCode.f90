@@ -270,6 +270,7 @@ PROGRAM HydroDynDriver
    InitInData%WaveDir        =  InitOutData_SeaSt%WaveDir     
    InitInData%WaveMultiDir   =  InitOutData_SeaSt%WaveMultiDir
    InitInData%WaveDOmega     =  InitOutData_SeaSt%WaveDOmega  
+   InitInData%MCFD           =  InitOutData_SeaSt%MCFD
    !InitInData%WaveElev0      => InitOutData_SeaSt%WaveElev0 
    CALL MOVE_ALLOC(  InitOutData_SeaSt%WaveElev0, InitInData%WaveElev0 )  
    InitInData%WaveTime       => InitOutData_SeaSt%WaveTime  
@@ -280,6 +281,9 @@ PROGRAM HydroDynDriver
    InitInData%PWaveDynP0     => InitOutData_SeaSt%PWaveDynP0  
    InitInData%PWaveAcc0      => InitOutData_SeaSt%PWaveAcc0   
    InitInData%PWaveVel0      => InitOutData_SeaSt%PWaveVel0   
+   
+   InitInData%WaveAccMCF     => InitOutData_SeaSt%WaveAccMCF
+   InitInData%PWaveAccMCF0   => InitOutData_SeaSt%PWaveAccMCF0
    
    InitInData%WaveElevC0     => InitOutData_SeaSt%WaveElevC0
    CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElevC, InitInData%WaveElevC )
@@ -299,6 +303,8 @@ PROGRAM HydroDynDriver
    nullify(InitOutData_SeaSt%WaveDirArr)
    nullify(InitOutData_SeaSt%WaveElev1)
    nullify(InitOutData_SeaSt%WaveElev2)
+   nullify(InitOutData_SeaSt%WaveAccMCF)
+   nullify(InitOutData_SeaSt%PWaveAccMCF0)
    
    call SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData%SeaSt_Interp_p, 0, ErrStat, ErrMsg )
    
@@ -404,6 +410,9 @@ PROGRAM HydroDynDriver
    nullify(InitInData%WaveElev1)
    nullify(InitInData%WaveElev2)
    
+   nullify(InitInData%WaveAccMCF)
+   nullify(InitInData%PWaveAccMCF0)
+   
    if (errStat >= AbortErrLev) then
          ! Clean up and exit 
       call HD_DvrCleanup()
@@ -499,10 +508,10 @@ PROGRAM HydroDynDriver
    maxAngle = 0.0
    
    DO n = 1, drvrInitInp%NSteps
-
+      
       Time = (n-1) * drvrInitInp%TimeInterval
       InputTime(1) = Time
-      
+
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
       
       ! PRPInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
@@ -654,7 +663,7 @@ PROGRAM HydroDynDriver
 
       ! Write output to a file which is managed by the driver program and not the individual modules
       ! TODO
-      
+
    END DO
 
    
@@ -695,7 +704,6 @@ subroutine HD_DvrCleanup()
    
       errStat2 = ErrID_None
       errMsg2  = ""
-      
       
       call SeaSt_End( u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )

@@ -45,6 +45,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             DpthAxCaMG               -          -        -         "Depth-based Axial Ca for marine growth"    -
 typedef   ^                            ^                             ReKi             DpthAxCp                 -          -        -         "Depth-based Axial Cp"    -
 typedef   ^                            ^                             ReKi             DpthAxCpMG               -          -        -         "Depth-based Axial Cp for marine growth"    -
+typedef   ^                            ^                             LOGICAL          DpthMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
 typedef   ^                            Morison_AxialCoefType         INTEGER          AxCoefID                 -          -        -         "User-supplied integer ID for this set of Axial coefs"    -
 typedef   ^                            ^                             ReKi             AxCd                     -          -        -         "Axial Cd"    -
 typedef   ^                            ^                             ReKi             AxCa                     -          -        -         "Axial Ca"    -
@@ -65,6 +66,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         "Index into the appropriate coefs table for this member's properties"    -
 typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         "Index into the filled group table if this is a filled member"    -
 typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Flag T/F for whether the member is modeled with potential flow theory"    -
+typedef   ^                            ^                             LOGICAL          PropMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"    -
 typedef   ^                            ^                             INTEGER          NElements                -          -        -         "number of elements in this member"    -
 typedef   ^                            ^                             ReKi             RefLength                -          -        -         "the reference total length for this member"    m
 typedef   ^                            ^                             ReKi             dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
@@ -146,6 +148,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         "Z-location of the filled free-surface"    m
 typedef   ^                            ^                             ReKi             FillDens                 -          -        -         "Filled fluid density"    kg/m^3
 typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Is this element/member modeled with potential flow theory T/F"    -
+typedef   ^                            ^                             LOGICAL          PropMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"    -
 typedef   ^                            ^                             LOGICAL        Flipped                    -          -        -         "Was the member flipped in a reordering event?  Need to know this to get the correct normal vector to the ends" -
 #
 typedef   ^                            Morison_MemberLoads           ReKi                     F_D                           {:}{:}         -         -         "Member-based (side-effects) Nodal viscous drag loads at time t"   -
@@ -185,6 +188,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             MemberAxCp2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberAxCpMG1            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberAxCpMG2            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             LOGICAL          MemberMCF                -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
 typedef   ^                            Morison_MGDepthsType          ReKi             MGDpth                   -          -        -         "Marine growth depth location for these properties" m
 typedef   ^                            ^                             ReKi             MGThck                   -          -        -         "Marine growth thickness"    m
 typedef   ^                            ^                             ReKi             MGDens                   -          -        -         "Marine growth density"    kg/m^3
@@ -228,6 +232,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     SimplAxCaMG                      -          -        -         "Simple model Axial Ca for marine growth"    -
 typedef   ^                            ^                             ReKi                     SimplAxCp                        -          -        -         "Simple model Axial Cp"    -
 typedef   ^                            ^                             ReKi                     SimplAxCpMG                      -          -        -         "Simple model Axial Cp for marine growth"    -
+typedef   ^                            ^                             LOGICAL                  SimplMCF                         -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
 typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_CoefDpths        CoefDpths                        {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NCoefMembers                     -          -        -         ""    -
@@ -256,15 +261,18 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             SiKi                     WaveElev1                        {*}{*}{*}  -        -         "First order wave elevation"        -
 typedef   ^                            ^                             SiKi                     WaveElev2                        {*}{*}{*}  -        -         "Second order wave elevation"        -
 typedef   ^                            ^                             SiKi                     WaveAcc                    {*}{*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveAccMCF                 {*}{*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveTime                         {*}        -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveVel                    {*}{*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*}     -        -         ""    -
 typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*}  -        -         ""    -
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                      SeaSt_Interp_ParameterType      SeaSt_Interp_p                   -          -        -  "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
+typedef   ^                            ^                             SiKi                     MCFD                             -          -        -         "Diameter of the MacCamy-Fuchs member."    -
 #
 #
 # Define outputs from the initialization routine here:
@@ -308,6 +316,7 @@ typedef   ^                            OtherStateType                IntKi      
 #typedef   ^                            ^                             ReKi                     F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            MiscVarType                   ReKi                     FV                            {:}{:}         -         -         "Fluid velocity at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FA                            {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     FAMCF                         {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FDynP                         {:}            -         -         "Fluid dynamic pressure at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     WaveElev                      {:}            -         -         "Total wave elevation"   m
 typedef   ^                            ^                             ReKi                     WaveElev1                      {:}            -         -         "First order wave elevation"        m
@@ -349,13 +358,16 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation"        m
 typedef   ^                            ^                             SiKi                     WaveVel                       {*}{*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveAcc                       {*}{*}{*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAccMCF                    {*}{*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveVel0                      {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveAcc0                      {*}{*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAccMCF0                   {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveDynP0                     {*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveTime                      {*}        -         -         "Times for which the wave kinematics are pre-computed"  s
 typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*} -         -         ""        -
 typedef   ^                            ^                             INTEGER                  nodeInWater                   {:}{:}     -        -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
