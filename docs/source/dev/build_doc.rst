@@ -14,7 +14,8 @@ Building this documentation locally
 The documentation is compiled with `Sphinx <http://sphinx-doc.org>`__, which is
 a Python based tool. Install it and the other required Python packages listed
 in ``openfast/docs/requirements.txt`` with ``pip`` or another Python package
-manager.
+manager. **Note: the current version requirements for Python packages used with OpenFAST
+also limit the Python version to Python 3.7 or 3.8.**
 
 These additional packages are optional and are not included in the requirements
 file:
