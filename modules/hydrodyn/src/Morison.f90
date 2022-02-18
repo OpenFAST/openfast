@@ -2986,7 +2986,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
       DO i =1,N    ! loop through member elements
 
-         ! calculate isntantaneous incline angle and heading, and related trig values
+         if ( i >= mem%i_floor )  then ! Member element is not completely buried in the seabed. Bug fix for OpenFast issue #847 GJH 2/3/2022
+         
+            ! calculate isntantaneous incline angle and heading, and related trig values
          ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
 
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
@@ -3010,9 +3012,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          a_s2    = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
          alpha_s2= u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
          omega_s2= u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
-        
-         if ( (.not. mem%PropPot) .and. (i >= mem%i_floor) )  then ! Member is NOT modeled with Potential Flow Theory and not completely buried in the seabed. Bug fix for OpenFast issue #847 GJH 2/3/2022
          
+         if ( .not. mem%PropPot ) then ! Member is NOT modeled with Potential Flow Theory
             ! should i_floor theshold be applied to below calculations to avoid wasting time on computing zero-valued things? <<<<<
             ! should lumped half-element coefficients get combined at initialization? <<<
               
@@ -3309,7 +3310,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! no load for unflooded element or element fully below seabed
         
          end if
-        
+
+      endif    ! i >= ifloor  
+           
+         
+   
       END DO ! i =1,N    ! loop through member elements       
 
        
