@@ -655,9 +655,15 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveTime  => Waves_InitOut%WaveTime
       p%WaveElev1 => Waves_InitOut%WaveElev
       InitOut%WaveElev1 => p%WaveElev1
-      p%WaveVel   => Waves_InitOut%WaveVel
-      p%WaveAcc   => Waves_InitOut%WaveAcc
-      p%WaveDynP  => Waves_InitOut%WaveDynP
+      p%WaveVel    => Waves_InitOut%WaveVel
+      p%WaveAcc    => Waves_InitOut%WaveAcc
+      p%WaveDynP   => Waves_InitOut%WaveDynP
+      !p%WaveVel0   => Waves_InitOut%WaveVel0
+      !p%WaveAcc0   => Waves_InitOut%WaveAcc0
+      !p%WaveDynP0  => Waves_InitOut%WaveDynP0
+      p%PWaveVel0  => Waves_InitOut%PWaveVel0
+      p%PWaveAcc0  => Waves_InitOut%PWaveAcc0
+      p%PWaveDynP0 => Waves_InitOut%PWaveDynP0
       p%WaveAccMCF => Waves_InitOut%WaveAccMCF
       ! Store user-requested wave elevation locations
       ALLOCATE ( p%WaveElevxi (InputFileData%NWaveElev), STAT=ErrStat2 )
@@ -1005,6 +1011,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
       InitOut%WtrDens = InputFileData%Waves%WtrDens
       InitOut%WtrDpth = InputFileData%Waves%WtrDpth
+      p%WaveStMod     = InputFileData%Waves%WaveStMod
       InitOut%MSL2SWL = InputFileData%MSL2SWL
       p%WtrDpth       = InitOut%WtrDpth  
       
@@ -1376,6 +1383,13 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       REAL(ReKi)                           :: AllOuts(MaxSeaStOutputs)  
       integer(IntKi)                       :: iBody, indxStart, indxEnd, iWAMIT  ! Counters
       real(ReKi)                           :: positionXYZ(3), positionXY(2)
+  
+      REAL(ReKi)                           :: zeta
+      REAL(ReKi)                           :: zeta1
+      REAL(ReKi)                           :: zeta2
+      REAL(SiKi)                           :: zp
+      REAL(ReKi)                           :: positionXYZp(3)
+      REAL(ReKi)                           :: positionXY0(3)
       
          ! Initialize ErrStat
          
@@ -1407,19 +1421,94 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )                  
       !END IF
 
-
-      do i = 1, p%NWaveKin
+      DO i = 1, p%NWaveKin
          positionXYZ = (/p%WaveKinxi(i),p%WaveKinyi(i),p%WaveKinzi(i)/)
-         call SeaSt_Interp_Setup( Time, positionXYZ, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
-         WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
-         WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
-         WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
-         
-      end do
+         IF (p%WaveStMod > 0) THEN ! Wave stretching enabled
+            positionXY = (/p%WaveKinxi(i),p%WaveKinyi(i)/)
+            zeta1 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+            IF (associated(p%Waves2%WaveElev2)) THEN
+               zeta2 = SeaSt_Interp_3D( Time, positionXY, p%Waves2%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+               zeta =  zeta1 + zeta2
+            ELSE
+               zeta =  zeta1 
+            END IF
+            
+            IF (p%WaveKinzi(i) <= zeta) THEN ! Probe in water
+               IF (p%WaveStMod < 3) THEN ! Vertical or extrapolation stretching
+                  IF (p%WaveKinzi(i)<=0.0) THEN ! Probe is below SWL
+                  ! Evaluate wave kinematics as usual
+                     CALL SeaSt_Interp_Setup( Time, positionXYZ, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  ELSE ! Probe is above SWL
+                     ! Get wave kinematics at the SWL first
+                     positionXY0 = (/p%WaveKinxi(i),p%WaveKinyi(i),-0.00001_SiKi/)
+                     CALL SeaSt_Interp_Setup( Time, positionXY0, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     IF (p%WaveStMod == 2) THEN ! extrapolation stretching
+                        ! Extrapolate
+                        WaveVel(:,i) = WaveVel(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        WaveAcc(:,i) = WaveAcc(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        WaveDynP(i)  = WaveDynP(i)  + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     END IF            
+                  END IF
+               ELSE IF (p%WaveStMod == 3) THEN ! Wheeler stretching
+                  ! Evaluate wave kinematics based on the re-mapped z-position
+                  zp = p%WtrDpth * ( p%WtrDpth + p%WaveKinzi(i) )/( p%WtrDpth + zeta ) - p%WtrDpth
+                  positionXYZp = (/p%WaveKinxi(i),p%WaveKinyi(i),zp/)
+                  CALL SeaSt_Interp_Setup( Time, positionXYZp, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+               END IF
+            ELSE ! Probe out of water
+               ! Zero everthing
+               WaveVel(:,i) = (/0.0,0.0,0.0/)
+               WaveAcc(:,i) = (/0.0,0.0,0.0/)
+               WaveDynP(i)  = 0.0
+            END IF
+         ELSE ! No wave stretching
+            IF (p%WaveKinzi(i)<=0) THEN ! Probe at or below SWL
+               IF (EqualRealNos(p%WaveKinzi(i),0.0_SiKi)) THEN
+                  positionXYZ(3) = -0.000001_SiKi
+               END IF
+               ! Evaluate wave kinematics as usual
+               CALL SeaSt_Interp_Setup( Time, positionXYZ, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+               WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+               WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+               WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+            ELSE ! Probe above SWL
+               ! Zero everthing
+               WaveVel(:,i) = (/0.0,0.0,0.0/)
+               WaveAcc(:,i) = (/0.0,0.0,0.0/)
+               WaveDynP(i)  = 0.0
+            END IF
+         END IF
+      END DO
      
       ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
    

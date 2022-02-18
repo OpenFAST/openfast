@@ -232,7 +232,10 @@ program SeaStateDriver
    ! Nullify these pointers because they are no longer needed
    nullify(InitOutData%WaveDynP)   
    nullify(InitOutData%WaveAcc)    
-   nullify(InitOutData%WaveVel)     
+   nullify(InitOutData%WaveVel)  
+   nullify(InitOutData%PWaveDynP0)   
+   nullify(InitOutData%PWaveAcc0)    
+   nullify(InitOutData%PWaveVel0)     
    nullify(InitOutData%WaveTime)
    !nullify(InitOutData%WaveElevC0)
    !nullify(InitOutData%WaveDirArr)
