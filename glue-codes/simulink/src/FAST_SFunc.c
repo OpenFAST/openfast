@@ -49,6 +49,7 @@ static double TMax = 0;
 static int NumInputs = NumFixedInputs;
 static int NumAddInputs = 0;  // number of additional inputs
 static int NumOutputs = 1;
+static bool EndEarly = false;
 static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static int ErrStat2 = 0;
@@ -430,8 +431,10 @@ static void mdlUpdate(SimStruct *S, int_T tid)
 
     /* ==== Call the Fortran routine (args are pass-by-reference) */
     
-    FAST_Update(&iTurb, &NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
+    FAST_Update(&iTurb, &NumInputs, &NumOutputs, InputAry, OutputAry, &EndEarly, &ErrStat, ErrMsg);
     n_t_global = n_t_global + 1;
+
+    //  TODO if(EndEarly) Signal to end the simulation
 
     if (checkError(S)) return;
 

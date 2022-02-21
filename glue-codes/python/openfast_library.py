@@ -27,6 +27,7 @@ class FastLibAPI(CDLL):
         self.dt = c_double(0.0)
         self.t_max = c_double(0.0)
         self.abort_error_level = c_int(99)
+        self.end_early = c_bool(False)
         self.num_outs = c_int(0)
         self._channel_names = create_string_buffer(20 * 4000)
         self.output_array = None
@@ -85,6 +86,7 @@ class FastLibAPI(CDLL):
             POINTER(c_int),         # NumOutputs_c IN
             POINTER(c_double),      # InputAry IN
             POINTER(c_double),      # OutputAry OUT
+            POINTER(c_bool),        # EndSimulationEarly OUT
             POINTER(c_int),         # ErrStat_c OUT
             POINTER(c_char)         # ErrMsg_c OUT
         ]
@@ -162,6 +164,7 @@ class FastLibAPI(CDLL):
                 byref(self.num_outs),
                 byref(self._inp_array),
                 byref(self.output_array),
+                byref(self.end_early),
                 byref(self.error_status),
                 self.error_message
             )
@@ -170,6 +173,8 @@ class FastLibAPI(CDLL):
                 self.fast_deinit()
                 print(f"Error {self.error_status.value}: {self.error_message.value}")
                 return
+            if self.end_early:
+                break
         
     def fast_deinit(self):
         if not self.ended:
