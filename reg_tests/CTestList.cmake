@@ -212,7 +212,14 @@ if(BUILD_OPENFAST_CPP_API)
 endif()
 
 # OpenFAST Python API test
-of_regression_py("5MW_Land_DLL_WTurb_py" "openfast;openfastlib;python")
+of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn")
+of_regression_py("5MW_ITIBarge_DLL_WTurb_WavesIrr_py"        "openfast;openfastlib;python;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti_py"  "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_OC3Spar_DLL_WTurb_WavesIrr_py"         "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_OC4Semi_WSt_WavesWN_py"                "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
+of_regression_py("5MW_Land_BD_DLL_WTurb_py"                  "openfast;openfastlib;python;beamdyn;aerodyn15;servodyn")
+of_regression_py("HelicalWake_OLAF_py"                       "openfast;openfastlib;python;aerodyn15;olaf")
+of_regression_py("EllipticalWing_OLAF_py"                    "openfast;openfastlib;python;aerodyn15;olaf")
 
 # AeroAcoustic regression test
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")

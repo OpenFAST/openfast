@@ -120,6 +120,12 @@ if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
 # create the local output directory if it does not already exist
+# and initialize it with input files for all test cases
+for data in ["AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
+    dataDir = os.path.join(buildDirectory, data)
+    if not os.path.isdir(dataDir):
+        shutil.copytree(os.path.join(moduleDirectory, data), dataDir)
+
 dst = os.path.join(buildDirectory, "5MW_Baseline")
 src = os.path.join(moduleDirectory, "5MW_Baseline")
 if not os.path.isdir(dst):
