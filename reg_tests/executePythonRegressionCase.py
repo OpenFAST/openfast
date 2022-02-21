@@ -155,8 +155,7 @@ if not noExec:
 
     openfastlib = openfast_library.FastLibAPI(openfastlib_path, caseInputFile)
     openfastlib.fast_run()
-    if openfastlib.fatal_error:
-        sys.exit(1)
+
     output_channel_names = openfastlib.output_channel_names
 
 ### Build the filesystem navigation variables for running the regression test
