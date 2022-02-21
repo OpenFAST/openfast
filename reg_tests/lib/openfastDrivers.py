@@ -67,14 +67,14 @@ def runBeamdynDriverCase(inputFile, executable, verbose=False):
     return _runGenericCase(inputFile, executable, verbose)
 
 def runHydrodynDriverCase(inputFile, executable, verbose=False):
-     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
-     os.chdir(caseDirectory)
-     return _runGenericCase(inputFile, executable, verbose)
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
 
 def runSubdynDriverCase(inputFile, executable, verbose=False):
-     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
-     os.chdir(caseDirectory)
-     return _runGenericCase(inputFile, executable, verbose)
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
 
 def runInflowwindDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
