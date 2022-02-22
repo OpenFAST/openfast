@@ -719,7 +719,7 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
             y_ED%PlatformPtMesh%TranslationDisp(wt%degreeofFreedom,1) =                      wt%amplitude * sin(time * wt%frequency)
             y_ED%PlatformPtMesh%TranslationVel (wt%degreeofFreedom,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
             y_ED%PlatformPtMesh%TranslationAcc (wt%degreeofFreedom,1) = -(wt%frequency)**2 * wt%amplitude * sin(time * wt%frequency)
-         elseif (any(wt%degreeOfFreedom==(/4,5,5/))) then
+         elseif (any(wt%degreeOfFreedom==(/4,5,6/))) then
             theta(1:3) = 0.0_ReKi
             theta(wt%degreeofFreedom-3) = wt%amplitude * sin(time * wt%frequency)
             y_ED%PlatformPtMesh%RotationVel (wt%degreeofFreedom-3,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
