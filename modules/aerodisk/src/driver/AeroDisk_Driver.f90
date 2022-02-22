@@ -258,6 +258,7 @@ PROGRAM AeroDisk_Driver
    !...............................................................................................................................
 
    InitInData%InputFile = Settings%ADskIptFileName
+   InitInData%RootName  = Settings%OutRootName
 
       ! Initialize the module
    CALL ADsk_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )

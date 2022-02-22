@@ -19,10 +19,13 @@ Input file
     
    --- AERO DISK INPUT FILE -------
    Sample actuator disk input file
+   --- SIMULATION CONTROL ---------
+    FALSE        echo            - Echo input data to "<RootName>.ADsk.ech" (flag)
+     "default"   DT              - Integration time step (s)
    --- ENVIRONMENTAL CONDITIONS ---
          1.225   AirDens         - Air density (kg/m^3) (or "default")
    --- ACTUATOR DISK PROPERTIES ---
-        63.0     RotRad          - Rotor radius (m) (or "default")
+        63.0     RotorRad        - Rotor radius (m) (or "default")
    "RtSpd,VRel,Skew,Pitch" InColNames      - Input column headers (string) {may include a combination of "TSR, RtSpd, VRel, Pitch, Skew"} (up to 4 columns) [choose TSR or RtSpd,VRel; if Skew is absent, Skew is modeled as (COS(Skew))^2]
    9,1,1,1       InColDims       - Number of values in each column (-) (must have same number of columns as InColName) [each >=2]
    RtSpd     VRel     Skew    Pitch   C_Fx   C_Fy   C_Fz   C_Mx   C_My   C_Mz

@@ -182,6 +182,8 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
    IF ( adskFlag ) THEN
       CLSettings%ADskIptFileName  =  TRIM(FileName)
       CLFlags%ADskIptFile =  .TRUE.
+      call GetRoot( CLSettings%ADskIptFileName, CLSettings%OutRootName )
+      CLFlags%OutRootName =  .TRUE.
    ELSE
       CLSettings%DvrIptFileName  =  TRIM(FileName)
       CLFlags%DvrIptFile =  .TRUE.
@@ -478,6 +480,15 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       DvrFlags%ADskIptFile  =  .TRUE.
    endif
 
+      ! AeroDisk output root name
+   CALL ReadVar( UnIn, FileName,DvrSettings%OutRootName,'OutRootName',' AeroDisk output rootname',   &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   if (Failed()) then
+      return
+   else
+      DvrFlags%OutRootName  =  .TRUE.
+   endif
+ 
 
       ! TStart    -- start time
    CALL ReadVar( UnIn, FileName,DvrSettings%TStart,'TStart',' Time in wind file to start parsing.',   &

@@ -40,6 +40,7 @@ module AeroDisk_Driver_Types
    type     :: ADskDriver_Flags
       logical                 :: DvrIptFile           = .FALSE.      !< Was an input file name given on the command line?
       logical                 :: ADskIptFile          = .FALSE.      !< Was an AeroDisk input file requested?
+      logical                 :: OutRootName          = .FALSE.      !< Was an AeroDisk output rootname 
       logical                 :: InputDispFile        = .FALSE.      !< Input displacement time series
       logical                 :: TStart               = .FALSE.      !< specified a start time
       logical                 :: NumTimeSteps         = .FALSE.      !< specified a number of timesteps to process
@@ -55,6 +56,7 @@ module AeroDisk_Driver_Types
    type     :: ADskDriver_Settings
       character(1024)         :: DvrIptFileName                !< Driver input file name
       character(1024)         :: ADskIptFileName               !< Filename of AeroDisk input file to read (if no driver input file)
+      character(1024)         :: OutRootName                   !< Output root name
       character(1024)         :: InputDispFile                 !< Filename of AeroDisk time series displacements
 
       integer(IntKi)          :: NumTimeSteps                  !< Number of timesteps

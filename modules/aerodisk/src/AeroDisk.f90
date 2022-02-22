@@ -48,7 +48,7 @@ MODULE AeroDisk
    !public :: ADsk_GetOP
 
 CONTAINS
-   
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize the AeroDisk module:
@@ -63,15 +63,17 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    type(ADsk_DiscreteStateType),    intent(  out)  :: xd          !< Initial discrete states
    type(ADsk_ConstraintStateType),  intent(  out)  :: z           !< Initial guess of the constraint states
    type(ADsk_OtherStateType),       intent(  out)  :: OtherState  !< Initial other states (logical, etc)
-   type(ADsk_OutputType),           intent(  out)  :: y           !< Initial system outputs (outputs are not calculated) 
+   type(ADsk_OutputType),           intent(  out)  :: y           !< Initial system outputs (outputs are not calculated)
    type(ADsk_MiscVarType),          intent(  out)  :: m           !< Misc variables for optimization (not copied in glue code)
-   real(DbKi),                      intent(inout)  :: Interval    !< Coupling interval in seconds: the rate that
+   real(DbKi),                      intent(inout)  :: Interval    !< Coupling interval in seconds
    type(ADsk_InitOutputType),       intent(  out)  :: InitOut     !< Output for initialization routine
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   integer(IntKi)                                  :: NumOuts     ! number of outputs; would probably be in the parameter type
+   type(ADsk_InputFile)                            :: InputFileData  !< Data from input file as a string array
+   type(FileInfoType)                              :: FileInfo_In !< The derived type for holding the full input file for parsing -- we may pass this in the future
+   integer(IntKi)                                  :: UnEc        ! unit number for the echo file (-1 for not in use)
    integer(IntKi)                                  :: ErrStat2    ! local error status
    character(ErrMsgLen)                            :: ErrMsg2     ! local error message
    character(*), parameter                         :: RoutineName = 'ADsk_Init'
@@ -79,38 +81,66 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
-   NumOuts = 2
 
-      ! Initialize the NWTC Subroutine Library
+   ! Initialize the NWTC Subroutine Library
    call NWTC_Init( )
 
-      ! Display the module information
+   ! Display the module information
    call DispNVD( ADsk_Ver )
 
+   ! set rootname
+   p%RootName = trim(InitInp%RootName)//".ADsk"
+
+   ! Get primary input file
+   if ( InitInp%UseInputFile ) then
+      CALL ProcessComFile( InitInp%InputFile, FileInfo_In, ErrStat2, ErrMsg2 )
+   else
+      CALL NWTC_Library_CopyFileInfoType( InitInp%PassedFileData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+   endif
+   if (Failed()) return
+
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the FileInfo_In data structure.
+   !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
+
+   ! Parse all ADsk-related input and populate the InputFileData structure
+   call ADsk_ParsePrimaryFileData( InitInp, p%RootName, Interval, FileInfo_In, InputFileData, UnEc, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
+
+call SetErrStat(ErrID_Fatal,'Have not set parameters from init or checked primary file data yet',ErrStat,ErrMsg,RoutineName); return
+
+   ! Verify all the necessary initialization and input file data
+!   CALL ADskInput_ValidateProcessInitData( InitInp, Interval, InputFileData, ErrStat2, ErrMsg2 )
+!   if (Failed()) return;
+
+
+!FIXME: see if we requested something different for time
       ! Define parameters here:
-   p%DeltaT  = Interval
+   p%DT        = Interval
+   p%numOuts   = InputFileData%NumOuts
 
       ! Define initial system states here:
 !   x%DummyContState           = 0.0_ReKi
 !   xd%DummyDiscState          = 0.0_ReKi
 !   z%DummyConstrState         = 0.0_ReKi
 !   OtherState%DummyOtherState = 0.0_ReKi
-      
-   ! Define optimization variables here:      
+
+   ! Define optimization variables here:
    m%DummyMiscVar          = 0.0_ReKi
-      
+
    ! Define initial guess for the system inputs here:
 !   u%DummyInput = 0.0_ReKi
+
 
 !   call SetOutParams()
 
    ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 );       if (Failed()) return;
+   call AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 );       if (Failed()) return;
    y%WriteOutput = 0
 
    ! Define initialization-routine output here:
-   call AllocAry(InitOut%WriteOutputHdr,NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
-   call AllocAry(InitOut%WriteOutputUnt,NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
+   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
+   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
    InitOut%WriteOutputHdr = (/ 'Time   ', 'Column2' /)
    InitOut%WriteOutputUnt = (/ '(s)',     '(-)'     /)
 
@@ -118,14 +148,16 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 !FIXME: any logic around this?
    !Interval = p%DeltaT
 
-      
+
    if (InitInp%Linearize) then
       CALL SetErrStat( ErrID_Fatal, 'AeroDisk cannot perform linearization analysis.', ErrStat, ErrMsg, RoutineName)
    end if
 
+call SetErrStat(ErrID_Fatal, 'Stopping early',ErrStat,ErrMsg,RoutineName); return
+
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
         !if (Failed) call CleanUp()
    end function Failed
@@ -227,7 +259,7 @@ SUBROUTINE ADsk_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
 
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed
@@ -271,7 +303,7 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
         !if (Failed) call CleanUp()
    end function Failed
@@ -308,9 +340,9 @@ SUBROUTINE ADsk_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
 
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
+!        if (Failed) call CleanUp()
    end function Failed
 
 END SUBROUTINE ADsk_CalcContStateDeriv
