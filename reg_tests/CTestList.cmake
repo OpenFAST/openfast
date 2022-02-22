@@ -162,6 +162,15 @@ function(ifw_py_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ifw_py_regression)
 
+# aerodisk
+function(adsk_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeAerodiskRegressionCase.py")
+  set(AERODISK_EXECUTABLE "${CTEST_AERODISK_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodisk")
+  regression(${TEST_SCRIPT} ${AERODISK_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(adsk_regression)
+
 #===============================================================================
 # Regression tests
 #===============================================================================
@@ -264,3 +273,7 @@ sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore")
 # InflowWind regression tests
 ifw_regression("ifw_turbsimff"                                "inflowwind")
 ifw_py_regression("ifw_py_turbsimff"                          "inflowwind;python")
+
+# AeroDisk regression tests
+adsk_regression("adsk_test1"                                  "aerodisk")
+
