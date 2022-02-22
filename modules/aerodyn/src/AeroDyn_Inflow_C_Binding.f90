@@ -185,7 +185,6 @@ subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
 end subroutine SetErr
 
 
-!FIXME: initial orientations are all single prec -- need to promote these on both sides of interface
 !===============================================================================================================
 !--------------------------------------------- AeroDyn Init----------------------------------------------------
 !===============================================================================================================
@@ -393,7 +392,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    call AllocAry(InitInp%AD%rotors(1)%BladeRootOrientation, 3, 3, NumBlades_c, 'BldRootOri', errStat2, errMsg2 ); if (Failed()) return
    InitInp%AD%rotors(1)%HubPosition          = real(HubPos_C(1:3),ReKi)
    InitInp%AD%rotors(1)%HubOrientation       = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
-   !InitInp%AD%rotors(1)%NacellePosition      = real(NacPos_C(1:3),ReKi)      ! FIXME: AD15 uses hub position for this
+   InitInp%AD%rotors(1)%NacellePosition      = real(NacPos_C(1:3),ReKi)
    InitInp%AD%rotors(1)%NacelleOrientation   = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
    InitInp%AD%rotors(1)%BladeRootPosition    = reshape( real(BldRootPos_C(1:3*NumBlades_c),ReKi), (/  3,NumBlades_c/) )
    InitInp%AD%rotors(1)%BladeRootOrientation = reshape( real(BldRootOri_C(1:9*NumBlades_c),R8Ki), (/3,3,NumBlades_c/) )
