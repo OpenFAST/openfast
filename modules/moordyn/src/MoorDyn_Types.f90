@@ -416,6 +416,7 @@ IMPLICIT NONE
     TYPE(MD_OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     INTEGER(IntKi)  :: MDUnOut      !< Unit number of main output file [-]
+    CHARACTER(1024)  :: PriPath      !< The path to the primary MoorDyn input file, used if looking for additional input files [-]
     INTEGER(IntKi)  :: WaveKin      !< Flag for whether or how to consider water kinematics [-]
     INTEGER(IntKi)  :: Current      !< Flag for whether or how to consider water kinematics [-]
     INTEGER(IntKi)  :: nTurbines      !< Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0 [-]
@@ -10715,6 +10716,7 @@ IF (ALLOCATED(SrcParamData%OutParam)) THEN
 ENDIF
     DstParamData%Delim = SrcParamData%Delim
     DstParamData%MDUnOut = SrcParamData%MDUnOut
+    DstParamData%PriPath = SrcParamData%PriPath
     DstParamData%WaveKin = SrcParamData%WaveKin
     DstParamData%Current = SrcParamData%Current
     DstParamData%nTurbines = SrcParamData%nTurbines
@@ -11195,6 +11197,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Delim)  ! Delim
       Int_BufSz  = Int_BufSz  + 1  ! MDUnOut
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PriPath)  ! PriPath
       Int_BufSz  = Int_BufSz  + 1  ! WaveKin
       Int_BufSz  = Int_BufSz  + 1  ! Current
       Int_BufSz  = Int_BufSz  + 1  ! nTurbines
@@ -11477,6 +11480,10 @@ ENDIF
     END DO ! I
     IntKiBuf(Int_Xferred) = InData%MDUnOut
     Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(InData%PriPath)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%PriPath(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
     IntKiBuf(Int_Xferred) = InData%WaveKin
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%Current
@@ -12119,6 +12126,10 @@ ENDIF
     END DO ! I
     OutData%MDUnOut = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(OutData%PriPath)
+      OutData%PriPath(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
     OutData%WaveKin = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%Current = IntKiBuf(Int_Xferred)

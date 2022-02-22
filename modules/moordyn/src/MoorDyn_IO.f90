@@ -1157,18 +1157,37 @@ CONTAINS
 !FIXME: make sure thes are actually open before trying to close them. Segfault will occur otherwise!!!!
 !  This bug can be triggered by an early failure of the parsing routines, before these files were ever opened
 !  which returns MD to OpenFAST as ErrID_Fatal, then OpenFAST calls MD_End, which calls this.
+
       ! close main MoorDyn output file
-      CLOSE( p%MDUnOut, IOSTAT = ErrStat )
+      if (p%MDUnOut > 0) then
+         CLOSE( p%MDUnOut, IOSTAT = ErrStat )
          IF ( ErrStat /= 0 ) THEN
             ErrMsg = 'Error closing output file'
          END IF
-
+      end if 
+      
+      ! close individual rod output files
+      DO I=1,p%NRods
+         if (allocated(m%RodList)) then
+         if (m%RodList(I)%RodUnOut > 0) then
+            CLOSE( m%RodList(I)%RodUnOut, IOSTAT = ErrStat )
+            IF ( ErrStat /= 0 ) THEN
+               ErrMsg = 'Error closing rod output file'
+            END IF
+         end if 
+         end if 
+      END DO
+      
       ! close individual line output files
       DO I=1,p%NLines
-         CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
+         if (allocated(m%LineList)) then
+         if (m%LineList(I)%LineUnOut > 0) then
+            CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
             IF ( ErrStat /= 0 ) THEN
                ErrMsg = 'Error closing line output file'
             END IF
+         end if 
+         end if
       END DO
 
       ! deallocate output arrays

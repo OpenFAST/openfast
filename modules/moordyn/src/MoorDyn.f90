@@ -74,6 +74,7 @@ CONTAINS
       ! local variables
       TYPE(MD_InputFileType)                       :: InputFileDat   ! Data read from input file for setup, but not stored after Init
       type(FileInfoType)                           :: FileInfo_In    !< The derived type for holding the full input file for parsing -- we may pass this in the future
+  !    CHARACTER(1024)                              :: priPath        ! The path to the primary MoorDyn input file
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
       INTEGER(IntKi)                               :: I              ! Current line number of input file 
@@ -245,8 +246,10 @@ CONTAINS
       ! Read the entire input file, minus any comment lines, into the FileInfo_In
       ! data structure in memory for further processing.
       call ProcessComFile( InitInp%FileName, FileInfo_In, ErrStat2, ErrMsg2 )
+      CALL GetPath( InitInp%FileName, p%PriPath )    ! Input files will be relative to the path where the primary input file is located.
    else
       call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+      p%PriPath = ""
    endif
    if (Failed()) return;
 
@@ -483,7 +486,7 @@ CONTAINS
       
       
       ! set up wave and current kinematics 
-      CALL setupWaterKin(WaterKinValue, p, InitInp%Tmax, ErrStat2, ErrMsg2)
+      CALL setupWaterKin(WaterKinValue, p, InitInp%Tmax, ErrStat2, ErrMsg2); if(Failed()) return
 
 
 
@@ -2089,7 +2092,7 @@ CONTAINS
       
       LOGICAL FUNCTION Failed()
 
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MDIO_ReadInput') 
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_Init') 
          Failed = ErrStat >= AbortErrLev
          if (Failed) call CleanUp()
       END FUNCTION Failed

@@ -61,6 +61,8 @@ CONTAINS
       INTEGER(4)                         :: i             ! Generic index
       INTEGER(4)                         :: K             ! Generic index
       INTEGER(IntKi)                     :: N
+      
+      INTEGER                            :: ErrStat2
 
       N = Rod%N  ! number of segments in this line (for code readability)
 
@@ -74,44 +76,44 @@ CONTAINS
       Rod%Cdn   = RodProp%Cdn
       Rod%Cdt   = RodProp%Cdt      
       Rod%CaEnd = RodProp%CaEnd      
-      Rod%CdEnd = RodProp%CdEnd      
-      
+      Rod%CdEnd = RodProp%CdEnd   
+
 
       ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
-      ALLOCATE ( Rod%r(3, 0:N), Rod%rd(3, 0:N), STAT = ErrStat )   ! <<<<<< add error checks here
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 1 in MoorDyn" 
+      ALLOCATE(Rod%r(3, 0:N), Rod%rd(3, 0:N), STAT=ErrStat2);  if(AllocateFailed("")) return
      
       ! allocate segment scalar quantities
       if (Rod%N == 0) then                                ! special case of zero-length Rod
-         ALLOCATE ( Rod%l(1), Rod%V(N), STAT = ErrStat )
+         ALLOCATE(Rod%l(1), Rod%V(N), STAT=ErrStat2);  if(AllocateFailed("Rod: l and V")) return
       else                                                ! normal case
-         ALLOCATE ( Rod%l(N), Rod%V(N), STAT = ErrStat )
+         ALLOCATE(Rod%l(N), Rod%V(N), STAT=ErrStat2);  if(AllocateFailed("Rod: l and V")) return
       end if
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 2 in MoorDyn"
 
       ! allocate water related vectors
-      ALLOCATE ( Rod%U(3, 0:N), Rod%Ud(3, 0:N), Rod%zeta(0:N), Rod%PDyn(0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 3 in MoorDyn"
+      ALLOCATE(Rod%U(3, 0:N), Rod%Ud(3, 0:N), Rod%zeta(0:N), Rod%PDyn(0:N), STAT=ErrStat2)  
+      if(AllocateFailed("Rod: U Ud zeta PDyn")) return
+
+      ! allocate node force vectors
+      ALLOCATE(Rod%W(3, 0:N), Rod%Bo(3, 0:N), Rod%Dp(3, 0:N), Rod%Dq(3, 0:N), Rod%Ap(3, 0:N), &
+         Rod%Aq(3, 0:N), Rod%Pd(3, 0:N), Rod%B(3, 0:N), Rod%Fnet(3, 0:N), STAT=ErrStat2)
+         if(AllocateFailed("Rod: force arrays")) return
+      
+      ! allocate mass and inverse mass matrices for each node (including ends)
+      ALLOCATE(Rod%M(3, 3, 0:N), STAT=ErrStat2);  if(AllocateFailed("Rod: M")) return
+
+
       ! set to zero initially (important of wave kinematics are not being used)
       Rod%U    = 0.0_DbKi
       Rod%Ud   = 0.0_DbKi
       Rod%zeta = 0.0_DbKi
       Rod%PDyn = 0.0_DbKi
 
-      ! allocate node force vectors
-      ALLOCATE ( Rod%W(3, 0:N), Rod%Bo(3, 0:N), Rod%Dp(3, 0:N), Rod%Dq(3, 0:N), Rod%Ap(3, 0:N), &
-         Rod%Aq(3, 0:N), Rod%Pd(3, 0:N), Rod%B(3, 0:N), Rod%Fnet(3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 4 in MoorDyn"
-      
-      ! allocate mass and inverse mass matrices for each node (including ends)
-      ALLOCATE ( Rod%M(3, 3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 5 in MoorDyn"
-
-
-
       ! ------------------------- set some geometric properties and the starting kinematics -------------------------
 
       CALL UnitVector(endCoords(1:3), endCoords(4:6), Rod%q, Rod%UnstrLen)  ! get Rod axis direction vector and Rod length
+
+      print *, 'im a rod'
+      print *, endCoords
 
       ! set Rod positions if applicable
       if (Rod%typeNum==0) then               ! for an independent rod, set the position right off the bat
@@ -154,6 +156,16 @@ CONTAINS
       IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
 
       ! need to add cleanup sub <<<
+
+
+   CONTAINS
+
+      LOGICAL FUNCTION AllocateFailed(arrayName)
+         CHARACTER(*), INTENT(IN   )      :: arrayName     ! The array name
+         call SetErrStat(ErrStat2, "Error allocating space for "//trim(arrayName)//" array.", ErrStat, ErrMsg, 'Rod_Setup') 
+         AllocateFailed = ErrStat2 >= AbortErrLev
+         !if (AllocateFailed) call CleanUp()
+      END FUNCTION AllocateFailed
 
    END SUBROUTINE Rod_Setup
    !--------------------------------------------------------------
@@ -577,7 +589,8 @@ CONTAINS
       ! ---------------------------- initial rod and node calculations ------------------------
 
       ! calculate some orientation information for the Rod as a whole
-      call GetOrientationAngles(Rod%r( :,0), Rod%r( :,N), phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
+      !call GetOrientationAngles(Rod%r( :,0), Rod%r( :,N), phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
+      call GetOrientationAngles(Rod%q, phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
  
       ! save to internal roll and pitch variables for use in output <<< should check these, make Euler angles isntead of independent <<<
       Rod%roll  = -180.0/Pi * phi*sinBeta

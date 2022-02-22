@@ -140,23 +140,19 @@ CONTAINS
    end function GetCurvature
    
 
-   ! calculate orientation angles of a cylindrical object
+   ! calculate orientation angles of a direction vector
    !-----------------------------------------------------------------------
-   subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
-      real(DbKi),   intent(in   ) :: p1(3),p2(3)
+   subroutine GetOrientationAngles(vec, phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
+      real(DbKi),   intent(in   ) :: vec(3) !p1(3),p2(3)
       real(DbKi),   intent(  out) :: phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat(3)
             
-      real(DbKi)                  :: vec(3), vecLen, vecLen2D
-
-      ! calculate isntantaneous incline angle and heading, and related trig values
-      ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
-      vec      = p2 - p1   
+      real(DbKi)                  ::  vecLen, vecLen2D
+ 
       vecLen   = SQRT(Dot_Product(vec,vec))
       vecLen2D = SQRT(vec(1)**2+vec(2)**2)
       if ( vecLen < 0.000001 ) then
-         print *, "ERROR in GetOrientationAngles in MoorDyn" !call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, 'Morison_CalcOutput' )
-         print *, p1
-         print *, p2
+         print *, "ERROR in GetOrientationAngles in MoorDyn. Supplied vector is near zero" 
+         print *, vec
          k_hat = NaN ! 1.0/0.0
       else
          k_hat = vec / vecLen 
@@ -1260,7 +1256,7 @@ CONTAINS
 
 
    ! ----- process WaterKin input value, potentially reading wave inputs and generating wave field -----
-   SUBROUTINE SetupWaterKin(WaterKinString, p, Tmax, ErrStat, ErrMsg)
+   SUBROUTINE setupWaterKin(WaterKinString, p, Tmax, ErrStat, ErrMsg)
 
       CHARACTER(40),           INTENT(IN   )  :: WaterKinString      ! string describing water kinematics filename
       TYPE(MD_ParameterType),  INTENT(INOUT)  :: p                   ! Parameters
@@ -1322,6 +1318,11 @@ CONTAINS
       CHARACTER(120)                   :: ErrMsg2   
       CHARACTER(120)                   :: RoutineName = 'SetupWaveKin'   
 
+
+      ErrStatTmp = ErrID_None  ! TODO: get rid of redundancy <<<
+      ErrStat2 = ErrID_None
+      ErrMsg2  = ""
+
       IF (LEN_TRIM(WaterKinString) == 0) THEN
          ! If the input is empty (not provided), there are no water kinematics to be included
          p%WaveKin = 0
@@ -1338,12 +1339,20 @@ CONTAINS
 
 
       ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-      PRINT *, "found a letter in the depth value so will try to load a water kinematics input file"
+      print *, "found a letter in the WaterKin value so will try to load a water kinematics input file"
       
       
       ! -------- load water kinematics input file -------------
       
-      FileName = TRIM(WaterKinString)
+      IF ( PathIsRelative( WaterKinString ) ) THEN   ! properly handle relative path <<<
+         !CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
+         FileName = TRIM(p%PriPath)//TRIM(WaterKinString)
+      ELSE
+         FileName = trim(WaterKinString)
+      END IF
+      
+      
+      
       UnEcho=-1
       CALL GetNewUnit( UnIn )   
       CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
@@ -1418,16 +1427,17 @@ CONTAINS
       ! --------------------- set from inputted wave elevation time series, grid approach -------------------
       if (p%WaveKin == 3) then
 
+         print *, 'Setting up WaveKin 3 option: read wave elevation time series from file'
 
          IF ( LEN_TRIM( WaveKinFile ) == 0 )  THEN
             CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); return
             RETURN
          END IF
 
-         !IF ( PathIsRelative( WaveKinFile ) ) THEN   ! properly handle relative path <<<
-         !   CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
-         !   WaveKinFile = TRIM(TmpPath)//TRIM(WaveKinFile)
-         !END IF
+         IF ( PathIsRelative( WaveKinFile ) ) THEN   ! properly handle relative path <<<
+            !CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
+            WaveKinFile = TRIM(p%PriPath)//TRIM(WaveKinFile)
+         END IF
          
          ! note: following is adapted from MoorDyn_Driver
          
@@ -2078,7 +2088,7 @@ CONTAINS
       RETURN
       END FUNCTION SINHNumOvrSINHDen
 
-	END SUBROUTINE SetupWaterKin
+	END SUBROUTINE setupWaterKin
    
    
 
