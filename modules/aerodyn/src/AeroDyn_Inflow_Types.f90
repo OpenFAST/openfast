@@ -127,6 +127,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: HHVel      !< Hub Height velocities for each rotors [-]
     REAL(ReKi)  :: PLExp      !< Power law exponents (for outputs only) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: IW_WriteOutput      !< WriteOutputs for inflow wind [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< System outputs [-]
   END TYPE ADI_OutputType
 ! =======================
 ! =========  ADI_Data  =======
@@ -3693,6 +3694,18 @@ IF (ALLOCATED(SrcOutputData%IW_WriteOutput)) THEN
   END IF
     DstOutputData%IW_WriteOutput = SrcOutputData%IW_WriteOutput
 ENDIF
+IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
+  i1_l = LBOUND(SrcOutputData%WriteOutput,1)
+  i1_u = UBOUND(SrcOutputData%WriteOutput,1)
+  IF (.NOT. ALLOCATED(DstOutputData%WriteOutput)) THEN 
+    ALLOCATE(DstOutputData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%WriteOutput = SrcOutputData%WriteOutput
+ENDIF
  END SUBROUTINE ADI_CopyOutput
 
  SUBROUTINE ADI_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -3710,6 +3723,9 @@ IF (ALLOCATED(OutputData%HHVel)) THEN
 ENDIF
 IF (ALLOCATED(OutputData%IW_WriteOutput)) THEN
   DEALLOCATE(OutputData%IW_WriteOutput)
+ENDIF
+IF (ALLOCATED(OutputData%WriteOutput)) THEN
+  DEALLOCATE(OutputData%WriteOutput)
 ENDIF
  END SUBROUTINE ADI_DestroyOutput
 
@@ -3776,6 +3792,11 @@ ENDIF
   IF ( ALLOCATED(InData%IW_WriteOutput) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! IW_WriteOutput upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%IW_WriteOutput)  ! IW_WriteOutput
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WriteOutput allocated yes/no
+  IF ( ALLOCATED(InData%WriteOutput) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutput)  ! WriteOutput
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -3866,6 +3887,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%IW_WriteOutput,1), UBOUND(InData%IW_WriteOutput,1)
         ReKiBuf(Re_Xferred) = InData%IW_WriteOutput(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WriteOutput) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutput,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutput,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
+        ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3979,6 +4015,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%IW_WriteOutput,1), UBOUND(OutData%IW_WriteOutput,1)
         OutData%IW_WriteOutput(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WriteOutput)) DEALLOCATE(OutData%WriteOutput)
+    ALLOCATE(OutData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
+        OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -6795,6 +6849,12 @@ IF (ALLOCATED(y_out%IW_WriteOutput) .AND. ALLOCATED(y1%IW_WriteOutput)) THEN
     y_out%IW_WriteOutput(i1) = y1%IW_WriteOutput(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
+IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
+  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
+    b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
+    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
  END SUBROUTINE ADI_Output_ExtrapInterp1
 
 
@@ -6873,6 +6933,13 @@ IF (ALLOCATED(y_out%IW_WriteOutput) .AND. ALLOCATED(y1%IW_WriteOutput)) THEN
     b = (t(3)**2*(y1%IW_WriteOutput(i1) - y2%IW_WriteOutput(i1)) + t(2)**2*(-y1%IW_WriteOutput(i1) + y3%IW_WriteOutput(i1)))* scaleFactor
     c = ( (t(2)-t(3))*y1%IW_WriteOutput(i1) + t(3)*y2%IW_WriteOutput(i1) - t(2)*y3%IW_WriteOutput(i1) ) * scaleFactor
     y_out%IW_WriteOutput(i1) = y1%IW_WriteOutput(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
+  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
+    b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%WriteOutput(i1) + t(3)*y2%WriteOutput(i1) - t(2)*y3%WriteOutput(i1) ) * scaleFactor
+    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
  END SUBROUTINE ADI_Output_ExtrapInterp2

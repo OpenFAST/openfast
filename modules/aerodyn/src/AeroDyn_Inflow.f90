@@ -79,12 +79,18 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    call AD_Init(InitInp%AD, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, Interval, InitOut_AD, errStat2, errMsg2); if (Failed()) return
    InitOut%Ver = InitOut_AD%ver
    ! Add writeoutput units and headers to driver, same for all cases and rotors!
+   !TODO: this header is too short if we add more rotors.  Should also add a rotor identifier
    call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_AD%rotors(1)%WriteOutputHdr, InitOut_AD%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize Inflow Wind 
    call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
    ! Concatenate AD outputs to IW outputs
    call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+
+   ! --- Initialize grouped outputs
+   !TODO: assumes one rotor
+   p%NumOuts = p%AD%rotors(1)%NumOuts + m%IW%p%NumOuts
+   call AllocAry(y%WriteOutput, p%NumOuts, 'WriteOutput', errStat2, errMsg2); if (Failed()) return
 
    ! --- Initialize outputs
    call AllocAry(y%IW_WriteOutput, size(m%IW%y%WriteOutput),'IW_WriteOutput', errStat2, errMsg2); if(Failed()) return
@@ -276,6 +282,11 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
       enddo
    endif
    y%PLExp = m%IW%PLExp
+
+   ! --- Set outputs
+!TODO: this assumes one rotor!!!
+   y%WriteOutput(1:p%AD%rotors(1)%NumOuts) = y%AD%rotors(1)%WriteOutput(1:p%AD%rotors(1)%NumOuts)
+   y%WriteOutput(p%AD%rotors(1)%NumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
 
 contains
 

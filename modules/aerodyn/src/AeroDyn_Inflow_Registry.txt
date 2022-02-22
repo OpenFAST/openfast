@@ -87,6 +87,7 @@ typedef    ^        ^                  ReKi                             HHVel   
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "Power law exponents (for outputs only)"
 typedef    ^        ^                  ReKi                             IW_WriteOutput  {:}     -     -   "WriteOutputs for inflow wind" -
 #typedef    ^        ^                  ADI_RotOutputType               rotors           :      -     -   "WriteOutputs of the driver only"
+typedef    ^    OutputType             ReKi                             WriteOutput     {:}     -     -   "System outputs"
 
 # ..... AeroDyn_Inflow data ...................................................................................................
 # NOTE: useful for driver/wrapper of this module
