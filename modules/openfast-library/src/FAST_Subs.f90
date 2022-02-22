@@ -1423,7 +1423,7 @@ END FUNCTION GetVersion
 SUBROUTINE FAST_ProgStart(ThisProgVer)
    TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
 
-   ! ... Initialize NWTC Library (open console, set pi constants) ...
+   ! ... Initialize NWTC Library
    ! sets the pi constants, open console for output, etc...
    CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
 
