@@ -975,8 +975,7 @@ N_Global = N_Global+1
 
 
    ! Transfer motions to input meshes
-   call Set_MotionMesh( ErrStat2, ErrMsg2 )           ! update motion mesh with input motion arrays
-      if (Failed())  return
+   call Set_MotionMesh( ErrStat2, ErrMsg2 );    if (Failed())  return
    call AD_SetInputMotion( u(1), &
             HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
             NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
@@ -1056,8 +1055,12 @@ END SUBROUTINE AeroDyn_Inflow_C_CalcOutput
 !! reset to those if we are repeating a timestep (normally this would be handled by the OF glue code, but since
 !! the states are not passed across the interface, we must handle them here).
 SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
-                  NumMeshPts_C, MeshPos_C, MeshOri_C, MeshVel_C, MeshAcc_C,   &
-                  ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_UpdateStates')
+               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,     &
+               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,     &
+               BldRootPos_C, BldRootOri_C, BldRootVel_C, BldRootAcc_C, &
+               NumMeshPts_C,  &
+               MeshPos_C,  MeshOri_C,  MeshVel_C,  MeshAcc_C,  &
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_UpdateStates')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_UpdateStates
@@ -1065,11 +1068,24 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
 #endif
    real(c_double),            intent(in   )  :: Time_C
    real(c_double),            intent(in   )  :: TimeNext_C
-   integer(c_int),            intent(in   )  :: NumMeshPts_C                 !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: MeshPos_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [x,y,z,Rx,Ry,Rz]          -- positions (global)
-   real(c_double),            intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )  !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
-   real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Vx,Vy,Vz,RVx,RVy,RVz]    -- velocities (global)
-   real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )  !< A 6xNumMeshPts_C array [Ax,Ay,Az,RAx,RAy,RAz]    -- accelerations (global)
+   real(c_float),             intent(in   )  :: HubPos_C( 3 )                 !< Hub position
+   real(c_double),            intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
+   real(c_float),             intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
+   real(c_float),             intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
+   real(c_float),             intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
+   real(c_double),            intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
+   real(c_float),             intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
+   real(c_float),             intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
+   real(c_float),             intent(in   )  :: BldRootPos_C( 3*NumBlades )   !< Blade root positions
+   real(c_double),            intent(in   )  :: BldRootOri_C( 9*NumBlades )   !< Blade root orientations
+   real(c_float),             intent(in   )  :: BldRootVel_C( 6*NumBlades )   !< Blade root velocities
+   real(c_float),             intent(in   )  :: BldRootAcc_C( 6*NumBlades )   !< Blade root accelerations
+   ! Blade mesh nodes
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
+   real(c_double),            intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+   real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+   real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
    integer(c_int),            intent(  out)  :: ErrStat_C
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
 
@@ -1156,14 +1172,12 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    tmpBldPtMeshAcc(1:6,1:NumMeshPts)      = reshape( real(MeshAcc_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
 
    ! Transfer motions to input meshes
-   call Set_MotionMesh( ErrStat2, ErrMsg2 )                    ! update motion mesh with input motion arrays
-      if (Failed())  return
-!FIXME:
-!   call AD_SetInputMotion( u(1), &
-!            HubPos_C,       HubOri_C,       HubVel_C,         HubAcc_C,         &
-!            NacPos_C,   NacOri_C,   NacVel_C,     NacAcc_C,     &
-!            BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
-!            ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+   call Set_MotionMesh( ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AD_SetInputMotion( u(1), &
+            HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
+            NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
+            BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
+            ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
       if (Failed())  return
 
 
@@ -1416,7 +1430,6 @@ subroutine AD_SetInputMotion( u_local,             &
    enddo
 end subroutine AD_SetInputMotion
 
-
 !> Map the loads of the output mesh to the intermediate output mesh.
 !! This routine is operating on module level data, hence few inputs
 subroutine AD_TransferLoads( u_local, y_local, ErrStat3, ErrMsg3 )
@@ -1430,8 +1443,9 @@ subroutine AD_TransferLoads( u_local, y_local, ErrStat3, ErrMsg3 )
    do i=1,NumBlades
       if ( y_local%AD%rotors(1)%BladeLoad(i)%Committed ) then
          if (debugverbose > 4) call MeshPrintInfo( CU, y_local%AD%rotors(1)%BladeLoad(i) )
-         call Transfer_Line2_to_Point( y%AD%rotors(1)%BladeLoad(i), AD_BldPtLoadMesh_tmp, Map_AD_BldLoad_P_2_BldPtLoad(i), ErrStat3, ErrMsg3, u_local%AD%rotors(1)%BladeMotion(i), AD_BldPtMotionMesh )
-            if (ErrStat3 >= AbortErrLev)  return
+         call Transfer_Line2_to_Point( y%AD%rotors(1)%BladeLoad(i), AD_BldPtLoadMesh_tmp, Map_AD_BldLoad_P_2_BldPtLoad(i), &
+                  ErrStat3, ErrMsg3, u_local%AD%rotors(1)%BladeMotion(i), AD_BldPtMotionMesh )
+         if (ErrStat3 >= AbortErrLev)  return
          AD_BldPtLoadMesh%Force  = AD_BldPtLoadMesh%Force  + AD_BldPtLoadMesh_tmp%Force
          AD_BldPtLoadMesh%Moment = AD_BldPtLoadMesh%Moment + AD_BldPtLoadMesh_tmp%Moment
       endif
