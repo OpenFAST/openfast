@@ -89,7 +89,7 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    ! --- Initialize grouped outputs
    !TODO: assumes one rotor
-   p%NumOuts = p%AD%rotors(1)%NumOuts + m%IW%p%NumOuts
+   p%NumOuts = p%AD%rotors(1)%NumOuts + p%AD%rotors(1)%BldNd_TotNumOuts + m%IW%p%NumOuts
    call AllocAry(y%WriteOutput, p%NumOuts, 'WriteOutput', errStat2, errMsg2); if (Failed()) return
 
    ! --- Initialize outputs
@@ -265,7 +265,7 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
 
    ! --- CalcOutputs for IW (Sets u_AD%rotors(:)%InflowOnBlade, etc,  and m%IW%y)
    ! TODO TODO TODO Uncomment
-   !call ADI_ADIW_Solve(t, u%AD, OtherState%AD, m%IW%u, m%IW, p%storeHHVel, errStat2, errMsg2)
+   call ADI_ADIW_Solve(t, u%AD, OtherState%AD, m%IW%u, m%IW, p%storeHHVel, errStat2, errMsg2)
    y%IW_WriteOutput(:) = m%IW%y%WriteOutput(:)
 
 
@@ -285,8 +285,8 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
 
    ! --- Set outputs
 !TODO: this assumes one rotor!!!
-   y%WriteOutput(1:p%AD%rotors(1)%NumOuts) = y%AD%rotors(1)%WriteOutput(1:p%AD%rotors(1)%NumOuts)
-   y%WriteOutput(p%AD%rotors(1)%NumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
+   y%WriteOutput(1:p%AD%rotors(1)%NumOuts+p%AD%rotors(1)%BldNd_TotNumOuts) = y%AD%rotors(1)%WriteOutput(1:p%AD%rotors(1)%NumOuts+p%AD%rotors(1)%BldNd_TotNumOuts)
+   y%WriteOutput(p%AD%rotors(1)%NumOuts+p%AD%rotors(1)%BldNd_TotNumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
 
 contains
 
@@ -560,14 +560,14 @@ subroutine ADI_AD_InputSolve_IfW(u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
          end do      
       end if
       ! Nacelle
-      if (u_AD%rotors(iWT)%NacelleMotion%NNodes > 0) then
+      if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
          u_AD%rotors(iWT)%InflowOnNacelle(:) = y_IfW%VelocityUVW(:,node)
          node = node + 1
       else
          u_AD%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
       end if
       ! Hub 
-!      if (u_AD%HubMotion%NNodes > 0) then
+!      if (u_AD%HubMotion%Committed) then
 !         u_AD%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
 !         node = node + 1
 !      else
