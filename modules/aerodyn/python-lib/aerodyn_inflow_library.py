@@ -85,8 +85,8 @@ class AeroDynInflowLib(CDLL):
         #       Also may want to convert this at some point to C_NULL_CHAR
         #       delimeter instead of fixed width.  Future problem though.
         # Number of channel names may exceeed 5000
-        self._channel_names_c = create_string_buffer(20 * 2000)
-        self._channel_units_c = create_string_buffer(20 * 2000)
+        self._channel_names_c = create_string_buffer(20 * 8000)
+        self._channel_units_c = create_string_buffer(20 * 8000)
 
         # Initial environmental conditions
         #self.MHK = false    #  MHK turbine type switch -- disabled for now

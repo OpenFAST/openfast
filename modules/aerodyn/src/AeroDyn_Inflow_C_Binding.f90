@@ -58,7 +58,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !        instead of fixed width.
    !     -  NOTE: AD:  MaxOutputs = 1291
    !              IfW: MaxOutputs = 59
-   integer(IntKi),   parameter            :: MaxADIOutputs = 2000
+   integer(IntKi),   parameter            :: MaxADIOutputs = 8000
 
    !------------------------------------------------------------------------------------
    !  Data storage
@@ -801,7 +801,7 @@ CONTAINS
 
       ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
       ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-      VTK_tWidth = max(9, CEILING( log10( TMax / dT_Global ) ) + 1) ! NOTE: at least 9, if user changes dt/and tmax
+      VTK_tWidth = CEILING( log10( TMax / dT_Global ) ) + 1
 
       ! Write reference meshes
       call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), AD_BldPtMotionMesh, trim(VTK_OutFileRoot)//'.BldPtMotionMesh', ErrStat3, ErrMsg3)
@@ -964,8 +964,6 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
 
    ! Convert the inputs from C to Fortrn
    Time = REAL(Time_C,DbKi)
-!FIXME: this is temporary until UpdateStates is functional
-N_Global = N_Global+1
 
    ! Reshape mesh position, orientation, velocity, acceleration
    tmpBldPtMeshPos(1:3,1:NumMeshPts)      = reshape( real(MeshPos_C(1:3*NumMeshPts),ReKi), (/3,  NumMeshPts/) )
