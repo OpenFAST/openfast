@@ -107,32 +107,28 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call ADsk_ParsePrimaryFileData( InitInp, p%RootName, Interval, FileInfo_In, InputFileData, UnEc, ErrStat2, ErrMsg2 )
    if (Failed()) return;
 
-call SetErrStat(ErrID_Fatal,'Have not set parameters from init or checked primary file data yet',ErrStat,ErrMsg,RoutineName); return
-
    ! Verify all the necessary initialization and input file data
-!   CALL ADskInput_ValidateProcessInitData( InitInp, Interval, InputFileData, ErrStat2, ErrMsg2 )
-!   if (Failed()) return;
+   CALL ADskInput_ValidateInput( InitInp, InputFileData, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
+
+   ! Set parameters
+   CALL ADskInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
+
+   ! For testing:
+   !call WriteAeroTab(p%AeroTable,Cu)
+
+      ! Placeholder empty vars for things we don't use, but the framework requires 
+   xd%DummyDiscreteState      = 0.0_ReKi
+   z%DummyConstrState         = 0.0_ReKi
+   OtherState%DummyOtherState = 0.0_IntKi
+   m%DummyMiscVar             = 0.0_IntKi
 
 
-!FIXME: see if we requested something different for time
-      ! Define parameters here:
-   p%DT        = Interval
-   p%numOuts   = InputFileData%NumOuts
-
-      ! Define initial system states here:
-!   x%DummyContState           = 0.0_ReKi
-!   xd%DummyDiscState          = 0.0_ReKi
-!   z%DummyConstrState         = 0.0_ReKi
-!   OtherState%DummyOtherState = 0.0_ReKi
-
-   ! Define optimization variables here:
-   m%DummyMiscVar          = 0.0_ReKi
+call SetErrStat(ErrID_Fatal,'Need to set inputs and outputs',ErrStat,ErrMsg,RoutineName); return
 
    ! Define initial guess for the system inputs here:
 !   u%DummyInput = 0.0_ReKi
-
-
-!   call SetOutParams()
 
    ! Define system output initializations (set up mesh) here:
    call AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 );       if (Failed()) return;

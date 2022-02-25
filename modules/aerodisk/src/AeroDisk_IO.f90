@@ -425,10 +425,15 @@ subroutine Get_RtAeroTableData(Info,LineNo,Idx,AeroTable,ErrStat,ErrMsg,UnEc)
    if (AeroTable%N_VRel  > 0_IntKi) call GetTabIndexVals( TmpTab(:,Idx%ColVRel ),'VRel' ,AeroTable%N_VRel ,AeroTable%VRel , ErrStat2, ErrMsg2); if (Failed()) return
    if (AeroTable%N_Pitch > 0_IntKi) call GetTabIndexVals( TmpTab(:,Idx%ColPitch),'Pitch',AeroTable%N_Pitch,AeroTable%Pitch, ErrStat2, ErrMsg2); if (Failed()) return
    if (AeroTable%N_Skew  > 0_IntKi) call GetTabIndexVals( TmpTab(:,Idx%ColSkew ),'Skew' ,AeroTable%N_Skew ,AeroTable%Skew , ErrStat2, ErrMsg2); if (Failed()) return
-
+   
    ! Now populate matrix -- read each line and put in correct table entry location
    call PopulateAeroTabs(AeroTable,Mask,Idx,TmpTab,NumRows,NumCols,ErrStat2,ErrMsg2); if (Failed()) return
    call CheckAeroTabs(AeroTable,Mask,ErrStat2,ErrMsg2);    if (Failed()) return
+
+   ! Now convert RtSpd from rpm to rad/s, and Pitch and Skew from deg to rad
+   if (AeroTable%N_RtSpd > 0_IntKi)    AeroTable%RtSpd = (AeroTable%RtSpd * Pi_S)/30.0_SiKi
+   if (AeroTable%N_Pitch > 0_IntKi)    AeroTable%Pitch = (AeroTable%Pitch * Pi_S)/180.0_SiKi
+   if (AeroTable%N_Skew  > 0_IntKi)    AeroTable%Skew  = (AeroTable%Skew  * Pi_S)/180.0_SiKi
 
    call Cleanup()
 
@@ -644,38 +649,201 @@ contains
 END SUBROUTINE UniqueRealValues
 
 
-!> validate and process input file data (some was done during parsing of input file)
-subroutine ADsk_ValidateProcessInput( InitInp, InputFileData, ErrStat, ErrMsg )
+!> Check inputdata
+subroutine ADskInput_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    type(ADsk_InitInputType),  intent(in   )  :: InitInp              !< Input data for initialization
-   type(ADsk_InputFile),      intent(inout)  :: InputFileData        !< The data for initialization
+   type(ADsk_InputFile),      intent(in   )  :: InputFileData        !< The data for initialization
    integer(IntKi),            intent(  out)  :: ErrStat              !< Error status  from this subroutine
    character(*),              intent(  out)  :: ErrMsg               !< Error message from this subroutine
-   integer(IntKi)                            :: ErrStat2             !< Temporary error status  for subroutine and function calls
-   character(ErrMsgLen)                      :: ErrMsg2              !< Temporary error message for subroutine and function calls
-   integer(IntKi)                            :: I                    !< Generic counter
-   character(*),              parameter      :: RoutineName="ADsk_ValidateInput"
-   integer(IntKi)                            :: IOS                  !< Temporary error status
+   character(*),              parameter      :: RoutineName="ADskInput_ValidateInput"
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-end subroutine ADsk_ValidateProcessInput
+   if (InputFileData%DT       <= 0.0_DbKi)   call SetErrStat(ErrID_Fatal,'DT must not be negative.',     ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%AirDens  <= 0.0_ReKi)   call SetErrStat(ErrID_Fatal,'AirDens must not be negative.',ErrStat,ErrMsg,RoutineName) 
+   if (InputFileData%RotorRad <= 0.0_ReKi)   call SetErrStat(ErrID_Fatal,'RotorRad must not be negative.',ErrStat,ErrMsg,RoutineName) 
 
+   ! Some sanity checks AeroTable
+   if (InputFileData%AeroTable%N_TSR > 0_IntKi) then
+      if (minval(InputFileData%AeroTable%TSR) <= 0.0_SiKi) then
+         call SetErrStat(ErrID_Fatal,'All TSR values in table must be postive.',ErrStat,ErrMsg,RoutineName)
+      endif
+   endif
+   if (InputFileData%AeroTable%N_RtSpd > 0_IntKi) then
+      if (minval(InputFileData%AeroTable%RtSpd) <= 0.0_SiKi) then
+         call SetErrStat(ErrID_Fatal,'All RtSpd values in table must be postive.',ErrStat,ErrMsg,RoutineName)
+      endif
+   endif
+   if (InputFileData%AeroTable%N_VRel > 0_IntKi) then
+      if (minval(InputFileData%AeroTable%VRel) < 0.0_SiKi ) then
+         call SetErrStat(ErrID_Fatal,'All VRel values in table must be postive.',ErrStat,ErrMsg,RoutineName)
+      endif
+   endif
+   if (InputFileData%AeroTable%N_Pitch > 0_IntKi) then   ! input table as deg, already converted to rad
+      if (minval(InputFileData%AeroTable%Pitch) <= -Pi_S .or. maxval(InputFileData%AeroTable%Pitch) >= Pi_S) then
+         call SetErrStat(ErrID_Fatal,'All Pitch values in table must be between -180 and 180 degrees.',ErrStat,ErrMsg,RoutineName)
+      endif
+   endif
+   if (InputFileData%AeroTable%N_Skew > 0_IntKi) then    ! input table as deg, already converted to rad
+      if (minval(InputFileData%AeroTable%Skew) <= 0.0_SiKi .or. maxval(InputFileData%AeroTable%Skew) >= Pi_S) then
+         call SetErrStat(ErrID_Fatal,'All Skew values in table must be between 0 and 180 degrees.',ErrStat,ErrMsg,RoutineName)
+      endif
+   endif
+
+end subroutine ADskInput_ValidateInput
+
+
+!> validate and process input file data (some was done during parsing of input file)
+subroutine ADskInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat, ErrMsg )
+   type(ADsk_InitInputType),  intent(in   )  :: InitInp              !< Input data for initialization
+   real(DbKi),                intent(inout)  :: Interval             !< Coupling interval in seconds
+   type(ADsk_InputFile),      intent(inout)  :: InputFileData        !< The data for initialization
+   type(ADsk_ParameterType),  intent(inout)  :: p                    !<
+   integer(IntKi),            intent(  out)  :: ErrStat              !< Error status  from this subroutine
+   character(*),              intent(  out)  :: ErrMsg               !< Error message from this subroutine
+   integer(IntKi)                            :: ErrStat2             !< Temporary error status  for subroutine and function calls
+   character(ErrMsgLen)                      :: ErrMsg2              !< Temporary error message for subroutine and function calls
+   character(*),              parameter      :: RoutineName="ADskInput_SetParameters"
+
+      ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! Set parameters
+   p%DT        = InputFileData%DT
+   Interval    = p%DT                        ! Tell glue code what we want for DT
+   p%numOuts   = InputFileData%NumOuts
+   p%RootName  = InitInp%RootName
+   p%RotorRad  = InputFileData%RotorRad
+   p%AirDens   = InputFileData%AirDens
+
+      ! Derived parameter
+   p%halfRhoA  = 0.5_ReKi * p%AirDens * Pi * p%RotorRad*p%RotorRad
+
+      ! Table of values
+   p%AeroTable%N_TSR   = InputFileData%AeroTable%N_TSR
+   p%AeroTable%N_RtSpd = InputFileData%AeroTable%N_RtSpd
+   p%AeroTable%N_VRel  = InputFileData%AeroTable%N_VRel
+   p%AeroTable%N_Pitch = InputFileData%AeroTable%N_Pitch
+   p%AeroTable%N_Skew  = InputFileData%AeroTable%N_Skew
+   if (allocated( InputFileData%AeroTable%TSR  ))  call move_alloc( InputFileData%AeroTable%TSR,   p%AeroTable%TSR   )
+   if (allocated( InputFileData%AeroTable%RtSpd))  call move_alloc( InputFileData%AeroTable%RtSpd, p%AeroTable%RtSpd )
+   if (allocated( InputFileData%AeroTable%VRel ))  call move_alloc( InputFileData%AeroTable%VRel,  p%AeroTable%VRel  )
+   if (allocated( InputFileData%AeroTable%Pitch))  call move_alloc( InputFileData%AeroTable%Pitch, p%AeroTable%Pitch )
+   if (allocated( InputFileData%AeroTable%Skew ))  call move_alloc( InputFileData%AeroTable%Skew,  p%AeroTable%Skew  )
+   if (allocated( InputFileData%AeroTable%C_Fx ))  call move_alloc( InputFileData%AeroTable%C_Fx,  p%AeroTable%C_Fx  )
+   if (allocated( InputFileData%AeroTable%C_Fy ))  call move_alloc( InputFileData%AeroTable%C_Fy,  p%AeroTable%C_Fy  )
+   if (allocated( InputFileData%AeroTable%C_Fz ))  call move_alloc( InputFileData%AeroTable%C_Fz,  p%AeroTable%C_Fz  )
+   if (allocated( InputFileData%AeroTable%C_Mx ))  call move_alloc( InputFileData%AeroTable%C_Mx,  p%AeroTable%C_Mx  )
+   if (allocated( InputFileData%AeroTable%C_My ))  call move_alloc( InputFileData%AeroTable%C_My,  p%AeroTable%C_My  )
+   if (allocated( InputFileData%AeroTable%C_Mz ))  call move_alloc( InputFileData%AeroTable%C_Mz,  p%AeroTable%C_Mz  )
+
+      ! Set the outputs
+   call SetOutParam(InputFileData%OutList, p, ErrStat, ErrMsg )
+end subroutine ADskInput_SetParameters
+
+
+!> Write the table out to a whatever UnOut is (as long as > 0).
+subroutine WriteAeroTab(Aero, UnOut)
+   type(ADsk_AeroTable),   intent(in   )  :: Aero
+   integer(IntKi),         intent(in   )  :: UnOut
+   integer(IntKi)                         :: i1,i2,i3,i4,i5       !< loop counters
+   character(*),           parameter      :: RoutineName="ADskInput_SetParameters"
+   if (UnOut <= 0_IntKi) return
+   ! Write header info
+   write(UnOut,'(A)')   '======================================='
+   write(UnOut,'(A)')   'AeroDisk Actuator Disk Properties table'
+   write(UnOut,'(A)')   '  NOTE: the units correspond to units used internally within code, not units of input'
+   if (Aero%N_TSR   > 0_IntKi) then
+      write(UnOut,'(A12,I5,A7)') '     TSR    ',Aero%N_TSR,' values'
+   else
+      write(UnOut,'(A)')   '     TSR    ---- unused ----'
+   endif
+   if (Aero%N_RtSpd > 0_IntKi) then
+      write(UnOut,'(A12,I5,A7)') '     RtSpd  ',Aero%N_RtSpd,' values'
+   else
+      write(UnOut,'(A)')   '     RtSpd  ---- unused ----'
+   endif
+   if (Aero%N_VRel  > 0_IntKi) then
+      write(UnOut,'(A12,I5,A7)') '     VRel   ',Aero%N_VRel,' values'
+   else
+      write(UnOut,'(A)')   '     VRel   ---- unused ----'
+   endif
+   if (Aero%N_Pitch > 0_IntKi) then
+      write(UnOut,'(A12,I5,A7)') '     Pitch  ',Aero%N_Pitch,' values'
+   else
+      write(UnOut,'(A)')   '     Pitch  ---- unused ----'
+   endif
+   if (Aero%N_Skew  > 0_IntKi) then
+      write(UnOut,'(A12,I5,A7)') '     Skew   ',Aero%N_Skew,' values'
+   else
+      write(UnOut,'(A)')   '     Skew   ---- unused ----'
+   endif
+   ! Table header
+   if (Aero%N_TSR   > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      TSR      '
+   if (Aero%N_Skew  > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      RtSpd    '
+   if (Aero%N_VRel  > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      VRel     '
+   if (Aero%N_Pitch > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      Pitch    '
+   if (Aero%N_Skew  > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      Skew     '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      C_fx     '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      C_fy     '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      C_fz     '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      C_mx     '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      C_my     '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      C_mz     '
+   write(UnOut,'(A)') ''
+   if (Aero%N_TSR   > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      (-)      '
+   if (Aero%N_Skew  > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      (rad/s)  '
+   if (Aero%N_VRel  > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      (m/s)    '
+   if (Aero%N_Pitch > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      (rad)    '
+   if (Aero%N_Skew  > 0_IntKi)   write(UnOut,'(A15)',ADVANCE='NO')   '      (rad)    '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      (-)      '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      (-)      '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      (-)      '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      (-)      '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      (-)      '
+   write(UnOut,'(A15)',ADVANCE='NO')   '      (-)      '
+   write(UnOut,'(A)') ''
+   ! Table itself
+   do i1=1,max(1,Aero%N_TSR  )
+      do i2=1,max(1,Aero%N_Skew )
+         do i3=1,max(1,Aero%N_VRel )
+            do i4=1,max(1,Aero%N_Pitch)
+               do i5=1,max(1,Aero%N_Skew )
+                  if (Aero%N_TSR  > 0_IntKi) write(UnOut,'(2x,f13.6)',ADVANCE='NO')  Aero%TSR  (i1)
+                  if (Aero%N_Skew > 0_IntKi) write(UnOut,'(2x,f13.6)',ADVANCE='NO')  Aero%Skew (i2)
+                  if (Aero%N_VRel > 0_IntKi) write(UnOut,'(2x,f13.6)',ADVANCE='NO')  Aero%VRel (i3)
+                  if (Aero%N_Pitch> 0_IntKi) write(UnOut,'(2x,f13.6)',ADVANCE='NO')  Aero%Pitch(i4)
+                  if (Aero%N_Skew > 0_IntKi) write(UnOut,'(2x,f13.6)',ADVANCE='NO')  Aero%Skew (i5)
+                  write(UnOut,   '(f13.6)',ADVANCE='NO')    Aero%C_Fx(i1,i2,i3,i4,i5)
+                  write(UnOut,'(2x,f13.6)',ADVANCE='NO')    Aero%C_Fy(i1,i2,i3,i4,i5)
+                  write(UnOut,'(2x,f13.6)',ADVANCE='NO')    Aero%C_Fz(i1,i2,i3,i4,i5)
+                  write(UnOut,'(2x,f13.6)',ADVANCE='NO')    Aero%C_Mx(i1,i2,i3,i4,i5)
+                  write(UnOut,'(2x,f13.6)',ADVANCE='NO')    Aero%C_My(i1,i2,i3,i4,i5)
+                  write(UnOut,'(2x,f13.6)',ADVANCE='NO')    Aero%C_Mz(i1,i2,i3,i4,i5)
+                  write(UnOut,'(A)') ''
+               enddo
+            enddo
+         enddo
+      enddo
+   enddo
+end subroutine WriteAeroTab
 
 
 !**********************************************************************************************************************************
 ! NOTE: The following lines of code were generated by a Matlab script called "Write_ChckOutLst.m"
-!      using the parameters listed in the "OutListParameters.xlsx" Excel file. Any changes to these
-!      lines should be modified in the Matlab script and/or Excel worksheet as necessary.
+!      using the parameters listed in the "OutListParameters.xlsx" Excel file. Any changes to these 
+!      lines should be modified in the Matlab script and/or Excel worksheet as necessary. 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a
+!> This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a 
 !! warning if any of the channels are not available outputs from the module.
 !!  It assigns the settings for OutParam(:) (i.e, the index, name, and units of the output channels, WriteOutput(:)).
 !!  the sign is set to 0 if the channel is invalid.
 !! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
-!!
-!! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 17-Feb-2022 14:08:12.
+!! 
+!! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 24-Feb-2022 16:52:56.
 SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -702,21 +870,21 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(34) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "ADCP     ","ADCQ     ","ADCT     ","ADFX     ","ADFXI    ","ADFY     ","ADFYI    ","ADFZ     ", &
-                               "ADFZI    ","ADMX     ","ADMXI    ","ADMY     ","ADMYI    ","ADMZ     ","ADMZI    ","ADPOWER  ", &
-                               "ADSKEW   ","ADSPEED  ","ADSTVX   ","ADSTVXI  ","ADSTVY   ","ADSTVYI  ","ADSTVZ   ","ADSTVZI  ", &
-                               "ADTPITCH ","ADTSR    ","ADVREL   ","ADVWINDX ","ADVWINDXI","ADVWINDY ","ADVWINDYI","ADVWINDZ ", &
+                               "ADFZI    ","ADMX     ","ADMXI    ","ADMY     ","ADMYI    ","ADMZ     ","ADMZI    ","ADPITCH  ", &
+                               "ADPOWER  ","ADSKEW   ","ADSPEED  ","ADSTVX   ","ADSTVXI  ","ADSTVY   ","ADSTVYI  ","ADSTVZ   ", &
+                               "ADSTVZI  ","ADTSR    ","ADVREL   ","ADVWINDX ","ADVWINDXI","ADVWINDY ","ADVWINDYI","ADVWINDZ ", &
                                "ADVWINDZI","ADYAWERR "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(34) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                      ADCp ,      ADCq ,      ADCt ,      ADFx ,     ADFxi ,      ADFy ,     ADFyi ,      ADFz , &
-                                    ADFzi ,      ADMx ,     ADMxi ,      ADMy ,     ADMyi ,      ADMz ,     ADMzi ,   ADPower , &
-                                   ADSkew ,   ADSpeed ,    ADSTVx ,   ADSTVxi ,    ADSTVy ,   ADSTVyi ,    ADSTVz ,   ADSTVzi , &
-                                 ADTPitch ,     ADTSR ,    ADVRel ,  ADVWindx , ADVWindxi ,  ADVWindy , ADVWindyi ,  ADVWindz , &
+                                    ADFzi ,      ADMx ,     ADMxi ,      ADMy ,     ADMyi ,      ADMz ,     ADMzi ,   ADPitch , &
+                                  ADPower ,    ADSkew ,   ADSpeed ,    ADSTVx ,   ADSTVxi ,    ADSTVy ,   ADSTVyi ,    ADSTVz , &
+                                  ADSTVzi ,     ADTSR ,    ADVRel ,  ADVWindx , ADVWindxi ,  ADVWindy , ADVWindyi ,  ADVWindz , &
                                 ADVWindzi ,  ADYawErr /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(34) =  (/  &  ! This lists the units corresponding to the allowed parameters
                                "(-)  ","(-)  ","(-)  ","(N)  ","(N)  ","(N)  ","(N)  ","(N)  ", &
-                               "(N)  ","(N-m)","(N-m)","(N-m)","(N-m)","(N-m)","(N-m)","(W)  ", &
-                               "(deg)","(rpm)","(m/s)","(m/s)","(m/s)","(m/s)","(m/s)","(m/s)", &
-                               "(deg)","(-)  ","(m/s)","(m/s)","(m/s)","(m/s)","(m/s)","(m/s)", &
+                               "(N)  ","(N-m)","(N-m)","(N-m)","(N-m)","(N-m)","(N-m)","(deg)", &
+                               "(W)  ","(deg)","(rpm)","(m/s)","(m/s)","(m/s)","(m/s)","(m/s)", &
+                               "(m/s)","(-)  ","(m/s)","(m/s)","(m/s)","(m/s)","(m/s)","(m/s)", &
                                "(m/s)","(deg)"/)
 
 
