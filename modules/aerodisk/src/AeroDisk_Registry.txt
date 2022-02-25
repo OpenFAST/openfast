@@ -109,6 +109,7 @@ typedef  ^        ParameterType        ReKi              AirDens           -  - 
 typedef  ^        ParameterType        IntKi             NumOuts           -  - -   "Number of outputs"   -
 typedef  ^        ParameterType        ReKi              halfRhoA          -  - -   "half air density times rotor swept area" "kg/m"
 typedef  ^        ParameterType        ADsk_AeroTable    AeroTable         -  - -   "Data table" -
+typedef  ^        ParameterType        LOGICAL           UseTSR            -  .false. -   "Use TSR values from table instead of VRel + RtSpd" -
 typedef  ^        ParameterType        OutParmType       OutParam         {:} - -   "Names and units (and other characteristics) of all requested output parameters"  -
 
 # ..... Misc/Optimization variables.................................................................................................

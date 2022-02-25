@@ -139,8 +139,12 @@ contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed =  ErrStat >= AbortErrLev
-!        if (Failed) call CleanUp()
+      if (Failed) call CleanUp()
    end function Failed
+   subroutine Cleanup()
+      ! Only do this on a fault.  Leave open for calling routine in case we want to write anything else.
+      if (UnEc > 0_IntKi)  close(UnEc)
+   end subroutine Cleanup
    subroutine GetVarNamePos(FileName,LineNo,ChAry,NameToCheck,ColNum,ErrStat3,ErrMsg3)
       character(*),           intent(in   )  :: FileName
       integer(IntKi),         intent(in   )  :: LineNo
@@ -661,9 +665,11 @@ subroutine ADskInput_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! InitInput checks
    if (InputFileData%DT       <= 0.0_DbKi)   call SetErrStat(ErrID_Fatal,'DT must not be negative.',     ErrStat,ErrMsg,RoutineName)
    if (InputFileData%AirDens  <= 0.0_ReKi)   call SetErrStat(ErrID_Fatal,'AirDens must not be negative.',ErrStat,ErrMsg,RoutineName) 
    if (InputFileData%RotorRad <= 0.0_ReKi)   call SetErrStat(ErrID_Fatal,'RotorRad must not be negative.',ErrStat,ErrMsg,RoutineName) 
+   if (InitInp%Linearize)  call SetErrStat(ErrID_Fatal,'AeroDisk cannot perform linearization analysis.',ErrStat,ErrMsg,RoutineName)
 
    ! Some sanity checks AeroTable
    if (InputFileData%AeroTable%N_TSR > 0_IntKi) then
@@ -692,6 +698,22 @@ subroutine ADskInput_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
       endif
    endif
 
+   ! Either TSR or RtSpd+VRel columns must be provided
+   if (InputFileData%AeroTable%N_TSR > 1_IntKi) then
+      if (InputFileData%AeroTable%N_RtSpd > 1_IntKi .or. InputFileData%AeroTable%N_VRel > 1_IntKi) then
+         call SetErrStat(ErrID_Fatal,'TSR values present in table along with RtSpd or VRel values. '//NewLine// &
+                  ' --> Either RtSpd and VRel values must be in the table, or TSR values may be present.'//NewLine// &
+                  '       To skip columns, you may enter "0" for the column index and leave the table values.',ErrStat,ErrMsg,RoutineName)
+         return
+      endif
+   else
+      if (InputFileData%AeroTable%N_RtSpd < 2_IntKi .and. InputFileData%AeroTable%N_VRel < 2_IntKi) then
+         call SetErrStat(ErrID_Fatal,'TSR values NOT present in table, but RtSpd and VRel values are not both present. '//NewLine// &
+                  ' --> Either RtSpd and VRel values must be in the table, or TSR values may be present.'//NewLine// &
+                  '       To skip columns, you may enter "0" for the column index and leave the table values.',ErrStat,ErrMsg,RoutineName)
+         return
+      endif
+   endif
 end subroutine ADskInput_ValidateInput
 
 
@@ -718,6 +740,7 @@ subroutine ADskInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat
    p%RootName  = InitInp%RootName
    p%RotorRad  = InputFileData%RotorRad
    p%AirDens   = InputFileData%AirDens
+   p%UseTSR    = .false.      ! Reset below if N_TSR>1
 
       ! Derived parameter
    p%halfRhoA  = 0.5_ReKi * p%AirDens * Pi * p%RotorRad*p%RotorRad
@@ -739,6 +762,9 @@ subroutine ADskInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat
    if (allocated( InputFileData%AeroTable%C_Mx ))  call move_alloc( InputFileData%AeroTable%C_Mx,  p%AeroTable%C_Mx  )
    if (allocated( InputFileData%AeroTable%C_My ))  call move_alloc( InputFileData%AeroTable%C_My,  p%AeroTable%C_My  )
    if (allocated( InputFileData%AeroTable%C_Mz ))  call move_alloc( InputFileData%AeroTable%C_Mz,  p%AeroTable%C_Mz  )
+
+      ! Use the TSR values
+   if (p%AeroTable%N_TSR > 1_IntKi)    p%UseTSR = .true.
 
       ! Set the outputs
    call SetOutParam(InputFileData%OutList, p, ErrStat, ErrMsg )
@@ -852,7 +878,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       ! Passed variables
 
    CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list out user-requested outputs
-   TYPE(ADsk_ParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   TYPE(ADsk_ParameterType),  INTENT(INOUT)  :: p                                 !< The module parameters
    INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
    CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
 
