@@ -115,49 +115,106 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL ADskInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat2, ErrMsg2 )
    if (Failed()) return;
 
-   ! For testing:
+   ! For diagnostic purposes.  If we add a summary file, use this to write table
    !call WriteAeroTab(p%AeroTable,Cu)
 
-      ! Placeholder empty vars for things we don't use, but the framework requires 
-   xd%DummyDiscreteState      = 0.0_ReKi
-   z%DummyConstrState         = 0.0_ReKi
-   OtherState%DummyOtherState = 0.0_IntKi
-   m%DummyMiscVar             = 0.0_IntKi
 
+   ! Set inputs
+   call Init_U(ErrStat2,ErrMsg2);   if (Failed())  return
 
-call SetErrStat(ErrID_Fatal,'Need to set inputs and outputs',ErrStat,ErrMsg,RoutineName); return
+   ! Set outputs
+   call Init_Y(ErrStat2,ErrMsg2);   if (Failed())  return
 
-   ! Define initial guess for the system inputs here:
-!   u%DummyInput = 0.0_ReKi
+   ! Set InitOutputs
+   call Init_InitY(ErrStat2,ErrMsg2);  if (Failed())  return
 
-   ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 );       if (Failed()) return;
-   y%WriteOutput = 0
-
-   ! Define initialization-routine output here:
-   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
-   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
-   InitOut%WriteOutputHdr = (/ 'Time   ', 'Column2' /)
-   InitOut%WriteOutputUnt = (/ '(s)',     '(-)'     /)
-
-
-!FIXME: any logic around this?
-   !Interval = p%DeltaT
-
-
-   if (InitInp%Linearize) then
-      CALL SetErrStat( ErrID_Fatal, 'AeroDisk cannot perform linearization analysis.', ErrStat, ErrMsg, RoutineName)
-   end if
-
-call SetErrStat(ErrID_Fatal, 'Stopping early',ErrStat,ErrMsg,RoutineName); return
+   ! Set some other stuff that the framework requires
+   call Init_OtherStuff()
 
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
-        !if (Failed) call CleanUp()
+        if (Failed) call CleanUp()
    end function Failed
 
+   subroutine Cleanup()
+      if (UnEc > 0_IntKi)  close (UnEc)
+   end subroutine Cleanup
+
+   !> Initialize the inputs in u
+   subroutine Init_U(ErrStat3,ErrMsg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      ! HubMotion mesh
+      call MeshCreate ( BlankMesh  = u%HubMotion  &
+                     ,IOS       = COMPONENT_INPUT &
+                     ,Nnodes    = 1               &
+                     ,ErrStat   = ErrStat3        &
+                     ,ErrMess   = ErrMsg3         &
+                     ,Orientation     = .true.    &
+                     ,TranslationDisp = .true.    &
+                     ,RotationVel     = .true.    &
+                     )
+         if (errStat3 >= AbortErrLev) return
+      call MeshPositionNode(u%HubMotion, 1, InitInp%HubPosition, errStat3, errMsg3, InitInp%HubOrientation);   if (errStat3 >= AbortErrLev) return
+      call MeshConstructElement( u%HubMotion, ELEMENT_POINT, errStat3, errMsg3, p1=1 );   if (errStat3 >= AbortErrLev) return
+      call MeshCommit(u%HubMotion, errStat3, errMsg3 );   if (errStat3 >= AbortErrLev) return
+      u%HubMotion%Orientation     = u%HubMotion%RefOrientation
+      u%HubMotion%TranslationDisp = 0.0_R8Ki
+      u%HubMotion%RotationVel     = 0.0_ReKi
+      return
+   end subroutine Init_U
+
+   !> Initialize the outputs in Y
+   subroutine Init_Y(ErrStat3,ErrMSg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      ! Set output loads mesh
+      call MeshCopy (  SrcMesh  = u%HubMotion        &
+                     , DestMesh = y%AeroLoads        &
+                     , CtrlCode = MESH_SIBLING       &
+                     , IOS      = COMPONENT_OUTPUT   &
+                     , force    = .TRUE.             &
+                     , moment   = .TRUE.             &
+                     , ErrStat  = ErrStat3           &
+                     , ErrMess  = ErrMsg3            )
+         if (ErrStat3 >= AbortErrLev) return
+
+      ! Initialize all outputs to zero (will be set by CalcOutput)
+      y%YawErr    = 0.0_ReKi
+      y%SkewAngle = 0.0_ReKi
+      y%ChiSkew   = 0.0_ReKi
+      y%VRel      = 0.0_ReKi
+      y%Ct        = 0.0_ReKi
+      y%Cq        = 0.0_ReKi
+      call AllocAry(y%WriteOutput,p%NumOuts,'WriteOutput',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
+      y%WriteOutput = 0.0_ReKi
+   end subroutine Init_Y
+
+   !> Initialize other stuff that the framework requires, but isn't used here
+   subroutine Init_OtherStuff()
+         ! Placeholder empty vars for things we don't use, but the framework requires 
+      xd%DummyDiscreteState      = 0.0_ReKi
+      z%DummyConstrState         = 0.0_ReKi
+      OtherState%DummyOtherState = 0.0_IntKi
+      m%DummyMiscVar             = 0.0_IntKi
+   end subroutine Init_OtherStuff
+
+   !> Initialize the InitOutput
+   subroutine Init_InitY(ErrStat3,ErrMsg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      integer(IntKi)                   :: i
+      call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
+      do i=1,p%NumOuts
+         InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
+         InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
+      end do
+      ! Version
+      InitOut%Ver = ADsk_Ver
+   end subroutine Init_InitY
 END SUBROUTINE ADsk_Init
 
 
