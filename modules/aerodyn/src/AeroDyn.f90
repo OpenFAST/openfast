@@ -109,7 +109,7 @@ subroutine AD_SetInitOut(p, p_AD, InputFileData, InitOut, errStat, errMsg)
                 
                 
       ! Set the info in WriteOutputHdr and WriteOutputUnt
-   CALL AllBldNdOuts_InitOut( InitOut, p, p_AD, InputFileData, ErrStat2, ErrMsg2 )
+   CALL AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    

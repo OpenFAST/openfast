@@ -104,11 +104,10 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine populates the headers with the blade node outputs.  The iteration cycle is blade:node:channel (channel iterated
 !! fastest).  If this iteration order is changed, it should be changed in the Calc_WriteAllBldNdOutput routine as well.
-SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, p_AD, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
 
    TYPE(RotInitOutputType),      INTENT(INOUT)  :: InitOut                          ! output data
    TYPE(RotParameterType),       INTENT(IN   )  :: p                                ! The module parameters
-   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD                             ! The module parameters
    TYPE(RotInputFile),           INTENT(IN   )  :: InputFileData                    ! All the data in the AeroDyn input file (want Blade Span for channel name)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                          ! The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg                           ! The error message, if an error occurred
