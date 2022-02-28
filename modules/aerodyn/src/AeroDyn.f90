@@ -1877,9 +1877,9 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    type(RotInputType),      intent(in   )  :: u                               !< AD Inputs at Time
    type(RotMiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
    real(R8Ki),              intent(  out)  :: x_hat_disk(3)
-   real(R8Ki),              intent(  out)  :: y_hat_disk(3)
-   real(R8Ki),              intent(  out)  :: z_hat_disk(3)
-   real(R8Ki),              intent(  out)  :: Azimuth(p%NumBlades)
+   real(R8Ki), optional,    intent(  out)  :: y_hat_disk(3)
+   real(R8Ki), optional,    intent(  out)  :: z_hat_disk(3)
+   real(R8Ki), optional,    intent(  out)  :: Azimuth(p%NumBlades)
    real(ReKi)                              :: z_hat(3)
    real(ReKi)                              :: tmp(3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
@@ -1900,27 +1900,34 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    x_hat_disk = u%HubMotion%Orientation(1,:,1) !actually also x_hat_hub
 
    m%V_dot_x  = dot_product( m%V_diskAvg, x_hat_disk )
-   tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
-   tmp_sz = TwoNorm(tmp)
-   if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
-      y_hat_disk = u%HubMotion%Orientation(2,:,1)
-      z_hat_disk = u%HubMotion%Orientation(3,:,1)
-   else
-     y_hat_disk = tmp / tmp_sz
-     z_hat_disk = cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
-  end if
-
-      ! "Azimuth angle" rad
-   do k=1,p%NumBlades
-      z_hat = u%BladeRootMotion(k)%Orientation(3,:,1)
-      tmp_sz_y = -1.0*dot_product(z_hat,y_hat_disk)
-      tmp_sz   =      dot_product(z_hat,z_hat_disk)
-      if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz,0.0_ReKi) ) then
-         Azimuth(k) = 0.0_ReKi
+   
+   
+   if (present(y_hat_disk)) then
+   
+      tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
+      tmp_sz = TwoNorm(tmp)
+      if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
+         y_hat_disk = u%HubMotion%Orientation(2,:,1)
+         z_hat_disk = u%HubMotion%Orientation(3,:,1)
       else
-         Azimuth(k) = atan2( tmp_sz_y, tmp_sz )
-      end if
-   end do
+        y_hat_disk = tmp / tmp_sz
+        z_hat_disk = cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
+     end if
+
+         ! "Azimuth angle" rad
+      do k=1,p%NumBlades
+         z_hat = u%BladeRootMotion(k)%Orientation(3,:,1)
+         tmp_sz_y = -1.0*dot_product(z_hat,y_hat_disk)
+         tmp_sz   =      dot_product(z_hat,z_hat_disk)
+         if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz,0.0_ReKi) ) then
+            Azimuth(k) = 0.0_ReKi
+         else
+            Azimuth(k) = atan2( tmp_sz_y, tmp_sz )
+         end if
+      end do
+      
+   end if
+   
 end subroutine DiskAvgValues
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
@@ -2012,10 +2019,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
    real(R8Ki)                              :: x_hat_disk(3)
-   real(R8Ki)                              :: y_hat_disk(3)
-   real(R8Ki)                              :: z_hat_disk(3)
    real(R8Ki), allocatable                 :: thetaBladeNds(:,:)
-   real(R8Ki), allocatable                 :: Azimuth(:)
    
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: iR ! Loop on rotors
@@ -2027,10 +2031,9 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    do tIndx=1,size(u)
       do iR =1, size(p%rotors)
          allocate(thetaBladeNds(p%rotors(iR)%NumBlNds, p%rotors(iR)%NumBlades))
-         allocate(azimuth(p%rotors(iR)%NumBlades))
          ! Get disk average values and orientations
          ! NOTE: needed because it sets m%V_diskAvg and m%V_dot_x, needed by CalcOutput..
-         call DiskAvgValues(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), x_hat_disk, y_hat_disk, z_hat_disk, Azimuth) 
+         call DiskAvgValues(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), x_hat_disk) ! also sets m%V_diskAvg and m%V_dot_x
          call GeomWithoutSweepPitchTwist(p%rotors(iR),u(tIndx)%rotors(iR), m%rotors(iR), thetaBladeNds,ErrStat,ErrMsg)
          if (ErrStat >= AbortErrLev) return
 
@@ -2059,7 +2062,6 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
             end do !j=nodes
          enddo ! k blades
          if (allocated(thetaBladeNds)) deallocate(thetaBladeNds)
-         if (allocated(azimuth))       deallocate(azimuth)
       enddo ! iR, rotors
 
       if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
