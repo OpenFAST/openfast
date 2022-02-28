@@ -230,7 +230,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(FileInfoType)                          :: FileInfo_In   !< The derived type for holding the full input file for parsing -- we may pass this in the future
    type(AD_InputFile)                          :: InputFileData ! Data stored in the module's input file after parsing
    character(1024)                             :: PriPath       !< Primary path
-   character(1024)                             :: EchoFileName
    integer(IntKi)                              :: UnEcho        ! Unit number for the echo file
    integer(IntKi)                              :: nRotors       ! Number of rotors
    integer(IntKi), allocatable, dimension(:)   :: NumBlades     ! Number of blades per rotor
@@ -1347,7 +1346,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                               :: i
    integer(intKi)                               :: iR ! Loop on rotors
 
    integer(intKi)                               :: ErrStat2
@@ -1377,7 +1375,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Calculate Outputs at time t
-      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
+      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       call SetOutputsFromFVW( t, u, p, OtherState, x, xd, m, y, ErrStat2, ErrMsg2 )
@@ -1424,8 +1422,6 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot,
    
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                               :: i
-   integer(intKi)                               :: j
 
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
@@ -1507,12 +1503,11 @@ subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRo
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                               :: i
-   integer(intKi)                               :: j
 
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'RotCalcOutput'
-   LOGICAL                                      :: CalcWriteOutput   
+!   LOGICAL                                      :: CalcWriteOutput   
    !-------------------------------------------------------   
    !     get values to output to file:  
    !-------------------------------------------------------   
@@ -1763,7 +1758,6 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    ! local variables
    real(R8Ki)                              :: x_hat(3)
    real(R8Ki)                              :: y_hat(3)
-   real(R8Ki)                              :: z_hat(3)
    real(R8Ki)                              :: x_hat_disk(3)
    real(R8Ki)                              :: y_hat_disk(3)
    real(R8Ki)                              :: z_hat_disk(3)
@@ -1775,8 +1769,8 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
-   integer(intKi)                          :: ErrStat2
-   character(ErrMsgLen)                    :: ErrMsg2
+!   integer(intKi)                          :: ErrStat2
+!   character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'SetInputsForBEMT'
    
    ! note ErrStat and ErrMsg are set in GeomWithoutSweepPitchTwist:
@@ -1824,7 +1818,6 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, y_hat ) ! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
          
-         !jmj says omega_z and PitchRate are the same things
          ! inputs for DBEMT (DBEMT_Mod == DBEMT_cont_tauConst)
          if (allocated(m%BEMT_u(indx)%Vx_elast_dot)) then
             m%BEMT_u(indx)%Vx_elast_dot(j,k)  = dot_product( u%BladeMotion(k)%TranslationAcc(:,j), x_hat ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
@@ -2026,7 +2019,6 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    integer(intKi)                          :: j, k  ! loop counter for blades
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
    integer :: iW
-   integer :: nWings
 
    do tIndx=1,size(u)
       do iR =1, size(p%rotors)

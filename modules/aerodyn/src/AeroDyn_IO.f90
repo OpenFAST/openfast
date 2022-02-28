@@ -2158,13 +2158,12 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    integer(IntKi)                                  :: i                 !< generic counter
    integer(IntKi)                                  :: iR                !< Loop on rotors
    integer(IntKi)                                  :: numBladesTot      !< total number of blades
-   integer(IntKi)                                  :: ErrStat2, IOS     !< Temporary Error status
+   integer(IntKi)                                  :: ErrStat2          !< Temporary Error status
    character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
    character(ErrMsgLen)                            :: ErrMsg_NoAllBldNdOuts
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe4(4)         !< temporary 4 number array for reading values in
 
-   character(1024)                                 :: FTitle            ! "File Title": the 2nd line of the input file, which contains a description of its contents
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
 
    ! Initialization

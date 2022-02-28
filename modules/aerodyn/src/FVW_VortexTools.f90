@@ -250,7 +250,7 @@ contains
       real(ReKi), dimension(:,:),      intent(inout)  :: Points         !< 
       integer(IntKi),                  intent(inout)  :: iHeadP         !< Index indicating where to start in Points
       ! Local
-      integer(IntKi) :: iSpan, iDepth
+      integer(IntKi) :: iSpan
       do iSpan = 1, size(LatticePoints,2)
          Points(1:3,iHeadP) = LatticePoints(1:3, iSpan)
          iHeadP=iHeadP+1
@@ -931,7 +931,7 @@ contains
       real(ReKi)   :: wTot ! Total vorticity strength
       real(ReKi)   :: SegLen ! Length of vortex segment
       real(ReKi)   :: halfSize ! TODO remove me
-      real(ReKi),dimension(3) :: locCenter, DeltaP,SegCenter,DP, SegDir, SegGammaVec
+      real(ReKi),dimension(3) :: locCenter, SegCenter,DP, SegDir, SegGammaVec
       real(ReKi),dimension(3) :: P1,P2 !< Segment extremities
       real(ReKi),dimension(3) :: nodeGeomCenter !< Geometric center from division of the domain in powers of 2
       real(ReKi),dimension(3) :: nodeBaryCenter !< Vorticity weighted center
