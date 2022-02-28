@@ -1985,11 +1985,24 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
       end do !k=blades
    else if (p%AeroProjMod==1) then
    
+      !m%AllOuts( BPitch(  k) ) = 0.0_ReKi  ! save this value of pitch for potential output; ill-defined, TODO
+      !
+      !m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined, TODO
+   
+      do k=1,p%NumBlades
+         call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         theta = EulerExtract( orientation ) !hub_theta_root(k)
+         if (k<=3) then
+            m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
+         endif
+         theta(3) = 0.0_ReKi
+         m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+      end do
+   
       ! Generic blade, we don't assume where the axes are, and we keep the default orientation
       do k=1,p%NumBlades
-         m%AllOuts( BPitch(  k) ) = 0.0_ReKi  ! save this value of pitch for potential output; ill-defined, TODO
-   
-         m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined, TODO
+         
          do j=1,p%NumBlNds
             thetaBladeNds(j,k) = 0.0_ReKi ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
             m%Curve(j,k) = 0.0_ReKi ! ill-defined, TODO
