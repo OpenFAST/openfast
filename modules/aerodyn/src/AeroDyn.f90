@@ -1721,6 +1721,7 @@ subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
    endif
 end subroutine SetInputs
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Disturbed inflow on the blade if tower shadow or tower influence are enabled
 subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
    type(RotParameterType),       intent(in   )  :: p                      !< AD parameters
@@ -3312,7 +3313,7 @@ FUNCTION CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI) RES
                u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
             end if
          end if
-         case (TwrShadow_Eames)
+      case (TwrShadow_Eames)
          if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
             exponential = ( ybar / (TwrTI * xbar) )**2
             denom = TwrTI * xbar * sqrt( TwoPi )
@@ -3394,7 +3395,10 @@ SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_towe
       ! Inside the tower, or very close, (will happen for vortex elements) we keep undisturbed inflow
       ! We don't want to reach the stagnation points
       DisturbInflow = .false.
-   else
+   !elseif ( TwrClrnc<= 0.0_ReKi) then
+   !   ! Tower strike
+   !   DisturbInflow = .false.
+   else 
       DisturbInflow = .true.
    end if
 
