@@ -67,6 +67,17 @@ extensions = [
     'sphinxcontrib.bibtex',
     'sphinxcontrib.mermaid',
 ]
+bibtex_bibfiles = [
+    'source/user/aerodyn-aeroacoustics/references.bib',
+    'source/user/aerodyn-olaf/bibliography.bib',
+    'source/user/aerodyn/bibliography.bib',
+    'source/user/beamdyn/references.bib',
+    'source/user/extptfm/bibliography.bib',
+    'source/user/fast.farm/bibliography.bib',
+    'source/user/hydrodyn/references.bib',
+    'source/user/servodyn-stc/StC_Refs.bib',
+    'source/user/subdyn/references_SD.bib'
+]
 
 autodoc_default_flags = [
     'members',
