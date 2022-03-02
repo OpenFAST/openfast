@@ -160,6 +160,15 @@ StC Initial Conditions
    StC Z initial displacement   *[relative to at rest position; used only when*
    **StC_DOF_MODE==1** *and* **StC_Z_DOF==TRUE** *]*
 
+**StC_Z_PreLd** [N]
+
+   StC Z spring preload. Either a direct value for the spring preload in
+   Newtons,  or **"gravity"** for pre-loading spring to shift the at rest
+   position of the StC Z mass when gravity is acting on it using
+   :math:`F_{Z_{PreLoad}} = M_Z * G`, or **"none"** to disable spring pre-load.
+   See :numref:`SrvD-StCz-PreLoad` for details of implementation.
+   *[used only when* **StC_DOF_MODE=1** and **StC_Z_DOF=TRUE** *]*
+
 
 StC Configuration
 -----------------

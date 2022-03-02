@@ -58,7 +58,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BldRNodes      !< Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL ) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrHNodes      !< Location of variable-spaced tower nodes (relative to the tower rigid base height [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos      !< Initial platform position (6 DOFs) [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TwrBasePos      !< initial position of the tower base (for SrvD) [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: TwrBaseRefPos      !< initial position of the tower base (for SrvD) [m]
+    REAL(R8Ki) , DIMENSION(1:3)  :: TwrBaseTransDisp      !< initial displacement of the tower base (for SrvD) [m]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: TwrBaseRefOrient      !< reference orientation of the tower base (for SrvD) [-]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: TwrBaseOrient      !< initial orientation of the tower base (for SrvD) [-]
     REAL(ReKi)  :: HubRad      !< Preconed hub radius (distance from the rotor apex to the blade root) [m]
     REAL(ReKi)  :: RotSpeed      !< Initial or fixed rotor speed [rad/s]
@@ -1136,7 +1138,9 @@ IF (ALLOCATED(SrcInitOutputData%TwrHNodes)) THEN
     DstInitOutputData%TwrHNodes = SrcInitOutputData%TwrHNodes
 ENDIF
     DstInitOutputData%PlatformPos = SrcInitOutputData%PlatformPos
-    DstInitOutputData%TwrBasePos = SrcInitOutputData%TwrBasePos
+    DstInitOutputData%TwrBaseRefPos = SrcInitOutputData%TwrBaseRefPos
+    DstInitOutputData%TwrBaseTransDisp = SrcInitOutputData%TwrBaseTransDisp
+    DstInitOutputData%TwrBaseRefOrient = SrcInitOutputData%TwrBaseRefOrient
     DstInitOutputData%TwrBaseOrient = SrcInitOutputData%TwrBaseOrient
     DstInitOutputData%HubRad = SrcInitOutputData%HubRad
     DstInitOutputData%RotSpeed = SrcInitOutputData%RotSpeed
@@ -1374,7 +1378,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%TwrHNodes)  ! TwrHNodes
   END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%PlatformPos)  ! PlatformPos
-      Re_BufSz   = Re_BufSz   + SIZE(InData%TwrBasePos)  ! TwrBasePos
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TwrBaseRefPos)  ! TwrBaseRefPos
+      Db_BufSz   = Db_BufSz   + SIZE(InData%TwrBaseTransDisp)  ! TwrBaseTransDisp
+      Db_BufSz   = Db_BufSz   + SIZE(InData%TwrBaseRefOrient)  ! TwrBaseRefOrient
       Db_BufSz   = Db_BufSz   + SIZE(InData%TwrBaseOrient)  ! TwrBaseOrient
       Re_BufSz   = Re_BufSz   + 1  ! HubRad
       Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
@@ -1567,9 +1573,19 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%PlatformPos(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%TwrBasePos,1), UBOUND(InData%TwrBasePos,1)
-      ReKiBuf(Re_Xferred) = InData%TwrBasePos(i1)
+    DO i1 = LBOUND(InData%TwrBaseRefPos,1), UBOUND(InData%TwrBaseRefPos,1)
+      ReKiBuf(Re_Xferred) = InData%TwrBaseRefPos(i1)
       Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%TwrBaseTransDisp,1), UBOUND(InData%TwrBaseTransDisp,1)
+      DbKiBuf(Db_Xferred) = InData%TwrBaseTransDisp(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i2 = LBOUND(InData%TwrBaseRefOrient,2), UBOUND(InData%TwrBaseRefOrient,2)
+      DO i1 = LBOUND(InData%TwrBaseRefOrient,1), UBOUND(InData%TwrBaseRefOrient,1)
+        DbKiBuf(Db_Xferred) = InData%TwrBaseRefOrient(i1,i2)
+        Db_Xferred = Db_Xferred + 1
+      END DO
     END DO
     DO i2 = LBOUND(InData%TwrBaseOrient,2), UBOUND(InData%TwrBaseOrient,2)
       DO i1 = LBOUND(InData%TwrBaseOrient,1), UBOUND(InData%TwrBaseOrient,1)
@@ -1889,11 +1905,27 @@ ENDIF
       OutData%PlatformPos(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%TwrBasePos,1)
-    i1_u = UBOUND(OutData%TwrBasePos,1)
-    DO i1 = LBOUND(OutData%TwrBasePos,1), UBOUND(OutData%TwrBasePos,1)
-      OutData%TwrBasePos(i1) = ReKiBuf(Re_Xferred)
+    i1_l = LBOUND(OutData%TwrBaseRefPos,1)
+    i1_u = UBOUND(OutData%TwrBaseRefPos,1)
+    DO i1 = LBOUND(OutData%TwrBaseRefPos,1), UBOUND(OutData%TwrBaseRefPos,1)
+      OutData%TwrBaseRefPos(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%TwrBaseTransDisp,1)
+    i1_u = UBOUND(OutData%TwrBaseTransDisp,1)
+    DO i1 = LBOUND(OutData%TwrBaseTransDisp,1), UBOUND(OutData%TwrBaseTransDisp,1)
+      OutData%TwrBaseTransDisp(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%TwrBaseRefOrient,1)
+    i1_u = UBOUND(OutData%TwrBaseRefOrient,1)
+    i2_l = LBOUND(OutData%TwrBaseRefOrient,2)
+    i2_u = UBOUND(OutData%TwrBaseRefOrient,2)
+    DO i2 = LBOUND(OutData%TwrBaseRefOrient,2), UBOUND(OutData%TwrBaseRefOrient,2)
+      DO i1 = LBOUND(OutData%TwrBaseRefOrient,1), UBOUND(OutData%TwrBaseRefOrient,1)
+        OutData%TwrBaseRefOrient(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
     END DO
     i1_l = LBOUND(OutData%TwrBaseOrient,1)
     i1_u = UBOUND(OutData%TwrBaseOrient,1)
