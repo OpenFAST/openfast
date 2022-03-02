@@ -107,7 +107,7 @@ CONTAINS
 SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
 
    TYPE(RotInitOutputType),      INTENT(INOUT)  :: InitOut                          ! output data
-   TYPE(RotParameterType),       INTENT(IN   )  :: p                                ! The module parameters
+   TYPE(RotParameterType),       INTENT(IN   )  :: p                                ! The rotor parameters
    TYPE(RotInputFile),           INTENT(IN   )  :: InputFileData                    ! All the data in the AeroDyn input file (want Blade Span for channel name)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                          ! The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg                           ! The error message, if an error occurred
@@ -167,7 +167,7 @@ END SUBROUTINE AllBldNdOuts_InitOut
 !!       here.
 
 SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, Indx, iRot, ErrStat, ErrMsg )
-   TYPE(RotParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
+   TYPE(RotParameterType),    INTENT(IN   )  :: p                                 ! The rotor parameters
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p_AD                              ! The module parameters
    TYPE(RotInputType),        INTENT(IN   )  :: u                                 ! inputs
    TYPE(RotMiscVarType),      INTENT(IN   )  :: m                                 ! misc variables
@@ -1263,7 +1263,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
       ! Passed variables
 
    CHARACTER(ChanLen),        INTENT(IN)     :: BldNd_OutList(:)                        !< The list out user-requested outputs
-   TYPE(RotParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   TYPE(RotParameterType),    INTENT(INOUT)  :: p                                 !< The rotor parameters
    TYPE(AD_ParameterType),    INTENT(INOUT)  :: p_AD                              !< The module parameters
    INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
    CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
