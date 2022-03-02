@@ -368,7 +368,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
 
    IF ( OnGrid ) THEN      ! The tower points don't use this
 
-      CALL GetInterpValues()
+      CALL GetInterpValues(); if (ErrStat/=ErrID_None) return
       
       !-------------------------------------------------------------------------------------------------
       ! Interpolate on the grid
@@ -393,7 +393,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
 
       IF (p%InterpTower) THEN
          
-         CALL GetInterpValues()
+         CALL GetInterpValues(); if (ErrStat >= AbortErrLev) return
          
       !-------------------------------------------------------------------------------------------------
       ! Interpolate on the bottom of the grid to the ground
@@ -539,6 +539,11 @@ SUBROUTINE ScaleTurbulence(InitInp, FFData, ScaleFactors, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   nz = size(FFData,1)
+   ny = size(FFData,2)
+   nc = size(FFData,3)
+   nx = size(FFData,4)
+   
    if ( InitInp%ScaleMethod == ScaleMethod_None ) then
       
       ! don't scale FFWind:      
@@ -556,11 +561,6 @@ SUBROUTINE ScaleTurbulence(InitInp, FFData, ScaleFactors, ErrStat, ErrMsg)
          
       else !if ( InitInp%ScaleMethod == ScaleMethod_StdDev ) then
          ! compute the scale factor to get requested sigma:
-         
-         nz = size(FFData,1)
-         ny = size(FFData,2)
-         nc = size(FFData,3)
-         nx = size(FFData,4)
          
             ! find the center point of the grid (if we don't have an odd number of grid points, we'll pick the point closest to the center)
          iz = (nz + 1) / 2 ! integer division

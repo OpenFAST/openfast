@@ -614,6 +614,8 @@ contains
       real(ReKi),    dimension(:,:,:), allocatable :: LatticePoints2 !< Lattice Points
       real(ReKi),    dimension(:,:),   allocatable :: LatticeGamma1  !< Lattice Circulation
       real(ReKi),    dimension(:,:),   allocatable :: LatticeGamma2  !< Lattice Circulation
+      real(ReKi),    dimension(:,:,:), allocatable :: LatticeEps1 !< Lattice Reg Param
+      real(ReKi),    dimension(:,:,:), allocatable :: LatticeEps2 !< Lattice Reg Param
       real(ReKi),    dimension(:,:),   allocatable :: CPs   !< ControlPoints
       real(ReKi),    dimension(:,:),   allocatable :: Uind  !< Induced velocity
       integer(IntKi) :: iHeadC
@@ -632,13 +634,22 @@ contains
       ! --- Creating two lattice
       allocate(LatticePoints1(3,2,2)) 
       allocate(LatticePoints2(3,3,4)) 
+      allocate(LatticeEps1(3,1,1)) 
+      allocate(LatticeEps2(3,2,3)) 
       allocate(LatticeGamma1(1,1)) ; 
       allocate(LatticeGamma2(2,3)) ; 
       LatticeGamma1=1
+      LatticeEps1(1,:,:) = 1
+      LatticeEps1(2,:,:) = 2
+      LatticeEps1(3,:,:) = 3
       ! Test shed vorticity
       LatticeGamma2(:,1)=1
       LatticeGamma2(:,2)=2
       LatticeGamma2(:,3)=3
+
+      LatticeEps2(:,:,1) = 1
+      LatticeEps2(:,:,2) = 2
+      LatticeEps2(:,:,3) = 3
       ! Test trailed vorticity
 !       LatticeGamma2(1,:)=1
 !       LatticeGamma2(2,:)=2
@@ -660,7 +671,7 @@ contains
 
       iHeadP=1
       iHeadC=1
-      CALL LatticeToSegments(LatticePoints1, LatticeGamma1, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true., .true. )
+      CALL LatticeToSegments(LatticePoints1, LatticeGamma1, LatticeEps1, 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, .true., .true., .false. )
       CALL printall()
       CALL WrVTK_Segments('Points1_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
 
@@ -687,7 +698,7 @@ contains
       allocate(SegGamma (1:nC2)    ); SegGamma=-9999
       iHeadP=1
       iHeadC=1
-      CALL LatticeToSegments(LatticePoints2, LatticeGamma2, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC , .true., .true.)
+      CALL LatticeToSegments(LatticePoints2, LatticeGamma2,  LatticeEps2, 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC , .true., .true., .false.)
       CALL printall()
       CALL WrVTK_Segments('Points2_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
 
@@ -702,8 +713,8 @@ contains
       allocate(SegConnct(1:2,1:nC)); SegConnct=-1
       allocate(SegPoints(1:3,1:nP)); SegPoints=-1
       allocate(SegGamma (1:nC)    ); SegGamma=-9999
-      CALL LatticeToSegments(LatticePoints1, LatticeGamma1, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true. , .true.)
-      CALL LatticeToSegments(LatticePoints2, LatticeGamma2, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC, .true. , .true.)
+      CALL LatticeToSegments(LatticePoints1, LatticeGamma1, LatticeEps1, 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, .true. , .true., .false.)
+      CALL LatticeToSegments(LatticePoints2, LatticeGamma2, LatticeEps2, 1, SegPoints, SegConnct, SegGamma, SegEpsilon, iHeadP, iHeadC, .true. , .true., .false.)
       CALL printall()
       CALL WrVTK_Segments('PointsBoth_seg.vtk', mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
 

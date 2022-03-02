@@ -72,6 +72,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Kappa      !< Shear coefficient [-]
     REAL(ReKi)  :: YoungE      !< Young's modulus [-]
     REAL(ReKi)  :: ShearG      !< Shear modulus [N/m^2]
+    REAL(ReKi) , DIMENSION(1:2)  :: D      !< Diameter at node 1 and 2, for visualization only [m]
     REAL(ReKi)  :: Area      !< Area of an element [m^2]
     REAL(ReKi)  :: Rho      !< Density [kg/m^3]
     REAL(ReKi)  :: T0      !< Pretension  [N]
@@ -104,6 +105,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
+    LOGICAL , DIMENSION(:), ALLOCATABLE  :: CableCChanRqst      !< flag indicating control channel for active cable tensioning is requested [-]
   END TYPE SD_InitOutputType
 ! =======================
 ! =========  SD_InitType  =======
@@ -223,6 +225,7 @@ IMPLICIT NONE
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (with initial cable force T0), not reduced [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NodeID2JointID      !< Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes) [-]
     LOGICAL  :: reduced      !< True if system has been reduced to account for constraints [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red_T      !< Transpose of T_red [-]
@@ -304,6 +307,8 @@ IMPLICIT NONE
     TYPE(MeshAuxDataType) , DIMENSION(:), ALLOCATABLE  :: MoutLst3      !< List of all member joint nodes and elements for output [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< An array holding names, units, and indices of all of the selected output channels.   logical [-]
     LOGICAL  :: OutAll      !< Flag to output or not all joint forces [-]
+    INTEGER(IntKi)  :: OutCBModes      !< Flag to output CB and Guyan modes to a given format [-]
+    INTEGER(IntKi)  :: OutFEMModes      !< Flag to output FEM modes to a given format [-]
     LOGICAL  :: OutReact      !< Flag to check whether reactions are requested [-]
     INTEGER(IntKi)  :: OutAllInt      !< Integer version of OutAll [-]
     INTEGER(IntKi)  :: OutAllDims      !< Integer version of OutAll [-]
@@ -326,7 +331,8 @@ IMPLICIT NONE
 ! =========  SD_OutputType  =======
   TYPE, PUBLIC :: SD_OutputType
     TYPE(MeshType)  :: Y1Mesh      !< Transition piece outputs on a point mesh [-]
-    TYPE(MeshType)  :: Y2Mesh      !< Interior+Interface nodes outputs on a point mesh [-]
+    TYPE(MeshType)  :: Y2Mesh      !< Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh [-]
+    TYPE(MeshType)  :: Y3Mesh      !< Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file [-]
   END TYPE SD_OutputType
 ! =======================
@@ -1667,6 +1673,7 @@ ENDIF
     DstElemPropTypeData%Kappa = SrcElemPropTypeData%Kappa
     DstElemPropTypeData%YoungE = SrcElemPropTypeData%YoungE
     DstElemPropTypeData%ShearG = SrcElemPropTypeData%ShearG
+    DstElemPropTypeData%D = SrcElemPropTypeData%D
     DstElemPropTypeData%Area = SrcElemPropTypeData%Area
     DstElemPropTypeData%Rho = SrcElemPropTypeData%Rho
     DstElemPropTypeData%T0 = SrcElemPropTypeData%T0
@@ -1728,6 +1735,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Kappa
       Re_BufSz   = Re_BufSz   + 1  ! YoungE
       Re_BufSz   = Re_BufSz   + 1  ! ShearG
+      Re_BufSz   = Re_BufSz   + SIZE(InData%D)  ! D
       Re_BufSz   = Re_BufSz   + 1  ! Area
       Re_BufSz   = Re_BufSz   + 1  ! Rho
       Re_BufSz   = Re_BufSz   + 1  ! T0
@@ -1777,6 +1785,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ShearG
     Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%D,1), UBOUND(InData%D,1)
+      ReKiBuf(Re_Xferred) = InData%D(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     ReKiBuf(Re_Xferred) = InData%Area
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Rho
@@ -1837,6 +1849,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%ShearG = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%D,1)
+    i1_u = UBOUND(OutData%D,1)
+    DO i1 = LBOUND(OutData%D,1), UBOUND(OutData%D,1)
+      OutData%D(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%Area = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Rho = ReKiBuf(Re_Xferred)
@@ -2341,6 +2359,18 @@ IF (ALLOCATED(SrcInitOutputData%DerivOrder_x)) THEN
   END IF
     DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
 ENDIF
+IF (ALLOCATED(SrcInitOutputData%CableCChanRqst)) THEN
+  i1_l = LBOUND(SrcInitOutputData%CableCChanRqst,1)
+  i1_u = UBOUND(SrcInitOutputData%CableCChanRqst,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%CableCChanRqst)) THEN 
+    ALLOCATE(DstInitOutputData%CableCChanRqst(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CableCChanRqst.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%CableCChanRqst = SrcInitOutputData%CableCChanRqst
+ENDIF
  END SUBROUTINE SD_CopyInitOutput
 
  SUBROUTINE SD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -2382,6 +2412,9 @@ IF (ALLOCATED(InitOutputData%IsLoad_u)) THEN
 ENDIF
 IF (ALLOCATED(InitOutputData%DerivOrder_x)) THEN
   DEALLOCATE(InitOutputData%DerivOrder_x)
+ENDIF
+IF (ALLOCATED(InitOutputData%CableCChanRqst)) THEN
+  DEALLOCATE(InitOutputData%CableCChanRqst)
 ENDIF
  END SUBROUTINE SD_DestroyInitOutput
 
@@ -2487,6 +2520,11 @@ ENDIF
   IF ( ALLOCATED(InData%DerivOrder_x) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! DerivOrder_x upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%DerivOrder_x)  ! DerivOrder_x
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! CableCChanRqst allocated yes/no
+  IF ( ALLOCATED(InData%CableCChanRqst) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableCChanRqst upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%CableCChanRqst)  ! CableCChanRqst
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2700,6 +2738,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%DerivOrder_x,1), UBOUND(InData%DerivOrder_x,1)
         IntKiBuf(Int_Xferred) = InData%DerivOrder_x(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%CableCChanRqst) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableCChanRqst,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableCChanRqst,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%CableCChanRqst,1), UBOUND(InData%CableCChanRqst,1)
+        IntKiBuf(Int_Xferred) = TRANSFER(InData%CableCChanRqst(i1), IntKiBuf(1))
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
@@ -2959,6 +3012,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%DerivOrder_x,1), UBOUND(OutData%DerivOrder_x,1)
         OutData%DerivOrder_x(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableCChanRqst not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CableCChanRqst)) DEALLOCATE(OutData%CableCChanRqst)
+    ALLOCATE(OutData%CableCChanRqst(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableCChanRqst.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%CableCChanRqst,1), UBOUND(OutData%CableCChanRqst,1)
+        OutData%CableCChanRqst(i1) = TRANSFER(IntKiBuf(Int_Xferred), OutData%CableCChanRqst(i1))
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
@@ -6982,6 +7053,18 @@ IF (ALLOCATED(SrcParamData%DP0)) THEN
   END IF
     DstParamData%DP0 = SrcParamData%DP0
 ENDIF
+IF (ALLOCATED(SrcParamData%NodeID2JointID)) THEN
+  i1_l = LBOUND(SrcParamData%NodeID2JointID,1)
+  i1_u = UBOUND(SrcParamData%NodeID2JointID,1)
+  IF (.NOT. ALLOCATED(DstParamData%NodeID2JointID)) THEN 
+    ALLOCATE(DstParamData%NodeID2JointID(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%NodeID2JointID.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%NodeID2JointID = SrcParamData%NodeID2JointID
+ENDIF
     DstParamData%reduced = SrcParamData%reduced
 IF (ALLOCATED(SrcParamData%T_red)) THEN
   i1_l = LBOUND(SrcParamData%T_red,1)
@@ -7721,6 +7804,8 @@ IF (ALLOCATED(SrcParamData%OutParam)) THEN
     ENDDO
 ENDIF
     DstParamData%OutAll = SrcParamData%OutAll
+    DstParamData%OutCBModes = SrcParamData%OutCBModes
+    DstParamData%OutFEMModes = SrcParamData%OutFEMModes
     DstParamData%OutReact = SrcParamData%OutReact
     DstParamData%OutAllInt = SrcParamData%OutAllInt
     DstParamData%OutAllDims = SrcParamData%OutAllDims
@@ -7780,6 +7865,9 @@ IF (ALLOCATED(ParamData%FG)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%DP0)) THEN
   DEALLOCATE(ParamData%DP0)
+ENDIF
+IF (ALLOCATED(ParamData%NodeID2JointID)) THEN
+  DEALLOCATE(ParamData%NodeID2JointID)
 ENDIF
 IF (ALLOCATED(ParamData%T_red)) THEN
   DEALLOCATE(ParamData%T_red)
@@ -8041,6 +8129,11 @@ ENDIF
   IF ( ALLOCATED(InData%DP0) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! DP0 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%DP0)  ! DP0
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! NodeID2JointID allocated yes/no
+  IF ( ALLOCATED(InData%NodeID2JointID) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! NodeID2JointID upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%NodeID2JointID)  ! NodeID2JointID
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! reduced
   Int_BufSz   = Int_BufSz   + 1     ! T_red allocated yes/no
@@ -8439,6 +8532,8 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! OutAll
+      Int_BufSz  = Int_BufSz  + 1  ! OutCBModes
+      Int_BufSz  = Int_BufSz  + 1  ! OutFEMModes
       Int_BufSz  = Int_BufSz  + 1  ! OutReact
       Int_BufSz  = Int_BufSz  + 1  ! OutAllInt
       Int_BufSz  = Int_BufSz  + 1  ! OutAllDims
@@ -8588,6 +8683,21 @@ ENDIF
           ReKiBuf(Re_Xferred) = InData%DP0(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%NodeID2JointID) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%NodeID2JointID,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%NodeID2JointID,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%NodeID2JointID,1), UBOUND(InData%NodeID2JointID,1)
+        IntKiBuf(Int_Xferred) = InData%NodeID2JointID(i1)
+        Int_Xferred = Int_Xferred + 1
       END DO
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%reduced, IntKiBuf(1))
@@ -9745,6 +9855,10 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%OutAll, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%OutCBModes
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%OutFEMModes
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%OutReact, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%OutAllInt
@@ -9956,6 +10070,24 @@ ENDIF
           OutData%DP0(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NodeID2JointID not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%NodeID2JointID)) DEALLOCATE(OutData%NodeID2JointID)
+    ALLOCATE(OutData%NodeID2JointID(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%NodeID2JointID.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%NodeID2JointID,1), UBOUND(OutData%NodeID2JointID,1)
+        OutData%NodeID2JointID(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
       END DO
   END IF
     OutData%reduced = TRANSFER(IntKiBuf(Int_Xferred), OutData%reduced)
@@ -11341,6 +11473,10 @@ ENDIF
   END IF
     OutData%OutAll = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutAll)
     Int_Xferred = Int_Xferred + 1
+    OutData%OutCBModes = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%OutFEMModes = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%OutReact = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutReact)
     Int_Xferred = Int_Xferred + 1
     OutData%OutAllInt = IntKiBuf(Int_Xferred)
@@ -11778,6 +11914,9 @@ ENDIF
       CALL MeshCopy( SrcOutputData%Y2Mesh, DstOutputData%Y2Mesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+      CALL MeshCopy( SrcOutputData%Y3Mesh, DstOutputData%Y3Mesh, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
 IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
   i1_l = LBOUND(SrcOutputData%WriteOutput,1)
   i1_u = UBOUND(SrcOutputData%WriteOutput,1)
@@ -11803,6 +11942,7 @@ ENDIF
   ErrMsg  = ""
   CALL MeshDestroy( OutputData%Y1Mesh, ErrStat, ErrMsg )
   CALL MeshDestroy( OutputData%Y2Mesh, ErrStat, ErrMsg )
+  CALL MeshDestroy( OutputData%Y3Mesh, ErrStat, ErrMsg )
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
@@ -11878,6 +12018,23 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Int_BufSz   = Int_BufSz + 3  ! Y3Mesh: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%Y3Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! Y3Mesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! Y3Mesh
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! Y3Mesh
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! Y3Mesh
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   Int_BufSz   = Int_BufSz   + 1     ! WriteOutput allocated yes/no
   IF ( ALLOCATED(InData%WriteOutput) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
@@ -11939,6 +12096,34 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
       CALL MeshPack( InData%Y2Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! Y2Mesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      CALL MeshPack( InData%Y3Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! Y3Mesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -12084,6 +12269,46 @@ ENDIF
         Int_Xferred = Int_Xferred + Buf_size
       END IF
       CALL MeshUnpack( OutData%Y2Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! Y2Mesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%Y3Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! Y3Mesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -12384,6 +12609,8 @@ END IF ! check if allocated
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp1(y1%Y2Mesh, y2%Y2Mesh, tin, y_out%Y2Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      CALL MeshExtrapInterp1(y1%Y3Mesh, y2%Y3Mesh, tin, y_out%Y3Mesh, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
@@ -12450,6 +12677,8 @@ END IF ! check if allocated
       CALL MeshExtrapInterp2(y1%Y1Mesh, y2%Y1Mesh, y3%Y1Mesh, tin, y_out%Y1Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp2(y1%Y2Mesh, y2%Y2Mesh, y3%Y2Mesh, tin, y_out%Y2Mesh, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      CALL MeshExtrapInterp2(y1%Y3Mesh, y2%Y3Mesh, y3%Y3Mesh, tin, y_out%Y3Mesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)

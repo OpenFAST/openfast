@@ -625,7 +625,7 @@ of the element writes
 :math:`\boldsymbol{f}_e=\boldsymbol{K}_e\boldsymbol{u}+\boldsymbol{f}_{e,0}`,
 with:
 
-.. math::
+.. math:: :label: StiffnessMatrixCable
 
    \begin{aligned}
      \begin{bmatrix} 
@@ -664,7 +664,7 @@ with:
        0\\
        1\\
      \end{bmatrix} 
-       \label{eq:StiffnessMatrixCable}\end{aligned}
+       \end{aligned}
 
 The relation above is expressed in the element coordinate system. The
 stiffness matrix and force vector are transferred to the global system
@@ -706,26 +706,50 @@ with :math:`L_e` the *undisplaced* length of the element (not
 Controlled pretension cable
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The controller updates the value of :math:`\Delta L` at each time step,
-which effectively changes the pretension properties of the cable. The
-quantity :math:`\Delta L` is the change in restlength if the cable had
-no pretension. Since cable extension beyond the element length
-(:math:`L_e`) is not allowed in SubDyn, :math:`\Delta L` is limited to
-negative values. 
-
-At a given time, the restlength of the cable is :math:`L_r(t)` (instead
+The controller changes the rest length of the cable at each time step, effectively changing the pretension properties of the cable.
+At a given time, the restlength of the cable is :math:`L_r(t)=L_e + \Delta L` (instead
 of :math:`L_0`), and the pretension force is :math:`T(t)` (instead of
-:math:`T_0`). The pretension force is then given as:
+:math:`T_0`). The pretension force is given as:
+
+.. math:: :label: tensionUnsteady
+
+   \begin{aligned}
+       T(t)= E A \frac{-\Delta L(t)}{L_r(t)} = E A \frac{-\Delta L(t)}{L_e + \Delta L(t)}
+   \end{aligned}
+
+At :math:`t=0`, when no controller action is present, the pretension force and length are:
+
+.. math:: :label: tensionZero
+
+   \begin{aligned}
+           T(0) =T_0= E A \frac{-\Delta L_0}{L_e + \Delta L_0}
+           ,\quad
+           \Delta L(0) = \Delta L_0 = \frac{-L_e T_0}{EA+T_0}
+   \end{aligned}
+
+
+The quantity :math:`\Delta L` is the change in restlength, and it is given as:
+
+.. math:: :label: DeltaLTot
+
+   \begin{aligned}
+       \Delta L(t) = \Delta L_0 + \Delta L_c(t)
+   \end{aligned}
+
+where :math:`\Delta L_c` is the change of length prescribed by the controller, and :math:`\Delta  L_0` 
+is the change of length attributed to the initial pretension. This choice is such that the controller input is nominally 0. Cable extension beyond the element length
+(:math:`L_e`) is not allowed in SubDyn, therefore :math:`\Delta L` is limited to
+negative values (:math:`L_r=L_e+\Delta L <= L_e`). 
+The tension force at a given time is given by inserting :eq:`DeltaLTot` into :eq:`tensionUnsteady`:
 
 .. math::
 
    \begin{aligned}
-       T(t)= E A \frac{-\Delta L_r(t)}{L_r(t)} = E A \frac{-\Delta L_r(t)}{L_e + \Delta L(t)}
-           ,\quad
-           T(0) =T_0= E A \frac{-\Delta L_0}{L_e + \Delta L_0}
-           ,\quad
-           \Delta L(0) = \Delta L_0\end{aligned}
+       T(t)=- E A \frac{\Delta L_0 + \Delta L_c }{L_e + \Delta L_0 + \Delta L_c}
+   \end{aligned}
 
+
+In the following we provide details on the implementation and the approximation introduced.
 The “equations of motions” for a cable element are written:
 
 .. math::
@@ -733,28 +757,27 @@ The “equations of motions” for a cable element are written:
    \begin{aligned}
        \boldsymbol{M}_e\boldsymbol{\ddot{u}}_e&= \boldsymbol{f}_e\end{aligned}
 
-If the pretension force is constant, equal to :math:`T_0` then the
-element force is:
+If the pretension force is constant (equal to :math:`T_0`), and additional external loads are neglected, then the element force is:
 
-.. math::
+.. math::  :label: CstCableA
 
    \begin{aligned}
    \boldsymbol{f}_e=\boldsymbol{f}_e (t,T_0) &=-\boldsymbol{K}_c(T_0) \boldsymbol{u}_e + \boldsymbol{f}_c(T_0)+ \boldsymbol{f}_g 
-        \label{eq:CableEqMotionT0}\end{aligned}
+        \end{aligned}
 
 where :math:`\boldsymbol{f}_c(T_0)` and :math:`\boldsymbol{K}_c(T_0)`
-are given in . If the pretension force is varying with time
+are given in :eq:`StiffnessMatrixCable`. If the pretension force is varying with time
 (:math:`T=T(t)`), then the force is:
 
-.. math::
+.. math::  :label: VaryingCableA
 
    \begin{aligned}
-    \boldsymbol{f}_e (t) =-\boldsymbol{K}_c(T) \boldsymbol{u}_e + \boldsymbol{f}_c(T)+ \boldsymbol{f}_g 
-       \label{eq:VaryingCableA}\end{aligned}
+      \boldsymbol{f}_e (t) =-\boldsymbol{K}_c(T) \boldsymbol{u}_e + \boldsymbol{f}_c(T)+ \boldsymbol{f}_g 
+   \end{aligned}
 
-where is evaluated with :math:`\epsilon=\frac{T}{EA}` and
-:math:`L=\frac{L_e}{1+\epsilon}`. We seek to express , as a correction
-term added to the equation of a constant pretension cable (i.e. , with
+where :eq:`VaryingCableA` is evaluated with :math:`\epsilon=\frac{T}{EA}` and
+:math:`L=\frac{L_e}{1+\epsilon}`. We seek to express :eq:`VaryingCableA`, as a correction
+term added to the equation of a constant pretension cable (i.e. :eq:`CstCableA`, with
 :math:`T(0)=T_0`). We add :math:`\pm\boldsymbol{f}_e(t,T_0)` to ,
 leading to:
 
@@ -2158,8 +2181,16 @@ where
 Note that the overbar is used on the input vector to denote that the
 forces apply to the interface nodes only.
 
+
+
 The outputs to HydroDyn and other modules are the deflections,
-velocities, and accelerations of the substructure:
+velocities, and accelerations of the substructure. 
+Two meshes are introduced to store these motions, noted :math:`y_2` and :math:`y_3`.
+The two meshes have different displacements for th floating case, where :math:`y_2` 
+only has the Guyan motion, whereas :math:`y_3` has the full elastic motion. 
+This distinction is not made in the following equations. The full elastic motion is assumed 
+in :math:`y_2` in this section. For more details, see section :numref:`SD_summary`.
+The output motion is: 
 
 .. math:: :label: y2
 
@@ -2203,7 +2234,10 @@ Using the expression of :math:`\ddot{q}_m` from Eq. :eq:`ddotqm`, the internal a
                 - \tilde{K}_{mm} q_m \right]
 
 
-In the floating case, the Guyan part of the motion are replaced by the analytical rigid body motion (see details in section :numref:`SD_summary`). 
+In the floating case, some subtles changes are introduced: 1) the Guyan part of the motion are replaced by the analytical rigid body motion, 
+2) the elastic displacements are set to zero to avoid a coupling issue with HydroDyn (see details in section :numref:`SD_summary`). 
+Because of 2), a third mesh was introduced, :math:`y_3`, which always contains the full elastic motion (full elastic displacements, velocities and accelerations, including the analytical tigid body motion in the floating case). 
+The third mesh is used for instance by Moordyn.
 
 
 The output equation for :math:`y_2`: can then be written as:
@@ -2557,6 +2591,7 @@ Output: nodal motions
 
 
 Note: :math:`F_L` contains the "extra moment" if user-requested with **GuyanLoadCorrection**.
+The meshes :math:`y_2` and :math:`y_3` are identical (Guyan displacements computed using :math:`Phi_R`, elastic displacements are included, together with the elastic velocities/accelerations).
 
 
 
@@ -2579,7 +2614,11 @@ Note: :math:`F_L` contains the "extra moment" if user-requested with **GuyanLoad
                 - \tilde{C}_{mm} \dot{q}_m
                 - \tilde{K}_{mm} q_m \right]
 
-where: 1) :math:`F_L` does not contain the extra moment, 2) the operators :math:`R_{g2b}` and :math:`R_{b2g}` are when GuyanLoadCorrection is True,  3) the elastic displacements were set to 0 for stability purposes (assuming that these are small) 4) the Guyan motion is computed using the exact rigid body motions. For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
+where: 1) :math:`F_L` does not contain the extra moment, 
+2) the operators :math:`R_{g2b}` and :math:`R_{b2g}` are when GuyanLoadCorrection is True,  
+3) the elastic displacements are set to 0 for stability purposes (assuming that these are small) in :math:`y_2` (used by HydroDyn), but not set to 0 for :math:`y_3` (used by MoorDyn).
+4) the Guyan motion (:math:`U_{L,\text{rigid}}`) is computed using the exact rigid body motions. 
+For a given node :math:`P`, located at the position :math:`r_{IP,0}` from the interface in the undisplaced configuration, the position (from the interface point), displacement, translational velocity and acceleration due to the rigid body motion are:
 
 
 .. math::
@@ -2610,7 +2649,5 @@ Outputs to file:
 **Motions**: nodal motions written to file are in global coordinates, and for the floating case they contain the elastic motion :math:`\bar{U}_L  = U_{L,\text{rigid}} + \Phi_m q_m +  U_{L,\text{SIM}}` (whereas these elastic motions are not returned to the glue code)
 
 
-**Loads**: 
-
-Nodal loads are written to file in the element coordinate system. The procedure are the same for fixed-bottom and floating cases. 
+**Loads**: Nodal loads are written to file in the element coordinate system. The procedure are the same for fixed-bottom and floating cases. 
 

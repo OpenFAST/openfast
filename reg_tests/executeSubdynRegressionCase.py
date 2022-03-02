@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
@@ -49,9 +49,9 @@ parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", typ
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
-parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
-parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
-parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
+parser.add_argument("-p", "-plot", dest="plot",  action='store_true', default=False, help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec",  action='store_true', default=False, help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose",  action='store_true', default=False, help="bool to include verbose system output")
 
 args = parser.parse_args()
 
@@ -60,9 +60,9 @@ executable = args.executable[0]
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
-plotError = args.plot if args.plot is False else True
-noExec = args.noExec if args.noExec is False else True
-verbose = args.verbose if args.verbose is False else True
+plotError = args.plot
+noExec = args.noExec
+verbose = args.verbose
 
 # validate inputs
 rtl.validateExeOrExit(executable)
@@ -87,21 +87,17 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-# create the local output directory if it does not already exist
-# and initialize it with input files for all test cases
-if not os.path.isdir(testBuildDirectory):
-    os.makedirs(testBuildDirectory)
-    for file in glob.glob(os.path.join(inputsDirectory,caseName+".dvr")):
-        filename = file.split(os.path.sep)[-1]
-        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
-    for file in glob.glob(os.path.join(inputsDirectory,"*dat")):
-        filename = file.split(os.path.sep)[-1]
-        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
+# create the local output directory and initialize it with input files (overwrite if exists)
+rtl.copyTree(inputsDirectory, testBuildDirectory, renameExtDict={'.out':'_ref.out'}, includeExt=['.dvr','.dat','.out','.csv'])
+
     
 ### Run SubDyn on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName+".dvr")
-    returnCode = openfastDrivers.runSubdynDriverCase(caseInputFile, executable)
+    # delete existing outputs for safety
+    rtl.deleteOutputs(caseInputFile, extensions=['.SD.out','.SD.CBModes.json','.SD.FEMmodes.json','.SD.sum.yaml','.ech','.sum','.html'])
+    # run driver
+    returnCode = openfastDrivers.runSubdynDriverCase(caseInputFile, executable, verbose=verbose)
     if returnCode != 0:
         rtl.exitWithError("")
     
