@@ -65,7 +65,7 @@ False         Use_F_TBL    - Use spring force from user-defined table (flag)
  6.0000000E+00   4.8000000E+06   6.0000000E+00   4.8000000E+06   6.0000000E+00   4.8000000E+06
 ---------------------- StructCtrl CONTROL -------------------------------------------- [used only when StC_DOF_MODE=1 or 2]
           0   StC_CMODE     - Control mode (switch) {0:none; 1: Semi-Active Control Mode; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}
-          0   StC_CChan     - Control channel group (1:10) for stiffness and damping (StC_[XYZ]_K, StC_[XYZ]_C, and StC_[XYZ]_Brake) (specify additional channels for blade instances of StC active control -- one channel per blade) [used only when StC_DOF_MODE=1 or 2, and StC_CMODE=4 or 5]
+          0   StC_CChan     - Control channel group (1:10) for stiffness and damping (StC_[XYZ]_K, StC_[XYZ]_C, and StC_[XYZ]_Brake) [used only when StC_DOF_MODE=1 or 2, and StC_CMODE=4 or 5]
           1   StC_SA_MODE   - Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} (-)
           0   StC_X_C_HIGH  - StC X high damping for ground hook control
           0   StC_X_C_LOW   - StC X low damping for ground hook control
@@ -90,7 +90,7 @@ False         Use_F_TBL    - Use spring force from user-defined table (flag)
      0.6433   headLossCoeff_Y - Y TLCD head loss coeff (-)
        1000   rho_Y           - Y TLCD liquid density (kg/m^3)
 ---------------------- PRESCRIBED TIME SERIES --------------------------------- [used only when StC_DOF_MODE=4]
-          0   PrescribedForcesCoord- Prescribed forces are in global or local coordinates (switch) {1: global; 2: local}
+          1   PrescribedForcesCoord- Prescribed forces are in global or local coordinates (switch) {1: global; 2: local}
 "TimeForceSeries.dat"  PrescribedForcesFile   - Time series force and moment (7 columns of time, FX, FY, FZ, MX, MY, MZ)
 -------------------------------------------------------------------------------
 

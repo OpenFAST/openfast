@@ -1,13 +1,11 @@
 OpenFAST
 ========
 
-|actions| |nbsp| |rtfd| |regtest-coverage|
+|actions| |nbsp| |rtfd|
 
 .. |actions| image:: https://github.com/openfast/openfast/actions/workflows/automated-dev-tests.yml/badge.svg?branch=dev
    :target: https://github.com/OpenFAST/openfast/actions/workflows/automated-dev-tests.yml?query=workflow%3A%22Development+Pipeline%22
    :alt: Build Status
-.. |regtest-coverage| image:: https://codecov.io/gh/openfast/openfast/branch/dev/graph/badge.svg?token=lZzalptLMO
-   :target: https://codecov.io/gh/openfast/openfast
 .. |rtfd| image:: https://readthedocs.org/projects/openfast/badge/?version=dev
    :target: https://openfast.readthedocs.io/en/dev
    :alt: Documentation Status
