@@ -112,7 +112,7 @@ CONTAINS
 
       CALL UnitVector(endCoords(1:3), endCoords(4:6), Rod%q, Rod%UnstrLen)  ! get Rod axis direction vector and Rod length
 
-      print *, 'im a rod'
+      print *, 'I am a rod'
       print *, endCoords
 
       ! set Rod positions if applicable
@@ -198,7 +198,7 @@ CONTAINS
       ! Pass kinematics to any attached lines (this is just like what a Connection does, except for both ends)
       ! so that they have the correct initial positions at this initialization stage.
       
-      if (Rod%typeNum >- 2)  CALL Rod_SetDependentKin(Rod, 0.0_DbKi, m)  ! don't call this for type -2 coupled Rods as it's already been called
+      if (Rod%typeNum >- 2)  CALL Rod_SetDependentKin(Rod, 0.0_DbKi, m, .TRUE.)  ! don't call this for type -2 coupled Rods as it's already been called
 
 
       ! assign the resulting kinematics to its part of the state vector (only matters if it's an independent Rod)
@@ -249,7 +249,7 @@ CONTAINS
          call ScaleVector(Rod%r6(4:6), 1.0_DbKi, Rod%r6(4:6)); ! enforce direction vector to be a unit vector
          
          ! since this rod has no states and all DOFs have been set, pass its kinematics to dependent Lines
-         CALL Rod_SetDependentKin(Rod, t, m)
+         CALL Rod_SetDependentKin(Rod, t, m, .FALSE.)
       
       else if (abs(Rod%typeNum) == 1) then ! rod end A pinned to a body, or ground, or coupling point
       
@@ -314,7 +314,7 @@ CONTAINS
          Rod%v6(4:6) = X(4:6)                         ! (rotational velocities about unrotated axes) 
          
          
-         CALL Rod_SetDependentKin(Rod, t, m)
+         CALL Rod_SetDependentKin(Rod, t, m, .FALSE.)
       
       else if (abs(Rod%typeNum) == 1) then                       ! pinned rod type (coupled or attached to something)t previously via setPinKin)
       
@@ -325,7 +325,7 @@ CONTAINS
          Rod%v6(4:6) = X(1:3)                    ! (rotational velocities about unrotated axes) 
          
          
-         CALL Rod_SetDependentKin(Rod, t, m)
+         CALL Rod_SetDependentKin(Rod, t, m, .FALSE.)
       
       else
          print *, "Error: Rod::setState called for a non-free rod type in MoorDyn"   ! <<<
@@ -341,11 +341,12 @@ CONTAINS
    ! Set the Rod end kinematics then set the kinematics of dependent objects (any attached lines).
    ! This also determines the orientation of zero-length rods.
    !--------------------------------------------------------------
-   SUBROUTINE Rod_SetDependentKin(Rod, t, m)
+   SUBROUTINE Rod_SetDependentKin(Rod, t, m, initial)
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod            ! the Rod object
       Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
+      LOGICAL,               INTENT(IN   )  :: initial        ! true if this is the call during initialization (in which case avoid calling any Lines yet)
 
       INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
       INTEGER(IntKi)                        :: J              ! index
@@ -385,8 +386,8 @@ CONTAINS
       END DO
 
 
-      ! if this is a zero-length Rod, get bending moment-related information from attached lines and compute Rod's equilibrium orientation
-      if (N==0) then
+      ! if this is a zero-length Rod and we're passed initialization, get bending moment-related information from attached lines and compute Rod's equilibrium orientation
+      if ((N==0) .and. (initial==.FALSE.)) then
       
          DO l=1,Rod%nAttachedA
          
@@ -891,14 +892,15 @@ CONTAINS
       ! >>> could some of these be precalculated just once? <<<
             
       ! add inertia terms for the Rod assuming it is uniform density (radial terms add to existing matrix which contains parallel-axis-theorem components only)
-      I_l = 0.125*Rod%mass * Rod%d*Rod%d     ! axial moment of inertia
-      I_r = Rod%mass/12 * (0.75*Rod%d*Rod%d + (Rod%UnstrLen/Rod%N)**2 ) * Rod%N     ! summed radial moment of inertia for each segment individually
-      
-      !h_c = [value from registry]
-
-      Imat_l(1,1) = I_r   ! inertia about CG in local orientations (as if Rod is vertical)
-      Imat_l(2,2) = I_r
-      Imat_l(3,3) = I_l
+      Imat_l = 0.0_DbKi
+      if (Rod%N > 0) then
+         I_l = 0.125*Rod%mass * Rod%d*Rod%d     ! axial moment of inertia
+         I_r = Rod%mass/12 * (0.75*Rod%d*Rod%d + (Rod%UnstrLen/Rod%N)**2 ) * Rod%N     ! summed radial moment of inertia for each segment individually
+         
+         Imat_l(1,1) = I_r   ! inertia about CG in local orientations (as if Rod is vertical)
+         Imat_l(2,2) = I_r
+         Imat_l(3,3) = I_l
+      end if
       
       OrMat = CalcOrientation(phi, beta, 0.0_DbKi)        ! get rotation matrix to put things in global rather than rod-axis orientations
       

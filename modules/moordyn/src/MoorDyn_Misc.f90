@@ -539,7 +539,11 @@ CONTAINS
                sum = sum + LU(k,p)*LU(p,j)
             END DO
             
-            LU(k,j) = (A(k,j)-sum)/LU(k,k)
+            if ( EqualRealNos( LU(k,k), 0.0_DbKi) ) then
+               LU(k,j) = 0.0_DbKi   ! avoid divide by zero <<< numerator likely zero too. check if this is safe <<<
+            else
+               LU(k,j) = (A(k,j)-sum)/LU(k,k)
+            end if
          END DO !j
          
       END DO !K
@@ -552,8 +556,11 @@ CONTAINS
             sum = sum + LU(i,k)*y(k);
          END DO
          
-         y(i) = (b(i)-sum)/LU(i,i)
-         
+         if ( EqualRealNos( LU(i,i), 0.0_DbKi) ) then
+            y(i) = 0.0_DbKi   ! avoid divide by zero <<< numerator likely zero too. check if this is safe <<<
+         else
+            y(i) = (b(i)-sum)/LU(i,i)
+         end if
       END DO
       
       DO j=1,n       ! this is actually for looping through i in reverse
