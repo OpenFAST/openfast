@@ -1671,16 +1671,16 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    REAL(ReKi), DIMENSION(3)                         :: BlglobCBplus     !< Global offset between aerodynamic center and center of buoyancy of blade node j+1
    REAL(ReKi), DIMENSION(3)                         :: HubglobCB        !< Global offset between aerodynamic center and center of buoyancy of hub node
    REAL(ReKi), DIMENSION(3)                         :: NacglobCB        !< Global offset between nacelle reference position and center of buoyancy of nacelle node
-   REAL(ReKi), DIMENSION(3)                         :: BltmpPos         !< Global position of blade node j, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3)                         :: BltmpPosplus     !< Global position of blade node j+1, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3)                         :: TwrtmpPos        !< Global position of tower node j, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3)                         :: TwrtmpPosplus    !< Global position of tower node j+1, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3)                         :: HubtmpPos        !< Global position of hub node, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3)                         :: NactmpPos        !< Global position of nacelle node, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3)                         :: BlposCB          !< Global position of the center of buoyancy of blade node j, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3)                         :: BlposCBplus      !< Global position of the center of buoyancy of blade node j+1, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: Blposroot        !< Global position of the center of buoyancy of blade root, adjusted to place the origin at the seabed
-   REAL(ReKi), DIMENSION(3)                         :: Twrpostop        !< Global position of the center of buoyancy of tower top, adjusted to place the origin at the seabed
+   REAL(ReKi), DIMENSION(3)                         :: BltmpPos         !< Global position of blade node j, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: BltmpPosplus     !< Global position of blade node j+1, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: TwrtmpPos        !< Global position of tower node j, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: TwrtmpPosplus    !< Global position of tower node j+1, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: HubtmpPos        !< Global position of hub node, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: NactmpPos        !< Global position of nacelle node, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: BlposCB          !< Global position of the center of buoyancy of blade node j, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: BlposCBplus      !< Global position of the center of buoyancy of blade node j+1, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: Blposroot        !< Global position of the center of buoyancy of blade root, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: Twrpostop        !< Global position of the center of buoyancy of tower top, adjusted to place the origin at the MSL
    REAL(ReKi)                                       :: BlheadAng        !< Heading angle of blade element j
    REAL(ReKi)                                       :: BlinclAng        !< Inclination angle of blade element j
    REAL(ReKi)                                       :: TwrheadAng       !< Heading angle of tower element j
@@ -1753,15 +1753,15 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
 
       do j = 1,p%NumBlNds - 1 ! loop through all nodes, except the last
 
-            ! Global position of blade node, adjusted to place the origin at the seabed
-         BltmpPos = u%BladeMotion(k)%Position(:,j) + u%BladeMotion(k)%TranslationDisp(:,j) - ( p%WtrDpth + p%MSL2SWL )
-         BltmpPosplus = u%BladeMotion(k)%Position(:,j+1) + u%BladeMotion(k)%TranslationDisp(:,j+1) - ( p%WtrDpth + p%MSL2SWL )
+            ! Global position of blade node, adjusted to place the origin at the MSL
+         BltmpPos = u%BladeMotion(k)%Position(:,j) + u%BladeMotion(k)%TranslationDisp(:,j) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
+         BltmpPosplus = u%BladeMotion(k)%Position(:,j+1) + u%BladeMotion(k)%TranslationDisp(:,j+1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
 
             ! Global offset between aerodynamic center and center of buoyancy of blade node
          BlglobCB = matmul( [p%BlCenBn(j,k), p%BlCenBt(j,k), 0.0_ReKi ], u%BladeMotion(k)%Orientation(:,:,j) )
          BlglobCBplus = matmul( [p%BlCenBn(j+1,k), p%BlCenBt(j+1,k), 0.0_ReKi ], u%BladeMotion(k)%Orientation(:,:,j+1) )
          
-            ! Global position of the center of buoyancy of blade node, adjusted to place the origin at the seabed
+            ! Global position of the center of buoyancy of blade node, adjusted to place the origin at the MSL
          BlposCB = BltmpPos + BlglobCB
          BlposCBplus = BltmpPosplus + BlglobCBplus
 
@@ -1871,9 +1871,9 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       end do
 
       do j = 1,p%NumTwrNds - 1 ! loop through all nodes, except the last
-            ! Global position of tower node, adjusted to place the origin at the seabed
-         TwrtmpPos = u%TowerMotion%Position(:,j) + u%TowerMotion%TranslationDisp(:,j) - ( p%WtrDpth + p%MSL2SWL )
-         TwrtmpPosplus = u%TowerMotion%Position(:,j+1) + u%TowerMotion%TranslationDisp(:,j+1) - ( p%WtrDpth + p%MSL2SWL )
+            ! Global position of tower node, adjusted to place the origin at the MSL
+         TwrtmpPos = u%TowerMotion%Position(:,j) + u%TowerMotion%TranslationDisp(:,j) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
+         TwrtmpPosplus = u%TowerMotion%Position(:,j+1) + u%TowerMotion%TranslationDisp(:,j+1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
          
             ! Heading and inclination angles of tower element
          TwrheadAng = atan2( TwrtmpPosplus(2) - TwrtmpPos(2), TwrtmpPosplus(1) - TwrtmpPos(1) )
@@ -1966,8 +1966,8 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       if ( u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) >= p%WtrDpth + p%MSL2SWL .OR. u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) <= 0.0_ReKi ) &
          call SetErrStat( ErrID_Fatal, 'The hub cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
 
-         ! Global position of hub node, adjusted to place the origin at the seabed
-      HubtmpPos = u%HubMotion%Position(:,1) + u%HubMotion%TranslationDisp(:,1) - ( p%WtrDpth + p%MSL2SWL )
+         ! Global position of hub node, adjusted to place the origin at the MSL
+      HubtmpPos = u%HubMotion%Position(:,1) + u%HubMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
 
          ! Global offset between hub center and center of buoyancy of hub node
       HubglobCB = matmul( [p%HubCenBx, 0.0_ReKi, 0.0_ReKi ], u%HubMotion%Orientation(:,:,1) )
@@ -2018,8 +2018,8 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       if ( u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) >= p%WtrDpth + p%MSL2SWL .OR. u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) <= 0.0_ReKi ) &
          call SetErrStat( ErrID_Fatal, 'The nacelle cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
 
-         ! Global position of nacelle node, adjusted to place the origin at the seabed
-      NactmpPos = u%NacelleMotion%Position(:,1) + u%NacelleMotion%TranslationDisp(:,1) - ( p%WtrDpth + p%MSL2SWL )
+         ! Global position of nacelle node, adjusted to place the origin at the MSL
+      NactmpPos = u%NacelleMotion%Position(:,1) + u%NacelleMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
 
          ! Global offset between nacelle reference position and center of buoyancy of nacelle node
       NacglobCB = matmul( [p%NacCenBx, p%NacCenBy, p%NacCenBz ], u%NacelleMotion%Orientation(:,:,1) )
