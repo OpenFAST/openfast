@@ -1374,16 +1374,16 @@ CONTAINS
       CALL ReadVar( UnIn, FileName, p%dtWave   , 'dtWave', 'time step for waves', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
       CALL ReadVar( UnIn, FileName, WaveDir    , 'WaveDir'    , 'wave direction', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
       ! X grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)	coordtype         ! get the entry type
-      READ(UnIn,'(A)', IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
+      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
+      READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
       ! Y grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)	coordtype         ! get the entry type		
-      READ(UnIn,'(A)', IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
+      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type		
+      READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
       ! Z grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)	coordtype         ! get the entry type		
-      READ(UnIn,'(A)', IOSTAT=ErrStat2)	entries2          ! get entries as string to be processed
+      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type		
+      READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
       ! ----- current -----
       CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
@@ -1427,7 +1427,7 @@ CONTAINS
       ! ** if a grid has already been set, these will interpolate onto it, otherwise they'll make a new grid based on their provided coordinates
 
       ! NOTE: lots of partial code is available from MD-C for supporting various wave kinematics input options
-	
+   
       ! WaveKin and Current compatibility check could go here in future
       
       
@@ -2095,7 +2095,7 @@ CONTAINS
       RETURN
       END FUNCTION SINHNumOvrSINHDen
 
-	END SUBROUTINE setupWaterKin
+   END SUBROUTINE setupWaterKin
    
    
 

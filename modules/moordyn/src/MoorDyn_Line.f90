@@ -1195,7 +1195,7 @@ CONTAINS
       end do
 
 
-      ! Bending loads	
+      ! Bending loads   
       Line%Bs = 0.0_DbKi         ! zero bending forces
          
       if (Line%EI > 0) then
@@ -1217,7 +1217,7 @@ CONTAINS
                   call scalevector(pvec, Kurvi*Line%EI, Line%endMomentA)
                   
                   ! scale force direction vectors by desired moment force magnitudes to get resulting forces on adjacent nodes
-                  call scalevector(Mforce_ip1, Kurvi*Line%EI/Line%lstr(i), Mforce_ip1)					
+                  call scalevector(Mforce_ip1, Kurvi*Line%EI/Line%lstr(i), Mforce_ip1)   				
                      
                   ! set force on node i to cancel out forces on adjacent nodes
                   Mforce_i = -Mforce_ip1
