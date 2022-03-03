@@ -1169,24 +1169,24 @@ CONTAINS
       ! close individual rod output files
       DO I=1,p%NRods
          if (allocated(m%RodList)) then
-         if (m%RodList(I)%RodUnOut > 0) then
-            CLOSE( m%RodList(I)%RodUnOut, IOSTAT = ErrStat )
-            IF ( ErrStat /= 0 ) THEN
-               ErrMsg = 'Error closing rod output file'
-            END IF
-         end if 
+            if (m%RodList(I)%RodUnOut > 0) then
+               CLOSE( m%RodList(I)%RodUnOut, IOSTAT = ErrStat )
+               IF ( ErrStat /= 0 ) THEN
+                  ErrMsg = 'Error closing rod output file'
+               END IF
+            end if 
          end if 
       END DO
       
       ! close individual line output files
       DO I=1,p%NLines
          if (allocated(m%LineList)) then
-         if (m%LineList(I)%LineUnOut > 0) then
-            CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
-            IF ( ErrStat /= 0 ) THEN
-               ErrMsg = 'Error closing line output file'
-            END IF
-         end if 
+            if (m%LineList(I)%LineUnOut > 0) then
+               CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
+               IF ( ErrStat /= 0 ) THEN
+                  ErrMsg = 'Error closing line output file'
+               END IF
+            end if 
          end if
       END DO
 

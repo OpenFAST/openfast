@@ -617,10 +617,8 @@ subroutine SrvD_Init_Jacobian( InitInp, p, u, y, InitOut, ErrStat, ErrMsg )
 
    ! --- System dimension
       ! rough estimate based on tower length
-   !dx = 0.2_ReKi*Pi/180.0_ReKi * max(TwoNorm(InitInp%NacPosition - InitInp%TwrBasePos), 1.0_ReKi)
    dx = 0.2_ReKi*Pi/180.0_ReKi * max(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos), 1.0_ReKi)
       ! for translation inputs
-   !du_t = 0.2_R8Ki*Pi_R8/180.0_R8Ki * max(real(TwoNorm(InitInp%NacPosition - InitInp%TwrBasePos),R8Ki), 1.0_R8Ki)
    du_t = 0.2_R8Ki*Pi_R8/180.0_R8Ki * max(real(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos),R8Ki), 1.0_R8Ki)
       ! for rotation inputs
    du_r = 0.2_R8Ki * Pi_R8 / 180.0_R8Ki

@@ -5,8 +5,8 @@ True          Echo               - Echo the input to "<rootname>.AD.ech"?  (flag
 "default"     DTAero             - Time interval for aerodynamic calculations {or "default"} (s)
           1   WakeMod            - Type of wake/induction model (switch) {0=none, 1=BEMT, 2=DBEMT, 3=OLAF}  [WakeMod cannot be 2 or 3 when linearizing]
           1   AFAeroMod          - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
-          0   TwrPotent          - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
-          0   TwrShadow          - Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
+          0   TwrPotent          - Type of tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+          0   TwrShadow          - Type of tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
 False         TwrAero            - Calculate tower aerodynamic loads? (flag)
 False         FrozenWake         - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
 False         CavitCheck         - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
@@ -34,7 +34,7 @@ True          TIDrag             - Include the drag term in the tangential-induc
 ======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
 "unused"      OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
 ======  Beddoes-Leishman Unsteady Airfoil Aerodynamics Options  ===================================== [used only when AFAeroMod=2]
-          1   UAMod              - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]
+          1   UAMod              - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)}, 4=HGM, 5=HGM+vortex, 6=Oye, 7=Boeing-Vertol [used only when AFAeroMod=2]
 FALSE         FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
        0.25   UAStartRad         - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
        0.95   UAEndRad           - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
@@ -62,8 +62,8 @@ True          UseBlCm            - Include aerodynamic pitching moment in calcul
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(2)        - Name of file containing distributed aerodynamic properties for Blade #2 (-) [unused if NumBl < 2]
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(3)        - Name of file containing distributed aerodynamic properties for Blade #3 (-) [unused if NumBl < 3]
 ======  Tower Influence and Aerodynamics ============================================================= [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
-          5   NumTwrNds         - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
-TwrElev        TwrDiam        TwrCd          TwrTI (used only with TwrShadow=2)
+          5   NumTwrNds         - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
+TwrElev        TwrDiam        TwrCd          TwrTI           ! [TwrTI used only with TwrShadow=2]
 (m)              (m)           (-)            (-)
 0.0000000E+00  6.0000000E+00  0.0000000E+00  1.0000000E-01
 2.0000000E+01  5.5000000E+00  0.0000000E+00  1.0000000E-01

@@ -495,6 +495,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       Init%InData_AD%rotors(1)%HubPosition        = ED%y%HubPtMotion%Position(:,1)
       Init%InData_AD%rotors(1)%HubOrientation     = ED%y%HubPtMotion%RefOrientation(:,:,1)
+      Init%InData_AD%rotors(1)%NacellePosition    = ED%y%NacelleMotion%Position(:,1)
       Init%InData_AD%rotors(1)%NacelleOrientation = ED%y%NacelleMotion%RefOrientation(:,:,1)
       
       do k=1,NumBl
@@ -1593,7 +1594,7 @@ END FUNCTION GetVersion
 SUBROUTINE FAST_ProgStart(ThisProgVer)
    TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
 
-   ! ... Initialize NWTC Library (open console, set pi constants) ...
+   ! ... Initialize NWTC Library
    ! sets the pi constants, open console for output, etc...
    CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
 
@@ -1994,7 +1995,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    end if
       
    
-   if ( p%TurbineType == Type_Offshore_Fixed .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) .or. p%TurbineType == Type_Offshore_Floating .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) ) then
+   if ( (p%TurbineType == Type_Offshore_Fixed .or. p%TurbineType == Type_Offshore_Floating) .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) ) then
     call SetErrStat(ErrID_Fatal, 'Height of turbine location, TurbinePos(3), must be 0 for offshore turbines.', ErrStat, ErrMsg, RoutineName)
    end if
 
@@ -6289,6 +6290,9 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       if (Turbine%m_FAST%Lin%FoundSteady) then
+         if (Turbine%m_FAST%Lin%ForceLin) then
+            Turbine%p_FAST%NLinTimes=1
+         endif
 
          do iLinTime=1,Turbine%p_FAST%NLinTimes
             t_global = Turbine%m_FAST%Lin%LinTimes(iLinTime)
@@ -6319,6 +6323,12 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
          end do
 
          if (Turbine%p_FAST%WrVTK == VTK_ModeShapes) CALL WrVTKCheckpoint()
+
+         if (Turbine%m_FAST%Lin%ForceLin) then
+            ErrStat2 = ErrID_Warn
+            ErrMsg2  = 'Linearization was forced at simulation end. The linearized model may not be sufficiently representative of the solution in steady state.'
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         endif
 
       end if
 
@@ -6427,7 +6437,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    ErrorLevel = ErrLevel_in
 
       ! for debugging, let's output the meshes and all of their fields
-   IF ( ErrorLevel >= AbortErrLev .AND. p_FAST%WrVTK > VTK_None) THEN
+   IF ( ErrorLevel >= AbortErrLev .AND. p_FAST%WrVTK > VTK_None .and. .not. m_FAST%Lin%FoundSteady) THEN
       p_FAST%VTK_OutFileRoot = trim(p_FAST%VTK_OutFileRoot)//'.DebugError'
       p_FAST%VTK_fields = .true.
       CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)

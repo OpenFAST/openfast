@@ -378,6 +378,11 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_Ctrl
       CALL AllocAry( m%dll_data%avrSwap,   EXavrSWAP_Size, 'avrSwap', ErrStat2, ErrMsg2 )
    else
       CALL AllocAry( m%dll_data%avrSwap,   R+(2*m%dll_data%DLL_NumTrq)-1 + MaxLoggingChannels, 'avrSwap', ErrStat2, ErrMsg2 )
+      if ((R+(2*m%dll_data%DLL_NumTrq)-1 + MaxLoggingChannels >= 1000) .and. p%EXavrSWAP)then
+         CALL CheckError( ErrID_Fatal, 'Too many combined torque lookup values ('//trim(Num2LStr((2*m%dll_data%DLL_NumTrq)))//' entries) '//   &
+            'and logging channels ('//trim(Num2LStr(MaxLoggingChannels))//') -- this overwrites the extended avrSWAP starting at channel 1000.')
+         RETURN
+      endif
    endif
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -571,7 +576,6 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
    call WrSumInfoSend(32, 'Blade 3 root out-of-plane bending moment (Nm) [SrvD input]')
    if (p%NumBl>1) call WrSumInfoSend(33, 'Blade 2 pitch angle (rad) [SrvD input]')
    if (p%NumBl>2) call WrSumInfoSend(34, 'Blade 3 pitch angle (rad) [SrvD input]')
-   call WrSumInfoBiDr(35, 'Generator contactor (-) [GenState from previous call to DLL (initialized to 1)]')
    call WrSumInfoSend(37, 'Nacelle yaw angle from North (rad)')
    call WrSumInfoSend(49, 'Maximum number of characters in the "MESSAGE" argument (-) [size of ErrMsg argument plus 1 (we add one for the C NULL CHARACTER)]')
    call WrSumInfoSend(50, 'Number of characters in the "INFILE"  argument (-) [trimmed length of DLL_InFile parameter plus 1 (we add one for the C NULL CHARACTER)]')
@@ -583,6 +587,7 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
    call WrSumInfoSend(62, 'Maximum number of values which can be returned for logging (-) [set to '//trim(Num2LStr(MaxLoggingChannels))//']')
    call WrSumInfoSend(63, 'Record number for start of logging output (-) [set to '//trim(Num2LStr(R + (2*dll_data%DLL_NumTrq)))//']')
    call WrSumInfoSend(64, 'Maximum number of characters which can be returned in "OUTNAME" (-) [set to '//trim(Num2LStr(p%avcOUTNAME_LEN))//' (including the C NULL CHARACTER)]')
+   call WrSumInfoSend(66, 'Start of Platform motion -- 1001')
    call WrSumInfoSend(69, 'Blade 1 root in-plane bending moment (Nm) [SrvD input]')
    call WrSumInfoSend(70, 'Blade 2 root in-plane bending moment (Nm) [SrvD input]')
    call WrSumInfoSend(71, 'Blade 3 root in-plane bending moment (Nm) [SrvD input]')
@@ -604,7 +609,7 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
    call WrSumInfoSend(129, 'Maximum extent of the avrSWAP array: '//trim(Num2LStr(size(dll_data%avrSWAP))) )
 
       ! Channels with info retrieved from the DLL (from Retrieve_avrSWAP routine)
-   call WrSumInfoRcvd(35, 'Generator contactor (-) [sent to DLL at the next call]')
+   call WrSumInfoBiDr(35, 'Generator contactor (-) [GenState from previous call to DLL (initialized to 1)]')
    call WrSumInfoBiDr(36, 'Shaft brake status (-) [sent to DLL at the next call; anything other than 0 or 1 is an error] ')
    call WrSumInfoRcvd(41, 'demanded yaw actuator torque [this output is ignored since record 29 is set to 0 by ServoDyn indicating yaw rate control]')
    IF ( dll_data%Ptch_Cntrl == GH_DISCON_PITCH_CONTROL_INDIVIDUAL )  then
@@ -1008,6 +1013,7 @@ END IF
    dll_data%avrSWAP(64) = p%avcOUTNAME_LEN                  !> * Record 64: Maximum number of characters which can be returned in "OUTNAME" (-) [set to bladedinterface::MaxLoggingChannels * (2+nwtc_base::chanlen) + 1 (we add one for the C NULL CHARACTER)]
 ! Record 65 is output [see Retrieve_avrSWAP()]
 ! Records 66-68 are reserved
+   dll_data%avrSWAP(66) = 1001                              !> * Record 66: start index of platform motions
 
    dll_data%avrSWAP(69) = u%RootMxc(1)                      !> * Record 69: Blade 1 root in-plane bending moment (Nm) [SrvD input]
    dll_data%avrSWAP(70) = u%RootMxc(2)                      !> * Record 70: Blade 2 root in-plane bending moment (Nm) [SrvD input]
