@@ -429,22 +429,22 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nyWave      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave      !< number of z wave grid points [-]
     INTEGER(IntKi)  :: ntWave      !< number of wave time steps [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: pxWave      !< x location of wave grid points [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: pyWave      !< y location of wave grid points [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: pzWave      !< z location of wave grid points [-]
-    REAL(ReKi)  :: dtWave      !< wave data time step [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uxWave      !< wave velocities time series at each grid point [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uyWave      !< wave velocities time series at each grid point [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uzWave      !< wave velocities time series at each grid point [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: axWave      !< wave accelerations time series at each grid point [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: ayWave      !< wave accelerations time series at each grid point [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: azWave      !< wave accelerations time series at each grid point [-]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: PDyn      !< wave dynamic pressure time series at each grid point [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: zeta      !< wave surface elevations time series at each surface grid point [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: pxWave      !< x location of wave grid points [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: pyWave      !< y location of wave grid points [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: pzWave      !< z location of wave grid points [-]
+    REAL(SiKi)  :: dtWave      !< wave data time step [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uxWave      !< wave velocities time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uyWave      !< wave velocities time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: uzWave      !< wave velocities time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: axWave      !< wave accelerations time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: ayWave      !< wave accelerations time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: azWave      !< wave accelerations time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: PDyn      !< wave dynamic pressure time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: zeta      !< wave surface elevations time series at each surface grid point [-]
     INTEGER(IntKi)  :: nzCurrent      !< number of z current grid points [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: pzCurrent      !< z location of current grid points [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uxCurrent      !< current velocities time series at each grid point [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: uyCurrent      !< current velocities time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: pzCurrent      !< z location of current grid points [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: uxCurrent      !< current velocities time series at each grid point [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: uyCurrent      !< current velocities time series at each grid point [-]
     INTEGER(IntKi)  :: Nx0      !< copy of initial size of system state vector, for linearization routines [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
@@ -12189,7 +12189,7 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%pxWave,1), UBOUND(OutData%pxWave,1)
-        OutData%pxWave(i1) = ReKiBuf(Re_Xferred)
+        OutData%pxWave(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12207,7 +12207,7 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%pyWave,1), UBOUND(OutData%pyWave,1)
-        OutData%pyWave(i1) = ReKiBuf(Re_Xferred)
+        OutData%pyWave(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12225,11 +12225,11 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%pzWave,1), UBOUND(OutData%pzWave,1)
-        OutData%pzWave(i1) = ReKiBuf(Re_Xferred)
+        OutData%pzWave(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-    OutData%dtWave = ReKiBuf(Re_Xferred)
+    OutData%dtWave = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! uxWave not allocated
     Int_Xferred = Int_Xferred + 1
@@ -12257,7 +12257,7 @@ ENDIF
         DO i3 = LBOUND(OutData%uxWave,3), UBOUND(OutData%uxWave,3)
           DO i2 = LBOUND(OutData%uxWave,2), UBOUND(OutData%uxWave,2)
             DO i1 = LBOUND(OutData%uxWave,1), UBOUND(OutData%uxWave,1)
-              OutData%uxWave(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              OutData%uxWave(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -12290,7 +12290,7 @@ ENDIF
         DO i3 = LBOUND(OutData%uyWave,3), UBOUND(OutData%uyWave,3)
           DO i2 = LBOUND(OutData%uyWave,2), UBOUND(OutData%uyWave,2)
             DO i1 = LBOUND(OutData%uyWave,1), UBOUND(OutData%uyWave,1)
-              OutData%uyWave(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              OutData%uyWave(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -12323,7 +12323,7 @@ ENDIF
         DO i3 = LBOUND(OutData%uzWave,3), UBOUND(OutData%uzWave,3)
           DO i2 = LBOUND(OutData%uzWave,2), UBOUND(OutData%uzWave,2)
             DO i1 = LBOUND(OutData%uzWave,1), UBOUND(OutData%uzWave,1)
-              OutData%uzWave(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              OutData%uzWave(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -12356,7 +12356,7 @@ ENDIF
         DO i3 = LBOUND(OutData%axWave,3), UBOUND(OutData%axWave,3)
           DO i2 = LBOUND(OutData%axWave,2), UBOUND(OutData%axWave,2)
             DO i1 = LBOUND(OutData%axWave,1), UBOUND(OutData%axWave,1)
-              OutData%axWave(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              OutData%axWave(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -12389,7 +12389,7 @@ ENDIF
         DO i3 = LBOUND(OutData%ayWave,3), UBOUND(OutData%ayWave,3)
           DO i2 = LBOUND(OutData%ayWave,2), UBOUND(OutData%ayWave,2)
             DO i1 = LBOUND(OutData%ayWave,1), UBOUND(OutData%ayWave,1)
-              OutData%ayWave(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              OutData%ayWave(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -12422,7 +12422,7 @@ ENDIF
         DO i3 = LBOUND(OutData%azWave,3), UBOUND(OutData%azWave,3)
           DO i2 = LBOUND(OutData%azWave,2), UBOUND(OutData%azWave,2)
             DO i1 = LBOUND(OutData%azWave,1), UBOUND(OutData%azWave,1)
-              OutData%azWave(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              OutData%azWave(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -12455,7 +12455,7 @@ ENDIF
         DO i3 = LBOUND(OutData%PDyn,3), UBOUND(OutData%PDyn,3)
           DO i2 = LBOUND(OutData%PDyn,2), UBOUND(OutData%PDyn,2)
             DO i1 = LBOUND(OutData%PDyn,1), UBOUND(OutData%PDyn,1)
-              OutData%PDyn(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              OutData%PDyn(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
@@ -12484,7 +12484,7 @@ ENDIF
       DO i3 = LBOUND(OutData%zeta,3), UBOUND(OutData%zeta,3)
         DO i2 = LBOUND(OutData%zeta,2), UBOUND(OutData%zeta,2)
           DO i1 = LBOUND(OutData%zeta,1), UBOUND(OutData%zeta,1)
-            OutData%zeta(i1,i2,i3) = ReKiBuf(Re_Xferred)
+            OutData%zeta(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
             Re_Xferred = Re_Xferred + 1
           END DO
         END DO
@@ -12506,7 +12506,7 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%pzCurrent,1), UBOUND(OutData%pzCurrent,1)
-        OutData%pzCurrent(i1) = ReKiBuf(Re_Xferred)
+        OutData%pzCurrent(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12524,7 +12524,7 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%uxCurrent,1), UBOUND(OutData%uxCurrent,1)
-        OutData%uxCurrent(i1) = ReKiBuf(Re_Xferred)
+        OutData%uxCurrent(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12542,7 +12542,7 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%uyCurrent,1), UBOUND(OutData%uyCurrent,1)
-        OutData%uyCurrent(i1) = ReKiBuf(Re_Xferred)
+        OutData%uyCurrent(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF

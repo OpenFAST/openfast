@@ -920,16 +920,16 @@ CONTAINS
       INTEGER(IntKi)             :: ix, iy, iz, it        ! indices for interpolation      
       INTEGER(IntKi)             :: iz0, iz1              ! special indices for currrent interpolation  
       INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
-      Real(ReKi)                 :: fx, fy, fz, ft        ! interpolation fractions
+      Real(SiKi)                 :: fx, fy, fz, ft        ! interpolation fractions
       !Real(DbKi)                 :: qt                    ! used in time step interpolation
    
    
       ! if wave kinematics enabled, get interpolated values from grid
       if (p%WaveKin > 0) then      
          
-         CALL getInterpNumsSiKi(p%pxWave   , REAL(x),  1, ix, fx)
-         CALL getInterpNumsSiKi(p%pyWave   , REAL(y),  1, iy, fy)
-         CALL getInterpNumsSiKi(p%pzWave   , REAL(z),  1, iz, fz)
+         CALL getInterpNumsSiKi(p%pxWave   , REAL(x,SiKi),  1, ix, fx)
+         CALL getInterpNumsSiKi(p%pyWave   , REAL(y,SiKi),  1, iy, fy)
+         CALL getInterpNumsSiKi(p%pzWave   , REAL(z,SiKi),  1, iz, fz)
          !CALL getInterpNums(p%tWave, t, tindex, it, ft)
          it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
          ft = (t - (it-1)*p%dtWave)/p%dtWave
@@ -956,7 +956,7 @@ CONTAINS
       ! if current kinematics enabled, add interpolated current values from profile
       if (p%Current > 0) then      
       
-         CALL getInterpNumsSiKi(p%pzCurrent, REAL(z), 1, iz0, fz)
+         CALL getInterpNumsSiKi(p%pzCurrent, REAL(z,SiKi), 1, iz0, fz)
                   
          IF (fz == 0) THEN  ! handle end case conditions
             iz1 = iz0
@@ -1378,11 +1378,11 @@ CONTAINS
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
       ! Y grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type		
+      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
       ! Z grid points
-      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type		
+      READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
       ! ----- current -----
@@ -1690,7 +1690,7 @@ CONTAINS
          
          INTEGER(IntKi),          INTENT(IN   )  :: coordtype
          CHARACTER(*),            INTENT(INOUT)  :: entries
-         REAL(ReKi), ALLOCATABLE,  INTENT(INOUT)  :: coordarray(:)
+         REAL(SiKi), ALLOCATABLE,  INTENT(INOUT)  :: coordarray(:)
          INTEGER(IntKi),          INTENT(  OUT)  :: n
       
       

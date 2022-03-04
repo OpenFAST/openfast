@@ -398,22 +398,22 @@ typedef   ^       ^                    IntKi        nxWave             -        
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -
 typedef   ^       ^                    IntKi        nzWave             -            -  -   "number of z wave grid points"            -
 typedef   ^       ^                    IntKi        ntWave             -            -  -   "number of wave time steps"            -
-typedef   ^       ^                    ReKi         pxWave             {:}          -  -   "x location of wave grid points"            -
-typedef   ^       ^                    ReKi         pyWave             {:}          -  -   "y location of wave grid points"            -
-typedef   ^       ^                    ReKi         pzWave             {:}          -  -   "z location of wave grid points"            -
-typedef   ^       ^                    ReKi         dtWave             -            -  -   "wave data time step"            -
-typedef   ^       ^                    ReKi         uxWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
-typedef   ^       ^                    ReKi         uyWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
-typedef   ^       ^                    ReKi         uzWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
-typedef   ^       ^                    ReKi         axWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
-typedef   ^       ^                    ReKi         ayWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
-typedef   ^       ^                    ReKi         azWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
-typedef   ^       ^                    ReKi         PDyn               {:}{:}{:}{:} -  -   "wave dynamic pressure time series at each grid point"            -
-typedef   ^       ^                    ReKi         zeta               {:}{:}{:}    -  -   "wave surface elevations time series at each surface grid point"   -
+typedef   ^       ^                    SiKi         pxWave             {:}          -  -   "x location of wave grid points"            -
+typedef   ^       ^                    SiKi         pyWave             {:}          -  -   "y location of wave grid points"            -
+typedef   ^       ^                    SiKi         pzWave             {:}          -  -   "z location of wave grid points"            -
+typedef   ^       ^                    SiKi         dtWave             -            -  -   "wave data time step"            -
+typedef   ^       ^                    SiKi         uxWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
+typedef   ^       ^                    SiKi         uyWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
+typedef   ^       ^                    SiKi         uzWave             {:}{:}{:}{:} -  -   "wave velocities time series at each grid point"            -
+typedef   ^       ^                    SiKi         axWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
+typedef   ^       ^                    SiKi         ayWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
+typedef   ^       ^                    SiKi         azWave             {:}{:}{:}{:} -  -   "wave accelerations time series at each grid point"            -
+typedef   ^       ^                    SiKi         PDyn               {:}{:}{:}{:} -  -   "wave dynamic pressure time series at each grid point"            -
+typedef   ^       ^                    SiKi         zeta               {:}{:}{:}    -  -   "wave surface elevations time series at each surface grid point"   -
 typedef   ^       ^                    IntKi        nzCurrent          -            -  -   "number of z current grid points"            -
-typedef   ^       ^                    ReKi         pzCurrent          {:}          -  -   "z location of current grid points"            -
-typedef   ^       ^                    ReKi         uxCurrent          {:}          -  -   "current velocities time series at each grid point"            -
-typedef   ^       ^                    ReKi         uyCurrent          {:}          -  -   "current velocities time series at each grid point"            -
+typedef   ^       ^                    SiKi         pzCurrent          {:}          -  -   "z location of current grid points"            -
+typedef   ^       ^                    SiKi         uxCurrent          {:}          -  -   "current velocities time series at each grid point"            -
+typedef   ^       ^                    SiKi         uyCurrent          {:}          -  -   "current velocities time series at each grid point"            -
 # --- Parameters for linearization ---
 typedef   ^       ^                    Integer      Nx0                -            -  -   "copy of initial size of system state vector, for linearization routines" -
 typedef   ^       ^                    Integer      Jac_u_indx         {:}{:}       -  -   "matrix to help fill/pack the u vector in computing the jacobian" -
