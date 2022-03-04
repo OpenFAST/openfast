@@ -387,7 +387,7 @@ CONTAINS
 
 
       ! if this is a zero-length Rod and we're passed initialization, get bending moment-related information from attached lines and compute Rod's equilibrium orientation
-      if ((N==0) .and. (initial==.FALSE.)) then
+      if ((N==0) .and. (.not. initial)) then
       
          DO l=1,Rod%nAttachedA
          
