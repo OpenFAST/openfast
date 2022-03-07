@@ -467,6 +467,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          endif
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
+         InitInData%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
+         InitInData%rotors(iWT)%NacelleOrientation = y_ED%NacelleMotion%RefOrientation(:,:,1)
          do k=1,wt%numBlades
             InitInp%AD%rotors(iWT)%BladeRootOrientation(:,:,k) = y_ED%BladeRootMotion(k)%RefOrientation(:,:,1)
             InitInp%AD%rotors(iWT)%BladeRootPosition(:,k)      = y_ED%BladeRootMotion(k)%Position(:,1)
@@ -893,7 +895,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    character(10) :: sWT
    character(15) :: sBld
    ! Basic inputs
-   real(ReKi) :: hubRad, hubHt, overhang, shftTilt, precone ! Basic inputs when basicHAWTFormat is true
+   real(ReKi) :: hubRad, hubHt, overhang, shftTilt, precone, twr2Shft ! Basic inputs when basicHAWTFormat is true
    real(ReKi) :: nacYaw, bldPitch, rotSpeed
    errStat = ErrID_None
    errMsg  = ''
@@ -986,6 +988,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          call ParseVar(FileInfo_In, CurLine, 'overhang'//sWT       , overhang          , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'shftTilt'//sWT       , shftTilt          , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'precone'//sWT        , precone           , errStat2, errMsg2 , unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'twr2Shft'//sWT       , twr2Shft          , errStat2, errMsg2 , unEc); if(Failed()) return
 
          shftTilt=-shftTilt*Pi/180._ReKi ! deg 2 rad, NOTE: OpenFAST convention sign wrong around y 
          precone=precone*Pi/180._ReKi ! deg 2 rad
@@ -996,8 +999,8 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          wt%hasTower          = .True.
          wt%HAWTprojection    = .True.
          wt%twr%origin_t      = 0.0_ReKi ! Exactly at the base
-         wt%nac%origin_t      = (/ 0.0_ReKi                , 0.0_ReKi, hubHt + overhang * sin(shftTilt)       /) ! NOTE WE DON'T HAVE TWR2SHAFT to approximate
-         wt%hub%origin_n      = (/ overhang * cos(shftTilt), 0.0_ReKi, -overhang * sin(shftTilt) /)              ! IDEM
+         wt%nac%origin_t      = (/ 0.0_ReKi                , 0.0_ReKi, hubHt - twr2Shft + overhang * sin(shftTilt)       /)
+         wt%hub%origin_n      = (/ overhang * cos(shftTilt), 0.0_ReKi, -overhang * sin(shftTilt) + twr2shft /)              ! IDEM
          wt%hub%orientation_n = (/ 0.0_ReKi,  shftTilt, 0.0_ReKi  /)
 
          ! blades

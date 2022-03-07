@@ -5,4 +5,3 @@
 
 .. bibliography:: bibliography.bib
    :labelprefix: ep-
-   :keyprefix: ep-
