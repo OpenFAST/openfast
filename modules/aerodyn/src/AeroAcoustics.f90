@@ -1101,7 +1101,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
                     ! Amiet's Inflow Noise Model is Calculated as long as InflowNoise is On
                     CALL InflowNoise(AlphaNoise,p%BlChord(J,I),Unoise,m%ChordAngleLE(K,J,I),m%SpanAngleLE(K,J,I),&
-                        elementspan,m%rLEtoObserve(K,J,I),xd%MeanVxVyVz(J,I),xd%TIVx(J,I),m%LE_Location(3,J,I),0.050,p,m%SPLti,errStat2,errMsg2 )
+                        elementspan,m%rLEtoObserve(K,J,I),xd%TIVx(J,I),p,m%SPLti,errStat2,errMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                     ! If Guidati model (simplified or full version) is also on then the 'SPL correction' to Amiet's model will be added 
                     IF ( p%IInflow .EQ. 2 )   THEN      
@@ -1648,30 +1648,19 @@ SUBROUTINE TIPNOIS(ALPHTIP,ALPRAT2,C,U ,THETA,PHI, R,p,SPLTIP, errStat, errMsg)
     ENDDO
 END SUBROUTINE TipNois
 !==================================================================================================================================!
-SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE_Location,dissip,p,SPLti,errStat,errMsg)
-!  REAL(ReKi),                                 INTENT(IN   ) :: AlphaNoise     ! AOA
-!  REAL(ReKi),                                 INTENT(IN   ) :: Chord          ! Chord Length
-!  REAL(ReKi),                                 INTENT(IN   ) :: U              !
-!  REAL(ReKi),                                 INTENT(IN   ) :: d              ! element span
-!  REAL(ReKi),                                 INTENT(IN   ) :: RObs           ! distance to observer
-!  REAL(ReKi),                                 INTENT(IN   ) :: THETA          !
-!  REAL(ReKi),                                 INTENT(IN   ) :: PHI            ! Spanwise directivity angle
+SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,TINoise,p,SPLti,errStat,errMsg)
+  REAL(ReKi),                                 INTENT(IN   ) :: AlphaNoise     ! AOA
+  REAL(ReKi),                                 INTENT(IN   ) :: Chord          ! Chord Length
+  REAL(ReKi),                                 INTENT(IN   ) :: U              !
+  REAL(ReKi),                                 INTENT(IN   ) :: THETA          !
+  REAL(ReKi),                                 INTENT(IN   ) :: PHI            ! Spanwise directivity angle
+  REAL(ReKi),                                 INTENT(IN   ) :: d              ! element span
+  REAL(ReKi),                                 INTENT(IN   ) :: RObs           ! distance to observer
 !  REAL(ReKi),                                 INTENT(IN   ) :: MeanVNoise     !
-!  REAL(ReKi),                                 INTENT(IN   ) :: TINoise        !
+  REAL(ReKi),                                 INTENT(IN   ) :: TINoise        !
 !  REAL(ReKi),                                 INTENT(IN   ) :: LE_Location    !
-  
-  REAL(ReKi)                                 :: AlphaNoise     ! AOA
-  REAL(ReKi)                                 :: Chord          ! Chord Length
-  REAL(ReKi)                                 :: U              !
-  REAL(ReKi)                                 :: d              ! element span
-  REAL(ReKi)                                 :: RObs           ! distance to observer
-  REAL(ReKi)                                 :: THETA          !
-  REAL(ReKi)                                 :: PHI            ! Spanwise directivity angle
-  REAL(ReKi)                                 :: MeanVNoise     !
-  REAL(ReKi)                                 :: TINoise        !
-  REAL(ReKi)                                 :: LE_Location    !
 
-  REAL(ReKi),                                 INTENT(IN   ) :: dissip         !
+!  REAL(ReKi),                                 INTENT(IN   ) :: dissip         !
   TYPE(AA_ParameterType),                     INTENT(IN   ) :: p              ! Parameters
   REAL(ReKi),DIMENSION(size(p%FreqList)),     INTENT(  OUT) :: SPLti          !
   INTEGER(IntKi),                             INTENT(  OUT) :: errStat        ! Error status of the operation
@@ -2481,8 +2470,7 @@ SUBROUTINE Aero_Tests()
     !CALL TIPNOIS(AlphaNoise,p%ALpRAT,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
     !    m%rTEtoObserve(K,J,I), p, m%SPLTIP,ErrStat2,errMsg2)
     !--------Inflow Turbulence Noise ------------------------------------------------!
-    !CALL InflowNoise(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0, &
-    !    xd%MeanVrel(J,I),0.050d0,0.050d0,p,m%SPLti,ErrStat2,errMsg2 )
+    !CALL InflowNoise(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0, xd%TIVx(J,I),0.050d0,p,m%SPLti,ErrStat2,errMsg2 )
     !CALL FullGuidati(3.0d0,63.920d0,0.22860d0,0.5090d0,1.220d0,90.0d0,90.0d0,xd%MeanVrel(J,I),xd%TIVrel(J,I), &
     !    p,p%BlAFID(J,I),m%SPLTIGui,ErrStat2 )
     !CALL Simple_Guidati(UNoise,0.22860d0,0.120d0,0.020d0,p,m%SPLTIGui,ErrStat2,errMsg2 )
