@@ -109,7 +109,7 @@ subroutine AD_SetInitOut(p, p_AD, InputFileData, InitOut, errStat, errMsg)
                 
                 
       ! Set the info in WriteOutputHdr and WriteOutputUnt
-   CALL AllBldNdOuts_InitOut( InitOut, p, p_AD, InputFileData, ErrStat2, ErrMsg2 )
+   CALL AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    
@@ -230,7 +230,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(FileInfoType)                          :: FileInfo_In   !< The derived type for holding the full input file for parsing -- we may pass this in the future
    type(AD_InputFile)                          :: InputFileData ! Data stored in the module's input file after parsing
    character(1024)                             :: PriPath       !< Primary path
-   character(1024)                             :: EchoFileName
    integer(IntKi)                              :: UnEcho        ! Unit number for the echo file
    integer(IntKi)                              :: nRotors       ! Number of rotors
    integer(IntKi), allocatable, dimension(:)   :: NumBlades     ! Number of blades per rotor
@@ -262,6 +261,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor input/outputs', errStat, errMsg, RoutineName )
    allocate(p%rotors(nRotors), m%rotors(nRotors), stat=errStat) 
    if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor params/misc', errStat, errMsg, RoutineName )
+   allocate(NumBlades(nRotors), stat=errStat ) ! temp array to pass NumBlades
+   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor params/misc', errStat, errMsg, RoutineName )
    if (errStat/=ErrID_None) then
       call Cleanup()
       return
@@ -270,13 +271,12 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
 
       ! set a few parameters needed while reading the input file
-   allocate(NumBlades(nRotors))
    do iR = 1, nRotors
       call ValidateNumBlades( InitInp%rotors(iR)%NumBlades, ErrStat2, ErrMsg2 )
       if (Failed()) return;
       NumBlades(iR)          = InitInp%rotors(iR)%NumBlades
       p%rotors(iR)%NumBlades = InitInp%rotors(iR)%NumBlades
-      if (size(InitInp%rotors)>1) then
+      if (nRotors>1) then
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD.R'//trim(num2lstr(iR))
       else
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD'
@@ -1087,7 +1087,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
 
    p%CompAA = InputFileData%CompAA
    
-   ! NOTE: In the following we use InputFileData%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, 
+   ! NOTE: In the following we use RotData%BladeProps(1)%NumBlNds as the number of aero nodes on EACH blade, 
    !       but if AD changes this, then it must be handled in the Glue-code linearization code, too (and elsewhere?) !
    if (p%NumBlades>0) then
       p%NumBlNds         = RotData%BladeProps(1)%NumBlNds
@@ -1116,7 +1116,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
       
-  !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
+  !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier so it could be used   
    
    p%numOuts          = InputFileData%NumOuts  
    p%NBlOuts          = InputFileData%NBlOuts      
@@ -1346,7 +1346,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                               :: i
    integer(intKi)                               :: iR ! Loop on rotors
 
    integer(intKi)                               :: ErrStat2
@@ -1366,7 +1365,9 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
    ! SetInputs, Calc BEM Outputs and Twr Outputs 
    do iR=1,size(p%rotors)
-      call RotCalcOutput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), ErrStat, ErrMsg)
+      call RotCalcOutput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat2, ErrMsg2, .false.)
+         call SetErrStat(ErrStat2, ErrMSg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
    enddo
 
    if (p%WakeMod == WakeMod_FVW) then
@@ -1374,7 +1375,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Calculate Outputs at time t
-      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
+      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       call SetOutputsFromFVW( t, u, p, OtherState, x, xd, m, y, ErrStat2, ErrMsg2 )
@@ -1387,59 +1388,40 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    !-------------------------------------------------------   
    if (CalcWriteOutput) then
       do iR = 1,size(p%rotors)
-         if (p%rotors(iR)%NumOuts > 0) then
-            call Calc_WriteOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), xd%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   
-               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      
-            !...............................................................................................................................   
-            ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
-            !...............................................................................................................................   
-
-            do i = 1,p%rotors(iR)%NumOuts  ! Loop through all selected output channels
-               y%rotors(iR)%WriteOutput(i) = p%rotors(iR)%OutParam(i)%SignM * m%rotors(iR)%AllOuts( p%rotors(iR)%OutParam(i)%Indx )
-            end do             ! i - All selected output channels
-
-          end if
-       
-         y%rotors(iR)%WriteOutput(p%rotors(iR)%NumOuts+1:) = 0.0_ReKi
-
-            ! Now we need to populate the blade node outputs here
-         if (p%rotors(iR)%NumBlades > 0) then
-            call Calc_WriteAllBldNdOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         endif
-      enddo
+         call RotWriteOutputs(t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMSg2, ErrStat, ErrMsg, RoutineName)
+      end do
    end if
-      
 
 end subroutine AD_CalcOutput
 
-
-subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, NeedWriteOutput)
 ! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
 
-   REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
-   TYPE(RotInputType),           INTENT(IN   )  :: u           !< Inputs at Time t
-   TYPE(RotParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD        !< Parameters
-   TYPE(RotContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
-   TYPE(RotDiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
-   TYPE(RotConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
-   TYPE(RotOtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-   TYPE(RotOutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
-                                                               !!   nectivity information does not have to be recalculated)
-   type(RotMiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                   INTENT(IN   )  :: t                  !< Current simulation time in seconds
+   TYPE(RotInputType),           INTENT(IN   )  :: u                  !< Inputs at Time t
+   TYPE(RotParameterType),       INTENT(IN   )  :: p                  !< Parameters
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD               !< Parameters
+   TYPE(RotContinuousStateType), INTENT(IN   )  :: x                  !< Continuous states at t
+   TYPE(RotDiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
+   TYPE(RotConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
+   TYPE(RotOtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
+   TYPE(RotOutputType),          INTENT(INOUT)  :: y                  !< Outputs computed at t (Input only so that mesh con-
+                                                                      !!   nectivity information does not have to be recalculated)
+   type(RotMiscVarType),         intent(inout)  :: m                  !< Misc/optimization variables
+   TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m_AD               !< misc variables
+   INTEGER,                      INTENT(IN   )  :: iRot               !< Rotor index, needed for OLAF
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   LOGICAL,          OPTIONAL,   INTENT(IN   )  :: NeedWriteOutput    !< Flag to determine if WriteOutput values need to be calculated in this call
 
+   
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                               :: i
-   integer(intKi)                               :: j
-   integer(intKi)                               :: iR ! Loop on rotors
 
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
@@ -1448,6 +1430,12 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, Er
    
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
+   if (present(NeedWriteOutput)) then
+      CalcWriteOutput = NeedWriteOutput
+   else
+      CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
+   end if
 
    call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1479,8 +1467,77 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, Er
    call AD_CavtCrit(u, p, m, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)    
    
+   
+   !-------------------------------------------------------   
+   !     get values to output to file:  
+   !-------------------------------------------------------   
+   if (CalcWriteOutput) then
+      call RotWriteOutputs(t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg)
+   end if   
+   
 end subroutine RotCalcOutput
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg)
+! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
+! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
+! placed in the y%WriteOutput(:) array.
+!..................................................................................................................................
 
+   REAL(DbKi),                   INTENT(IN   )  :: t                  !< Current simulation time in seconds
+   TYPE(RotInputType),           INTENT(IN   )  :: u                  !< Inputs at Time t
+   TYPE(RotParameterType),       INTENT(IN   )  :: p                  !< Parameters
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD               !< Parameters
+   TYPE(RotContinuousStateType), INTENT(IN   )  :: x                  !< Continuous states at t
+   TYPE(RotDiscreteStateType),   INTENT(IN   )  :: xd                 !< Discrete states at t
+   TYPE(RotConstraintStateType), INTENT(IN   )  :: z                  !< Constraint states at t
+   TYPE(RotOtherStateType),      INTENT(IN   )  :: OtherState         !< Other states at t
+   TYPE(RotOutputType),          INTENT(INOUT)  :: y                  !< Outputs computed at t (Input only so that mesh con-
+                                                                      !!   nectivity information does not have to be recalculated)
+   type(RotMiscVarType),         intent(inout)  :: m                  !< Misc/optimization variables
+   TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m_AD               !< misc variables
+   INTEGER,                      INTENT(IN   )  :: iRot               !< Rotor index, needed for OLAF
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+
+   
+      ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
+   integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
+   integer(intKi)                               :: i
+
+   integer(intKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   character(*), parameter                      :: RoutineName = 'RotCalcOutput'
+!   LOGICAL                                      :: CalcWriteOutput   
+   !-------------------------------------------------------   
+   !     get values to output to file:  
+   !-------------------------------------------------------   
+   if (p%NumOuts > 0) then
+      call Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, iRot, ErrStat2, ErrMsg2 )   
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+      
+      !...............................................................................................................................   
+      ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
+      !...............................................................................................................................   
+
+      do i = 1,p%NumOuts  ! Loop through all selected output channels
+         y%WriteOutput(i) = p%OutParam(i)%SignM * m%AllOuts( p%OutParam(i)%Indx )
+      end do             ! i - All selected output channels
+
+   end if
+       
+   if (p%BldNd_TotNumOuts > 0) then
+      y%WriteOutput(p%NumOuts+1:) = 0.0_ReKi
+
+      ! Now we need to populate the blade node outputs here
+      if (p%NumBlades > 0) then
+         call Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, y, OtherState, indx, iRot, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+   end if
+
+   
+end subroutine RotWriteOutputs
+!----------------------------------------------------------------------------------------------------------------------------------
 
 subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
    TYPE(RotInputType),           INTENT(IN   )  :: u           !< Inputs at Time t
@@ -1520,13 +1577,12 @@ end subroutine AD_CavtCrit
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
-subroutine AD_CalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
+subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    REAL(DbKi),                   INTENT(IN   )   :: Time        !< Current simulation time in seconds
    TYPE(AD_InputType),           INTENT(IN   )   :: u           !< Inputs at Time
    TYPE(AD_ParameterType),       INTENT(IN   )   :: p           !< Parameters
-   TYPE(AD_ParameterType),       INTENT(IN   )   :: p_AD        !< Parameters
    TYPE(AD_ContinuousStateType), INTENT(IN   )   :: x           !< Continuous states at Time
    TYPE(AD_DiscreteStateType),   INTENT(IN   )   :: xd          !< Discrete states at Time
    TYPE(AD_ConstraintStateType), INTENT(IN   )   :: z           !< Constraint states at Time (possibly a guess)
@@ -1550,12 +1606,12 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m
    
 
    do iR=1, size(p%rotors)
-      call RotCalcConstrStateResidual( Time, u%rotors(iR), p%rotors(iR), p_AD, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), m%rotors(iR), z_residual%rotors(iR), ErrStat, ErrMsg )
+      call RotCalcConstrStateResidual( Time, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), m%rotors(iR), z_residual%rotors(iR), ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    enddo
    
 end subroutine AD_CalcConstrStateResidual
-
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
 subroutine RotCalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -1576,7 +1632,6 @@ subroutine RotCalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m
    
       ! Local variables   
    integer, parameter                            :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                                :: iR ! rotor index
    integer(intKi)                                :: ErrStat2
    character(ErrMsgLen)                          :: ErrMsg2
    character(*), parameter                       :: RoutineName = 'RotCalcConstrStateResidual'
@@ -1619,7 +1674,6 @@ subroutine RotCalcContStateDeriv( t, u, p, p_AD, x, xd, z, OtherState, m, dxdt, 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-   INTEGER(IntKi)                                 :: iR          ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                                 :: ErrStat2    ! temporary Error status of the operation
    CHARACTER(*), PARAMETER                        :: RoutineName = 'RotCalcContStateDeriv'
@@ -1704,7 +1758,6 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    ! local variables
    real(R8Ki)                              :: x_hat(3)
    real(R8Ki)                              :: y_hat(3)
-   real(R8Ki)                              :: z_hat(3)
    real(R8Ki)                              :: x_hat_disk(3)
    real(R8Ki)                              :: y_hat_disk(3)
    real(R8Ki)                              :: z_hat_disk(3)
@@ -1716,8 +1769,8 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
-   integer(intKi)                          :: ErrStat2
-   character(ErrMsgLen)                    :: ErrMsg2
+!   integer(intKi)                          :: ErrStat2
+!   character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'SetInputsForBEMT'
    
    ! note ErrStat and ErrMsg are set in GeomWithoutSweepPitchTwist:
@@ -1765,7 +1818,6 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, y_hat ) ! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
          
-         !jmj says omega_z and PitchRate are the same things
          ! inputs for DBEMT (DBEMT_Mod == DBEMT_cont_tauConst)
          if (allocated(m%BEMT_u(indx)%Vx_elast_dot)) then
             m%BEMT_u(indx)%Vx_elast_dot(j,k)  = dot_product( u%BladeMotion(k)%TranslationAcc(:,j), x_hat ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
@@ -1818,9 +1870,9 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    type(RotInputType),      intent(in   )  :: u                               !< AD Inputs at Time
    type(RotMiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
    real(R8Ki),              intent(  out)  :: x_hat_disk(3)
-   real(R8Ki),              intent(  out)  :: y_hat_disk(3)
-   real(R8Ki),              intent(  out)  :: z_hat_disk(3)
-   real(R8Ki),              intent(  out)  :: Azimuth(p%NumBlades)
+   real(R8Ki), optional,    intent(  out)  :: y_hat_disk(3)
+   real(R8Ki), optional,    intent(  out)  :: z_hat_disk(3)
+   real(R8Ki), optional,    intent(  out)  :: Azimuth(p%NumBlades)
    real(ReKi)                              :: z_hat(3)
    real(ReKi)                              :: tmp(3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
@@ -1841,27 +1893,34 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    x_hat_disk = u%HubMotion%Orientation(1,:,1) !actually also x_hat_hub
 
    m%V_dot_x  = dot_product( m%V_diskAvg, x_hat_disk )
-   tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
-   tmp_sz = TwoNorm(tmp)
-   if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
-      y_hat_disk = u%HubMotion%Orientation(2,:,1)
-      z_hat_disk = u%HubMotion%Orientation(3,:,1)
-   else
-     y_hat_disk = tmp / tmp_sz
-     z_hat_disk = cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
-  end if
-
-      ! "Azimuth angle" rad
-   do k=1,p%NumBlades
-      z_hat = u%BladeRootMotion(k)%Orientation(3,:,1)
-      tmp_sz_y = -1.0*dot_product(z_hat,y_hat_disk)
-      tmp_sz   =      dot_product(z_hat,z_hat_disk)
-      if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz,0.0_ReKi) ) then
-         Azimuth(k) = 0.0_ReKi
+   
+   
+   if (present(y_hat_disk)) then
+   
+      tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
+      tmp_sz = TwoNorm(tmp)
+      if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
+         y_hat_disk = u%HubMotion%Orientation(2,:,1)
+         z_hat_disk = u%HubMotion%Orientation(3,:,1)
       else
-         Azimuth(k) = atan2( tmp_sz_y, tmp_sz )
-      end if
-   end do
+        y_hat_disk = tmp / tmp_sz
+        z_hat_disk = cross_product( m%V_diskAvg, x_hat_disk ) / tmp_sz
+     end if
+
+         ! "Azimuth angle" rad
+      do k=1,p%NumBlades
+         z_hat = u%BladeRootMotion(k)%Orientation(3,:,1)
+         tmp_sz_y = -1.0*dot_product(z_hat,y_hat_disk)
+         tmp_sz   =      dot_product(z_hat,z_hat_disk)
+         if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz,0.0_ReKi) ) then
+            Azimuth(k) = 0.0_ReKi
+         else
+            Azimuth(k) = atan2( tmp_sz_y, tmp_sz )
+         end if
+      end do
+      
+   end if
+   
 end subroutine DiskAvgValues
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
@@ -1925,9 +1984,25 @@ subroutine GeomWithoutSweepPitchTwist(p,u,m,thetaBladeNds,ErrStat,ErrMsg)
          end do !j=nodes
       end do !k=blades
    else if (p%AeroProjMod==1) then
+   
+      !m%AllOuts( BPitch(  k) ) = 0.0_ReKi  ! save this value of pitch for potential output; ill-defined, TODO
+      !
+      !m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined, TODO
+   
+      do k=1,p%NumBlades
+         call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         theta = EulerExtract( orientation ) !hub_theta_root(k)
+         if (k<=3) then
+            m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
+         endif
+         theta(3) = 0.0_ReKi
+         m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+      end do
+   
       ! Generic blade, we don't assume where the axes are, and we keep the default orientation
       do k=1,p%NumBlades
-         m%hub_theta_x_root(k) = 0.0_ReKi ! ill-defined, TODO
+         
          do j=1,p%NumBlNds
             thetaBladeNds(j,k) = 0.0_ReKi ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
             m%Curve(j,k) = 0.0_ReKi ! ill-defined, TODO
@@ -1950,25 +2025,20 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
    real(R8Ki)                              :: x_hat_disk(3)
-   real(R8Ki)                              :: y_hat_disk(3)
-   real(R8Ki)                              :: z_hat_disk(3)
    real(R8Ki), allocatable                 :: thetaBladeNds(:,:)
-   real(R8Ki), allocatable                 :: Azimuth(:)
    
    integer(intKi)                          :: tIndx
    integer(intKi)                          :: iR ! Loop on rotors
    integer(intKi)                          :: j, k  ! loop counter for blades
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
    integer :: iW
-   integer :: nWings
 
    do tIndx=1,size(u)
       do iR =1, size(p%rotors)
          allocate(thetaBladeNds(p%rotors(iR)%NumBlNds, p%rotors(iR)%NumBlades))
-         allocate(azimuth(p%rotors(iR)%NumBlades))
          ! Get disk average values and orientations
          ! NOTE: needed because it sets m%V_diskAvg and m%V_dot_x, needed by CalcOutput..
-         call DiskAvgValues(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), x_hat_disk, y_hat_disk, z_hat_disk, Azimuth) 
+         call DiskAvgValues(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), x_hat_disk) ! also sets m%V_diskAvg and m%V_dot_x
          call GeomWithoutSweepPitchTwist(p%rotors(iR),u(tIndx)%rotors(iR), m%rotors(iR), thetaBladeNds,ErrStat,ErrMsg)
          if (ErrStat >= AbortErrLev) return
 
@@ -1997,7 +2067,6 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
             end do !j=nodes
          enddo ! k blades
          if (allocated(thetaBladeNds)) deallocate(thetaBladeNds)
-         if (allocated(azimuth))       deallocate(azimuth)
       enddo ! iR, rotors
 
       if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
@@ -2061,16 +2130,12 @@ subroutine SetInputsForAA(p, u, m, errStat, errMsg)
    end do
 end subroutine SetInputsForAA
 !----------------------------------------------------------------------------------------------------------------------------------
-
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
 subroutine SetOutputsFromBEMT(p, m, y )
 
    type(RotParameterType),  intent(in   )  :: p                               !< AD parameters
    type(RotOutputType),     intent(inout)  :: y                               !< AD outputs 
    type(RotMiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
-   !type(BEMT_OutputType),   intent(in   )  :: BEMT_y                          ! BEMT outputs
-   !real(ReKi),              intent(in   )  :: WithoutSweepPitchTwist(:,:,:,:) ! modified orientation matrix
 
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
@@ -2262,7 +2327,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 
    type(AD_InitInputType),   intent(in   )  :: InitInp                           !< Input data for initialization routine
    type(AD_InputFile),       intent(in)     :: InputFileData                     !< All the data in the AeroDyn input file
-   integer(IntKi),           intent(in)     :: NumBl(:)                          !< Number of blades
+   integer(IntKi),           intent(in)     :: NumBl(:)                          !< Number of blades: size(NumBl) = number of rotors
    integer(IntKi),           intent(out)    :: ErrStat                           !< Error status
    character(*),             intent(out)    :: ErrMsg                            !< Error message
 
@@ -2474,7 +2539,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          !end if
       end if
       
-      if (InputFileData%WakeMod == WakeMod_FVW) then
+      if (InputFileData%WakeMod == WakeMod_FVW) then !bjj: note: among other things, WriteOutput values will not be calculated properly in AD Jacobians if FVW this is allowed
          call SetErrStat( ErrID_Fatal, 'FVW cannot currently be used for linearization. Set WakeMod=0 or WakeMod=1.', ErrStat, ErrMsg, RoutineName )
       else if (InputFileData%WakeMod == WakeMod_DBEMT) then
 !bjj: when linearization has been tested
@@ -3093,14 +3158,10 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
 
    real(ReKi)                                   :: BladeNodePosition(3)    ! local blade node position
    
-   
-   real(ReKi)                                   :: u_TwrShadow             ! axial velocity deficit fraction from tower shadow
-   real(ReKi)                                   :: u_TwrPotent             ! axial velocity deficit fraction from tower potential flow
-   real(ReKi)                                   :: v_TwrPotent             ! transverse velocity deficit fraction from tower potential flow
-   
-   real(ReKi)                                   :: denom                   ! denominator
-   real(ReKi)                                   :: exponential             ! exponential term
    real(ReKi)                                   :: v(3)                    ! temp vector
+   
+   logical                                      :: FirstWarn_TowerStrike
+   logical                                      :: DisturbInflow
    
    integer(IntKi)                               :: j, k                    ! loop counters for elements, blades
    integer(intKi)                               :: ErrStat2
@@ -3111,6 +3172,7 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""   
    
+   FirstWarn_TowerStrike = .true.
    
       ! these models are valid for only small tower deflections; check for potential division-by-zero errors:   
    call CheckTwrInfl( u, ErrStat2, ErrMsg2 )
@@ -3125,70 +3187,17 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
          
          BladeNodePosition = u%BladeMotion(k)%Position(:,j) + u%BladeMotion(k)%TranslationDisp(:,j)
          
-         call getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, m%TwrClrnc(j,k), ErrStat2, ErrMsg2)
+         call getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, m%TwrClrnc(j,k), FirstWarn_TowerStrike, DisturbInflow, ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            if (.not. FirstWarn_TowerStrike) call SetErrStat(ErrID_Fatal, "Tower strike.", ErrStat, ErrMsg, RoutineName )
             if (ErrStat >= AbortErrLev) return
-         
-      
-         ! calculate tower influence:
-         if ( abs(zbar) < 1.0_ReKi .and. p%TwrPotent /= TwrPotent_none ) then
-            if ( p%TwrPotent == TwrPotent_baseline ) then
-               
-               denom = (xbar**2 + ybar**2)**2
-               
-               if (equalRealNos(denom,0.0_ReKi)) then
-                  u_TwrPotent = 0.0_ReKi
-                  v_TwrPotent = 0.0_ReKi
-               else
-                  u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
-                  v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
-               end if
-               
-            elseif (p%TwrPotent == TwrPotent_Bak) then
-               
-               xbar = xbar + 0.1
-               
-               denom = (xbar**2 + ybar**2)**2
-               if (equalRealNos(denom,0.0_ReKi)) then
-                  u_TwrPotent = 0.0_ReKi
-                  v_TwrPotent = 0.0_ReKi
-               else
-                  u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
-                  v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
-               
-                  denom = TwoPi*(xbar**2 + ybar**2)
-                  u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
-                  v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom
-               end if
-               
-            end if
+
+         if ( DisturbInflow ) then
+            v = CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI)
+            m%DisturbedInflow(:,j,k) = u%InflowOnBlade(:,j,k) + matmul( theta_tower_trans, v ) 
          else
-            u_TwrPotent = 0.0_ReKi
-            v_TwrPotent = 0.0_ReKi
+            m%DisturbedInflow(:,j,k) = u%InflowOnBlade(:,j,k)
          end if
-         
-         u_TwrShadow = 0.0_ReKi
-         select case (p%TwrShadow)
-            case (TwrShadow_Powles)
-               if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
-                  denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
-                  if ( abs(ybar) < denom ) then
-                     u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
-                  end if
-               end if
-             case (TwrShadow_Eames)
-               if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
-                  exponential = ( ybar / (TwrTI * xbar) )**2
-                  denom = TwrTI * xbar * sqrt( TwoPi )
-                  u_TwrShadow = -TwrCd / denom * exp ( -0.5_ReKi * exponential ) 
-               end if
-         end select
-                     
-         v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
-         v(2) = v_TwrPotent*W_tower
-         v(3) = 0.0_ReKi
-         
-         m%DisturbedInflow(:,j,k) = u%InflowOnBlade(:,j,k) + matmul( theta_tower_trans, v ) 
       
       end do !j=NumBlNds
    end do ! NumBlades
@@ -3216,109 +3225,123 @@ SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
    real(ReKi)                                   :: TwrTI                   ! local tower TI (for Eames tower shadow model)
    real(ReKi)                                   :: W_tower                 ! local relative wind speed normal to the tower
    real(ReKi)                                   :: Pos(3)                  ! current point
-   real(ReKi)                                   :: u_TwrShadow             ! axial velocity deficit fraction from tower shadow
-   real(ReKi)                                   :: u_TwrPotent             ! axial velocity deficit fraction from tower potential flow
-   real(ReKi)                                   :: v_TwrPotent             ! transverse velocity deficit fraction from tower potential flow
-   real(ReKi)                                   :: denom                   ! denominator
-   real(ReKi)                                   :: exponential             ! exponential term
    real(ReKi)                                   :: v(3)                    ! temp vector
    integer(IntKi)                               :: i                       ! loop counters for points
    real(ReKi)                                   :: TwrClrnc                ! local tower clearance
-   real(ReKi)                                   :: r_TowerBlade(3)         ! distance vector from tower to blade
-   real(ReKi)                                   :: TwrDiam                 ! local tower diameter  
-   logical                                      :: found   
+   logical                                      :: FirstWarn_TowerStrike
+   logical                                      :: DisturbInflow
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'TwrInflArray'
    ErrStat = ErrID_None
    ErrMsg  = ""   
    
+   
+   
+   FirstWarn_TowerStrike = .false. ! we aren't going to end due to an assumed "tower-strike"
+   
    ! these models are valid for only small tower deflections; check for potential division-by-zero errors:   
    call CheckTwrInfl( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); if (ErrStat >= AbortErrLev) return
 
    !$OMP PARALLEL default(shared)
-   !$OMP do private(i,Pos,r_TowerBlade,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,TwrDiam,found,denom,exponential,u_TwrPotent,v_TwrPotent,u_TwrShadow,v) schedule(runtime)
+   !$OMP do private(i,Pos,theta_tower_trans,W_tower,xbar,ybar,zbar,TwrCd,TwrTI,TwrClrnc,FirstWarn_TowerStrike,DisturbInflow,v) schedule(runtime)
    do i = 1, size(Positions,2)
       Pos=Positions(1:3,i)
          
       ! Find nearest line2 element or node of the tower  (see getLocalTowerProps)
       ! values are found for the deflected tower, returning theta_tower, W_tower, xbar, ybar, zbar, and TowerCd:
-      ! option 1: nearest line2 element
-      call TwrInfl_NearestLine2Element(p, u, Pos, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrDiam, found)
-      if ( .not. found) then 
-         ! option 2: nearest node
-         call TwrInfl_NearestPoint(p, u, Pos, r_TowerBlade, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrDiam)
-      end if
-      TwrClrnc = TwoNorm(r_TowerBlade) - 0.5_ReKi*TwrDiam
+      call getLocalTowerProps(p, u, Pos, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrClrnc, FirstWarn_TowerStrike, DisturbInflow, ErrStat2, ErrMsg2)
 
-      if ( TwrClrnc>20*TwrDiam) then
-         ! Far away, we skip the computation and keep undisturbed inflow 
-      elseif ( TwrClrnc<=0.01_ReKi*TwrDiam) then
-         ! Inside the tower, or very close, (will happen for vortex elements) we keep undisturbed inflow
-         ! We don't want to reach the stagnation points
-      else
-         ! calculate tower influence:
-         if ( abs(zbar) < 1.0_ReKi .and. p%TwrPotent /= TwrPotent_none ) then
-
-            if ( p%TwrPotent == TwrPotent_baseline ) then
-               denom = (xbar**2 + ybar**2)**2
-               u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
-               v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom      
-
-            elseif (p%TwrPotent == TwrPotent_Bak) then
-               xbar = xbar + 0.1
-               denom = (xbar**2 + ybar**2)**2               
-               u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
-               v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom        
-               denom = TwoPi*(xbar**2 + ybar**2)               
-               u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
-               v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom                       
-               
-            end if
-         else
-            u_TwrPotent = 0.0_ReKi
-            v_TwrPotent = 0.0_ReKi
-         end if
-         
-         u_TwrShadow = 0.0_ReKi
-         select case (p%TwrShadow)
-            case (TwrShadow_Powles)
-               if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
-                  denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
-                  if ( abs(ybar) < denom ) then
-                     u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
-                  end if
-               end if
-             case (TwrShadow_Eames)
-               if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
-                  exponential = ( ybar / (TwrTI * xbar) )**2
-                  denom = TwrTI * xbar * sqrt( TwoPi )
-                  u_TwrShadow = -TwrCd / denom * exp ( -0.5_ReKi * exponential ) 
-               end if
-            ! We limit the deficit to avoid having too much flow reversal and accumulation of vorticity behind the tower
-            ! Limit to -0.5 the wind speed at the tower
-            u_TwrShadow =max(u_TwrShadow, -0.5)
-         end select
-                     
-         v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
-         v(2) = v_TwrPotent*W_tower
-         v(3) = 0.0_ReKi
-         
+      if ( DisturbInflow ) then
+         v = CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI)
          Inflow(1:3,i) = Inflow(1:3,i) + matmul( theta_tower_trans, v ) 
-      endif ! Check if point far away or in tower
+      end if
+      
    enddo ! loop on points
    !$OMP END DO 
    !$OMP END PARALLEL
 END SUBROUTINE TwrInflArray
 !----------------------------------------------------------------------------------------------------------------------------------
+FUNCTION CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI) RESULT(v)
+
+   TYPE(RotParameterType),       INTENT(IN   )  :: p                       !< Parameters
+   real(ReKi), intent(inout)                    :: xbar                    ! local x^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi), intent(in)                       :: ybar                    ! local y^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi), intent(in)                       :: zbar                    ! local z^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi), intent(in)                       :: W_tower                 ! local relative wind speed normal to the tower
+   real(ReKi), intent(in)                       :: TwrCd                   ! local tower drag coefficient
+   real(ReKi), intent(in)                       :: TwrTI                   ! local tower TI (for Eames tower shadow model)
+   real(ReKi)                                   :: v(3)                    ! modified velocity vector
+      
+   real(ReKi)                                   :: denom                   ! denominator
+   real(ReKi)                                   :: exponential             ! exponential term
+   real(ReKi)                                   :: u_TwrShadow             ! axial velocity deficit fraction from tower shadow
+   real(ReKi)                                   :: u_TwrPotent             ! axial velocity deficit fraction from tower potential flow
+   real(ReKi)                                   :: v_TwrPotent             ! transverse velocity deficit fraction from tower potential flow
+
+
+   u_TwrShadow = 0.0_ReKi
+   u_TwrPotent = 0.0_ReKi
+   v_TwrPotent = 0.0_ReKi
+      
+   ! calculate tower influence:
+   if ( abs(zbar) < 1.0_ReKi .and. p%TwrPotent /= TwrPotent_none ) then
+
+      if ( p%TwrPotent == TwrPotent_baseline ) then
+         denom = (xbar**2 + ybar**2)**2
+         u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
+         v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
+
+      elseif (p%TwrPotent == TwrPotent_Bak) then
+         xbar = xbar + 0.1
+         denom = (xbar**2 + ybar**2)**2
+         u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
+         v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
+         denom = TwoPi*(xbar**2 + ybar**2)
+         u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
+         v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom
+               
+      end if
+   end if
+         
+   select case (p%TwrShadow)
+      case (TwrShadow_Powles)
+         if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+            denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
+            if ( abs(ybar) < denom ) then
+               u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
+            end if
+         end if
+         case (TwrShadow_Eames)
+         if ( xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+            exponential = ( ybar / (TwrTI * xbar) )**2
+            denom = TwrTI * xbar * sqrt( TwoPi )
+            u_TwrShadow = -TwrCd / denom * exp ( -0.5_ReKi * exponential ) 
+         end if
+   end select
+
+   ! We limit the deficit to avoid having too much flow reversal and accumulation of vorticity behind the tower
+   ! Limit to -0.5 the wind speed at the tower
+   u_TwrShadow =max(u_TwrShadow, -0.5_ReKi)
+         
+         
+   v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
+   v(2) = v_TwrPotent*W_tower
+   v(3) = 0.0_ReKi
+      
+
+END FUNCTION CalculateTowerInfluence
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the tower constants necessary to compute the tower influence. 
 !! if u%TowerMotion does not have any nodes there will be serious problems. I assume that has been checked earlier.
-SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrClrnc, ErrStat, ErrMsg)
+SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_tower, xbar, ybar, zbar, TwrCd, TwrTI, TwrClrnc, FirstWarn_TowerStrike, DisturbInflow, ErrStat, ErrMsg)
 !..................................................................................................................................
    TYPE(RotInputType),           INTENT(IN   )  :: u                       !< Inputs at Time t
    TYPE(RotParameterType),       INTENT(IN   )  :: p                       !< Parameters
    REAL(ReKi)                   ,INTENT(IN   )  :: BladeNodePosition(3)    !< local blade node position
    REAL(ReKi)                   ,INTENT(  OUT)  :: theta_tower_trans(3,3)  !< transpose of local tower orientation expressed as a DCM
+   LOGICAL                      ,INTENT(INOUT)  :: FirstWarn_TowerStrike   !< Whether we should check and warn for a tower strike 
+   LOGICAL                      ,INTENT(  OUT)  :: DisturbInflow           !< Whether tower clearance is in the range of values where it should disturb the inflow
    REAL(ReKi)                   ,INTENT(  OUT)  :: W_tower                 !< local relative wind speed normal to the tower
    REAL(ReKi)                   ,INTENT(  OUT)  :: xbar                    !< local x^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                   ,INTENT(  OUT)  :: ybar                    !< local y^ component of r_TowerBlade normalized by tower radius
@@ -3353,11 +3376,28 @@ SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_towe
    end if
    
    TwrClrnc = TwoNorm(r_TowerBlade) - 0.5_ReKi*TwrDiam
-   if ( TwrClrnc <= 0.0_ReKi ) then
-      call SetErrStat(ErrID_Fatal, "Tower strike.", ErrStat, ErrMsg, RoutineName)
+
+   if (FirstWarn_TowerStrike) then
+      if ( TwrClrnc <= 0.0_ReKi ) then
+         !call SetErrStat(ErrID_Fatal, "Tower strike.", ErrStat, ErrMsg, RoutineName)
+         !call SetErrStat(ErrID_Severe, NewLine//NewLine//"** WARNING: Tower strike. **  This warning will not be repeated though the condition may persist."//NewLine//NewLine//, ErrStat, ErrMsg, RoutineName)
+         call WrScr( NewLine//NewLine//"** WARNING: Tower strike. **  This warning will not be repeated though the condition may persist."//NewLine//NewLine )
+         FirstWarn_TowerStrike = .false.
+      end if
    end if
+
    
-   
+   if ( TwrClrnc>20.0_ReKi*TwrDiam) then
+      ! Far away, we skip the computation and keep undisturbed inflow 
+      DisturbInflow = .false.
+   elseif ( TwrClrnc<=0.01_ReKi*TwrDiam) then
+      ! Inside the tower, or very close, (will happen for vortex elements) we keep undisturbed inflow
+      ! We don't want to reach the stagnation points
+      DisturbInflow = .false.
+   else
+      DisturbInflow = .true.
+   end if
+
 END SUBROUTINE getLocalTowerProps
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Option 1: Find the nearest-neighbor line2 element of the tower mesh for which the blade line2-element node projects orthogonally onto
@@ -3515,7 +3555,7 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tow
    REAL(ReKi)                      ,INTENT(  OUT)  :: ybar                          !< local y^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                      ,INTENT(  OUT)  :: zbar                          !< local z^ component of r_TowerBlade normalized by tower radius
    REAL(ReKi)                      ,INTENT(  OUT)  :: TwrCd                         !< local tower drag coefficient
-   REAL(ReKi)                      ,INTENT(  OUT)  :: TwrTI                         !< local tower TI (for Eeames tower shadow model)
+   REAL(ReKi)                      ,INTENT(  OUT)  :: TwrTI                         !< local tower TI (for Eames tower shadow model)
    REAL(ReKi)                      ,INTENT(  OUT)  :: TwrDiam                       !< local tower diameter
       
       ! local variables
@@ -3663,14 +3703,14 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       return
    endif
 
-   call Rot_JacobianPInput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   call Rot_JacobianPInput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 
 END SUBROUTINE AD_JacobianPInput
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
 
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -3686,6 +3726,8 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
                                                                                !!   available here so that mesh parameter information (i.e.,
                                                                                !!   connectivity) does not have to be recalculated for dYdu.
    TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
+   INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
@@ -3813,7 +3855,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
 
             ! compute y at u_op + delta_p u
-         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_p, m, ErrStat2, ErrMsg2 ) 
+         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          
             
@@ -3836,7 +3878,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrSta
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
             
             ! compute y at u_op - delta_m u
-         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_m, m, ErrStat2, ErrMsg2 ) 
+         call RotCalcOutput( t, u_perturb, p, p_AD, x_init, xd, z_copy, OtherState_copy, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          
             
@@ -3976,7 +4018,7 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       return
    endif
 
-   call RotJacobianPContState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+   call RotJacobianPContState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 
 
 END SUBROUTINE AD_JacobianPContState
@@ -3984,7 +4026,7 @@ END SUBROUTINE AD_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -4000,6 +4042,8 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, Err
                                                                                !!   available here so that mesh parameter information (i.e.,
                                                                                !!   connectivity) does not have to be recalculated for dYdx.
    TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
+   INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
@@ -4105,7 +4149,7 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, Err
 
             ! compute y at x_op + delta_p x
          ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
-         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_p, m, ErrStat2, ErrMsg2 ) 
+         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
@@ -4116,7 +4160,7 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, Err
          
             ! compute y at x_op - delta_m x
          ! NOTE: z_op is the same as z because x_perturb does not affect the values of phi, thus I am not updating the states or calling UpdatePhi to get z_perturb.
-         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_m, m, ErrStat2, ErrMsg2 ) 
+         call RotCalcOutput( t, u, p, p_AD, x_perturb, xd, z, OtherState_init, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
@@ -4345,13 +4389,13 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
       return
    endif
 
-   call RotJacobianPConstrState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), errStat, errMsg, dYdz, dXdz, dXddz, dZdz )
+   call RotJacobianPConstrState( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, errStat, errMsg, dYdz, dXdz, dXddz, dZdz )
 
 END SUBROUTINE AD_JacobianPConstrState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and dZ/dz are returned.
-SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -4367,6 +4411,8 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, E
                                                                                !!   available here so that mesh parameter information (i.e.,
                                                                                !!   connectivity) does not have to be recalculated for dYdz.
    TYPE(RotMiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m_AD       !< misc variables
+   INTEGER,                              INTENT(IN   )           :: iRot       !< Rotor index, needed for OLAF
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
@@ -4473,7 +4519,7 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, E
                z_perturb%BEMT%phi(j,k) = z%BEMT%phi(j,k) + delta_p
             
                   ! compute y at z_op + delta_p z
-               call RotCalcOutput( t, u, p, p_AD, x, xd, z_perturb, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
+               call RotCalcOutput( t, u, p, p_AD, x, xd, z_perturb, OtherState, y_p, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
             
             
@@ -4481,7 +4527,7 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, E
                z_perturb%BEMT%phi(j,k) = z%BEMT%phi(j,k) - delta_m
             
                   ! compute y at z_op - delta_m z
-               call RotCalcOutput( t, u, p, p_AD, x, xd, z_perturb, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
+               call RotCalcOutput( t, u, p, p_AD, x, xd, z_perturb, OtherState, y_m, m, m_AD, iRot, ErrStat2, ErrMsg2 ) 
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
             
 
