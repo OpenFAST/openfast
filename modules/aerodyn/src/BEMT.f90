@@ -291,16 +291,11 @@ subroutine BEMT_InitOtherStates( OtherState, p, errStat, errMsg )
 
    errStat = ErrID_None
    errMsg  = ""
-   
-   
-   if (p%UseInduction) then
-      
-      allocate ( OtherState%ValidPhi( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-      if ( errStat2 /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error allocating memory for OtherState%ValidPhi.', errStat, errMsg, RoutineName )
-         return
-      end if
-
+     
+   allocate ( OtherState%ValidPhi( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for OtherState%ValidPhi.', errStat, errMsg, RoutineName )
+      return
    end if
    
    ! values of the OtherStates are initialized in BEMT_ReInit()

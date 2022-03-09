@@ -21,4 +21,4 @@ ServoDyn Users Guide
    :maxdepth: 2
    
    input.rst
- 
+   ExtendedBladedInterface.rst 
