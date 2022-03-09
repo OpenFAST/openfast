@@ -330,6 +330,7 @@ IMPLICIT NONE
     TYPE(AFI_ParameterType) , DIMENSION(:), ALLOCATABLE  :: AFI      !< AirfoilInfo parameters [-]
     INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
+    LOGICAL  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  RotInputType  =======
@@ -11177,6 +11178,7 @@ ENDIF
       CALL FVW_CopyParam( SrcParamData%FVW, DstParamData%FVW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstParamData%UA_Flag = SrcParamData%UA_Flag
  END SUBROUTINE AD_CopyParam
 
  SUBROUTINE AD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -11305,6 +11307,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Int_BufSz  = Int_BufSz  + 1  ! UA_Flag
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -11450,6 +11453,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%UA_Flag, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_PackParam
 
  SUBROUTINE AD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -11639,6 +11644,8 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%UA_Flag = TRANSFER(IntKiBuf(Int_Xferred), OutData%UA_Flag)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_UnPackParam
 
  SUBROUTINE AD_CopyRotInputType( SrcRotInputTypeData, DstRotInputTypeData, CtrlCode, ErrStat, ErrMsg )
