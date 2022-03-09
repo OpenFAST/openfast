@@ -1,7 +1,7 @@
-------- AeroAcoustics Module v1.00.* INPUT FILE ------------------------------------------------
+------- AeroAcoustics Module INPUT FILE -------------------------------------------------------------
 IEA task 37 RWT turbine -- https://github.com/IEAWindTask37/IEA-3.4-130-RWT
 ======  General Options  ============================================================================
-False        Echo         - Echo the input to "<rootname>.AD.ech"?  (flag)
+False        Echo         - Echo the input to "<rootname>.AD.NN.ech"?  (flag)
 0.1          DT_AA        - Time interval for aeroacoustics calculations (s), must be a multiple of DT_Aero from AeroDyn15  (or "default")
 0            AAStart      - Time after which the AeroAcoustics module is run (s)
 70           BldPrcnt     - Percentage of the blade span, starting from the tip, that will contribute to the overall noise levels. (float)
