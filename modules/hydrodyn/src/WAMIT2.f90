@@ -935,12 +935,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data3D%WvDir1(1)))//' degrees (first wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data3D%WvDir2(1)))//' degrees (second wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE
 
@@ -991,12 +991,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE
 
@@ -1448,12 +1448,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data3D%WvDir1(1)))//' degrees (first wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data3D%WvDir2(1)))//' degrees (second wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE
 
@@ -1504,12 +1504,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE
 
@@ -2098,12 +2098,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( InitInp%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir1 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(DiffQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(DiffQTFData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
-                     'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                     'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
       ELSE IF ( InitInp%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir2 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(DiffQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(DiffQTFData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
-                     'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                     'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
       ELSE
 
@@ -2620,12 +2620,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( InitInp%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir1 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(SumQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(SumQTFData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
-                     'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                     'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
       ELSE IF ( InitInp%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir2 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(SumQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(SumQTFData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
-                     'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                     'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
       ELSE
 
