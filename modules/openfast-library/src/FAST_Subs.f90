@@ -720,6 +720,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! ........................
    ! initialize SeaStates
    ! ........................
+   ALLOCATE( SeaSt%Input( p_FAST%InterpOrder+1 ), SeaSt%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SeaSt%Input and SeaSt%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+
    if ( p_FAST%CompSeaSt == Module_SeaSt ) then
 
       Init%InData_SeaSt%Gravity       = p_FAST%Gravity
