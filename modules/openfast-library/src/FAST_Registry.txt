@@ -329,6 +329,7 @@ typedef  ^  FAST_MiscLinType  IntKi    CopyOP_CtrlCode -  -  -  "mesh control co
 typedef  ^  FAST_MiscLinType  DbKi     AzimTarget     {:} -  -  "target azimuth positions in CalcSteady algorithm" rad
 typedef  ^  FAST_MiscLinType  logical  IsConverged     -  -  -  "whether the error calculation in the CalcSteady algorithm is converged" -
 typedef  ^  FAST_MiscLinType  logical  FoundSteady     -  -  -  "whether the CalcSteady algorithm found a steady-state solution" -
+typedef  ^  FAST_MiscLinType  logical  ForceLin        -  -  -  "whether the CalcSteady algorithm found a steady-state solution" -
 typedef  ^  FAST_MiscLinType  IntKi    n_rot           -  -  -  "number of rotations completed in CalcSteady algorithm" -
 typedef  ^  FAST_MiscLinType  IntKi    AzimIndx        -  -  -  "index into target azimuth array in CalcSteady algorithm" -
 typedef  ^  FAST_MiscLinType  IntKi    NextLinTimeIndx -  -  -  "index for next time in LinTimes where linearization should occur" -
@@ -617,19 +618,21 @@ typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_P_2_SD_P	-	-	-	"Map HydroDyn Moris
 typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_HD_W_P	-	-	-	"Map SubDyn y2Mesh Point to HydroDyn WAMIT Point"
 typedef	^	FAST_ModuleMapType	MeshMapType	HD_W_P_2_SD_P	-	-	-	"Map HydroDyn WAMIT Point to SubDyn y2Mesh Point"
 # ED/BD <-> SrvD/StC
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_N	{:}	-	-	"Map ElastoDyn Nacelle point mesh to ServoDyn/NStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SrvD_P_2_ED_P_N	{:}	-	-	"Map ServoDyn  nacelle point mesh to ElastoDyn     point mesh on the nacelle"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_SrvD_P_T	{:}	-	-	"Map ElastoDyn tower   line2 mesh to ServoDyn/TStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SrvD_P_2_ED_P_T	{:}	-	-	"Map ServoDyn  tower   point mesh to ElastoDyn     point load mesh on the tower"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_SrvD_P_B 	{:}{:}	-	-	"Map ElastoDyn blade line2 mesh to ServoDyn/BStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SrvD_P_2_ED_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to ElastoDyn point load mesh on the blade"
-typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_SrvD_P_B 	{:}{:}	-	-	"Map BeamDyn blade line2 mesh to ServoDyn/BStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SrvD_P_2_BD_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade"
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_NStC_P_N	{:}	-	-	"Map ElastoDyn      nacelle point mesh to ServoDyn/NStC point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	NStC_P_2_ED_P_N	{:}	-	-	"Map ServoDyn/NStC  nacelle point mesh to ElastoDyn     point mesh on the nacelle"
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_TStC_P_T	{:}	-	-	"Map ElastoDyn      tower   line2 mesh to ServoDyn/TStC point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	TStC_P_2_ED_P_T	{:}	-	-	"Map ServoDyn/TStC  tower   point mesh to ElastoDyn     point load mesh on the tower"
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_BStC_P_B 	{:}{:}	-	-	"Map ElastoDyn blade line2 mesh to ServoDyn/BStC point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_ED_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to ElastoDyn point load mesh on the blade"
+typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BStC_P_B 	{:}{:}	-	-	"Map BeamDyn blade line2 mesh to ServoDyn/BStC point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_BD_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade"
 # ED/SD <-> SrvD/StC -- Platform TMD
-typedef	^	FAST_ModuleMapType	MeshMapType	SrvD_P_P_2_ED_P	{:}	-	-	"Map ServoDyn  platform point mesh load   to ElastoDyn     point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	{:}	-	-	"Map ElastoDyn platform point mesh motion to ServoDyn/SStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SrvD_P_P_2_SD_P	{:}	-	-	"Map ServoDyn  platform point mesh load   to SubDyn        point load Lmesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_SrvD_P_P	{:}	-	-	"Map SubDyn    platform y3mesh motion to ServoDyn/SStC point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_ED_P	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to ElastoDyn     point load mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SStC_P_P	{:}	-	-	"Map ElastoDyn     platform point mesh motion to ServoDyn/SStC point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_SD_P	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to SubDyn        point load mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_SStC_P_P	{:}	-	-	"Map SubDyn        y3mesh   point mesh motion to ServoDyn/SStC point mesh"
+# ED --> SrvD -- PlatformPtMesh motion to SrvD%PtfmMotionMesh for passing to DLL
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn     platform point mesh motion to ServoDyn      point mesh -- for passing to controller"
 # ED/BD <-> AD (blades)
 typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
@@ -655,7 +658,6 @@ typedef	^	FAST_ModuleMapType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_NacelleLoads	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh_2	-	-	-	"copy of ED input mesh (used only for temporary storage)"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh_3	-	-	-	"copy of ED input mesh (used only for temporary storage)"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_TowerPtloads	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_BladePtLoads	{:}	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_SD_TPMesh	-	-	-	"copy of SD input mesh"
@@ -678,8 +680,11 @@ typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric power input from Sim
 typedef	^	FAST_ExternInputType	ReKi	YawPosCom	-	-	2pi	"yaw position command from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	YawRateCom	-	-	-	"yaw rate command from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	BlPitchCom	3	-	2pi	"blade pitch commands from Simulink/Labview"	"rad"
+typedef	^	FAST_ExternInputType	ReKi	BlAirfoilCom	3	-	-	"blade airfoil commands from Simulink/Labview"	"-"
 typedef	^	FAST_ExternInputType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW"
 typedef	^	FAST_ExternInputType	ReKi	LidarFocus	3	-	-	"lidar focus (relative to lidar location)"	m
+typedef	^	FAST_ExternInputType	ReKi	CableDeltaL	{20}	-	-	"Cable control DeltaL"	m
+typedef	^	FAST_ExternInputType	ReKi	CableDeltaLdot	{20}	-	-	"Cable control DeltaLdot"	m/s
 
 # ..... FAST_MiscVarType data .......................................................................................................
 typedef	FAST	FAST_MiscVarType	DbKi	TiLstPrn	-	-	-	"The simulation time of the last print (to file)"	(s)

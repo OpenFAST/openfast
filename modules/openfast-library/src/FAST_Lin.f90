@@ -293,6 +293,7 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, NumBlNodes, ErrStat, 
    m_FAST%Lin%n_rot           = 0
    m_FAST%Lin%IsConverged     = .false.
    m_FAST%Lin%FoundSteady     = .false.
+   m_FAST%Lin%ForceLin        = .false.
    m_FAST%Lin%AzimIndx        = 1
    
    p_FAST%AzimDelta   = TwoPi / p_FAST%NLinTimes
@@ -2528,14 +2529,14 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy  )
       
    !IF (u_SrvD%NStC%Mesh%Committed) THEN
    !   
-   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStC%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
+   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStC%Mesh, MeshMapData%ED_P_2_NStC_P_N, ErrStat2, ErrMsg2 )
    !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    !         
    !END IF
    !
    !IF (u_SrvD%TSC%Mesh%Committed) THEN
    !   
-   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStC%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
+   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStC%Mesh, MeshMapData%ED_L_2_TStC_P_T, ErrStat2, ErrMsg2 )
    !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    !         
    !END IF
@@ -2590,12 +2591,12 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       end do
       
       !IF (y_SrvD%NStC%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%NStC%Mesh, u_ED%NacelleLoads, MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NStC%Mesh, y_ED%NacelleMotion )
+      !   CALL Linearize_Point_to_Point( y_SrvD%NStC%Mesh, u_ED%NacelleLoads, MeshMapData%NStC_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NStC%Mesh, y_ED%NacelleMotion )
       !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%NacelleLoads' )                  
       !END IF
       !
       !IF (y_SrvD%TStC%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%TStC%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TStC%Mesh, y_ED%TowerLn2Mesh )
+      !   CALL Linearize_Point_to_Point( y_SrvD%TStC%Mesh, u_ED%TowerPtLoads, MeshMapData%TStC_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TStC%Mesh, y_ED%TowerLn2Mesh )
       !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerPtLoads' )                  
       !END IF
             
@@ -5317,12 +5318,25 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
          ! this is the 2pi boundary, so we are either larger than the last target azimuth or less than the next one
          NextAzimuth = psi >= m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx) .and. psi < m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx-1)
       end if
+
+      ! Forcing linearization if it's the last step
+      if (t_global >= p_FAST%TMax - 0.5_DbKi*p_FAST%DT) then
+         call WrScr('')
+         call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization.')
+         m_FAST%Lin%ForceLin = .True.
+         m_FAST%Lin%AzimIndx = 1
+         NextAzimuth         = .True.
+      endif
       
       if (NextAzimuth) then
       
             ! interpolate to find y at the target azimuth
          call FAST_DiffInterpOutputs( m_FAST%Lin%AzimTarget(m_FAST%Lin%AzimIndx), p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
                    IceF, IceD, ErrStat, ErrMsg )
+         ! If linearization is forced
+         if (m_FAST%Lin%ForceLin) then
+            m_FAST%Lin%IsConverged = .True.
+         endif
                    
          if (m_FAST%Lin%IsConverged .or. m_FAST%Lin%n_rot == 0) then ! save this operating point for linearization later
             m_FAST%Lin%LinTimes(m_FAST%Lin%AzimIndx) = t_global  
@@ -5349,6 +5363,10 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
          end if
          
       end if
+      if (m_FAST%Lin%ForceLin) then
+         m_FAST%Lin%IsConverged=.true.
+         m_FAST%Lin%FoundSteady=.true.
+      endif
          
 
 END SUBROUTINE FAST_CalcSteady

@@ -250,9 +250,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
    InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
 
-   InitOut%HubHt       = p%HubHt
-   InitOut%TwrBasePos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
-   InitOut%TwrBaseOrient = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
+   InitOut%HubHt            = p%HubHt
+   InitOut%TwrBaseRefPos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
+   InitOut%TwrBaseTransDisp = y%TowerLn2Mesh%TranslationDisp(:,p%TwrNodes + 2)
+   InitOut%TwrBaseRefOrient = y%TowerLn2Mesh%RefOrientation(:,:,p%TwrNodes + 2)
+   InitOut%TwrBaseOrient    = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
    InitOut%RotSpeed    = p%RotSpeed
    InitOut%isFixed_GenDOF = .not. InputFileData%GenDOF
