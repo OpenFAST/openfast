@@ -286,6 +286,7 @@ typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
+typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
 
 
 # ..... Inputs ....................................................................................................................
