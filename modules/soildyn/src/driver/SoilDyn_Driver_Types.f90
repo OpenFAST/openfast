@@ -33,11 +33,6 @@ MODULE SoilDyn_Driver_Types
 
       !> This contains flags to note if the settings were made.  This same data structure is
       !! used both during the driver input file and the command line options.
-      !!
-      !! NOTE: The WindFileType is only set if it is given as a command line option.  Otherwise
-      !!       it is handled internally by InflowWInd.
-      !!
-      !! NOTE: The wind direction is specified by the SoilDyn input file.
    TYPE     :: SlDDriver_Flags
       LOGICAL                 :: DvrIptFile           = .FALSE.      !< Was an input file name given on the command line?
       LOGICAL                 :: SlDIptFile           = .FALSE.      !< Was an SoilDyn input file requested?
