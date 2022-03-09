@@ -731,6 +731,9 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
       ! hub 2 hubAD
       call MeshMapCreate(wt%hub%ptMesh, uAD%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
 
+      ! nac 2 nacAD
+      call MeshMapCreate(wt%nac%ptMesh, uAD%rotors(iWT)%nacelleMotion, wt%nac%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed())return
+
       ! bldroot 2 bldroot AD
       do iB = 1, wt%numBlades
          call MeshMapCreate(wt%bld(iB)%ptMesh, uAD%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed())return
@@ -1064,6 +1067,9 @@ subroutine Set_AD_Inputs(nt,dvr,AD,IW,errStat,errMsg)
       wt => dvr%WT(iWT)
       ! Hub 2 Hub AD 
       call Transfer_Point_to_Point(wt%hub%ptMesh, AD%u(1)%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+
+      ! Nac 2 Nac AD 
+      call Transfer_Point_to_Point(wt%nac%ptMesh, AD%u(1)%rotors(iWT)%nacelleMotion, wt%nac%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,wt%numBlades
