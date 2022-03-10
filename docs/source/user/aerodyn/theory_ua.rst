@@ -139,7 +139,29 @@ as the function reaches :math:`0` on both sides of :math:`\alpha_0`,
 then :math:`f_s^{st}` is kept at the constant value :math:`0`. 
 
 
+**Note that for UAMod=5, a different separation function is formed.**
+We define an offset for the :math:`C_n` function, ``cn_offset``, where 
+:math:`C_{n,offset}=\frac{C_n\left(\alpha^{Lower}\right)+C_n\left(\alpha^{Upper}\right)}{2}`. Then, the separation function 
+is a value between 0 and 1, given by the following equation:
+
+.. math::
+
+   f_s^{st}(\alpha) = \left[ 2 \max\left\{\frac{1}{4} , \sqrt{\frac{C_n^{st}(\alpha) - C_{n,offset}}{C_n^{fullyAttached}(\alpha)-C_{n,offset}}} \right\} -1 \right]^2
+ 
+with the fully-attached :math:`C_n` curve defined as :math:`C_n` between :math:`alpha^{Lower}` and :math:`alpha^{Upper}` and linear functions outside of that range:
+
+.. math::
+
+   C_n^{fullyAttached}(\alpha) =  \begin{cases} C_n\left(\alpha^{Upper}\right) + C_n^{slope}\left(\alpha^{Upper}\right) \cdot \left(\alpha-\alpha^{Upper}\right)          & \alpha>\alpha^{Upper} \\
+                                                        C_n(\alpha)                                                                                                       & \alpha^{Lower}<=\alpha<=\alpha^{Upper} \\
+                                                        C_n\left(\alpha^{Lower}\right) + C_n^{slope}\left(\alpha^{Lower}\right) \cdot  \left(\alpha-\alpha^{Lower}\right) & \alpha<\alpha^{Lower} \end{cases}
+
+Note that to avoid numerical issues at the :math:`\pm180` degree boundary, this function changes slope when the separation function is 0 above :math:`alpha^{Upper}` and below :math:`alpha^{Lower}`.
+This allow the fully-attached linear sections to be periodic and avoid numerical issues with large magnitudes of angle of attack.
+
+
 **Inviscid and fully separated lift coefficient:**
+
 The inviscid lift coefficient is
 :math:`C_{l,\text{inv}}= C_{l,\alpha} (\alpha-\alpha_0)`.
 The fully separated lift coefficient may
@@ -465,6 +487,7 @@ Inputs
 See :numref:`ad_ua_inputs` for a description of the inputs necessary in the AeroDyn primary file (e.g. ``UAMod``) 
 
 See :numref:`airfoil_data_input_file` for a more comprehensive description of all the inputs present in the profile input file.
+Their default values are described in :numref:`UA_AFI_defaults`
 
 See :numref:`ua_notations` for a list of notations and definitions specific to unsteady aerodynamic inputs.
 
@@ -472,6 +495,71 @@ An example of profile data (containing some of the unsteady aerodynamic paramete
 :download:`(here) <examples/ad_polar_example.dat>`.
 
 
+.. _UA_AFI_defaults:
+
+Calculating Default Airfoil Coefficients
+----------------------------------------
+
+The default value for ``cd0`` is the minimum value of the :math:`C_d` curve between :math:`\pm20` degrees angle of attack. 
+:math:`\alpha_{c_{d0}}` is defined to be the angle of attack where ``cd0`` occurs.
+
+After computing ``cd0``, the :math:`C_n` curve is computed by
+
+.. math::
+       C_{n}(\alpha) = C_l(\alpha) \cos\alpha + \left(C_d(\alpha) - c_{d0}\right) \sin\alpha
+
+The slope of the :math:`C_n` curve is computed as follows:
+   
+.. math::
+       C_{n}^{Slope}\left(\frac{\alpha_{i+1} + \alpha_i}{2}\right) = \frac{C_n(\alpha_{i+1}) - C_n(\alpha_i)}{\alpha_{i+1} - \alpha_i}
+
+:math:`C_{n,smooth}^{Slope}` is a smoothed version of :math:`C_{n}^{Slope}`, calculated using a triweight kernel with a window of 2 degrees.
+
+
+.. math::
+       C_{l}^{Slope}\left(\frac{\alpha_{i+1} + \alpha_i}{2}\right) = \frac{C_l(\alpha_{i+1}) - C_l(\alpha_i)}{\alpha_{i+1} - \alpha_i}
+
+
+Using :math:`C_{n,smooth}^{Slope}`, ``alphaUpper`` and ``alphaLower`` are computed:
+
+``alphaUpper`` is the smallest angle of attack value between :math:`\alpha_{c_{d0}}` and 20 degrees where the :math:`C_{n,smooth}^{Slope}` curve has started to decrease to 90% of its maximum slope. 
+
+.. math::
+       C_{n,smooth}^{Slope}\left(\alpha^{Upper}\right) < 0.9 \max_{\alpha \in \left[\alpha_{c_{d0}}, \alpha^{Upper}\right]}  C_{n,smooth}^{Slope}\left( \alpha \right) 
+
+
+``alphaLower`` is the largest angle of attack value between -20 degrees and :math:`\alpha_{c_{d0}}` where the :math:`C_{n,smooth}^{Slope}` curve has started to decrease to 90% of its maximum slope. 
+
+.. math::
+       C_{n,smooth}^{Slope}\left(\alpha^{Lower}\right) < 0.9 \max_{\alpha \in \left[\alpha^{Lower}, \alpha_{c_{d0}}\right]}  C_{n,smooth}^{Slope}\left( \alpha \right) 
+
+``Cn1`` is the value of :math:`C_n(\alpha)` at the smallest value of :math:`\alpha` where :math:`\alpha >= \alpha^{Upper}` and the separation function, :math:`f_{st}(\alpha)` = 0.7.
+
+``Cn2`` is the value of :math:`C_n(\alpha)` at the largest value of :math:`\alpha` where :math:`\alpha <= \alpha^{Lower}` and the separation function, :math:`f_{st}(\alpha)`  = 0.7.
+  
+``Cn_offset`` is the average value of the :math:`C_n` curve at ``alphaUpper`` and ``alphaLower``:
+
+.. math::
+       C_{n}^{offset} = \frac{C_n\left(\alpha^{Lower}\right) + C_n\left(\alpha^{Upper}\right)}{2}
+
+``C_nalpha`` is defined as the maximum slope of the smoothed :math:`C_n` curve, :math:`C_{n,smooth}^{Slope}` between :math:`\pm20` degrees angle of attack.
+
+``C_lalpha`` is defined as the maximum slope of the (un-smoothed) :math:`C_l` curve, :math:`C_{l}^{Slope}` between :math:`\pm20` degrees angle of attack.
+
+The default ``alpha0`` is computed as the zero-crossing of a line with a slope equal to ``C_lalpha`` that goes through the :math:`C_l` curve at :math:`\alpha = \frac{\alpha^{Upper} + \alpha^{Lower}}{2}`
+
+.. math::
+       \alpha_0 = \frac{\alpha^{Upper} + \alpha^{Lower}}{2} - \frac{C_l\left(\frac{\alpha^{Upper} + \alpha^{Lower}}{2}\right) }{C_{l,\alpha}}
+
+``Cm0`` is the value of the :math:`C_m` curve at ``alpha0``: :math:`C_{m,0} = C_m\left(\alpha_0\right)`. If the :math:`C_m` polar values have not been included, :math:`C_{m,0} =0`.
+
+``alpha1`` is the angle of attack above ``alphaUpper`` where the separation function, :math:`f_s^{st}` is 0.7.
+
+``alpha2`` is the angle of attack below ``alphaLower`` where the separation function, :math:`f_s^{st}` is 0.7.
+
+``Cn1`` is the value of the :math:`C_n` curve at ``alpha1``.
+
+``Cn2`` is the value of the :math:`C_n` curve at ``alpha2``.
 
 
 
@@ -482,6 +570,7 @@ Outputting variables of the dynamic stall models is possible, but requires
 to set preprocessor variable ``UA_OUTS`` and recompile the program (OpenFAST, AeroDyn Driver, or Unsteady Aero driver). 
 The outputs are written in output files with extension `*.UA.out`.
 To activate these outputs with `cmake`, compile using ``-DCMAKE_Fortran_FLAGS="-DUA_OUTS=ON"``
+
 
 
 

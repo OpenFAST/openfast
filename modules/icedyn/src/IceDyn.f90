@@ -37,7 +37,7 @@ MODULE IceDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.02.01', '23-Jul-2016' )
+   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', '', '' )
 
    ! ..... Public Subroutines ...................................................................................................
 

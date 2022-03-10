@@ -2529,14 +2529,14 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy  )
       
    !IF (u_SrvD%NStC%Mesh%Committed) THEN
    !   
-   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStC%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
+   !   CALL Linearize_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NStC%Mesh, MeshMapData%ED_P_2_NStC_P_N, ErrStat2, ErrMsg2 )
    !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    !         
    !END IF
    !
    !IF (u_SrvD%TSC%Mesh%Committed) THEN
    !   
-   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStC%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
+   !   CALL Linearize_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TStC%Mesh, MeshMapData%ED_L_2_TStC_P_T, ErrStat2, ErrMsg2 )
    !      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    !         
    !END IF
@@ -2591,12 +2591,12 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       end do
       
       !IF (y_SrvD%NStC%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%NStC%Mesh, u_ED%NacelleLoads, MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NStC%Mesh, y_ED%NacelleMotion )
+      !   CALL Linearize_Point_to_Point( y_SrvD%NStC%Mesh, u_ED%NacelleLoads, MeshMapData%NStC_P_2_ED_P_N, ErrStat2, ErrMsg2, u_SrvD%NStC%Mesh, y_ED%NacelleMotion )
       !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%NacelleLoads' )                  
       !END IF
       !
       !IF (y_SrvD%TStC%Mesh%Committed) THEN      
-      !   CALL Linearize_Point_to_Point( y_SrvD%TStC%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TStC%Mesh, y_ED%TowerLn2Mesh )
+      !   CALL Linearize_Point_to_Point( y_SrvD%TStC%Mesh, u_ED%TowerPtLoads, MeshMapData%TStC_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TStC%Mesh, y_ED%TowerLn2Mesh )
       !      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerPtLoads' )                  
       !END IF
             
