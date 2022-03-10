@@ -241,7 +241,7 @@ CONTAINS
          CALL GetNewUnit( UnCoef )
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )   ! add error handling?
          
-         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first three lines (title, names, and units) then parse
+         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first two lines (title, names, and units) then parse
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
             
@@ -249,19 +249,25 @@ CONTAINS
             
             READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2      !read into a line
 
-            IF (ErrStat4 > 0) EXIT
-            
-            READ(Line2,*,IOSTAT=ErrStat4) LineProp_Xs(I), LineProp_Ys(I)
-             
+            IF (ErrStat4 > 0) then
+               print *, "Error while reading lookup table file"
+               EXIT
+            ELSE IF (ErrStat4 < 0) then
+               print *, "Read ", I-1, " data lines from lookup table file"
+               EXIT
+            ELSE
+               READ(Line2,*,IOSTAT=ErrStat4) LineProp_Xs(I), LineProp_Ys(I)
+            END IF 
          END DO
          
          if (I < 2) then
             ErrStat3 = ErrID_Fatal
             ErrMsg3  = "Less than the minimum of 2 data lines found in file "//TRIM(inputString)//" (first 3 lines are headers)."
+            LineProp_npoints = 0
             Close (UnCoef)
             RETURN
          else
-            LineProp_npoints = I;
+            LineProp_npoints = I-1
             Close (UnCoef)
          end if
       

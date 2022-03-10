@@ -1127,7 +1127,7 @@ CONTAINS
          ! handle nonlinear stiffness if needed
          if (Line%nEApoints > 0) then
             
-            Xi = Line%l(I)/Line%lstr(I) - 1.0                   ! strain rate based on inputs
+            Xi = Line%lstr(I)/Line%l(I) - 1.0                   ! strain rate based on inputs
             Yi = 0.0_DbKi
 
             ! find stress based on strain
