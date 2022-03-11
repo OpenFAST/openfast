@@ -2718,10 +2718,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: Vs    ! segment submerged volume
    REAL(ReKi)               :: a0    ! waterplane ellipse shape
    REAL(ReKi)               :: b0    
-   REAL(ReKi)               :: cr    ! centroid of segment submerged volume relative to its lower node
-   REAL(ReKi)               :: cl 
-   REAL(ReKi)               :: cx 
-   REAL(ReKi)               :: cz 
+  !REAL(ReKi)               :: cr    ! centroid of segment submerged volume relative to its lower node
+  !REAL(ReKi)               :: cl 
+  !REAL(ReKi)               :: cx 
+  !REAL(ReKi)               :: cz
+   REAL(ReKi)               :: ZetaP, ZetaM, dZetadx, dZetady
+   REAL(ReKi)               :: n_hat(3), t_hat(3), s_hat(3), r_hat(3)
+   REAL(ReKi)               :: sinGamma, cosGamma, tanGamma
+   REAL(ReKi)               :: s0, Vrc, Vhc, Z0
+   REAL(ReKi)               :: FbVec(3), MbVec(3)
    REAL(ReKi)               :: pwr   ! exponent for buoyancy node distribution smoothing
    REAL(ReKi)               :: alpha ! final load distribution factor for element
    REAL(ReKi)               :: Fb    !buoyant force
@@ -3066,7 +3071,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          alpha_s2= u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
          omega_s2= u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
          
-         if ( .not. mem%PropPot ) then ! Member is NOT modeled with Potential Flow Theory
+         IF ( .NOT. mem%PropPot ) THEN ! Member is NOT modeled with Potential Flow Theory
             ! should i_floor theshold be applied to below calculations to avoid wasting time on computing zero-valued things? <<<<<
             ! should lumped half-element coefficients get combined at initialization? <<<
               
@@ -3137,136 +3142,164 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_IMG(4:6)
 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
+            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
+            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
 
-            if ( z1 < 0.0_ReKi ) then   ! if segment is at least partially submerged 
-              
-    
-               if (z2 >= 0) then ! special calculation if the slice is partially submerged
-                  
+            IF ( z1 < Zeta1 ) THEN  ! If element is at least partially submerged
+
+               IF (z2 >= Zeta2) THEN  ! Partially submerged element
+
                   ! Check that this is not the 1st element of the member
-                  if (( i == 1 ) .and. (z2 > 0.0_ReKi)) then
-                     call SeterrStat(ErrID_Fatal, 'The lowest element of a Morison member has become partially submerged!  This is not allowed.  Please review your model and create a discretization such that even with displacements, the lowest element of a member does not become partially submerged.', errStat, errMsg, 'Morison_CalcOutput' )                  
-                     return
-                  end if
-                  
-                  h0 = -z1/cosPhi             ! distances along element centerline from point 1 to the waterplane
-              
-              
-                  if (abs(dRdl_mg) < 0.0001) then      ! untapered cylinder case
+                  IF (( i == 1 ) .AND. (z2 > Zeta2)) THEN
+                    CALL SeterrStat(ErrID_Fatal, 'The lowest element of a Morison member has become partially submerged!  This is not allowed.  Please review your model and create a discretization such that even with displacements, the lowest element of a member does not become partially submerged.', errStat, errMsg, 'Morison_CalcOutput' )
+                    RETURN
+                  END IF
 
-                     Vs =    Pi*r1*r1*h0   ! volume of total submerged portion
-                     if ( EqualRealNos(Vs, 0.0_ReKi) ) then
-                        cx = 0.0_ReKi  ! Avoid singularity, but continue to provide the correct solution
-                     else
-                        cr = 0.25*r1*r1*tanPhi/h0
-                        cl = 0.5*h0 + 0.125*r1*r1*tanPhi*tanPhi/h0
-                        cx = cr*cosPhi + cl*sinPhi
-                     end if
-                    
-                     !alpha0 = 0.5*h0/dl            ! force distribution between end nodes
-                 
-                  else       ! inclined tapered cylinder case (note I've renamed r0 to rh here!!)
-                     !===================
-                     !Per plan equations
-                     ! NOTE:  Variable changes of Plan     vs       Code
-                     !---------------------------------------------------
-                     !                             V                 Vs
-                     !                             a_h               a0
-                     !                             b_h               b0
-                     !                             x_c               cx
-                     !                             h                 h0
-                     !                             r1                r_MG,i
-                     !                             r_c               cr
-                     !                             h_c               cl
-                     ! NOTE: a0 and b0 always appear as a0b0, never separately.
-                     rh   = r1 + h0*dRdl_mg    ! radius of element at point where its centerline crosses the waterplane
-                     C_1  = 1.0_ReKi - dRdl_mg**2 * tanPhi**2
-                     ! waterplane ellipse shape
-                     b0   = rh/sqrt(C_1)
-                     a0   = rh/((C_1)*cosPhi)             ! simplified from what's in ConicalCalcs.ipynb
+                  ! Submergence ratio
+                  SubRatio = ( Zeta1-pos1(3) ) / ( (Zeta1-pos1(3)) - (Zeta2-pos2(3)) )
+                  ! The position of the intersection between the free surface and the element
+                  FSInt    = SubRatio * (pos2-pos1) + pos1
+                  ! Distances along element centerline from point 1 to the waterplane
+                  h0       = SubRatio * dl
+
+                  ! radius of element at point where its centerline crosses the waterplane
+                  rh    = r1 + h0*dRdl_mg    
+
+                  ! Estimate the free-surface normal at the free-surface intersection, n_hat
+                  CALL GetTotalWaveElev( Time, (/FSInt(1)+rh,FSInt(2)/), ZetaP, ErrStat2, ErrMsg2 )
+                  CALL GetTotalWaveElev( Time, (/FSInt(1)-rh,FSInt(2)/), ZetaM, ErrStat2, ErrMsg2 )
+                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+                  dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*rh)
+                  CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)+rh/), ZetaP, ErrStat2, ErrMsg2 )
+                  CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)-rh/), ZetaM, ErrStat2, ErrMsg2 )
+                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+                  dZetady = (ZetaP-ZetaM)/(2.0_ReKi*rh)
+                  n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
+                  n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+
+                  ! Get other relevant unit vectors, t_hat, r_hat, and s_hat
+                  t_hat    = Cross_Product(k_hat,n_hat)
+                  sinGamma = SQRT(Dot_Product(t_hat,t_hat))
+                  cosGamma = Dot_Product(k_hat,n_hat)
+                  tanGamma = sinGamma/cosGamma
+                  IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
+                     t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   ! Arbitrary choice for t_hat
+                     t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+                  ELSE
+                     t_hat = t_hat / sinGamma
+                  END IF
+                  s_hat = Cross_Product(t_hat,n_hat)
+                  r_hat = Cross_Product(t_hat,k_hat)
+
+                  ! Compute the waterplane shape, the submerged volume, and it's geometric center
+                  IF (abs(dRdl_mg) < 0.0001) THEN  ! non-tapered member
+
+                     IF (cosGamma < 0.0001) THEN
+                        CALL SetErrStat(ErrID_Fatal, 'Element cannot be parallel to the free surface.  This has happened for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+                     END IF
+
+                     a0   = r1/cosGamma                                       ! Semi major axis of waterplane
+                     b0   = r1                                                ! Semi minor axis of waterplane
                      a0b0 = a0*b0
-                     C_2  = a0b0*rh*cosPhi - r1**3
-                     cl   = -(-0.75*a0b0*rh**2*cosPhi + 0.75*r1**4*C_1 + r1*C_1*C_2) / (dRdl_mg*C_1*C_2)
-                     cr   = (0.75*a0b0*dRdl_mg*rh**2*sinPhi)/(C_1*C_2)
-                     cx   = cr*cosPhi + cl*sinPhi 
-                     Vs   = pi*(a0b0*rh*cosPhi - r1**3)/(3.0*dRdl_mg)       
-                  
-                     ! End per plan equations
-                     !===================
-                  
-                     !rh = r1 + h0*dRdl_mg    ! radius of element at point where its centerline crosses the waterplane
-                     !l1 = r1/dRdl_mg  ! distance from cone end to bottom node
-                     !              
-                     !! waterplane ellipse shape
-                     !b0 = rh/sqrt(1 - dRdl_mg**2 * tanPhi**2)
-                     !a0 = rh/((1 - dRdl_mg**2*tanPhi**2)*cosPhi)             ! simplified from what's in ConicalCalcs.ipynb
-                     !
-                     !! segment submerged volume
-                     !!Vs = pi*(a0*b0*rh*cosPhi - l1**3*dRdl_mg**3)/(3*dRdl_mg) !Original code
-                     !Vs = pi*(a0*b0*rh*cosPhi - r1**3)/(3*dRdl_mg)        !Plan doc
-                     !
-                     !! centroid of segment submerged volume (relative to bottom node)
-                     !cx = -0.25*(3*a0*b0*rh*rh*(dRdl_mg**2 + 1)*cosPhi + 3.0*l1**4*dRdl_mg**4*(dRdl_mg**2*tanPhi**2 - 1) + 4*l1*dRdl_mg*(dRdl_mg**2*tanPhi**2 - 1)*(a0*b0*rh*cosPhi - 1.0*l1**3*dRdl_mg**3))*sin(phi)/(dRdl_mg*(dRdl_mg**2*tanPhi**2 - 1)*(a0*b0*rh*cosPhi - l1**3*dRdl_mg**3))
-                              
-                     !alpha0 = (r1*r1 + 2*r1*r2 + 3*r2**2)/4/(r1*r1 + r1*r2 + r2**2)  ! this can be precomputed
-              
-                  end if
+                     s0   = 0.0_ReKi                                          ! Distance from the center of the waterplane to the element centerline
+                     Vs   =       Pi*r1**2*h0                                 ! volume of total submerged portion
+                     Vrc  = -0.25*Pi*r1**4*tanGamma                           ! Submerged Volume * r_c
+                     Vhc  = 0.125*Pi*r1**2* (4.0*h0**2 + r1**2 * tanGamma**2) ! Submerged Volume * h_c
 
+                  ELSE  ! tapered member
+
+                     C_1  = 1.0_ReKi - dRdl_mg**2 * tanGamma**2
+                     IF (C_1 < 0.0001) THEN ! The free surface is nearly tangent to the element wall
+                        CALL SetErrStat(ErrID_Fatal, 'Element cannot be parallel to the free surface.  This has happened for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+                     END IF
+
+                     a0   = rh/(C_1*cosGamma)                                 ! Semi major axis of waterplane
+                     b0   = rh/sqrt(C_1)                                      ! Semi minor axis of waterplane
+                     a0b0 = a0*b0
+                     C_2  = a0b0*rh*cosGamma - r1**3
+                     s0   = -rh*dRdl_mg*tanGamma/C_1/cosGamma                  ! Distance from the center of the waterplane to the element centerline
+                     Vs   =  Pi*C_2/(3.0*dRdl_mg)                              ! volume of total submerged portion
+                     Vrc  = -0.25*Pi *  a0b0*rh**2*sinGamma/C_1                                                   ! Submerged Volume * r_c
+                     Vhc  =  0.25*Pi * (a0b0*rh**2*cosGamma/C_1 - r1**4 - 4.0_ReKi/3.0_ReKi*r1*C_2 ) /dRdl_mg**2   ! Submerged Volume * h_c
+
+                  END IF
+
+                  ! z-coordinate of the center of the waterplane in the global earth-fixed system
+                  Z0 = z1+h0*k_hat(3)+s0*s_hat(3)  
+
+                  ! Hydrostatic force on element
+                  FbVec = (/0.0_ReKi,0.0_ReKi,Vs/) - Pi*a0b0*Z0*n_hat + Pi*r1**2*z1*k_hat
+                  FbVec = p%WtrDens * g * FbVec
+
+                  ! Hydrostatic moment on element about the lower node
+                  MbVec = Cross_Product( Vrc*r_hat+Vhc*k_hat, (/0.0_ReKi,0.0_ReKi,1.0_ReKi/) ) &
+                          + 0.25*Pi*a0b0*  ( ( s_hat(3)*a0*a0 + 4.0*(s0-h0*sinGamma)*Z0 )*t_hat - t_hat(3)*b0*b0*s_hat ) &
+                          - 0.25*Pi*r1**4* (   r_hat(3)                                  *t_hat - t_hat(3)   *   r_hat )
+                  MbVec = p%WtrDens * g * MbVec
+
+                  ! Distribute element load to nodes
                   pwr = 3
-                  alpha    = (1.0-mem%alpha(i))*z1**pwr/(-mem%alpha(i)*z2**pwr + (1.0-mem%alpha(i))*z1**pwr)
+                  alpha = (1.0-mem%alpha(i))*(z1-Zeta1)**pwr / ( -mem%alpha(i)*(z2-Zeta2)**pwr + (1.0-mem%alpha(i))*(z1-Zeta1)**pwr )
 
-                  Fb  = Vs*p%WtrDens*g       !buoyant force
-                  Fr  = -Fb*sinPhi     !radial component of buoyant force
-                  Fl  = Fb*cosPhi      !axial component of buoyant force
-                  Moment = -Fb*cx      !This was matt's code        !moment induced about the center of the cylinder's bottom face
+                  ! Hydrostatic force
+                  F_B1(1:3) =    alpha  * FbVec
+                  F_B2(1:3) = (1-alpha) * FbVec
 
-                  ! calculate (imaginary) bottom plate forces/moment to subtract from displacement-based values
-                  Fl  = Fl  + p%WtrDens*g*z1* Pi *r1*r1        
-                  Moment  = Moment  + p%WtrDens*g* sinPhi * Pi/4.0*r1**4       
+                  ! Hydrostatic moment correction followed by redistribution
+                  MbVec = MbVec - Cross_Product( -k_hat*dl, F_B2(1:3))
+                  F_B1(4:6) =    alpha  * MbVec
+                  F_B2(4:6) = (1-alpha) * MbVec
 
-
-                  ! reduce taper-based moment to remove (not double count) radial force distribution to each node 
-                  Moment  = Moment + Fr*(1.0_ReKi-alpha)*dl
-                  !call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, alpha, m%F_B(:, mem%NodeIndx(i)), m%F_B(:, mem%NodeIndx(i-1)))
-                  call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, alpha, F_B1, F_B2)
-                  m%memberLoads(im)%F_B(:, i) = m%memberLoads(im)%F_B(:, i) + F_B1      ! alpha
+                  ! Add nodal loads to mesh
+                  m%memberLoads(im)%F_B(:, i)   = m%memberLoads(im)%F_B(:, i  ) + F_B1  ! alpha
                   m%memberLoads(im)%F_B(:, i-1) = m%memberLoads(im)%F_B(:, i-1) + F_B2  ! 1-alpha
                   y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
                   y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B1(4:6)
                   y%Mesh%Force (:,mem%NodeIndx(i-1)) = y%Mesh%Force (:,mem%NodeIndx(i-1)) + F_B2(1:3)
                   y%Mesh%Moment(:,mem%NodeIndx(i-1)) = y%Mesh%Moment(:,mem%NodeIndx(i-1)) + F_B2(4:6)
-               else ! normal, fully submerged case
-              
-                  Fl = -2.0*Pi*dRdl_mg*p%WtrDens*g*dl*( z1*r1 + 0.5*(z1*dRdl_mg + r1*cosPhi)*dl + 1.0/3.0*(dRdl_mg*cosPhi*dl*dl) )   ! from CylinderCalculationsR1.ipynb
-              
-                  Fr = -Pi*p%WtrDens*g*dl*(r1*r1 + dRdl_mg*r1*dl + (dRdl_mg**2*dl**2)/3.0)*sinPhi                          ! from CylinderCalculationsR1.ipynb
-                  Moment = -Pi*dl*g*p%WtrDens*(3.0*dl**3*dRdl_mg**4 + 3.0*dl**3*dRdl_mg**2 + 12.0*dl**2*dRdl_mg**3*r1 + 8.0*dl**2*dRdl_mg*r1 + 18.0*dl*dRdl_mg**2*r1*r1 + 6.0*dl*r1*r1 + 12.0*dRdl_mg*r1**3)*sinPhi/12.0   ! latest from CylinderCalculationsR1.ipynb
 
-                  ! precomputed as mem%alpha(i) ... alpha0 = (r1*r1 + 2*r1*r2 + 3*r2**2)/4/(r1*r1 + r1*r2 + r2**2)
-      !TODO: Review the below alpha eqn, GJH           
-                  z1d = -min(0.0_ReKi,z1)
-                  z2d = -min(0.0_ReKi,z2)
-                   
+               ELSE ! fully submerged element
+
+                  ! Compute the waterplane shape, the submerged volume, and it's geometric center
+                  ! No need to consider tapered and non-tapered elements separately
+                  Vs   =  Pi*dl   *(r1**2 +     r1*r2 +     r2**2 ) /  3.0_ReKi   ! volume of total submerged portion
+                  Vhc  =  Pi*dl**2*(r1**2 + 2.0*r1*r2 + 3.0*r2**2 ) / 12.0_ReKi   ! Submerged Volume * h_c
+
+                  ! Hydrostatic force on element
+                  FbVec = (/0.0_ReKi,0.0_ReKi,Vs/) - Pi*( r2*r2*z2 - r1*r1*z1) *k_hat
+                  FbVec = p%WtrDens * g * FbVec
+
+                  ! Hydrostatic moment on element about the lower node
+                  MbVec = (Vhc+0.25*Pi*(r2**4-r1**4)) * Cross_Product(k_hat,(/0.0_ReKi,0.0_ReKi,1.0_ReKi/))
+                  MbVec = p%WtrDens * g * MbVec
+
+                  ! Distribute element load to nodes
                   pwr = 3
-                  alpha = mem%alpha(i)*z2d**pwr/(mem%alpha(i)*z2d**pwr+(1-mem%alpha(i))*z1d**pwr)
-                             
-              
-                  ! reduce moment to remove (not double count) radial force distribution to each node
-                  Moment = Moment - Fr*alpha*dl
-                  ! TODO: Should the order be, i, i+1 GJH
-                  !call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, alpha, m%F_B(:, mem%NodeIndx(i+1)), m%F_B(:, mem%NodeIndx(i)))
-                  call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, alpha, F_B1, F_B2)
+                  alpha = mem%alpha(i)*(z2-Zeta2)**pwr/(mem%alpha(i)*(z2-Zeta2)**pwr+(1.0_ReKi-mem%alpha(i))*(z1-Zeta1)**pwr)
+
+                  ! Hydrostatic force
+                  F_B1(1:3) =    alpha  * FbVec
+                  F_B2(1:3) = (1-alpha) * FbVec
+
+                  ! Hydrostatic moment correction followed by redistribution
+                  MbVec = MbVec - Cross_Product( k_hat*dl, F_B1(1:3))
+                  F_B1(4:6) =    alpha  * MbVec
+                  F_B2(4:6) = (1-alpha) * MbVec
+
+                  ! Add nodal loads to mesh
                   m%memberLoads(im)%F_B(:,i+1) = m%memberLoads(im)%F_B(:,i+1) + F_B1  ! alpha
-                  m%memberLoads(im)%F_B(:, i)  = m%memberLoads(im)%F_B(:, i)  + F_B2  ! 1-alpha
-                  y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B2(1:3)
-                  y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B2(4:6)
+                  m%memberLoads(im)%F_B(:,i  ) = m%memberLoads(im)%F_B(:,i  ) + F_B2  ! 1-alpha
                   y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_B1(1:3)
                   y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_B1(4:6)
-               end if  ! submergence cases
-             
-            end if ! element at least partially submerged
-         
-         end if ! NOT Modeled with Potential flow theory
+                  y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B2(1:3)
+                  y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B2(4:6)
+
+               END IF  ! submergence cases
+
+            END IF ! element at least partially submerged
+
+         END IF ! NOT Modeled with Potential flow theory
       
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
 
@@ -4050,6 +4083,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
       
    END IF
+
+   CONTAINS
+   SUBROUTINE GetTotalWaveElev( Time, positionXY, Zeta, ErrStat, ErrMsg )
+      REAL(DbKi),      INTENT( IN    ) :: Time
+      REAL(ReKi),      INTENT( IN    ) :: positionXY(2)
+      REAL(ReKi),      INTENT(   OUT ) :: Zeta
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat     ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg      ! Error message if errStat /= ErrID_None
+      ErrStat   = ErrID_None
+      ErrMsg    = ""
+      Zeta = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat, ErrMsg )
+      IF (associated(p%WaveElev2)) THEN
+         Zeta = Zeta + SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat, ErrMsg )
+      END IF
+   END SUBROUTINE GetTotalWaveElev
 
 END SUBROUTINE Morison_CalcOutput
 
