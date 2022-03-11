@@ -738,9 +738,14 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
    if ( InputFileData%Waves%WaveMod == 0 )  then   ! .TRUE if we have incident waves.
 
       ! TODO: Issue warning if WaveTMax was not already 0.0 in this case.
-      if ( .NOT. EqualRealNos(InputFileData%Waves%WaveTMax, 0.0_DbKi) ) then
-         call WrScr( '  Setting WaveTMax to 0.0 since WaveMod = 0' )
-         InputFileData%Waves%WaveTMax = 0.0
+      ! Setting WaveTMax = 0 breaks interpolation. Should probably set it to just TMax instead.
+      ! if ( .NOT. EqualRealNos(InputFileData%Waves%WaveTMax, 0.0_DbKi) ) then
+      !    call WrScr( '  Setting WaveTMax to 0.0 since WaveMod = 0' )
+      !    InputFileData%Waves%WaveTMax = 0.0
+      ! end if
+      if ( .NOT. EqualRealNos(InputFileData%Waves%WaveTMax, InitInp%TMax) ) then
+         call WrScr( '  Setting WaveTMax to TMax since WaveMod = 0' )
+         InputFileData%Waves%WaveTMax = InitInp%TMax
       end if
       if ( .NOT. EqualRealNos(InputFileData%Waves%WaveDir, 0.0_SiKi) ) then
          call WrScr( '  Setting WaveDir to 0.0 since WaveMod = 0' )
@@ -769,7 +774,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
    else
 
-      InputFileData%Waves%WaveDT = 0.0
+      ! When waveMod = 0, should also set WaveDT to InitInp%TMax to keep interpolation working.
+      ! Essentially just two time steps, t=0 and t=TMax
+      !InputFileData%Waves%WaveDT = 0.0
+      InputFileData%Waves%WaveDT  = InitInp%TMax
 
    end if
 
