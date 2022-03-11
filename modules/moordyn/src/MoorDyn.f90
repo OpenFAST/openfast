@@ -793,7 +793,7 @@ CONTAINS
                      m%BodyList(l)%r6 = tempArray     ! set initial body position and orientation
                      
                   else 
-                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Body type string for Body "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Body type string for Body "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
                      return
                   end if
                   
@@ -849,9 +849,10 @@ CONTAINS
                      IF (trim(tempString1) == trim(m%RodTypeList(J)%name)) THEN
                        m%RodList(l)%PropsIdNum = J
                        EXIT
-                       IF (J == p%nRodTypes) THEN   ! call an error if there is no match
-                           CALL SetErrStat( ErrID_Fatal, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
-                       END IF
+                     END IF
+                     IF (J == p%nRodTypes) THEN   ! call an error if there is no match
+                         CALL SetErrStat( ErrID_Fatal, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
+                         RETURN
                      END IF
                   END DO
 
@@ -1151,7 +1152,7 @@ CONTAINS
                   
 
                   IF ( ErrStat2 /= 0 ) THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Failed to read rod data for Connection '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, 'Failed to read data for Connection '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF

@@ -1269,7 +1269,7 @@ CONTAINS
                   CASE DEFAULT
                     y%WriteOutput(I) = 0.0_ReKi
                     ErrStat = ErrID_Warn
-                    ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Line '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                    ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Line '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
             ELSE IF (p%OutParam(I)%OType == 2) THEN  ! if dealing with a Connect output
@@ -1303,7 +1303,7 @@ CONTAINS
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
-                     ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Connection '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Connection '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
             ELSE IF (p%OutParam(I)%OType == 3) THEN  ! if dealing with a Rod output
@@ -1342,7 +1342,7 @@ CONTAINS
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
-                     ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Rod '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Rod '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
             ELSE IF (p%OutParam(I)%OType == 4) THEN  ! if dealing with a Body output
@@ -1374,7 +1374,7 @@ CONTAINS
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
-                     ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Body '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Body '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
 
