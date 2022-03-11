@@ -2105,6 +2105,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             END IF
          
          END DO   !J = 1, InitInp%InpJoints(I)%NConnections
+
+         Vn = Vn*TwoPi/3.0_ReKi ! Semisphere volume is Vn = 2/3 pi \sum (r_MG^3 k)
          
          p%An_End(:,i) = An_drag 
          Amag_drag = Dot_Product(An_drag ,An_drag)
