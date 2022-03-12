@@ -283,6 +283,61 @@ Nacelle-yaw Control
    Final yaw angle for override yaw maneuvers
 
 
+.. _SrvD-AfC-inputs:
+
+Aerodynamic Flow Control
+~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+**AfCmode**       [switch]
+
+   Airfoil control mode {0: none, 1: sine wave cycle, 4: user-defined from
+   Simulink/Labview, 5: user-defined from Bladed-style DLL}
+
+**AfC_Mean**      [-]
+
+   Mean level for cosine cycling or steady value *[used only with*
+   **AfCmode==1** *]*
+
+**AfC_Amp**       [-]
+
+   Amplitude for cosine cycling of flap signal *[used only with*
+   **AfCmode==1** *]*
+
+**AfC_Phase**     [deg]
+
+   Phase relative to the blade azimuth (0 is vertical) for cosine cycling of
+   flap signal *[used only with* **AfCmode==1** *]*
+
+When **AfCmode==1**, the signal for the airfoil flow control is set by the
+expression *AfC_Mean + p%AfC_Amp*cos( Azimuth + AfC_phase)* where the azimuth
+is the azimuth of that particular blade (azimuth=0 is considered vertical).
+
+
+.. _SrvD-CableControl-inputs:
+
+Cable Control
+~~~~~~~~~~~~~
+
+Control of cable elements specified in either the MoorDyn or SubDyn modules can
+be controlled through ServoDyn by a Bladed-style controller.  Each cable
+receives a pair of controller channels, one for the requested cable length
+change (DeltaL), and one for the cable length rate of change (DeltaLdot).  The
+channel assignments are requested by the modules with the cable elements
+(MoorDyn and/or SubDyn at present), and mapped to the appropriate control
+channel.  A summary of which module requested the channels is available in the
+summary file output from ServoDyn.  Up to 100 channel groups may be requested
+when linking to a DLL, or 20 channel groups when linking to Simulink.
+
+**CCmode**        [switch]
+
+   Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5:
+   user-defined from Bladed-style DLL}.
+
+   Each cable control channel group consists of a channel for DeltaL (requested
+   cable length change) and a channel for DeltaLdot (cable length change
+   rate) from the controller/Simulink interface.
+
+
 .. _SrvD-StC-inputs:
 
 Structural Control
@@ -443,7 +498,10 @@ Output
 
 **SumPrint**      [flag]
 
-   Print summary data to <RootName>.sum *(currently unused)*
+   Print summary data to <RootName>.sum.  This file contains a summary of the
+   inputs, and will give a detailed list of the communication channels with a
+   Bladed-style controller when used.  This information may be helpful in
+   debugging a controller, or verifying how ServoDyn is configured.
 
 **OutFile**       [-]
 
@@ -468,7 +526,7 @@ ServoDyn. Enter one or more lines containing quoted strings that in turn
 contain one or more output parameter names. Separate output parameter
 names by any combination of commas, semicolons, spaces, and/or tabs. If
 you prefix a parameter name with a minus sign, “-”, underscore, “_”, or
-the characters “m” or “M”, ServooDyn will multiply the value for that
+the characters “m” or “M”, ServoDyn will multiply the value for that
 channel by –1 before writing the data. The parameters are written in the
 order they are listed in the input file. ServoDyn allows you to use
 multiple lines so that you can break your list into meaningful groups

@@ -51,6 +51,10 @@ if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
   # https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
   set_source_files_properties(src/FAST_Farm_Types.f90 src/FASTWrapper_Types.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 endif()
+if (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" AND NOT WIN32)
+  # Compilation hangs on FAST_Farm_Types.f90 with -O3 on linux (on some hardware)
+  set_source_files_properties(src/FAST_Farm_Types.f90 PROPERTIES COMPILE_FLAGS "-O2")
+endif()
 
 install(TARGETS FAST.Farm
   RUNTIME DESTINATION bin)

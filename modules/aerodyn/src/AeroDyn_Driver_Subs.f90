@@ -435,6 +435,8 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
          endif
          InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
          InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
+         InitInData%rotors(iWT)%NacellePosition    = wt%nac%ptMesh%Position(:,1)
+         InitInData%rotors(iWT)%NacelleOrientation = wt%nac%ptMesh%RefOrientation(:,:,1)
          do k=1,wt%numBlades
             InitInData%rotors(iWT)%BladeRootOrientation(:,:,k) = wt%bld(k)%ptMesh%RefOrientation(:,:,1)
             InitInData%rotors(iWT)%BladeRootPosition(:,k)      = wt%bld(k)%ptMesh%Position(:,1)
@@ -729,6 +731,9 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
       ! hub 2 hubAD
       call MeshMapCreate(wt%hub%ptMesh, uAD%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
 
+      ! nac 2 nacAD
+      call MeshMapCreate(wt%nac%ptMesh, uAD%rotors(iWT)%nacelleMotion, wt%nac%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed())return
+
       ! bldroot 2 bldroot AD
       do iB = 1, wt%numBlades
          call MeshMapCreate(wt%bld(iB)%ptMesh, uAD%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed())return
@@ -902,7 +907,7 @@ subroutine Set_Mesh_Motion(nt,dvr,errStat,errMsg)
             wt%ptMesh%TranslationDisp(wt%degreeofFreedom,1) =                      wt%amplitude * sin(time * wt%frequency)
             wt%ptMesh%TranslationVel (wt%degreeofFreedom,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
             wt%ptMesh%TranslationAcc (wt%degreeofFreedom,1) = -(wt%frequency)**2 * wt%amplitude * sin(time * wt%frequency)
-         elseif (any(wt%degreeOfFreedom==(/4,5,5/))) then
+         elseif (any(wt%degreeOfFreedom==(/4,5,6/))) then
             theta(1:3) = 0.0_ReKi
             theta(wt%degreeofFreedom-3) = wt%amplitude * sin(time * wt%frequency)
             wt%ptMesh%RotationVel (wt%degreeofFreedom-3,1) =  (wt%frequency)    * wt%amplitude * cos(time * wt%frequency)
@@ -1062,6 +1067,9 @@ subroutine Set_AD_Inputs(nt,dvr,AD,IW,errStat,errMsg)
       wt => dvr%WT(iWT)
       ! Hub 2 Hub AD 
       call Transfer_Point_to_Point(wt%hub%ptMesh, AD%u(1)%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+
+      ! Nac 2 Nac AD 
+      call Transfer_Point_to_Point(wt%nac%ptMesh, AD%u(1)%rotors(iWT)%nacelleMotion, wt%nac%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,wt%numBlades
@@ -1255,7 +1263,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    character(10) :: sWT
    character(15) :: sBld
    ! Basic inputs
-   real(ReKi) :: hubRad, hubHt, overhang, shftTilt, precone ! Basic inputs when basicHAWTFormat is true
+   real(ReKi) :: hubRad, hubHt, overhang, shftTilt, precone, twr2Shft ! Basic inputs when basicHAWTFormat is true
    real(ReKi) :: nacYaw, bldPitch, rotSpeed
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1348,6 +1356,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          call ParseVar(FileInfo_In, CurLine, 'overhang'//sWT       , overhang          , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'shftTilt'//sWT       , shftTilt          , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'precone'//sWT        , precone           , errStat2, errMsg2 , unEc); if(Failed()) return
+         call ParseVar(FileInfo_In, CurLine, 'twr2Shft'//sWT       , twr2Shft          , errStat2, errMsg2 , unEc); if(Failed()) return
 
          shftTilt=-shftTilt*Pi/180._ReKi ! deg 2 rad, NOTE: OpenFAST convention sign wrong around y 
          precone=precone*Pi/180._ReKi ! deg 2 rad
@@ -1358,8 +1367,8 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          wt%hasTower          = .True.
          wt%HAWTprojection    = .True.
          wt%twr%origin_t      = 0.0_ReKi ! Exactly at the base
-         wt%nac%origin_t      = (/ 0.0_ReKi                , 0.0_ReKi, hubHt + overhang * sin(shftTilt)       /) ! NOTE WE DON'T HAVE TWR2SHAFT to approximate
-         wt%hub%origin_n      = (/ overhang * cos(shftTilt), 0.0_ReKi, -overhang * sin(shftTilt) /)              ! IDEM
+         wt%nac%origin_t      = (/ 0.0_ReKi                , 0.0_ReKi, hubHt - twr2Shft + overhang * sin(shftTilt)       /)
+         wt%hub%origin_n      = (/ overhang * cos(shftTilt), 0.0_ReKi, -overhang * sin(shftTilt) + twr2shft /)              ! IDEM
          wt%hub%orientation_n = (/ 0.0_ReKi,  shftTilt, 0.0_ReKi  /)
 
          ! blades
@@ -1892,9 +1901,9 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
 
          ! 6 base DOF
          rotations  = EulerExtract(dvr%WT(iWT)%ptMesh%Orientation(:,:,1)); 
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(1,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(1,1); k=k+1 ! surge
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(2,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(2,1); k=k+1 ! sway
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(3,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(3,1); k=k+1 ! heave
+         arr(k) = dvr%WT(iWT)%ptMesh%TranslationDisp(1,1); k=k+1 ! surge
+         arr(k) = dvr%WT(iWT)%ptMesh%TranslationDisp(2,1); k=k+1 ! sway
+         arr(k) = dvr%WT(iWT)%ptMesh%TranslationDisp(3,1); k=k+1 ! heave
          arr(k) = rotations(1) * R2D                                                      ; k=k+1 ! roll
          arr(k) = rotations(2) * R2D                                                      ; k=k+1 ! pitch
          arr(k) = rotations(3) * R2D                                                      ; k=k+1 ! yaw

@@ -196,8 +196,12 @@ Speedup Options
 
 **VelocityMethod** [switch] specifies the method used to determine the velocity.
 There are two options: 1) Biot-Savart law applied to the vortex segments *[1]*
-and 2) tree formulation using a particle representation *[2]*. The default
-option is *[1]*.
+,2) tree formulation using a particle representation *[2]*. and 3) tree formulation
+using a segment representation. The default option is *[1]*.
+Option *[2]* requires the specification of *PartPerSegment* (see below). 
+Option *[3]* is expected to give results close to option *[1]* while offering
+significant speedup, and this option does not require the specification of *PartPerSegment*.
+
 
 **TreeBranchFactor** [-] specifies the dimensionless distance, in branch radius,
 above which a multipole calculation is used instead of a direct evaluation. This

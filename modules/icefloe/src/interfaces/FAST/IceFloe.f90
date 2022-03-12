@@ -54,7 +54,7 @@ MODULE IceFloe
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: IceFloe_Ver = ProgDesc( 'IceFloe', 'v1.01.01', '23-Jul-2016' )
+   TYPE(ProgDesc), PARAMETER  :: IceFloe_Ver = ProgDesc( 'IceFloe', '', '' )
 
 ! ..... Public Subroutines ...................................................................................................
 
