@@ -1124,7 +1124,7 @@ CONTAINS
                      end if
                   
                   else 
-                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
                      return
                   end if
                   
