@@ -444,7 +444,7 @@ CONTAINS
                   else if ( OptString == 'CV')  then
                      read (OptValue,*) p%cv
                   else
-                     CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
+                     CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
                   end if
 
                   nOpts = nOpts + 1
@@ -1181,10 +1181,11 @@ CONTAINS
                      IF (trim(tempString1) == trim(m%LineTypeList(J)%name)) THEN
                        m%LineList(l)%PropsIdNum = J
                        EXIT
+                       END IF
                        IF (J == p%nLineTypes) THEN   ! call an error if there is no match
                            CALL SetErrStat( ErrID_Fatal, 'Unable to find matching line type name for Line '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                           RETURN
                        END IF
-                     END IF
                   END DO
                   
                   ! account for states of line
@@ -1584,8 +1585,8 @@ CONTAINS
       IF (wordy > 0) print *, "allocating state vectors to size ", Nx
 
       ! allocate state vector and temporary state vectors based on size just calculated
-      ALLOCATE ( x%states(m%Nx), m%xTemp%states(m%Nx), m%xdTemp%states(m%Nx), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( x%states(m%Nx), m%xTemp%states(m%Nx), m%xdTemp%states(m%Nx), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
         ErrMsg  = ' Error allocating state vectors.'
         !CALL CleanUp()
         RETURN
@@ -1619,13 +1620,13 @@ CONTAINS
       ! (set up initial condition of each coupled object based on values specified by glue code) 
       ! Also create i/o meshes       
       
-      ALLOCATE ( u%CoupledKinematics(p%nTurbines), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( u%CoupledKinematics(p%nTurbines), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
         CALL CheckError(ErrID_Fatal, ' Error allocating CoupledKinematics input array.')
         RETURN
       END IF
-      ALLOCATE ( y%CoupledLoads(p%nTurbines), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( y%CoupledLoads(p%nTurbines), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
         CALL CheckError(ErrID_Fatal, ' Error allocating CoupledLoads output array.')
         RETURN
       END IF
@@ -1746,7 +1747,7 @@ CONTAINS
          u%CoupledKinematics(iTurb)%RotationVel    = 0.0_ReKi
          u%CoupledKinematics(iTurb)%RotationAcc    = 0.0_ReKi
 
-         CALL MeshCommit ( u%CoupledKinematics(iTurb), ErrStat, ErrMsg )
+         CALL MeshCommit ( u%CoupledKinematics(iTurb), ErrStat2, ErrMsg )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1935,8 +1936,8 @@ CONTAINS
          END DO
 
          ! allocate array holding 10 latest fairlead tensions
-         ALLOCATE ( FairTensIC(p%nLines, 10), STAT = ErrStat )
-         IF ( ErrStat /= ErrID_None ) THEN
+         ALLOCATE ( FairTensIC(p%nLines, 10), STAT = ErrStat2 )
+         IF ( ErrStat2 /= ErrID_None ) THEN
             CALL CheckError( ErrID_Fatal, ErrMsg2 )
             RETURN
          END IF
