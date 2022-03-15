@@ -2368,7 +2368,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
       IF ( Indx > 0 ) THEN ! we found the channel name
          IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
-            p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
+            p%OutParam(I)%Indx  = ParamIndxAry(Indx)  ! don't reset the index -- causes issues in linearization
             p%OutParam(I)%Units = "INVALID"
             p%OutParam(I)%SignM = 0
          ELSE

@@ -2812,7 +2812,11 @@ contains
       ! jacobian with the proper sign:
       !...............................................................................
       do I = 1,p%NumOuts  ! Loop through all selected output channels
-         dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts( 1:3, p%OutParam(I)%Indx )
+         if (p%OutParam(I)%Indx > 0_IntKi) then
+            dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = p%OutParam(I)%SignM * AllOuts( 1:3, p%OutParam(I)%Indx )
+         else
+            dYdu(I+SrvD_Indx_Y_WrOutput,1:3) = 0.0_R8Ki
+         endif
       enddo             ! I - All selected output channels
    end subroutine dYdu_YawGen
 
