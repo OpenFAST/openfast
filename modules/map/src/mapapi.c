@@ -358,7 +358,7 @@ MAP_EXTERNCALL void map_offset_vessel(MAP_OtherStateType_t* other_type, MAP_Inpu
 
   /* define transformation matrix */
   R[0][0] = cpsi*cthe;    R[0][1] = cpsi*sthe*sphi - spsi*cphi;   R[0][2] = cpsi*sthe*cphi + spsi*sphi;
-  R[1][0] = spsi*cthe;    R[1][1] = sphi*sthe*sphi + cpsi*cphi;   R[1][2] = spsi*sthe*cphi - cpsi*sphi;
+  R[1][0] = spsi*cthe;    R[1][1] = sphi*sthe*spsi + cpsi*cphi;   R[1][2] = spsi*sthe*cphi - cpsi*sphi;
   R[2][0] = -sthe;        R[2][1] = cthe*sphi;                    R[2][2] = cthe*cphi;
 
   for (i=0 ; i<u_size ; i++) { 
