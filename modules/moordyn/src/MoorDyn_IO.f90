@@ -516,8 +516,14 @@ CONTAINS
         IF (let1(1:1) == 'L') THEN      ! Look for L?N?xxxx
           p%OutParam(I)%OType = 1                ! Line object type
           ! for now we'll just assume the next character(s) are "n" to represent node number or "s" to represent segment number
-          READ (num2,*) nID                      ! node or segment ID
-          p%OutParam(I)%NodeID = nID
+          IF (num2/=" ") THEN
+              READ (num2,*) nID                      ! node or segment ID
+              p%OutParam(I)%NodeID = nID
+          ELSE
+              CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+              CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'. Line ID or Node ID missing.')
+              CYCLE
+          END IF
           qVal = let3                            ! quantity type string
         
         ! Connect case                            
@@ -531,10 +537,14 @@ CONTAINS
           IF (LEN_TRIM(let3)== 0) THEN           ! No third character cluster indicates this is a whole-rod channel
             p%OutParam(I)%NodeID = 0
             qVal = let2                          ! quantity type string
-          ELSE
+          ELSE IF (num2/=" ") THEN
             READ (num2,*) nID                    ! rod node ID
             p%OutParam(I)%NodeID = nID
             qVal = let3                          ! quantity type string
+          ELSE
+            CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+            CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Rod ID or Node ID missing.')
+            CYCLE
           END IF
           
         ! Body case                            
@@ -552,8 +562,14 @@ CONTAINS
         END IF
 
         ! object number
-        READ (num1,*) oID
-        p%OutParam(I)%ObjID = oID                ! line or connect ID number
+        IF (num1/=" ") THEN
+            READ (num1,*) oID
+            p%OutParam(I)%ObjID = oID                ! line or connect ID number
+        ELSE
+          CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Object ID missing.')
+          CYCLE
+        END IF
 
         ! which kind of quantity?
         IF (qVal == 'PX') THEN

@@ -146,6 +146,7 @@ CONTAINS
       INTEGER                       :: MaxAryLen = 1000    ! Maximum length of the array being read
       INTEGER                       :: NumWords            ! Number of words contained on a line
       INTEGER                       :: Nx
+      INTEGER                       :: QuoteCh                                     ! Character position.
       CHARACTER(*), PARAMETER       :: RoutineName = 'MD_Init'
 
       
@@ -1450,11 +1451,21 @@ CONTAINS
                DO
                   ! read a line
                   Line = NextLine(i)
+                  Line = adjustl(trim(Line))   ! remove leading whitespace
 
                   CALL Conv2UC(Line)   ! convert to uppercase for easy string matching
 
                   if ((INDEX(Line, "---") > 0) .or. (INDEX(Line, "END") > 0)) EXIT ! stop if we hit a header line or the keyword "END"
                      
+                  ! Check if we have a quoted string at the beginning.  Ignore anything outside the quotes if so (this is the ReadVar behaviour for quoted strings).
+                  IF (SCAN(Line(1:1), '''"' ) == 1_IntKi ) THEN
+                     QuoteCh = SCAN( Line(2:), '''"' )            ! last quote
+                     IF (QuoteCh < 1)  QuoteCh = LEN_TRIM(Line)   ! in case no end quote
+                     Line(QuoteCh+2:) = ' '    ! blank out everything after last quote
+                  ELSE
+                      CALL WrScr('Warning: Could not find a quoted string in line: '//trim(Line)//'. Output specifier(s) should be enclosed in quotes for proper parsing of outlist.')
+                  END IF
+
                   NumWords = CountWords( Line )    ! The number of words in Line.
 
                   p%NumOuts = p%NumOuts + NumWords  ! The total number of output channels read in so far.
