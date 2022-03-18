@@ -276,7 +276,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (Failed()) return;
       NumBlades(iR)          = InitInp%rotors(iR)%NumBlades
       p%rotors(iR)%NumBlades = InitInp%rotors(iR)%NumBlades
-      if (size(InitInp%rotors)>1) then
+      if (nRotors > 1) then
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD.R'//trim(num2lstr(iR))
       else
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD'
@@ -1160,7 +1160,8 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-      integer :: iW
+      
+      integer                                      :: iW
 
 
 
@@ -1668,6 +1669,7 @@ subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
    endif
 end subroutine SetInputs
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Disturbed inflow on the blade if tower shadow or tower influence are enabled
 subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
    type(RotParameterType),       intent(in   )  :: p                      !< AD parameters
@@ -1798,8 +1800,10 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
   
    m%BEMT_u(indx)%UserProp = u%UserProp
    
-   ! ................ TSR .....................
    
+   !..........................
+   ! TSR
+   !..........................
    if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
       m%BEMT_u(indx)%TSR = 0.0_ReKi
    else

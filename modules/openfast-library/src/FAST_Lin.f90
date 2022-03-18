@@ -4987,7 +4987,7 @@ FUNCTION Indx_y_ED_BladeRoot_Start(y_ED, y_FAST, BladeNum) RESULT(ED_Out_Start)
    end do
 END FUNCTION Indx_y_ED_BladeRoot_Start
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the y_ED%BladeRootMotion(BladeNum) mesh in the FAST linearization outputs.
+!> This routine returns the starting index for the y_ED%NacelleMotion mesh in the FAST linearization outputs.
 FUNCTION Indx_y_ED_Nacelle_Start(y_ED, y_FAST) RESULT(ED_Out_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(ED_OutputType),            INTENT(IN )  :: y_ED             !< ED outputs at t
@@ -4997,7 +4997,6 @@ FUNCTION Indx_y_ED_Nacelle_Start(y_ED, y_FAST) RESULT(ED_Out_Start)
 
    ED_Out_Start = Indx_y_ED_BladeRoot_Start(y_ED, y_FAST, size(y_ED%BladeRootMotion))        ! start of last blade root
    ED_Out_Start = ED_Out_Start + y_ED%BladeRootMotion(size(y_ED%BladeRootMotion))%NNodes*18  ! N blade roots, 6 fields with 3 components per blade.
-   ED_Out_Start = ED_Out_Start + y_ED%NacelleMotion%NNodes*18     ! 6 fields with 3 components
 END FUNCTION Indx_y_ED_Nacelle_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for y_ED%Yaw in the FAST linearization outputs.
