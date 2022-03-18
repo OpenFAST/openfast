@@ -31,6 +31,7 @@ ifeq ($(OS),Windows_NT)
   CFLAGS    = $(BITS) -g -std=c99 -DMAP_DLL_EXPORTS -DCMINPACK_NO_DLL  -DNDEBUG -D_WINDOWS -D_USRDLL -D_MINGW
   LDFLAGS   = $(BITS) -g -shared -Wl,--export-all-symbols
   LIB_FLAGS :=
+  CC_TOOLS  = gcc
 else
   PLATFORM = $(shell uname -s)
   DEL_CMD   = rm -rf
