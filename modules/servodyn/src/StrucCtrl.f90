@@ -197,7 +197,11 @@ SUBROUTINE StC_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       x%StC_x(2,i_pt) = 0
       x%StC_x(3,i_pt) = InputFileData%StC_Y_DSP
       x%StC_x(4,i_pt) = 0
-      x%StC_x(5,i_pt) = InputFileData%StC_Z_DSP
+      if ((p%StC_DOF_MODE == DOFMode_Indept) .and. p%StC_Z_DOF) then    ! Should be zero for omni and TLCD
+         x%StC_x(5,i_pt) = InputFileData%StC_Z_DSP
+      else
+         x%StC_x(5,i_pt) = 0.0_ReKi
+      endif
       x%StC_x(6,i_pt) = 0
    enddo
 
@@ -508,9 +512,7 @@ SUBROUTINE StC_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
       !INTEGER                                            :: nTime           ! number of inputs
 
 
-      IF ( p%StC_DOF_MODE /= DOFMode_Prescribed ) THEN
-         CALL StC_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-      ENDIF
+      CALL StC_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
 END SUBROUTINE StC_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -564,6 +566,19 @@ SUBROUTINE StC_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
          ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
+
+      ! if prescribed forces, there are no states to advance, so return
+      if ( p%StC_DOF_MODE == DOFMode_Prescribed ) then
+         do i_pt=1,p%NumMeshPts
+            x%StC_x(1,i_pt) = 0
+            x%StC_x(2,i_pt) = 0
+            x%StC_x(3,i_pt) = 0
+            x%StC_x(4,i_pt) = 0
+            x%StC_x(5,i_pt) = 0
+            x%StC_x(6,i_pt) = 0
+         enddo
+         return
+      endif
 
       CALL StC_CopyContState( x, k1, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
@@ -1047,7 +1062,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       enddo
 
       ! NOTE: m%F_stop and m%F_table are calculated earlier
-      IF (p%StC_DOF_MODE == ControlMode_None) THEN
+      IF ((p%StC_DOF_MODE == ControlMode_None) .or. (p%StC_DOF_MODE == DOFMode_Prescribed)) THEN
          do i_pt=1,p%NumMeshPts
             ! Aggregate acceleration terms
             m%Acc(1:3,i_pt) = 0.0_ReKi 
@@ -1086,7 +1101,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
 
       ! Compute the first time derivatives, dxdt%StC_x(1) and dxdt%StC_x(3), of the continuous states,:
       ! Compute elements 1 and 3 of dxdt%StC_x so that we can compute m%C_ctrl,m%C_Brake, and m%F_fr in StC_GroundHookDamp if necessary
-      IF (p%StC_DOF_MODE == ControlMode_None) THEN
+      IF ((p%StC_DOF_MODE == ControlMode_None) .or. (p%StC_DOF_MODE == DOFMode_Prescribed)) THEN
 
          dxdt%StC_x = 0.0_ReKi ! Whole array
 
@@ -1121,6 +1136,12 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
                dxdt%StC_x(5,i_pt) = x%StC_x(6,i_pt)
             enddo
          END IF
+
+         if ( .not. (p%StC_DOF_MODE == DOFMode_Indept .AND. p%StC_Z_DOF)) then      ! z not used in any other configuration
+            do i_pt=1,p%NumMeshPts
+               dxdt%StC_x(5,i_pt) = 0.0_ReKi
+            enddo
+         endif
 
       ENDIF
 
@@ -1235,6 +1256,17 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             dxdt%StC_x(6,i_pt) = 0.0_ReKi ! Z is off
          enddo
 
+      ELSE IF ( p%StC_DOF_MODE == DOFMode_Prescribed ) THEN
+      ! if prescribed forces, there are no states to advance, so return
+         do i_pt=1,p%NumMeshPts
+            dxdt%StC_x(1,i_pt) = 0
+            dxdt%StC_x(2,i_pt) = 0
+            dxdt%StC_x(3,i_pt) = 0
+            dxdt%StC_x(4,i_pt) = 0
+            dxdt%StC_x(5,i_pt) = 0
+            dxdt%StC_x(6,i_pt) = 0
+         enddo
+         return
       END IF
 
       call CleanUp()
@@ -1654,14 +1686,14 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
 
    Nrows = SIZE(p%F_TBL,1)
    ALLOCATE(TmpRAry(Nrows),STAT=ErrStat2)
+   IF (ErrStat2 /= 0) then
+       call SetErrStat(ErrID_Fatal,'Error allocating temp array.',ErrStat,ErrMsg,'SpringForceExtrapInterp')
+      RETURN
+   END IF
 
    do i_pt=1,p%NumMeshPts
 
       IF (p%StC_DOF_MODE == DOFMode_Indept .OR. p%StC_DOF_MODE == DOFMode_Omni) THEN
-         IF (ErrStat2 /= 0) then
-             call SetErrStat(ErrID_Fatal,'Error allocating temp array.',ErrStat,ErrMsg,'SpringForceExtrapInterp')
-            RETURN
-         END IF
 
          IF (p%StC_DOF_MODE == DOFMode_Indept) THEN
             DO I = 1,3
@@ -1669,6 +1701,7 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table,ErrStat,ErrMsg)
             END DO
          ELSE !IF (p%StC_DOF_MODE == DOFMode_Omni) THEN  ! Only X and Y
             Disp = SQRT(x%StC_x(1,i_pt)**2+x%StC_x(3,i_pt)**2) ! constant assignment to vector
+            Disp(3) = 0.0_ReKi
          END IF
 
          
@@ -2238,7 +2271,11 @@ SUBROUTINE StC_SetParameters( InputFileData, InitInp, p, Interval, ErrStat, ErrM
 
    p%StC_X_DOF = InputFileData%StC_X_DOF
    p%StC_Y_DOF = InputFileData%StC_Y_DOF
-   p%StC_Z_DOF = InputFileData%StC_Z_DOF
+   if (p%StC_DOF_MODE == DOFMode_Indept) then
+      p%StC_Z_DOF = InputFileData%StC_Z_DOF
+   else
+      p%StC_Z_DOF = .false.
+   endif
 
    ! StC X parameters
    p%M_X = InputFileData%StC_X_M
