@@ -924,7 +924,7 @@ CONTAINS
                         
                            CALL Body_AddRod(m%BodyList(J), l, tempArray)   ! add rod l to the body
                            
-                           if ((INDEX(let2, "PINNED") > 0) .or. (INDEX(let2, "PIN") > 0)) then
+                           if ( (let2 == "PINNED") .or. (let2 == "PIN") ) then
                               m%RodList(l)%typeNum = 1
                               
                               p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
@@ -935,8 +935,12 @@ CONTAINS
                               
                               m%FreeRodIs(p%nFreeRods) = l
                      
-                           else
+                           else if (let2 == " ") then ! rod is not requested to be pinned, so add this rod as a fixed one
                               m%RodList(l)%typeNum = 2
+                     
+                           else
+                               CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )
+                               return
                            end if
                         
                         else
