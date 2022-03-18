@@ -587,6 +587,13 @@ CONTAINS
                    
                    !read into a line
                    Line = NextLine(i)
+                   
+                   ! check for correct number of columns in current line
+                   IF ( CountWords( Line ) /= 10 ) THEN
+                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 10 columns.', ErrStat, ErrMsg, RoutineName )
+                       CALL CleanUp()
+                       RETURN
+                   END IF
 
                    ! parse out entries: Name  Diam MassDenInAir EA cIntDamp EI    Cd  Ca  CdAx  CaAx 
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
@@ -680,6 +687,13 @@ CONTAINS
                    !read into a line
                    Line = NextLine(i)
 
+                   ! check for correct number of columns in current line
+                   IF ( CountWords( Line ) /= 7 ) THEN
+                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Rod Type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
+                       CALL CleanUp()
+                       RETURN
+                   END IF
+                   
                    ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
@@ -705,7 +719,7 @@ CONTAINS
 							end if
 
                    IF ( ErrStat2 /= ErrID_None ) THEN
-                      CALL SetErrStat( ErrID_Fatal, 'Failed to process rod type properties for rod '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                      CALL SetErrStat( ErrID_Fatal, 'Failed to process rod type properties for rod '//trim(Num2LStr(l))//'. Check formatting and correct number of columns.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
                       RETURN
                    END IF
@@ -725,6 +739,13 @@ CONTAINS
                   
                   !read into a line
                   Line = NextLine(i)
+                   
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= 14 ) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 14 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
+                  END IF
 
                   ! parse out entries: ID   Attachment  X0  Y0  Z0  r0  p0  y0    M  CG*  I*    V  CdA*  Ca*
                   IF (ErrStat2 == 0) THEN
@@ -872,6 +893,13 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= 11 ) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Rod '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 11 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
+                  END IF
+                  
                   ! parse out entries: RodID  RodType  Attachment  Xa   Ya   Za   Xb   Yb   Zb  NumSegs  Flags/Outputs
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%RodList(l)%IdNum, tempString1, tempString2, &
@@ -1058,6 +1086,13 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= 9 ) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Point '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 9 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
+                  END IF
+                  
                   ! parse out entries: PointID Attachment  X  Y  Z  M  V  CdA Ca 
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%ConnectList(l)%IdNum, tempString1, tempArray(1), &
@@ -1209,6 +1244,13 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= 7 ) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
+                  END IF
+                  
                    ! parse out entries: ID  LineType  AttachA  AttachB     UnstrLen  NumSegs   Outputs  (note: order changed Dec 13, 2021 before MDv2 release) 
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, tempString2, tempString3, &
