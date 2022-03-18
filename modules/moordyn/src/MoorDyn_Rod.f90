@@ -115,23 +115,12 @@ CONTAINS
       print *, 'I am a rod'
       print *, endCoords
 
-      ! set Rod positions if applicable
-      if (Rod%typeNum==0) then               ! for an independent rod, set the position right off the bat
-
-         Rod%r6(1:3) = endCoords(1:3)      ! (end A coordinates) 
-         Rod%v6(1:3) = 0.0_DbKi            ! (end A velocity, unrotated axes) 
+      ! set Rod positions (some or all may be overwritten depending on if the Rod is coupled or attached to a Body)
+      Rod%r6(1:3) = endCoords(1:3)      ! (end A coordinates) 
+      Rod%v6(1:3) = 0.0_DbKi            ! (end A velocity, unrotated axes) 
    
-         Rod%r6(4:6) = Rod%q               ! (Rod direction unit vector)
-         Rod%v6(4:6) = 0.0_DbKi            ! (rotational velocities about unrotated axes) 
-
-      else if (abs(Rod%typeNum)==1) then    ! for a pinned rod, just set the orientation (position will be set later by parent object)
-
-         Rod%r6(4:6) = Rod%q               ! (Rod direction unit vector)
-         Rod%v6(4:6) = 0.0_DbKi            ! (rotational velocities about unrotated axes) 
-
-      end if
-      ! otherwise (for a fixed rod) the positions will be set by the parent body or via coupling
-
+      Rod%r6(4:6) = Rod%q               ! (Rod direction unit vector)
+      Rod%v6(4:6) = 0.0_DbKi            ! (rotational velocities about unrotated axes) 
 
       ! save mass for future calculations >>>> should calculate I_l and I_r here in future <<<<
       Rod%mass  = Rod%UnstrLen*RodProp%w
