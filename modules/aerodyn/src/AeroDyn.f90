@@ -3353,10 +3353,10 @@ SUBROUTINE TwrInflArray( p, u, m, Positions, Inflow, ErrStat, ErrMsg )
    !$OMP END PARALLEL
 END SUBROUTINE TwrInflArray
 !----------------------------------------------------------------------------------------------------------------------------------
-FUNCTION CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI) RESULT(v)
+FUNCTION CalculateTowerInfluence(p, xbar_in, ybar, zbar, W_tower, TwrCd, TwrTI) RESULT(v)
 
    TYPE(RotParameterType),       INTENT(IN   )  :: p                       !< Parameters
-   real(ReKi), intent(inout)                    :: xbar                    ! local x^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
+   real(ReKi), intent(in   )                    :: xbar_in                 ! local x^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
    real(ReKi), intent(in)                       :: ybar                    ! local y^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
    real(ReKi), intent(in)                       :: zbar                    ! local z^ component of r_TowerBlade (distance from tower to blade) normalized by tower radius
    real(ReKi), intent(in)                       :: W_tower                 ! local relative wind speed normal to the tower
@@ -3366,6 +3366,7 @@ FUNCTION CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI) RES
       
    real(ReKi)                                   :: denom                   ! denominator
    real(ReKi)                                   :: exponential             ! exponential term
+   real(ReKi)                                   :: xbar                    ! potentially modified version of xbar_in
    real(ReKi)                                   :: u_TwrShadow             ! axial velocity deficit fraction from tower shadow
    real(ReKi)                                   :: u_TwrPotent             ! axial velocity deficit fraction from tower potential flow
    real(ReKi)                                   :: v_TwrPotent             ! transverse velocity deficit fraction from tower potential flow
@@ -3374,6 +3375,7 @@ FUNCTION CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI) RES
    u_TwrShadow = 0.0_ReKi
    u_TwrPotent = 0.0_ReKi
    v_TwrPotent = 0.0_ReKi
+   xbar        = xbar_in
       
    ! calculate tower influence:
    if ( abs(zbar) < 1.0_ReKi .and. p%TwrPotent /= TwrPotent_none ) then

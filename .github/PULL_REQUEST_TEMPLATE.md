@@ -25,7 +25,6 @@
 - [ ] Create a merge commit in r-test and add a corresponding tag
 - [ ] Compile executables for Windows builds
     - [ ] FAST_SFunc.mexw64
-    - [ ] MAP_X64.dll
     - [ ] OpenFAST-Simulink_x64.dll
     - [ ] openfast_x64.exe
     - [ ] DISCON.dll
