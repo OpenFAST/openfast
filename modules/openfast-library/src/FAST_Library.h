@@ -23,6 +23,8 @@ EXTERNAL_ROUTINE void FAST_OpFM_Init(int * iTurb, double *TMax, const char *Inpu
 EXTERNAL_ROUTINE void FAST_OpFM_Solution0(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_OpFM_Step(int * iTurb, int *ErrStat, char *ErrMsg);
 
+EXTERNAL_ROUTINE void FAST_HubPostion(int * iTurb, float * absolute_position, float * rotation_veocity, double * orientation_dcm, int *ErrStat, char *ErrMsg);
+
 EXTERNAL_ROUTINE void FAST_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, int * NumOuts, double * dt, int * n_t_global, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_Sizes(int * iTurb, const char *InputFileName, int *AbortErrLev, int * NumOuts, double * dt, double * tmax, int *ErrStat, char *ErrMsg, char *ChannelNames, double *TMax = NULL, double *InitInputAry = NULL);
 EXTERNAL_ROUTINE void FAST_Start(int * iTurb, int *NumInputs_c, int *NumOutputs_c, double *InputAry, double *OutputAry, int *ErrStat, char *ErrMsg);
