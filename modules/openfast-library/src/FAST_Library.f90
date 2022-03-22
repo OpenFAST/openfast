@@ -335,6 +335,9 @@ subroutine FAST_HubPosition(iTurb, AbsPosition_c, RotationalVel_c, Orientation_c
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
 
+   ErrStat_c = ErrID_None
+   ErrMsg = C_NULL_CHAR
+
    if (iTurb > size(Turbine) ) then
       ErrStat_c = ErrID_Fatal
       ErrMsg = "iTurb is greater than the number of turbines in the simulation."//C_NULL_CHAR
