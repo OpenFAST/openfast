@@ -37,8 +37,8 @@ class FastLibAPI(CDLL):
         # If < 8, FAST_SetExternalInputs simply returns,
         # but this behavior may change to an error
         ### MAKE THIS 8 OR 11
-        self._num_inputs = c_int(8)
-        self._inp_array = (c_double * 10)(0.0, )  # 10 is hard-coded in FAST_Library as MAXInitINPUTS
+        self._num_inputs = c_int(51)
+        self._inp_array = (c_double * 53)(0.0, )  # 10 is hard-coded in FAST_Library as MAXInitINPUTS
         self._inp_array[0] = -1.0  # Sensor type - 
 
         self.output_values = None
