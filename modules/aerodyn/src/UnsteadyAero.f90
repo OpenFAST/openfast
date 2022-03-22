@@ -348,9 +348,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    real(ReKi)                :: q_minus1                                      !
    real(ReKi)                :: q_f_minus1
    real(ReKi)                :: Cn_pot_minus1                                 !
-   real(ReKi)                :: K3prime_q                                     !
    real(ReKi)                :: k_mq                                          !
-   real(ReKi)                :: Kprimeprime_q                                 !
    real(ReKi)                :: dynamicFilterCutoffHz                         ! find frequency based on reduced frequency of k = BL_p%filtCutOff
    real(ReKi)                :: LowPassConst
    
@@ -512,19 +510,19 @@ endif
       KC%Cn_q_circ       = 0.0_ReKi
    end if
    
-   K3prime_q       = Get_ExpEqn( BL_p%b5*beta_M_Sqrd*KC%ds, 1.0_ReKi, xd%K3prime_q_minus1(i,j),  BL_p%A5*(KC%q_f_cur - q_f_minus1), 0.0_ReKi )  ! Eqn 1.26
-   KC%Cm_q_circ    = -BL_p%C_nalpha*(KC%q_f_cur - K3prime_q)*p%c(i,j)/(16.0_ReKi*beta_M*u%U)                                  ! Eqn 1.25
+   KC%K3prime_q       = Get_ExpEqn( BL_p%b5*beta_M_Sqrd*KC%ds, 1.0_ReKi, xd%K3prime_q_minus1(i,j),  BL_p%A5*(KC%q_f_cur - q_f_minus1), 0.0_ReKi )  ! Eqn 1.26
+   KC%Cm_q_circ    = -BL_p%C_nalpha*(KC%q_f_cur - KC%K3prime_q)*p%c(i,j)/(16.0_ReKi*beta_M*u%U)                                  ! Eqn 1.25
    
    KC%Cn_pot       = KC%Cn_alpha_q_circ + KC%Cn_alpha_q_nc                                                                    ! Eqn 1.20 [2a]
    
    k_mq            = 7.0_ReKi / (15.0_ReKi*(1.0_ReKi-M) + 1.5_ReKi * BL_p%C_nalpha * BL_p%A5 * BL_p%b5 * beta_M * M**2)       ! Eqn 1.29 [2]      ! CHECK THAT DENOM ISN'T ZERO!
-   Kprimeprime_q   = Get_ExpEqn( real(p%dt,ReKi), k_mq**2*T_I , xd%Kprimeprime_q_minus1(i,j) ,  KC%Kq_f , Kq_f_minus1  )      ! Eqn 1.29 [3]
+   KC%Kprimeprime_q   = Get_ExpEqn( real(p%dt,ReKi), k_mq**2*T_I , xd%Kprimeprime_q_minus1(i,j) ,  KC%Kq_f , Kq_f_minus1  )      ! Eqn 1.29 [3]
    
       ! Compute Cm_q_nc 
    if ( p%UAMod == UA_MinnemaPierce ) then
-      KC%Cm_q_nc =  -1.0_ReKi * KC%Cn_q_nc / 4.0_ReKi - (KC%k_alpha**2) * T_I * (KC%Kq_f - Kprimeprime_q) / (3.0_ReKi*M)      ! Eqn 1.31
+      KC%Cm_q_nc =  -1.0_ReKi * KC%Cn_q_nc / 4.0_ReKi - (KC%k_alpha**2) * T_I * (KC%Kq_f - KC%Kprimeprime_q) / (3.0_ReKi*M)      ! Eqn 1.31
    else  
-      KC%Cm_q_nc = -7.0_ReKi * (k_mq**2) * T_I * (KC%Kq_f - Kprimeprime_q) / (12.0_ReKi*M)                                    ! Eqn 1.29 [1]       
+      KC%Cm_q_nc = -7.0_ReKi * (k_mq**2) * T_I * (KC%Kq_f - KC%Kprimeprime_q) / (12.0_ReKi*M)                                    ! Eqn 1.29 [1]       
    end if
    
    if ( p%UAMod == UA_Gonzalez ) then
@@ -2074,6 +2072,8 @@ endif
       xd%X4_minus1(i,j)           = KC%X4
       xd%Kprime_alpha_minus1(i,j) = KC%Kprime_alpha
       xd%Kprime_q_minus1(i,j)     = KC%Kprime_q
+      xd%K3prime_q_minus1(i,j)    = KC%K3prime_q
+      xd%Kprimeprime_q_minus1(i,j)= KC%Kprimeprime_q
       xd%Dp_minus1(i,j)           = KC%Dp
       xd%Cn_pot_minus1(i,j)       = KC%Cn_pot
       xd%Cn_prime_minus1(i,j)     = KC%Cn_prime
