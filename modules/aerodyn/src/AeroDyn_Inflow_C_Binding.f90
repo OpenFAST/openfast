@@ -1462,16 +1462,19 @@ subroutine Set_OutputLoadArray()
    enddo
 end subroutine Set_OutputLoadArray
 
-!> take DCM passed in, do logrithmic mapping, then exponential mapping back to DCM.  Idea here is we can account
+!> take DCM passed in, do Euler angle extract, then Euler angle construct back to DCM.  Idea here is we can account
 !! for minor accuracy issues in the passed DCM
 subroutine OrientRemap(DCM)
    real(R8Ki), intent(inout)  :: DCM(3,3)
-   real(R8Ki)                 :: logMap(3)
-   integer(IntKi)             :: TmpErrStat  ! DCM_logMapD requires this output, but doesn't use it at all
-   character(ErrMsgLen)       :: TmpErrMsg   ! DCM_logMapD requires this output, but doesn't use it at all
+   real(R8Ki)                 :: theta(3)
+!   real(R8Ki)                 :: logMap(3)
+!   integer(IntKi)             :: TmpErrStat  ! DCM_logMapD requires this output, but doesn't use it at all
+!   character(ErrMsgLen)       :: TmpErrMsg   ! DCM_logMapD requires this output, but doesn't use it at all
 !write(200,*)   reshape(DCM,(/9/))
-   call DCM_logMap(DCM,logMap,TmpErrStat,TmpErrMsg)
-   DCM = DCM_Exp(logMap)
+   theta = EulerExtract(DCM)
+   DCM = EulerConstruct(theta)
+!   call DCM_logMap(DCM,logMap,TmpErrStat,TmpErrMsg)
+!   DCM = DCM_Exp(logMap)
 !write(201,*)   reshape(DCM,(/9/))
 end subroutine OrientRemap
 
