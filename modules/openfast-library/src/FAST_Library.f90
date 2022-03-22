@@ -349,7 +349,7 @@ subroutine FAST_HubPosition(iTurb, AbsPosition_c, RotationalVel_c, Orientation_c
       return
    end if
 
-   AbsPosition_c = Turbine(iTurb)%ED%y%HubPtMotion%Position(:,1) + Turbine(iTurb)%ED%y%HubPtMotion%TranslationDisp(:,1)
+   AbsPosition_c = REAL(Turbine(iTurb)%ED%y%HubPtMotion%Position(:,1), C_FLOAT) + REAL(Turbine(iTurb)%ED%y%HubPtMotion%TranslationDisp(:,1), C_FLOAT)
    Orientation_c = reshape( Turbine(iTurb)%ED%y%HubPtMotion%Orientation(1:3,1:3,1), (/9/) )
    RotationalVel_c = Turbine(iTurb)%ED%y%HubPtMotion%RotationVel(:,1)
 
