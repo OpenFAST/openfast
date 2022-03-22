@@ -854,7 +854,7 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 
 
 !!===============================================================================================================
-!!--------------------------------------------- AeroDyn Init----------------------------------------------------
+!!--------------------------------------------- AeroDyn ReInit---------------------------------------------------
 !!===============================================================================================================
 !!TODO: finish this routine so it is usable
 !SUBROUTINE AeroDyn_Inflow_C_ReInit( T_initial_C, DT_C, TMax_C,                     &
@@ -1161,7 +1161,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    endif
 
    !-------------------------------------------------------
-   ! Set inputs for time T+dt -- u(1)
+   ! Set inputs for time T+dt -- u(INPUT_PRED)
    !-------------------------------------------------------
    ! Reshape mesh position, orientation, velocity, acceleration
    tmpBldPtMeshPos(1:3,1:NumMeshPts)      = reshape( real(MeshPos_C(1:3*NumMeshPts),ReKi), (/3,  NumMeshPts/) )
@@ -1171,7 +1171,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
 
    ! Transfer motions to input meshes
    call Set_MotionMesh( ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AD_SetInputMotion( u(1), &
+   call AD_SetInputMotion( u(INPUT_PRED), &
             HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
             NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
             BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
@@ -1189,7 +1189,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
 
 
    ! Call the main subroutine ADI_UpdateStates to get the velocities
-   CALL ADI_UpdateStates( InputTimes(INPUT_PRED), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherStates(STATE_PRED), m, ErrStat2, ErrMsg2 )
+   CALL ADI_UpdateStates( InputTimes(INPUT_CURR), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherStates(STATE_PRED), m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
 
