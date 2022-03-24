@@ -43,49 +43,141 @@ For other questions regarding OpenFAST, please contact
     - :ref:`code_style`
     - :ref:`debugging`
 
-API Reference
-~~~~~~~~~~~~~
-Some subroutines and derived types throughout the source code have in-source
-documentation which is compiled with Doxygen. Though this portion of the
-documentation is always under development, the existing API reference can
-be found in the following pages:
-
-- `Main Page <../../html/index.html>`_
-- `Index of Types <../../html/classes.html>`_
-- `Source Files <../../html/files.html>`_
-
 .. _development_philosophy:
 
-Development Philosophy
-~~~~~~~~~~~~~~~~~~~~~~
+Development Philosophy and Guidelines
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-OpenFAST is intended to be a self sustaining community developed software.
-A couple of tenets of this goal are that the code should be reasonably
-straightforward to comprehend and manageable to improve. With that in mind, we
-expect that new capabilities will include adequate testing and documentation.
+OpenFAST is intended to be a self-sustaining, community developed software.
+While the NREL OpenFAST team serves as the gatekeeper of the repository, we
+actively encourage the community to share new ideas and contribute code.
+Considerations for contributing code are outlined here.
 
-We have the following guidance for developers:
+Engagement with NREL
+--------------------
 
-- When fixing a bug, first introduce a unit test that exposes the bug, fix the
-  bug, and submit a Pull Request. See :ref:`testing` and
-  :ref:`github_workflow` for more information.
+The process for community code contribution starts with engaging directly
+with the NREL OpenFAST team to define the scope of the work and coordinate
+development efforts. This is particularly important since many groups
+work on OpenFAST simultaneously. By engaging early, all developers can
+stay up to date and minimize conflicts during the code merge.
+The prefered method of communication is `GitHub Issues <https://github.com/openfast/openfast/issues>`_.
+An initial post should contain all relevant information about the planned
+development work, the areas of the software that will be impacted,
+and any model validation materials. After this step, the NREL OpenFAST
+team may reach out to schedule a meeting to talk through the details.
 
-- When adding a new feature, create appropriate automated unit and regression
-  tests as described in :ref:`testing`. The objective is to create a GitHub
-  pull request that provides adequate verification and validation so that the
-  NREL OpenFAST developer team can merge the pull request with confidence that
-  the new feature is "correct" and supports our goal of self-sustaining
-  software. See :ref:`pull_requests` for more information on submitting
-  a pull request.
+Qualities of a good submission
+------------------------------
 
-- If a code modification affects regression test results in an expected manner,
-  work with the NREL OpenFAST developer team to upgrade the regression test
-  suite via a GitHub issue or pull request at the `openfast/r-test <https://github.com/openfast/r-test>`_
-  repository.
+Development efforts should include adequate testing throughout
+the development process. New subroutines should include unit-level tests,
+and the existing regression tests should be run periodically to ensure that
+the full system behavior has not changed unintentionally. For new features,
+additional regression tests should be added to cover the new code.
+If the regression test results change in an expected manner, the baseline
+results should be updated locally and in the `openfast/r-test <https://github.com/openfast/r-test>`_
+repository. The `r-test README <https://github.com/openfast/r-test#updating-the-baselines>`_
+describes updating the baselines and the :ref:`testing`
+section in this documentation contains additional details on testing.
 
-Development Guidelines
-~~~~~~~~~~~~~~~~~~~~~~
-The following sections provide extended guidance on how to develop source code,
+New code should consider robustness from both the developer and user
+perspectives. Here are some questions to consider during
+code development:
+
+- Is it clear to other developers how to use your subroutine?
+- Does your new code exhibit clear and predictable behavior?
+- How will your code perform under different qualities of data?
+- How does your code impact the performance of simulation?
+
+Additionally, user and developer documentation should be included
+with new code. User documentation includes theory, modeling guidance,
+and a description of any inputs and outputs. This documentation is
+included as part of the online documentation described in :ref:`build_doc`.
+Developer documentation is typically included in comments in the source
+code. This should describe subroutine API's (inputs and outputs) as well
+as any algorithms or lines of code that are unclear. Ask yourself
+what you would need to know to fully understand your code if you don't
+see it again for two years.
+
+Submit for review and NREL feedback
+-----------------------------------
+
+New code can be submitted for review from the NREL OpenFAST team by
+opening a `pull request <https://github.com/openfast/openfast/pulls>`_
+as described in :ref:`github_workflow`. We will review the code for
+accuracy, validity, quality, and robustness. Reviewing open source
+code contributions can be difficult, so it is worthwhile to review
+your own code and consider what information would help you to
+determine whether it is ready to merge.
+
+The review process begins with simply ensuring that the automated
+tests pass in `GitHub Actions <https://github.com/openfast/openfast/actions>`_.
+**Please ensure that all automated tests pass prior to requesting a review.**
+After that, the process will involve some communication between the
+reviewer and the submitter, possibly requests for more information
+on the background or validation, and comments in the pull request
+to gain additional insight into specific lines of code.
+
+After a consensus is reached between the submitter and reviewer,
+the pull request will be merged into the target branch (typically
+`dev`) and the pull request will be closed. You're done!
+This change will be included in the subsequent release of OpenFAST
+when the `dev` branch is merged into `main`.
+
+Bug fixes
+---------
+
+If you've found a bug in the code, it is important to fully describe
+it both in a `GitHub Issue <https://github.com/openfast/openfast/issues>`_
+and through a minimal test. Before making a commit with the bug fix,
+commit the new test that exposes the bug. This test should fail.
+Then, commit the bug fix and show that the test passes. The git-commit
+history should look something like this (progresses bottom to top):
+
+.. mermaid::
+
+  gitGraph BT:
+  options
+  {
+    "nodeSpacing": 60,
+    "nodeFillColor": "white",
+    "nodeStrokeWidth": 2,
+    "nodeStrokeColor": "#747474",
+    "lineStrokeWidth": 2,
+    "branchOffset": 30,
+    "lineColor": "grey",
+    "leftMargin": 20,
+    "branchColors": ["#007bff", "#ff2d54"],
+    "nodeRadius": 5,
+    "nodeLabel": {
+      "width": 75,
+      "height": 100,
+      "x": -25,
+      "y": 0
+    }
+  }
+  end
+
+  commit
+  branch dev
+  checkout dev
+  commit "Merge pull request #123"
+  commit "Merge pull request #124"
+  branch bugfix
+  checkout bugfix
+  commit "Add unit test exposing out of bounds error"
+  commit "Fix out of bounds error in array"
+  checkout dev
+  commit "Merge pull request #125"
+  merge bugfix
+
+See :ref:`testing` and :ref:`github_workflow` for more information.
+
+Additional guidance
+-------------------
+
+The following sections provide extended guidance on developing source code,
 interacting with the NREL OpenFAST team and other community contributors, and
 generally debugging and building out features.
 
@@ -100,12 +192,26 @@ generally debugging and building out features.
     performance.rst
     versioning.rst
 
+
+
+
+API Reference
+~~~~~~~~~~~~~
+Some subroutines and derived types throughout the source code have in-source
+documentation which is compiled with Doxygen. Though this portion of the
+documentation is always under development, the existing API reference can
+be found in the following pages:
+
+- `Main Page <../../html/index.html>`_
+- `Index of Types <../../html/classes.html>`_
+- `Source Files <../../html/files.html>`_
+
 Other Documentation
 ~~~~~~~~~~~~~~~~~~~
 Additional documentation exists that may be useful for developers seeking deeper
 understanding of the solver and mathematics.
 
-- `NWTC Programmer’s Handbook <https://drive.google.com/file/d/1bDV1fBkiZUWs6Tkzb6nhCMUQvHpN_OtM/view?usp=sharing>`_
+- `NWTC Programmer's Handbook <https://drive.google.com/file/d/1bDV1fBkiZUWs6Tkzb6nhCMUQvHpN_OtM/view?usp=sharing>`_
    This is an overview of programming guidelines for FAST 8. While some syntax and minor details have
    changed in OpenFAST, most of this guide is still relevant.
 - :download:`OutListParameters.xlsx <../../OtherSupporting/OutListParameters.xlsx>`
