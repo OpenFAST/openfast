@@ -63,10 +63,6 @@ these resources will be moved to their appropriate location. If newer versions
 of the external resources are available, please open a `GitHub Issue <https://github.com/openfast/openfast/issues>`_
 with the information for the new documentation.
 
-- External Platform MCKF
-
-  - :download:`Superelement reduction of substructures for sequential load calculations in OpenFAST <https://iopscience.iop.org/article/10.1088/1742-6596/1452/1/012033/pdf>`
-
 - MAP++
 
   - `Official MAP++ documentation <https://map-plus-plus.readthedocs.io/en/latest/index.html>`_
