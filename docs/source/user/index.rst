@@ -54,42 +54,9 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    Structural Control <servodyn-stc/StC_index.rst>
    C++ API <cppapi/index.rst>
    FAST.Farm <fast.farm/index.rst>
-   
 
-Modularization Framework
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Information specific to the modularization framework of OpenFAST is provided here. These are a collection
-of publications, presentations, and past studies on the subject.
-
-- `The New Modularization Framework for the FAST Wind Turbine CAE Tool <https://www.nrel.gov/docs/fy13osti/57228.pdf>`_
-- :download:`Example Module Implementation Plans <../../OtherSupporting/ModulePlan_GasmiPaperExamples.doc>`
-- :download:`Module and Mesh-Mapping Linearization Implementation Plan <../../OtherSupporting/LinearizationOfMeshMapping_Rev18_Rev2.doc>`
-- :download:`Interpolation of DCMs <../../OtherSupporting/DCM_Interpolation/DCM_Interpolation.pdf>` - A summary of the mathematics used in the interpolation of DCM (direction cosine matrices) using logarithmic mapping and matrix exponentials.
-- :download:`Set-point Linearization Development Plan <../../OtherSupporting/DevelopmentPlan-SetPoint-Linearization.pdf>`
-
-.. - :download:`OpenFAST Steady State Solution <../../OtherSupporting/OpenFASTSteadyStateSolution_Rev7.doc>`
-
-
-Glue Code and Mesh Mapping
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- `FAST Modular Wind Turbine CAE Tool: Nonmatching Spatial and Temporal Meshes <https://www.nrel.gov/docs/fy14osti/60742.pdf>`_
-- `FAST Modular Framework for Wind Turbine Simulation: New Algorithms and Numerical Examples <https://dx.doi.org/10.2514/6.2015-1461>`_
-- :download:`OpenFAST Algorithms <../../OtherSupporting/OpenFAST_Algorithms/OpenFAST_Algorithms.pdf>` - A summary of the solve method used in the glue code.
-- :download:`Predictor-Corrector Approach <../../OtherSupporting/ProposedPCApproach_Rev4.docx>`
-
-
-NWTC Subroutine Library
-~~~~~~~~~~~~~~~~~~~~~~~
-
-- :download:`NWTC Library – short overview of subroutines and functions <../../OtherSupporting/NWTC_Library_Description.pdf>`
-
-
-Other Modules
-~~~~~~~~~~~~~
-The resources listed here relate to modules that do not currently
-have formal documentation or are contributed to OpenFAST from organizations
+The following modules do not currently have formal documentation
+or are contributed to OpenFAST from organizations
 external to NREL and the core OpenFAST team. As documentation is added,
 these resources will be moved to their appropriate location. If newer versions
 of the external resources are available, please open a `GitHub Issue <https://github.com/openfast/openfast/issues>`_
@@ -128,3 +95,32 @@ with the information for the new documentation.
 - TurbSim
 
   - :download:`User’s Guide <../../OtherSupporting/TurbSim/TurbSim_v2.00.pdf>`
+
+Modularization Framework
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Information specific to the modularization framework of OpenFAST is provided here. These are a collection
+of publications, presentations, and past studies on the subject.
+
+- `The New Modularization Framework for the FAST Wind Turbine CAE Tool <https://www.nrel.gov/docs/fy13osti/57228.pdf>`_
+- :download:`Example Module Implementation Plans <../../OtherSupporting/ModulePlan_GasmiPaperExamples.doc>`
+- :download:`Module and Mesh-Mapping Linearization Implementation Plan <../../OtherSupporting/LinearizationOfMeshMapping_Rev18_Rev2.doc>`
+- :download:`Interpolation of DCMs <../../OtherSupporting/DCM_Interpolation/DCM_Interpolation.pdf>` - A summary of the mathematics used in the interpolation of DCM (direction cosine matrices) using logarithmic mapping and matrix exponentials.
+- :download:`Set-point Linearization Development Plan <../../OtherSupporting/DevelopmentPlan-SetPoint-Linearization.pdf>`
+
+.. - :download:`OpenFAST Steady State Solution <../../OtherSupporting/OpenFASTSteadyStateSolution_Rev7.doc>`
+
+
+Glue Code and Mesh Mapping
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- `FAST Modular Wind Turbine CAE Tool: Nonmatching Spatial and Temporal Meshes <https://www.nrel.gov/docs/fy14osti/60742.pdf>`_
+- `FAST Modular Framework for Wind Turbine Simulation: New Algorithms and Numerical Examples <https://dx.doi.org/10.2514/6.2015-1461>`_
+- :download:`OpenFAST Algorithms <../../OtherSupporting/OpenFAST_Algorithms/OpenFAST_Algorithms.pdf>` - A summary of the solve method used in the glue code.
+- :download:`Predictor-Corrector Approach <../../OtherSupporting/ProposedPCApproach_Rev4.docx>`
+
+
+NWTC Subroutine Library
+~~~~~~~~~~~~~~~~~~~~~~~
+
+- :download:`NWTC Library – short overview of subroutines and functions <../../OtherSupporting/NWTC_Library_Description.pdf>`
