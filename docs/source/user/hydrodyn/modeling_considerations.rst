@@ -12,7 +12,6 @@ development plans, and publications are made available for reference.
 Note that some of these may be outdated and pertain to older versions
 of HydroDyn.
 
-- :download:`HydroDyn User’s Guide and Theory Manual <https://www.nrel.gov/docs/fy14osti/61161.pdf>`
 - :download:`Computation of Wave Loads Under Multidirectional Sea States for Floating Offshore Wind Turbines <https://www.nrel.gov/docs/fy14osti/61161.pdf>`
 - :download:`Effects of Second-Order Hydrodynamic Forces on Floating Offshore Wind Turbines <https://www.nrel.gov/docs/fy14osti/60966.pdf>`
 - :download:`State-Space Realization of the Wave-Radiation Force within FAST <https://www.nrel.gov/docs/fy13osti/58099.pdf>`
