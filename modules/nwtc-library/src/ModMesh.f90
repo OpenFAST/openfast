@@ -2329,6 +2329,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
        RETURN  ! Early return
      ENDIF
 
+     !bjj: Not sure Mesh%ElemTable(:)%nelem can be used on all versions of gfortran
      IF ( ALL( Mesh%ElemTable(:)%nelem /= SUM(Mesh%ElemTable(:)%nelem ) ) ) THEN
        ErrStat = ErrID_Fatal
        ErrMess = "MeshCommit: a mesh can have only one type of element."

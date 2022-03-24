@@ -24,18 +24,15 @@ usefrom   WAMIT.txt
 usefrom   WAMIT2.txt
 usefrom   Morison.txt
 #usefrom   FIT.txt
+
 param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxHDOutputs                    -          537        -         "The maximum number of output channels supported by this module"    -
-typedef   HydroDyn/HydroDyn            InitInputType                 CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the HydroDyn module"    -
-typedef   ^                            ^                             LOGICAL                  UseInputFile                    -          -          -         "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
-typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -          -          -         "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
-typedef	 ^	                           ^                            	Logical	                Linearize	                     -	     .FALSE.	    -	        "Flag that tells this module if the glue code wants to linearize."	-
-typedef   ^                            ^                             DbKi                     DT                              -          -          -         "Supplied by Driver:  Simulation time step"  "(sec)"
-typedef   ^                            ^                             ReKi                     Gravity                         -          -          -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
-typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
-typedef   ^                            ^                             LOGICAL                  HasIce                          -          -          -         "Supplied by Driver:  Whether this simulation has ice loading (flag)"    -
-typedef   ^                            ^                             SiKi                     WaveElevXY                      {:}{:}     -          -         "Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."    "m,-"
-typedef   ^                            ^                             ReKi                     PtfmLocationX                   -          -          -         "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
-typedef   ^                            ^                             ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
+param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxUserOutputs                  -         4583        -         " Total possible number of output channels:  Waves2 = 18 + SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4032 + HydroDyn=519   =  4583" -
+
+#########################
+# ..... Input file data ...........................................................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Primary Input file data ...................................................................................................
+typedef  HydroDyn/HydroDyn    HydroDyn_InputFile   LOGICAL      EchoFlag          -     -     -     "Echo the input file"                                    -
 typedef   ^                            ^                             ReKi                     AddF0                           {:}{:}     -          -         "Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m)"    -
 typedef   ^                            ^                             ReKi                     AddCLin                         {:}{:}{:}   -          -         "Additional stiffness matrix"    -
 typedef   ^                            ^                             ReKi                     AddBLin                         {:}{:}{:}   -          -         "Additional linear damping matrix"    -
@@ -72,6 +69,23 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             INTEGER                  UnSum                           -          -          -         "File unit for the HydroDyn summary file [-1 = no summary file]"    -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -          -         "Output format for numerical results"    -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -          -         "Output format for header strings"    -
+
+
+
+typedef   HydroDyn/HydroDyn            InitInputType                 CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the HydroDyn module"    -
+typedef   ^                            ^                             LOGICAL                  UseInputFile                    -       .TRUE.        -         "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
+typedef   ^                            ^                             FileInfoType             PassedFileData                  -          -          -         "If we don't use the input file, pass everything through this"   -
+typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -          -          -         "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
+typedef	 ^	                           ^                            	Logical	                Linearize	                     -	     .FALSE.	    -	        "Flag that tells this module if the glue code wants to linearize."	-
+typedef   ^                            ^                             ReKi                     Gravity                         -          -          -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
+typedef   ^                            ^                             ReKi                     defWtrDens                      -          -          -         "Default water density from the driver; may be overwritten                      "  "(kg/m^3)"
+typedef   ^                            ^                             ReKi                     defWtrDpth                      -          -          -         "Default water depth from the driver; may be overwritten                        "  "m"
+typedef   ^                            ^                             ReKi                     defMSL2SWL                      -          -          -         "Default mean sea level to still water level from the driver; may be overwritten"  "m"
+typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
+typedef   ^                            ^                             LOGICAL                  HasIce                          -          -          -         "Supplied by Driver:  Whether this simulation has ice loading (flag)"    -
+typedef   ^                            ^                             SiKi                     WaveElevXY                      {:}{:}     -          -         "Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."    "m,-"
+typedef   ^                            ^                             ReKi                     PtfmLocationX                   -          -          -         "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
+typedef   ^                            ^                             ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
 #
 #
 # Define outputs from the initialization routine here:

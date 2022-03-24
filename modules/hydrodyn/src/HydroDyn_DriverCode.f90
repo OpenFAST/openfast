@@ -34,6 +34,9 @@ PROGRAM HydroDynDriver
    TYPE HD_Drvr_InitInput
       LOGICAL                 :: Echo
       REAL(ReKi)              :: Gravity
+      REAL(ReKi)              :: WtrDens
+      REAL(ReKi)              :: WtrDpth
+      REAL(ReKi)              :: MSL2SWL
       CHARACTER(1024)         :: HDInputFile
       CHARACTER(1024)         :: OutRootName
       LOGICAL                 :: Linearize
@@ -176,6 +179,9 @@ PROGRAM HydroDynDriver
       STOP
    END IF
    InitInData%Gravity      = drvrInitInp%Gravity
+   InitInData%defWtrDens   = drvrInitInp%WtrDens
+   InitInData%defWtrDpth   = drvrInitInp%WtrDpth
+   InitInData%defMSL2SWL   = drvrInitInp%MSL2SWL
    InitInData%UseInputFile = .TRUE. 
    InitInData%InputFile    = drvrInitInp%HDInputFile
    InitInData%OutRootName  = drvrInitInp%OutRootName
@@ -778,6 +784,41 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       RETURN
    END IF
 
+      ! WtrDens - Water density.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%WtrDens, 'WtrDens', 'Water density', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read WtrDens parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+      ! WtrDpth - Water depth.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%WtrDpth, 'WtrDpth', 'Water depth', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read WtrDpth parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+      ! MSL2SWL - Offset between still-water level and mean sea level.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%MSL2SWL, 'MSL2SWL', 'Offset between still-water level and mean sea level', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read MSL2SWL parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
    
    !-------------------------------------------------------------------------------------------------
    ! HYDRODYN section

@@ -20,4 +20,4 @@ section :numref:`general-reference-docs`.
    :maxdepth: 2
    
    input.rst
-
+   ExtendedBladedInterface.rst 

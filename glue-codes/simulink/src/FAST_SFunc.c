@@ -81,20 +81,26 @@ static int nTurbines = 1;
 static int
 checkError(SimStruct *S){
 
-   if (ErrStat >= AbortErrLev){
-      ssPrintf("\n");
-      ssSetErrorStatus(S, ErrMsg);
-      mdlTerminate(S);  // terminate on error (in case Simulink doesn't do so itself)
-      return 1;
-   }
-   else if (ErrStat >= ErrID_Warn){
-      ssPrintf("\n");
-      ssWarning(S, ErrMsg);
-   }
-   else if (ErrStat != ErrID_None){
-      ssPrintf("\n%s\n", ErrMsg);
-   }
-   return 0;
+    if (ErrStat >= AbortErrLev) {
+        ssPrintf("\n");
+        if (ErrStat > ErrID_Fatal) { // in case we've reached a trim solution
+            ssPrintf("%s\n", ErrMsg);
+        }
+        else {
+            ssSetErrorStatus(S, ErrMsg);
+        }
+        mdlTerminate(S);  // terminate on error (in case Simulink doesn't do so itself)
+        return 1;
+    }
+    else if (ErrStat >= ErrID_Warn) {
+        ssPrintf("\n");
+        ssWarning(S, ErrMsg);
+    }
+    else if (ErrStat != ErrID_None) {
+        ssPrintf("\n");
+        ssPrintf("%s\n", ErrMsg);
+    }
+    return 0;
 
 }
 

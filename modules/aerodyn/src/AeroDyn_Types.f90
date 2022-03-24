@@ -57,6 +57,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubOrientation      !< DCM reference orientation of hub [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootPosition      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: NacellePosition      !< X-Y-Z reference position of nacelle [m]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation      !< DCM reference orientation of nacelle [-]
     INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
   END TYPE RotInitInputType
@@ -70,6 +71,14 @@ IMPLICIT NONE
     TYPE(FileInfoType)  :: PassedPrimaryInputData      !< Primary input file as FileInfoType (set by driver/glue code) [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: Gravity      !< Gravity force [Nm/s^2]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: defFldDens      !< Default fluid density from the driver; may be overwritten [kg/m^3]
+    REAL(ReKi)  :: defKinVisc      !< Default kinematic viscosity from the driver; may be overwritten [m^2/s]
+    REAL(ReKi)  :: defSpdSound      !< Default speed of sound from the driver; may be overwritten [m/s]
+    REAL(ReKi)  :: defPatm      !< Default atmospheric pressure from the driver; may be overwritten [Pa]
+    REAL(ReKi)  :: defPvap      !< Default vapor pressure from the driver; may be overwritten [Pa]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
   END TYPE AD_InitInputType
 ! =======================
 ! =========  AD_BladePropsType  =======
@@ -116,7 +125,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  RotInputFile  =======
   TYPE, PUBLIC :: RotInputFile
-    INTEGER(IntKi)  :: BldNd_BladesOut      !< The blades to output (AD_AllBldNdOuts) [-]
     TYPE(AD_BladePropsType) , DIMENSION(:), ALLOCATABLE  :: BladeProps      !< blade property information from blade input files [-]
     INTEGER(IntKi)  :: NumTwrNds      !< Number of tower nodes used in the analysis [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrElev      !< Elevation at tower node [m]
@@ -131,8 +139,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: DTAero      !< Time interval for aerodynamic calculations {or "default"} [s]
     INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     INTEGER(IntKi)  :: AFAeroMod      !< Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
-    INTEGER(IntKi)  :: TwrPotent      !< Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
-    INTEGER(IntKi)  :: TwrShadow      !< Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
+    INTEGER(IntKi)  :: TwrPotent      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
+    INTEGER(IntKi)  :: TwrShadow      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero      !< Calculate tower aerodynamic loads? [flag]
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
@@ -143,7 +151,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure [Pa]
-    REAL(ReKi)  :: FluidDepth      !< Submerged hub depth [m]
     REAL(ReKi)  :: SpdSound      !< Speed of sound [m/s]
     INTEGER(IntKi)  :: SkewMod      !< Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0] [-]
     REAL(ReKi)  :: SkewModFactor      !< Constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
@@ -286,8 +293,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: TwrPotent      !< Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
-    INTEGER(IntKi)  :: TwrShadow      !< Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
+    INTEGER(IntKi)  :: TwrPotent      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
+    INTEGER(IntKi)  :: TwrShadow      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero      !< Calculate tower aerodynamic loads? [flag]
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
@@ -298,7 +305,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap      !< Vapour pressure [Pa]
-    REAL(ReKi)  :: FluidDepth      !< Submerged hub height [m]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -317,11 +325,12 @@ IMPLICIT NONE
 ! =========  AD_ParameterType  =======
   TYPE, PUBLIC :: AD_ParameterType
     TYPE(RotParameterType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< Parameter types for each rotor [-]
+    REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(AFI_ParameterType) , DIMENSION(:), ALLOCATABLE  :: AFI      !< AirfoilInfo parameters [-]
     INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
-    REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
+    LOGICAL  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  RotInputType  =======
@@ -408,6 +417,7 @@ IF (ALLOCATED(SrcRotInitInputTypeData%BladeRootOrientation)) THEN
   END IF
     DstRotInitInputTypeData%BladeRootOrientation = SrcRotInitInputTypeData%BladeRootOrientation
 ENDIF
+    DstRotInitInputTypeData%NacellePosition = SrcRotInitInputTypeData%NacellePosition
     DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
     DstRotInitInputTypeData%AeroProjMod = SrcRotInitInputTypeData%AeroProjMod
  END SUBROUTINE AD_CopyRotInitInputType
@@ -477,6 +487,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! BladeRootOrientation upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%BladeRootOrientation)  ! BladeRootOrientation
   END IF
+      Db_BufSz   = Db_BufSz   + SIZE(InData%NacellePosition)  ! NacellePosition
       Db_BufSz   = Db_BufSz   + SIZE(InData%NacelleOrientation)  ! NacelleOrientation
       Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -563,6 +574,10 @@ ENDIF
         END DO
       END DO
   END IF
+    DO i1 = LBOUND(InData%NacellePosition,1), UBOUND(InData%NacellePosition,1)
+      DbKiBuf(Db_Xferred) = InData%NacellePosition(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     DO i2 = LBOUND(InData%NacelleOrientation,2), UBOUND(InData%NacelleOrientation,2)
       DO i1 = LBOUND(InData%NacelleOrientation,1), UBOUND(InData%NacelleOrientation,1)
         DbKiBuf(Db_Xferred) = InData%NacelleOrientation(i1,i2)
@@ -672,6 +687,12 @@ ENDIF
         END DO
       END DO
   END IF
+    i1_l = LBOUND(OutData%NacellePosition,1)
+    i1_u = UBOUND(OutData%NacellePosition,1)
+    DO i1 = LBOUND(OutData%NacellePosition,1), UBOUND(OutData%NacellePosition,1)
+      OutData%NacellePosition(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
     i1_l = LBOUND(OutData%NacelleOrientation,1)
     i1_u = UBOUND(OutData%NacelleOrientation,1)
     i2_l = LBOUND(OutData%NacelleOrientation,2)
@@ -725,6 +746,14 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%Gravity = SrcInitInputData%Gravity
+    DstInitInputData%MHK = SrcInitInputData%MHK
+    DstInitInputData%defFldDens = SrcInitInputData%defFldDens
+    DstInitInputData%defKinVisc = SrcInitInputData%defKinVisc
+    DstInitInputData%defSpdSound = SrcInitInputData%defSpdSound
+    DstInitInputData%defPatm = SrcInitInputData%defPatm
+    DstInitInputData%defPvap = SrcInitInputData%defPvap
+    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
  END SUBROUTINE AD_CopyInitInput
 
  SUBROUTINE AD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -826,6 +855,14 @@ ENDIF
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
+      Re_BufSz   = Re_BufSz   + 1  ! defFldDens
+      Re_BufSz   = Re_BufSz   + 1  ! defKinVisc
+      Re_BufSz   = Re_BufSz   + 1  ! defSpdSound
+      Re_BufSz   = Re_BufSz   + 1  ! defPatm
+      Re_BufSz   = Re_BufSz   + 1  ! defPvap
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -935,6 +972,22 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Gravity
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defFldDens
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defKinVisc
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defSpdSound
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defPatm
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%defPvap
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE AD_PackInitInput
 
@@ -1074,6 +1127,22 @@ ENDIF
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
     Int_Xferred = Int_Xferred + 1
     OutData%Gravity = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%defFldDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defKinVisc = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defSpdSound = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defPatm = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%defPvap = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE AD_UnPackInitInput
 
@@ -3213,7 +3282,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstRotInputFileData%BldNd_BladesOut = SrcRotInputFileData%BldNd_BladesOut
 IF (ALLOCATED(SrcRotInputFileData%BladeProps)) THEN
   i1_l = LBOUND(SrcRotInputFileData%BladeProps,1)
   i1_u = UBOUND(SrcRotInputFileData%BladeProps,1)
@@ -3345,7 +3413,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! BldNd_BladesOut
   Int_BufSz   = Int_BufSz   + 1     ! BladeProps allocated yes/no
   IF ( ALLOCATED(InData%BladeProps) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BladeProps upper/lower bounds for each dimension
@@ -3418,8 +3485,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%BldNd_BladesOut
-    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%BladeProps) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -3552,8 +3617,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%BldNd_BladesOut = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeProps not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -3728,7 +3791,6 @@ ENDIF
     DstInputFileData%KinVisc = SrcInputFileData%KinVisc
     DstInputFileData%Patm = SrcInputFileData%Patm
     DstInputFileData%Pvap = SrcInputFileData%Pvap
-    DstInputFileData%FluidDepth = SrcInputFileData%FluidDepth
     DstInputFileData%SpdSound = SrcInputFileData%SpdSound
     DstInputFileData%SkewMod = SrcInputFileData%SkewMod
     DstInputFileData%SkewModFactor = SrcInputFileData%SkewModFactor
@@ -3901,7 +3963,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
       Re_BufSz   = Re_BufSz   + 1  ! Patm
       Re_BufSz   = Re_BufSz   + 1  ! Pvap
-      Re_BufSz   = Re_BufSz   + 1  ! FluidDepth
       Re_BufSz   = Re_BufSz   + 1  ! SpdSound
       Int_BufSz  = Int_BufSz  + 1  ! SkewMod
       Re_BufSz   = Re_BufSz   + 1  ! SkewModFactor
@@ -4050,8 +4111,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%Patm
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Pvap
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%FluidDepth
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%SpdSound
     Re_Xferred = Re_Xferred + 1
@@ -4301,8 +4360,6 @@ ENDIF
     OutData%Patm = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Pvap = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%FluidDepth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%SpdSound = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -10027,7 +10084,8 @@ ENDIF
     DstRotParameterTypeData%Gravity = SrcRotParameterTypeData%Gravity
     DstRotParameterTypeData%Patm = SrcRotParameterTypeData%Patm
     DstRotParameterTypeData%Pvap = SrcRotParameterTypeData%Pvap
-    DstRotParameterTypeData%FluidDepth = SrcRotParameterTypeData%FluidDepth
+    DstRotParameterTypeData%WtrDpth = SrcRotParameterTypeData%WtrDpth
+    DstRotParameterTypeData%MSL2SWL = SrcRotParameterTypeData%MSL2SWL
     DstRotParameterTypeData%AeroProjMod = SrcRotParameterTypeData%AeroProjMod
     DstRotParameterTypeData%NumOuts = SrcRotParameterTypeData%NumOuts
     DstRotParameterTypeData%RootName = SrcRotParameterTypeData%RootName
@@ -10246,7 +10304,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Re_BufSz   = Re_BufSz   + 1  ! Patm
       Re_BufSz   = Re_BufSz   + 1  ! Pvap
-      Re_BufSz   = Re_BufSz   + 1  ! FluidDepth
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -10518,7 +10577,9 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Pvap
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%FluidDepth
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AeroProjMod
     Int_Xferred = Int_Xferred + 1
@@ -10898,7 +10959,9 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%Pvap = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%FluidDepth = ReKiBuf(Re_Xferred)
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%AeroProjMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -11093,6 +11156,7 @@ IF (ALLOCATED(SrcParamData%rotors)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+    DstParamData%DT = SrcParamData%DT
     DstParamData%RootName = SrcParamData%RootName
 IF (ALLOCATED(SrcParamData%AFI)) THEN
   i1_l = LBOUND(SrcParamData%AFI,1)
@@ -11114,7 +11178,7 @@ ENDIF
       CALL FVW_CopyParam( SrcParamData%FVW, DstParamData%FVW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-    DstParamData%DT = SrcParamData%DT
+    DstParamData%UA_Flag = SrcParamData%UA_Flag
  END SUBROUTINE AD_CopyParam
 
  SUBROUTINE AD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -11200,6 +11264,7 @@ ENDIF
       END IF
     END DO
   END IF
+      Db_BufSz   = Db_BufSz   + 1  ! DT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
   Int_BufSz   = Int_BufSz   + 1     ! AFI allocated yes/no
   IF ( ALLOCATED(InData%AFI) ) THEN
@@ -11242,7 +11307,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Db_BufSz   = Db_BufSz   + 1  ! DT
+      Int_BufSz  = Int_BufSz  + 1  ! UA_Flag
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -11311,6 +11376,8 @@ ENDIF
       ENDIF
     END DO
   END IF
+    DbKiBuf(Db_Xferred) = InData%DT
+    Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(InData%RootName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
@@ -11386,8 +11453,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-    DbKiBuf(Db_Xferred) = InData%DT
-    Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%UA_Flag, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_PackParam
 
  SUBROUTINE AD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -11473,6 +11540,8 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
+    OutData%DT = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(OutData%RootName)
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
@@ -11575,8 +11644,8 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    OutData%DT = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
+    OutData%UA_Flag = TRANSFER(IntKiBuf(Int_Xferred), OutData%UA_Flag)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_UnPackParam
 
  SUBROUTINE AD_CopyRotInputType( SrcRotInputTypeData, DstRotInputTypeData, CtrlCode, ErrStat, ErrMsg )

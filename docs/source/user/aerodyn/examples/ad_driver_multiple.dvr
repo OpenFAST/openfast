@@ -2,10 +2,18 @@
 Multiple HAWT
 ----- Input Configuration ---------------------------------------------------------------
 False           Echo        - Echo input parameters to "<rootname>.ech"?
+        0       MHK         - MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}
         1       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined cases}
         0.3     TMax        - Total run time [used only when AnalysisType/=3] (s)
         0.1     DT          - Simulation time step [used only when AnalysisType/=3] (s)
 "./OpenFAST_BAR_00_AeroDyn15_2WT.dat" AeroFile - Name of the primary AeroDyn input file
+----- Environmental Conditions ----------------------------------------------------------
+       1025     FldDens      - Density of working fluid (kg/m^3)
+ 1.4639E-05     KinVisc      - Kinematic viscosity of working fluid (m^2/s)
+      333.3     SpdSound     - Speed of sound in working fluid (m/s)
+     101325     Patm         - Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+       2000     Pvap         - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+        150     WtrDpth      - Water depth (m)
 ----- Inflow Data -----------------------------------------------------------------------
           1      CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
 "./OpenFAST_BAR_00_InflowFile.dat" InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
@@ -63,6 +71,7 @@ True            HAWTprojection(1)      - True if turbine is a horizontal axis tu
           -7    Overhang(2)     - Overhang (m)
           -6    ShftTilt(2)     - Shaft tilt (deg)
           -4    Precone(2)      - Blade precone (deg)
+     3.09343    Twr2Shft(2)     - Vertical distance from the tower-top to the rotor shaft (m)
 ----- Turbine(2) Motion [used only when AnalysisType=1] ---------------------------------
 0               BaseMotionType(2)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
 0               DegreeOfFreedom(2)     - {1:xt, 2:yt, 3:zt, 4:theta_xt, 5:theta_yt, 6:theta_zt} [used only when BaseMotionType=1] (flag)

@@ -121,6 +121,7 @@ typedef   ^                         ^            ReKi                    yawAcc 
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_N    -      -     -   "Mesh mapping from nacelle to AD nacelle motion"
 typedef   ^                         ^            MeshMapType             map2hubPt        -      -     -   "Mesh mapping from Nacelle to hub"
 
 # ... Tower data ............................................................................................................
@@ -154,9 +155,17 @@ typedef   ^                         ^            character(1024)         motionF
 typedef   ^                         ^            ReKi                    WriteOutput      :      -     -   "WriteOutputs of the driver only"
 
 # ..... Data for driver simulation .......................................................................................................
-typedef   ^                        Dvr_SimData  character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
+typedef   ^                        Dvr_SimData   character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
 typedef   ^                         ^            character(1024)         IW_InputFile     -      -     -   "Name of InfloWind input file" -
+typedef   ^                         ^            IntKi                   MHK              -      -     -   "MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}" "-"
 typedef   ^                         ^            IntKi                   AnalysisType     -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef   ^                         ^            ReKi                    FldDens          -      -     -   "Density of working fluid" "kg/m^3"
+typedef   ^                         ^            ReKi                    KinVisc          -      -     -   "Kinematic viscosity of working fluid" "m^2/s"
+typedef   ^                         ^            ReKi                    SpdSound         -      -     -   "Speed of sound in working fluid" "m/s"
+typedef   ^                         ^            ReKi                    Patm             -      -     -   "Atmospheric pressure" "Pa"
+typedef   ^                         ^            ReKi                    Pvap             -      -     -   "Vapour pressure of working fluid" "Pa"
+typedef   ^                         ^            ReKi                    WtrDpth          -      -     -   "Water depth" "m"
+typedef   ^                         ^            ReKi                    MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" "m"
 typedef   ^                         ^            IntKi                   CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
 typedef   ^                         ^            ReKi                    HWindSpeed       -      -     -   "RefHeight Wind speed"
 typedef   ^                         ^            ReKi                    RefHt            -      -     -   "RefHeight"

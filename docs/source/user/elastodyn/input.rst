@@ -37,11 +37,6 @@ coupled simulation.
 
 **dT**
 
-Environmental Condition
-~~~~~~~~~~~~~~~~~~~~~~~
-
-**gravity**
-
 Degrees of Freedom
 ~~~~~~~~~~~~~~~~~~
 

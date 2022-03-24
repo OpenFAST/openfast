@@ -276,7 +276,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (Failed()) return;
       NumBlades(iR)          = InitInp%rotors(iR)%NumBlades
       p%rotors(iR)%NumBlades = InitInp%rotors(iR)%NumBlades
-      if (size(InitInp%rotors)>1) then
+      if (nRotors > 1) then
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD.R'//trim(num2lstr(iR))
       else
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD'
@@ -302,7 +302,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    ! call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
       !  Parse the FileInfo_In structure of data from the inputfile into the InitInp%InputFile structure
-   CALL ParsePrimaryFileInfo( PriPath, InitInp%InputFile, p%RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+   CALL ParsePrimaryFileInfo( PriPath, InitInp, InitInp%InputFile, p%RootName, NumBlades, interval, FileInfo_In, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
       if (Failed()) return;
 
       ! -----------------------------------------------------------------
@@ -471,6 +471,7 @@ contains
    subroutine Cleanup()
 
       CALL AD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Destroyfileinfotype(FileInfo_In, ErrStat2, ErrMsg2)
       IF ( UnEcho > 0 ) CLOSE( UnEcho )
       
    end subroutine Cleanup
@@ -516,7 +517,7 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
       do IR=1, size(p%rotors)
          call BEMT_ReInit(p%rotors(iR)%BEMT,x%rotors(iR)%BEMT,xd%rotors(iR)%BEMT,z%rotors(iR)%BEMT,OtherState%rotors(iR)%BEMT,m%rotors(iR)%BEMT,ErrStat,ErrMsg)
 
-         if (p%rotors(iR)%BEMT%UA_Flag) then
+         if (p%UA_Flag) then
             call UA_ReInit( p%rotors(iR)%BEMT%UA, x%rotors(iR)%BEMT%UA, xd%rotors(iR)%BEMT%UA, OtherState%rotors(iR)%BEMT%UA, m%rotors(iR)%BEMT%UA, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          end if
@@ -1030,8 +1031,8 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
       if (errStat >= AbortErrLev) return
             
          ! set node initial position/orientation
-      position = InitInp%HubPosition
-      position(1:2) = 0
+      position = InitInp%NacellePosition
+
       call MeshPositionNode(u%NacelleMotion, 1, position, errStat2, errMsg2, orient=InitInp%NacelleOrientation)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
@@ -1069,16 +1070,16 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
+   p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   
    p_AD%DT            = InputFileData%DTAero
    p_AD%WakeMod       = InputFileData%WakeMod
    p%TwrPotent        = InputFileData%TwrPotent
    p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
-   p%Gravity          = InitInp%Gravity
    
 
-   
    if (InitInp%Linearize .and. InputFileData%WakeMod == WakeMod_BEMT) then
       p%FrozenWake = InputFileData%FrozenWake
    else
@@ -1104,13 +1105,15 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       call move_alloc( RotData%TwrTI,   p%TwrTI )      
    end if
    
+   p%Gravity          = InitInp%Gravity
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
    p%Patm             = InputFileData%Patm
    p%Pvap             = InputFileData%Pvap
-   p%FluidDepth       = InputFileData%FluidDepth
    p%SpdSound         = InputFileData%SpdSound
-   
+   p%WtrDpth          = InitInp%WtrDpth
+   p%MSL2SWL          = InitInp%MSL2SWL
+
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
       
@@ -1157,7 +1160,8 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-      integer :: iW
+      
+      integer                                      :: iW
 
 
 
@@ -1171,7 +1175,7 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! End the FVW submodule
       if (p%WakeMod == WakeMod_FVW ) then
 
-         if ( m%FVW%UA_Flag ) then
+         if ( p%UA_Flag ) then
             do iW=1,p%FVW%nWings
                call UA_End(m%FVW%W(iW)%p_UA)
             enddo
@@ -1403,7 +1407,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
             ! Now we need to populate the blade node outputs here
          if (p%rotors(iR)%NumBlades > 0) then
-            call Calc_WriteAllBldNdOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+            call Calc_WriteAllBldNdOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, x%rotors(iR), y%rotors(iR), OtherState%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          endif
       enddo
@@ -1466,16 +1470,16 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, Er
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          call AA_CalcOutput(t, m%AA_u, p%AA, x%AA, xd%AA,  z%AA, OtherState%AA,  m%AA_y, m%AA, errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end if  
-
-      call AD_CavtCrit(u, p, m, errStat2, errMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-   endif
+      end if   
+   endif 
 
    if ( p%TwrAero ) then
       call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    endif
+
+   call AD_CavtCrit(u, p, m, errStat2, errMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)    
    
 end subroutine RotCalcOutput
 
@@ -1501,7 +1505,7 @@ subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
                if (ErrStat >= AbortErrLev) return
       
             SigmaCavit= -1* m%BEMT_y%Cpmin(i,j) ! Local cavitation number on node j                                               
-            SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%FluidDepth - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
+            SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%WtrDpth - ( u%HubMotion%Position(3,1)+u%HubMotion%TranslationDisp(3,1) ) - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
                                                                         
                if ( (SigmaCavitCrit < SigmaCavit) .and. (.not. (m%CavitWarnSet(i,j)) ) ) then     
                     call WrScr( NewLine//'Cavitation occurred at blade '//trim(num2lstr(j))//' and node '//trim(num2lstr(i))//'.' )
@@ -1665,6 +1669,7 @@ subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
    endif
 end subroutine SetInputs
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Disturbed inflow on the blade if tower shadow or tower influence are enabled
 subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
    type(RotParameterType),       intent(in   )  :: p                      !< AD parameters
@@ -1795,8 +1800,10 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
   
    m%BEMT_u(indx)%UserProp = u%UserProp
    
-   ! ................ TSR .....................
    
+   !..........................
+   ! TSR
+   !..........................
    if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
       m%BEMT_u(indx)%TSR = 0.0_ReKi
    else
@@ -2176,7 +2183,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Cd_dyn    = AFI_interp%Cd
             Cm_dyn    = AFI_interp%Cm
             
-            if (m%FVW%UA_Flag) then
+            if (p%UA_Flag) then
                u_UA => m%FVW%W(iW)%u_UA(j,InputIndex) ! Alias
                ! ....... compute inputs to UA ...........
                u_UA%alpha    = alpha
@@ -2233,7 +2240,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
       end do !k=blades
    end do ! iR rotors
 
-   if ( m%FVW%UA_Flag ) then
+   if ( p%UA_Flag ) then
       ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
       do iW=1,p%FVW%nWings
          call UA_WriteOutputToFile(t, m%FVW%W(iW)%p_UA, m%FVW%W(iW)%y_UA)
@@ -2314,12 +2321,14 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       enddo
    endif
    
-   if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   !if (InitInp%MHK == 0 .and. InputFileData%CavitCheck) call SetErrStat ( ErrID_Fatal, 'A cavitation check can only be performed for an MHK turbine.', ErrStat, ErrMsg, RoutineName ) ! hkr (5/5/21) Uncomment after buoyancy and added mass are implemented
+   if (InitInp%MHK == 1 .and. InputFileData%CompAA .or. InitInp%MHK == 2 .and. InputFileData%CompAA) call SetErrStat ( ErrID_Fatal, 'The aeroacoustics module cannot be used with an MHK turbine.', ErrStat, ErrMsg, RoutineName )
+
+   if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The density of the working fluid must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%KinVisc <= 0.0) call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%Pvap <= 0.0) call SetErrStat ( ErrID_Fatal, 'The vapour pressure (Pvap) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%Patm <= 0.0) call SetErrStat ( ErrID_Fatal, 'The atmospheric pressure (Patm)  must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%FluidDepth <= 0.0) call SetErrStat ( ErrID_Fatal, 'Fluid depth (FluidDepth) must be greater than zero', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%CavitCheck .and. InputFileData%Pvap <= 0.0) call SetErrStat ( ErrID_Fatal, 'The vapour pressure (Pvap) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%CavitCheck .and. InputFileData%Patm <= 0.0) call SetErrStat ( ErrID_Fatal, 'The atmospheric pressure (Patm)  must be greater than zero.', ErrStat, ErrMsg, RoutineName )
 
       
    
@@ -2779,7 +2788,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
      end do
   end do
    
-   InitInp%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   InitInp%UA_Flag       = p_AD%UA_Flag
    InitInp%UAMod         = InputFileData%UAMod
    InitInp%Flookup       = InputFileData%Flookup
    InitInp%a_s           = InputFileData%SpdSound
@@ -2869,7 +2878,10 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
    InitInp%DTaero         = p%DT       ! NOTE: FVW can run a lower timestep internally
 
    ! Allocate wings
-   nWings = sum(p%rotors(:)%numBlades)
+   nWings = 0
+   do iR=1,size(p%rotors)
+      nWings = nWings + p%rotors(iR)%numBlades
+   end do
    allocate(InitInp%W(nWings)        , STAT = ErrStat2); ErrMsg2='Allocate W'; if(Failed()) return
    allocate(InitInp%WingsMesh(nWings), STAT = ErrStat2); ErrMsg2='Allocate Wings Mesh'; if(Failed()) return
 
@@ -2939,7 +2951,7 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
       enddo ! iB, blades
 
       ! Unsteady Aero Data
-      InitInp%UA_Flag    = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+      InitInp%UA_Flag    = p%UA_Flag
       InitInp%UAMod      = InputFileData%UAMod
       InitInp%Flookup    = InputFileData%Flookup
       InitInp%a_s        = InputFileData%SpdSound

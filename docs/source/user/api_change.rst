@@ -13,20 +13,75 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 OpenFAST v3.0.0 to OpenFAST `dev`
 ---------------------------------
 
+No change
+
+
+
+OpenFAST v3.0.0 to OpenFAST v3.1.0
+----------------------------------
+
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Added in OpenFAST dev
+Added in OpenFAST v3.1.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-AeroDyn 15                                    40   UAStartRad          0.25    UAStartRad          - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
-AeroDyn 15                                    41   UAEndRad            0.95    UAEndRad            - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
-AirFoilTables                                 12\* alphaUpper          5.0   alphaUpper          ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
-AirFoilTables                                 13\* alphaLower         \-3.0   alphaLower         ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
-AirFoilTables                                 42\* UACutout_delta     "DEFAULT"  UACutout_delta  ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
+ServoDyn                                      60   AeroControlSec  ---------------------- AERODYNAMIC FLOW CONTROL --------------------------------
+ServoDyn                                      61   AfCmode         0             AfCmode      - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+ServoDyn                                      61   AfC_Mean        0             AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
+ServoDyn                                      61   AfC_Amp         0             AfC_Amp      - Amplitude for cosine cycling of flap signal (-) [used only with AfCmode==1]
+ServoDyn                                      61   AfC_Phase       0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for cosine cycling of flap signal (deg) [used only with AfCmode==1]
+ServoDyn                                      74   CablesSection   ---------------------- CABLE CONTROL -------------------------------------------
+ServoDyn                                      75   CCmode          0             CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+HydroDyn driver                               6    WtrDens         1025       WtrDens           - Water density (kg/m^3)
+HydroDyn driver                               7    WtrDpth         200        WtrDpth           - Water depth (m)
+HydroDyn driver                               8    MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
+OpenFAST                                      21   MHK             0          MHK               - MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}
+OpenFAST                                      22   N/A             ---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
+OpenFAST                                      23   Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
+OpenFAST                                      24   AirDens         1.225      AirDens           - Air density (kg/m^3)
+OpenFAST                                      25   WtrDens         1025       WtrDens           - Water density (kg/m^3)
+OpenFAST                                      26   KinVisc         1.464E-05  KinVisc           - Kinematic viscosity of working fluid (m^2/s)
+OpenFAST                                      27   SpdSound        335        SpdSound          - Speed of sound in air (m/s)
+OpenFAST                                      28   Patm            103500     Patm              - Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+OpenFAST                                      29   Pvap            1700       Pvap              - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+OpenFAST                                      30   WtrDpth         50         WtrDpth           - Water depth (m)
+OpenFAST                                      31   MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
+AeroDyn 15                                    40   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+AeroDyn 15                                    41   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+AeroDyn driver                                34   Twr2Shft        3.09343    Twr2Shft          - Vertical distance from the tower-top to the rotor shaft (m)
+AirFoilTables                                 12\* alphaUpper      5.0        alphaUpper        ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
+AirFoilTables                                 13\* alphaLower      \-3.0      alphaLower        ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
+AirFoilTables                                 42\* UACutout_delta  "DEFAULT"  UACutout_delta    ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
 
+============================================= ==== =============== ========================================================================================================================================================================================================
+Modified in OpenFAST v3.1.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+AeroDyn                                       16   AirDens         "default"  AirDens           - Air density (kg/m^3)
+AeroDyn                                       17   KinVisc         "default"  KinVisc           - Kinematic viscosity of working fluid (m^2/s)
+AeroDyn                                       18   SpdSound        "default"  SpdSound          - Speed of sound in air (m/s)
+AeroDyn                                       19   Patm            "default"  Patm              - Atmospheric pressure (Pa) [used only when CavitCheck=True]
+AeroDyn                                       20   Pvap            "default"  Pvap              - Vapour pressure of working fluid (Pa) [used only when CavitCheck=True]
+HydroDyn                                      5    WtrDens         "default"  WtrDens           - Water density (kg/m^3)
+HydroDyn                                      6    WtrDpth         "default"  WtrDpth           - Water depth (meters)
+HydroDyn                                      7    MSL2SWL         "default"  MSL2SWL           - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod = 6; must be zero if PotMod=1 or 2]
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.1.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+AeroDyn                                       21   FluidDepth      0.5        FluidDepth        - Water depth above mid-hub height (m) [used only when CavitCheck=True]
+ElastoDyn                                     7    N/A             ---------------------- ENVIRONMENTAL CONDITION ---------------------------------
+ElastoDyn                                     8    Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+- The AeroDyn driver input file was completely rewritten. You may consult the following examples for a :download:`single rotor <./aerodyn/examples/ad_driver_example.dvr>` and :download:`multiple rotors <./aerodyn/examples/ad_driver_multiple.dvr>` in addition to the :ref:`AeroDyn driver documentation<ad_driver>`.
 
 
 -  SubDyn  
@@ -57,9 +112,6 @@ SubDyn           n  OutCOSM            Output cosine matrices with the selected 
 SubDyn         n+1  OutCBModes         Output Guyan and Craig-Bampton modes {0: No output, 1: JSON output}, (flag) 
 SubDyn         n+2  OutFEMModes        Output first 30 FEM modes {0: No output, 1: JSON output} (flag)
 ============== ==== ================== =============================================================================================================================================================================
-
-
-
 
 
 

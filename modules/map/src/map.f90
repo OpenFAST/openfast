@@ -1061,16 +1061,16 @@ IF (ErrStat >= AbortErrLev) RETURN
           
          SELECT CASE( p%InputLineType(iLine) )
          CASE('C')             
-            InitInp%C_obj%library_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%library_input_str )
+            InitInp%C_obj%library_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%library_input_str,   SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetCableLibraryData(InitInp%C_obj)
          CASE ('N')            
-            InitInp%C_obj%node_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%node_input_str )
+            InitInp%C_obj%node_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%node_input_str,         SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetNodeData(InitInp%C_obj)                 
          CASE ('E')
-            InitInp%C_obj%line_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%line_input_str )
+            InitInp%C_obj%line_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%line_input_str,         SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetElementData(InitInp%C_obj)                 
          CASE ('S')
-            InitInp%C_obj%option_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%option_input_str )
+            InitInp%C_obj%option_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%option_input_str,     SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetSolverOptions(InitInp%C_obj)                  
          END SELECT
              

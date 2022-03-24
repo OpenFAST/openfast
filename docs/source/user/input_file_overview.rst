@@ -15,7 +15,7 @@ Value column input files
 ------------------------
 
 Only the first column in a *value column* based input file is read.  This is the
-historical format used by OpenFAST and it's predecessors (the keyword was often
+historical format used by OpenFAST and its predecessors (the keyword was often
 referenced in the source code and documentation, but OpenFAST did not process
 the keyword or description). Everything after the
 first value read is simply ignored by the code.  This allowed the user to keep
@@ -82,6 +82,7 @@ modules use the *value column* format):
 ============== ==========================================================
 AeroDyn         Main AD15 input file 
 AeroDyn         Airfoil files
+HydroDyn        Main HD input file
 InflowWind      Main IfW input file
 InflowWind      Uniform wind input file
 InflowWind      Bladed wind summary file

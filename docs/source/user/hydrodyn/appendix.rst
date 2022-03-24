@@ -11,9 +11,9 @@ structure::
       NREL 5.0 MW offshore baseline floating platform HydroDyn input properties for the OC4 Semi-submersible.
       False            Echo           - Echo the input file data (flag)
       ---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
-            1025   WtrDens        - Water density (kg/m^3)
-            200   WtrDpth        - Water depth (meters)
-                  0   MSL2SWL        - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod = 6; must be zero if PotMod=1 or 2]
+      "DEFAULT"   WtrDens        - Water density (kg/m^3)
+      "DEFAULT"   WtrDpth        - Water depth (meters)
+      "DEFAULT"   MSL2SWL        - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod = 6; must be zero if PotMod=1 or 2]
       ---------------------- WAVES ---------------------------------------------------
                   3   WaveMod        - Incident wave kinematics model {0: none=still water, 1: regular (periodic), 1P#: regular with user-specified phase, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: White noise spectrum (irregular), 4: user-defined spectrum from routine UserWaveSpctrm (irregular), 5: Externally generated wave-elevation time series, 6: Externally generated full wave-kinematics time series [option 6 is invalid for PotMod/=0]} (switch)
                   0   WaveStMod      - Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} (switch) [unused when WaveMod=0 or when PotMod/=0]
@@ -260,6 +260,9 @@ structure::
       TRUE             Echo                - Echo the input file data (flag)
       ---------------------- ENVIRONMENTAL CONDITIONS -------------------------------
       9.80665          Gravity             - Gravity (m/s^2)
+      1025             WtrDens             - Water density (kg/m^3)
+      200              WtrDpth             - Water depth (meters)
+      0                MSL2SWL             - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod = 6; must be zero if PotMod=1 or 2]
       ---------------------- HYDRODYN -----------------------------------------------
       "./OC4Semi.dat"  HDInputFile         - Primary HydroDyn input file name (quoted string)
       "./OC4Semi"      OutRootName         - The name which prefixes all HydroDyn generated files (quoted string)

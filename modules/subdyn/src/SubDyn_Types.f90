@@ -105,6 +105,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
+    LOGICAL , DIMENSION(:), ALLOCATABLE  :: CableCChanRqst      !< flag indicating control channel for active cable tensioning is requested [-]
   END TYPE SD_InitOutputType
 ! =======================
 ! =========  SD_InitType  =======
@@ -2358,6 +2359,18 @@ IF (ALLOCATED(SrcInitOutputData%DerivOrder_x)) THEN
   END IF
     DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
 ENDIF
+IF (ALLOCATED(SrcInitOutputData%CableCChanRqst)) THEN
+  i1_l = LBOUND(SrcInitOutputData%CableCChanRqst,1)
+  i1_u = UBOUND(SrcInitOutputData%CableCChanRqst,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%CableCChanRqst)) THEN 
+    ALLOCATE(DstInitOutputData%CableCChanRqst(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CableCChanRqst.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%CableCChanRqst = SrcInitOutputData%CableCChanRqst
+ENDIF
  END SUBROUTINE SD_CopyInitOutput
 
  SUBROUTINE SD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -2399,6 +2412,9 @@ IF (ALLOCATED(InitOutputData%IsLoad_u)) THEN
 ENDIF
 IF (ALLOCATED(InitOutputData%DerivOrder_x)) THEN
   DEALLOCATE(InitOutputData%DerivOrder_x)
+ENDIF
+IF (ALLOCATED(InitOutputData%CableCChanRqst)) THEN
+  DEALLOCATE(InitOutputData%CableCChanRqst)
 ENDIF
  END SUBROUTINE SD_DestroyInitOutput
 
@@ -2504,6 +2520,11 @@ ENDIF
   IF ( ALLOCATED(InData%DerivOrder_x) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! DerivOrder_x upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%DerivOrder_x)  ! DerivOrder_x
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! CableCChanRqst allocated yes/no
+  IF ( ALLOCATED(InData%CableCChanRqst) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! CableCChanRqst upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%CableCChanRqst)  ! CableCChanRqst
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2717,6 +2738,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%DerivOrder_x,1), UBOUND(InData%DerivOrder_x,1)
         IntKiBuf(Int_Xferred) = InData%DerivOrder_x(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%CableCChanRqst) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CableCChanRqst,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CableCChanRqst,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%CableCChanRqst,1), UBOUND(InData%CableCChanRqst,1)
+        IntKiBuf(Int_Xferred) = TRANSFER(InData%CableCChanRqst(i1), IntKiBuf(1))
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
@@ -2976,6 +3012,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%DerivOrder_x,1), UBOUND(OutData%DerivOrder_x,1)
         OutData%DerivOrder_x(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CableCChanRqst not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%CableCChanRqst)) DEALLOCATE(OutData%CableCChanRqst)
+    ALLOCATE(OutData%CableCChanRqst(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CableCChanRqst.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%CableCChanRqst,1), UBOUND(OutData%CableCChanRqst,1)
+        OutData%CableCChanRqst(i1) = TRANSFER(IntKiBuf(Int_Xferred), OutData%CableCChanRqst(i1))
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF

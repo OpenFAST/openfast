@@ -332,7 +332,12 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
          RETURN
       END IF  
       
-   call Farm_InitOutput( farm, ErrStat, ErrMsg )
+   call Farm_InitOutput( farm, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF  
 
       ! Print the summary file if requested:
    IF (farm%p%SumPrint) THEN
