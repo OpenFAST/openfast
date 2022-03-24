@@ -9,7 +9,7 @@ modifications to the software. For reference, additional materials
 such as presentation slides, development plans, and publications
 can be downladed from the list below.
 
-- :download:`Conversion of Blade Beam Properties <../../../OtherSupporting/BeamDyn/conversion_of_blade_beam_properties.pdf>`
+- :download:`BeamDyn inputs from sectional beam properties <../../../OtherSupporting/BeamDyn/beamdyn_inputs_sectional_props.pdf>`
 
 The authors are grateful to the U.S. Department of Energy Wind and Water
 Power Program and the NREL Laboratory Directed Research and Development
