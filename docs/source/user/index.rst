@@ -25,7 +25,7 @@ General
 Workshop material, legacy documentation, and other resources are listed below.
 
 - `Workshop Presentations <https://drive.google.com/drive/folders/1BDDfcnIyvmZCwf7eFo0ISI7aF_FMAOvt?usp=sharing>`_
-- :download:`Old FAST v6 User’s Guide <../../OtherSupporting/Old_FAST6_UsersGuide.pdf>`
+- :download:`Old FAST v6 User's Guide <../../OtherSupporting/Old_FAST6_UsersGuide.pdf>`
 - :download:`FAST v8 README <../../OtherSupporting/FAST8_README.pdf>`
 - `Implementation of Substructure Flexibility and Member-Level Load Capabilities for Floating Offshore Wind Turbines in OpenFAST <https://www.nrel.gov/docs/fy20osti/76822.pdf>`_
 - `FAST modularization framework for wind turbine simulation: full-system linearization <https://www.nrel.gov/docs/fy17osti/67015.pdf>`_
@@ -75,11 +75,11 @@ with the information for the new documentation.
 
 - MoorDyn
 
-  - `Official User’s Guide <http://www.matt-hall.ca/files/MoorDyn%20Users%20Guide%202017-08-16.pdf>`_
+  - `Official User's Guide <http://www.matt-hall.ca/files/MoorDyn%20Users%20Guide%202017-08-16.pdf>`_
 
 - OrcaFlex Interface:
 
-  - :download:`User’s Guide <../../OtherSupporting/OrcaFlex/User_Guide_OrcaFlexInterface.pdf>`
+  - :download:`User's Guide <../../OtherSupporting/OrcaFlex/User_Guide_OrcaFlexInterface.pdf>`
 
 - IceFloe
 
@@ -91,7 +91,7 @@ with the information for the new documentation.
 
 - TurbSim
 
-  - :download:`User’s Guide <../../OtherSupporting/TurbSim/TurbSim_v2.00.pdf>`
+  - :download:`User's Guide <../../OtherSupporting/TurbSim/TurbSim_v2.00.pdf>`
 
 Modularization Framework
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -120,4 +120,4 @@ Glue Code and Mesh Mapping
 NWTC Subroutine Library
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-- :download:`NWTC Library – short overview of subroutines and functions <../../OtherSupporting/NWTC_Library_Description.pdf>`
+- :download:`NWTC Library - short overview of subroutines and functions <../../OtherSupporting/NWTC_Library_Description.pdf>`

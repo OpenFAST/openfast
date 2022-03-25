@@ -211,7 +211,7 @@ Other Documentation
 Additional documentation exists that may be useful for developers seeking deeper
 understanding of the solver and mathematics.
 
-- `NWTC Programmer's Handbook <https://drive.google.com/file/d/1bDV1fBkiZUWs6Tkzb6nhCMUQvHpN_OtM/view?usp=sharing>`_
+- :download:`NWTC Programmer's Handbook <../../OtherSupporting/NWTC_Programmers_Handbook.pdf>`
    This is an overview of programming guidelines for FAST 8. While some syntax and minor details have
    changed in OpenFAST, most of this guide is still relevant.
 - :download:`OutListParameters.xlsx <../../OtherSupporting/OutListParameters.xlsx>`
