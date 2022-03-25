@@ -229,6 +229,7 @@ ad_regression("ad_Kite_OLAF"                "aerodyn;bem")
 ad_regression("ad_MultipleHAWT"             "aerodyn;bem")
 ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
 ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
+ad_regression("ad_MHK_RM1_Fixed"            "aerodyn;bem")
 ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
