@@ -149,7 +149,7 @@ Yawing occurs around the :math:`z_n` axis,  the rotor rotates about the :math:`x
 Two turbine input formats are supported:
 
 - basic (`BasicHAWTFormat=True`): Basic horizontal axis wind turbine (HAWT) format.
-  In this format, the turbine geometry is entirely determined by the number of blades (`NumBlades`), the hub radius (`HubRad`), the hub height  (`HubHt`), the overhang (`Overhang`), the shaft tilt (`ShftTilt`) and the precone (`Precone`), as shown in :numref:`fig:BasicGeometry`.
+  In this format, the turbine geometry is entirely determined by the number of blades (`NumBlades`), the hub radius (`HubRad`), the hub height  (`HubHt`), the overhang (`Overhang`), the shaft tilt (`ShftTilt`), the precone (`Precone`), and the vertical distance from the tower-top to the rotor shaft (`Twr2Shft`), as shown in :numref:`fig:BasicGeometry`.
   The definition of each parameter follows the ElastoDyn convention. For example, `HubRad` specifies the radius from the center-of-rotation to the blade root along the (possibly preconed) blade-pitch axis and must be greater than zero. `HubHt` specifies the elevation of the hub center above the ground for land-based wind turbines, above the mean sea level (MSL) for offshore wind turbines, or above the seabed for MHK turbines. `Overhang` specifies the distance along the (possibly tilted) rotor shaft between the tower centerline and hub center and is positive downwind (use a negative number for upwind rotors). `ShftTilt` is the angle (in degrees) between the rotor shaft and the horizontal plane, and positive `ShftTilt` means that the downwind end of the shaft is the highest (upwind turbines have negative `ShftTilt` for improved tower clearance). `Precone` is the angle (in degrees) between a flat rotor disk and the cone swept by the blades, positive downwind (upwind turbines have negative `Precone` for improved tower clearance).
 
   .. figure:: figs/ad_driver_geom.png
@@ -171,6 +171,7 @@ Two turbine input formats are supported:
               -7    Overhang(1)     - Overhang (m)
               -6    ShftTilt(1)     - Shaft tilt (deg)
               -4    Precone(1)      - Blade precone (deg)
+         3.09343    Twr2Shft(1)     - Vertical distance from the tower-top to the rotor shaft (m)
 
 
 - advanced (`BasicHAWTFormat=False`): The position and orientation of the tower base, nacelle, hub, and individual blades can be arbitrarily defined. This can be used for HAWT and any other turbine concepts. 
@@ -478,6 +479,7 @@ An example of an AeroDyn driver for a basic inflow, basic HAWT, and combined cas
               -7    Overhang(1)     - Overhang (m)
               -6    ShftTilt(1)     - Shaft tilt (deg)
               -4    Precone(1)      - Blade precone (deg)
+         3.09343    Twr2Shft(1)     - Vertical distance from the tower-top to the rotor shaft (m)
     ----- Turbine(1) Motion [used only when AnalysisType=1] ---------------------------------
     1               BaseMotionType(1)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
     1               DegreeOfFreedom(1)     - {1:xg, 2:yg, 3:zg, 4:theta_xg, 5:theta_yg, 6:theta_zg} [used only when BaseMotionType=1] (flag)

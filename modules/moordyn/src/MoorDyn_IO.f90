@@ -1094,18 +1094,25 @@ CONTAINS
 
 
       ! close main MoorDyn output file
-      CLOSE( p%MDUnOut, IOSTAT = ErrStat )
-         IF ( ErrStat /= 0 ) THEN
-            ErrMsg = 'Error closing output file'
-         END IF
+      if (p%MDUnOut > 0) then
+         CLOSE( p%MDUnOut, IOSTAT = ErrStat )
+            IF ( ErrStat /= 0 ) THEN
+               ErrMsg = 'Error closing output file'
+            END IF
+      endif
 
       ! close individual line output files
-      DO I=1,p%NLines
-         CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
-            IF ( ErrStat /= 0 ) THEN
-               ErrMsg = 'Error closing line output file'
-            END IF
-      END DO
+      if (allocated(m%LineList)) then
+         DO I=1,p%NLines
+            if (m%LineList(I)%LineUnOut > 0) then
+               CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
+                  IF ( ErrStat /= 0 ) THEN
+                     ErrMsg = 'Error closing line output file'
+                     exit    ! exit this loop
+                  END IF
+            endif
+         END DO
+      endif
 
       ! deallocate output arrays
       IF (ALLOCATED(m%MDWrOutput)) THEN
