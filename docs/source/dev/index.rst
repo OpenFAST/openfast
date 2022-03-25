@@ -64,14 +64,61 @@ stay up to date and minimize conflicts during the code merge.
 The prefered method of communication is `GitHub Issues <https://github.com/openfast/openfast/issues>`_.
 An initial post should contain all relevant information about the planned
 development work, the areas of the software that will be impacted,
-and any model validation materials. After this step, the NREL OpenFAST
+and any model validation materials. See :ref:`development_plan`
+for more information on describing the planned work.
+
+The NREL OpenFAST team is always working on internal projects
+that require the majority of our attention, but we will make every effort
+to engage with the community and support development efforts in
+a reasonable time frame. After posting an Issue, the NREL OpenFAST
 team may reach out to schedule a meeting to talk through the details.
+
+.. _development_plan:
+
+Development Plan / Implementation Plan
+--------------------------------------
+Significant code development efforts at NREL begin with the development
+of a detailed implementation plan, and a few such plans are available to
+download for reference:
+
+- :download:`Development Plan for the Aerodynamic Linearization of OpenFAST <../../OtherSupporting/AeroDyn/AeroLin_2019-12.pdf>`
+- :download:`FAST.Farm Development Plan <../../OtherSupporting/FAST.Farm_Plan_Rev25.doc>`.
+- :download:`Implementation Plan - 2nd-order Forces Within HydroDyn <../../OtherSupporting/HydroDyn/HydroDyn_2ndOrderForces_Plan.pdf>`
+- :download:`Implementation Plan - 2nd-order Wave Kinematics Within HydroDyn <../../OtherSupporting/HydroDyn/WAVE2_document.pdf>`
+
+A good plan within the modularization framework of OpenFAST will
+follow the definitions and nomenclature used by the
+:download:`NWTC Programmer's Handbook <../../OtherSupporting/NWTC_Programmers_Handbook.pdf>`.
+It should communication the following information:
+
+- State whether the module is intended for loose coupling,
+  tight coupling for time marching, and/or linearization.
+- Define the module's inputs (including initialization), 
+  outputs (including initialization), states (continous,
+  discrete, and constraint), and parameters, including units.
+- Lay out an example input file for the module.
+- Explain the module's mathemetical formulation, including
+  Jacobians (for tight coupling and linearization), in the form
+  required of the framework.
+- Prescribe how the module's inputs are derived from the 
+  outputs of other specific modules
+- Identify any potential numerical problems and how to avoid 
+  them in the code.
+- Lay out the module's subroutines using pseudocode (as opposed 
+  to actual code), including identifying which mathematical formulas
+  are used by which subroutines, and describing the algorithms used
+  in the solution process.
+
+This information is very helpful since it is easier to review, iterate,
+and agree on a plan before making changes to source code. Additionally,
+an implementation plan will greatly aid in the programming effort and is
+a useful starting point for writing the user and develop documentation.
 
 Qualities of a good submission
 ------------------------------
 
 Development efforts should include adequate testing throughout
-the development process. New subroutines should include unit-level tests,
+the development process. When possible, new subroutines should include unit-level tests,
 and the existing regression tests should be run periodically to ensure that
 the full system behavior has not changed unintentionally. For new features,
 additional regression tests should be added to cover the new code.
@@ -88,11 +135,11 @@ code development:
 - Is it clear to other developers how to use your subroutine?
 - Does your new code exhibit clear and predictable behavior?
 - How will your code perform under different qualities of data?
-- How does your code impact the performance of simulation?
+- How does your code impact the performance of the simulation?
 
 Additionally, user and developer documentation should be included
 with new code. User documentation includes theory, modeling guidance,
-and a description of any inputs and outputs. This documentation is
+and a description of any inputs and outputs. User documentation should be
 included as part of the online documentation described in :ref:`build_doc`.
 Developer documentation is typically included in comments in the source
 code. This should describe subroutine API's (inputs and outputs) as well
