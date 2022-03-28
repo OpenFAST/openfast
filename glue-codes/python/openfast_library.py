@@ -11,7 +11,7 @@ from ctypes import (
 import os
 from typing import List
 import numpy as np
-
+import math
 
 class FastLibAPI(CDLL):
 
@@ -211,7 +211,18 @@ class FastLibAPI(CDLL):
 
     @property
     def total_time_steps(self):
-        return int(self.t_max.value / self.dt.value) + 1
+        # From FAST_Subs FAST_Init:
+        # p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
+        # Then in FAST_Prog:
+        # TIME_STEP_LOOP:  DO n_t_global = Restart_step, Turbine(1)%p_FAST%n_TMax_m1 
+        # 
+        # Note that Fortran indexing starts at 1 and includes the upper bound
+        # Python indexing starts at 0 and does not include the upper bound
+        # The for-loop in this interface begins at 1 (there's an init step before)
+        # and that's why we have the +1 below
+        # 
+        # We assume here t_initial is always 0
+        return math.ceil( self.t_max.value / self.dt.value) + 1
 
 
     @property
