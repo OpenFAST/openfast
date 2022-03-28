@@ -35,7 +35,7 @@ typedef  ^        ADsk_AeroTable    SiKi                 C_Mz             {:}{:}
 # ..... Initialization data .......................................................................................................
 # ADsk input file
 typedef  AeroDisk/ADsk ADsk_InputFile LOGICAL            Echo              -  - -   "Echo the input file"                    -
-typedef  ^        ADsk_InputFile    R8Ki                 DT                -  - -   "Time step for module time integration" s
+typedef  ^        ADsk_InputFile    DBKi                 DT                -  - -   "Time step for module time integration" s
 typedef  ^        ADsk_InputFile    ReKi                 AirDens           -  - -   "Air density" "kg/m^3"
 typedef  ^        ADsk_InputFile    ReKi                 RotorRad          -  - -   "Rotor radius"   m
 typedef  ^        ADsk_InputFile    LOGICAL              SumPrint          -  - -   "Print summary data to <RootName>.sum" -
@@ -103,7 +103,7 @@ typedef  ^       OtherStateType        IntKi             DummyOtherState   -  - 
 # ..... Parameters.................................................................................................................
 # unchanging parameters:
 typedef  ^        ParameterType        CHARACTER(1024)   RootName          -  - -   "RootName for writing output files" -
-typedef  ^        ParameterType        DbKi              DT                -  - -   "Time step for module time integration" s
+typedef  ^        ParameterType        DBKi              DT                -  - -   "Time step for module time integration" s
 typedef  ^        ParameterType        ReKi              RotorRad          -  - -   "Rotor radius"   m
 typedef  ^        ParameterType        ReKi              AirDens           -  - -   "Air density" "kg/m^3"
 typedef  ^        ParameterType        IntKi             NumOuts           -  - -   "Number of outputs"   -

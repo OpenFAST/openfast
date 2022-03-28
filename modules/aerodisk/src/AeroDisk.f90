@@ -30,7 +30,7 @@ MODULE AeroDisk
 
    implicit none
    private
-   type(ProgDesc), parameter :: ADsk_Ver = ProgDesc( 'AeroDisk', 'v1.00.00', '15-Feb-2022' )
+   type(ProgDesc), parameter :: ADsk_Ver = ProgDesc( 'AeroDisk', '', '' )
 
    public :: ADsk_Init
    public :: ADsk_End
@@ -268,63 +268,6 @@ END SUBROUTINE ADsk_End
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
-!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-SUBROUTINE ADsk_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-   real(DbKi),                         intent(in   )  :: t               !< Current simulation time in seconds
-   integer(IntKi),                     intent(in   )  :: n               !< Current step of the simulation: t = n*Interval
-   type(ADsk_InputType),               intent(inout)  :: Inputs(:)       !< Inputs at InputTimes (output for mesh connect)
-   real(DbKi),                         intent(in   )  :: InputTimes(:)   !< Times in seconds associated with Inputs
-   type(ADsk_ParameterType),           intent(in   )  :: p               !< Parameters
-   type(ADsk_ContinuousStateType),     intent(inout)  :: x               !< Input: Continuous states at t;
-   type(ADsk_DiscreteStateType),       intent(inout)  :: xd              !< Input: Discrete states at t;
-   type(ADsk_ConstraintStateType),     intent(inout)  :: z               !< Input: Constraint states at t;
-   type(ADsk_OtherStateType),          intent(inout)  :: OtherState      !< Other states: Other states at t;
-   type(ADsk_MiscVarType),             intent(inout)  :: m               !<  Misc variables for optimization
-   integer(IntKi),                     intent(  out)  :: ErrStat         !< Error status of the operation
-   character(*),                       intent(  out)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
-
-   ! Local variables
-   type(ADsk_ContinuousStateType)                     :: dxdt            ! Continuous state derivatives at t
-   type(ADsk_InputType)                               :: u               ! Instantaneous inputs
-   integer(IntKi)                                     :: ErrStat2        ! local error status
-   character(ErrMsgLen)                               :: ErrMsg2         ! local error message
-   character(*), parameter                            :: RoutineName = 'ADsk_UpdateStates'
-
-      ! Initialize variables
-   ErrStat   = ErrID_None           ! no error has occurred
-   ErrMsg    = ""
-
-   ! Get the inputs at time t, based on the array of values sent by the glue code:
-   ! before calling ExtrapInterp routine, memory in u must be allocated; we can do that with a copy:
-   call ADsk_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed()) return;
-
-   call ADsk_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 );   if (Failed()) return;
-
-   ! Get first time derivatives of continuous states (dxdt):
-   call ADsk_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 );   if (Failed()) return;
-
-   ! Integrate (update) continuous states (x) here:
-   !x = function of dxdt and x
-
-   ! Destroy local variables before returning
-   call cleanup()
-
-contains
-   logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
-   end function Failed
-   subroutine Cleanup()
-      ! Destroy data to prevent memory leaks
-      call ADsk_DestroyInput(       u,          ErrStat2, ErrMsg2)
-      call ADsk_DestroyContState(   dxdt,       ErrStat2, ErrMsg2)
-   end subroutine Cleanup
-end subroutine ADsk_UpdateStates
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
 SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
@@ -360,12 +303,43 @@ contains
         Failed =  ErrStat >= AbortErrLev
         !if (Failed) call CleanUp()
    end function Failed
-
 END SUBROUTINE ADsk_CalcOutput
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
+!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
+!! NOTE: there are no states in AeroDisk
+SUBROUTINE ADsk_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   real(DbKi),                         intent(in   )  :: t               !< Current simulation time in seconds
+   integer(IntKi),                     intent(in   )  :: n               !< Current step of the simulation: t = n*Interval
+   type(ADsk_InputType),               intent(inout)  :: Inputs(:)       !< Inputs at InputTimes (output for mesh connect)
+   real(DbKi),                         intent(in   )  :: InputTimes(:)   !< Times in seconds associated with Inputs
+   type(ADsk_ParameterType),           intent(in   )  :: p               !< Parameters
+   type(ADsk_ContinuousStateType),     intent(inout)  :: x               !< Input: Continuous states at t;
+   type(ADsk_DiscreteStateType),       intent(inout)  :: xd              !< Input: Discrete states at t;
+   type(ADsk_ConstraintStateType),     intent(inout)  :: z               !< Input: Constraint states at t;
+   type(ADsk_OtherStateType),          intent(inout)  :: OtherState      !< Other states: Other states at t;
+   type(ADsk_MiscVarType),             intent(inout)  :: m               !<  Misc variables for optimization
+   integer(IntKi),                     intent(  out)  :: ErrStat         !< Error status of the operation
+   character(*),                       intent(  out)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
+
+   ! Local variables
+   character(*), parameter                            :: RoutineName = 'ADsk_UpdateStates'
+
+      ! Initialize variables
+   ErrStat   = ErrID_None
+   ErrMsg    = ""
+
+      ! There are no states.
+   x%DummyContState = 0.0_ReKi
+
+end subroutine ADsk_UpdateStates
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for computing derivatives of continuous states.
+!! NOTE: there are no states in AeroDisk
 SUBROUTINE ADsk_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(ADsk_InputType),            intent(in   )  :: u           !< Inputs at t
@@ -380,23 +354,14 @@ SUBROUTINE ADsk_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrS
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   integer(IntKi)                                  :: ErrStat2        ! local error status
-   character(ErrMsgLen)                            :: ErrMsg2         ! local error message
    character(*), parameter                         :: RoutineName = 'ADsk_CalcContStateDeriv'
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Compute the first time derivatives of the continuous states here:
-   !dxdt%DummyContState = 0.0_ReKi
-
-contains
-   logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        Failed =  ErrStat >= AbortErrLev
-!        if (Failed) call CleanUp()
-   end function Failed
+      ! There are no states
+   dxdt%DummyContState = 0.0_ReKi
 
 END SUBROUTINE ADsk_CalcContStateDeriv
 

@@ -56,7 +56,7 @@ IMPLICIT NONE
 ! =========  ADsk_InputFile  =======
   TYPE, PUBLIC :: ADsk_InputFile
     LOGICAL  :: Echo      !< Echo the input file [-]
-    REAL(R8Ki)  :: DT      !< Time step for module time integration [s]
+    REAL(DbKi)  :: DT      !< Time step for module time integration [s]
     REAL(ReKi)  :: AirDens      !< Air density [kg/m^3]
     REAL(ReKi)  :: RotorRad      !< Rotor radius [m]
     LOGICAL  :: SumPrint      !< Print summary data to <RootName>.sum [-]
@@ -1406,7 +1406,7 @@ ENDIF
   Int_Xferred  = 1
     OutData%Echo = TRANSFER(IntKiBuf(Int_Xferred), OutData%Echo)
     Int_Xferred = Int_Xferred + 1
-    OutData%DT = REAL(DbKiBuf(Db_Xferred), R8Ki)
+    OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%AirDens = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
