@@ -5,8 +5,12 @@ This document offers a quick reference guide for the ElastoDyn software
 program. It is intended to be used by the general user in combination
 with other OpenFAST manuals. The manual will be updated as new releases are
 issued and as needed to provide further information on advancements or
-modifications to the software. For general information on OpenFAST,
-users should refer to section :numref:`general-reference-docs`.
+modifications to the software.
+
+Much more documentation for this module is available in the legacy documentation
+listed in :ref:`general-reference-docs`. Specifically, the FAST v6 User's Guide
+as well as small updates in the FAST v8 README describe this module and contain
+general information on OpenFAST.
 
 .. note::
 
@@ -45,7 +49,7 @@ with careful study.
 
 Note that the "unofficial FAST Theory Manual" applies to the structural
 equations of FAST v7 and the ElastoDyn module of FAST v8 and OpenFAST.
- 
+
 .. toctree::
    
    input.rst
