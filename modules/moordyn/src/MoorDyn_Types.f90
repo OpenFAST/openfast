@@ -143,9 +143,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:10)  :: Attached      !< list of IdNums of lines attached to this connection node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
-    REAL(DbKi)  :: conX      !<  [-]
-    REAL(DbKi)  :: conY      !<  [-]
-    REAL(DbKi)  :: conZ      !<  [-]
     REAL(DbKi)  :: conM      !<  [-]
     REAL(DbKi)  :: conV      !<  [-]
     REAL(DbKi)  :: conFX      !<  [-]
@@ -2353,9 +2350,6 @@ ENDIF
     DstConnectData%Attached = SrcConnectData%Attached
     DstConnectData%Top = SrcConnectData%Top
     DstConnectData%nAttached = SrcConnectData%nAttached
-    DstConnectData%conX = SrcConnectData%conX
-    DstConnectData%conY = SrcConnectData%conY
-    DstConnectData%conZ = SrcConnectData%conZ
     DstConnectData%conM = SrcConnectData%conM
     DstConnectData%conV = SrcConnectData%conV
     DstConnectData%conFX = SrcConnectData%conFX
@@ -2441,9 +2435,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%Attached)  ! Attached
       Int_BufSz  = Int_BufSz  + SIZE(InData%Top)  ! Top
       Int_BufSz  = Int_BufSz  + 1  ! nAttached
-      Db_BufSz   = Db_BufSz   + 1  ! conX
-      Db_BufSz   = Db_BufSz   + 1  ! conY
-      Db_BufSz   = Db_BufSz   + 1  ! conZ
       Db_BufSz   = Db_BufSz   + 1  ! conM
       Db_BufSz   = Db_BufSz   + 1  ! conV
       Db_BufSz   = Db_BufSz   + 1  ! conFX
@@ -2510,12 +2501,6 @@ ENDIF
     END DO
     IntKiBuf(Int_Xferred) = InData%nAttached
     Int_Xferred = Int_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conX
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conY
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conZ
-    Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%conM
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%conV
@@ -2631,12 +2616,6 @@ ENDIF
     END DO
     OutData%nAttached = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%conX = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-    OutData%conY = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-    OutData%conZ = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
     OutData%conM = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%conV = DbKiBuf(Db_Xferred)
