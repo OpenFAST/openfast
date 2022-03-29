@@ -3,7 +3,6 @@ import openfast_library
 
 project_root = '/Users/rmudafor/Development/weis'
 library_path = project_root + '/build/modules/openfast-library/libopenfastlib.dylib'
-library_path = '/Users/rmudafor/Downloads/libopenfastlib.dylib'
 
 def serial(input_file):
     input_file_name = input_file # "/Users/rmudafor/Development/weis/reg_tests/r-test/glue-codes/openfast/AOC_YFix_WSt/AOC_YFix_WSt.fst"
