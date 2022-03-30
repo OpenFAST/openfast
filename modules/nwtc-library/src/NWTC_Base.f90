@@ -34,7 +34,6 @@ MODULE NWTC_Base
 
    INTEGER, PARAMETER            :: BITS_IN_ADDR  = C_INTPTR_T*8                  !< The number of bits in an address (32-bit or 64-bit).
    INTEGER, PARAMETER            :: ErrMsgLen = 1024                              !< The maximum number of characters in an error message in the FAST framework
-   INTEGER, PARAMETER            :: CStringLen = 1025                             !< Length of strings through the C interface
    
    INTEGER(IntKi), PARAMETER     :: ChanLen   = 20                                !< The maximum allowable length of channel names (i.e., width of output columns) in the FAST framework
    INTEGER(IntKi), PARAMETER     :: MinChanLen = 10                               !< The min allowable length of channel names (i.e., width of output columns), used because some modules (like Bladed DLL outputs) have excessively long names
