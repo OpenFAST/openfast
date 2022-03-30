@@ -84,12 +84,7 @@ checkError(SimStruct *S){
 
     if (ErrStat >= AbortErrLev) {
         ssPrintf("\n");
-        if (ErrStat > ErrID_Fatal) { // in case we've reached a trim solution
-            ssPrintf("%s\n", ErrMsg);
-        }
-        else {
-            ssSetErrorStatus(S, ErrMsg);
-        }
+        ssSetErrorStatus(S, ErrMsg);
         mdlTerminate(S);  // terminate on error (in case Simulink doesn't do so itself)
         return 1;
     }
@@ -434,8 +429,13 @@ static void mdlUpdate(SimStruct *S, int_T tid)
     FAST_Update(&iTurb, &NumInputs, &NumOutputs, InputAry, OutputAry, &EndEarly, &ErrStat, ErrMsg);
     n_t_global = n_t_global + 1;
 
-    //  TODO if(EndEarly) Signal to end the simulation
+   // For trim solution or any other reason to end early when there is no error
+   if (EndEarly) {
+      mdlTerminate(S);  // terminate after simulation completes (in case Simulink doesn't do so itself)
+      return;
+   }
 
+   // Handle errors
     if (checkError(S)) return;
 
     setOutputs(S, OutputAry);
