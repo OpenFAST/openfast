@@ -6429,6 +6429,10 @@ subroutine StC_SetDLLinputs(p,m,MeasDisp,MeasVel,ErrStat,ErrMsg,InitResize)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+      ! Since we do averaging of these signal
+   if (allocated(MeasDisp))   MeasDisp = 0.0_SiKi
+   if (allocated(MeasVel))    MeasVel  = 0.0_SiKi
+
       ! Only proceed if we have have StC controls with the extended swap and legacy interface
    if ((p%NumStC_Control <= 0) .or. (.not. p%EXavrSWAP))    return
    if (.not. allocated(MeasDisp) .or. .not. allocated(MeasVel)) then
