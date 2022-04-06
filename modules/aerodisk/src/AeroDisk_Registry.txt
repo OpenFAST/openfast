@@ -78,7 +78,7 @@ typedef  ^        OutputType        MeshType             AeroLoads         -  - 
 #TODO: any mesh for visualization of blades/rotor disk?
 # outputs not on meshes:
 typedef  ^        OutputType        ReKi                 YawErr            -  - -   "Nacelle-yaw error, i.e., the angle about positive Z from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambient + rotor  motion), both projected onto the horizontal plane" rad
-typedef  ^        OutputType        ReKi                 SkewAngle         -  - -   "Azimuth angle (from the nominally vertical axis in the disk plane, Z_disk ) to the vector about which the inflow skew angle is defined, i.e., the angle about positive X_disk  from Z_disk  to the vector about which the positive inflow skew angle is defined "   rad
+typedef  ^        OutputType        ReKi                 PsiSkew           -  - -   "Azimuth angle (from the nominally vertical axis in the disk plane, Z_disk ) to the vector about which the inflow skew angle is defined, i.e., the angle about positive X_disk  from Z_disk  to the vector about which the positive inflow skew angle is defined "   rad
 typedef  ^        OutputType        ReKi                 ChiSkew           -  - -   "Inflow skew angle"   rad
 typedef  ^        OutputType        ReKi                 VRel              -  - -   "Rotor-disk-averaged relative wind speed (ambient + rotor motion), normal to disk"   m/s
 typedef  ^        OutputType        ReKi                 Ct                -  - -   "Thrust force coefficient (normal to disk)"   -
@@ -113,5 +113,16 @@ typedef  ^        ParameterType        LOGICAL           UseTSR            -  .f
 typedef  ^        ParameterType        OutParmType       OutParam         {:} - -   "Names and units (and other characteristics) of all requested output parameters"  -
 
 # ..... Misc/Optimization variables.................................................................................................
-typedef  ^        MiscVarType           IntKi             DummyMiscVar      -  - -   "" -
-
+typedef  ^        MiscVarType          IntKi             idx_last         {5} - -   "Last indices used in lookup search"               -
+typedef  ^        MiscVarType          ReKi              AllOuts          {:} - -   "Array of all outputs"                             -
+typedef  ^        MiscVarType          SiKi              x_hat             3  - -   "Acuator disk X direction unit vector (global)"    -
+typedef  ^        MiscVarType          SiKi              y_hat             3  - -   "Acuator disk Y direction unit vector (global)"    -
+typedef  ^        MiscVarType          SiKi              z_hat             3  - -   "Acuator disk Z direction unit vector (global)"    -
+typedef  ^        MiscVarType          SiKi              VRel              -  - -   "magnitude of VRel (output as y%VRel)"             m/s
+typedef  ^        MiscVarType          SiKi              VRel_xd           -  - -   "relative wind velocity along disk normal"         m/s
+typedef  ^        MiscVarType          SiKi              lambda            -  - -   "TSR - tip speed ratio"                            -
+typedef  ^        MiscVarType          SiKi              Chi               -  - -   "Inflow skew angle"                                rad
+typedef  ^        MiscVarType          SiKi              C_F               3  - -   "Force  coefficients from table"                   -
+typedef  ^        MiscVarType          SiKi              C_M               3  - -   "Moment coefficients from table"                   -
+typedef  ^        MiscVarType          SiKi              Force             3  - -   "Force  calculated in actuator disk coordinates"   N
+typedef  ^        MiscVarType          SiKi              Moment            3  - -   "Moment calculated in actuator disk coordinates"   N-m

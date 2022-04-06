@@ -97,7 +97,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ADsk_OutputType
     TYPE(MeshType)  :: AeroLoads      !< Mesh containing the forces and moments from the aero loading [-]
     REAL(ReKi)  :: YawErr      !< Nacelle-yaw error, i.e., the angle about positive Z from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambient + rotor  motion), both projected onto the horizontal plane [rad]
-    REAL(ReKi)  :: SkewAngle      !< Azimuth angle (from the nominally vertical axis in the disk plane, Z_disk ) to the vector about which the inflow skew angle is defined, i.e., the angle about positive X_disk  from Z_disk  to the vector about which the positive inflow skew angle is defined  [rad]
+    REAL(ReKi)  :: PsiSkew      !< Azimuth angle (from the nominally vertical axis in the disk plane, Z_disk ) to the vector about which the inflow skew angle is defined, i.e., the angle about positive X_disk  from Z_disk  to the vector about which the positive inflow skew angle is defined  [rad]
     REAL(ReKi)  :: ChiSkew      !< Inflow skew angle [rad]
     REAL(ReKi)  :: VRel      !< Rotor-disk-averaged relative wind speed (ambient + rotor motion), normal to disk [m/s]
     REAL(ReKi)  :: Ct      !< Thrust force coefficient (normal to disk) [-]
@@ -140,7 +140,19 @@ IMPLICIT NONE
 ! =======================
 ! =========  ADsk_MiscVarType  =======
   TYPE, PUBLIC :: ADsk_MiscVarType
-    INTEGER(IntKi)  :: DummyMiscVar      !<  [-]
+    INTEGER(IntKi) , DIMENSION(1:5)  :: idx_last      !< Last indices used in lookup search [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< Array of all outputs [-]
+    REAL(SiKi) , DIMENSION(1:3)  :: x_hat      !< Acuator disk X direction unit vector (global) [-]
+    REAL(SiKi) , DIMENSION(1:3)  :: y_hat      !< Acuator disk Y direction unit vector (global) [-]
+    REAL(SiKi) , DIMENSION(1:3)  :: z_hat      !< Acuator disk Z direction unit vector (global) [-]
+    REAL(SiKi)  :: VRel      !< magnitude of VRel (output as y%VRel) [m/s]
+    REAL(SiKi)  :: VRel_xd      !< relative wind velocity along disk normal [m/s]
+    REAL(SiKi)  :: lambda      !< TSR - tip speed ratio [-]
+    REAL(SiKi)  :: Chi      !< Inflow skew angle [rad]
+    REAL(SiKi) , DIMENSION(1:3)  :: C_F      !< Force  coefficients from table [-]
+    REAL(SiKi) , DIMENSION(1:3)  :: C_M      !< Moment coefficients from table [-]
+    REAL(SiKi) , DIMENSION(1:3)  :: Force      !< Force  calculated in actuator disk coordinates [N]
+    REAL(SiKi) , DIMENSION(1:3)  :: Moment      !< Moment calculated in actuator disk coordinates [N-m]
   END TYPE ADsk_MiscVarType
 ! =======================
 CONTAINS
@@ -2344,7 +2356,7 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstOutputData%YawErr = SrcOutputData%YawErr
-    DstOutputData%SkewAngle = SrcOutputData%SkewAngle
+    DstOutputData%PsiSkew = SrcOutputData%PsiSkew
     DstOutputData%ChiSkew = SrcOutputData%ChiSkew
     DstOutputData%VRel = SrcOutputData%VRel
     DstOutputData%Ct = SrcOutputData%Ct
@@ -2432,7 +2444,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Re_BufSz   = Re_BufSz   + 1  ! YawErr
-      Re_BufSz   = Re_BufSz   + 1  ! SkewAngle
+      Re_BufSz   = Re_BufSz   + 1  ! PsiSkew
       Re_BufSz   = Re_BufSz   + 1  ! ChiSkew
       Re_BufSz   = Re_BufSz   + 1  ! VRel
       Re_BufSz   = Re_BufSz   + 1  ! Ct
@@ -2499,7 +2511,7 @@ ENDIF
       ENDIF
     ReKiBuf(Re_Xferred) = InData%YawErr
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%SkewAngle
+    ReKiBuf(Re_Xferred) = InData%PsiSkew
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ChiSkew
     Re_Xferred = Re_Xferred + 1
@@ -2595,7 +2607,7 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%YawErr = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%SkewAngle = ReKiBuf(Re_Xferred)
+    OutData%PsiSkew = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%ChiSkew = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -3532,13 +3544,37 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'ADsk_CopyMisc'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
+    DstMiscData%idx_last = SrcMiscData%idx_last
+IF (ALLOCATED(SrcMiscData%AllOuts)) THEN
+  i1_l = LBOUND(SrcMiscData%AllOuts,1)
+  i1_u = UBOUND(SrcMiscData%AllOuts,1)
+  IF (.NOT. ALLOCATED(DstMiscData%AllOuts)) THEN 
+    ALLOCATE(DstMiscData%AllOuts(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AllOuts.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%AllOuts = SrcMiscData%AllOuts
+ENDIF
+    DstMiscData%x_hat = SrcMiscData%x_hat
+    DstMiscData%y_hat = SrcMiscData%y_hat
+    DstMiscData%z_hat = SrcMiscData%z_hat
+    DstMiscData%VRel = SrcMiscData%VRel
+    DstMiscData%VRel_xd = SrcMiscData%VRel_xd
+    DstMiscData%lambda = SrcMiscData%lambda
+    DstMiscData%Chi = SrcMiscData%Chi
+    DstMiscData%C_F = SrcMiscData%C_F
+    DstMiscData%C_M = SrcMiscData%C_M
+    DstMiscData%Force = SrcMiscData%Force
+    DstMiscData%Moment = SrcMiscData%Moment
  END SUBROUTINE ADsk_CopyMisc
 
  SUBROUTINE ADsk_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -3550,6 +3586,9 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(MiscData%AllOuts)) THEN
+  DEALLOCATE(MiscData%AllOuts)
+ENDIF
  END SUBROUTINE ADsk_DestroyMisc
 
  SUBROUTINE ADsk_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3587,7 +3626,23 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! DummyMiscVar
+      Int_BufSz  = Int_BufSz  + SIZE(InData%idx_last)  ! idx_last
+  Int_BufSz   = Int_BufSz   + 1     ! AllOuts allocated yes/no
+  IF ( ALLOCATED(InData%AllOuts) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! AllOuts upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AllOuts)  ! AllOuts
+  END IF
+      Re_BufSz   = Re_BufSz   + SIZE(InData%x_hat)  ! x_hat
+      Re_BufSz   = Re_BufSz   + SIZE(InData%y_hat)  ! y_hat
+      Re_BufSz   = Re_BufSz   + SIZE(InData%z_hat)  ! z_hat
+      Re_BufSz   = Re_BufSz   + 1  ! VRel
+      Re_BufSz   = Re_BufSz   + 1  ! VRel_xd
+      Re_BufSz   = Re_BufSz   + 1  ! lambda
+      Re_BufSz   = Re_BufSz   + 1  ! Chi
+      Re_BufSz   = Re_BufSz   + SIZE(InData%C_F)  ! C_F
+      Re_BufSz   = Re_BufSz   + SIZE(InData%C_M)  ! C_M
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Force)  ! Force
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Moment)  ! Moment
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3615,8 +3670,61 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%DummyMiscVar
+    DO i1 = LBOUND(InData%idx_last,1), UBOUND(InData%idx_last,1)
+      IntKiBuf(Int_Xferred) = InData%idx_last(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+  IF ( .NOT. ALLOCATED(InData%AllOuts) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AllOuts,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AllOuts,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%AllOuts,1), UBOUND(InData%AllOuts,1)
+        ReKiBuf(Re_Xferred) = InData%AllOuts(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    DO i1 = LBOUND(InData%x_hat,1), UBOUND(InData%x_hat,1)
+      ReKiBuf(Re_Xferred) = InData%x_hat(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%y_hat,1), UBOUND(InData%y_hat,1)
+      ReKiBuf(Re_Xferred) = InData%y_hat(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%z_hat,1), UBOUND(InData%z_hat,1)
+      ReKiBuf(Re_Xferred) = InData%z_hat(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    ReKiBuf(Re_Xferred) = InData%VRel
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VRel_xd
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%lambda
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Chi
+    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%C_F,1), UBOUND(InData%C_F,1)
+      ReKiBuf(Re_Xferred) = InData%C_F(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%C_M,1), UBOUND(InData%C_M,1)
+      ReKiBuf(Re_Xferred) = InData%C_M(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Force,1), UBOUND(InData%Force,1)
+      ReKiBuf(Re_Xferred) = InData%Force(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Moment,1), UBOUND(InData%Moment,1)
+      ReKiBuf(Re_Xferred) = InData%Moment(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE ADsk_PackMisc
 
  SUBROUTINE ADsk_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3632,6 +3740,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'ADsk_UnPackMisc'
@@ -3645,8 +3754,80 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%DummyMiscVar = IntKiBuf(Int_Xferred)
+    i1_l = LBOUND(OutData%idx_last,1)
+    i1_u = UBOUND(OutData%idx_last,1)
+    DO i1 = LBOUND(OutData%idx_last,1), UBOUND(OutData%idx_last,1)
+      OutData%idx_last(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AllOuts not allocated
     Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AllOuts)) DEALLOCATE(OutData%AllOuts)
+    ALLOCATE(OutData%AllOuts(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AllOuts.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%AllOuts,1), UBOUND(OutData%AllOuts,1)
+        OutData%AllOuts(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    i1_l = LBOUND(OutData%x_hat,1)
+    i1_u = UBOUND(OutData%x_hat,1)
+    DO i1 = LBOUND(OutData%x_hat,1), UBOUND(OutData%x_hat,1)
+      OutData%x_hat(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%y_hat,1)
+    i1_u = UBOUND(OutData%y_hat,1)
+    DO i1 = LBOUND(OutData%y_hat,1), UBOUND(OutData%y_hat,1)
+      OutData%y_hat(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%z_hat,1)
+    i1_u = UBOUND(OutData%z_hat,1)
+    DO i1 = LBOUND(OutData%z_hat,1), UBOUND(OutData%z_hat,1)
+      OutData%z_hat(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    OutData%VRel = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VRel_xd = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%lambda = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Chi = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%C_F,1)
+    i1_u = UBOUND(OutData%C_F,1)
+    DO i1 = LBOUND(OutData%C_F,1), UBOUND(OutData%C_F,1)
+      OutData%C_F(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%C_M,1)
+    i1_u = UBOUND(OutData%C_M,1)
+    DO i1 = LBOUND(OutData%C_M,1), UBOUND(OutData%C_M,1)
+      OutData%C_M(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Force,1)
+    i1_u = UBOUND(OutData%Force,1)
+    DO i1 = LBOUND(OutData%Force,1), UBOUND(OutData%Force,1)
+      OutData%Force(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Moment,1)
+    i1_u = UBOUND(OutData%Moment,1)
+    DO i1 = LBOUND(OutData%Moment,1), UBOUND(OutData%Moment,1)
+      OutData%Moment(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE ADsk_UnPackMisc
 
 
@@ -3922,8 +4103,8 @@ ENDIF
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
   b = -(y1%YawErr - y2%YawErr)
   y_out%YawErr = y1%YawErr + b * ScaleFactor
-  b = -(y1%SkewAngle - y2%SkewAngle)
-  y_out%SkewAngle = y1%SkewAngle + b * ScaleFactor
+  b = -(y1%PsiSkew - y2%PsiSkew)
+  y_out%PsiSkew = y1%PsiSkew + b * ScaleFactor
   b = -(y1%ChiSkew - y2%ChiSkew)
   y_out%ChiSkew = y1%ChiSkew + b * ScaleFactor
   b = -(y1%VRel - y2%VRel)
@@ -4000,9 +4181,9 @@ END IF ! check if allocated
   b = (t(3)**2*(y1%YawErr - y2%YawErr) + t(2)**2*(-y1%YawErr + y3%YawErr))* scaleFactor
   c = ( (t(2)-t(3))*y1%YawErr + t(3)*y2%YawErr - t(2)*y3%YawErr ) * scaleFactor
   y_out%YawErr = y1%YawErr + b  + c * t_out
-  b = (t(3)**2*(y1%SkewAngle - y2%SkewAngle) + t(2)**2*(-y1%SkewAngle + y3%SkewAngle))* scaleFactor
-  c = ( (t(2)-t(3))*y1%SkewAngle + t(3)*y2%SkewAngle - t(2)*y3%SkewAngle ) * scaleFactor
-  y_out%SkewAngle = y1%SkewAngle + b  + c * t_out
+  b = (t(3)**2*(y1%PsiSkew - y2%PsiSkew) + t(2)**2*(-y1%PsiSkew + y3%PsiSkew))* scaleFactor
+  c = ( (t(2)-t(3))*y1%PsiSkew + t(3)*y2%PsiSkew - t(2)*y3%PsiSkew ) * scaleFactor
+  y_out%PsiSkew = y1%PsiSkew + b  + c * t_out
   b = (t(3)**2*(y1%ChiSkew - y2%ChiSkew) + t(2)**2*(-y1%ChiSkew + y3%ChiSkew))* scaleFactor
   c = ( (t(2)-t(3))*y1%ChiSkew + t(3)*y2%ChiSkew - t(2)*y3%ChiSkew ) * scaleFactor
   y_out%ChiSkew = y1%ChiSkew + b  + c * t_out

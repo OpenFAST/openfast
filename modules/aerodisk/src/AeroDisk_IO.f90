@@ -214,7 +214,7 @@ contains
             return
          endif
 
-      ! Get order of the other columns
+      ! Get order of the other columns (returns 0 if column name not in file)
       call GetVarNamePos(thisFile, thisLine, TmpChAry, "TSR",   Idx%ColTSR,   ErrStat3,ErrMsg3); if (ErrStat3 >= ErrID_Fatal) return
       call GetVarNamePos(thisFile, thisLine, TmpChAry, "RtSpd", Idx%ColRtSpd, ErrStat3,ErrMsg3); if (ErrStat3 >= ErrID_Fatal) return
       call GetVarNamePos(thisFile, thisLine, TmpChAry, "VRel",  Idx%ColVRel,  ErrStat3,ErrMsg3); if (ErrStat3 >= ErrID_Fatal) return
@@ -423,7 +423,7 @@ subroutine Get_RtAeroTableData(Info,LineNo,Idx,AeroTable,ErrStat,ErrMsg,UnEc)
       LineNo = LineNo + 1
    enddo
 
-   ! Find the unique values in the indexing columns of the table
+   ! Find the unique values in the indexing columns of the table (if name given, otherwise skip)
    if (AeroTable%N_TSR   > 0_IntKi) call GetTabIndexVals( TmpTab(:,Idx%ColTSR  ),'TSR'  ,AeroTable%N_TSR  ,AeroTable%TSR  , ErrStat2, ErrMsg2); if (Failed()) return
    if (AeroTable%N_RtSpd > 0_IntKi) call GetTabIndexVals( TmpTab(:,Idx%ColRtSpd),'RtSpd',AeroTable%N_RtSpd,AeroTable%RtSpd, ErrStat2, ErrMsg2); if (Failed()) return
    if (AeroTable%N_VRel  > 0_IntKi) call GetTabIndexVals( TmpTab(:,Idx%ColVRel ),'VRel' ,AeroTable%N_VRel ,AeroTable%VRel , ErrStat2, ErrMsg2); if (Failed()) return
@@ -856,6 +856,94 @@ subroutine WriteAeroTab(Aero, UnOut)
       enddo
    enddo
 end subroutine WriteAeroTab
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> this routine fills the AllOuts array, which is used to send data to the glue code to be written to an output file.
+!! NOTE: AllOuts is ReKi, but most calculations in this module are in single precision. This requires a bunch of conversions at this
+!! stage.
+subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
+   type(ADsk_InputType),         intent(in   )  :: u                 !< The inputs at time T
+   type(ADsk_ParameterType),     intent(in   )  :: p                 !< The module parameters
+   type(ADsk_OutputType),        intent(in   )  :: y                 !< outputs
+   type(ADsk_MiscVarType),       intent(inout)  :: m                 !< misc/optimization variables (for computing mesh transfers)
+   integer(IntKi),               intent(  out)  :: ErrStat           !< The error status code
+   character(*),                 intent(  out)  :: ErrMsg            !< The error message, if an error occurred
+   logical,                      intent(in   )  :: CalcWriteOutput   !< flag that determines if we need to compute AllOuts (or just the reaction loads that get returned to ServoDyn)
+   ! local variables
+   character(*), parameter                      :: RoutineName = 'Calc_WriteOutput'
+   integer(IntKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   real(ReKi)                                   :: Tmp3(3)
+   real(ReKi)                                   :: Rxyz(3,3)         !< rotation matrix for x,y,z of local coordinates
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! rotation matrix
+!FIXME: make sure this is actually correct and not the transpose of what we want
+   Rxyz(1:3,1) = real(m%x_hat, ReKi)
+   Rxyz(1:3,2) = real(m%y_hat, ReKi)
+   Rxyz(1:3,3) = real(m%z_hat, ReKi)
+
+   ! Rotspeed etc
+   m%AllOuts( ADSpeed   ) = u%RotSpeed * 30.0_ReKi / Pi
+   m%AllOuts( ADPitch   ) = u%BlPitch * 180.0_ReKi / Pi
+
+   m%AllOuts( ADTSR     ) = real(m%lambda, ReKi)      ! TSR -- tip speed ratio   (-)
+   m%AllOuts( ADVRel    ) = real(m%VRel, ReKi)        ! magnitude of VRel vector (m/s)
+   m%AllOuts( ADSkew    ) = real(m%Chi * 180.0_ReKi / Pi, ReKi)
+
+   ! Wind in local frame, inertial frame
+   Tmp3 = matmul(Rxyz(1:3,1:3), u%Vwind)
+   m%AllOuts( ADVWindx  ) = Tmp3(1)
+   m%AllOuts( ADVWindy  ) = Tmp3(2)
+   m%AllOuts( ADVWindz  ) = Tmp3(3)
+   m%AllOuts( ADVWindxi ) = u%VWind(1)
+   m%AllOuts( ADVWindyi ) = u%VWind(2)
+   m%AllOuts( ADVWindzi ) = u%VWind(3)
+
+   ! Rotor velocity in local frame, inertial frame
+   Tmp3 = matmul(Rxyz(1:3,1:3), u%HubMotion%TranslationVel(1:3,1))
+   m%AllOuts( ADSTVx    ) = Tmp3(1)
+   m%AllOuts( ADSTVy    ) = Tmp3(2)
+   m%AllOuts( ADSTVz    ) = Tmp3(3)
+   m%AllOuts( ADSTVxi   ) = u%HubMotion%TranslationVel(1,1)
+   m%AllOuts( ADSTVyi   ) = u%HubMotion%TranslationVel(2,1)
+   m%AllOuts( ADSTVzi   ) = u%HubMotion%TranslationVel(3,1)
+
+   ! Coefficients
+   if (EqualRealNos(m%VRel_xd,0.0_SiKi)) then
+      m%AllOuts( ADCp   ) = 0.0_ReKi
+   else
+      m%AllOuts( ADCp   ) = (real(m%Moment(1),ReKi) * u%RotSpeed) / (p%halfRhoA * real(m%Vrel_xd,ReKi)**3_IntKi )
+   endif
+   m%AllOuts( ADCt      ) = real(m%Force(1), ReKi)
+   m%AllOuts( ADCq      ) = real(m%Moment(1),ReKi)
+
+   ! Power
+   m%AllOuts( ADPower   ) = real(m%Moment(1),ReKi) * u%RotSpeed
+
+   ! Resulting forces
+   m%AllOuts( ADFx      ) = real(m%Force(1), ReKi)
+   m%AllOuts( ADFy      ) = real(m%Force(2), ReKi)
+   m%AllOuts( ADFz      ) = real(m%Force(3), ReKi)
+   m%AllOuts( ADMx      ) = real(m%Moment(1),ReKi)
+   m%AllOuts( ADMy      ) = real(m%Moment(2),ReKi)
+   m%AllOuts( ADMz      ) = real(m%Moment(3),ReKi)
+   !Tmp3 = m%Force( 1)*m%x_hat + m%Force( 2)*m%y_hat + m%Force( 3)*m%z_hat
+   Tmp3 = matmul(real(m%Force(1:3),ReKi), Rxyz(1:3,1:3))
+   m%AllOuts( ADFxi     ) = Tmp3(1)
+   m%AllOuts( ADFyi     ) = Tmp3(2)
+   m%AllOuts( ADFzi     ) = Tmp3(3)
+   !Tmp3 = m%Moment(1)*m%x_hat + m%Moment(2)*m%y_hat + m%Moment(3)*m%z_hat
+   Tmp3 = matmul(real(m%Force(1:3),ReKi), Rxyz(1:3,1:3))
+   m%AllOuts( ADMxi     ) = Tmp3(1)
+   m%AllOuts( ADMyi     ) = Tmp3(2)
+   m%AllOuts( ADMzi     ) = Tmp3(3)
+
+end subroutine Calc_WriteOutput
 
 
 !**********************************************************************************************************************************
