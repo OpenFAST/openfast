@@ -71,6 +71,7 @@ True            HAWTprojection(1)      - True if turbine is a horizontal axis tu
           -7    Overhang(2)     - Overhang (m)
           -6    ShftTilt(2)     - Shaft tilt (deg)
           -4    Precone(2)      - Blade precone (deg)
+     3.09343    Twr2Shft(2)     - Vertical distance from the tower-top to the rotor shaft (m)
 ----- Turbine(2) Motion [used only when AnalysisType=1] ---------------------------------
 0               BaseMotionType(2)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
 0               DegreeOfFreedom(2)     - {1:xt, 2:yt, 3:zt, 4:theta_xt, 5:theta_yt, 6:theta_zt} [used only when BaseMotionType=1] (flag)

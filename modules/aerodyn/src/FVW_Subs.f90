@@ -14,7 +14,7 @@ module FVW_SUBS
    integer(IntKi), parameter :: idCircPrescribed    = 3
    integer(IntKi), parameter, dimension(2) :: idCircVALID = (/idCircPolarData, idCircPrescribed /)
    ! Integration method
-   integer(IntKi), parameter :: idRK4      = 1 
+   integer(IntKi), parameter :: idRK4      = 1
    integer(IntKi), parameter :: idAB4      = 2
    integer(IntKi), parameter :: idABM4     = 3
    integer(IntKi), parameter :: idPredictor= 4
@@ -44,11 +44,13 @@ module FVW_SUBS
    integer(IntKi), parameter :: idVelocityBasic = 1
    integer(IntKi), parameter :: idVelocityTree  = 2
    integer(IntKi), parameter :: idVelocityPart  = 3
-   integer(IntKi), parameter, dimension(3) :: idVelocityVALID      = (/idVelocityBasic, idVelocityTree, idVelocityPart /)
+   integer(IntKi), parameter :: idVelocityTreeSeg  = 4
+   integer(IntKi), parameter, dimension(4) :: idVelocityVALID      = (/idVelocityBasic, idVelocityTree, idVelocityPart,&
+                                                                       idVelocityTreeSeg/)
 
-   real(ReKi), parameter :: CoreSpreadAlpha = 1.25643 
+   real(ReKi), parameter :: CoreSpreadAlpha = 1.25643
 
-   ! Implementation 
+   ! Implementation
    integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
    logical       , parameter :: DEV_VERSION=.False.
 contains
@@ -80,7 +82,7 @@ END FUNCTION interpolation_array
 !==========================================================================
 
 ! =====================================================================================
-!> Output blade circulation 
+!> Output blade circulation
 subroutine Output_Gamma(CP, Gamma_LL, iW, iStep, iLabel, iIter)
    real( ReKi ), dimension( :, : ), intent(in   ) :: CP       !< Control Points
    real( ReKi ), dimension( : ),    intent(in   ) :: Gamma_LL !< Circulation on the lifting line
@@ -106,7 +108,7 @@ subroutine Output_Gamma(CP, Gamma_LL, iW, iStep, iLabel, iIter)
 endsubroutine Output_Gamma
 ! =====================================================================================
 !> Read a delimited file  containing a circulation and interpolate it on the requested Control Points
-!! The input file is a delimited file with one line of header. 
+!! The input file is a delimited file with one line of header.
 !! Each following line consists of two columns: r/R_[-] and Gamma_[m^2/s]
 subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrStat, ErrMsg)
    character(len=*),           intent(in   ) :: CirculationFileName !< Input file to read
@@ -127,7 +129,7 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrS
    real(ReKi), parameter :: ReNaN = huge(1.0_ReKi)
    ErrStat = ErrID_None
    ErrMsg  = ''
-   ! --- 
+   ! ---
    call GetNewUnit(iUnit)
    call OpenFInpFile(iUnit, CirculationFileName, errStat2, errMsg2); if(Failed()) return
    nLines=line_count(iUnit)-1
@@ -164,7 +166,7 @@ contains
    end subroutine
 
    logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadAndInterpGamma') 
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadAndInterpGamma')
       Failed =  ErrStat >= AbortErrLev
       if (Failed) call CleanUp()
    end function Failed
@@ -177,7 +179,7 @@ contains
       integer(IntKi), parameter :: nline_max=100000000 ! 100 M
       integer(IntKi) :: i
       line_count=0
-      do i=1,nline_max 
+      do i=1,nline_max
          line=''
          read(iunit,'(A)',END=100)line
          line_count=line_count+1
@@ -195,12 +197,12 @@ endsubroutine ReadAndInterpGamma
 ! =====================================================================================
 
 ! --------------------------------------------------------------------------------
-! --- Mapping functions 
+! --- Mapping functions
 ! --------------------------------------------------------------------------------
 
 !> Make sure the First panel of the NW match the last panel of the Trailing edge
 !!  - Same position of points
-!!  - Same circulation 
+!!  - Same circulation
 subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
@@ -238,7 +240,7 @@ subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
       enddo
    endif
 
-   ! Circulations are the same on both side of the TE 
+   ! Circulations are the same on both side of the TE
    if (p%nNWMax>p%iNWStart-1) then
       do iW = 1,p%nWings
          do iSpan = 1,p%W(iW)%nSpan
@@ -247,7 +249,7 @@ subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
       enddo
    endif
    ! When subcycling, we make sure the new circulation progressively ramps up from the old one
-   ! NOTE: subcycling needs improvement. 
+   ! NOTE: subcycling needs improvement.
    !       Frequencies are introduced, even for prescribed circulation, when wake roll up is included
    !       If the wake is not free, the convection velocity is constant and there is no issue.
    !       As a test case, the elliptical wing with constant circulation can be used, with roll up
@@ -285,7 +287,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
    ErrStat = ErrID_None
    ErrMsg  = ""
-   
+
    ! First Panel of Farwake has coordinates of last panel of near wake always
    if (p%nFWMax>0) then
       if (m%nNW==p%nNWMax) then
@@ -334,7 +336,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    if (.false.) print*,z%W(iW)%Gamma_LL(1) ! Just to avoid unused var warning
 endsubroutine Map_NW_FW
 
-!> Propagate the positions and circulation one index forward (loop from end to start) 
+!> Propagate the positions and circulation one index forward (loop from end to start)
 subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
@@ -348,7 +350,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
 
    ! -- Propagate far wake
       do iW=1,p%nWings
-         do iAge=p%nFWMax+1,2,-1 ! 
+         do iAge=p%nFWMax+1,2,-1 !
             do iSpan=1,FWnSpan+1
                x%W(iW)%r_FW(1:3,iSpan,iAge) = x%W(iW)%r_FW(1:3,iSpan,iAge-1)
             enddo
@@ -391,7 +393,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    ! Temporary hack for sub-cycling since straight after wkae computation, the wake size will increase
    ! So we do a "fake" propagation here
    do iW=1,p%nWings
-      do iAge=p%nFWMax+1,2,-1 ! 
+      do iAge=p%nFWMax+1,2,-1 !
          do iSpan=1,FWnSpan+1
             m%dxdt%W(iW)%r_FW(1:3,iSpan,iAge) = m%dxdt%W(iW)%r_FW(1:3,iSpan,iAge-1)
          enddo
@@ -399,7 +401,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
       !m%dxdt_FW(1:3,1:FWnSpan+1,1) = -999999_ReKi ! Important not nullified. The best would be to map the last NW convection velocity for this first row.
    enddo
    do iW=1,p%nWings
-      do iAge=p%nNWMax+1,p%iNWStart+1,-1 
+      do iAge=p%nNWMax+1,p%iNWStart+1,-1
          do iSpan=1,p%W(iW)%nSpan+1
             m%dxdt%W(iW)%r_NW(1:3,iSpan,iAge) = m%dxdt%W(iW)%r_NW(1:3,iSpan,iAge-1)
          enddo
@@ -513,7 +515,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    type(GridOutType), pointer :: g
 
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
-   ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
+   ! NOTE: Maximum number of points are passed, whether they "exist" or not.
    ! NOTE: InflowWind ignores points at (0,0,0)
    !if (DEV_VERSION) then
    !   ! Removing points that don't exist
@@ -523,7 +525,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    !   endif
    !   if ( ((p%nNWMax<=1) .and. (m%nFW==0)) .or. ((m%nFW>0) .and. (m%nFW<=p%nFWMax))) then
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+2:p%nFWMax+1, 1:p%nWings) = 0.0_ReKi
-   !   else 
+   !   else
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+1:p%nFWMax+1, 1:p%nWings) = 0.0_ReKi
    !   endif
    !   !call print_x_NW_FW(p,m,x,'wind after')
@@ -584,7 +586,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    !   endif
    !   if ( ((p%nNWMax<=1) .and. (m%nFW==0)) .or. ((m%nFW>0) .and. (m%nFW<=p%nFWMax))) then
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+2:p%nFWMax+1, 1:p%nWings) =-999999.0_ReKi
-   !   else 
+   !   else
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+1:p%nFWMax+1, 1:p%nWings) =-999999.0_ReKi
    !   endif
    !endif
@@ -600,7 +602,7 @@ subroutine DistributeRequestedWind_LL(V_wind, p, m)
    !real(ReKi), dimension(:,:,:),    intent(inout) :: Vwnd_LL !< Wind on lifting line
    integer(IntKi) :: iW, iP_start,iP_end   ! Current index of point, start and end of range
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
-   ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
+   ! NOTE: Maximum number of points are passed, whether they "exist" or not.
    iP_end=0
    ! --- LL CP
    do iW=1,p%nWings
@@ -618,7 +620,7 @@ subroutine DistributeRequestedWind_LL(V_wind, p, m)
 end subroutine DistributeRequestedWind_LL
 
 !> Distribute wind onto NW and FW
-!! Modifies m%W(:)%Vwind_NW,  m%W(:)%Vwind_FW  
+!! Modifies m%W(:)%Vwind_NW,  m%W(:)%Vwind_FW
 subroutine DistributeRequestedWind_NWFW(V_wind, p, m)
    real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Requested wind, packed
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
@@ -713,7 +715,7 @@ subroutine CountSegments(p, nNW, nFW, iDepthStart, nSeg, nSegP, nSegNW)
    if ((nNW-iDepthStart)>=0) then
       do iW=1,p%nWings
          nSegP  = nSegP +         (  (p%W(iW)%nSpan+1)*(nNW-iDepthStart+2)            )
-         nSegNW = nSegNW +        (2*(p%W(iW)%nSpan+1)*(nNW-iDepthStart+2)-(p%W(iW)%nSpan+1)-(nNW-iDepthStart+1+1))  
+         nSegNW = nSegNW +        (2*(p%W(iW)%nSpan+1)*(nNW-iDepthStart+2)-(p%W(iW)%nSpan+1)-(nNW-iDepthStart+1+1))
          if (.not.LastNWShed) then
             nSegNW =   nSegNW -            (p%W(iW)%nSpan) ! Removing last set of shed segments
          endif
@@ -725,7 +727,7 @@ subroutine CountSegments(p, nNW, nFW, iDepthStart, nSeg, nSegP, nSegNW)
       do iW=1,p%nWings
          nSegP  = nSegP +            (  (FWnSpan+1)*(nFW+1) )
          if (p%FWShedVorticity) then
-            nSeg = nSeg +            (2*(FWnSpan+1)*(nFW+1)-(FWnSpan+1)-(nFW+1))  
+            nSeg = nSeg +            (2*(FWnSpan+1)*(nFW+1)-(FWnSpan+1)-(nFW+1))
          else
             nSeg = nSeg +            (  (FWnSpan+1)*(nFW)                    )   ! No Shed vorticity
          endif
@@ -741,7 +743,7 @@ pure integer(IntKi) function CountCPs(p, nNW, nFWEff) result(nCPs)
    integer :: iW
    nCPs=0
    do iW=1,p%nWings
-      nCPs = nCPs + (p%W(iW)%nSpan+1)*(nNW+1) 
+      nCPs = nCPs + (p%W(iW)%nSpan+1)*(nNW+1)
       if (nFWEff>0)  nCPs = nCPs + (FWnSpan+1)*(nFWEff+1)
    enddo
 end function CountCPs
@@ -937,7 +939,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          enddo
       else ! Should never happen (caught earlier)
          ErrStat = ErrID_Fatal
-         ErrMsg ='Regularization determination method not implemented' 
+         ErrMsg ='Regularization determination method not implemented'
       endif
 
       if (iW==1) then
@@ -1046,7 +1048,7 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    ! --- Converting to particles
    if ((p%VelocityMethod==idVelocityTree) .or. (p%VelocityMethod==idVelocityPart)) then
       iHeadP=1
-      nPart = p%PartPerSegment * nSeg 
+      nPart = p%PartPerSegment * nSeg
       allocate(Part%P(3,nPart), Part%Alpha(3,nPart), Part%RegParam(nPart))
       Part%Alpha(:,:)  = -99999.99_ReKi
       Part%P(:,:)      = -99999.99_ReKi
@@ -1067,17 +1069,20 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    if (p%VelocityMethod==idVelocityTree) then
       Tree%DistanceDirect = 2*sum(Part%RegParam)/size(Part%RegParam) ! 2*mean(eps), below that distance eps has a strong effect
       call grow_tree(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+   elseif (p%VelocityMethod==idVelocityTreeSeg) then
+      Tree%DistanceDirect = 2*sum(Sgmt%Epsilon)/size(Sgmt%Epsilon) ! 2*mean(eps), below that distance eps has a strong effect
+      call grow_tree_segment(Tree, Sgmt%Points, Sgmt%Connct(:,1:nSeg),Sgmt%Gamma, p%RegFunction, Sgmt%Epsilon, 0)
    endif
 
 end subroutine InducedVelocitiesAll_Init
 
-!> Compute induced velocity on flat CPs 
+!> Compute induced velocity on flat CPs
 subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrStat, ErrMsg)
    real(ReKi), dimension(:,:),      intent(in)    :: CPs     !< Control points (3 x nCPs++)
    integer(IntKi)                 , intent(in)    :: nCPs    !< Number of control points on which to compute (nCPs <= size(CPs,2))
    real(ReKi), dimension(:,: )    , intent(inout) :: Uind    !< Induced velocity vector - Side effects!!! (3 x nCPs++)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(T_Sgmt),                    intent(in   ) :: Sgmt    !< Tree of particles if needed
+   type(T_Sgmt),                    intent(in   ) :: Sgmt    !< Segments
    type(T_Part),                    intent(in   ) :: Part    !< Particle storage if needed
    type(T_Tree),                    intent(inout) :: Tree    !< Tree of particles if needed
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
@@ -1096,6 +1101,8 @@ subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrSt
 
    elseif (p%VelocityMethod==idVelocityPart) then
       call ui_part_nograd(CPs ,Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind, nCPs, size(Part%P,2))
+   elseif (p%VelocityMethod==idVelocityTreeSeg) then
+      call ui_tree_segment(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
    endif
 end subroutine InducedVelocitiesAll_Calc
 
@@ -1122,6 +1129,8 @@ subroutine InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
 
    elseif (p%VelocityMethod==idVelocityPart) then
       deallocate(Part%P, Part%Alpha, Part%RegParam)
+   elseif (p%VelocityMethod==idVelocityTreeSeg) then
+   call cut_tree(Tree)
    endif
 
 end subroutine InducedVelocitiesAll_End
@@ -1163,7 +1172,7 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
       print'(A,I0,A,I0,A,I0)','Convection - nSeg:',m%Sgmt%nAct,' - nSegP:',m%Sgmt%nActP, ' - nCPs:',nCPs
    endif
 contains
-   !> Pack all the points that convect 
+   !> Pack all the points that convect
    subroutine PackConvectingPoints()
       ! Counting total number of control points that convects
       nCPs = CountCPs(p, m%nNW, nFWEff)
@@ -1191,7 +1200,7 @@ contains
          endif
       endif
    end subroutine
-   !> Distribute the induced velocity to the proper location 
+   !> Distribute the induced velocity to the proper location
    subroutine UnPackInducedVelocity()
       do iW=1,p%nWings
          m%W(iW)%Vind_NW = -9999._ReKi !< Safety
@@ -1201,7 +1210,7 @@ contains
       do iW=1,p%nWings
          CALL VecToLattice(m%Uind, 1, m%W(iW)%Vind_NW(:,:,1:m%nNW+1), iHeadP)
       enddo
-      if (nFWEff>0) then 
+      if (nFWEff>0) then
          do iW=1,p%nWings
             CALL VecToLattice(m%Uind, 1, m%W(iW)%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1), iHeadP)
          enddo
@@ -1241,7 +1250,7 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   logical ::  bMirror 
+   logical ::  bMirror
    ErrStat = ErrID_None
    ErrMsg  = ""
    do iW=1,p%nWings
@@ -1274,7 +1283,7 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
             nCPs = nCPs + p%W(iW)%nSpan+1
          enddo
       endif
-      allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc 
+      allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc
       allocate(Uind(1:3,1:nCPs)) !       The size is reasonably small, and m%Uind then stay filled with "rollup velocities" (for export)
       Uind=0.0_ReKi !< important due to side effects of ui_seg
       ! ---
@@ -1310,7 +1319,7 @@ contains
       nCPs=iHeadP-1
    end subroutine
 
-   !> Distribute the induced velocity to the proper location 
+   !> Distribute the induced velocity to the proper location
    subroutine UnPackLiftingLineVelocities()
       integer :: iSpan
       iHeadP=1
@@ -1429,7 +1438,7 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    !M_sa(1,1:3) = (/  cos(PitchAndTwist*1._DbKi), sin(PitchAndTwist*1._DbKi), 0.0_DbKi /)
    !M_sa(2,1:3) = (/ -sin(PitchAndTwist*1._DbKi), cos(PitchAndTwist*1._DbKi), 0.0_DbKi /)
    !M_sa(3,1:3) = (/                   0.0_DbKi,                  0.0_DbKi, 1.0_DbKi /)
-   !M_sg= matmul(M_sa, M_ag ) 
+   !M_sg= matmul(M_sa, M_ag )
 
    ! --- Airfoil coordinates: used to define alpha, and Vrel, also called "n-t" system
    Vtot_g    = Vwnd_g - Vstr_g + Vind_g
@@ -1442,10 +1451,18 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    Vstr_s = matmul(M_sg, Vstr_g)
    Vind_s = matmul(M_sg, Vind_g)
    Vwnd_s = matmul(M_sg, Vwnd_g)
-   Urel_s = Vwnd_s - Vstr_s          ! relative wind 
+   Urel_s = Vwnd_s - Vstr_s          ! relative wind
    Vtot_s = Vwnd_s - Vstr_s + Vind_s
-   AxInd  = -Vind_s(1)/Urel_s(1) 
-   TanInd =  Vind_s(2)/Urel_s(2)
+   if (EqualRealNos(Urel_s(1),0.0_ReKi)) then
+      AxInd = 0.0_ReKi
+   else
+      AxInd  = -Vind_s(1)/Urel_s(1)
+   endif
+   if (EqualRealNos(Urel_s(2),0.0_ReKi)) then
+      TanInd = 0.0_ReKi
+   else
+      TanInd =  Vind_s(2)/Urel_s(2)
+   end if
    phi    = atan2( Vtot_s(1), Vtot_s(2) )        ! flow angle
 
    if(.false.) print*,PitchAndTwist ! just to avoid unused var for now
