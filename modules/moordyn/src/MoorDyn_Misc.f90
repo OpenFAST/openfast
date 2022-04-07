@@ -1346,7 +1346,7 @@ CONTAINS
 
 
       ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-      print *, "found a letter in the WaterKin value so will try to load a water kinematics input file"
+      print *, "   The waterKin input contains letters so will load a water kinematics input file"
       
       
       ! -------- load water kinematics input file -------------

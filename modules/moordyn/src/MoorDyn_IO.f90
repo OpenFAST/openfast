@@ -159,7 +159,7 @@ CONTAINS
          BathGrid_Ys(1) = 0.0_DbKi
 
       ELSE ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-         PRINT *, "found a letter in the depth value so will try to load a bathymetry file"
+         PRINT *, "   The depth input contains letters so will load a bathymetry file."
          
          ! load lookup table data from file
          CALL GetNewUnit( UnCoef ) ! unit number for coefficient input file

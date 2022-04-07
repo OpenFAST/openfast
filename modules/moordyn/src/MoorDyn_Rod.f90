@@ -112,9 +112,6 @@ CONTAINS
 
       CALL UnitVector(endCoords(1:3), endCoords(4:6), Rod%q, Rod%UnstrLen)  ! get Rod axis direction vector and Rod length
 
-      print *, 'I am a rod'
-      print *, endCoords
-
       ! set Rod positions (some or all may be overwritten depending on if the Rod is coupled or attached to a Body)
       Rod%r6(1:3) = endCoords(1:3)      ! (end A coordinates) 
       Rod%v6(1:3) = 0.0_DbKi            ! (end A velocity, unrotated axes) 

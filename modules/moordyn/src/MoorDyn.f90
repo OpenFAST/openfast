@@ -1508,8 +1508,6 @@ CONTAINS
                      QuoteCh = SCAN( Line(2:), '''"' )            ! last quote
                      IF (QuoteCh < 1)  QuoteCh = LEN_TRIM(Line)   ! in case no end quote
                      Line(QuoteCh+2:) = ' '    ! blank out everything after last quote
-                  ELSE
-                      CALL WrScr('Warning: Could not find a quoted string in line: '//trim(Line)//'. Output specifier(s) should be enclosed in quotes for proper parsing of outlist.')
                   END IF
 
                   NumWords = CountWords( Line )    ! The number of words in Line.
