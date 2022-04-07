@@ -541,6 +541,14 @@ CONTAINS
       Real(DbKi)                 :: dL           ! length attributed to node
       Real(DbKi)                 :: VOF          ! fraction of volume associated with node that is submerged
       
+      Real(DbKi)                 :: VOF0         ! original VOF based only on axis before refinement
+      Real(DbKi)                 :: z1hi         ! highest elevation of cross section at node [m]
+      Real(DbKi)                 :: z1lo         ! lowest  elevation of cross section at node [m]
+      Real(DbKi)                 :: G            ! distance normal to axis from bottom edge of cross section to waterplane [m]
+      Real(DbKi)                 :: A            ! area of cross section at node that is below the waterline [m2]
+      Real(DbKi)                 :: zA           ! crude approximation to z value of centroid of submerged cross section at node [m]
+      
+      
       Real(DbKi)                 :: Vi(3)        ! relative flow velocity over a node
       Real(DbKi)                 :: SumSqVp, SumSqVq, MagVp, MagVq
       Real(DbKi)                 :: Vp(3), Vq(3) ! transverse and axial components of water velocity at a given node     
@@ -607,11 +615,14 @@ CONTAINS
            
       zeta = Rod%zeta(N)! just use the wave elevation computed at the location of the top node for now
       
-      if ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then    ! check if it's crossing the water plane (should also add some limits to avoid near-horizontals at some point)
+      ! get approximate location of waterline crossing along Rod axis (note: negative h0 indicates end A is above end B, and measures -distance from end A to waterline crossing)
+      if ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) < zeta)) then        ! fully submerged case  
+         Rod%h0 = Rod%UnstrLen                                       
+      else if ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then   ! check if it's crossing the water plane (should also add some limits to avoid near-horizontals at some point)
          Rod%h0 = (zeta - Rod%r(3,0))/Rod%q(3)                       ! distance along rod centerline from end A to the waterplane
-      else if (Rod%r(3,0) < zeta) then
-         Rod%h0 = Rod%UnstrLen                                   ! fully submerged case   <<<<<< remove the 2.0 and double check there are no if statements that get changed <<<<
-      else
+      else if ((Rod%r(3,N) < zeta) .and. (Rod%r(3,0) > zeta)) then   ! check if it's crossing the water plane but upside down
+         Rod%h0 = -(zeta - Rod%r(3,0))/Rod%q(3)                       ! negative distance along rod centerline from end A to the waterplane
+      else 
          Rod%h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?)
       end if
 
@@ -638,15 +649,49 @@ CONTAINS
          END IF
 
          ! get scalar for submerged portion                  
-         IF (Lsum + dL <= Rod%h0) THEN    ! if fully submerged 
-            VOF = 1.0_DbKi
-         ELSE IF (Lsum < Rod%h0) THEN    ! if partially below waterline 
-            VOF = (Rod%h0 - Lsum)/dL
-         ELSE                        ! must be out of water
-            VOF = 0.0_DbKi
-         END IF
+         if (Rod%h0 < 0.0_DbKi) then  ! upside down partially-submerged Rod case
+            IF (Lsum >= -Rod%h0) THEN    ! if fully submerged 
+               VOF0 = 1.0_DbKi
+            ELSE IF (Lsum + dL > -Rod%h0) THEN    ! if partially below waterline 
+               VOF0 = (Lsum+dL + Rod%h0)/dL
+            ELSE                        ! must be out of water
+               VOF0 = 0.0_DbKi
+            END IF
+         else
+            IF (Lsum + dL <= Rod%h0) THEN    ! if fully submerged 
+               VOF0 = 1.0_DbKi
+            ELSE IF (Lsum < Rod%h0) THEN    ! if partially below waterline 
+               VOF0 = (Rod%h0 - Lsum)/dL
+            ELSE                        ! must be out of water
+               VOF0 = 0.0_DbKi
+            END IF
+         end if
          
          Lsum = Lsum + dL            ! add length attributed to this node to the total
+
+         ! get submerged cross sectional area and centroid for each node
+         z1hi = Rod%r(3,I) + 0.5*Rod%d*abs(sinPhi)  ! highest elevation of cross section at node
+         z1lo = Rod%r(3,I) - 0.5*Rod%d*abs(sinPhi)  ! lowest  elevation of cross section at node
+         
+         if (z1lo > zeta) then   ! fully out of water
+             A = 0.0  ! area
+             zA = 0   ! centroid depth
+         else if (z1hi < zeta) then   ! fully submerged
+             A = Pi*0.25*Rod%d**2
+             zA = Rod%r(3,I)
+         else             ! if z1hi*z1lo < 0.0:   # if cross section crosses waterplane
+            if (abs(sinPhi) < 0.001) then
+               A = 0.5_DbKi
+               zA = 0.0_DbKi
+            else
+               G = (-z1lo+zeta)/abs(sinPhi)   ! distance from node to waterline cross at same axial location [m]
+               A = 0.25*Rod%d**2*acos((Rod%d - 2.0*G)/Rod%d) - (0.5*Rod%d-G)*sqrt(Rod%d*G-G**2)  ! area of circular cross section that is below waterline [m^2]
+               zA = (z1lo-zeta)/2  ! very crude approximation of centroid for now... <<< need to double check zeta bit <<<
+            end if
+         end if
+         
+         VOF = VOF0*cosPhi**2 + A/(0.25*Pi*Rod%d**2)*sinPhi**2  ! this is a more refined VOF-type measure that can work for any incline
+
 
          ! build mass and added mass matrix
          DO J=1,3
@@ -674,9 +719,8 @@ CONTAINS
             ! weight (now only the dry weight)
             Rod%W(:,I) = (/ 0.0_DbKi, 0.0_DbKi, -m_i * p%g /)   ! assuming g is positive
             
-            ! buoyance (now calculated based on outside pressure, for submerged portion only)
-            ! radial buoyancy force from sides
-            Ftemp = -VOF * 0.25*Pi*dL*Rod%d*Rod%d * p%rhoW*p%g * sinPhi
+            ! radial buoyancy force from sides (now calculated based on outside pressure, for submerged portion only)
+            Ftemp = -VOF * v_i * p%rhoW*p%g * sinPhi   ! magnitude of radial buoyancy force at this node
             Rod%Bo(:,I) = (/ Ftemp*cosBeta*cosPhi, Ftemp*sinBeta*cosPhi, -Ftemp*sinPhi /)            
 
             !relative flow velocities
@@ -747,7 +791,7 @@ CONTAINS
          ! >>> eventually should consider a VOF approach for the ends    hTilt = 0.5*Rod%d/cosPhi <<<
          
             ! buoyancy force
-            Ftemp = -VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g*Rod%r(3,I)
+            Ftemp = -VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g* zA
             Rod%Bo(:,I) = Rod%Bo(:,I) + (/ Ftemp*cosBeta*sinPhi, Ftemp*sinBeta*sinPhi, Ftemp*cosPhi /) 
          
             ! buoyancy moment
@@ -773,17 +817,17 @@ CONTAINS
             END DO
          
          END IF
-            
-         IF ((I==N) .and. (Rod%h0 >= Rod%UnstrLen)) THEN    ! if this end B and it is submerged (note, if N=0, both this and previous if statement are true)
+         
+         IF ((I==N) .and. ((Rod%h0 >= Rod%UnstrLen) .or. (Rod%h0 < 0.0_DbKi))) THEN    ! if this end B and it is submerged (note, if N=0, both this and previous if statement are true)
          
             ! buoyancy force
-            Ftemp = VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g*Rod%r(3,I)
+            Ftemp = VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g* zA
             Rod%Bo(:,I) = Rod%Bo(:,I) + (/ Ftemp*cosBeta*sinPhi, Ftemp*sinBeta*sinPhi, Ftemp*cosPhi /) 
          
             ! buoyancy moment
             Mtemp = VOF * 1.0/64.0*Pi*Rod%d**4 * p%rhoW*p%g * sinPhi 
             Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
-            
+           
             ! axial drag
             Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
             
@@ -815,9 +859,12 @@ CONTAINS
 
       ! ----- add waterplane moment of inertia moment if applicable -----
       IF ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then    ! check if it's crossing the water plane
-         Mtemp = 1.0/16.0 *Pi*Rod%d**4 * p%rhoW*p%g * sinPhi * (1.0 + 0.5* tanPhi**2)
+         ! >>> could scale the below based on whether part of the end cap is crossing the water plane...
+         !Mtemp = 1.0/16.0 *Pi*Rod%d**4 * p%rhoW*p%g * sinPhi * (1.0 + 0.5* tanPhi**2)  ! original (goes to infinity at 90 deg)
+         Mtemp = 1.0/16.0 *Pi*Rod%d**4 * p%rhoW*p%g * sinPhi * cosPhi  ! simple alternative that goes to 0 at 90 deg then reverses sign beyond that
          Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /)
       END IF
+
    
       ! ---------------- now add in forces on end nodes from attached lines ------------------
          
@@ -850,7 +897,7 @@ CONTAINS
          Rod%M(:,:,N) = Rod%M(:,:,N)  + Mass_i    ! mass at end node
          
       END DO
-      
+
       ! ---------------- now lump everything in 6DOF about end A -----------------------------
 
       ! question: do I really want to neglect the rotational inertia/drag/etc across the length of each segment?

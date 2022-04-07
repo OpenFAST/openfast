@@ -143,9 +143,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:10)  :: Attached      !< list of IdNums of lines attached to this connection node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
-    REAL(DbKi)  :: conX      !<  [-]
-    REAL(DbKi)  :: conY      !<  [-]
-    REAL(DbKi)  :: conZ      !<  [-]
     REAL(DbKi)  :: conM      !<  [-]
     REAL(DbKi)  :: conV      !<  [-]
     REAL(DbKi)  :: conFX      !<  [-]
@@ -417,6 +414,8 @@ IMPLICIT NONE
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     INTEGER(IntKi)  :: MDUnOut      !< Unit number of main output file [-]
     CHARACTER(1024)  :: PriPath      !< The path to the primary MoorDyn input file, used if looking for additional input files [-]
+    INTEGER(IntKi)  :: writeLog      !< Switch for level of log file output [-]
+    INTEGER(IntKi)  :: UnLog      !< Unit number of log file [-]
     INTEGER(IntKi)  :: WaveKin      !< Flag for whether or how to consider water kinematics [-]
     INTEGER(IntKi)  :: Current      !< Flag for whether or how to consider water kinematics [-]
     INTEGER(IntKi)  :: nTurbines      !< Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0 [-]
@@ -2353,9 +2352,6 @@ ENDIF
     DstConnectData%Attached = SrcConnectData%Attached
     DstConnectData%Top = SrcConnectData%Top
     DstConnectData%nAttached = SrcConnectData%nAttached
-    DstConnectData%conX = SrcConnectData%conX
-    DstConnectData%conY = SrcConnectData%conY
-    DstConnectData%conZ = SrcConnectData%conZ
     DstConnectData%conM = SrcConnectData%conM
     DstConnectData%conV = SrcConnectData%conV
     DstConnectData%conFX = SrcConnectData%conFX
@@ -2441,9 +2437,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%Attached)  ! Attached
       Int_BufSz  = Int_BufSz  + SIZE(InData%Top)  ! Top
       Int_BufSz  = Int_BufSz  + 1  ! nAttached
-      Db_BufSz   = Db_BufSz   + 1  ! conX
-      Db_BufSz   = Db_BufSz   + 1  ! conY
-      Db_BufSz   = Db_BufSz   + 1  ! conZ
       Db_BufSz   = Db_BufSz   + 1  ! conM
       Db_BufSz   = Db_BufSz   + 1  ! conV
       Db_BufSz   = Db_BufSz   + 1  ! conFX
@@ -2510,12 +2503,6 @@ ENDIF
     END DO
     IntKiBuf(Int_Xferred) = InData%nAttached
     Int_Xferred = Int_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conX
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conY
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conZ
-    Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%conM
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%conV
@@ -2631,12 +2618,6 @@ ENDIF
     END DO
     OutData%nAttached = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%conX = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-    OutData%conY = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-    OutData%conZ = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
     OutData%conM = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%conV = DbKiBuf(Db_Xferred)
@@ -10717,6 +10698,8 @@ ENDIF
     DstParamData%Delim = SrcParamData%Delim
     DstParamData%MDUnOut = SrcParamData%MDUnOut
     DstParamData%PriPath = SrcParamData%PriPath
+    DstParamData%writeLog = SrcParamData%writeLog
+    DstParamData%UnLog = SrcParamData%UnLog
     DstParamData%WaveKin = SrcParamData%WaveKin
     DstParamData%Current = SrcParamData%Current
     DstParamData%nTurbines = SrcParamData%nTurbines
@@ -11198,6 +11181,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Delim)  ! Delim
       Int_BufSz  = Int_BufSz  + 1  ! MDUnOut
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%PriPath)  ! PriPath
+      Int_BufSz  = Int_BufSz  + 1  ! writeLog
+      Int_BufSz  = Int_BufSz  + 1  ! UnLog
       Int_BufSz  = Int_BufSz  + 1  ! WaveKin
       Int_BufSz  = Int_BufSz  + 1  ! Current
       Int_BufSz  = Int_BufSz  + 1  ! nTurbines
@@ -11484,6 +11469,10 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%PriPath(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%writeLog
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%UnLog
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveKin
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%Current
@@ -12130,6 +12119,10 @@ ENDIF
       OutData%PriPath(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%writeLog = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%UnLog = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%WaveKin = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%Current = IntKiBuf(Int_Xferred)

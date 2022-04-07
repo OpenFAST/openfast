@@ -106,8 +106,8 @@ CONTAINS
       
       ! Local variables for reading file input (Previously in MDIO_ReadInput)
       INTEGER(IntKi)               :: UnEc                 ! The local unit number for this module's echo file
-    INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
-    CHARACTER(200)   :: Frmt     ! a string to hold a format statement
+      INTEGER(IntKi)               :: UnOut    ! for outputing wave kinematics data
+      CHARACTER(200)               :: Frmt     ! a string to hold a format statement
 
       CHARACTER(1024)              :: EchoFile             ! Name of MoorDyn echo file
       CHARACTER(1024)              :: Line                 ! String to temporarially hold value of read line
@@ -411,7 +411,19 @@ CONTAINS
                   CALL Conv2UC(OptString)
 
                   ! check all possible options types and see if OptString is one of them, in which case set the variable.
-                  if ( OptString == 'DTM') THEN
+                  if ( OptString == 'WRITELOG') THEN
+                     read (OptValue,*) p%writeLog
+                     if (p%writeLog > 0) then   ! if not zero, open a log file for output
+                        CALL GetNewUnit( p%UnLog )
+                        CALL OpenFOutFile ( p%UnLog, TRIM(p%RootName)//'.log', ErrStat, ErrMsg )
+                        IF ( ErrStat > AbortErrLev ) THEN
+                           ErrMsg = ' Failed to open MoorDyn log file: '//TRIM(ErrMsg)
+                           RETURN
+                        END IF
+                        write(p%UnLog,'(A)', IOSTAT=ErrStat2) "MoorDyn v2 log file with output level "//TRIM(Num2LStr(p%writeLog))
+                        write(p%UnLog,'(A)', IOSTAT=ErrStat2) "Note: options above the writeLog line in the input file will not be recorded."
+								end if
+                  else if ( OptString == 'DTM') THEN
                      read (OptValue,*) p%dtM0 
                   else if ( OptString == 'G') then
                      read (OptValue,*) p%g
@@ -630,7 +642,18 @@ CONTAINS
 
                    ! specify IdNum of line type for error checking
                    m%LineTypeList(l)%IdNum = l  
-
+                   
+                  ! write lineType information to log file
+							if (p%writeLog > 1) then
+                      write(p%UnLog, '(A12,A20)'  ) " LineType"//trim(num2lstr(l))//":"
+                      write(p%UnLog, '(A12,A20)'  ) " name: ", m%LineTypeList(l)%name
+								 write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
+								 write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
+								 write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
+								 write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
+								 write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
+								 write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
+							end if
 
                    IF ( ErrStat2 /= ErrID_None ) THEN
                       CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -667,7 +690,18 @@ CONTAINS
 
                    ! specify IdNum of rod type for error checking
                    m%RodTypeList(l)%IdNum = l  
-
+                   
+                  ! write lineType information to log file
+							if (p%writeLog > 1) then
+                      write(p%UnLog, '(A12,A20)'  ) " RodType"//trim(num2lstr(l))//":"
+                      write(p%UnLog, '(A12,A20)'  ) " name: ", m%RodTypeList(l)%name
+								 write(p%UnLog, '(A12,f12.4)') " d   : ", m%RodTypeList(l)%d  
+								 write(p%UnLog, '(A12,f12.4)') " w   : ", m%RodTypeList(l)%w  
+								 write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%RodTypeList(l)%Cdn
+								 write(p%UnLog, '(A12,f12.4)') " Can : ", m%RodTypeList(l)%Can
+								 write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%RodTypeList(l)%CdEnd
+								 write(p%UnLog, '(A12,f12.4)') " Cat : ", m%RodTypeList(l)%CaEnd
+							end if
 
                    IF ( ErrStat2 /= ErrID_None ) THEN
                       CALL SetErrStat( ErrID_Fatal, 'Failed to process rod type properties for rod '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
@@ -1522,6 +1556,13 @@ CONTAINS
    IF (wordy > 2) print *, "CpldConIs are ", m%CpldConIs
 
 
+   ! write system description to log file
+   if (p%writeLog > 1) then
+      write(p%UnLog, '(A)') "----- MoorDyn Model Summary (to be written) -----"
+   end if
+
+
+
       !------------------------------------------------------------------------------------
       !                          fill in state vector index record holders
       !------------------------------------------------------------------------------------
@@ -1920,6 +1961,38 @@ CONTAINS
 !      END IF
 !      END DO
 
+      ! -------------------------------------------------------------------
+      !        if log file, compute and write some object properties
+      ! -------------------------------------------------------------------
+      if (p%writeLog > 1) then
+      
+         write(p%UnLog, '(A)'  ) "  Bodies:"         
+         DO l = 1,p%nBodies
+            write(p%UnLog, '(A)'  )         "    Body"//trim(num2lstr(l))//":"            
+            write(p%UnLog, '(A12, f12.4)')  "      mass: ", m%BodyList(l)%M(1,1)
+         END DO
+         
+         write(p%UnLog, '(A)'  ) "  Rods:"
+         DO l = 1,p%nRods
+            write(p%UnLog, '(A)'  )         "    Rod"//trim(num2lstr(l))//":"  
+            ! m%RodList(l) 
+         END DO
+         
+         write(p%UnLog, '(A)'  ) "  Points:"
+         DO l = 1,p%nFreeCons
+            write(p%UnLog, '(A)'  )         "    Point"//trim(num2lstr(l))//":"  
+            ! m%ConnectList(l)
+         END DO
+         
+         write(p%UnLog, '(A)'  ) "  Lines:"
+         DO l = 1,p%nLines
+            write(p%UnLog, '(A)'  )         "    Line"//trim(num2lstr(l))//":"  
+            ! m%LineList(l)
+         END DO
+      
+      end if
+
+
       ! --------------------------------------------------------------------
       !           do dynamic relaxation to get ICs
       ! --------------------------------------------------------------------
@@ -2134,7 +2207,7 @@ CONTAINS
       SUBROUTINE CleanUp()
         ! ErrStat = ErrID_Fatal  
         call MD_DestroyInputFileType( InputFileDat, ErrStat2, ErrMsg2 )    ! Ignore any error messages from this
- !       IF (InitInp%Echo) CLOSE( UnEc )
+        IF (p%UnLog) CLOSE( p%UnLog )
       END SUBROUTINE
 
       !> If for some reason the file is truncated, it is possible to get into an infinite loop
@@ -2832,7 +2905,7 @@ CONTAINS
       CALL MD_DestroyMisc(m, ErrStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          
-         
+      IF (p%UnLog) CLOSE( p%UnLog )  ! close log file if it's open
          !TODO: any need to specifically deallocate things like m%xTemp%states in the above? <<<<
 
  !     IF ( ErrStat==ErrID_None) THEN

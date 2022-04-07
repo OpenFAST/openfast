@@ -124,11 +124,11 @@ CONTAINS
       !print *, 'Segment natural frequency is ', temp, ' Hz'
       
       
-      print *, "Line ElasticMod is ", Line%ElasticMod
-      print *, "EA (static value) is", Line%EA
-      print *, "EA_D              is", Line%EA_D 
-      print *, "BA                is", Line%BA 
-      print *, "BA_D              is", Line%BA_D 
+      !print *, "Line ElasticMod is ", Line%ElasticMod
+      !print *, "EA (static value) is", Line%EA
+      !print *, "EA_D              is", Line%EA_D 
+      !print *, "BA                is", Line%BA 
+      !print *, "BA_D              is", Line%BA_D 
       
 
       ! allocate node positions and velocities (NOTE: these arrays start at ZERO)

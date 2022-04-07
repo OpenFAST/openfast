@@ -1634,7 +1634,6 @@ CONTAINS
                   end do  ! I, frequencies
                   
                   ! now IFFT all the wave kinematics except surface elevation and save it into the grid of data
-                  print *, 'a'
                   CALL ApplyFFT_cx( p%PDyn  (:,iz,iy,ix), WaveDynPC , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveDynP.', ErrStat,ErrMsg,RoutineName)
                   CALL ApplyFFT_cx( p%uxWave(:,iz,iy,ix), WaveVelCHx, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelHx.',ErrStat,ErrMsg,RoutineName)
                   CALL ApplyFFT_cx( p%uyWave(:,iz,iy,ix), WaveVelCHy, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelHy.',ErrStat,ErrMsg,RoutineName)
@@ -1646,9 +1645,7 @@ CONTAINS
                end do ! iz
                  
                ! IFFT wave elevation here because it's only at the surface
-               print *, 'b'
                CALL ApplyFFT_cx( p%zeta(:,iy,ix) , WaveElevC , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveElev.', ErrStat,ErrMsg,RoutineName)
-               print *, 'c'
             end do ! iy
          end do ! ix
 

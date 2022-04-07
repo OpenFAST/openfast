@@ -393,6 +393,7 @@ CONTAINS
 
       ! Initialize variables
       U = 0.0_DbKi      ! Set to zero for now
+      Body%F6net = 0.0_DbKi
 
       ! First, the body's own mass matrix must be adjusted based on its orientation so that 
       ! we have a mass matrix in the global orientation frame
@@ -429,6 +430,10 @@ CONTAINS
          ! get net force and mass from Connection on body ref point (global orientation)
          CALL Connect_GetNetForceAndMass( m%ConnectList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m, p)
          
+         if (ABS(F6_i(5)) > 1.0E12) then
+            print *, "Warning: extreme pitch moment from body-attached Point ", l
+         end if
+         
          ! sum quantitites
          Body%F6net = Body%F6net + F6_i
          Body%M     = Body%M     + M6_i
@@ -439,6 +444,10 @@ CONTAINS
       
          ! get net force and mass from Rod on body ref point (global orientation)
          CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), F6_i, M6_i, m, p)
+         
+         if (ABS(F6_i(5)) > 1.0E12) then
+            print *, "Warning: extreme pitch moment from body-attached Rod ", l
+         end if
          
          ! sum quantitites
          Body%F6net = Body%F6net + F6_i
