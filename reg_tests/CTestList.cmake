@@ -162,6 +162,15 @@ function(ifw_py_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ifw_py_regression)
 
+# seastate
+function(seast_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSeaStateRegressionCase.py")
+  set(SEASTATE_EXECUTABLE "${CTEST_SEASTATE_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/seastate")
+  regression(${TEST_SCRIPT} ${SEASTATE_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(seast_regression)
+
 #===============================================================================
 # Regression tests
 #===============================================================================
@@ -264,3 +273,8 @@ sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore")
 # InflowWind regression tests
 ifw_regression("ifw_turbsimff"                                "inflowwind")
 ifw_py_regression("ifw_py_turbsimff"                          "inflowwind;python")
+
+# SeaState regression tests
+seast_regression("seastate1"                                 "seastate")
+seast_regression("seastate_wavemod5"                         "seastate")
+seast_regression("seastate_wr_kin1"                          "seastate")
