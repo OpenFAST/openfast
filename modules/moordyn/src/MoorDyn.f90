@@ -35,7 +35,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', '', '' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.a25', '2022-04-11' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -428,13 +428,13 @@ CONTAINS
                      read (OptValue,*) p%dtM0 
                   else if ( OptString == 'G') then
                      read (OptValue,*) p%g
-                  else if ( OptString == 'RHOW') then
+                  else if (( OptString == 'RHOW') .or. ( OptString == 'RHO')) then
                      read (OptValue,*) p%rhoW
                   else if (( OptString == 'WTRDPTH') .or. ( OptString == 'DEPTH') .or. ( OptString == 'WATERDEPTH')) then
                      read (OptValue,*) DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
-                  else if ( OptString == 'KBOT')  then
+                  else if (( OptString == 'KBOT') .or. ( OptString == 'KB'))  then
                      read (OptValue,*) p%kBot
-                  else if ( OptString == 'CBOT')  then
+                  else if (( OptString == 'CBOT') .or. ( OptString == 'CB'))  then
                      read (OptValue,*) p%cBot
                   else if ( OptString == 'DTIC')  then
                      read (OptValue,*) InputFileDat%dtIC

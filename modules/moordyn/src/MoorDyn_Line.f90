@@ -72,7 +72,7 @@ CONTAINS
       ! note: Line%BA is set later
       Line%EA_D = LineProp%EA_D
       Line%BA_D = LineProp%BA_D
-      !Line%EI   = LineProp%EI  <<< for bending stiffness
+      Line%EI   = LineProp%EI  !<<< for bending stiffness
       
       Line%Can   = LineProp%Can
       Line%Cat   = LineProp%Cat
@@ -1078,19 +1078,24 @@ CONTAINS
       !       Line%V(I) = Pi/4.0 * d*d*Line%l(I)                        !volume attributed to segment
       END DO
 
-      !calculate unit tangent vectors (q) for each node (including ends) note: I think these are pointing toward 0 rather than N!
-      CALL UnitVector(Line%r(:,0), Line%r(:,1), Line%q(:,0), dummyLength) ! compute unit vector q
+      !calculate unit tangent vectors (q) for each internal node based on adjacent node positions
       DO I = 1, N-1
-        CALL UnitVector(Line%r(:,I-1), Line%r(:,I+1), Line%q(:,I), dummyLength) ! compute unit vector q ... using adjacent two nodes!
+        CALL UnitVector(Line%r(:,I-1), Line%r(:,I+1), Line%q(:,I), dummyLength)
       END DO
-      CALL UnitVector(Line%r(:,N-1), Line%r(:,N), Line%q(:,N), dummyLength)     ! compute unit vector q
-
-
+      
+	   ! calculate unit tangent vectors for either end node if the line has no bending stiffness of if either end is pinned (otherwise it's already been set via setEndStateFromRod)
+      if ((Line%endTypeA==0) .or. (Line%EI==0.0)) then 
+         CALL UnitVector(Line%r(:,0), Line%r(:,1), Line%q(:,0), dummyLength)
+      end if
+      if ((Line%endTypeB==0) .or. (Line%EI==0.0)) then 
+         CALL UnitVector(Line%r(:,N-1), Line%r(:,N), Line%q(:,N), dummyLength)
+      end if
+      
       ! apply wave kinematics (if there are any) 
       DO i=0,N
          CALL getWaterKin(p, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, m%WaveTi, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i))
       END DO
-
+      
 
       ! --------------- calculate mass (including added mass) matrix for each node -----------------
       DO I = 0, N
@@ -1207,20 +1212,17 @@ CONTAINS
             
                if (Line%endTypeA > 0) then ! if attached to Rod i.e. cantilever connection
                
-                  Kurvi = GetCurvature(Line%lstr(i), Line%q(:,i), Line%qs(:,i))  ! curvature <<< check if this approximation works for an end (assuming rod angle is node angle which is middle of if there was a segment -1/2
+                  Kurvi = GetCurvature(Line%lstr(1), Line%q(:,0), Line%qs(:,1))  ! curvature (assuming rod angle is node angle which is middle of if there was a segment -1/2)
          
-                  pvec = cross_product(Line%q(:,0), Line%qs(:,i))            ! get direction of bending radius axis
+                  pvec = cross_product(Line%q(:,0), Line%qs(:,1))                ! get direction of bending radius axis
                   
-                  Mforce_ip1 = cross_product(Line%qs(:,i), pvec)        ! get direction of resulting force from bending to apply on node i+1
-                  
-                  ! record bending moment at end for potential application to attached object   <<<< do double check this....
-                  call scalevector(pvec, Kurvi*Line%EI, Line%endMomentA)
-                  
-                  ! scale force direction vectors by desired moment force magnitudes to get resulting forces on adjacent nodes
-                  call scalevector(Mforce_ip1, Kurvi*Line%EI/Line%lstr(i), Mforce_ip1)
+                  Mforce_ip1 = cross_product(Line%qs(:,1), pvec)                 ! get direction of resulting force from bending to apply on node i+1
+
+                  call scalevector(pvec, Kurvi*Line%EI, Line%endMomentA)         ! record bending moment at end for potential application to attached object
+
+                  call scalevector(Mforce_ip1, Kurvi*Line%EI/Line%lstr(1), Mforce_ip1)  ! scale force direction vectors by desired moment force magnitudes to get resulting forces on adjacent nodes
                      
-                  ! set force on node i to cancel out forces on adjacent nodes
-                  Mforce_i = -Mforce_ip1
+                  Mforce_i = -Mforce_ip1                                         ! set force on node i to cancel out forces on adjacent nodes
                   
                   ! apply these forces to the node forces
                   Line%Bs(:,i  ) = Line%Bs(:,i  ) +  Mforce_i
@@ -1233,20 +1235,17 @@ CONTAINS
             
                if (Line%endTypeB > 0) then ! if attached to Rod i.e. cantilever connection
                
-                  Kurvi = GetCurvature(Line%lstr(i-1), Line%qs(:,i-1), Line%q(:,i))  ! curvature <<< check if this approximation works for an end (assuming rod angle is node angle which is middle of if there was a segment -1/2
+                  Kurvi = GetCurvature(Line%lstr(N), Line%qs(:,N), Line%q(:,N))  ! curvature (assuming rod angle is node angle which is middle of if there was a segment -1/2
                   
-                  pvec = cross_product(Line%qs(:,i-1), Line%q(:,N))         ! get direction of bending radius axis
+                  pvec = cross_product(Line%qs(:,N), Line%q(:,N))                ! get direction of bending radius axis
                   
-                  Mforce_im1 = cross_product(Line%qs(:,i-1), pvec)    ! get direction of resulting force from bending to apply on node i-1
+                  Mforce_im1 = cross_product(Line%qs(:,N), pvec)                 ! get direction of resulting force from bending to apply on node i-1
                   
-                  ! record bending moment at end for potential application to attached object   <<<< do double check this....
-                  call scalevector(pvec, -Kurvi*Line%EI, Line%endMomentB ) ! note end B is oposite sign as end A
+                  call scalevector(pvec, -Kurvi*Line%EI, Line%endMomentB )       ! record bending moment at end (note end B is oposite sign as end A)
                   
-                  ! scale force direction vectors by desired moment force magnitudes to get resulting forces on adjacent nodes
-                  call scalevector(Mforce_im1, Kurvi*Line%EI/Line%lstr(i-1), Mforce_im1)
-                     
-                  ! set force on node i to cancel out forces on adjacent nodes
-                  Mforce_i =  Mforce_im1
+                  call scalevector(Mforce_im1, Kurvi*Line%EI/Line%lstr(N), Mforce_im1)  ! scale force direction vectors by desired moment force magnitudes to get resulting forces on adjacent nodes
+                  
+                  Mforce_i =  Mforce_im1                                         ! set force on node i to cancel out forces on adjacent nodes
                   
                   ! apply these forces to the node forces
                   Line%Bs(:,i-1) = Line%Bs(:,i-1) +  Mforce_im1
@@ -1256,19 +1255,18 @@ CONTAINS
             
             else   ! internal node
             
-               Kurvi = GetCurvature(Line%lstr(i-1)+Line%lstr(i), Line%qs(:,i-1), Line%qs(:,i))  ! curvature <<< remember to check sign, or just take abs
+               Kurvi = GetCurvature(Line%lstr(i)+Line%lstr(i+1), Line%qs(:,i), Line%qs(:,i+1))  ! curvature
                
-               pvec = cross_product(Line%qs(:,i-1), Line%qs(:,i))         ! get direction of bending radius axis
+               pvec = cross_product(Line%qs(:,i), Line%qs(:,i+1))  ! get direction of bending radius axis
                
-               Mforce_im1 = cross_product(Line%qs(:,i-1), pvec)    ! get direction of resulting force from bending to apply on node i-1
-               Mforce_ip1 = cross_product(Line%qs(:,i  ), pvec)    ! get direction of resulting force from bending to apply on node i+1
+               Mforce_im1 = cross_product(Line%qs(:,i  ), pvec)    ! get direction of resulting force from bending to apply on node i-1
+               Mforce_ip1 = cross_product(Line%qs(:,i+1), pvec)    ! get direction of resulting force from bending to apply on node i+1
                
                ! scale force direction vectors by desired moment force magnitudes to get resulting forces on adjacent nodes
-               call scalevector(Mforce_im1, Kurvi*Line%EI/Line%lstr(i-1), Mforce_im1)
-               call scalevector(Mforce_ip1, Kurvi*Line%EI/Line%lstr(i  ), Mforce_ip1)
-            
-               ! set force on node i to cancel out forces on adjacent nodes
-               Mforce_i = -Mforce_im1 - Mforce_ip1
+               call scalevector(Mforce_im1, Kurvi*Line%EI/Line%lstr(i  ), Mforce_im1)
+               call scalevector(Mforce_ip1, Kurvi*Line%EI/Line%lstr(i+1), Mforce_ip1)
+        
+               Mforce_i = -Mforce_im1 - Mforce_ip1                 ! set force on node i to cancel out forces on adjacent nodes
                
                ! apply these forces to the node forces
                Line%Bs(:,i-1) = Line%Bs(:,i-1) + Mforce_im1 
@@ -1429,10 +1427,6 @@ CONTAINS
             Xd(3*N-3 + 3*I-3 + J) = Line%rd(J,I);       ! dxdt = V  (velocities)
             Xd(        3*I-3 + J) = Sum1                ! dVdt = RHS * A  (accelerations)
             
-            !if ((Line%Time > 100) .and. (Line%IdNum == 1) .and. (I==19) .and. (J==3)) then
-            !   print *, Line%Time, Line%r(J,I), Line%rd(J,I), Sum1
-            !end if
-
          END DO ! J
       END DO  ! I
 
@@ -1578,7 +1572,7 @@ CONTAINS
    !--------------------------------------------------------------
 
 
-   ! set end node unit vector of a line (this is called by an attached to a Rod, only applicable for bending stiffness)
+   ! set end node unit vector of a line (this is called when attached to a Rod, only applicable for bending stiffness)
    !--------------------------------------------------------------
    SUBROUTINE Line_SetEndOrientation(Line, qin, topOfLine, rodEndB)
 

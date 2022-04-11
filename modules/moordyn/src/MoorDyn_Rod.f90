@@ -588,8 +588,8 @@ CONTAINS
       call GetOrientationAngles(Rod%q, phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
  
       ! save to internal roll and pitch variables for use in output <<< should check these, make Euler angles isntead of independent <<<
-      Rod%roll  = -180.0/Pi * phi*sinBeta
-      Rod%pitch =  180.0/Pi * phi*cosBeta
+      Rod%roll  = -phi*sinBeta
+      Rod%pitch =  phi*cosBeta
 
       ! set interior node positions and velocities (stretch the nodes between the endpoints linearly) (skipped for zero-length Rods)
       DO i=1,N-1
