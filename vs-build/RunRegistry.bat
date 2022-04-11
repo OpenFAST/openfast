@@ -42,6 +42,7 @@ SET AD_Loc=%Modules_Loc%\aerodyn\src
 SET SrvD_Loc=%Modules_Loc%\servodyn\src
 SET BD_Loc=%Modules_Loc%\beamdyn\src
 SET SC_Loc=%Modules_Loc%\supercontroller\src
+SET ADsk_Loc=%Modules_Loc%\aerodisk\src
 
 SET AWAE_Loc=%Modules_Loc%\awae\src
 SET WD_Loc=%Modules_Loc%\wakedynamics\src
@@ -50,7 +51,8 @@ SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SrvD_Loc%" -I "%AD14_Loc%" -I^
  "%AD_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
  "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
- "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%OpFM_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%"
+ "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%OpFM_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%" -I^
+ "%ADsk_Loc%"
 
 
 SET ModuleName=%1
@@ -266,6 +268,12 @@ GOTO checkError
 SET CURR_LOC=%AWAE_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\AWAE_Registry.txt" -I %NWTC_Lib_Loc% -I %IfW_Loc% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
+:ADSK
+SET CURR_LOC=%ADsk_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\AeroDisk_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap -O "%Output_Loc%"
 GOTO checkError
 
 :Version

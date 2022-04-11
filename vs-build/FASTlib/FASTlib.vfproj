@@ -508,7 +508,50 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\aerodyn14\src\AeroDyn14.f90"/>
 		<File RelativePath="..\..\modules\aerodyn14\src\AeroSubs.f90"/>
-		<File RelativePath="..\..\modules\aerodyn14\src\GenSubs.f90"/></Filter></Filter>
+		<File RelativePath="..\..\modules\aerodyn14\src\GenSubs.f90"/></Filter>
+		<Filter Name="AeroDisk">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Registry.txt">
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk.f90"/>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_IO.f90"/>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Output_Params.f90"/></Filter></Filter>
 		<Filter Name="BeamDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\beamdyn\src\BeamDyn_Types.f90">
