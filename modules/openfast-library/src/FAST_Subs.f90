@@ -426,7 +426,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
    IF ( p_FAST%CompAero == Module_AD14 ) THEN
 
-      CALL AD_SetInitInput(Init%InData_AD14, Init%OutData_ED, ED%y, p_FAST, ErrStat2, ErrMsg2)            ! set the values in Init%InData_AD14
+      CALL AD14_SetInitInput(Init%InData_AD14, Init%OutData_ED, ED%y, p_FAST, ErrStat2, ErrMsg2)            ! set the values in Init%InData_AD14
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       CALL AD14_Init( Init%InData_AD14, AD14%Input(1), AD14%p, AD14%x(STATE_CURR), AD14%xd(STATE_CURR), AD14%z(STATE_CURR), &
@@ -3690,8 +3690,8 @@ SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
 
 END SUBROUTINE WrVTK_Ground
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine sets up the information needed to initialize AeroDyn, then initializes AeroDyn
-SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrStat, ErrMsg)
+!> This subroutine sets up the information needed to initialize AeroDyn14.  Call AD14_Init after calling this routine
+SUBROUTINE AD14_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrStat, ErrMsg)
 
    ! Passed variables:
    TYPE(AD14_InitInputType),INTENT(INOUT) :: InitInData_AD14  !< The initialization input to AeroDyn14
@@ -3778,7 +3778,7 @@ SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrSta
 
 
    RETURN
-END SUBROUTINE AD_SetInitInput
+END SUBROUTINE AD14_SetInitInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the number of subcycles (substeps) for modules at initialization, checking to make sure that their requested
 !! time step is valid.
