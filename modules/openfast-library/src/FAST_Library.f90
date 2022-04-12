@@ -22,8 +22,8 @@ MODULE FAST_Data
    INTEGER(IntKi)                        :: NumTurbines 
    INTEGER,        PARAMETER             :: IntfStrLen  = 1025       ! length of strings through the C interface
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 4000        ! Maximum number of outputs
-   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 10       ! Maximum number of initialization values from Simulink
-   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 8
+   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 53       ! Maximum number of initialization values from Simulink
+   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 51
    
    
       ! Global (static) data:
@@ -187,17 +187,7 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
       ! initialize variables:   
    n_t_global = 0
 
-#ifdef SIMULINK_DirectFeedThrough   
-   IF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
-      ErrStat_c = ErrID_Fatal
-      ErrMsg  = "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR
-      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
-      RETURN
-   END IF
 
-   CALL FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, Turbine(iTurb)%m_FAST)
-
-#endif      
    !...............................................................................................................................
    ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................  
@@ -318,6 +308,9 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Er
       
 end subroutine FAST_Update 
 !==================================================================================================================================
+!> NOTE: If this interface is changed, update the table in the ServoDyn_IO.f90::WrSumInfo4Simulink routine
+!!    Ideally we would write this summary info from here, but that isn't currently done.  So as a workaround so the user has some
+!!    vague idea what went wrong with their simulation, we have ServoDyn include the arrangement set here in the SrvD.sum file.
 subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
 
    USE, INTRINSIC :: ISO_C_Binding
@@ -334,17 +327,21 @@ subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
          ! set the inputs from external code here...
          ! transfer inputs from Simulink to FAST
       IF ( NumInputs_c < NumFixedInputs ) RETURN ! This is an error
-      
-      m_FAST%ExternInput%GenTrq      = InputAry(1)
-      m_FAST%ExternInput%ElecPwr     = InputAry(2)
-      m_FAST%ExternInput%YawPosCom   = InputAry(3)
-      m_FAST%ExternInput%YawRateCom  = InputAry(4)
-      m_FAST%ExternInput%BlPitchCom  = InputAry(5:7)
-      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)         
+
+   !NOTE: if anything here changes, update ServoDyn_IO.f90::WrSumInfo4Simulink
+      m_FAST%ExternInput%GenTrq           = InputAry(1)
+      m_FAST%ExternInput%ElecPwr          = InputAry(2)
+      m_FAST%ExternInput%YawPosCom        = InputAry(3)
+      m_FAST%ExternInput%YawRateCom       = InputAry(4)
+      m_FAST%ExternInput%BlPitchCom       = InputAry(5:7)
+      m_FAST%ExternInput%HSSBrFrac        = InputAry(8)
+      m_FAST%ExternInput%BlAirfoilCom     = InputAry(9:11)
+      m_FAST%ExternInput%CableDeltaL      = InputAry(12:31)
+      m_FAST%ExternInput%CableDeltaLdot   = InputAry(32:51)
             
       IF ( NumInputs_c > NumFixedInputs ) THEN  ! NumFixedInputs is the fixed number of inputs
          IF ( NumInputs_c == NumFixedInputs + 3 ) &
-             m_FAST%ExternInput%LidarFocus = InputAry(9:11)
+             m_FAST%ExternInput%LidarFocus = InputAry(52:54)
       END IF   
       
 end subroutine FAST_SetExternalInputs

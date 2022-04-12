@@ -10,7 +10,7 @@ generated from both the
 `dev <http://github.com/openfast/openfast/tree/dev/>`_ branches whenever
 new commits are added. Clicking on the bar on the lower left corner of the
 page reveals a panel (see image below) containing options to select the branch
-of the repository, download the documentation other formats (PFD, HTML, EPub),
+of the repository, download the documentation other formats (PDF, HTML, EPub),
 and link to other relevant websites.
 
 .. image:: ../_static/docs_options.png

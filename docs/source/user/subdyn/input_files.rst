@@ -608,11 +608,6 @@ specified in the SUBDYN section of the driver input file when running
 SubDyn in stand-alone mode, or in the FAST input file when running a
 coupled simulation. See Section 4.2 for summary file details.
 
-Currently, **OutCOSM** is ignored. In future releases,
-specifying **OutCOSM** = TRUE will cause SubDyn to include direction
-cosine matrices (undeflected) in the summary file for only those members
-requested in the list of output channels.
-
 The following two inputs specified whether mode shapes should be written
 to disk.  **OutCBModes** is a flag that controls the output of the Guyan
 and Craig-Bampton modes. Similarly, **OutFEMModes**, controls the output
@@ -627,6 +622,10 @@ The files can be opened to visualize the modes using the tool viz3danim
 (see the `live version <https://ebranlard.github.io/viz3Danim/>`_
 , or its `github repository <https://github.com/ebranlard/viz3danim>`_).
 
+Currently, **OutCOSM** is ignored. In future releases,
+specifying **OutCOSM** = TRUE will cause SubDyn to include direction
+cosine matrices (undeflected) in the summary file for only those members
+requested in the list of output channels.
 
 Specifying **OutAll** = TRUE causes SubDyn to output forces and
 moments at all of the joints (not internal nodes). That is, the static

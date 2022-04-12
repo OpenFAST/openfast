@@ -1,12 +1,12 @@
-------- AERODYN v15.03.\* INPUT FILE ------------------------------------------------
+------- AERODYN INPUT FILE -----------------------------------------------
 IEA Wind Task 37 land-based reference wind turbine
 ====== General Options ===================================================
 False          Echo        - Echo the input to "<rootname>.AD.ech"? (flag)
 "default"      DT_AA       - Time interval for aerodynamic calculations {or "default"} (s)
 1              WakeMod     - Type of wake/induction model (switch) {0=none, 1=BEMT}
 2              AFAeroMod   - Type of blade airfoil aerodynamics model (switch
-0              TwrPotent   - Type tower influence on wind around the tower (switch)
-False          TwrShadow   - Calculate tower influence on wind (flag)
+0              TwrPotent   - Type of tower influence on wind around the tower (switch)
+0              TwrShadow   - Type of tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
 False          TwrAero     - Calculate tower aerodynamic loads? (flag)
 False          FrozenWake  - Assume frozen wake during linearization? (flag
 False          CavitCheck  - Perform cavitation check? (flag)
