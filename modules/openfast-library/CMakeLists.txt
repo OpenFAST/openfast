@@ -27,6 +27,7 @@ add_library(openfast_prelib src/FAST_Types.f90)
 target_link_libraries(openfast_prelib
   nwtclibs
   ifwlib
+  aerodisklib
   aerodynlib
   aerodyn14lib
   servodynlib

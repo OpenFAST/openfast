@@ -16,6 +16,7 @@ usefrom	Registry_BeamDyn.txt
 usefrom	ServoDyn_Registry.txt
 usefrom	Registry-AD14.txt
 usefrom	AeroDyn_Registry.txt
+usefrom	AeroDisk_Registry.txt
 usefrom	SubDyn_Registry.txt
 usefrom	HydroDyn.txt
 usefrom	IceFloe_FASTRegistry.inp
@@ -53,7 +54,8 @@ param	^	-	INTEGER	Module_MD	-	14	-	"MoorDyn"	-
 param	^	-	INTEGER	Module_Orca	-	15	-	"OrcaFlex integration (HD/Mooring)"	-
 param	^	-	INTEGER	Module_IceF	-	16	-	"IceFloe"	-
 param	^	-	INTEGER	Module_IceD	-	17	-	"IceDyn"	-
-param	^	-	INTEGER	NumModules	-	17	-	"The number of modules available in FAST"	-
+param	^	-	INTEGER	Module_ADsk	-	18	-	"AeroDisk"	-
+param	^	-	INTEGER	NumModules	-	18	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
@@ -109,7 +111,7 @@ typedef	^	FAST_ParameterType	IntKi	SizeJac_Opt1	{9}	-	-	"(1)=size of matrix; (2)
 # Feature switches and flags:
 typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM}"	-
-typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD; Module_ADsk}"	-
 typedef	^	FAST_ParameterType	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (switch) {Module_None; Module_HD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_HD}"	-
@@ -224,7 +226,8 @@ typedef   ^      ^                   AD_DiscreteStateType                  xd_AD
 typedef   ^      ^                   AD_ConstraintStateType                 z_AD      {:}    -   -   "Constraint states"
 typedef   ^      ^                   AD_OtherStateType                OtherSt_AD      {:}    -   -   "Other states"
 typedef   ^      ^                   AD_InputType                           u_AD      {:}    -   -   "System inputs"
-# ..... InflowWind OP data .......................................................................................................
+# ..... No AeroDisk data ......................................................................................................
+# ..... InflowWind OP data ....................................................................................................
 typedef   FAST   FAST_LinStateSave   InflowWind_ContinuousStateType         x_IfW     {:}    -   -   "Continuous states"
 typedef   ^      ^                   InflowWind_DiscreteStateType          xd_IfW     {:}    -   -   "Discrete states"
 typedef   ^      ^                   InflowWind_ConstraintStateType         z_IfW     {:}    -   -   "Constraint states"
@@ -446,6 +449,20 @@ typedef	^	^	AD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSt
 typedef	^	^	AD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
+# ..... AeroDisk data .......................................................................................................
+typedef	FAST	AeroDisk_Data	ADsk_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	ADsk_DiscreteStateType	xd	{2}	-	-	"Discrete states"
+typedef	^	^	ADsk_ConstraintStateType	z	{2}	-	-	"Constraint states"
+typedef	^	^	ADsk_OtherStateType	OtherSt	{2}	-	-	"Other states"
+typedef	^	^	ADsk_ParameterType	p	-	-	-	"Parameters"
+typedef	^	^	ADsk_InputType	u	-	-	-	"System inputs"
+typedef	^	^	ADsk_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	ADsk_MiscVarType	m	-	-	-	"Misc/optimization variables"
+typedef	^	^	ADsk_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
+typedef	^	^	ADsk_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
+typedef	^	^	ADsk_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
+
 # ..... InflowWind data .......................................................................................................
 typedef	FAST	InflowWind_Data	InflowWind_ContinuousStateType	x	{2}	-	-	"Continuous states"
 typedef	^	^	InflowWind_DiscreteStateType	xd	{2}	-	-	"Discrete states"
@@ -626,6 +643,8 @@ typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn Towe
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
+# ED <-> ADsk (hub)
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_ADsk_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
 # IceF <-> SD
 typedef	^	FAST_ModuleMapType	MeshMapType	IceF_P_2_SD_P	-	-	-	"Map IceFloe point mesh to SubDyn LMesh point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceF_P	-	-	-	"Map SubDyn y3Mesh point mesh to IceFloe point mesh"
@@ -694,6 +713,8 @@ typedef   ^   FAST_InitData    AD14_InitInputType           InData_AD14     -  -
 typedef   ^   FAST_InitData    AD14_InitOutputType         OutData_AD14     -  -  -  "AD14 Initialization output data"
 typedef   ^   FAST_InitData    AD_InitInputType             InData_AD       -  -  -  "AD Initialization input data"
 typedef   ^   FAST_InitData    AD_InitOutputType           OutData_AD       -  -  -  "AD Initialization output data"
+typedef   ^   FAST_InitData    ADsk_InitInputType           InData_ADsk     -  -  -  "ADsk Initialization input data"
+typedef   ^   FAST_InitData    ADsk_InitOutputType         OutData_ADsk     -  -  -  "ADsk Initialization output data"
 typedef   ^   FAST_InitData    InflowWind_InitInputType     InData_IfW      -  -  -  "IfW Initialization input data"
 typedef   ^   FAST_InitData    InflowWind_InitOutputType   OutData_IfW      -  -  -  "IfW Initialization output data"
 typedef   ^   FAST_InitData    OpFM_InitInputType           InData_OpFM     -  -  -  "OpFM Initialization input data"

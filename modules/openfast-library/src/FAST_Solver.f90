@@ -28,6 +28,7 @@ MODULE FAST_Solver
    USE FAST_ModTypes
       
    USE AeroDyn
+   USE AeroDisk
    USE AeroDyn14
    USE InflowWind
    USE ElastoDyn
