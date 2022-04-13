@@ -204,6 +204,10 @@ void fast::OpenFAST::init() {
                 timeZero = true;
 
                 numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
+                if(numVelPtsTwr[iTurb] == 0) {
+                    numForcePtsTwr[iTurb] = 0;
+                    std::cout << "Aerodyn doesn't want to calculate forces on the tower. All actuator points on the tower are turned off for turbine " << turbineMapProcToGlob[iTurb] << "." << std::endl ;
+                }
 
                 int nfpts = get_numForcePtsLoc(iTurb);
                 forceNodeVel[iTurb].resize(nfpts);
