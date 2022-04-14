@@ -669,27 +669,27 @@ contains
         !if (Failed) call CleanUp()
    end function Failed
    function getN3D() result(Nr)        ! For when TSR is given
-      integer(SiKi) :: Nr(8)
+      real(SiKi)  :: Nr(8)
       Nr( 1) = ( 1.0_SiKi - r_TSR ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi - r_Skew )
       Nr( 2) = ( 1.0_SiKi - r_TSR ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr( 3) = ( 1.0_SiKi - r_TSR ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi - r_Skew )
-      Nr( 4) = ( 1.0_SiKi - r_TSR ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi + r_Skew )    
+      Nr( 4) = ( 1.0_SiKi - r_TSR ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr( 5) = ( 1.0_SiKi + r_TSR ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi - r_Skew )
       Nr( 6) = ( 1.0_SiKi + r_TSR ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr( 7) = ( 1.0_SiKi + r_TSR ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi - r_Skew )
-      Nr( 8) = ( 1.0_SiKi + r_TSR ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi + r_Skew )    
+      Nr( 8) = ( 1.0_SiKi + r_TSR ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr     = Nr/ REAL( SIZE(Nr), SiKi )  ! normalize
    end function getN3D
    function getN4D() result(Nr)        ! For when TSR is not given
-      integer(SiKi) :: Nr(16)
+      real(SiKi)  :: Nr(16)
       Nr( 1) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi - r_VRel ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi - r_Skew )
       Nr( 2) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi - r_VRel ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr( 3) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi - r_VRel ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi - r_Skew )
-      Nr( 4) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi - r_VRel ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi + r_Skew )    
+      Nr( 4) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi - r_VRel ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr( 5) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi + r_VRel ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi - r_Skew )
       Nr( 6) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi + r_VRel ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr( 7) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi + r_VRel ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi - r_Skew )
-      Nr( 8) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi + r_VRel ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi + r_Skew )    
+      Nr( 8) = ( 1.0_SiKi - r_RtSpd ) * ( 1.0_SiKi + r_VRel ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr( 9) = ( 1.0_SiKi + r_RtSpd ) * ( 1.0_SiKi - r_VRel ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi - r_Skew )
       Nr(10) = ( 1.0_SiKi + r_RtSpd ) * ( 1.0_SiKi - r_VRel ) * ( 1.0_SiKi - r_Pitch ) * ( 1.0_SiKi + r_Skew )
       Nr(11) = ( 1.0_SiKi + r_RtSpd ) * ( 1.0_SiKi - r_VRel ) * ( 1.0_SiKi + r_Pitch ) * ( 1.0_SiKi - r_Skew )
