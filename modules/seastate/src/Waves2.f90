@@ -213,6 +213,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
       ErrStatTmp  = ErrID_None
       ErrMsg      = ""
       ErrMsgTmp   = ""
+      y%DummyOutput = 0  ! initialize dummy variable to make the compiler warnings go away
 
          ! Initialize the data storage
       misc%LastIndWave = 1_IntKi

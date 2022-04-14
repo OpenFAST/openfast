@@ -200,7 +200,7 @@ typedef   ^                  ^                      SeaSt_Interp_ParameterType  
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
-typedef   ^                  InputType              SiKi                     DummyInput        -       -      -  "Remove this variable if you have discrete states" -
+typedef   ^                  InputType              SiKi                     DummyInput        -       -      -  "Remove this variable if you have inputs" -
 #
 #
 # ..... Outputs ...................................................................................................................

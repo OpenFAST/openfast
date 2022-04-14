@@ -1853,7 +1853,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
           tmpComplex = CMPLX( InitOut%WaveElevC0(1,I) , InitOut%WaveElevC0(2,I)  )
           tmpComplex = tmpComplex * CMPLX( cos(ConstWavePhase), sin(ConstWavePhase)  )
           InitOut%WaveElevC0(1,I) = REAL(tmpComplex)
-          InitOut%WaveElevC0(2,I) = IMAG(tmpComplex)
+          InitOut%WaveElevC0(2,I) = AIMAG(tmpComplex)
         END DO
       ENDIF
       ! End of Constrained Wave
@@ -1986,7 +1986,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                ! This subroutine call applies the FFT at the correct location.
          i = mod(k-1, InitInp%NGrid(1)) + 1
          j = (k-1) / InitInp%NGrid(2) + 1
-         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp )
+         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
          CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'VariousWaves_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -2353,7 +2353,7 @@ CONTAINS
       CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStatLcl,ErrMsgLcl,'WaveElevTimeSeriesAtXY')
 
       WaveElevCAtXY( 1,: ) = REAL(tmpComplexArr(:))
-      WaveElevCAtXY( 2,: ) = IMAG(tmpComplexArr(:))
+      WaveElevCAtXY( 2,: ) = AIMAG(tmpComplexArr(:))
          ! Append first datpoint as the last as aid for repeated wave data
       WaveElevAtXY(InitOut%NStepWave) = WaveElevAtXY(0)
 
