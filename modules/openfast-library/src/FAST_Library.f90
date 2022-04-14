@@ -561,6 +561,11 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
       IF (NumBl_c > 0) THEN
          NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
       END IF
+   ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_ADsk) THEN
+      call WrScr("AeroDisk not implmented in FAST_Library.f90")
+      ErrStat = AbortErrLev
+      ErrMsg  = "AeroDisk not implmented in FAST_Library.f90"
+      if (Failed()) return
    END IF
    
 contains

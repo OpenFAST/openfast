@@ -644,6 +644,7 @@ typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
 # ED <-> ADsk (hub)
+typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_ED_P_H	-	-	-	"Map AeroDisk point load mesh to ElastoDyn hub point load mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_ADsk_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
 # IceF <-> SD
 typedef	^	FAST_ModuleMapType	MeshMapType	IceF_P_2_SD_P	-	-	-	"Map IceFloe point mesh to SubDyn LMesh point mesh"
@@ -770,6 +771,7 @@ typedef	^	FAST_TurbineType	BeamDyn_Data	BD	-	-	-	"Data for the BeamDyn module"	-
 typedef	^	FAST_TurbineType	ServoDyn_Data	SrvD	-	-	-	"Data for the ServoDyn module"	-
 typedef	^	FAST_TurbineType	AeroDyn_Data	AD	-	-	-	"Data for the AeroDyn module"	-
 typedef	^	FAST_TurbineType	AeroDyn14_Data	AD14	-	-	-	"Data for the AeroDyn14 module"	-
+typedef	^	FAST_TurbineType	AeroDisk_Data	ADsk	-	-	-	"Data for the AeroDisk module"	-
 typedef	^	FAST_TurbineType	InflowWind_Data	IfW	-	-	-	"Data for InflowWind module"	-
 typedef	^	FAST_TurbineType	OpenFOAM_Data	OpFM	-	-	-	"Data for OpenFOAM integration module"	-
 typedef	^	FAST_TurbineType	SCDataEx_Data	SC_DX	-	-	-	"Data for SuperController integration module"	-
