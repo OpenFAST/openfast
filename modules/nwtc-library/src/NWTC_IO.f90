@@ -4045,7 +4045,7 @@ END SUBROUTINE CheckR16Var
       INTEGER                                :: DashLoc                       ! The possible location of the dash in the range text.
 
       CHARACTER( 20)                         :: InclInfoUC                    ! InclInfo converted to upper case.
-      CHARACTER(512)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(2048)                        :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(1024)                        :: PriPath                       ! path name of primary file (RelativePathFileName)
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseInclInfo'
 
@@ -5409,7 +5409,7 @@ END SUBROUTINE CheckR16Var
    INTEGER                                   :: UnIn                          ! The unit number used for the input file.
                                                                               ! Should the comment characters be passed to this routine instead of being hard coded? -mlb
    CHARACTER(1024)                           :: IncFileName                   ! The name of a file that this one includes.
-   CHARACTER(512)                            :: Line                          ! The contents of a line returned from ReadLine() with comment removed.
+   CHARACTER(2048)                           :: Line                          ! The contents of a line returned from ReadLine() with comment removed.
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    CHARACTER(*), PARAMETER                   :: RoutineName = 'ReadComFile'
 
@@ -7374,7 +7374,7 @@ END SUBROUTINE CheckR16Var
 
       CHARACTER(1024)                              :: FileName                ! The name of this file being processed.
       CHARACTER(1024)                              :: IncFileName             ! The name of a file that this one includes.
-      CHARACTER(512)                               :: Line                    ! The contents of a line returned from ReadLine() with comment removed.
+      CHARACTER(2048)                              :: Line                    ! The contents of a line returned from ReadLine() with comment removed.
       CHARACTER(ErrMsgLen)                         :: ErrMsg2
       CHARACTER(*),       PARAMETER                :: RoutineName = 'ScanComFile'
 
