@@ -365,7 +365,7 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ! Magnitude of relative wind velocity
    m%VRel = TwoNorm(VRel_vec)
    ! relative wind velocity along disk normal
-   m%VRel_xd = dot_product(VRel_vec, x_hatDisk)
+   m%VRel_xd = abs(dot_product(VRel_vec, x_hatDisk))
    ! set output
    y%VRel = m%VRel
 

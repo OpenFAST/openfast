@@ -31,6 +31,7 @@ MODULE AeroDisk_IO
       integer(IntKi)    :: ColVRel  !< Column number for VRel
       integer(IntKi)    :: ColSkew  !< Column number for Skew
       integer(IntKi)    :: ColPitch !< Column number for Pitch
+      integer(IntKi)    :: NumColNamesGiven  !< total number of column names given
    end type TableIndexType
 
 contains
@@ -221,6 +222,9 @@ contains
       call GetVarNamePos(thisFile, thisLine, TmpChAry, "Skew",  Idx%ColSkew,  ErrStat3,ErrMsg3); if (ErrStat3 >= ErrID_Fatal) return
       call GetVarNamePos(thisFile, thisLine, TmpChAry, "Pitch", Idx%ColPitch, ErrStat3,ErrMsg3); if (ErrStat3 >= ErrID_Fatal) return
 
+      ! total number of columns specified
+      Idx%NumColNamesGiven = maxval( (/ Idx%ColTSR, Idx%ColRtSpd, Idx%ColVRel, Idx%ColSkew, Idx%ColPitch /) )
+
       ! make sure have have column names
       if ((Idx%ColTSR + Idx%ColRtSpd + Idx%ColVRel + Idx%ColSkew + Idx%ColPitch) <= 0_IntKi) then
          ErrStat3 = ErrID_Fatal
@@ -378,7 +382,7 @@ subroutine Get_RtAeroTableData(Info,LineNo,Idx,AeroTable,ErrStat,ErrMsg,UnEc)
    if (AeroTable%N_VRel  > 0_IntKi)    Sz(3) = 1_IntKi
    if (AeroTable%N_Pitch > 0_IntKi)    Sz(4) = 1_IntKi
    if (AeroTable%N_Skew  > 0_IntKi)    Sz(5) = 1_IntKi
-   NumCols = sum(Sz) + 6_IntKi      ! Add DOF columns
+   NumCols = Idx%NumColNamesGiven + 6_IntKi      ! Add DOF columns
 
    ! temporary array for sizing -- note that min dimension size is 1 so we calculate number of rows correctly
    Sz(1) = max(AeroTable%N_TSR,  1_IntKi)
@@ -919,8 +923,8 @@ subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    else
       m%AllOuts( ADCp   ) = (real(m%Moment(1),ReKi) * u%RotSpeed) / (p%halfRhoA * real(m%Vrel_xd,ReKi)**3_IntKi )
    endif
-   m%AllOuts( ADCt      ) = real(m%Force(1), ReKi)
-   m%AllOuts( ADCq      ) = real(m%Moment(1),ReKi)
+   m%AllOuts( ADCt      ) = real(m%C_F(1),ReKi)
+   m%AllOuts( ADCq      ) = real(m%C_M(1),ReKi)
 
    ! Power
    m%AllOuts( ADPower   ) = real(m%Moment(1),ReKi) * u%RotSpeed
