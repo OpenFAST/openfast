@@ -2262,7 +2262,7 @@ CONTAINS
       SUBROUTINE CleanUp()
         ! ErrStat = ErrID_Fatal  
         call MD_DestroyInputFileType( InputFileDat, ErrStat2, ErrMsg2 )    ! Ignore any error messages from this
-        IF (p%UnLog) CLOSE( p%UnLog )
+        IF (p%UnLog > 0_IntKi) CLOSE( p%UnLog )       ! Remove this when the log file is kept open during the full simulation
       END SUBROUTINE
 
       !> If for some reason the file is truncated, it is possible to get into an infinite loop
@@ -2960,7 +2960,7 @@ CONTAINS
       CALL MD_DestroyMisc(m, ErrStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          
-      IF (p%UnLog) CLOSE( p%UnLog )  ! close log file if it's open
+      IF (p%UnLog > 0_IntKi) CLOSE( p%UnLog )  ! close log file if it's open
          !TODO: any need to specifically deallocate things like m%xTemp%states in the above? <<<<
 
  !     IF ( ErrStat==ErrID_None) THEN
