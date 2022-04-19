@@ -10,7 +10,7 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v3.0.0 to OpenFAST `dev`
+OpenFAST v3.1.0 to OpenFAST `dev`
 ---------------------------------
 
 No change
@@ -118,19 +118,32 @@ SubDyn         n+2  OutFEMModes        Output first 30 FEM modes {0: No output, 
 OpenFAST v2.6.0 to OpenFAST v3.0.0
 ----------------------------------
 
--  ServoDyn
+**ServoDyn Changes**
 
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
-      module (StC) with updated capabilities and input file.
+-  The input file parser is updated to a keyword/value pair based input.
+   Each entry must have a corresponding keyword with the same spelling as
+   expected.
+-  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+   module (StC) with updated capabilities and input file.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   na              ---------------------- TUNED MASS DAMPER ---------------------------------------
+ServoDyn                                      61   CompNTMD        False         CompNTMD     - Compute nacelle tuned mass damper {true/false} (flag)
+ServoDyn                                      62   NTMDfile        "NRELOffshrBsline5MW_ServoDyn_TMD.dat"    NTMDfile     - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNTMD is false]
+ServoDyn                                      63   CompTTMD        False         CompTTMD     - Compute tower tuned mass damper {true/false} (flag)
+ServoDyn                                      64   TTMDfile        "NRELOffshrBsline5MW_ServoDyn_TMD.dat"    TTMDfile     - Name of the file for tower tuned mass damper (quoted string) [unused when CompTTMD is false]
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
 Added in OpenFAST v3.0.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   na              ---------------------- STRUCTURAL CONTROL --------------------------------------             NumBStC      - Number of blade structural controllers (integer)
 ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
 ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
 ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
