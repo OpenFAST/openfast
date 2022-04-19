@@ -1083,7 +1083,7 @@ CONTAINS
         CALL UnitVector(Line%r(:,I-1), Line%r(:,I+1), Line%q(:,I), dummyLength)
       END DO
       
-	   ! calculate unit tangent vectors for either end node if the line has no bending stiffness of if either end is pinned (otherwise it's already been set via setEndStateFromRod)
+      ! calculate unit tangent vectors for either end node if the line has no bending stiffness of if either end is pinned (otherwise it's already been set via setEndStateFromRod)
       if ((Line%endTypeA==0) .or. (Line%EI==0.0)) then 
          CALL UnitVector(Line%r(:,0), Line%r(:,1), Line%q(:,0), dummyLength)
       end if

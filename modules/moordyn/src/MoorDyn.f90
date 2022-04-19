@@ -423,7 +423,7 @@ CONTAINS
                         END IF
                         write(p%UnLog,'(A)', IOSTAT=ErrStat2) "MoorDyn v2 log file with output level "//TRIM(Num2LStr(p%writeLog))
                         write(p%UnLog,'(A)', IOSTAT=ErrStat2) "Note: options above the writeLog line in the input file will not be recorded."
-								end if
+                     end if
                   else if ( OptString == 'DTM') THEN
                      read (OptValue,*) p%dtM0 
                   else if ( OptString == 'G') then
@@ -652,24 +652,24 @@ CONTAINS
                    m%LineTypeList(l)%IdNum = l  
                    
                   ! write lineType information to log file
-							if (p%writeLog > 1) then
+                  if (p%writeLog > 1) then
                       write(p%UnLog, '(A12,A20)'  ) " LineType"//trim(num2lstr(l))//":"
                       write(p%UnLog, '(A12,A20)'  ) " name: ", m%LineTypeList(l)%name
-								 write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
-								 write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
-								 write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
-								 write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
-								 write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
-								 write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
-							end if
+                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
+                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
+                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
+                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
+                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
+                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
+                  end if
 
-                   IF ( ErrStat2 /= ErrID_None ) THEN
-                      CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      CALL CleanUp()
-                      RETURN
-                   END IF
+                  IF ( ErrStat2 /= ErrID_None ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
 
-                END DO
+               END DO
 
 
             !-------------------------------------------------------------------------------------------
@@ -707,16 +707,16 @@ CONTAINS
                    m%RodTypeList(l)%IdNum = l  
                    
                   ! write lineType information to log file
-							if (p%writeLog > 1) then
+                  if (p%writeLog > 1) then
                       write(p%UnLog, '(A12,A20)'  ) " RodType"//trim(num2lstr(l))//":"
                       write(p%UnLog, '(A12,A20)'  ) " name: ", m%RodTypeList(l)%name
-								 write(p%UnLog, '(A12,f12.4)') " d   : ", m%RodTypeList(l)%d  
-								 write(p%UnLog, '(A12,f12.4)') " w   : ", m%RodTypeList(l)%w  
-								 write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%RodTypeList(l)%Cdn
-								 write(p%UnLog, '(A12,f12.4)') " Can : ", m%RodTypeList(l)%Can
-								 write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%RodTypeList(l)%CdEnd
-								 write(p%UnLog, '(A12,f12.4)') " Cat : ", m%RodTypeList(l)%CaEnd
-							end if
+                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%RodTypeList(l)%d  
+                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%RodTypeList(l)%w  
+                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%RodTypeList(l)%Cdn
+                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%RodTypeList(l)%Can
+                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%RodTypeList(l)%CdEnd
+                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%RodTypeList(l)%CaEnd
+                  end if
 
                    IF ( ErrStat2 /= ErrID_None ) THEN
                       CALL SetErrStat( ErrID_Fatal, 'Failed to process rod type properties for rod '//trim(Num2LStr(l))//'. Check formatting and correct number of columns.', ErrStat, ErrMsg, RoutineName )
