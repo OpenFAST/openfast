@@ -35,7 +35,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.a25', '2022-04-11' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.a26', '2022-04-13' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -634,7 +634,7 @@ CONTAINS
                    else if (N==2) then                               ! visco-elastic case when two BA values provided
                       read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
                    else if (m%LineTypeList(l)%ElasticMod == 2) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
-                      print *, "Warning, viscoelastic model being used with zero damping on the dynamic stiffness."
+                      CALL WrScr("Warning, viscoelastic model being used with zero damping on the dynamic stiffness.")
                    end if
                    ! get the regular/static coefficient or relation in all cases (can be from a lookup table?)
                    CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%BA,     &
@@ -1102,7 +1102,7 @@ CONTAINS
                      CALL Conv2UC(tempString4) ! convert to uppercase so that matching is not case-sensitive
                      
                      if ((INDEX(tempString4, "SEABED") > 0 ) .or. (INDEX(tempString4, "GROUND") > 0 ) .or. (INDEX(tempString4, "FLOOR") > 0 )) then  ! if keyword used
-                        PRINT *, 'Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry'         ! interpret the anchor depth value as a 'seabed' input
+                        CALL WrScr('Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry')      ! interpret the anchor depth value as a 'seabed' input
                         CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth, nvec)         ! meaning the anchor should be at the depth of the local bathymetry
                         tempArray(3) = -depth
                      else                                                       ! if the anchor depth input isn't one of the supported keywords, 
@@ -1185,7 +1185,7 @@ CONTAINS
                            m%ConnectList(l)%TypeNum = -1            ! set as coupled type   
                            p%nCpldCons(J) = p%nCpldCons(J) + 1      ! increment counter for the appropriate turbine                   
                            m%CpldConIs(p%nCpldCons(J),J) = l
-                           print *, ' added connection ', l, ' as fairlead for turbine ', J
+                           CALL WrScr(' added connection '//TRIM(int2lstr(l))//' as fairlead for turbine '//trim(int2lstr(J)))
                            
                            
                         else
@@ -1379,6 +1379,7 @@ CONTAINS
                   IF ( scan( LineOutString, 'c') > 0 )  m%LineList(l)%OutFlagList(11) = 1  ! segment internal damping force
                   IF ( scan( LineOutString, 's') > 0 )  m%LineList(l)%OutFlagList(12) = 1  ! Segment strain
                   IF ( scan( LineOutString, 'd') > 0 )  m%LineList(l)%OutFlagList(13) = 1  ! Segment strain rate
+                  IF ( scan( LineOutString, 'l') > 0 )  m%LineList(l)%OutFlagList(14) = 1  ! Segment stretched length
 
                   IF (SUM(m%LineList(l)%OutFlagList) > 0)   m%LineList(l)%OutFlagList(1) = 1  ! this first entry signals whether to create any output file at all
                   ! the above letter-index combinations define which OutFlagList entry corresponds to which output type
@@ -1439,12 +1440,12 @@ CONTAINS
                      if (TempIDnums(J) <= p%nLines) then      ! ensure line ID is in range
                         if (m%LineList( TempIDnums(J) )%CtrlChan == 0) then      ! ensure line doesn't already have a CtrlChan assigned 
                            m%LineList( TempIDnums(J) )%CtrlChan = Itemp
-                           print *, 'Assigned Line ', TempIDnums(J), ' to control channel ', Itemp
+                           CALL WrScr('Assigned Line '//TRIM(Int2LStr(TempIDnums(J)))//' to control channel '//TRIM(Int2LStr(Itemp)))
                         else
-                           print *, 'Error: Line ', TempIDnums(J), ' already is assigned to control channel ', m%LineList( TempIDnums(J) )%CtrlChan, ' so cannot also be assigned to channel ', Itemp 
+                           CALL WrScr('Error: Line '//TRIM(Int2LStr(TempIDnums(J)))//' already is assigned to control channel '//TRIM(Int2LStr(m%LineList( TempIDnums(J) )%CtrlChan))//' so cannot also be assigned to channel '//TRIM(Int2LStr(Itemp)))
                         end if                     
                      else
-                        print *, 'Error: Line ID ', TempIDnums(J), ' of CtrlChan ', Itemp, ' is out of range' 
+                        CALL WrScr('Error: Line ID '//TRIM(Int2LStr(TempIDnums(J)))//' of CtrlChan '//TRIM(Int2LStr(Itemp))//' is out of range')
                      end if
                   
                   END DO
@@ -2107,7 +2108,7 @@ CONTAINS
                END DO
                
                IF (ErrStat == ErrID_Fatal) THEN
-                  print *, "NaN detected at time ", t, " during MoorDyn's dynamic relaxation process."
+                  CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t))//" during MoorDyn's dynamic relaxation process.")
                   IF (wordy > 1) THEN
                      print *, "Here is the state vector: "
                      print *, x%states
@@ -2373,7 +2374,7 @@ CONTAINS
          END DO
          
          IF (ErrStat == ErrID_Fatal) THEN
-            print *, "NaN detected at time ", t2, " in MoorDyn."
+            CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn.")
             IF (wordy > 1) THEN
                print *, ". Here is the state vector: "
                print *, x%states
@@ -2404,7 +2405,7 @@ CONTAINS
       END DO
       
       IF (ErrStat == ErrID_Fatal) THEN
-         print *, "NaN detected at time ", t2, " in MoorDyn."
+         CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn.")
          IF (wordy > 1) THEN
             print *, ". Here is the state vector: "
             print *, x%states
@@ -3621,6 +3622,11 @@ SUBROUTINE MD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'SD_Init_Jacobian'
    real(ReKi) :: dx, dy, dz, maxDim
    
+   INTEGER(IntKi)                                    :: l, I
+   real(ReKi)                                        :: dl_slack     ! how much a given line segment is stretched [m] 
+   real(ReKi)                                        :: dl_slack_min ! minimum change in a node position for the least-strained segment in the simulation to go slack [m]
+   
+   
    ! local variables:
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -3630,6 +3636,24 @@ SUBROUTINE MD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
    !dy = maxval(Init%Nodes(:,3))- minval(Init%Nodes(:,3))
    !dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
    !maxDim = max(dx, dy, dz)
+   
+   
+   ! Figure out appropriate transverse perturbation size to avoid slack segments
+   dl_slack_min = 0.1_ReKi  ! start at 0.1 m
+   
+   do l = 1,p%nLines
+      do I = 1, m%LineList(l)%N
+         dl_slack = m%LineList(l)%lstr(I) - m%LineList(l)%l(I)
+      
+         ! store the smallest positive length margin to a segment going slack
+         if (( dl_slack > 0.0_ReKi) .and. (dl_slack < dl_slack_min)) then
+            dl_slack_min = dl_slack  
+         end if
+      end do
+   end do
+   
+   !TODO: consider attachment radii to also produce a rotational perturbation size from the above
+   
    
    ! --- System dimension
    call Init_Jacobian_y(); if (Failed()) return
@@ -3696,7 +3720,7 @@ contains
       idx = 0
       ! Free bodies
       DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
-         p%dx(idx+1:idx+3) = 0.2             ! body displacement [m]
+         p%dx(idx+1:idx+3) = dl_slack_min    ! body displacement [m]
          p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
          ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+11)
          InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
@@ -3717,7 +3741,7 @@ contains
       ! Rods
       DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
          if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then  ! pinned rod
-            p%dx(idx+1:idx+3) = 0.02         ! body rotation [rad]
+            p%dx(idx+1:idx+3) = 0.02         ! rod rotation [rad]
             ! corresponds to state indices: (m%RodStateIs1(l)+3:m%RodStateIs1(l)+5)
             InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
             InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
@@ -3727,8 +3751,8 @@ contains
             p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+5          ! x%state index for rot_z
             idx = idx + 3
          else                                ! free rod
-            p%dx(idx+1:idx+3) = 0.1          ! body displacement [m]
-            p%dx(idx+4:idx+6) = 0.02         ! body rotation [rad]
+            p%dx(idx+1:idx+3) = dl_slack_min ! rod displacement [m]
+            p%dx(idx+4:idx+6) = 0.02         ! rod rotation [rad]
             ! corresponds to state indices: (m%RodStateIs1(l)+6:m%RodStateIs1(l)+11)
             InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Px, m'
             InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Py, m'
@@ -3749,7 +3773,7 @@ contains
       ! Free Connnections
       DO l = 1,p%nFreeCons                   ! Point m%ConnectList(m%FreeConIs(l))
          ! corresponds to state indices: (m%ConStateIs1(l)+3:m%ConStateIs1(l)+5)
-         p%dx(idx+1:idx+3) = 0.1             ! point displacement [m]
+         p%dx(idx+1:idx+3) = dl_slack_min    ! point displacement [m]
          InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Px, m'
          InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Py, m'
          InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Pz, m'
@@ -3764,7 +3788,7 @@ contains
          ! corresponds to state indices: (m%LineStateIs1(l)+3*N-3:m%LineStateIs1(l)+6*N-7) -- NOTE: end nodes not included 
          N = m%LineList(l)%N                 ! number of segments in the line
          DO i = 0,N-2
-            p%dx(idx+1:idx+3) = 0.1          ! line internal node displacement [m]
+            p%dx(idx+1:idx+3) = dl_slack_min ! line internal node displacement [m]
             InitOut%LinNames_x(idx+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Px, m'
             InitOut%LinNames_x(idx+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Py, m'
             InitOut%LinNames_x(idx+3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Pz, m'
@@ -3873,7 +3897,6 @@ contains
    END SUBROUTINE Init_Jacobian_x
 
    SUBROUTINE Init_Jacobian_u()
-      REAL(R8Ki)     :: perturb
       INTEGER(IntKi) :: i, j, idx, nu, i_meshField
       character(10)  :: LinStr      ! for noting which line a DeltaL control is attached to
       logical        :: LinCtrl     ! Is the current DeltaL channel associated with a line?
@@ -3949,14 +3972,13 @@ contains
 
       ! --- Default perturbations, p%du:
       call allocAry( p%du, 11, 'p%du', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      perturb   = 2.0_R8Ki*D2R_D
-      p%du( 1) = perturb       ! u%CoupledKinematics(1)%TranslationDisp  = 1;
-      p%du( 2) = perturb       ! u%CoupledKinematics(1)%Orientation      = 2;
-      p%du( 3) = perturb       ! u%CoupledKinematics(1)%TranslationVel   = 3;
-      p%du( 4) = perturb       ! u%CoupledKinematics(1)%RotationVel      = 4;
-      p%du( 5) = perturb       ! u%CoupledKinematics(1)%TranslationAcc   = 5;
-      p%du( 6) = perturb       ! u%CoupledKinematics(1)%RotationAcc      = 6;
-      p%du(10) = 0.2_ReKi      ! deltaL [m]
+      p%du( 1) = dl_slack_min  ! u%CoupledKinematics(1)%TranslationDisp  = 1;
+      p%du( 2) = 0.1_ReKi      ! u%CoupledKinematics(1)%Orientation      = 2;
+      p%du( 3) = 0.1_ReKi      ! u%CoupledKinematics(1)%TranslationVel   = 3;
+      p%du( 4) = 0.1_ReKi      ! u%CoupledKinematics(1)%RotationVel      = 4;
+      p%du( 5) = 0.1_ReKi      ! u%CoupledKinematics(1)%TranslationAcc   = 5;
+      p%du( 6) = 0.1_ReKi      ! u%CoupledKinematics(1)%RotationAcc      = 6;
+      p%du(10) = dl_slack_min  ! deltaL [m]
       p%du(11) = 0.2_ReKi      ! deltaLdot [m/s] 
    END SUBROUTINE Init_Jacobian_u
 

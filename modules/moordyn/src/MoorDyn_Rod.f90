@@ -486,7 +486,8 @@ CONTAINS
       ! check for NaNs (should check all state derivatives, not just first 6)
       DO J = 1, 6
          IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Rod%time, " in Rod ",Rod%IdNum
+            CALL WrScr("NaN detected at time "//trim(Num2LStr(Rod%time))//" in Rod "//trim(Int2LStr(Rod%IdNum)))
+            
             IF (wordy > 1) THEN
                print *, " state derivatives:"
                print *, Xd
@@ -542,6 +543,7 @@ CONTAINS
       Real(DbKi)                 :: z1hi         ! highest elevation of cross section at node [m]
       Real(DbKi)                 :: z1lo         ! lowest  elevation of cross section at node [m]
       Real(DbKi)                 :: G            ! distance normal to axis from bottom edge of cross section to waterplane [m]
+      Real(DbKi)                 :: al           ! angle involved in circular segment buoyancy calc [rad]
       Real(DbKi)                 :: A            ! area of cross section at node that is below the waterline [m2]
       Real(DbKi)                 :: zA           ! crude approximation to z value of centroid of submerged cross section at node [m]
       
@@ -608,10 +610,8 @@ CONTAINS
          ! <<<< currently F is not being used and instead a VOF variable is used within the node loop
       END DO
       
-      ! >>> remember to check for violated conditions, if there are any... <<<
-           
-      zeta = Rod%zeta(N)! just use the wave elevation computed at the location of the top node for now
-      
+      ! Calculated h0 (note this should be deprecated/replced)           
+      zeta = Rod%zeta(N)  ! temporary      
       ! get approximate location of waterline crossing along Rod axis (note: negative h0 indicates end A is above end B, and measures -distance from end A to waterline crossing)
       if ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) < zeta)) then        ! fully submerged case  
          Rod%h0 = Rod%UnstrLen                                       
@@ -670,20 +670,23 @@ CONTAINS
          z1hi = Rod%r(3,I) + 0.5*Rod%d*abs(sinPhi)  ! highest elevation of cross section at node
          z1lo = Rod%r(3,I) - 0.5*Rod%d*abs(sinPhi)  ! lowest  elevation of cross section at node
          
-         if (z1lo > zeta) then   ! fully out of water
+         if (z1lo > Rod%zeta(I)) then   ! fully out of water
              A = 0.0  ! area
              zA = 0   ! centroid depth
-         else if (z1hi < zeta) then   ! fully submerged
+         else if (z1hi < Rod%zeta(I)) then   ! fully submerged
              A = Pi*0.25*Rod%d**2
              zA = Rod%r(3,I)
          else             ! if z1hi*z1lo < 0.0:   # if cross section crosses waterplane
-            if (abs(sinPhi) < 0.001) then
-               A = 0.5_DbKi
+            if (abs(sinPhi) < 0.001) then   ! if cylinder is near vertical, i.e. end is horizontal
+               A = 0.5_DbKi  ! <<< shouldn't this just be zero? <<<
                zA = 0.0_DbKi
             else
-               G = (-z1lo+zeta)/abs(sinPhi)   ! distance from node to waterline cross at same axial location [m]
-               A = 0.25*Rod%d**2*acos((Rod%d - 2.0*G)/Rod%d) - (0.5*Rod%d-G)*sqrt(Rod%d*G-G**2)  ! area of circular cross section that is below waterline [m^2]
-               zA = (z1lo-zeta)/2  ! very crude approximation of centroid for now... <<< need to double check zeta bit <<<
+               G = (Rod%r(3,I)-Rod%zeta(I))/abs(sinPhi) !(-z1lo+Rod%zeta(I))/abs(sinPhi)   ! distance from node to waterline cross at same axial location [m]
+               !A = 0.25*Rod%d**2*acos((Rod%d - 2.0*G)/Rod%d) - (0.5*Rod%d-G)*sqrt(Rod%d*G-G**2)  ! area of circular cross section that is below waterline [m^2]
+               !zA = (z1lo-Rod%zeta(I))/2  ! very crude approximation of centroid for now... <<< need to double check zeta bit <<<
+               al = acos(2.0*G/Rod%d)
+               A = Rod%d*Rod%d/8.0 * (2.0*al - sin(2.0*al))
+               zA = Rod%r(3,I) - 0.6666666666 * Rod%d* (sin(al))**3 / (2.0*al - sin(2.0*al))
             end if
          end if
          
@@ -782,15 +785,14 @@ CONTAINS
          
          ! ------ now add forces, moments, and added mass from Rod end effects (these can exist even if N==0) -------
          
-         ! end A
-         IF ((I==0) .and. (Rod%h0 > 0.0_ReKi)) THEN    ! if this is end A and it is submerged 
+         IF ((I==0) .and. (z1lo < Rod%zeta(I))) THEN    ! if this is end A and it is at least partially submerged 
          
          ! >>> eventually should consider a VOF approach for the ends    hTilt = 0.5*Rod%d/cosPhi <<<
          
             ! buoyancy force
             Ftemp = -VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g* zA
             Rod%Bo(:,I) = Rod%Bo(:,I) + (/ Ftemp*cosBeta*sinPhi, Ftemp*sinBeta*sinPhi, Ftemp*cosPhi /) 
-         
+                  
             ! buoyancy moment
             Mtemp = -VOF * 1.0/64.0*Pi*Rod%d**4 * p%rhoW*p%g * sinPhi 
             Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
@@ -815,7 +817,7 @@ CONTAINS
          
          END IF
          
-         IF ((I==N) .and. ((Rod%h0 >= Rod%UnstrLen) .or. (Rod%h0 < 0.0_DbKi))) THEN    ! if this end B and it is submerged (note, if N=0, both this and previous if statement are true)
+         IF ((I==N) .and. (z1lo < Rod%zeta(I))) THEN    ! if this end B and it is at least partially submerged (note, if N=0, both this and previous if statement are true)
          
             ! buoyancy force
             Ftemp = VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g* zA
@@ -844,7 +846,6 @@ CONTAINS
          END IF
          
          
-         
          ! ---------------------------- total forces for this node -----------------------------
          
          Rod%Fnet(:,I) = Rod%W(:,I) + Rod%Bo(:,I) + Rod%Dp(:,I) + Rod%Dq(:,I) &
@@ -855,7 +856,7 @@ CONTAINS
 
 
       ! ----- add waterplane moment of inertia moment if applicable -----
-      IF ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then    ! check if it's crossing the water plane
+      IF ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then    ! check if it's crossing the water plane <<< may need updating
          ! >>> could scale the below based on whether part of the end cap is crossing the water plane...
          !Mtemp = 1.0/16.0 *Pi*Rod%d**4 * p%rhoW*p%g * sinPhi * (1.0 + 0.5* tanPhi**2)  ! original (goes to infinity at 90 deg)
          Mtemp = 1.0/16.0 *Pi*Rod%d**4 * p%rhoW*p%g * sinPhi * cosPhi  ! simple alternative that goes to 0 at 90 deg then reverses sign beyond that

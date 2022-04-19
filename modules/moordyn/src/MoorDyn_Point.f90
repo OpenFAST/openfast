@@ -73,7 +73,7 @@ CONTAINS
          IF (wordy > 0) print *, "Initialized Connection ", Connect%IdNum
       
       else 
-         print *,"   Error: wrong Point type given to Connect_Initialize for number ", Connect%idNum
+         CALL WrScr("   Error: wrong Point type given to Connect_Initialize for number "//trim(Int2Lstr(Connect%idNum)))
       end if
       
    END SUBROUTINE Connect_Initialize
@@ -195,7 +195,7 @@ CONTAINS
       ! check for NaNs
       DO J = 1, 6
          IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Connect%time, " in Point ",Connect%IdNum, " in MoorDyn."
+            CALL WrScr("NaN detected at time "//trim(Num2LStr(Connect%time))//" in Point "//trim(Int2LStr(Connect%IdNum))//" in MoorDyn.")
             IF (wordy > 1) print *, "state derivatives:"
             IF (wordy > 1) print *, Xd
             EXIT
@@ -312,7 +312,7 @@ CONTAINS
          Fnet_out = Connect%Fnet + F_iner          ! add inertial loads
 
       ELSE
-         print *, "Connect_GetCoupledForce called for wrong (uncoupled) Point type in MoorDyn!"
+         CALL WrScr("Connect_GetCoupledForce called for wrong (uncoupled) Point type in MoorDyn!")
       END IF
       
    END SUBROUTINE Connect_GetCoupledForce

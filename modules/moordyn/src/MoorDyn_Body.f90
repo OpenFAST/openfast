@@ -358,7 +358,7 @@ CONTAINS
       ! check for NaNs (should check all state derivatives, not just first 6)
       DO J = 1, 6
          IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Body%time, " in Body ",Body%IdNum, "in MoorDyn,"
+            CALL WrScr("NaN detected at time "//trim(Num2LStr(Body%time))//" in Body "//trim(Int2LStr(Body%IdNum))//"in MoorDyn,")
             IF (wordy > 0) print *, "state derivatives:"
             IF (wordy > 0) print *, Xd
             EXIT

@@ -903,7 +903,8 @@ CONTAINS
    ! master function to get wave/water kinematics at a given point -- called by each object from grid-based data
    SUBROUTINE getWaterKin(p, x, y, z, t, tindex, U, Ud, zeta, PDyn)
    
-      ! note, this whole approach assuems that px, py, and pz are in increasing order
+      ! This whole approach assuems that px, py, and pz are in increasing order.
+      ! Wheeler stretching is now built in.
    
       TYPE(MD_ParameterType),INTENT (IN   )       :: p       ! MoorDyn parameters (contains the wave info for now)
       Real(DbKi),            INTENT (IN   )       :: x
@@ -921,24 +922,32 @@ CONTAINS
       INTEGER(IntKi)             :: iz0, iz1              ! special indices for currrent interpolation  
       INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
       Real(SiKi)                 :: fx, fy, fz, ft        ! interpolation fractions
-      !Real(DbKi)                 :: qt                    ! used in time step interpolation
+      Real(DbKi)                 :: zp                    ! zprime coordinate used for Wheeler stretching
    
    
       ! if wave kinematics enabled, get interpolated values from grid
       if (p%WaveKin > 0) then      
-         
-         CALL getInterpNumsSiKi(p%pxWave   , REAL(x,SiKi),  1, ix, fx)
-         CALL getInterpNumsSiKi(p%pyWave   , REAL(y,SiKi),  1, iy, fy)
-         CALL getInterpNumsSiKi(p%pzWave   , REAL(z,SiKi),  1, iz, fz)
+      
+         ! find time interpolation indices and coefficients
          !CALL getInterpNums(p%tWave, t, tindex, it, ft)
          it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
          ft = (t - (it-1)*p%dtWave)/p%dtWave
-         tindex = it
+         tindex = it                  
+      
+         ! find x-y interpolation indices and coefficients
+         CALL getInterpNumsSiKi(p%pxWave   , REAL(x,SiKi),  1, ix, fx)
+         CALL getInterpNumsSiKi(p%pyWave   , REAL(y,SiKi),  1, iy, fy)
          
-         CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)
+         ! interpolate wave elevation
+         CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)   
          
-         CALL calculate4Dinterpolation(p%PDyn, ix, iy, iz, it, fx, fy, fz, ft, PDyn)
+         ! compute modified z coordinate to be used for interpolating velocities and accelerations with Wheeler stretching
+         zp = ( z - zeta ) * p%WtrDpth/( p%WtrDpth + zeta )
          
+         CALL getInterpNumsSiKi(p%pzWave   , REAL(zp,SiKi),  1, iz, fz)
+
+         ! interpolate everything else
+         CALL calculate4Dinterpolation(p%PDyn  , ix, iy, iz, it, fx, fy, fz, ft, PDyn)         
          CALL calculate4Dinterpolation(p%uxWave, ix, iy, iz, it, fx, fy, fz, ft, U(1)  )
          CALL calculate4Dinterpolation(p%uyWave, ix, iy, iz, it, fx, fy, fz, ft, U(2)  )
          CALL calculate4Dinterpolation(p%uzWave, ix, iy, iz, it, fx, fy, fz, ft, U(3)  )      

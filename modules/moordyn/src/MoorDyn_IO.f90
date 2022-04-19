@@ -159,7 +159,7 @@ CONTAINS
          BathGrid_Ys(1) = 0.0_DbKi
 
       ELSE ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-         PRINT *, "   The depth input contains letters so will load a bathymetry file."
+         CALL WrScr("   The depth input contains letters so will load a bathymetry file.")
          
          ! load lookup table data from file
          CALL GetNewUnit( UnCoef ) ! unit number for coefficient input file
@@ -232,7 +232,7 @@ CONTAINS
       
       else ! otherwise interpet the input as a file name to load stress-strain lookup data from
       
-         print *, "found A letter in the line coefficient value so will try to load the filename."
+         CALL WrScr("found A letter in the line coefficient value so will try to load the filename.")
          
          LineProp_c = 0.0
          
@@ -250,10 +250,10 @@ CONTAINS
             READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2      !read into a line
 
             IF (ErrStat4 > 0) then
-               print *, "Error while reading lookup table file"
+               CALL WrScr("Error while reading lookup table file")
                EXIT
             ELSE IF (ErrStat4 < 0) then
-               print *, "Read ", I-1, " data lines from lookup table file"
+               CALL WrScr("Read "//trim(Int2LStr(I-1))//" data lines from lookup table file")
                EXIT
             ELSE
                READ(Line2,*,IOSTAT=ErrStat4) LineProp_Xs(I), LineProp_Ys(I)
@@ -297,7 +297,7 @@ CONTAINS
          END IF
          n = n + 1
          if (n > 6) then
-            print *, "ERROR - SplitByBars cannot do more than 6 entries"
+            CALL WrScr("ERROR - SplitByBars cannot do more than 6 entries")
          end if
          outstrings(n) = instring(pos1:pos1+pos2-2)
          pos1 = pos2+pos1
