@@ -63,6 +63,9 @@ set(CTEST_SUBDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/subdyn/subdyn_driver" C
 # Set the InflowWind executable configuration option and default
 set(CTEST_INFLOWWIND_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/inflowwind/inflowwind_driver" CACHE FILEPATH "Specify the InflowWind driver executable to use in testing.")
 
+# Set the SeaState executable configuration option and default
+set(CTEST_SEASTATE_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/seastate/seastate_driver" CACHE FILEPATH "Specify the SeaState driver executable to use in testing.")
+
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})
   find_program(PYTHON_EXECUTABLE NAMES python3 python py)

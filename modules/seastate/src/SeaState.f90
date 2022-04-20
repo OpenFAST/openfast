@@ -1017,6 +1017,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%MSL2SWL = InputFileData%MSL2SWL
       p%WtrDpth       = InitOut%WtrDpth  
       
+      InitOut%WaveMultiDir = InputFileData%Waves%WaveMultiDir
       InitOut%MCFD    = InputFileData%Waves%MCFD
  
       CALL SeaStOut_Init( SeaSt_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1149,7 +1150,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WaveDirMax   =  Waves_InitOut%WaveDirMax          ! For WAMIT and WAMIT2
        InitOut%WaveDir      =  Waves_InitOut%WaveDir             ! For WAMIT for use in SS_Excitation
        !InitOut%WaveNDir     =  Waves_InitOut%WaveNDir            ! Not needed
-       InitOut%WaveMultiDir =  Waves_InitOut%WaveMultiDir        ! For WAMIT2
        InitOut%WaveDOmega   =  Waves_InitOut%WaveDOmega          ! For WAMIT and WAMIT2, FIT
        !InitOut%WaveKinzi    =  Waves_InitOut%WaveKinzi           ! Not needed
        InitOut%WaveDynP     => Waves_InitOut%WaveDynP            ! For Morison

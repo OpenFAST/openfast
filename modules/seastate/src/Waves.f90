@@ -2615,7 +2615,7 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    InitOut%WaveMultiDir = InitInp%WaveMultiDir
    u%DummyInput = 0.0
    p%DT = Interval
-   p%WaveMultiDir = InitOut%WaveMultiDir     ! Flag to indicate multidirectional waves
+   p%WaveMultiDir = InitInp%WaveMultiDir     ! Flag to indicate multidirectional waves
    x%DummyContState = 0.0
    xd%DummyDiscState = 0.0
    z%DummyConstrState = 0.0

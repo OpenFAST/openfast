@@ -1163,7 +1163,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       
    
    CALL HDOUT_ChkOutLst( InputFileData%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
-   IF ( ErrStat /= 0 ) RETURN
+   IF ( ErrStat >= ErrID_Fatal ) RETURN
 
          ! Aggregate the sub-module initialization outputs for the glue code
 

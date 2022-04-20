@@ -720,6 +720,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! ........................
    ! initialize SeaStates
    ! ........................
+   ALLOCATE( SeaSt%Input( p_FAST%InterpOrder+1 ), SeaSt%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SeaSt%Input and SeaSt%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+
    if ( p_FAST%CompSeaSt == Module_SeaSt ) then
 
       Init%InData_SeaSt%Gravity       = p_FAST%Gravity
@@ -839,10 +846,31 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL HydroDyn_Init( Init%InData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), &
                           HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module( MODULE_HD ), Init%OutData_HD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ! 1) Nullify the HD Init Input pointers (do this now in case HD_Init failed)
+      ! 2) Now, when HydroDyn_DestroyInitInput is called and hence SeaState_DestroyInitOutput, we will not deallocate data which is still in use because the is associated test will fail.
+      nullify(Init%InData_HD%WaveElevC0)
+      nullify(Init%InData_HD%WaveDirArr)
+      nullify(Init%InData_HD%WaveDynP)   
+      nullify(Init%InData_HD%WaveAcc)    
+      nullify(Init%InData_HD%WaveVel)      
+      nullify(Init%InData_HD%WaveTime)
+      nullify(Init%InData_HD%WaveElev1)
+      nullify(Init%InData_HD%WaveElev2)
+  
+      ! If HD_Init failed, cleanup and exit 
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
 
       p_FAST%ModuleInitialized(Module_HD) = .TRUE.
       CALL SetModuleSubstepTime(Module_HD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
 
       allocate( y_FAST%Lin%Modules(MODULE_HD)%Instance(1), stat=ErrStat2)
       if (ErrStat2 /= 0 ) then
@@ -857,23 +885,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(Init%OutData_HD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%NumOutputs = size(Init%OutData_HD%WriteOutputHdr)
       end if
 
-         ! 1) Nullify the HD Init Input pointers
-         ! 2) Now, when HydroDyn_DestroyInitInput is called and hence SeaState_DestroyInitOutput, we will not deallocate data which is still in use because the is associated test will fail.
-    
-         nullify(Init%InData_HD%WaveElevC0)
-         nullify(Init%InData_HD%WaveDirArr)
-         nullify(Init%InData_HD%WaveDynP)   
-         nullify(Init%InData_HD%WaveAcc)    
-         nullify(Init%InData_HD%WaveVel) 
-         nullify(Init%InData_HD%PWaveDynP0)   
-         nullify(Init%InData_HD%PWaveAcc0)    
-         nullify(Init%InData_HD%PWaveVel0)      
-         nullify(Init%InData_HD%WaveTime)
-         nullify(Init%InData_HD%WaveElev1)
-         nullify(Init%InData_HD%WaveElev2)
-         nullify(Init%InData_HD%WaveAccMCF)
-         nullify(Init%InData_HD%PWaveAccMCF0)
-   
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -3003,7 +3014,7 @@ END DO
          call cleanup()
          RETURN
       end if
-   IF ( PathIsRelative( p%HydroFile ) ) p%HydroFile = TRIM(PriPath)//TRIM(p%HydroFile)
+   IF ( PathIsRelative( p%SeaStFile ) ) p%SeaStFile = TRIM(PriPath)//TRIM(p%SeaStFile)
 
       ! HydroFile - Name of file containing hydrodynamic input parameters (-):
    CALL ReadVar( UnIn, InputFile, p%HydroFile, "HydroFile", "Name of file containing hydrodynamic input parameters (-)", ErrStat2, ErrMsg2, UnEc)
