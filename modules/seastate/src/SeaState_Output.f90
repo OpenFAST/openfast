@@ -743,9 +743,8 @@ SUBROUTINE SeaStOut_Init( SeaSt_ProgDesc, OutRootName, InputFileData, y,  p, m, 
    ! Check that the variables in OutList are valid      
    !-------------------------------------------------------------------------------------------------      
       
-   
-   CALL SeaStOUT_ChkOutLst( InputFileData%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
-   IF ( ErrStat >= ErrID_Fatal ) RETURN
+   CALL SeaStOUT_ChkOutLst( InputFileData%OutList, y, p, ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev ) RETURN
 
    ! Aggregate the sub-module initialization outputs for the glue code
 
@@ -1004,12 +1003,12 @@ SUBROUTINE SeaStOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    
       ! Passed variables
       
-   TYPE(SeaSt_OutputType),     INTENT( INOUT ) :: y                                ! This module's internal data
-   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
+   TYPE(SeaSt_OutputType),          INTENT( INOUT ) :: y                                ! This module's internal data
+   TYPE(SeaSt_ParameterType),       INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
 !   INTEGER,                 INTENT(IN   ) :: NumMemberNodes(*)                         ! the number of nodes on each of the first 9 members
-   CHARACTER(ChanLen),            INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ChanLen), ALLOCATABLE, INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
+   INTEGER,                         INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables.
    
@@ -1042,7 +1041,10 @@ SUBROUTINE SeaStOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
 
       ! Set index, name, and units for all of the output channels.
       ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
-
+   p%OutParam(0)%Name = 'Time'
+   p%OutParam(0)%SignM = 1
+   p%OutParam(0)%Units = '(s)'
+   
    DO I = 1,p%NumOuts
 
       p%OutParam(I)%Name  = OutList(I)

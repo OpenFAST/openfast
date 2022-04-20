@@ -958,26 +958,26 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, F_Add, F_Wave
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by HydroDyn_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
-   REAL(DbKi),                         INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
-   TYPE(HydroDyn_ParameterType),       INTENT( IN    )  :: p              ! HydroDyn's parameter data
-   TYPE(HydroDyn_OutputType),          INTENT( INOUT )  :: y              ! HydroDyn's output data
-   type(WAMIT_MiscVarType),            intent( in    )  :: m_WAMIT(:)     ! WAMIT object's MiscVar data
-   type(WAMIT2_MiscVarType),           intent( in    )  :: m_WAMIT2(:)    ! WAMIT2 object's MiscVar data
-   REAL(ReKi),                         INTENT( IN    )  :: F_Add(:)
-   REAL(ReKi),                         INTENT( IN    )  :: F_Waves(:)
-   REAL(ReKi),                         INTENT( IN    )  :: F_Hydro(:)     ! All hydrodynamic loads integrated at (0,0,0) in the global coordinate system
-   type(MeshType),                     INTENT( IN    )  :: PRPmesh        ! the PRP mesh -- for motions output
-   REAL(ReKi),                         INTENT( IN    )  :: q(:)           ! WAMIT body translations and rotations
-   REAL(ReKi),                         INTENT( IN    )  :: qdot(:)        ! WAMIT body translational and rotational velocities
-   REAL(ReKi),                         INTENT( IN    )  :: qdotdot(:)     ! WAMIT body translational and rotational accelerations
-   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxHDOutputs)
-   INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat        ! Error status of the operation
-   CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                            INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
+   TYPE(HydroDyn_ParameterType),          INTENT( IN    )  :: p              ! HydroDyn's parameter data
+   TYPE(HydroDyn_OutputType),             INTENT( INOUT )  :: y              ! HydroDyn's output data
+   type(WAMIT_MiscVarType),  ALLOCATABLE, intent( in    )  :: m_WAMIT(:)     ! WAMIT object's MiscVar data
+   type(WAMIT2_MiscVarType), ALLOCATABLE, intent( in    )  :: m_WAMIT2(:)    ! WAMIT2 object's MiscVar data
+   REAL(ReKi),               ALLOCATABLE, INTENT( IN    )  :: F_Add(:)
+   REAL(ReKi),               ALLOCATABLE, INTENT( IN    )  :: F_Waves(:)
+   REAL(ReKi),                            INTENT( IN    )  :: F_Hydro(:)     ! All hydrodynamic loads integrated at (0,0,0) in the global coordinate system
+   type(MeshType),                        INTENT( IN    )  :: PRPmesh        ! the PRP mesh -- for motions output
+   REAL(ReKi),                            INTENT( IN    )  :: q(:)           ! WAMIT body translations and rotations
+   REAL(ReKi),                            INTENT( IN    )  :: qdot(:)        ! WAMIT body translational and rotational velocities
+   REAL(ReKi),                            INTENT( IN    )  :: qdotdot(:)     ! WAMIT body translational and rotational accelerations
+   REAL(ReKi),                            INTENT(   OUT )  :: AllOuts(MaxHDOutputs)
+   INTEGER(IntKi),                        INTENT(   OUT )  :: ErrStat        ! Error status of the operation
+   CHARACTER(*),                          INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
-   INTEGER                                              :: I, iBody, startIndx, endIndx
-   integer(IntKi)                                       :: ErrStat2
-   character(ErrMsgLen)                                 :: ErrMsg2
-   real(ReKi)                                           :: rotdisp(3)
+   INTEGER                                                 :: I, iBody, startIndx, endIndx
+   integer(IntKi)                                          :: ErrStat2
+   character(ErrMsgLen)                                    :: ErrMsg2
+   real(ReKi)                                              :: rotdisp(3)
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1162,8 +1162,8 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, 
    !-------------------------------------------------------------------------------------------------      
       
    
-   CALL HDOUT_ChkOutLst( InputFileData%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
-   IF ( ErrStat >= ErrID_Fatal ) RETURN
+   CALL HDOUT_ChkOutLst( InputFileData%OutList, y, p, ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Aggregate the sub-module initialization outputs for the glue code
 
@@ -1450,12 +1450,12 @@ SUBROUTINE HDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    
       ! Passed variables
       
-   TYPE(HydroDyn_OutputType),     INTENT( INOUT ) :: y                                ! This module's internal data
-   TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
+   TYPE(HydroDyn_OutputType),       INTENT( INOUT ) :: y                                ! This module's internal data
+   TYPE(HydroDyn_ParameterType),    INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
 !   INTEGER,                 INTENT(IN   ) :: NumMemberNodes(*)                         ! the number of nodes on each of the first 9 members
-   CHARACTER(ChanLen),            INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ChanLen), ALLOCATABLE, INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
+   INTEGER,                         INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables.
    
@@ -1488,7 +1488,10 @@ SUBROUTINE HDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
 
       ! Set index, name, and units for all of the output channels.
       ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
-
+   p%OutParam(0)%Name = 'Time'
+   p%OutParam(0)%SignM = 1
+   p%OutParam(0)%Units = '(s)'
+   
    DO I = 1,p%NumOuts
 
       p%OutParam(I)%Name  = OutList(I)
