@@ -1633,48 +1633,6 @@ CONTAINS
 END SUBROUTINE FAST_InitializeAll
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This function returns a string describing the glue code and some of the compilation options we're using.
-FUNCTION GetVersion(ThisProgVer)
-
-   ! Passed Variables:
-
-   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
-   CHARACTER(1024)                 :: GetVersion      !< String containing a description of the compiled precision.
-
-   CHARACTER(200)                  :: git_commit
-
-   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
-
-   IF ( Cmpl4SFun )  THEN     ! FAST has been compiled as an S-Function for Simulink
-      GetVersion = TRIM(GetVersion)//' as a DLL S-Function for Simulink'
-   ELSEIF ( Cmpl4LV )  THEN     ! FAST has been compiled as a DLL for Labview
-      GetVersion = TRIM(GetVersion)//' as a DLL for LabVIEW'
-   ENDIF
-
-   GetVersion = TRIM(GetVersion)//' as a '//TRIM(Num2LStr(BITS_IN_ADDR))//'-bit application using'
-
-   ! determine precision
-
-      IF ( ReKi == SiKi )  THEN     ! Single precision
-         GetVersion = TRIM(GetVersion)//' single'
-      ELSEIF ( ReKi == R8Ki )  THEN ! Double precision
-         GetVersion = TRIM(GetVersion)// ' double'
-      ELSE                          ! Unknown precision
-         GetVersion = TRIM(GetVersion)//' unknown'
-      ENDIF
-
-
-!   GetVersion = TRIM(GetVersion)//' precision with '//OS_Desc
-   GetVersion = TRIM(GetVersion)//' precision'
-
-   ! add git info
-   git_commit = QueryGitVersion()
-   GetVersion = TRIM(GetVersion)//' at commit '//git_commit
-
-   RETURN
-END FUNCTION GetVersion
-
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
@@ -1684,10 +1642,9 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    ! sets the pi constants, open console for output, etc...
    CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
 
-   ! Display the copyright notice
+   ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( ThisProgVer%Name )
-
-   CALL DispCompileRuntimeInfo
+   CALL DispCompileRuntimeInfo( ThisProgVer%Name )
 
 END SUBROUTINE FAST_ProgStart
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2133,7 +2090,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    !......................................................
    ! Set the description lines to be printed in the output file
    !......................................................
-   y_FAST%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(FAST_Ver))
+   y_FAST%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(FAST_Ver, Cmpl4SFun, Cmpl4LV))
    y_FAST%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
    y_FAST%FileDescLines(3)  = 'Description from the FAST input file: '//TRIM(p_FAST%FTitle)
 

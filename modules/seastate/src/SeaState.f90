@@ -32,6 +32,7 @@ MODULE SeaState
    use SeaState_Interp
    USE Current
    USE Waves2
+   USE VersionInfo
   
    IMPLICIT NONE
    
@@ -59,42 +60,6 @@ MODULE SeaState
   
    CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This function returns a string describing the glue code and some of the compilation options we're using.
-FUNCTION GetVersion(ThisProgVer)
-
-   ! Passed Variables:
-
-   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
-   CHARACTER(1024)                 :: GetVersion      !< String containing a description of the compiled precision.
-
-   CHARACTER(200)                  :: git_commit
-
-   GetVersion = TRIM(GetNVD(ThisProgVer))//' was compiled'
-
-  
-
-   GetVersion = TRIM(GetVersion)//' as a '//TRIM(Num2LStr(BITS_IN_ADDR))//'-bit application using'
-
-   ! determine precision
-
-      IF ( ReKi == SiKi )  THEN     ! Single precision
-         GetVersion = TRIM(GetVersion)//' single'
-      ELSEIF ( ReKi == R8Ki )  THEN ! Double precision
-         GetVersion = TRIM(GetVersion)// ' double'
-      ELSE                          ! Unknown precision
-         GetVersion = TRIM(GetVersion)//' unknown'
-      ENDIF
-
-
-!   GetVersion = TRIM(GetVersion)//' precision with '//OS_Desc
-   GetVersion = TRIM(GetVersion)//' precision'
-
-   ! add git info
-   git_commit = QueryGitVersion()
-   GetVersion = TRIM(GetVersion)//' at commit '//git_commit
-
-   RETURN
-END FUNCTION GetVersion   
 !subroutine ConvertWaveDataToSeaStatePointers(Waves_InitOut, p, ErrStat, ErrMsg)
 !   TYPE(Waves_InitOutputType),      INTENT(in   )  :: Waves_InitOut     !< Output from Waves initialization routine
 !   TYPE(SeaSt_ParameterType),       INTENT(inout)  :: p                 !< SeaState Parameters      
