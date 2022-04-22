@@ -440,7 +440,7 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !! - \f$ M_z = \frac{1}{2} \rho A \left( V_\textrm{rel,x} \right)^2 * C_\textrm{M,z}\left(\text{TSR}@\lambda,\text{RtSpd}@\Omega,\text{V}_\text{rel}@V_\textrm{rel},\text{Pitch}@\theta,\text{Skew}@\chi\right) \f$
    tmp1 = real(p%halfRhoA,SiKi) * m%VRel_xd * m%VRel_xd
    m%Force(1:3)  = tmp1 * m%C_F(1:3)
-   m%Moment(1:3) = tmp1 * m%C_M(1:3)
+   m%Moment(1:3) = tmp1 * real(p%RotorRad,SiKi) * m%C_M(1:3)
 
    !> Apply skew if not in table
    !! - \f$ \vec{F} = \vec{F} \left( \cos(\chi) \right)^2 \f$
