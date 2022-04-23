@@ -41,7 +41,10 @@ module AeroDisk_Driver_Types
       logical                 :: DvrIptFile           = .FALSE.      !< Was an input file name given on the command line?
       logical                 :: ADskIptFile          = .FALSE.      !< Was an AeroDisk input file requested?
       logical                 :: OutRootName          = .FALSE.      !< Was an AeroDisk output rootname 
-      logical                 :: InputDispFile        = .FALSE.      !< Input displacement time series
+      logical                 :: AirDens              = .FALSE.      !< Air density
+      logical                 :: RotorRad             = .FALSE.      !< rotor radius
+      logical                 :: RotorHeight          = .FALSE.      !< rotor height
+      logical                 :: ShftTilt             = .FALSE.      !< shaft tilt
       logical                 :: TStart               = .FALSE.      !< specified a start time
       logical                 :: NumTimeSteps         = .FALSE.      !< specified a number of timesteps to process
       logical                 :: NumTimeStepsDefault  = .FALSE.      !< specified a 'DEFAULT' for number of timesteps to process
@@ -57,14 +60,18 @@ module AeroDisk_Driver_Types
       character(1024)         :: DvrIptFileName                !< Driver input file name
       character(1024)         :: ADskIptFileName               !< Filename of AeroDisk input file to read (if no driver input file)
       character(1024)         :: OutRootName                   !< Output root name
-      character(1024)         :: InputDispFile                 !< Filename of AeroDisk time series displacements
 
+      real(ReKi)              :: AirDens                       !< Air density (kg/m^3)
+      real(ReKi)              :: RotorRad                      !< rotor radius (m)
+      real(ReKi)              :: RotorHeight                   !< rotor height (m)
+      real(ReKi)              :: ShftTilt                      !< shaft tilt (deg)
+
+      real(DbKi)              :: TStart                        !< Start time
       integer(IntKi)          :: NumTimeSteps                  !< Number of timesteps
       real(DbKi)              :: DT                            !< resolution of time
-      real(DbKi)              :: TStart                        !< Start time
 
       type(ProgDesc)          :: ProgInfo                      !< Program info
-      type(ProgDesc)          :: ADskProgInfo                   !< Program info for AeroDisk
+      type(ProgDesc)          :: ADskProgInfo                  !< Program info for AeroDisk
    end type    ADskDriver_Settings
 
 
