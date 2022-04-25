@@ -368,14 +368,14 @@ END SUBROUTINE RetrieveArgs
 !> This subroutine reads the driver input file and sets up the flags and settings
 !! for the driver code.  Any settings from the command line options will override
 !! this.
-SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, ProgInfo, ErrStat, ErrMsg )
+SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, ProgInfo, CaseTimeSeries, ErrStat, ErrMsg )
 
    CHARACTER(1024),                    INTENT(IN   )  :: DvrFileName
    type(FileInfoType),                 INTENT(IN   )  :: DvrFileInfo          ! Input file stored in FileInfoType structure
    TYPE(SEDDriver_Flags),              INTENT(INOUT)  :: DvrFlags
    TYPE(SEDDriver_Settings),           INTENT(INOUT)  :: DvrSettings
    TYPE(ProgDesc),                     INTENT(IN   )  :: ProgInfo
-!   real(ReKi),          allocatable,   intent(  out)  :: CaseTimeSeries(:,:)
+   real(ReKi),          allocatable,   intent(  out)  :: CaseTimeSeries(:,:)
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              ! returns a non-zero value when an error occurs
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -495,28 +495,28 @@ SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, Pro
    ENDIF
 
 
-!      ! Column headers
-!   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)
-!   CurLine = CurLine + 1
-!   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)
-!   CurLine = CurLine + 1
-!
-!
-!      ! Last line of table is assumed to be last line in file (or included file)
-!   TabLines = DvrFileInfo%NumLines - CurLine + 1
-!   call AllocAry( CaseTimeSeries, 7, TabLines, 'CaseTimeSeries', ErrStatTmp, ErrMsgTmp )
-!   do i=1,Tablines
-!      call ParseAry ( DvrFileInfo, CurLine, 'Coordinates', TmpRe7, 7, ErrStatTmp, ErrMsgTmp, UnEc )
-!         if (Failed())  return;
-!      ! Set time, wind_x, wind_y, wind_z
-!      CaseTimeSeries(1:4,i) = TmpRe7(1:4)
-!      ! Set RotSpeed    (rpm -> rad/s)
-!      CaseTimeSeries(5,i)   = TmpRe7(5) * Pi / 30.0_ReKi
-!      ! Set Pitch       (deg -> rad)
-!      CaseTimeSeries(6,i)   = TmpRe7(6) * Pi / 180.0_ReKi
-!      ! Set Yaw         (deg -> rad)
-!      CaseTimeSeries(7,i)   = TmpRe7(7) * Pi / 180.0_ReKi
-!   enddo
+      ! Column headers
+   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)
+   CurLine = CurLine + 1
+   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)
+   CurLine = CurLine + 1
+
+
+      ! Last line of table is assumed to be last line in file (or included file)
+   TabLines = DvrFileInfo%NumLines - CurLine + 1
+   call AllocAry( CaseTimeSeries, 7, TabLines, 'CaseTimeSeries', ErrStatTmp, ErrMsgTmp )
+   do i=1,Tablines
+      call ParseAry ( DvrFileInfo, CurLine, 'Coordinates', TmpRe7, 7, ErrStatTmp, ErrMsgTmp, UnEc )
+         if (Failed())  return;
+      ! Set Time_(s)    AerTrq_(N-m)   HSSBrTrqC_(N-m)   GenTrq_(N-m)
+      CaseTimeSeries(1:4,i) = TmpRe7(1:4)
+      ! Set BlPitchCom  (deg -> rad)
+      CaseTimeSeries(5,i)   = TmpRe7(5) * Pi / 180.0_ReKi
+      ! Set Yaw         (deg -> rad)
+      CaseTimeSeries(6,i)   = TmpRe7(6) * Pi / 180.0_ReKi
+      ! Set YawRate     (deg/s -> rad/s)
+      CaseTimeSeries(7,i)   = TmpRe7(7) * Pi / 180.0_ReKi
+   enddo
 
 
       ! Close the echo and input file

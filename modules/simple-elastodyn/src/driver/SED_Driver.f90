@@ -159,7 +159,7 @@ PROGRAM SED_Driver
       ! call Print_FileInfo_Struct( CU, DvrFileInfo ) ! CU is the screen -- different number on different systems.
 
          ! Parse the input file
-      CALL ParseDvrIptFile( CLSettings%DvrIptFileName, DvrFileInfo, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
+      CALL ParseDvrIptFile( CLSettings%DvrIptFileName, DvrFileInfo, SettingsFlags, Settings, ProgInfo, CaseTimeSeries, ErrStat, ErrMsg )
       call CheckErr('')
 
          ! VVerbose error reporting
@@ -205,8 +205,6 @@ PROGRAM SED_Driver
    endif
 
 
-
-call ProgAbort("Need an input time series of some kind.  Finish this bit of code.  Aborting.")
    TimeIntervalFound=.true.      ! If specified or default value set
    ! DT - timestep.  If default was specified, then calculate default level.
    if ( SettingsFlags%DTdefault ) then
@@ -214,10 +212,10 @@ call ProgAbort("Need an input time series of some kind.  Finish this bit of code
       TimeIntervalFound=.false.
       TimeInterval=1000.0_DbKi
       ! Step through all lines to get smallest DT
-!      do n=min(2,size(CaseTimeSeries,2)),size(CaseTimeSeries,2)     ! Start at 2nd point (min to avoid stepping over end for single line files)
-!         TimeInterval=min(TimeInterval, real(CaseTimeSeries(1,n)-CaseTimeSeries(1,n-1), DbKi))
-!         TimeIntervalFound=.true.
-!      enddo
+      do n=min(2,size(CaseTimeSeries,2)),size(CaseTimeSeries,2)     ! Start at 2nd point (min to avoid stepping over end for single line files)
+         TimeInterval=min(TimeInterval, real(CaseTimeSeries(1,n)-CaseTimeSeries(1,n-1), DbKi))
+         TimeIntervalFound=.true.
+      enddo
       if (TimeIntervalFound) then
          call WrScr('Using smallest DT from data file: '//trim(Num2LStr(TimeInterval))//' seconds.')
       else
