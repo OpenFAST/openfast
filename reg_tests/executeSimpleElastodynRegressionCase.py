@@ -97,6 +97,9 @@ if not os.path.isdir(testBuildDirectory):
     for file in glob.glob(os.path.join(inputsDirectory,"*dat")):
         filename = file.split(os.path.sep)[-1]
         shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
+    for file in glob.glob(os.path.join(inputsDirectory,"*csv")):
+        filename = file.split(os.path.sep)[-1]
+        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
 
 ### Run SED on the test case
 if not noExec:

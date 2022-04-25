@@ -2,7 +2,7 @@
 ! LICENSING
 ! Copyright (C) 2020  National Renewable Energy Laboratory
 !
-!    This file is part of SED
+!    This file is part of Simplified-ElastoDyn (SED)
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -27,26 +27,407 @@ MODULE SED_IO
 
 contains
 
-SUBROUTINE SED_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
-   type(SED_InitInputType),   intent(in   )  :: InitInp              !< Input data for initialization
+!---------------------------------------------------------------
+!> Parse the input in the InFileInfo (FileInfo_Type data structure):
+subroutine SED_ParsePrimaryFileData( InitInp, RootName, interval, FileInfo_In, InputFileData, UnEc, ErrStat, ErrMsg )
+   type(SED_InitInputType),   intent(in   )  :: InitInp              !< Input data for initialization routine
+   character(1024),           intent(in   )  :: RootName             !< root name for summary file
+   real(DBKi),                intent(in   )  :: interval             !< timestep
+   type(FileInfoType),        intent(in   )  :: FileInfo_In          !< The input file stored in a data structure
    type(SED_InputFile),       intent(inout)  :: InputFileData        !< The data for initialization
+   integer(IntKi),            intent(  out)  :: UnEc                 !< The local unit number for this module's echo file
    integer(IntKi),            intent(  out)  :: ErrStat              !< Error status  from this subroutine
    character(*),              intent(  out)  :: ErrMsg               !< Error message from this subroutine
+
+   ! local vars
+   integer(IntKi)                            :: CurLine              !< current entry in FileInfo_In%Lines array
+   integer(IntKi)                            :: i                    !< generic counter
+!   type(TableIndexType)                      :: TabIdx               !< indices for table columnns, for simplifying data parsing/passing
+   real(SiKi)                                :: TmpRe(10)            !< temporary 10 number array for reading values in from table
    integer(IntKi)                            :: ErrStat2             !< Temporary error status  for subroutine and function calls
    character(ErrMsgLen)                      :: ErrMsg2              !< Temporary error message for subroutine and function calls
-   integer(IntKi)                            :: I                    !< Generic counter
-   character(*),              parameter      :: RoutineName="SED_ValidateInput"
-   integer(IntKi)                            :: IOS                  !< Temporary error status
+   character(*),              parameter      :: RoutineName="SED_ParsePrimaryFileData"
+
+      ! Initialize ErrStat
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+   UnEc     = -1  ! No file
+
+
+   CALL AllocAry( InputFileData%OutList, MaxOutPts, "Outlist", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   !======  Simulation control  =========================================================================
+   CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
+   call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+
+   if ( InputFileData%Echo ) then
+      CALL OpenEcho ( UnEc, TRIM(RootName)//'.ech', ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      WRITE(UnEc, '(A)') 'Echo file for AeroDisk primary input file: '//trim(InitInp%InputFile)
+      ! Write the first three lines into the echo file
+      WRITE(UnEc, '(A)') FileInfo_In%Lines(1)
+      WRITE(UnEc, '(A)') FileInfo_In%Lines(2)
+      WRITE(UnEc, '(A)') FileInfo_In%Lines(3)
+
+      CurLine = 4
+      call ParseVar( FileInfo_In, CurLine, 'Echo', InputFileData%Echo, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+   endif
+
+      ! IntMethod - Integration method: {1: RK4, 2: AB4, or 3: ABM4} (-):
+   call ParseVar ( FileInfo_In, CurLine, "IntMethod", InputFileData%IntMethod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! DT - Time interval for aerodynamic calculations {or default} (s):
+   call ParseVarWDefault ( FileInfo_In, CurLine, "DT", InputFileData%DT, interval, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+
+   !======  Degrees of Freedom  =========================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+      ! GenDOF -  Generator DOF (flag)
+   call ParseVar( FileInfo_In, CurLine, "GenDOF", InputFileData%GenDOF, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+
+   !======  Iniital Conditions  =========================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! Azimuth - Initial azimuth angle for blades (degrees)
+   call ParseVar( FileInfo_In, CurLine, "Azimuth", InputFileData%Azimuth, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+   InputFileData%Azimuth = InputFileData%Azimuth * D2R
+
+      ! BlPitch - Blades initial pitch (degrees)
+   call ParseVar( FileInfo_In, CurLine, "BlPitch", InputFileData%BlPitch, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+   InputFileData%BlPitch = InputFileData%BlPitch * D2R
+
+      ! RotSpeed - Initial or fixed rotor speed (rpm)
+   call ParseVar( FileInfo_In, CurLine, "RotSpeed", InputFileData%RotSpeed, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! NacYaw - Initial or fixed nacelle-yaw angle (degrees)
+   call ParseVar( FileInfo_In, CurLine, "NacYaw", InputFileData%NacYaw, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+   InputFileData%NacYaw = InputFileData%NacYaw * D2R
+
+      ! PtfmPitch - Fixed pitch tilt rotational displacement of platform (degrees)
+   call ParseVar( FileInfo_In, CurLine, "PtfmPitch", InputFileData%PtfmPitch, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+   InputFileData%PtfmPitch = InputFileData%PtfmPitch * D2R
+
+
+   !======  Turbine Configuration  ======================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! NumBl       - Number of blades (-)
+   call ParseVar( FileInfo_In, CurLine, "NumBl", InputFileData%NumBl, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! TipRad      - The distance from the rotor apex to the blade tip (meters)
+   call ParseVar( FileInfo_In, CurLine, "TipRad", InputFileData%TipRad, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! HubRad      - The distance from the rotor apex to the blade root (meters)
+   call ParseVar( FileInfo_In, CurLine, "HubRad", InputFileData%HubRad, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! PreCone     - Blades cone angle (degrees)
+   call ParseVar( FileInfo_In, CurLine, "PreCone", InputFileData%PreCone, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+   InputFileData%PreCone = InputFileData%PreCone * D2R
+
+      ! OverHang    - Distance from yaw axis to rotor apex [3 blades] or teeter pin [2 blades] (meters)
+   call ParseVar( FileInfo_In, CurLine, "OverHang", InputFileData%OverHang, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! ShftTilt    - Rotor shaft tilt angle (degrees)
+   call ParseVar( FileInfo_In, CurLine, "ShftTilt", InputFileData%ShftTilt, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+   InputFileData%ShftTilt = InputFileData%ShftTilt * D2R
+
+      ! Twr2Shft    - Vertical distance from the tower-top to the rotor shaft (meters)
+   call ParseVar( FileInfo_In, CurLine, "Twr2Shft", InputFileData%Twr2Shft, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! TowerHt     - Height of tower above ground level [onshore] or MSL [offshore] (meters)
+   call ParseVar( FileInfo_In, CurLine, "TowerHt", InputFileData%TowerHt, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+
+   !======  Mass and Inertia  ===========================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! RotIner     - Rot inertia about rotor axis [blades + hub] (kg m^2)
+   call ParseVar( FileInfo_In, CurLine, "RotIner", InputFileData%RotIner, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! GenIner     - Generator inertia about HSS (kg m^2)
+   call ParseVar( FileInfo_In, CurLine, "GenIner", InputFileData%GenIner, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+
+   !======  Drivetrain  =================================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! GBEff     - Gearbox efficiency (%)
+   call ParseVar( FileInfo_In, CurLine, "GBEff", InputFileData%GBEff, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! GBRatio     - Gearbox ratio (-)
+   call ParseVar( FileInfo_In, CurLine, "GBRatio", InputFileData%GBRatio, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+
+   !======  Outputs  ====================================================================================
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+!      ! SumPrint - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)
+!   call ParseVar( FileInfo_In, CurLine, "SumPrint", InputFileData%SumPrint, ErrStat2, ErrMsg2, UnEc )
+!      if (Failed()) return
+
+   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%OutList, &
+            InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return;
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call CleanUp()
+   end function Failed
+   subroutine Cleanup()
+      ! Only do this on a fault.  Leave open for calling routine in case we want to write anything else.
+      if (UnEc > 0_IntKi)  close(UnEc)
+   end subroutine Cleanup
+end subroutine SED_ParsePrimaryFileData
+
+
+!> Check inputdata
+subroutine SEDInput_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
+   type(SED_InitInputType),   intent(in   )  :: InitInp              !< Input data for initialization
+   type(SED_InputFile),       intent(in   )  :: InputFileData        !< The data for initialization
+   integer(IntKi),            intent(  out)  :: ErrStat              !< Error status  from this subroutine
+   character(*),              intent(  out)  :: ErrMsg               !< Error message from this subroutine
+   character(*),              parameter      :: RoutineName="SEDInput_ValidateInput"
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-END SUBROUTINE SED_ValidateInput
+end subroutine SEDInput_ValidateInput
+
+
+!> validate and process input file data (some was done during parsing of input file)
+subroutine SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat, ErrMsg )
+   type(SED_InitInputType),   intent(in   )  :: InitInp              !< Input data for initialization
+   real(DbKi),                intent(inout)  :: Interval             !< Coupling interval in seconds
+   type(SED_InputFile),       intent(inout)  :: InputFileData        !< The data for initialization
+   type(SED_ParameterType),   intent(inout)  :: p                    !<
+   integer(IntKi),            intent(  out)  :: ErrStat              !< Error status  from this subroutine
+   character(*),              intent(  out)  :: ErrMsg               !< Error message from this subroutine
+   integer(IntKi)                            :: ErrStat2             !< Temporary error status  for subroutine and function calls
+   character(ErrMsgLen)                      :: ErrMsg2              !< Temporary error message for subroutine and function calls
+   character(*),              parameter      :: RoutineName="SEDInput_SetParameters"
+
+      ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! Set parameters
+   p%DT        = InputFileData%DT
+   Interval    = p%DT                        ! Tell glue code what we want for DT
+   p%numOuts   = InputFileData%NumOuts
+   p%RootName  = InitInp%RootName
+
+      ! Set the outputs
+   call SetOutParam(InputFileData%OutList, p, ErrStat, ErrMsg )
+end subroutine SEDInput_SetParameters
+
+
 
 
 !FIXME: add SetOutParam here
 
 
-END MODULE SED_IO
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> this routine fills the AllOuts array, which is used to send data to the glue code to be written to an output file.
+!! NOTE: AllOuts is ReKi, but most calculations in this module are in single precision. This requires a bunch of conversions at this
+!! stage.
+subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
+   type(SED_InputType),          intent(in   )  :: u                 !< The inputs at time T
+   type(SED_ParameterType),      intent(in   )  :: p                 !< The module parameters
+   type(SED_OutputType),         intent(in   )  :: y                 !< outputs
+   type(SED_MiscVarType),        intent(inout)  :: m                 !< misc/optimization variables (for computing mesh transfers)
+   integer(IntKi),               intent(  out)  :: ErrStat           !< The error status code
+   character(*),                 intent(  out)  :: ErrMsg            !< The error message, if an error occurred
+   logical,                      intent(in   )  :: CalcWriteOutput   !< flag that determines if we need to compute AllOuts (or just the reaction loads that get returned to ServoDyn)
+   ! local variables
+   character(*), parameter                      :: RoutineName = 'Calc_WriteOutput'
+   integer(IntKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   real(ReKi)                                   :: Tmp3(3)
+   real(ReKi)                                   :: Rxyz(3,3)         !< rotation matrix for x,y,z of local coordinates
+
+   ! Initialize
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   m%AllOuts = 0.0_ReKi
+
+end subroutine Calc_WriteOutput
+
+
+
+!**********************************************************************************************************************************
+! NOTE: The following lines of code were generated by a Matlab script called "Write_ChckOutLst.m"
+!      using the parameters listed in the "OutListParameters.xlsx" Excel file. Any changes to these 
+!      lines should be modified in the Matlab script and/or Excel worksheet as necessary. 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a 
+!! warning if any of the channels are not available outputs from the module.
+!!  It assigns the settings for OutParam(:) (i.e, the index, name, and units of the output channels, WriteOutput(:)).
+!!  the sign is set to 0 if the channel is invalid.
+!! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
+!! 
+!! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 25-Apr-2022 09:45:38.
+SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   IMPLICIT                        NONE
+
+      ! Passed variables
+
+   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list out user-requested outputs
+   TYPE(SED_ParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
+   CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
+
+      ! Local variables
+
+   INTEGER                      :: ErrStat2                                        ! temporary (local) error status
+   INTEGER                      :: I                                               ! Generic loop-counting index
+   INTEGER                      :: J                                               ! Generic loop-counting index
+   INTEGER                      :: INDX                                            ! Index for valid arrays
+
+   LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
+   LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
+   CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
+   CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
+
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(13) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "AZIMUTH  ","GENACC   ","GENSPEED ","HSSHFTA  ","HSSHFTV  ","LSSTIPA  ","LSSTIPAXA","LSSTIPAXS", &
+                               "LSSTIPV  ","LSSTIPVXA","LSSTIPVXS","ROTACC   ","ROTSPEED "/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(13) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                  Azimuth ,    GenAcc ,  GenSpeed ,    GenAcc ,  GenSpeed ,    RotAcc ,    RotAcc ,    RotAcc , &
+                                 RotSpeed ,  RotSpeed ,  RotSpeed ,    RotAcc ,  RotSpeed /)
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(13) =  (/  &  ! This lists the units corresponding to the allowed parameters
+                               "(deg)    ","(deg/s^2)","(rpm)    ","(deg/s^2)","(rpm)    ","(deg/s^2)","(deg/s^2)","(deg/s^2)", &
+                               "(rpm)    ","(rpm)    ","(rpm)    ","(deg/s^2)","(rpm)    "/)
+
+
+      ! Initialize values
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   InvalidOutput = .FALSE.
+
+
+!   ..... Developer must add checking for invalid inputs here: .....
+
+!   ................. End of validity checking .................
+
+
+   !-------------------------------------------------------------------------------------------------
+   ! Allocate and set index, name, and units for the output channels
+   ! If a selected output channel is not available in this module, set error flag.
+   !-------------------------------------------------------------------------------------------------
+
+   ALLOCATE ( p%OutParam(0:p%NumOuts) , STAT=ErrStat2 )
+   IF ( ErrStat2 /= 0_IntKi )  THEN
+      CALL SetErrStat( ErrID_Fatal,"Error allocating memory for the SimpleElastoDyn OutParam array.", ErrStat, ErrMsg, RoutineName )
+      RETURN
+   ENDIF
+
+      ! Set index, name, and units for the time output channel:
+
+   p%OutParam(0)%Indx  = Time
+   p%OutParam(0)%Name  = "Time"    ! OutParam(0) is the time channel by default.
+   p%OutParam(0)%Units = "(s)"
+   p%OutParam(0)%SignM = 1
+
+
+      ! Set index, name, and units for all of the output channels.
+      ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
+
+   DO I = 1,p%NumOuts
+
+      p%OutParam(I)%Name  = OutList(I)
+      OutListTmp          = OutList(I)
+
+      ! Reverse the sign (+/-) of the output channel if the user prefixed the
+      !   channel name with a "-", "_", "m", or "M" character indicating "minus".
+
+
+      CheckOutListAgain = .FALSE.
+
+      IF      ( INDEX( "-_", OutListTmp(1:1) ) > 0 ) THEN
+         p%OutParam(I)%SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
+         OutListTmp          = OutListTmp(2:)
+      ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
+         CheckOutListAgain   = .TRUE.
+         p%OutParam(I)%SignM = 1
+      ELSE
+         p%OutParam(I)%SignM = 1
+      END IF
+
+      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
+
+
+      Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+
+
+         ! If it started with an "M" (CheckOutListAgain) we didn't find the value in our list (Indx < 1)
+
+      IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again
+         p%OutParam(I)%SignM = -1                     ! ex, "MTipDxc1" causes the sign of TipDxc1 to be switched.
+         OutListTmp          = OutListTmp(2:)
+
+         Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+      END IF
+
+
+      IF ( Indx > 0 ) THEN ! we found the channel name
+         IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
+            p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
+            p%OutParam(I)%Units = "INVALID"
+            p%OutParam(I)%SignM = 0
+         ELSE
+            p%OutParam(I)%Indx  = ParamIndxAry(Indx)
+            p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
+         END IF
+      ELSE ! this channel isn't valid
+         p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
+         p%OutParam(I)%Units = "INVALID"
+         p%OutParam(I)%SignM = 0                    ! multiply all results by zero
+
+         CALL SetErrStat(ErrID_Fatal, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
+      END IF
+
+   END DO
+
+   RETURN
+END SUBROUTINE SetOutParam
+!----------------------------------------------------------------------------------------------------------------------------------
+!End of code generated by Matlab script
+!**********************************************************************************************************************************
+END MODULE SED_IO

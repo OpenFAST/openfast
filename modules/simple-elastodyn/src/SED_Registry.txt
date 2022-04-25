@@ -15,13 +15,14 @@ include   Registry_NWTC_Library.txt
 
 # ..... Initialization data .......................................................................................................
 # SED input file
-typedef  SED/SED  SED_InputFile     LOGICAL              EchoFlag          -  - -   "Echo the input file"                    -
-typedef  ^        SED_InputFile     R8Ki                 DeltaT            -  - -   "Time step for module time integration" s
+typedef  SED/SED  SED_InputFile     LOGICAL              Echo              -  - -   "Echo the input file"                    -
+typedef  ^        SED_InputFile     DBKi                 DT                -  - -   "Time step for module time integration" s
 typedef  ^        SED_InputFile     IntKi                IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
 typedef  ^        SED_InputFile     LOGICAL              GenDOF            -  - -   "whether the generator is fixed or free" -
 typedef  ^        SED_InputFile     R8Ki                 Azimuth           -  - -   "Initial azimuth angle for blade 1" deg
 typedef  ^        SED_InputFile     ReKi                 BlPitch           -  - -   "Initial blade pitch angles" radians
 typedef  ^        SED_InputFile     ReKi                 RotSpeed          -  - -   "Initial or fixed rotor speed" RPM
+typedef  ^        SED_InputFile     ReKi                 NacYaw            -  - -   "Initial or fixed nacelle yaw" deg
 typedef  ^        SED_InputFile     ReKi                 PtfmPitch         -  - -   "Fixed pitch tilt rotational displacement of platform" deg
 typedef  ^        SED_InputFile     IntKi                NumBl             -  - -   "Number of blades on the turbine" -
 typedef  ^        SED_InputFile     ReKi                 TipRad            -  - -   "Preconed blade-tip radius (distance from the rotor apex to the blade tip)" m
@@ -36,6 +37,7 @@ typedef  ^        SED_InputFile     ReKi                 GenIner           -  - 
 typedef  ^        SED_InputFile     ReKi                 GBEff             -  - -   "Gearbox efficiency" "percent"
 typedef  ^        SED_InputFile     ReKi                 GBRatio           -  - -   "Gearbox ratio" -
 typedef  ^        SED_InputFile     LOGICAL              SumPrint          -  - -   "Print summary data to <RootName>.sum" -
+typedef  ^        SED_InputFile     IntKi                NumOuts           -  - -   "Number of outputs"   -
 typedef  ^        SED_InputFile     CHARACTER(ChanLen)   OutList           :  - -   "List of user-requested output channels" -
 
 
@@ -43,7 +45,9 @@ typedef  ^        SED_InputFile     CHARACTER(ChanLen)   OutList           :  - 
 # inputs for initialization:
 typedef  SED/SED  InitInputType     CHARACTER(1024)      InputFile         -  - -   "Name of the input file"   -
 typedef  ^        InitInputType     CHARACTER(1024)      RootName          -  - -   "RootName for writing output files" -
-typedef  ^        InitInputType     LOGICAL              Linearize         -  .false. -   "Linearization not currently enabled" -
+typedef  ^        InitInputType     LOGICAL              Linearize         - .false. - "this module cannot be linearized at present" -
+typedef  ^        InitInputType     LOGICAL              UseInputFile      - .TRUE.  - "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
+typedef  ^        InitInputType     FileInfoType         PassedFileData    -  - -   "If we don't use the input file, pass everything through this"   -
 
 
 # outputs from initialization:
@@ -104,7 +108,8 @@ typedef  ^       OtherStateType        IntKi             DummyOtherState   -  - 
 
 # ..... Parameters.................................................................................................................
 # unchanging parameters:
-typedef  ^       ParameterType         DbKi              DeltaT            -  - -   "Time step for module time integration" s
+typedef  ^        ParameterType        CHARACTER(1024)   RootName          -  - -   "RootName for writing output files" -
+typedef  ^       ParameterType         DbKi              DT                -  - -   "Time step for module time integration" s
 typedef  ^       ParameterType         IntKi             IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
 typedef  ^       ParameterType         ReKi              J_DT              -  - -   "Drivetrain inertia (blades+hub+shaft+generator)" "kgm^2"
 typedef  ^       ParameterType         ReKi              PtfmPitch         -  - -   "Static platform tilt angle" rad
@@ -112,8 +117,9 @@ typedef  ^       ParameterType         MeshMapType       mapPtf2Twr        -  - 
 typedef  ^       ParameterType         MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
 typedef  ^       ParameterType         MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
 typedef  ^       ParameterType         LOGICAL           isFixed_GenDOF    -  - -   "whether the generator is fixed or free" -
-
+typedef  ^       ParameterType         IntKi             NumOuts           -  - -   "Number of outputs"   -
+typedef  ^        ParameterType        OutParmType       OutParam         {:} - -   "Names and units (and other characteristics) of all requested output parameters"  -
 
 # ..... Misc/Optimization variables.................................................................................................
-typedef  ^       MiscVarType           IntKi             DummyMiscVar      -  - -   "" -
+typedef  ^        MiscVarType          ReKi              AllOuts          {:} - -   "Array of all outputs"                             -
 

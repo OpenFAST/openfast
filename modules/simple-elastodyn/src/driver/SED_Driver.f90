@@ -44,7 +44,8 @@ PROGRAM SED_Driver
    integer(IntKi)                                     :: NumTSteps            !< number of timesteps
    logical                                            :: TimeIntervalFound    !< Interval between time steps, in seconds
    real(DbKi)                                         :: InputTime(NumInp)    !< Variable for storing time associated with inputs, in seconds
-   real(ReKi),                            allocatable :: CaseTimeSeries(:,:)   !< List of displacements and times to apply {idx 1 =  time step, idx 2 =  [T, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z]}
+   real(DbKi),                            allocatable :: CaseTime(:)          !< Timestamps for the case data
+   real(ReKi),                            allocatable :: CaseData(:,:)        !< Data for the case.  Corresponds to CaseTime
 
    type(SED_InitInputType)                            :: InitInData           !< Input data for initialization
    type(SED_InitOutputType)                           :: InitOutData          !< Output data from initialization
@@ -159,7 +160,7 @@ PROGRAM SED_Driver
       ! call Print_FileInfo_Struct( CU, DvrFileInfo ) ! CU is the screen -- different number on different systems.
 
          ! Parse the input file
-      CALL ParseDvrIptFile( CLSettings%DvrIptFileName, DvrFileInfo, SettingsFlags, Settings, ProgInfo, CaseTimeSeries, ErrStat, ErrMsg )
+      CALL ParseDvrIptFile( CLSettings%DvrIptFileName, DvrFileInfo, SettingsFlags, Settings, ProgInfo, CaseTime, CaseData, ErrStat, ErrMsg )
       call CheckErr('')
 
          ! VVerbose error reporting
@@ -212,8 +213,8 @@ PROGRAM SED_Driver
       TimeIntervalFound=.false.
       TimeInterval=1000.0_DbKi
       ! Step through all lines to get smallest DT
-      do n=min(2,size(CaseTimeSeries,2)),size(CaseTimeSeries,2)     ! Start at 2nd point (min to avoid stepping over end for single line files)
-         TimeInterval=min(TimeInterval, real(CaseTimeSeries(1,n)-CaseTimeSeries(1,n-1), DbKi))
+      do n=min(2,size(CaseTime)),size(CaseTime)     ! Start at 2nd point (min to avoid stepping over end for single line files)
+         TimeInterval=min(TimeInterval, real(CaseTime(n)-CaseTime(n-1), DbKi))
          TimeIntervalFound=.true.
       enddo
       if (TimeIntervalFound) then
@@ -226,7 +227,7 @@ PROGRAM SED_Driver
 
    ! TMax and NumTSteps from input file or from the value specified (specified overrides)
    if ( SettingsFlags%NumTimeStepsDefault ) then
-      TMax = real(CaseTimeSeries(1,size(CaseTimeSeries,2)), DbKi)
+      TMax = CaseTime(size(CaseTime))
       NumTSteps = ceiling( TMax / TimeInterval )
    elseif ( SettingsFlags%NumTimeSteps ) then   ! Override with number of timesteps
       TMax = TimeInterval * Settings%NumTimeSteps + TStart

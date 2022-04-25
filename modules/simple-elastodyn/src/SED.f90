@@ -71,7 +71,9 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   integer(IntKi)                                  :: NumOuts     ! number of outputs; would probably be in the parameter type
+   type(SED_InputFile)                             :: InputFileData  !< Data from input file as a string array
+   type(FileInfoType)                              :: FileInfo_In !< The derived type for holding the full input file for parsing -- we may pass this in the future
+   integer(IntKi)                                  :: UnEc        ! unit number for the echo file (-1 for not in use)
    integer(IntKi)                                  :: ErrStat2    ! local error status
    character(ErrMsgLen)                            :: ErrMsg2     ! local error message
    character(*), parameter                         :: RoutineName = 'SED_Init'
@@ -79,7 +81,6 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
-   NumOuts = 2
 
       ! Initialize the NWTC Subroutine Library
    call NWTC_Init( )
@@ -87,40 +88,55 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ! Display the module information
    call DispNVD( SED_Ver )
 
-      ! Define parameters here:
-   p%DeltaT  = Interval
 
-      ! Define initial system states here:
-!   x%DummyContState           = 0.0_ReKi
-!   xd%DummyDiscState          = 0.0_ReKi
-!   z%DummyConstrState         = 0.0_ReKi
-!   OtherState%DummyOtherState = 0.0_ReKi
-      
-   ! Define optimization variables here:      
-   m%DummyMiscVar          = 0.0_ReKi
-      
-   ! Define initial guess for the system inputs here:
-!   u%DummyInput = 0.0_ReKi
+   ! set rootname
+   p%RootName = trim(InitInp%RootName)//".SED"
 
-!   call SetOutParams()
+   ! Get primary input file
+   if ( InitInp%UseInputFile ) then
+      CALL ProcessComFile( InitInp%InputFile, FileInfo_In, ErrStat2, ErrMsg2 )
+   else
+      CALL NWTC_Library_CopyFileInfoType( InitInp%PassedFileData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+   endif
+   if (Failed()) return
 
-   ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 );       if (Failed()) return;
-   y%WriteOutput = 0
+   ! For diagnostic purposes, the following can be used to display the contents
+   ! of the FileInfo_In data structure.
+   !call Print_FileInfo_Struct( CU, FileInfo_In ) ! CU is the screen -- different number on different systems.
 
-   ! Define initialization-routine output here:
-   call AllocAry(InitOut%WriteOutputHdr,NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
-   call AllocAry(InitOut%WriteOutputUnt,NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
-   InitOut%WriteOutputHdr = (/ 'Time   ', 'Column2' /)
-   InitOut%WriteOutputUnt = (/ '(s)',     '(-)'     /)
+   ! Parse all SED-related input and populate the InputFileData structure
+   call SED_ParsePrimaryFileData( InitInp, p%RootName, Interval, FileInfo_In, InputFileData, UnEc, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
+
+   ! Verify all the necessary initialization and input file data
+   CALL SEDInput_ValidateInput( InitInp, InputFileData, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
+
+   ! Set parameters
+   CALL SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
+
+   ! For diagnostic purposes.  If we add a summary file, use this to write table
+   !call WriteAeroTab(p%AeroTable,Cu)
 
 
-!FIXME: any logic around this?
-   !Interval = p%DeltaT
+   ! Set inputs
+   call Init_U(ErrStat2,ErrMsg2);   if (Failed())  return
 
-      
+   ! Set outputs
+   call Init_Y(ErrStat2,ErrMsg2);   if (Failed())  return
+
+   ! Set InitOutputs
+   call Init_InitY(ErrStat2,ErrMsg2);  if (Failed())  return
+
+   ! Set some other stuff that the framework requires
+   call Init_OtherStuff(ErrStat2,ErrMsg2);  if (Failed())  return
+
+   ! This should be caught by glue code
    if (InitInp%Linearize) then
-      CALL SetErrStat( ErrID_Fatal, 'SED cannot perform linearization analysis.', ErrStat, ErrMsg, RoutineName)
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = 'SED cannot perform linearization analysis.'
+      if (Failed()) return
    end if
 
 contains
@@ -130,6 +146,51 @@ contains
         !if (Failed) call CleanUp()
    end function Failed
 
+   !> Initialize the inputs in u
+   subroutine Init_U(ErrStat3,ErrMsg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      return
+   end subroutine Init_U
+
+   !> Initialize the outputs in Y
+   subroutine Init_Y(ErrStat3,ErrMSg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      call AllocAry(y%WriteOutput,p%NumOuts,'WriteOutput',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
+      y%WriteOutput = 0.0_ReKi
+   end subroutine Init_Y
+
+   !> Initialize other stuff that the framework requires, but isn't used here
+   subroutine Init_OtherStuff(ErrStat3,ErRMsg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+      if (allocated(m%AllOuts)) deallocate(m%AllOuts)
+      allocate(m%AllOuts(0:MaxOutPts),STAT=ErrStat3)
+      if (ErrStat3 /= 0) then
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = "Cannot allocate m%AllOuts"
+         return
+      endif
+      m%AllOuts = 0.0_SiKi
+   end subroutine Init_OtherStuff
+
+   !> Initialize the InitOutput
+   subroutine Init_InitY(ErrStat3,ErrMsg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      integer(IntKi)                   :: i
+      call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
+      do i=1,p%NumOuts
+         InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
+         InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
+      end do
+      ! Version
+      InitOut%Ver = SED_Ver
+   end subroutine Init_InitY
 END SUBROUTINE SED_Init
 
 

@@ -368,14 +368,15 @@ END SUBROUTINE RetrieveArgs
 !> This subroutine reads the driver input file and sets up the flags and settings
 !! for the driver code.  Any settings from the command line options will override
 !! this.
-SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, ProgInfo, CaseTimeSeries, ErrStat, ErrMsg )
+SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, ProgInfo, CaseTime, CaseData, ErrStat, ErrMsg )
 
    CHARACTER(1024),                    INTENT(IN   )  :: DvrFileName
    type(FileInfoType),                 INTENT(IN   )  :: DvrFileInfo          ! Input file stored in FileInfoType structure
    TYPE(SEDDriver_Flags),              INTENT(INOUT)  :: DvrFlags
    TYPE(SEDDriver_Settings),           INTENT(INOUT)  :: DvrSettings
    TYPE(ProgDesc),                     INTENT(IN   )  :: ProgInfo
-   real(ReKi),          allocatable,   intent(  out)  :: CaseTimeSeries(:,:)
+   real(DbKi),          allocatable,   intent(  out)  :: CaseTime(:)
+   real(ReKi),          allocatable,   intent(  out)  :: CaseData(:,:)
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              ! returns a non-zero value when an error occurs
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -383,7 +384,7 @@ SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, Pro
    INTEGER(IntKi)                                     :: CurLine              ! Current line in parsing
    INTEGER(IntKi)                                     :: TabLines             ! Number of lines in the table
    integer(IntKi)                                     :: i                    !< generic loop counter
-   real(ReKi)                                         :: TmpRe7(7)            !< temporary real array
+   real(DbKi)                                         :: TmpDb7(7)            !< temporary real array
    CHARACTER(1024)                                    :: RootName             ! Root name of AeroDisk driver input file
 
       ! Input file echoing
@@ -504,18 +505,21 @@ SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, Pro
 
       ! Last line of table is assumed to be last line in file (or included file)
    TabLines = DvrFileInfo%NumLines - CurLine + 1
-   call AllocAry( CaseTimeSeries, 7, TabLines, 'CaseTimeSeries', ErrStatTmp, ErrMsgTmp )
+   call AllocAry( CaseTime,    TabLines, 'CaseTime', ErrStatTmp, ErrMsgTmp ); if (Failed()) return;
+   call AllocAry( CaseData, 6, TabLines, 'CaseData', ErrStatTmp, ErrMsgTmp ); if (Failed()) return;
    do i=1,Tablines
-      call ParseAry ( DvrFileInfo, CurLine, 'Coordinates', TmpRe7, 7, ErrStatTmp, ErrMsgTmp, UnEc )
+      call ParseAry ( DvrFileInfo, CurLine, 'Coordinates', TmpDb7, 7, ErrStatTmp, ErrMsgTmp, UnEc )
          if (Failed())  return;
-      ! Set Time_(s)    AerTrq_(N-m)   HSSBrTrqC_(N-m)   GenTrq_(N-m)
-      CaseTimeSeries(1:4,i) = TmpRe7(1:4)
+      ! Set Time_(s)
+      CaseTime(i)     = TmpDb7(1)
+      ! Set AerTrq_(N-m)   HSSBrTrqC_(N-m)   GenTrq_(N-m)
+      CaseData(1:3,i) = real(TmpDb7(2:4),ReKi)
       ! Set BlPitchCom  (deg -> rad)
-      CaseTimeSeries(5,i)   = TmpRe7(5) * Pi / 180.0_ReKi
+      CaseData(4,i)   = real(TmpDb7(5),ReKi) * D2R
       ! Set Yaw         (deg -> rad)
-      CaseTimeSeries(6,i)   = TmpRe7(6) * Pi / 180.0_ReKi
+      CaseData(5,i)   = real(TmpDb7(6),ReKi) * D2R
       ! Set YawRate     (deg/s -> rad/s)
-      CaseTimeSeries(7,i)   = TmpRe7(7) * Pi / 180.0_ReKi
+      CaseData(6,i)   = real(TmpDb7(7),ReKi) * D2R
    enddo
 
 
