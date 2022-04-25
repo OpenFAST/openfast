@@ -44,7 +44,8 @@ PROGRAM AeroDisk_Driver
    integer(IntKi)                                     :: NumTSteps            !< number of timesteps
    logical                                            :: TimeIntervalFound    !< Interval between time steps, in seconds
    real(DbKi)                                         :: InputTime(NumInp)    !< Variable for storing time associated with inputs, in seconds
-   real(ReKi),                            allocatable :: CaseTimeSeries(:,:)   !< List of displacements and times to apply {idx 1 =  time step, idx 2 =  [T, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z]}
+   real(DbKi),                            allocatable :: CaseTime(:)          !< Timestamps for the case data
+   real(ReKi),                            allocatable :: CaseData(:,:)        !< Data for the case.  Corresponds to CaseTime
 
    type(ADsk_InitInputType)                           :: InitInData           !< Input data for initialization
    type(ADsk_InitOutputType)                          :: InitOutData          !< Output data from initialization
@@ -161,7 +162,7 @@ PROGRAM AeroDisk_Driver
       ! call Print_FileInfo_Struct( CU, DvrFileInfo ) ! CU is the screen -- different number on different systems.
 
          ! Parse the input file
-      CALL ParseDvrIptFile( CLSettings%DvrIptFileName, DvrFileInfo, SettingsFlags, Settings, ProgInfo, CaseTimeSeries, ErrStat, ErrMsg )
+      CALL ParseDvrIptFile( CLSettings%DvrIptFileName, DvrFileInfo, SettingsFlags, Settings, ProgInfo, CaseTime, CaseData, ErrStat, ErrMsg )
       call CheckErr('')
 
          ! VVerbose error reporting
@@ -215,8 +216,8 @@ PROGRAM AeroDisk_Driver
       TimeIntervalFound=.false.
       TimeInterval=1000.0_DbKi
       ! Step through all lines to get smallest DT
-      do n=min(2,size(CaseTimeSeries,2)),size(CaseTimeSeries,2)     ! Start at 2nd point (min to avoid stepping over end for single line files)
-         TimeInterval=min(TimeInterval, real(CaseTimeSeries(1,n)-CaseTimeSeries(1,n-1), DbKi))
+      do n=min(2,size(CaseTime)),size(CaseTime)     ! Start at 2nd point (min to avoid stepping over end for single line files)
+         TimeInterval=min(TimeInterval, real(CaseTime(n)-CaseTime(n-1), DbKi))
          TimeIntervalFound=.true.
       enddo
       if (TimeIntervalFound) then
@@ -229,7 +230,7 @@ PROGRAM AeroDisk_Driver
 
    ! TMax and NumTSteps from input file or from the value specified (specified overrides)
    if ( SettingsFlags%NumTimeStepsDefault ) then
-      TMax = real(CaseTimeSeries(1,size(CaseTimeSeries,2)), DbKi)
+      TMax = CaseTime(size(CaseTime))
       NumTSteps = ceiling( TMax / TimeInterval )
    elseif ( SettingsFlags%NumTimeSteps ) then   ! Override with number of timesteps
       TMax = TimeInterval * Settings%NumTimeSteps + TStart
@@ -283,17 +284,19 @@ PROGRAM AeroDisk_Driver
       InputTime(1) = Time
 
       ! interpolate into the input data to get the wind info.  Set this as u then run { InterpStpReal( X, Xary, Yary, indx, size) }
+      !  NOTE: converting CaseTime into ReKi is going to slow things down, but this is a demo driver, not a production tool, so I'm not
+      !        going to spend time fixing it.
 
       ! WindSpeed
-      u(1)%VWind(1) = InterpStp( real(Time,ReKi), CaseTimeSeries(1,:), CaseTimeSeries(2,:), TmpIdx, size(CaseTimeSeries,2) )
-      u(1)%VWind(2) = InterpStp( real(Time,ReKi), CaseTimeSeries(1,:), CaseTimeSeries(3,:), TmpIdx, size(CaseTimeSeries,2) )
-      u(1)%VWind(3) = InterpStp( real(Time,ReKi), CaseTimeSeries(1,:), CaseTimeSeries(4,:), TmpIdx, size(CaseTimeSeries,2) )
+      u(1)%VWind(1) = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      u(1)%VWind(2) = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
+      u(1)%VWind(3) = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
       ! RotSpeed
-      u(1)%RotSpeed = InterpStp( real(Time,ReKi), CaseTimeSeries(1,:), CaseTimeSeries(5,:), TmpIdx, size(CaseTimeSeries,2) )
+      u(1)%RotSpeed = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
       ! Pitch
-      u(1)%BlPitch  = InterpStp( real(Time,ReKi), CaseTimeSeries(1,:), CaseTimeSeries(6,:), TmpIdx, size(CaseTimeSeries,2) )
+      u(1)%BlPitch  = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
       ! Yaw
-      Yaw           = InterpStp( real(Time,ReKi), CaseTimeSeries(1,:), CaseTimeSeries(7,:), TmpIdx, size(CaseTimeSeries,2) )
+      Yaw           = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
 
       ! Now set the turbine orientation info -- note we don't include azimuth (code doesn't use it)
       Theta = (/ 0.0_R8Ki, 0.0_R8Ki, real(Yaw,R8Ki) /)
