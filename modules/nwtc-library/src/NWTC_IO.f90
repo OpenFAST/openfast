@@ -8569,11 +8569,11 @@ END SUBROUTINE CheckR16Var
    SUBROUTINE ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
    
       CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
-      CHARACTER(1024) , INTENT(  OUT)        :: descr                !< Line describing the contents of the file
+      CHARACTER(*) ,    INTENT(  OUT)        :: descr                !< Line describing the contents of the file
       INTEGER(IntKi)  , INTENT(  OUT)        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
       REAL(ReKi)      , INTENT(  OUT)        :: origin(3)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
       REAL(ReKi)      , INTENT(  OUT)        :: gridSpacing(3)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
-      CHARACTER(1024) , INTENT(  OUT)        :: vecLabel
+      CHARACTER(*) ,    INTENT(  OUT)        :: vecLabel
       INTEGER(IntKi)  , INTENT(INOUT)        :: Un                   !< unit number of opened file
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs

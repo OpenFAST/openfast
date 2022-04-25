@@ -1112,7 +1112,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ! Passed variables
 
    TYPE(ProgDesc),                INTENT( IN    ) :: HydroDyn_ProgDesc    ! 
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! The name of the output file 
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! The name of the output file 
    TYPE(HydroDyn_InputFile ),     INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
    TYPE(HydroDyn_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p 
@@ -1246,7 +1246,7 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
       ! Passed variables
 
    TYPE(ProgDesc)               , INTENT( IN    ) :: HydroDyn_ProgDesc
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! Root name for the output file
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p   
    TYPE(HydroDyn_InitOutPutType ),INTENT( IN    ) :: InitOut            !
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           

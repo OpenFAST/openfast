@@ -698,12 +698,12 @@ SUBROUTINE SeaStOut_Init( SeaSt_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ! Passed variables
 
    TYPE(ProgDesc),                INTENT( IN    ) :: SeaSt_ProgDesc    ! 
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! The name of the output file 
-   TYPE(SeaSt_InputFile ),     INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
-   TYPE(SeaSt_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
-   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p 
-   TYPE(SeaSt_MiscVarType),    INTENT( INOUT ) :: m
-   TYPE(SeaSt_InitOutputType), INTENT( INOUT ) :: InitOut
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! The name of the output file 
+   TYPE(SeaSt_InputFile ),        INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
+   TYPE(SeaSt_OutputType),        INTENT( INOUT ) :: y                    ! This module's internal data
+   TYPE(SeaSt_ParameterType),     INTENT( INOUT ) :: p 
+   TYPE(SeaSt_MiscVarType),       INTENT( INOUT ) :: m
+   TYPE(SeaSt_InitOutputType),    INTENT( INOUT ) :: InitOut
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -813,9 +813,9 @@ SUBROUTINE SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName,  p, InitOut, ErrSta
       ! Passed variables
 
    TYPE(ProgDesc)               , INTENT( IN    ) :: SeaSt_ProgDesc
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! Root name for the output file
-   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p   
-   TYPE(SeaSt_InitOutPutType ),INTENT( IN    ) :: InitOut            !
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
+   TYPE(SeaSt_ParameterType),     INTENT( INOUT ) :: p   
+   TYPE(SeaSt_InitOutPutType ),   INTENT( IN    ) :: InitOut              !
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
