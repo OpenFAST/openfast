@@ -171,6 +171,15 @@ function(adsk_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${AERODISK_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(adsk_regression)
 
+# simple-elastodyn
+function(sed_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSimpleElastodynRegressionCase.py")
+  set(SED_EXECUTABLE "${CTEST_SED_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/simple-elastodyn")
+  regression(${TEST_SCRIPT} ${SED_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(sed_regression)
+
 #===============================================================================
 # Regression tests
 #===============================================================================
@@ -280,3 +289,5 @@ ifw_py_regression("ifw_py_turbsimff"                          "inflowwind;python
 # AeroDisk regression tests
 adsk_regression("ad_timeseries_shutdown"                      "aerodisk")
 
+# SimplifiedElastoDyn regression tests
+sed_regression("sed_test1"                                    "simple-elastodyn")
