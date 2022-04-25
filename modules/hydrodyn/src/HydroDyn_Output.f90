@@ -1275,7 +1275,7 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
         (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0 ) ) THEN           ! Output has been requested so let's open an output file            
       
          ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'.HD.out'
+      OutFileName = TRIM(OutRootName)//'.out'
       CALL GetNewUnit( p%UnOutFile )
    
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 

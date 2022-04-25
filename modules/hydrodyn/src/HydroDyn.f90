@@ -398,7 +398,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       IF ( InputFileData%HDSum ) THEN 
          
-         SummaryName = TRIM(InitInp%OutRootName)//'.HD.sum'
+         SummaryName = TRIM(InitInp%OutRootName)//'.sum'
          CALL HDOut_OpenSum( InputFileData%UnSum, SummaryName, HydroDyn_ProgDesc, ErrStat2, ErrMsg2 )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN

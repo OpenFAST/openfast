@@ -419,7 +419,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
       IF ( InputFileData%SeaStSum ) THEN 
          
-         SummaryName = TRIM(InitInp%OutRootName)//'.SEA.sum'
+         SummaryName = trim(InitInp%OutRootName)//'.sum'
          CALL SeaStOut_OpenSum( InputFileData%UnSum, SummaryName, SeaSt_ProgDesc, ErrStat2, ErrMsg2 )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN

@@ -208,7 +208,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          if (Failed()) return;
 
    if ( InputFileData%Echo ) then
-      EchoFile = TRIM(OutRootName)//'.HD.ech'
+      EchoFile = TRIM(OutRootName)//'.ech'
       CALL OpenEcho ( UnEc, TRIM(EchoFile), ErrStat2, ErrMsg2 )
          if (Failed())  return;
       WRITE(UnEc, '(A)') 'Echo file for AeroDyn 15 primary input file: '//trim(InputFileName)

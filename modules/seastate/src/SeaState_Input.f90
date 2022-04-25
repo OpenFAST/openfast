@@ -102,7 +102,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
          if (Failed()) return;
 
    if ( InputFileData%Echo ) then
-      EchoFile = trim(OutRootName)//'.SEA.ech'
+      EchoFile = trim(OutRootName)//'.ech'
       call OpenEcho ( UnEc, trim(EchoFile), ErrStat2, ErrMsg2 )
          if (Failed())  return;
       write(UnEc, '(A)') 'Echo file for SeaState primary input file: '//trim(InputFileName)

@@ -203,7 +203,7 @@ PROGRAM HydroDynDriver
    InitInData%defMSL2SWL   = drvrInitInp%MSL2SWL
    InitInData%UseInputFile = .TRUE. 
    InitInData%InputFile    = drvrInitInp%HDInputFile
-   InitInData%OutRootName  = drvrInitInp%OutRootName
+   InitInData%OutRootName  = trim(drvrInitInp%OutRootName)//'.HD'
    InitInData%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
    InitInData%Linearize    = drvrInitInp%Linearize
   
@@ -230,7 +230,7 @@ PROGRAM HydroDynDriver
    InitInData_SeaSt%defMSL2SWL   = drvrInitInp%MSL2SWL
    InitInData_SeaSt%UseInputFile = .TRUE. 
    InitInData_SeaSt%InputFile    = drvrInitInp%SeaStateInputFile
-   InitInData_SeaSt%OutRootName  = drvrInitInp%OutRootName
+   InitInData_SeaSt%OutRootName  = trim(drvrInitInp%OutRootName)//'.SEA'
    InitInData_SeaSt%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
    Interval = drvrInitInp%TimeInterval
    

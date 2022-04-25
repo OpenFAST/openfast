@@ -840,7 +840,7 @@ SUBROUTINE SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName,  p, InitOut, ErrSta
    IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0  ) THEN           ! Output has been requested so let's open an output file            
       
          ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'.SeaSt.out'
+      OutFileName = TRIM(OutRootName)//'.out'
       CALL GetNewUnit( p%UnOutFile )
    
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
