@@ -40,7 +40,7 @@ module SED_Driver_Types
    type     :: SEDDriver_Flags
       logical                 :: DvrIptFile           = .FALSE.      !< Was an input file name given on the command line?
       logical                 :: SEDIptFile           = .FALSE.      !< Was an SED input file requested?
-      logical                 :: InputDispFile        = .FALSE.      !< Input displacement time series
+      logical                 :: OutRootName          = .FALSE.      !< Was an AeroDisk output rootname 
       logical                 :: TStart               = .FALSE.      !< specified a start time
       logical                 :: NumTimeSteps         = .FALSE.      !< specified a number of timesteps to process
       logical                 :: NumTimeStepsDefault  = .FALSE.      !< specified a 'DEFAULT' for number of timesteps to process
@@ -55,11 +55,11 @@ module SED_Driver_Types
    type     :: SEDDriver_Settings
       character(1024)         :: DvrIptFileName                !< Driver input file name
       character(1024)         :: SEDIptFileName                !< Filename of SED input file to read (if no driver input file)
-      character(1024)         :: InputDispFile                 !< Filename of SED time series displacements
+      character(1024)         :: OutRootName                   !< Output root name
 
+      real(DbKi)              :: TStart                        !< Start time
       integer(IntKi)          :: NumTimeSteps                  !< Number of timesteps
       real(DbKi)              :: DT                            !< resolution of time
-      real(DbKi)              :: TStart                        !< Start time
 
       type(ProgDesc)          :: ProgInfo                      !< Program info
       type(ProgDesc)          :: SEDProgInfo                   !< Program info for SED

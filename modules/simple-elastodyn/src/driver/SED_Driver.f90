@@ -44,7 +44,7 @@ PROGRAM SED_Driver
    integer(IntKi)                                     :: NumTSteps            !< number of timesteps
    logical                                            :: TimeIntervalFound    !< Interval between time steps, in seconds
    real(DbKi)                                         :: InputTime(NumInp)    !< Variable for storing time associated with inputs, in seconds
-   real(R8Ki),                            allocatable :: DisplacementList(:,:)   !< List of displacements and times to apply {idx 1 =  time step, idx 2 =  [T, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z]}
+   real(ReKi),                            allocatable :: CaseTimeSeries(:,:)   !< List of displacements and times to apply {idx 1 =  time step, idx 2 =  [T, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z]}
 
    type(SED_InitInputType)                            :: InitInData           !< Input data for initialization
    type(SED_InitOutputType)                           :: InitOutData          !< Output data from initialization
@@ -66,6 +66,8 @@ PROGRAM SED_Driver
    TYPE(SEDDriver_Flags)                              :: SettingsFlags        ! Flags indicating which settings were specified (includes CL and ipt file)
    TYPE(SEDDriver_Settings)                           :: Settings             ! Driver settings
    REAL(DbKi)                                         :: Timer(1:2)           ! Keep track of how long this takes to run
+   type(FileInfoType)                                 :: DvrFileInfo          ! Input file stored in FileInfoType structure
+
 
       ! Data transfer
    real(R8Ki)                                         :: Force(6)
@@ -75,7 +77,7 @@ PROGRAM SED_Driver
    INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
    integer(IntKi)                                     :: i                    !< generic loop counter
    integer(IntKi)                                     :: DimIdx               !< Index of current dimension
-   integer(IntKi)                                     :: TmpIdx(6)            !< Index of last point accessed by dimension
+   integer(IntKi)                                     :: TmpIdx               !< Index of last point accessed by dimension
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
@@ -149,7 +151,15 @@ PROGRAM SED_Driver
    IF ( SettingsFlags%DvrIptFile ) THEN
 
          ! Read the driver input file
-      CALL ReadDvrIptFile( CLSettings%DvrIptFileName, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
+      CALL ProcessComFile( CLSettings%DvrIptFileName, DvrFileInfo, ErrStat, ErrMsg )
+      call CheckErr('')
+
+      ! For diagnostic purposes, the following can be used to display the contents
+      ! of the DvrFileInfo data structure.
+      ! call Print_FileInfo_Struct( CU, DvrFileInfo ) ! CU is the screen -- different number on different systems.
+
+         ! Parse the input file
+      CALL ParseDvrIptFile( CLSettings%DvrIptFileName, DvrFileInfo, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
       call CheckErr('')
 
          ! VVerbose error reporting
@@ -183,20 +193,6 @@ PROGRAM SED_Driver
    ENDIF
 
 
-   !------------------------------------------
-   ! Read DisplacementList from InputDispFile
-   !  NOTE: DiplacementList is arranged for speed in interpolation
-   !        -- index 1 =  time step
-   !        -- index 2 =  [T, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z]
-   !------------------------------------------
-   if ( SettingsFlags%InputDispFile ) then
-      call ReadInputDispFile( Settings%InputDispFile, DisplacementList, ErrStat, ErrMsg )
-      call CheckErr('')
-
-      if ( SEDDriver_Verbose >= 10_IntKi )   call WrScr('Input Displacements given for '//trim(Num2LStr(size(DisplacementList,1)))// &
-         ' time steps from T = '//trim(Num2LStr(DisplacementList(1,1)))//' to '//trim(Num2LStr(DisplacementList(size(DisplacementList,1),1)))//' seconds.')
-   endif
-
 
    !------------------------------------------
    ! Logic for timestep and total time for sim.
@@ -210,40 +206,30 @@ PROGRAM SED_Driver
 
 
 
+call ProgAbort("Need an input time series of some kind.  Finish this bit of code.  Aborting.")
    TimeIntervalFound=.true.      ! If specified or default value set
    ! DT - timestep.  If default was specified, then calculate default level.
    if ( SettingsFlags%DTdefault ) then
-      if ( SettingsFlags%InputDispFile ) then
-         ! Set a value to start with (something larger than any expected DT).
-         TimeIntervalFound=.false.
-         TimeInterval=1000.0_DbKi
-         ! Step through all lines to get smallest DT
-         do n=min(2,size(DisplacementList,1)),size(DisplacementList,1)     ! Start at 2nd point (min to avoid stepping over end for single line files)
-            TimeInterval=min(TimeInterval, real(DisplacementList(n,1)-DisplacementList(n-1,1), DbKi))
-            TimeIntervalFound=.true.
-         enddo
-         if (TimeIntervalFound) then
-            call WrScr('Using smallest DT from data file: '//trim(Num2LStr(TimeInterval))//' seconds.')
-         else
-            call WrScr('No time timesteps found in input displacement file.  Using only one timestep.')
-         endif
+      ! Set a value to start with (something larger than any expected DT).
+      TimeIntervalFound=.false.
+      TimeInterval=1000.0_DbKi
+      ! Step through all lines to get smallest DT
+!      do n=min(2,size(CaseTimeSeries,2)),size(CaseTimeSeries,2)     ! Start at 2nd point (min to avoid stepping over end for single line files)
+!         TimeInterval=min(TimeInterval, real(CaseTimeSeries(1,n)-CaseTimeSeries(1,n-1), DbKi))
+!         TimeIntervalFound=.true.
+!      enddo
+      if (TimeIntervalFound) then
+         call WrScr('Using smallest DT from data file: '//trim(Num2LStr(TimeInterval))//' seconds.')
       else
-         ! set default level.  NOTE: the REDWIN dll does not use any form of timestep, so this is merely for bookkeeping.
-         TimeInterval = 0.01_DbKi
-         call WrScr('Setting default timestep to '//trim(Num2LStr(TimeInterval))//' seconds.')
+         call WrScr('No time timesteps found in input displacement file.  Using only one timestep.')
       endif
    endif
 
 
    ! TMax and NumTSteps from input file or from the value specified (specified overrides)
    if ( SettingsFlags%NumTimeStepsDefault ) then
-      if ( SettingsFlags%InputDispFile ) then
-         TMax = real(DisplacementList(size(DisplacementList,1),1), DbKi)
-         NumTSteps = ceiling( TMax / TimeInterval )
-      else  ! Do one timestep
-         NumTSteps = 1_IntKi
-         TMax = TimeInterval * NumTSteps
-      endif
+      TMax = real(CaseTimeSeries(1,size(CaseTimeSeries,2)), DbKi)
+      NumTSteps = ceiling( TMax / TimeInterval )
    elseif ( SettingsFlags%NumTimeSteps ) then   ! Override with number of timesteps
       TMax = TimeInterval * Settings%NumTimeSteps + TStart
       NumTSteps = Settings%NumTimeSteps
@@ -258,6 +244,7 @@ PROGRAM SED_Driver
    !...............................................................................................................................
 
    InitInData%InputFile = Settings%SEDIptFileName
+   InitInData%RootName  = Settings%OutRootName
 
       ! Initialize the module
    CALL SED_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
@@ -281,25 +268,23 @@ PROGRAM SED_Driver
    !...............................................................................................................................
 
 
-   TmpIdx(1:6) = 0_IntKi
+   TmpIdx = 0_IntKi
 
    DO n = 0,NumTSteps
       Time = n*TimeInterval+TStart
       InputTime(1) = Time
 
-         ! interpolate into the input data to get the displacement.  Set this as u then run
-      if ( SettingsFlags%InputDispFile ) then
-!         do i=1,u(1)%SoilMesh%NNodes
-!            ! InterpStpReal( X, Xary, Yary, indx, size)
-!            do DimIdx=1,3
-!               u(1)%SoilMesh%TranslationDisp(DimIdx,i) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+1), TmpIdx(DimIdx), size(DisplacementList,1) )
-!            enddo
-!            do DimIdx=1,3
-!               Theta(DimIdx) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+4), TmpIdx(DimIdx), size(DisplacementList,1) )
-!            enddo
-!            u(1)%SoilMesh%Orientation(1:3,1:3,i) = EulerConstruct(Theta)
-!         enddo
-      endif
+!     ! interpolate into the input data to get the displacement.  Set this as u then run
+!     do i=1,u(1)%SoilMesh%NNodes
+!        ! InterpStpReal( X, Xary, Yary, indx, size)
+!        do DimIdx=1,3
+!           u(1)%SoilMesh%TranslationDisp(DimIdx,i) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+1), TmpIdx(DimIdx), size(DisplacementList,1) )
+!        enddo
+!        do DimIdx=1,3
+!           Theta(DimIdx) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+4), TmpIdx(DimIdx), size(DisplacementList,1) )
+!        enddo
+!        u(1)%SoilMesh%Orientation(1:3,1:3,i) = EulerConstruct(Theta)
+!     enddo
 
          ! Calculate outputs at n
       CALL SED_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );

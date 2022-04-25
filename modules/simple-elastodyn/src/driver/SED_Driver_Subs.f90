@@ -68,7 +68,6 @@ subroutine InitSettingsFlags( ProgInfo, CLSettings, CLFlags )
       ! Set some CLSettings to null/default values
    CLSettings%DvrIptFileName   =  ""             ! No input name name until set
    CLSettings%SEDIptFileName   =  ""             ! No SED input file name until set
-   CLSettings%InputDispFile    =  ""             ! No SED input displacement timeseries file name until set
    CLSettings%NumTimeSteps     =  0_IntKi
    CLSettings%DT               =  0.0_DbKi
    CLSettings%TStart           =  0.0_ReKi
@@ -77,7 +76,6 @@ subroutine InitSettingsFlags( ProgInfo, CLSettings, CLFlags )
       ! Set some CLFlags to null/default values
    CLFlags%DvrIptFile          =  .FALSE.        ! Driver     input filename given as command line argument
    CLFlags%SEDIptFile          =  .FALSE.        ! SED input filename given as command line argument
-   CLFlags%InputDispFile       =  .FALSE.        ! No SED input displacement timeseries file name until set
    CLFlags%TStart              =  .FALSE.        ! specified time to start at
    CLFlags%NumTimeSteps        =  .FALSE.        ! specified a number of timesteps
    CLFlags%NumTimeStepsDefault =  .FALSE.        ! specified 'DEFAULT' for number of timesteps
@@ -182,6 +180,8 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
    IF ( sedFlag ) THEN
       CLSettings%SEDIptFileName  =  TRIM(FileName)
       CLFlags%SEDIptFile =  .TRUE.
+      call GetRoot( CLSettings%SEDIptFileName, CLSettings%OutRootName )
+      CLFlags%OutRootName =  .TRUE.
    ELSE
       CLSettings%DvrIptFileName  =  TRIM(FileName)
       CLFlags%DvrIptFile =  .TRUE.
@@ -368,22 +368,27 @@ END SUBROUTINE RetrieveArgs
 !> This subroutine reads the driver input file and sets up the flags and settings
 !! for the driver code.  Any settings from the command line options will override
 !! this.
-SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat, ErrMsg )
+SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, ProgInfo, ErrStat, ErrMsg )
 
    CHARACTER(1024),                    INTENT(IN   )  :: DvrFileName
+   type(FileInfoType),                 INTENT(IN   )  :: DvrFileInfo          ! Input file stored in FileInfoType structure
    TYPE(SEDDriver_Flags),              INTENT(INOUT)  :: DvrFlags
    TYPE(SEDDriver_Settings),           INTENT(INOUT)  :: DvrSettings
    TYPE(ProgDesc),                     INTENT(IN   )  :: ProgInfo
+!   real(ReKi),          allocatable,   intent(  out)  :: CaseTimeSeries(:,:)
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              ! returns a non-zero value when an error occurs
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
       ! Local variables
-   INTEGER(IntKi)                                     :: UnIn                 ! Unit number for the driver input file
-   CHARACTER(1024)                                    :: FileName             ! Name of SED driver input file
+   INTEGER(IntKi)                                     :: CurLine              ! Current line in parsing
+   INTEGER(IntKi)                                     :: TabLines             ! Number of lines in the table
+   integer(IntKi)                                     :: i                    !< generic loop counter
+   real(ReKi)                                         :: TmpRe7(7)            !< temporary real array
+   CHARACTER(1024)                                    :: RootName             ! Root name of AeroDisk driver input file
 
       ! Input file echoing
    LOGICAL                                            :: EchoFileContents     ! Do we echo the driver file out or not?
-   INTEGER(IntKi)                                     :: UnEchoLocal          ! The local unit number for this module's echo file
+   INTEGER(IntKi)                                     :: UnEc          ! The local unit number for this module's echo file
    CHARACTER(1024)                                    :: EchoFileName         ! Name of SED driver echo file
 
       ! Time steps
@@ -396,103 +401,57 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
 
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
-   UnEchoLocal = -1
+   UnEc = -1
 
-   FileName = TRIM(DvrFileName)
+   call GetRoot( DvrFileName, RootName )
 
-   CALL GetNewUnit( UnIn )
-   CALL OpenFInpFile( UnIn, FileName, ErrStatTmp, ErrMsgTmp )
-   IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,' Failed to open SED Driver input file: '//FileName,   &
-         ErrStat,ErrMsg,'ReadDvrIptFile')
-      CLOSE( UnIn )
-      RETURN
-   ENDIF
+   !======  General  ====================================================================================
+   CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
+   call ParseVar( DvrFileInfo, CurLine, 'Echo', EchoFileContents, ErrStatTmp, ErrMsgTmp )
+      if (Failed()) return;
 
+   if ( EchoFileContents ) then
+      CALL OpenEcho ( UnEc, TRIM(RootName)//'.ech', ErrStatTmp, ErrMsgTmp )
+         if (Failed()) return;
+      WRITE(UnEc, '(A)') 'Echo file for AeroDisk driver input file: '//trim(DvrFileName)
+      ! Write the first three lines into the echo file
+      WRITE(UnEc, '(A)') DvrFileInfo%Lines(1)
+      WRITE(UnEc, '(A)') DvrFileInfo%Lines(2)
+      WRITE(UnEc, '(A)') DvrFileInfo%Lines(3)
 
-   CALL WrScr( 'Opening SED Driver input file:  '//trim(FileName) )
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! File header
-   !-------------------------------------------------------------------------------------------------
-
-   CALL ReadCom( UnIn, FileName,' SED Driver input file header line 1', ErrStatTmp, ErrMsgTmp )
-   if (Failed()) return
-
-   CALL ReadCom( UnIn, FileName, 'SED Driver input file header line 2', ErrStatTmp, ErrMsgTmp )
-   if (Failed()) return
-
-   CALL ReadCom( UnIn, FileName, 'SED Driver input file seperator line', ErrStatTmp, ErrMsgTmp )
-   if (Failed()) return
-
-     ! Echo Input Files.
-   CALL ReadVar ( UnIn, FileName, EchoFileContents, 'Echo', 'Echo Input', ErrStatTmp, ErrMsgTmp )
-   if (Failed()) return
-
-
-      ! If we are Echoing the input then we should re-read the first three lines so that we can echo them
-      ! using the NWTC_Library routines.  The echoing is done inside those routines via a global variable
-      ! which we must store, set, and then replace on error or completion.
-
-   IF ( EchoFileContents ) THEN
-
-      EchoFileName = TRIM(FileName)//'.ech'
-      CALL GetNewUnit( UnEchoLocal )
-      CALL OpenEcho ( UnEchoLocal, EchoFileName, ErrStatTmp, ErrMsgTmp, ProgInfo )
-      if (Failed()) return
-
-      REWIND(UnIn)
-
-         ! Reread and echo
-      CALL ReadCom( UnIn, FileName,' SED Driver input file header line 1', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
-      if (Failed()) return
-
-      CALL ReadCom( UnIn, FileName, 'SED Driver input file header line 2', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
-      if (Failed()) return
-
-      CALL ReadCom( UnIn, FileName, 'SED Driver input file seperator line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
-      if (Failed()) return
-
-        ! Echo Input Files.
-      CALL ReadVar ( UnIn, FileName, EchoFileContents, 'Echo', 'Echo Input', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
-      if (Failed()) return
-
-   ENDIF
-
-
-   !-------------------------------------------------------------------------------------------------
-   !  Driver setup section
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-   CALL ReadCom( UnIn, FileName,' Driver setup section, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
-   if (Failed()) return
-
-      ! SED input file
-   CALL ReadVar( UnIn, FileName,DvrSettings%SEDIptFileName,'SEDIptFileName',' SED input filename',   &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   if (Failed()) then
-      return
-   else
-      DvrFlags%SEDIptFile  =  .TRUE.
+      CurLine = 4
+      call ParseVar( DvrFileInfo, CurLine, 'Echo', EchoFileContents, ErrStatTmp, ErrMsgTmp, UnEc )
+         if (Failed()) return
    endif
 
+   !======  Primary file and rootname  ==================================================================
+   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! AeroDisk input file
+   call ParseVar( DvrFileInfo, CurLine, "SEDIptFile", DvrSettings%SEDIptFileName, ErrStatTmp, ErrMsgTmp, UnEc )
+   if (Failed()) return 
+   DvrFlags%SEDIptFile  =  .TRUE.
+
+      ! AeroDisk output root name
+   call ParseVar( DvrFileInfo, CurLine, "OutRootName", DvrSettings%OutRootName, ErrStatTmp, ErrMsgTmp, UnEc )
+   if (Failed()) return 
+   DvrFlags%OutRootName  =  .TRUE.
+ 
+
+   !======  Case analysis  ===============================================================================
+   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
 
       ! TStart    -- start time
-   CALL ReadVar( UnIn, FileName,DvrSettings%TStart,'TStart',' Time in wind file to start parsing.',   &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   if (Failed()) then
-      return
-   else
-      DvrFlags%TStart   =  .TRUE.
-   endif
+   call ParseVar( DvrFileInfo, CurLine, "TStart", DvrSettings%TStart, ErrStatTmp, ErrMsgTmp, UnEc )
+   if (Failed()) return 
+   DvrFlags%TStart   =  .TRUE.
 
 
       ! DT    -- Timestep size for the driver to take (or DEFAULT for what the file contains)
-   CALL ReadVar( UnIn, FileName,InputChr,'InputChr',' Character string for Timestep size for the driver to take (or DEFAULT for what the file contains).',  &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   if (Failed()) return
+   call ParseVar( DvrFileInfo, CurLine, "DT", InputChr, ErrStatTmp, ErrMsgTmp, UnEc )
+   if (Failed()) return 
 
       ! Check if we asked for the DEFAULT (use what is in the file)
    CALL Conv2UC( InputChr )
@@ -514,8 +473,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
 
       ! Number of timesteps
-   CALL ReadVar( UnIn, FileName,InputChr,'InputChr',' Character string for number of timesteps to read.',   &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   call ParseVar( DvrFileInfo, CurLine, "NumTimeSteps", InputChr, ErrStatTmp, ErrMsgTmp, UnEc )
    if (Failed()) return
 
       ! Check if we asked for the DEFAULT (use what is in the file)
@@ -537,39 +495,41 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ENDIF
 
 
-
-   !-------------------------------------------------------------------------------------------------
-   !  SED time series input -- this is read from a file of 7 columns (time and 6 dof)
-   !-------------------------------------------------------------------------------------------------
-
-      ! InputDispFile input file
-   CALL ReadVar( UnIn, FileName,InputChr,'InputDispFile',' SED input displacements filename',   &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   if (Failed()) return
-
-   DvrSettings%InputDispFile  = InputChr
-   call Conv2UC( InputChr )
-   if (trim(InputChr) == 'NONE') then
-      DvrSettings%InputDispFile  = ''
-      DvrFlags%InputDispFile  =  .FALSE.
-   else
-      DvrFlags%InputDispFile  =  .TRUE.
-   endif
+!      ! Column headers
+!   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)
+!   CurLine = CurLine + 1
+!   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)
+!   CurLine = CurLine + 1
+!
+!
+!      ! Last line of table is assumed to be last line in file (or included file)
+!   TabLines = DvrFileInfo%NumLines - CurLine + 1
+!   call AllocAry( CaseTimeSeries, 7, TabLines, 'CaseTimeSeries', ErrStatTmp, ErrMsgTmp )
+!   do i=1,Tablines
+!      call ParseAry ( DvrFileInfo, CurLine, 'Coordinates', TmpRe7, 7, ErrStatTmp, ErrMsgTmp, UnEc )
+!         if (Failed())  return;
+!      ! Set time, wind_x, wind_y, wind_z
+!      CaseTimeSeries(1:4,i) = TmpRe7(1:4)
+!      ! Set RotSpeed    (rpm -> rad/s)
+!      CaseTimeSeries(5,i)   = TmpRe7(5) * Pi / 30.0_ReKi
+!      ! Set Pitch       (deg -> rad)
+!      CaseTimeSeries(6,i)   = TmpRe7(6) * Pi / 180.0_ReKi
+!      ! Set Yaw         (deg -> rad)
+!      CaseTimeSeries(7,i)   = TmpRe7(7) * Pi / 180.0_ReKi
+!   enddo
 
 
       ! Close the echo and input file
-   CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-   CLOSE( UnIn )
+   CALL CleanupEchoFile( EchoFileContents, UnEc )
 
 
 CONTAINS
 
    !> Set error status, close stuff, and return
    logical function Failed()
-      CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'ParseDvrIptFile')
       if (ErrStat >= AbortErrLev) then
-         CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-         CLOSE( UnIn )
+         CALL CleanupEchoFile( EchoFileContents, UnEc )
       endif
       Failed =    ErrStat >= AbortErrLev
    end function Failed
@@ -585,7 +545,7 @@ CONTAINS
       endif
    END SUBROUTINE CleanupEchoFile
 
-END SUBROUTINE ReadDvrIptFile
+END SUBROUTINE ParseDvrIptFile
 
 
 !> This subroutine copies an command line (CL) settings over to the program settings.  Warnings are
@@ -684,324 +644,6 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
 
 
 END SUBROUTINE UpdateSettingsWithCL
-
-
-
-SUBROUTINE ReadInputDispFile( InputDispFile, DisplacementList, ErrStat, ErrMsg )
-   CHARACTER(1024),                    INTENT(IN   )  :: InputDispFile       !< Name of the points file to read
-   REAL(R8Ki), ALLOCATABLE,            INTENT(  OUT)  :: DisplacementList(:,:)       !< The coordinates we read in: idx 1 = timestep, idx 2 = values
-   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< The error status
-   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< The message for the status
-
-      ! Local variables
-   CHARACTER(1024)                                    :: ErrMsgTmp            !< Temporary error message for calls
-   INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
-   INTEGER(IntKi)                                     :: FiUnitPoints         !< Unit number for points file to open
-
-   INTEGER(IntKi)                                     :: NumDataColumns       !< Number of data columns
-   INTEGER(IntKi)                                     :: NumDataPoints        !< Number of lines of data (one point per line)
-   INTEGER(IntKi)                                     :: NumHeaderLines       !< Number of header lines to ignore
-
-   INTEGER(IntKi)                                     :: I                    !< Generic counter
-   character(*), parameter                            :: RoutineName = 'ReadInputDispFile'
-
-      ! Initialization of subroutine
-   ErrMsg      =  ''
-   ErrMsgTmp   =  ''
-   ErrStat     =  ErrID_None
-   ErrStatTmp  =  ErrID_None
-
-
-      ! Now open file
-   CALL GetNewUnit( FiUnitPoints, ErrStatTmp, ErrMsgTmp ); if (Failed()) return
-   CALL OpenFInpFile(   FiUnitPoints,  TRIM(InputDispFile), ErrStatTmp, ErrMsgTmp )   ! Unformatted input file
-      if (Failed()) return
-
-      ! Find out how long the file is
-   CALL GetFileLength( FiUnitPoints, InputDispFile, NumDataColumns, NumDataPoints, NumHeaderLines, ErrMsgTmp, ErrStatTmp )
-      if (Failed()) return
-   IF ( NumDataColumns /= 7 ) THEN
-      ErrStatTmp  = ErrID_Fatal
-      ErrMsgTmp   = ' Expecting seven columns in '//TRIM(InputDispFile)//' corresponding to '//   &
-         'time, dX, dY, dZ, dTheta_X, dTheta_Y, dTheta_Z  coordinates.  Instead found '//TRIM(Num2LStr(NumDataColumns))//' columns.'
-      if (Failed()) return
-   ENDIF
-
-
-      ! Allocate the storage for the data
-   CALL AllocAry( DisplacementList, NumDataPoints, 7, "Array of Points data", ErrStatTmp, ErrMsgTmp )
-      if (Failed()) return
-
-
-      ! Read in the headers and throw them away
-   DO I=1,NumHeaderLines
-      CALL ReadCom( FiUnitPoints, InputDispFile,' Points file header line', ErrStatTmp, ErrMsgTmp )
-      if (Failed()) return
-   ENDDO
-
-      ! Read in the datapoints   -- This is arranged with time in first index for speed in later interpolation operations
-   DO I=1,NumDataPoints
-      CALL ReadAry ( FiUnitPoints, InputDispFile, DisplacementList(I,:), 7, 'DisplacementList', &
-         'Coordinate point from Points file', ErrStatTmp, ErrMsgTmp)
-      if (Failed()) return
-   ENDDO
-
-   CLOSE( FiUnitPoints )
-
-CONTAINS
-   !> Set error status, close stuff, and return
-   logical function Failed()
-      CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev .and. FiUnitPoints >0) close( FiUnitPoints )
-      Failed =    ErrStat >= AbortErrLev
-   end function Failed
-
-
-   !-------------------------------------------------------------------------------------------------------------------------------
-   !>    This subroutine looks at a file that has been opened and finds out how many header lines there are, how many columns there
-   !!    are, and    how many lines of data there are in the file.
-   !!
-   !!    A few things are assumed about the file:
-   !!       1. Any header lines are the first thing in the file.
-   !!       2. No text appears anyplace other than in first part of the file
-   !!       3. The datalines only contain numbers that can be read in as reals.
-   !!
-   !!    Limitations:
-   !!       1. only handles up to 20 words (columns) on a line
-   !!       2. empty lines are considered text lines
-   !!       3. All data rows must contain the same number of columns
-   !!
-   !!
-   SUBROUTINE GetFileLength(UnitDataFile, DataFileName, NumDataColumns, NumDataLines, NumHeaderLines, ErrMsg, ErrStat)
-
-      INTEGER(IntKi),                     INTENT(IN   )  :: UnitDataFile      !< Unit number of the file we are looking at.
-      CHARACTER(*),                       INTENT(IN   )  :: DataFileName      !< The name of the file we are looking at.
-      INTEGER(IntKi),                     INTENT(  OUT)  :: NumDataColumns    !< The number of columns in the data file.
-      INTEGER(IntKi),                     INTENT(  OUT)  :: NumDataLines      !< Number of lines containing data
-      INTEGER(IntKi),                     INTENT(  OUT)  :: NumHeaderLines    !< Number of header lines at the start of the file
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            !< Error Message to return (empty if all good)
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat           !< Status flag if there were any problems (ErrID_None if all good)
-
-         ! Local Variables
-      CHARACTER(2048)                                    :: ErrMsgTmp         !< Temporary message variable.  Used in calls.
-      INTEGER(IntKi)                                     :: ErrStatTmp        !< Temporary error status.  Used in calls.
-      INTEGER(IntKi)                                     :: LclErrStat        !< Temporary error status.  Used locally to indicate when we have reached the end of the file.
-      INTEGER(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
-      LOGICAL                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
-
-      CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
-      INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
-      CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
-      REAL(R8Ki)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
-      CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
-      INTEGER(IntKi)                                     :: i                 !< simple integer counters
-      INTEGER(IntKi)                                     :: LineNumber        !< the line I am on
-      LOGICAL                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
-      LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.
-      INTEGER(IntKi)                                     :: NumWords          !< Number of words on a line
-      INTEGER(IntKi)                                     :: FirstDataLineNum  !< Line number of the first row of data in the file
-
-         ! Initialize the error handling
-      ErrStat     = ErrID_None
-      ErrStatTmp  = ErrID_None
-      LclErrStat  = ErrID_None
-      ErrMsg      = ''
-      ErrMsgTmp   = ''
-
-         ! Set some of the flags and counters
-      HaveReadData   = .FALSE.
-      NumDataColumns = 0
-      NumHeaderLines = 0
-      NumDataLines   = 0
-      LineNumber     = 0
-
-         ! Just in case we were handed a file that we are part way through reading (should never be true), rewind to the start
-
-      REWIND( UnitDataFile )
-
-         !------------------------------------
-         !> The variable LclErrStat is used to indicate when we have reached the end of the file or had an error from
-         !! ReadLine.  Until that occurs, we read each line, and decide if it contained any non-numeric data.  The
-         !! first group of lines containing non-numeric data is considered the header.  The first line of all numeric
-         !! data is considered the start of the data section.  Any non-numeric containing found within the data section
-         !! will be considered as an invalid file format at which point we will return a fatal error from this routine.
-
-      DO WHILE ( LclErrStat == ErrID_None )
-
-            !> Reset the indicator flag for the non-numeric content
-         LineHasText = .FALSE.
-
-            !> Read in a single line from the file
-         CALL ReadLine( UnitDataFile, '', TextLine, LineLen, LclErrStat )
-
-            !> If there was an error in reading the file, then exit.
-            !!    Possible causes: reading beyond end of file in which case we are done so don't process it.
-         IF ( LclErrStat /= ErrID_None ) EXIT
-
-            !> Increment the line counter.
-         LineNumber  = LineNumber + 1
-
-            !> Read all the words on the line into the array called 'Words'.  Only the first words will be encountered
-            !! will be stored.  The others are empty (i.e. only three words on the line, so the remaining 17 are empty).
-         CALL GetWords( TextLine, Words, 20 )
-
-            !> Cycle through and count how many are not empty.  Once an empty value is encountered, all the rest should
-            !! be empty if GetWords worked correctly.  The index of the last non-empty value is stored.
-         DO i=1,20
-            IF (TRIM(Words(i)) .ne. '') NumWords=i
-         ENDDO
-
-
-            !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
-            !! everything that is one the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
-            !! when the value in Words(i) can be read as a real(R8Ki).  'StrRead' will contain the string equivalent.
-         DO i=1,NumWords
-            CALL ReadRealNumberFromString( Words(i), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )
-            IF ( .NOT. IsRealNum)   LineHasText = .TRUE.
-         ENDDO
-
-            !> If all the words on that line had no text in them, then it must have been a line of data.
-            !! If not, then we have either a header line, which is ok, or a line containing text in the middle of the
-            !! the data section, which is not good (the flag HaveReadData tells us which case this is).
-         IF ( LineHasText ) THEN
-            IF ( HaveReadData ) THEN      ! Uh oh, we have already read a line of data before now, so there is a problem
-               CALL SetErrStat( ErrID_Fatal, ' Found text on line '//TRIM(Num2LStr(LineNumber))//' of '//TRIM(DataFileName)// &
-                           ' when real numbers were expected.  There may be a problem with format of the file: '// &
-                           TRIM(DataFileName)//'.', ErrStat, ErrMsg, RoutineName)
-               IF ( ErrStat >= AbortErrLev )    RETURN
-            ELSE
-               NumHeaderLines = NumHeaderLines + 1
-            ENDIF
-         ELSE     ! No text, must be data line
-            NumDataLines = NumDataLines + 1
-               ! If this is the first row of data, then store the number of words that were on the line
-            IF ( .NOT. HaveReadData )  THEN
-                  ! If this is the first line of data, keep some relevant info about it and the number of columns in it
-               HaveReadData      = .TRUE.
-               FirstDataLineNum  = LineNumber         ! Keep the line number of the first row of data (for error reporting)
-               NumDataColumns    = NumWords
-            ELSE
-                  ! Make sure that the number columns on the row matches the number of columnns on the first row of data.
-               IF ( NumWords /= NumDataColumns ) THEN
-                  CALL SetErrStat( ErrID_Fatal, ' Error in file: '//TRIM(DataFileName)//'.'// &
-                           ' The number of data columns on line '//TRIM(Num2LStr(LineNumber))// &
-                           '('//TRIM(Num2LStr(NumWords))//' columns) is different than the number of columns on first row of data '// &
-                           ' (line: '//TRIM(Num2LStr(FirstDataLineNum))//', '//TRIM(Num2LStr(NumDataColumns))//' columns).', &
-                           ErrStat, ErrMsg, RoutineName)
-                  IF ( ErrStat >= AbortErrLev )    RETURN
-               ENDIF
-            ENDIF
-         ENDIF
-
-      ENDDO
-
-      REWIND( UnitDataFile )
-
-   END SUBROUTINE GetFileLength
-
-   !-------------------------------------------------------------------------------
-   !> This subroutine takes a line of text that is passed in and reads the first
-   !! word to see if it is a number.  An internal read is used to do this.  If
-   !! it is a number, it is started in ValueRead and returned. The flag IsRealNum
-   !! is set to true.  Otherwise, ValueRead is set to NaN (value from the NWTC_Num)
-   !! and the flag is set to false.
-   !!
-   !! The IsRealNum flag is set to indicate if we actually have a real number or
-   !! not.  After calling this routine, a simple if statement can be used:
-   !!
-   !!       @code
-   !!    IF (IsRealNum) THEN
-   !!       ! do something
-   !!    ELSE
-   !!       ! do something else
-   !!    ENDIF
-   !!       @endcode
-   !!
-   !-------------------------------------------------------------------------------
-   SUBROUTINE ReadRealNumberFromString(StringToParse, ValueRead, StrRead, IsRealNum, ErrStat, ErrMsg, IOErrStat)
-      CHARACTER(*),        INTENT(IN   )           :: StringToParse  !< The string we were handed.
-      REAL(R8Ki),          INTENT(  OUT)           :: ValueRead      !< The variable being read.  Returns as NaN (library defined) if not a Real.
-      CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
-      LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
-      INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
-      CHARACTER(*),        INTENT(  OUT)           :: ErrMsg         !< Error message including message from ReadNum
-      INTEGER(IntKi),      INTENT(  OUT)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
-
-      ErrStat     = ErrID_None
-      ErrMsg      = ''
-
-         ! ReadNum returns a string contained in StrRead.  So, we now try to do an internal read to VarRead and then trap errors.
-      read(StringToParse,*,IOSTAT=IOErrStat)   StrRead
-      read(StringToParse,*,IOSTAT=IOErrStat)   ValueRead
-
-         ! If IOErrStat==0, then we have a real number, anything else is a problem.
-      if (IOErrStat==0) then
-         IsRealNum   = .TRUE.
-      else
-         IsRealNum   = .FALSE.
-         ValueRead   = NaN                ! This is NaN as defined in the NWTC_Num.
-         ErrMsg      = 'Not a real number. '//TRIM(ErrMsgTmp)//NewLine
-         ErrSTat     = ErrID_Severe
-      endif
-
-      RETURN
-   END SUBROUTINE ReadRealNumberFromString
-
-   !-------------------------------------------------------------------------------
-   !> This subroutine works with the ReadNum routine from the library.  ReadNum is
-   !! called to read a word from the input file.  An internal read is then done to
-   !! convert the string to a number that is stored in VarRead and returned.
-   !!
-   !! The IsRealNum flag is set to indicate if we actually have a real number or
-   !! not.  After calling this routine, a simple if statement can be used:
-   !!
-   !!       @code
-   !!    IF (ISRealNum) THEN
-   !!       ! do something
-   !!    ELSE
-   !!       ! do something else
-   !!    ENDIF
-   !!       @endcode
-   !!
-   !-------------------------------------------------------------------------------
-   SUBROUTINE ReadRealNumber(UnitNum, FileName, VarName, VarRead, StrRead, IsRealNum, ErrStat, ErrMsg, IOErrStat)
-      INTEGER(IntKi),      INTENT(IN   )           :: UnitNum        !< The unit number of the file being read
-      CHARACTER(*),        INTENT(IN   )           :: FileName       !< The name of the file being read.  Used in the ErrMsg from ReadNum (Library routine).
-      CHARACTER(*),        INTENT(IN   )           :: VarName        !< The variable we are reading.  Used in the ErrMsg from ReadNum (Library routine)'.
-      REAL(R8Ki),          INTENT(  OUT)           :: VarRead        !< The variable being read.  Returns as NaN (library defined) if not a Real.
-      CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
-      LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
-      INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
-      CHARACTER(*),        INTENT(  OUT)           :: ErrMsg         !< Error message including message from ReadNum
-      INTEGER(IntKi),      INTENT(  OUT)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
-
-      INTEGER(IntKi)                      :: ErrStatTmp
-      CHARACTER(2048)                     :: ErrMsgTmp
-
-      ErrStat     = ErrID_None
-      ErrMsg      = ''
-
-         ! Now call the ReadNum routine to get the number
-         ! If it is a word that does not start with T or F, then ReadNum won't give any errors.
-      CALL ReadNum( UnitNum, FileName, StrRead, VarName, ErrStatTmp, ErrMsgTmp)
-
-         ! ReadNum returns a string contained in StrRead.  So, we now try to do an internal read to VarRead and then trap errors.
-      read(StrRead,*,IOSTAT=IOErrStat)   VarRead
-
-         ! If IOErrStat==0, then we have a real number, anything else is a problem.
-      if (IOErrStat==0) then
-         IsRealNum   = .TRUE.
-      else
-         IsRealNum   = .FALSE.
-         VarRead     = NaN                ! This is NaN as defined in the NWTC_Num.
-         ErrMsg      = 'Not a real number. '//TRIM(ErrMsgTmp)//NewLine
-         ErrStat     = ErrStatTmp         ! The ErrStatTmp returned by the ReadNum routine is an ErrID level.
-      endif
-      RETURN
-   END SUBROUTINE ReadRealNumber
-
-END SUBROUTINE ReadInputDispFile
-
 
 
 
