@@ -1247,7 +1247,7 @@ SUBROUTINE SeaSt_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! Write the SeaState-level output file data if the user requested module-level output
          ! and the current time has advanced since the last stored time step.
          
-      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3) THEN               
+      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3) THEN  !Note: this will always output a line, even if we're ending early (e.g. if HD doesn't initialize properly, this will write a line of zeros to the output file.)
          CALL SeaStOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat, ErrMsg )         
       END IF          
       

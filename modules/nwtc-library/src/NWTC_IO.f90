@@ -6295,10 +6295,9 @@ END SUBROUTINE CheckR16Var
          RETURN
       END IF
 
-      IF ( PRESENT(UnEc) )  THEN
-         IF ( UnEc > 0 ) &
-            WRITE (UnEc,Ec_StrFrmt)  OutLine, "List of user-requested output channels", '"OutList"'
-      END IF      
+      !IF ( PRESENT(UnEc) )  THEN
+      !   IF ( UnEc > 0 ) WRITE (UnEc,Ec_StrFrmt)  OutLine, "List of user-requested output channels", '"OutList"'
+      !END IF      
       
       LineNum = LineNum + 1
       

@@ -776,7 +776,7 @@ SUBROUTINE SeaStOut_Init( SeaSt_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ErrStat = ErrID_Fatal
       RETURN
    END IF
-   y%WriteOutput = 0.0_ReKi  ! bjj added this only so the Intel Inspector wouldn't complain about uninitialized memory access (was harmless)
+   y%WriteOutput = 0.0_ReKi  ! If there is an error at initialization, y%WriteOutput can be written in the SeaState_End() routine, so this needs some initial value.
    
             
       ! Initialize the HD-level Hdr and Unt elements
