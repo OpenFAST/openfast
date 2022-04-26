@@ -24,6 +24,14 @@ MODULE SED_IO
 
    implicit none
 
+   integer(IntKi),   parameter   :: IMETHOD_RK4    = 1
+   integer(IntKi),   parameter   :: IMETHOD_AB4    = 2
+   integer(IntKi),   parameter   :: IMETHOD_ABM4   = 3
+
+
+   real(ReKi),       parameter   :: SmallAngleLimit_Deg  =  15.0     ! Largest input angle considered "small" (used as a check on input data), degrees
+   integer(IntKi),   parameter   :: MaxBl = 3                        ! Maximum number of blades allowed in simulation
+
 
 contains
 
@@ -42,7 +50,6 @@ subroutine SED_ParsePrimaryFileData( InitInp, RootName, interval, FileInfo_In, I
    ! local vars
    integer(IntKi)                            :: CurLine              !< current entry in FileInfo_In%Lines array
    integer(IntKi)                            :: i                    !< generic counter
-!   type(TableIndexType)                      :: TabIdx               !< indices for table columnns, for simplifying data parsing/passing
    real(SiKi)                                :: TmpRe(10)            !< temporary 10 number array for reading values in from table
    integer(IntKi)                            :: ErrStat2             !< Temporary error status  for subroutine and function calls
    character(ErrMsgLen)                      :: ErrMsg2              !< Temporary error message for subroutine and function calls
@@ -178,12 +185,13 @@ subroutine SED_ParsePrimaryFileData( InitInp, RootName, interval, FileInfo_In, I
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
-      ! GBEff     - Gearbox efficiency (%)
-   call ParseVar( FileInfo_In, CurLine, "GBEff", InputFileData%GBEff, ErrStat2, ErrMsg2, UnEc )
+      ! GBoxEff     - Gearbox efficiency (%)
+   call ParseVar( FileInfo_In, CurLine, "GBoxEff", InputFileData%GBoxEff, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+   InputFileData%GBoxEff = InputFileData%GBoxEff * 0.01_ReKi   ! convert from percent
 
-      ! GBRatio     - Gearbox ratio (-)
-   call ParseVar( FileInfo_In, CurLine, "GBRatio", InputFileData%GBRatio, ErrStat2, ErrMsg2, UnEc )
+      ! GBoxRatio     - Gearbox ratio (-)
+   call ParseVar( FileInfo_In, CurLine, "GBoxRatio", InputFileData%GBoxRatio, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
 
 
@@ -199,7 +207,6 @@ subroutine SED_ParsePrimaryFileData( InitInp, RootName, interval, FileInfo_In, I
    call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%OutList, &
             InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return;
-
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -225,6 +232,51 @@ subroutine SEDInput_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! InitInput checks
+   if (InitInp%Linearize)  call SetErrStat(ErrID_Fatal,'AeroDisk cannot perform linearization analysis.',ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%DT       <= 0.0_DbKi)   call SetErrStat(ErrID_Fatal,'DT must not be negative.',     ErrStat,ErrMsg,RoutineName)
+   if ((InputFileData%IntMethod /= IMETHOD_RK4) .and. (InputFileData%IntMethod /= IMETHOD_AB4) .and. (InputFileData%IntMethod /= IMETHOD_ABM4))   &
+      call SetErrStat(ErrID_Fatal,'IntMethod must be '//trim(Num2LStr(IMETHOD_RK4))//': RK4, '//trim(Num2LStr(IMETHOD_AB4))//': AB4, or '//trim(Num2LStr(IMETHOD_ABM4))//': ABM4',     ErrStat,ErrMsg,RoutineName)
+
+   ! initial settings check
+   if (abs(InputFileData%Azimuth) > TwoPi)     &
+      call SetErrStat(ErrID_Fatal,'Starting Azimuth must be between -360 and 360 degrees.',     ErrStat,ErrMsg,RoutineName)
+   if ((InputFileData%BlPitch  <= -pi ) .or. (InputFileData%BlPitch > pi))    &
+      call SetErrStat( ErrID_Fatal, 'BlPitch must be greater than -pi radians and '// &
+                                   'less than or equal to pi radians (i.e., in the range (-180, 180] degrees).',ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%RotSpeed < 0_ReKi)   call SetErrStat(ErrID_Fatal,'RotSpeed must not be negative',   ErrStat,ErrMsg,RoutineName)
+   IF ((InputFileData%NacYaw <= -pi) .or. (InputFileData%NacYaw > pi)) &
+      call SetErrStat( ErrID_Fatal, 'NacYaw must be in the range (-pi, pi] radians (i.e., (-180, 180] degrees).',ErrStat,ErrMsg,RoutineName)
+   if ( ABS( InputFileData%PtfmPitch ) > SmallAngleLimit_Deg*D2R )  &
+      call SetErrStat( ErrID_Fatal, 'PtfmPitch must be between -'//TRIM(Num2LStr(SmallAngleLimit_Deg))//' and ' &
+                                    //TRIM(Num2LStr(SmallAngleLimit_Deg))//' degrees.',ErrStat,ErrMsg,RoutineName)
+
+   ! turbine configuration
+   if ((InputFileData%NumBl < 1) .or. (InputFileData%NumBl > MaxBl))    &
+      call SetErrStat( ErrID_Fatal, 'NumBl must be 1, 2, or 3.',ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%TipRad < 0.0_ReKi)   call SetErrStat(ErrID_Fatal,'TipRad must not be negative.',ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%HubRad < 0.0_ReKi)   call SetErrStat(ErrID_Fatal,'HubRad must not be negative.',ErrStat,ErrMsg,RoutineName)
+   if (abs(InputFileData%PreCone) >= PiBy2)     &
+      call SetErrStat( ErrID_Fatal, 'PreCone must be in the range (-pi/2, pi/2) '//&
+                                   'radians (i.e., (-90, 90) degrees).',ErrStat,ErrMsg,RoutineName)
+   if (abs(InputFileData%OverHang) > InputFileData%TipRad)     &
+      call SetErrStat( ErrID_Fatal, 'Overhang larger than tip-radius.  Does your model make sense?',ErrStat,ErrMsg,RoutineName)
+   if (abs(InputFileData%ShftTilt) > PiBy2)    &
+      call SetErrStat(ErrID_Fatal,'ShftTilt must be between -pi/2 and pi/2 radians (i.e., in the range [-90, 90] degrees).',ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%Twr2Shft < 0.0_ReKi)    call SetErrStat(ErrID_Fatal,'Twr2Shft must not be negative.',ErrStat,ErrMsg,RoutineName)
+   if ( InputFileData%TowerHt <= 0.0_ReKi)   call SetErrStat( ErrID_Fatal, 'TowerHt must be greater than zero.',ErrStat,ErrMsg,RoutineName )
+
+   if ( InputFileData%TowerHt + InputFileData%Twr2Shft + InputFileData%OverHang*SIN(InputFileData%ShftTilt) <= InputFileData%TipRad )     &
+      call SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
+
+   ! inertias
+   if (InputFileData%RotIner < 0.0_ReKi)     call SetErrStat(ErrID_Fatal,'RotIner must not be negative.',ErrStat,ErrMsg,RoutineName)
+   if (InputFileData%GenIner < 0.0_ReKi)     call SetErrStat(ErrID_Fatal,'GenIner must not be negative.',ErrStat,ErrMsg,RoutineName)
+
+   ! gearbox
+   if ((InputFileData%GBoxEff <= 0.0_ReKi) .OR. (InputFileData%GBoxEff > 1.0_ReKi))    &
+         call SetErrStat( ErrID_Fatal, 'GBoxEff must be in the range (0,1] (i.e., (0,100] percent).',ErrStat,ErrMsg,RoutineName )
+   !GBRatio  -- no sanity checks on this
 end subroutine SEDInput_ValidateInput
 
 
@@ -240,25 +292,44 @@ subroutine SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat,
    character(ErrMsgLen)                      :: ErrMsg2              !< Temporary error message for subroutine and function calls
    character(*),              parameter      :: RoutineName="SEDInput_SetParameters"
 
-      ! Initialize ErrStat
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Set parameters
+   ! Set parameters
+   p%RootName  = InitInp%RootName
    p%DT        = InputFileData%DT
    Interval    = p%DT                        ! Tell glue code what we want for DT
    p%numOuts   = InputFileData%NumOuts
-   p%RootName  = InitInp%RootName
+   p%IntMethod = InputFileData%IntMethod
+   p%GenDOF    = InputFileData%GenDOF
 
-      ! Set the outputs
+   ! geometry
+   p%NumBl     = InputFileData%NumBl
+   p%TipRad    = InputFileData%TipRad
+   p%HubRad    = InputFileData%HubRad
+   p%PreCone   = InputFileData%PreCone
+   p%OverHang  = InputFileData%OverHang
+   p%ShftTilt  = InputFileData%ShftTilt
+   p%Twr2Shft  = InputFileData%Twr2Shft
+   p%TowerHt   = InputFileData%TowerHt
+   p%PtfmPitch = InputFileData%PtfmPitch
+   p%HubHt     = p%TowerHt + p%Twr2Shft + p%OverHang*sin(p%ShftTilt)
+!FIXME: Do we need to account for cone????  ED does not
+   p%BladeLength  = p%TipRad - p%HubRad
+
+   ! inertia / drivetrain
+   p%RotIner   = InputFileData%RotIner
+   p%GenIner   = InputFileData%GenIner
+   p%GBoxEff   = InputFileData%GBoxEff
+   p%GBoxRatio = InputFileData%GBoxRatio
+
+   ! system inertia
+   p%J_DT   = p%RotIner + p%GBoxRatio**2_IntKi * p%GenIner
+
+   ! Set the outputs
    call SetOutParam(InputFileData%OutList, p, ErrStat, ErrMsg )
 end subroutine SEDInput_SetParameters
-
-
-
-
-!FIXME: add SetOutParam here
-
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -285,21 +356,25 @@ subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    ErrMsg  = ""
    m%AllOuts = 0.0_ReKi
 
+!   m%AllOuts( Azimuth  ) =
+!   m%AllOuts( RotSpeed ) =
+!   m%AllOuts( RotAcc   ) =
+!   m%AllOuts( GenSpeed ) =
+!   m%AllOuts( GenAcc   ) =
 end subroutine Calc_WriteOutput
-
 
 
 !**********************************************************************************************************************************
 ! NOTE: The following lines of code were generated by a Matlab script called "Write_ChckOutLst.m"
-!      using the parameters listed in the "OutListParameters.xlsx" Excel file. Any changes to these 
-!      lines should be modified in the Matlab script and/or Excel worksheet as necessary. 
+!      using the parameters listed in the "OutListParameters.xlsx" Excel file. Any changes to these
+!      lines should be modified in the Matlab script and/or Excel worksheet as necessary.
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a 
+!> This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a
 !! warning if any of the channels are not available outputs from the module.
 !!  It assigns the settings for OutParam(:) (i.e, the index, name, and units of the output channels, WriteOutput(:)).
 !!  the sign is set to 0 if the channel is invalid.
 !! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
-!! 
+!!
 !! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 25-Apr-2022 09:45:38.
 SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -340,12 +415,6 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ""
    InvalidOutput = .FALSE.
-
-
-!   ..... Developer must add checking for invalid inputs here: .....
-
-!   ................. End of validity checking .................
-
 
    !-------------------------------------------------------------------------------------------------
    ! Allocate and set index, name, and units for the output channels

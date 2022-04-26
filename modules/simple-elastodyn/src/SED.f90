@@ -116,21 +116,17 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat2, ErrMsg2 )
    if (Failed()) return;
 
-   ! For diagnostic purposes.  If we add a summary file, use this to write table
-   !call WriteAeroTab(p%AeroTable,Cu)
-
-
    ! Set inputs
    call Init_U(ErrStat2,ErrMsg2);   if (Failed())  return
 
    ! Set outputs
    call Init_Y(ErrStat2,ErrMsg2);   if (Failed())  return
 
-   ! Set InitOutputs
-   call Init_InitY(ErrStat2,ErrMsg2);  if (Failed())  return
-
    ! Set some other stuff that the framework requires
    call Init_OtherStuff(ErrStat2,ErrMsg2);  if (Failed())  return
+
+   ! Set InitOutputs
+   call Init_InitY(ErrStat2,ErrMsg2);  if (Failed())  return
 
    ! This should be caught by glue code
    if (InitInp%Linearize) then
@@ -189,7 +185,19 @@ contains
          InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
       end do
       ! Version
-      InitOut%Ver = SED_Ver
+      InitOut%Ver          = SED_Ver
+      InitOut%NumBl        = p%NumBl
+      InitOut%BladeLength  = p%BladeLength
+      InitOut%TowerHt      = p%TowerHt
+      InitOut%HubHt        = p%HubHt
+      InitOut%HubRad       = p%HubRad
+      InitOut%GenDOF       = p%GenDOF
+
+      ! from states
+!      InitOut%BlPitch      =
+!      InitOut%PlatformPos  =
+!      InitOut%RotSpeed     =
+
    end subroutine Init_InitY
 END SUBROUTINE SED_Init
 

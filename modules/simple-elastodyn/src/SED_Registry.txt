@@ -34,8 +34,8 @@ typedef  ^        SED_InputFile     ReKi                 Twr2Shft          -  - 
 typedef  ^        SED_InputFile     ReKi                 TowerHt           -  - -   "Height of tower above ground level [onshore] or MSL [offshore]" m
 typedef  ^        SED_InputFile     ReKi                 RotIner           -  - -   "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)" "kg m^2"
 typedef  ^        SED_InputFile     ReKi                 GenIner           -  - -   "Generator inertia about HSS" "kg m^2"
-typedef  ^        SED_InputFile     ReKi                 GBEff             -  - -   "Gearbox efficiency" "percent"
-typedef  ^        SED_InputFile     ReKi                 GBRatio           -  - -   "Gearbox ratio" -
+typedef  ^        SED_InputFile     ReKi                 GBoxEff           -  - -   "Gearbox efficiency" "percent"
+typedef  ^        SED_InputFile     ReKi                 GBoxRatio         -  - -   "Gearbox ratio" -
 typedef  ^        SED_InputFile     LOGICAL              SumPrint          -  - -   "Print summary data to <RootName>.sum" -
 typedef  ^        SED_InputFile     IntKi                NumOuts           -  - -   "Number of outputs"   -
 typedef  ^        SED_InputFile     CHARACTER(ChanLen)   OutList           :  - -   "List of user-requested output channels" -
@@ -57,12 +57,12 @@ typedef  ^        InitOutputType    ProgDesc             Ver               -  - 
 typedef  ^        InitOutputType    IntKi                NumBl             -  - -   "Number of blades on the turbine"   -
 typedef  ^        InitOutputType    ReKi                 BlPitch          {:} - -   "Initial blade pitch angles"   radians
 typedef  ^        InitOutputType    ReKi                 BladeLength       -  - -   "Blade length (for AeroDyn)"   meters
-typedef  ^        InitOutputType    ReKi                 TowerHeight       -  - -   "Tower Height"   meters
+typedef  ^        InitOutputType    ReKi                 TowerHt           -  - -   "Tower Height"   meters
 typedef  ^        InitOutputType    ReKi                 HubHt             -  - -   "Height of the hub"   meters
 typedef  ^        InitOutputType    ReKi                 PlatformPos      {6} - -   "Initial platform position (6 DOFs)"
 typedef  ^        InitOutputType    ReKi                 HubRad            -  - -   "Preconed hub radius (distance from the rotor apex to the blade root)"   m
 typedef  ^        InitOutputType    ReKi                 RotSpeed          -  - -   "Initial or fixed rotor speed"   rad/s
-typedef  ^        InitOutputType    LOGICAL              isFixed_GenDOF    -  - -   "whether the generator is fixed or free" -
+typedef  ^        InitOutputType    LOGICAL              GenDOF            -  - -   "whether the generator DOF is on (true) or off (false)" -
 
 
 # ..... Inputs ....................................................................................................................
@@ -109,17 +109,31 @@ typedef  ^       OtherStateType        IntKi             DummyOtherState   -  - 
 # ..... Parameters.................................................................................................................
 # unchanging parameters:
 typedef  ^        ParameterType        CHARACTER(1024)   RootName          -  - -   "RootName for writing output files" -
-typedef  ^       ParameterType         DbKi              DT                -  - -   "Time step for module time integration" s
-typedef  ^       ParameterType         IntKi             IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
-typedef  ^       ParameterType         ReKi              J_DT              -  - -   "Drivetrain inertia (blades+hub+shaft+generator)" "kgm^2"
-typedef  ^       ParameterType         ReKi              PtfmPitch         -  - -   "Static platform tilt angle" rad
-typedef  ^       ParameterType         MeshMapType       mapPtf2Twr        -  - -   "Mesh mapping from Ptfm to Tower line" -
-typedef  ^       ParameterType         MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
-typedef  ^       ParameterType         MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
-typedef  ^       ParameterType         LOGICAL           isFixed_GenDOF    -  - -   "whether the generator is fixed or free" -
-typedef  ^       ParameterType         IntKi             NumOuts           -  - -   "Number of outputs"   -
+typedef  ^        ParameterType        LOGICAL           GenDOF            -  - -   "whether the generator DOF is on (free) or off (fixed)" -
+typedef  ^        ParameterType        DbKi              DT                -  - -   "Time step for module time integration" s
+typedef  ^        ParameterType        IntKi             IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
+typedef  ^        ParameterType        ReKi              J_DT              -  - -   "Drivetrain inertia (blades+hub+shaft+generator)" "kgm^2"
+typedef  ^        ParameterType        ReKi              PtfmPitch         -  - -   "Static platform tilt angle" rad
+typedef  ^        ParameterType        ReKi              RotIner           -  - -   "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)" "kg m^2"
+typedef  ^        ParameterType        ReKi              GenIner           -  - -   "Generator inertia about HSS" "kg m^2"
+typedef  ^        ParameterType        ReKi              GBoxEff           -  - -   "Gearbox efficiency" "percent"
+typedef  ^        ParameterType        ReKi              GBoxRatio         -  - -   "Gearbox ratio" -
+typedef  ^        ParameterType        IntKi             NumBl             -  - -   "Number of blades on the turbine" -
+typedef  ^        ParameterType        ReKi              TipRad            -  - -   "Preconed blade-tip radius (distance from the rotor apex to the blade tip)" m
+typedef  ^        ParameterType        ReKi              HubRad            -  - -   "Preconed hub radius (distance from the rotor apex to the blade root)" m
+typedef  ^        ParameterType        ReKi              BladeLength       -  - -   "Length of blades" m
+typedef  ^        ParameterType        ReKi              PreCone           -  - -   "Rotor precone angles" deg
+typedef  ^        ParameterType        ReKi              OverHang          -  - -   "Distance from yaw axis to rotor apex or teeter pin" m
+typedef  ^        ParameterType        ReKi              ShftTilt          -  - -   "Rotor shaft tilt angle" deg
+typedef  ^        ParameterType        ReKi              Twr2Shft          -  - -   "Vertical distance from the tower-top to the rotor shaft" m
+typedef  ^        ParameterType        ReKi              TowerHt           -  - -   "Height of tower above ground level [onshore] or MSL [offshore]" m
+typedef  ^        ParameterType        ReKi              HubHt             -  - -   "Height of hub center above ground level [onshore] or MSL [offshore]" m
+typedef  ^        ParameterType        IntKi             NumOuts           -  - -   "Number of outputs"   -
 typedef  ^        ParameterType        OutParmType       OutParam         {:} - -   "Names and units (and other characteristics) of all requested output parameters"  -
 
 # ..... Misc/Optimization variables.................................................................................................
 typedef  ^        MiscVarType          ReKi              AllOuts          {:} - -   "Array of all outputs"                             -
+typedef  ^        MiscVarType          MeshMapType       mapPtf2Twr        -  - -   "Mesh mapping from Ptfm to Tower line" -
+typedef  ^        MiscVarType          MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
+typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
 
