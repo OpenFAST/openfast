@@ -806,6 +806,7 @@ void fast::OpenFAST::allocateMemory() {
     nacelle_area.resize(nTurbinesProc);
     air_density.resize(nTurbinesProc);
     numBlades.resize(nTurbinesProc);
+    forcePtsBladeDistributionType.resize(nTurbinesProc);
     numForcePtsBlade.resize(nTurbinesProc);
     numForcePtsTwr.resize(nTurbinesProc);
     numVelPtsBlade.resize(nTurbinesProc);
@@ -823,6 +824,7 @@ void fast::OpenFAST::allocateMemory() {
         for(int i=0;i<3;i++) {
             TurbineBasePos[iTurb][i] = globTurbineData[globProc].TurbineBasePos[i];
         }
+        forcePtsBladeDistributionType[iTurb] =  globTurbineData[globProc].forcePtsBladeDistributionType;
         numForcePtsBlade[iTurb] = globTurbineData[globProc].numForcePtsBlade;
         numForcePtsTwr[iTurb] = globTurbineData[globProc].numForcePtsTwr;
         nacelle_cd[iTurb] = globTurbineData[globProc].nacelle_cd;

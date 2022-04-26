@@ -28,6 +28,7 @@ struct globTurbineDataType {
   std::string FASTRestartFileName;
   std::vector<double> TurbineBasePos;
   std::vector<double> TurbineHubPos;
+  std::string forcePtsBladeDistributionType;
   int numForcePtsBlade;
   int numForcePtsTwr;
   float nacelle_cd{0.0};
@@ -104,6 +105,7 @@ class OpenFAST {
   int ntStart;      // The time step to start the FAST simulation
   int nEveryCheckPoint;    // Check point files will be written every 'nEveryCheckPoint' time steps
   std::vector<int> numBlades;           // Number of blades
+  std::vector<std::string> forcePtsBladeDistributionType;
   std::vector<int> numForcePtsBlade;
   std::vector<int> numForcePtsTwr;
   std::vector<int> numVelPtsBlade;
