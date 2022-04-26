@@ -18,8 +18,7 @@ typedef	^	^	ReKi	StructTwrHNodes	{:}	-	-	"Location of variable-spaced structural
 typedef	^       ^	ReKi	BladeLength	-	-	-	"Blade length"	meters
 typedef	^	^	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
 typedef	^	^	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
-
-
+typedef ^       ^       logical NodeClusterType -       -       -       "Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
 
 
 
@@ -53,6 +52,7 @@ typedef ^       ^       ReKi            forceTwrHnodes             {:}     "Radi
 typedef ^	^	ReKi	BladeLength	-	-	-	"Blade length (same for all blades)"	"m"
 typedef ^	^	ReKi	TowerHeight	-	-	-	"Tower height"	"m"
 typedef ^	^	ReKi	TowerBaseHeight	-	-	-	"Tower base height"	"m"
+typedef ^       ^       logical NodeClusterType -       -       -       "Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
 
 
 # ..... OpenFOAM_InputType data .......................................................................................................

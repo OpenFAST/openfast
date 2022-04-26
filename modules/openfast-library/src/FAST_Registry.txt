@@ -167,7 +167,7 @@ typedef	^	FAST_ParameterType	INTEGER	VTK_tWidth	-	-	-	"Width of number of files 
 typedef	^	FAST_ParameterType	DbKi	VTK_fps	-	-	-	"number of frames per second to output VTK data" -
 typedef	^	FAST_ParameterType	FAST_VTK_SurfaceType	VTK_surface	-	-	-	"Data for VTK surface visualization"
 typedef	^	FAST_ParameterType	SiKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics)"	m
-typedef	^	FAST_ParameterType	CHARACTER(4)	Tdesc	-	-	-	"description of turbine ID (for FAST.Farm) screen printing"	
+typedef	^	FAST_ParameterType	CHARACTER(4)	Tdesc	-	-	-	"description of turbine ID (for FAST.Farm) screen printing"
 
 #  Parameters for linearization
 typedef	^	FAST_ParameterType	LOGICAL	CalcSteady	-	-	-	"Calculate a steady-state periodic operating point before linearization [unused if Linearize=False]"	-
@@ -185,7 +185,7 @@ typedef	^	FAST_ParameterType	LOGICAL	LinOutJac	-	-	-	"Include full Jacabians in 
 typedef	^	FAST_ParameterType	LOGICAL	LinOutMod	-	-	-	"Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False]"	-
 typedef	^	FAST_ParameterType	FAST_VTK_ModeShapeType	VTK_modes	-	-	-	"Data for VTK mode-shape visualization" -
 
-typedef ^       FAST_ParameterType	LOGICAL	UseSC 	-	-	-	"Use Supercontroller"	-  
+typedef ^       FAST_ParameterType	LOGICAL	UseSC 	-	-	-	"Use Supercontroller"	-
 typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the linearization"
 typedef	^	FAST_ParameterType	IntKi	Lin_ModOrder	{NumModules}	-	-	"indices that determine which order the modules are in the glue-code linearization matrix"
 typedef  ^  FAST_ParameterType  IntKi    LinInterpOrder     -  -  -  "Interpolation order for CalcSteady solution" -
@@ -736,6 +736,7 @@ typedef	^	FAST_ExternInitType	ReKi	windGrid_pZero	3	-	-	"fixed position of the X
 typedef	^	FAST_ExternInitType	CHARACTER(1024)	RootName	-	-	-	"Root name of FAST output files (overrides normal operation)"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsBlade	-	-	-	"number of actuator line force points in blade"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsTower	-	-	-	"number of actuator line force points in tower"	-
+typedef ^       FAST_ExternInitType     logical NodeClusterType -       -       -       "Node clustering for actuator line (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
 
 
 # ..... FAST Turbine Data (one realization) .......................................................................................................
