@@ -1284,10 +1284,12 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       nullify(p%Morison%WaveElev2)
       nullify(p%Morison%WaveAccMCF)
       nullify(p%Morison%PWaveAccMCF0)
-      do i = 1,p%NBody
-         nullify(p%WAMIT(i)%SS_Exctn%WaveElev1)
-         nullify(p%WAMIT(i)%SS_Exctn%WaveTime)
-      end do
+      if (allocated(p%WAMIT)) then
+         do i = 1,size(p%WAMIT)
+            nullify(p%WAMIT(i)%SS_Exctn%WaveElev1)
+            nullify(p%WAMIT(i)%SS_Exctn%WaveTime)
+         end do
+      end if
       CALL HydroDyn_DestroyParam( p, ErrStat, ErrMsg )
 
 
