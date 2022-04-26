@@ -24,6 +24,7 @@ MODULE FAST_Subs
    USE FAST_Solver
    USE FAST_Linear
    USE SC_DataEx
+   USE VersionInfo
 
    IMPLICIT NONE
 

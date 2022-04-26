@@ -39,7 +39,7 @@ set(SEAST_SOURCES
 )
 
 add_library(seastlib ${SEAST_SOURCES})
-target_link_libraries(seastlib nwtclibs)
+target_link_libraries(seastlib nwtclibs versioninfolib)
 
 set(SEAST_DRIVER_SOURCES
   src/SeaState_DriverCode.f90
