@@ -373,12 +373,12 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
            ! [I - XX']V = V - (V dot X)X
            Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
            ! Compute C matrix and update Vdist_low
-           if(p%Mod_Projection==0) then        
+           if(p%Mod_Projection==1) then        
               ! We keep the full field (including cross flow components), done for outputs and VTK outputs
               m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
               m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
               
-           else if (p%Mod_Projection==1) then
+           else if (p%Mod_Projection==2) then
               ! We project against the normal of the plane to remove the cross flow components
               C_rot(1,1) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
               C_rot(1,2) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)

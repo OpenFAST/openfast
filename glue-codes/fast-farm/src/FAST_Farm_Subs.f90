@@ -1026,10 +1026,10 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
-      end if            
-    
-          
+      end if
 
+   !----------------------- CURL WAKE PARAMETERS ------------------------------------------
+   CALL ReadCom        ( UnIn, InputFile, "Section Header: Curl wake parameters", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl        ,    "Swirl", "Swirl switch", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.1, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices,      "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
@@ -1040,9 +1040,9 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    if (AWAE_InitInp%Mod_Projection==-1) then
       ! -1 means the user selected "default"
       if (WD_InitInp%Mod_Wake==Mod_Wake_Curl) then
-           AWAE_InitInp%Mod_Projection=1
+           AWAE_InitInp%Mod_Projection=2
       else 
-           AWAE_InitInp%Mod_Projection=0
+           AWAE_InitInp%Mod_Projection=1
       endif
    endif
 
@@ -1432,7 +1432,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (AWAE_InitInp%C_Meander < 1.0_Reki) THEN
       CALL SetErrStat(ErrID_Fatal,'C_Meander parameter must not be less than 1.',ErrStat,ErrMsg,RoutineName)
    END IF
-   IF (AWAE_InitInp%Mod_Projection < 0 .or. AWAE_InitInp%Mod_Projection >1 ) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 0',ErrStat,ErrMsg,RoutineName)
+   IF (.not.(ANY((/1,2/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 2',ErrStat,ErrMsg,RoutineName)
          
    !--- OUTPUT ---
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
@@ -1525,6 +1525,7 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++         
          
          WD_InitInp%TurbNum     = nt
+         WD_InitInp%OutFileRoot = farm%p%OutFileRoot
          
             ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call WD_Init( WD_InitInp, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &

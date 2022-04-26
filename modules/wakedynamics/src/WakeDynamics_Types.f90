@@ -77,6 +77,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WD_InitInputType
     TYPE(WD_InputFileType)  :: InputFileData      !< FAST.Farm input-file data for wake dynamics [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
+    CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
   END TYPE WD_InitInputType
 ! =======================
 ! =========  WD_InitOutputType  =======
@@ -184,6 +185,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: FilterInit      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
     REAL(ReKi)  :: k_vCurl      !< Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0] [-]
     LOGICAL  :: OutAllPlanes      !< Output all planes [-]
+    CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
+    INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
   END TYPE WD_ParameterType
 ! =======================
 ! =========  WD_InputType  =======
@@ -533,6 +536,7 @@ CONTAINS
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%TurbNum = SrcInitInputData%TurbNum
+    DstInitInputData%OutFileRoot = SrcInitInputData%OutFileRoot
  END SUBROUTINE WD_CopyInitInput
 
  SUBROUTINE WD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -601,6 +605,7 @@ CONTAINS
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! TurbNum
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFileRoot)  ! OutFileRoot
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -658,6 +663,10 @@ CONTAINS
       ENDIF
     IntKiBuf(Int_Xferred) = InData%TurbNum
     Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(InData%OutFileRoot)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%OutFileRoot(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE WD_PackInitInput
 
  SUBROUTINE WD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -728,6 +737,10 @@ CONTAINS
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%TurbNum = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(OutData%OutFileRoot)
+      OutData%OutFileRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE WD_UnPackInitInput
 
  SUBROUTINE WD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -4024,6 +4037,8 @@ ENDIF
     DstParamData%FilterInit = SrcParamData%FilterInit
     DstParamData%k_vCurl = SrcParamData%k_vCurl
     DstParamData%OutAllPlanes = SrcParamData%OutAllPlanes
+    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
+    DstParamData%TurbNum = SrcParamData%TurbNum
  END SUBROUTINE WD_CopyParam
 
  SUBROUTINE WD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -4127,6 +4142,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! FilterInit
       Re_BufSz   = Re_BufSz   + 1  ! k_vCurl
       Int_BufSz  = Int_BufSz  + 1  ! OutAllPlanes
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFileRoot)  ! OutFileRoot
+      Int_BufSz  = Int_BufSz  + 1  ! TurbNum
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4260,6 +4277,12 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%k_vCurl
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%OutAllPlanes, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(InData%OutFileRoot)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%OutFileRoot(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    IntKiBuf(Int_Xferred) = InData%TurbNum
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_PackParam
 
@@ -4405,6 +4428,12 @@ ENDIF
     OutData%k_vCurl = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%OutAllPlanes = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutAllPlanes)
+    Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(OutData%OutFileRoot)
+      OutData%OutFileRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%TurbNum = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE WD_UnPackParam
 
