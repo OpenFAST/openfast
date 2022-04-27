@@ -48,7 +48,7 @@ MODULE SED
    !public :: SED_GetOP
 
 CONTAINS
-   
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize the SED module:
@@ -63,7 +63,7 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    type(SED_DiscreteStateType),     intent(  out)  :: xd          !< Initial discrete states
    type(SED_ConstraintStateType),   intent(  out)  :: z           !< Initial guess of the constraint states
    type(SED_OtherStateType),        intent(  out)  :: OtherState  !< Initial other states (logical, etc)
-   type(SED_OutputType),            intent(  out)  :: y           !< Initial system outputs (outputs are not calculated) 
+   type(SED_OutputType),            intent(  out)  :: y           !< Initial system outputs (outputs are not calculated)
    type(SED_MiscVarType),           intent(  out)  :: m           !< Misc variables for optimization (not copied in glue code)
    real(DbKi),                      intent(inout)  :: Interval    !< Coupling interval in seconds: the rate that
    type(SED_InitOutputType),        intent(  out)  :: InitOut     !< Output for initialization routine
@@ -116,11 +116,11 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat2, ErrMsg2 )
    if (Failed()) return;
 
-   ! Set inputs
-   call Init_U(ErrStat2,ErrMsg2);   if (Failed())  return
-
    ! Set outputs
    call Init_Y(ErrStat2,ErrMsg2);   if (Failed())  return
+
+   ! Set inputs
+   call Init_U(ErrStat2,ErrMsg2);   if (Failed())  return
 
    ! Set some other stuff that the framework requires
    call Init_OtherStuff(ErrStat2,ErrMsg2);  if (Failed())  return
@@ -137,10 +137,137 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
         !if (Failed) call CleanUp()
    end function Failed
+
+   !> Initialize the outputs in Y
+   subroutine Init_Y(ErrStat3,ErrMSg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      real(ReKi)                       :: Pos(3)
+      real(R8Ki)                       :: Orient(3,3)
+
+      !-------------------------
+      ! Set output platform mesh
+      call MeshCreate ( BlankMesh  = y%PlatformPtMesh  &
+                     ,IOS       = COMPONENT_INPUT &
+                     ,Nnodes    = 1               &
+                     ,ErrStat   = ErrStat3        &
+                     ,ErrMess   = ErrMsg3         &
+                     ,Orientation     = .true.    &
+                     ,TranslationDisp = .true.    &
+                     ,RotationVel     = .false.   &
+                     ,TranslationVel  = .false.   &
+                     ,RotationAcc     = .false.   &
+                     ,TranslationAcc  = .false.   &
+                     )
+         if (errStat3 >= AbortErrLev) return
+
+      ! Position/orientation of ref
+      Pos = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+      call Eye(Orient, ErrStat3, ErrMsg3);                                                      if (errStat3 >= AbortErrLev) return
+      call MeshPositionNode(y%PlatformPtMesh, 1, Pos, errStat3, errMsg3, Orient);               if (errStat3 >= AbortErrLev) return
+
+      ! Construct/commit
+      call MeshConstructElement( y%PlatformPtMesh, ELEMENT_POINT, errStat3, errMsg3, p1=1 );    if (errStat3 >= AbortErrLev) return
+      call MeshCommit(y%PlatformPtMesh, errStat3, errMsg3 );                                    if (errStat3 >= AbortErrLev) return
+
+      ! Initial node positions (stays at 0,0,0)
+      y%PlatformPtMesh%TranslationDisp(1:3,1) = real(Pos,R8Ki)
+
+      ! Initial node orientations
+      call SmllRotTrans( 'platform displacement (SED)', 0.0_R8Ki, real(p%PtfmPitch,R8Ki), 0.0_R8Ki, &
+          y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat3, errmsg=ErrMsg3 )
+
+
+      !-----------------
+      ! Set TowerLn2Mesh
+      call MeshCreate ( BlankMesh  = y%TowerLn2Mesh  &
+                     ,IOS       = COMPONENT_INPUT &
+                     ,Nnodes    = 2               &
+                     ,ErrStat   = ErrStat3        &
+                     ,ErrMess   = ErrMsg3         &
+                     ,Orientation     = .true.    &
+                     ,TranslationDisp = .true.    &
+                     ,RotationVel     = .false.   &
+                     ,TranslationVel  = .false.   &
+                     ,RotationAcc     = .false.   &
+                     ,TranslationAcc  = .false.   &
+                     )
+         if (errStat3 >= AbortErrLev) return
+
+      ! Position/orientation of tower base
+      Pos = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+      call Eye(Orient, ErrStat3, ErrMsg3);                                                         if (errStat3 >= AbortErrLev) return
+      call MeshPositionNode(y%TowerLn2Mesh, 1, Pos, errStat3, errMsg3, Orient);                    if (errStat3 >= AbortErrLev) return
+
+      ! Position/orientation of tower top
+      Pos = (/ 0.0_ReKi, 0.0_ReKi, p%TowerHt /)
+      call Eye(Orient, ErrStat3, ErrMsg3);                                                         if (errStat3 >= AbortErrLev) return
+      call MeshPositionNode(y%TowerLn2Mesh, 2, Pos, errStat3, errMsg3, Orient);                    if (errStat3 >= AbortErrLev) return
+
+      ! Construct/commit
+      call MeshConstructElement( y%TowerLn2Mesh, ELEMENT_LINE2, errStat3, errMsg3, p1=1, p2=2 );   if (errStat3 >= AbortErrLev) return
+      call MeshCommit(y%TowerLn2Mesh, errStat3, errMsg3 );                                         if (errStat3 >= AbortErrLev) return
+
+      ! Initial node positions (node 1 stays at 0,0,0,  Top tips forward and down with PtfmPitch)
+      y%TowerLn2Mesh%TranslationDisp(1:3,1) = y%PlatformPtMesh%TranslationDisp(1:3,1)
+      Pos(1) = sin(p%PtfmPitch)*p%TowerHt
+      Pos(2) = 0.0_ReKi
+      Pos(3) = cos(p%PtfmPitch)*p%TowerHt
+      Pos = Pos - y%TowerLn2Mesh%Position(1:3,2)
+      y%TowerLn2Mesh%TranslationDisp(1:3,2) = real(Pos,R8Ki)
+
+      ! Initial node orientations (same as ptfm)
+      y%TowerLn2Mesh%Orientation(:,:,1) = y%PlatformPtMesh%Orientation(:,:,1)
+      y%TowerLn2Mesh%Orientation(:,:,2) = y%PlatformPtMesh%Orientation(:,:,1)
+
+
+      !------------------------
+      ! Set output nacelle mesh -- nacelle yaw dof exists, but no tower top motion
+      call MeshCreate ( BlankMesh  = y%NacelleMotion  &
+                     ,IOS       = COMPONENT_INPUT &
+                     ,Nnodes    = 1               &
+                     ,ErrStat   = ErrStat3        &
+                     ,ErrMess   = ErrMsg3         &
+                     ,Orientation     = .true.    &
+                     ,TranslationDisp = .true.    &
+                     ,RotationVel     = .true.    &
+                     ,TranslationVel  = .false.   &
+                     ,RotationAcc     = .true.    &
+                     ,TranslationAcc  = .false.   &
+                     )
+         if (errStat3 >= AbortErrLev) return
+
+      ! Position/orientation of ref
+      Pos = y%TowerLn2Mesh%Position(1:3,2)   ! tower top
+      call Eye(Orient, ErrStat3, ErrMsg3);                                                   if (errStat3 >= AbortErrLev) return
+      call MeshPositionNode(y%NacelleMotion, 1, Pos, errStat3, errMsg3, Orient);             if (errStat3 >= AbortErrLev) return
+
+      ! Construct/commit
+      call MeshConstructElement( y%NacelleMotion, ELEMENT_POINT, errStat3, errMsg3, p1=1 );  if (errStat3 >= AbortErrLev) return
+      call MeshCommit(y%NacelleMotion, errStat3, errMsg3 );                                  if (errStat3 >= AbortErrLev) return
+
+      ! Initial node positions
+      y%NacelleMotion%TranslationDisp(1:3,1) = y%TowerLn2Mesh%TranslationDisp(1:3,2)
+
+      ! Initial orientation (rotate about tower top (pitched position)
+      call SmllRotTrans( 'nacelle yaw', 0.0_R8Ki, 0.0_R8Ki, real(InputFileData%NacYaw,R8Ki), &
+          Orient, errstat=ErrStat3, errmsg=ErrMsg3 )
+      y%NacelleMotion%Orientation(:,:,1) = matmul(Orient, y%TowerLn2Mesh%Orientation(:,:,2))
+
+      ! Initial node motions
+      y%NacelleMotion%RotationVel(:,1) = 0.0_ReKi
+      y%NacelleMotion%RotationAcc(:,1) = 0.0_ReKi
+
+
+      !--------
+      ! Outputs
+      call AllocAry(y%WriteOutput,p%NumOuts,'WriteOutput',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
+      y%WriteOutput = 0.0_ReKi
+   end subroutine Init_Y
 
    !> Initialize the inputs in u
    subroutine Init_U(ErrStat3,ErrMsg3)
@@ -148,14 +275,6 @@ contains
       character(*),     intent(  out)  :: ErrMsg3
       return
    end subroutine Init_U
-
-   !> Initialize the outputs in Y
-   subroutine Init_Y(ErrStat3,ErrMSg3)
-      integer(IntKi),   intent(  out)  :: ErrStat3
-      character(*),     intent(  out)  :: ErrMsg3
-      call AllocAry(y%WriteOutput,p%NumOuts,'WriteOutput',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
-      y%WriteOutput = 0.0_ReKi
-   end subroutine Init_Y
 
    !> Initialize other stuff that the framework requires, but isn't used here
    subroutine Init_OtherStuff(ErrStat3,ErRMsg3)
@@ -186,6 +305,7 @@ contains
       end do
       ! Version
       InitOut%Ver          = SED_Ver
+      ! Turbine config
       InitOut%NumBl        = p%NumBl
       InitOut%BladeLength  = p%BladeLength
       InitOut%TowerHt      = p%TowerHt
@@ -194,9 +314,10 @@ contains
       InitOut%GenDOF       = p%GenDOF
 
       ! from states
-!      InitOut%BlPitch      =
-!      InitOut%PlatformPos  =
-!      InitOut%RotSpeed     =
+!FIXME: populate this using states, not inputfiledata
+!      InitOut%BlPitch      = InputFileData%BlPitch
+!      InitOut%PlatformPos  =    ....small angle for (4:6)
+!      InitOut%RotSpeed     = InputFileData%RotSpeed
 
    end subroutine Init_InitY
 END SUBROUTINE SED_Init
@@ -296,7 +417,7 @@ SUBROUTINE SED_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
 
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed
@@ -340,7 +461,7 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
         !if (Failed) call CleanUp()
    end function Failed
@@ -377,7 +498,7 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
 
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed

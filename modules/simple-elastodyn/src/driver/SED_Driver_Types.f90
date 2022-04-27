@@ -63,6 +63,10 @@ module SED_Driver_Types
 
       type(ProgDesc)          :: ProgInfo                      !< Program info
       type(ProgDesc)          :: SEDProgInfo                   !< Program info for SED
+
+      integer(IntKi)          :: WrVTK                         !< Write VTK outputs [0: none, 1: init only, 2: animation]
+      integer(IntKi)          :: VTK_tWidth                    !< width of the time field in the VTK
+      character(1024)         :: VTK_OutFileRoot               !< Output root name for VTK
    end type    SEDDriver_Settings
 
 

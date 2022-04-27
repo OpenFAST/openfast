@@ -110,12 +110,7 @@ PROGRAM SED_Driver
 
       ! Parse the input line
    call RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= 0 ) THEN
-      CALL WrScr( NewLine//ErrMsg )
-      ErrStat  =  ErrID_None
-   ENDIF
+   call CheckErr('')
 
       ! Check if we are doing verbose error reporting
    IF ( CLSettingsFlags%VVerbose )     SEDDriver_Verbose =  10_IntKi
@@ -236,7 +231,7 @@ PROGRAM SED_Driver
       NumTSteps = 1_IntKi
       TMax = TimeInterval * NumTSteps
    endif
-
+   Settings%NumTimeSteps = NumTSteps
 
 
    ! Routines called in initialization
@@ -247,10 +242,7 @@ PROGRAM SED_Driver
 
       ! Initialize the module
    CALL SED_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( 'After Init: '//ErrMsg )
-      if ( ErrStat >= AbortErrLev ) call ProgEnd()
-   END IF
+   call CheckErr('After Init: ');
 
       ! Set the output file
    call GetRoot(Settings%SEDIptFileName,OutputFileRootName)
@@ -261,6 +253,10 @@ PROGRAM SED_Driver
    CALL SED_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL SED_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
 
+   if (Settings%WrVTK > 0_IntKi) then
+      call WrVTK_refMeshes(Settings, p, y, ErrStat,ErrMsg)
+      call CheckErr('After WrVTK_refMeshes: ');
+   endif
 
 
    ! Routines called in loose coupling -- the glue code may implement this in various ways
@@ -272,6 +268,11 @@ PROGRAM SED_Driver
    DO n = 0,NumTSteps
       Time = n*TimeInterval+TStart
       InputTime(1) = Time
+
+      if (Settings%WrVTK > 1_IntKi) then
+         call WrVTK_Meshes(Settings, p, y, n, ErrStat,ErrMsg)
+         call CheckErr('Time: '//trim(Num2LStr(Time))//'After WrVTK_Meshes: ');
+      endif
 
 !     ! interpolate into the input data to get the displacement.  Set this as u then run
 !     do i=1,u(1)%SoilMesh%NNodes
@@ -315,7 +316,7 @@ CONTAINS
    subroutine CheckErr(Text)
       character(*), intent(in) :: Text
        IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-         CALL WrScr( Text//ErrMsg )
+         CALL WrScr( Text//trim(ErrMsg) )
          if ( ErrStat >= AbortErrLev ) call ProgEnd()
       END IF
    end subroutine CheckErr

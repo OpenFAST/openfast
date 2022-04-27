@@ -30,6 +30,7 @@ MODULE SED_Driver_Subs
 
 !  NOTE: This is loosely based on the InflowWind driver code.
 
+
 CONTAINS
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 !> Print out help information
@@ -438,6 +439,14 @@ SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, Pro
    call ParseVar( DvrFileInfo, CurLine, "OutRootName", DvrSettings%OutRootName, ErrStatTmp, ErrMsgTmp, UnEc )
    if (Failed()) return 
    DvrFlags%OutRootName  =  .TRUE.
+
+
+   !======  Output  ======================================================================================
+   if ( EchoFileContents )   WRITE(UnEc, '(A)') DvrFileInfo%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+
+      ! WrVTK     -- writing VTK visualization files must be [0: none, 1: init only, 2: animation]
+   call ParseVar( DvrFileInfo, CurLine, "WrVTK", DvrSettings%WrVTK, ErrStatTmp, ErrMsgTmp, UnEc )
  
 
    !======  Case analysis  ===============================================================================
@@ -751,7 +760,7 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
    real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
    integer(IntKi)         ,  intent(in   )   :: OutUnit              ! Status of error message
    character(*)           ,  intent(in   )   :: OutFmt
-   type(SED_OutputType),    intent(in   )   :: Output
+   type(SED_OutputType),     intent(in   )   :: Output
    integer(IntKi)                            :: errStat              ! Status of error message (we're going to ignore errors in writing to the file)
    character(ErrMsgLen)                      :: errMsg               ! Error message if ErrStat /= ErrID_None
    character(200)                            :: frmt                 ! A string to hold a format specifier
@@ -768,5 +777,71 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
    write (OutUnit,'()')
 end subroutine Dvr_WriteOutputLine
 
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Write VTK reference meshes and setup directory if needed.
+subroutine WrVTK_refMeshes(DvrSettings, p, y, ErrStat,ErrMsg)
+   type( SEDDriver_Settings ),   intent(inout)  :: DvrSettings    !< Stored settings
+   type(SED_ParameterType),      intent(in   )  :: p              !< System parameters
+   type(SED_OutputType),         intent(in   )  :: y              !< System outputs
+   integer(IntKi),               intent(  out)  :: ErrStat        !< error status
+   character(ErrMsgLen),         intent(  out)  :: ErrMsg         !< error message
+   integer(IntKi)                               :: i
+   character(1024)                              :: TmpFileName
+
+   ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
+   ! create the VTK directory if it does not exist
+   call GetPath ( DvrSettings%OutRootName, DvrSettings%VTK_OutFileRoot, TmpFileName ) ! the returned VTK_OutFileRoot includes a file separator character at the end
+   DvrSettings%VTK_OutFileRoot = trim(DvrSettings%VTK_OutFileRoot) // 'vtk-SED'
+   call MKDIR( trim(DvrSettings%VTK_OutFileRoot) )
+   DvrSettings%VTK_OutFileRoot = trim( DvrSettings%VTK_OutFileRoot ) // PathSep // trim(TmpFileName)
+
+   ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
+   ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
+   DvrSettings%VTK_tWidth = CEILING( log10( real(DvrSettings%NumTimeSteps,ReKi) ) ) + 1
+print*,'NumTimeSteps: ',DvrSettings%NumTimeSteps
+print*,'VTK_tWidth:   ',DvrSettings%VTK_tWidth
+
+   ! Write reference meshes
+   call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%PlatformPtMesh, trim(DvrSettings%VTK_OutFileRoot)//'.PlatformPtMesh', ErrStat, ErrMsg)
+      if (ErrStat >= AbortErrLev) return
+   call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%TowerLn2Mesh,   trim(DvrSettings%VTK_OutFileRoot)//'.TowerLn2Mesh',   ErrStat, ErrMsg)
+      if (ErrStat >= AbortErrLev) return
+   call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%NacelleMotion,  trim(DvrSettings%VTK_OutFileRoot)//'.NacelleMotion',  ErrStat, ErrMsg)
+      if (ErrStat >= AbortErrLev) return
+!   call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%HubPtMotion,    trim(DvrSettings%VTK_OutFileRoot)//'.HubPtMotion',    ErrStat, ErrMsg)
+!      if (ErrStat >= AbortErrLev) return
+!   do i=1,p%NumBl
+!      call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%BladeRootMotion(i), trim(DvrSettings%VTK_OutFileRoot)//'.BladeRootMotion'//trim(Num2LStr(i)), ErrStat, ErrMsg)
+!         if (ErrStat >= AbortErrLev) return
+!   enddo
+end subroutine WrVTK_refMeshes
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Write VTK reference meshes and setup directory if needed.
+subroutine WrVTK_Meshes(DvrSettings, p, y, N_Global, ErrStat,ErrMsg)
+   type( SEDDriver_Settings ),   intent(inout)  :: DvrSettings    !< Stored settings
+   type(SED_ParameterType),      intent(in   )  :: p              !< System parameters
+   type(SED_OutputType),         intent(in   )  :: y              !< System outputs
+   integer(IntKi),               intent(in   )  :: N_Global       !< System timestep number
+   integer(IntKi),               intent(  out)  :: ErrStat        !< error status
+   character(ErrMsgLen),         intent(  out)  :: ErrMsg         !< error message
+   integer(IntKi)                               :: i
+   character(1024)                              :: TmpFileName
+
+   ! Write meshes
+   call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%PlatformPtMesh, trim(DvrSettings%VTK_OutFileRoot)//'.PlatformPtMesh', N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
+      if (ErrStat >= AbortErrLev) return
+   call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%TowerLn2Mesh,   trim(DvrSettings%VTK_OutFileRoot)//'.TowerLn2Mesh',   N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
+      if (ErrStat >= AbortErrLev) return
+   call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%NacelleMotion,  trim(DvrSettings%VTK_OutFileRoot)//'.NacelleMotion',  N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
+      if (ErrStat >= AbortErrLev) return
+!   call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%HubPtMotion,    trim(DvrSettings%VTK_OutFileRoot)//'.HubPtMotion',    N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
+!      if (ErrStat >= AbortErrLev) return
+!   do i=1,p%NumBl
+!      call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%BladeRootMotion(i), trim(DvrSettings%VTK_OutFileRoot)//'.BladeRootMotion'//trim(Num2LStr(i)), N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
+!         if (ErrStat >= AbortErrLev) return
+!   enddo
+end subroutine WrVTK_Meshes
 
 END MODULE SED_Driver_Subs
