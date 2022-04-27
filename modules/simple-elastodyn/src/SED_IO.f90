@@ -30,7 +30,10 @@ MODULE SED_IO
 
 
    real(ReKi),       parameter   :: SmallAngleLimit_Deg  =  15.0     ! Largest input angle considered "small" (used as a check on input data), degrees
-   integer(IntKi),   parameter   :: MaxBl = 3                        ! Maximum number of blades allowed in simulation
+   integer(IntKi),   parameter   :: MaxBl    = 3                     ! Maximum number of blades allowed in simulation
+
+   integer(IntKi),   parameter   :: DOF_Az   = 1                     ! Rotor azimuth
+
 
 
 contains
@@ -97,6 +100,10 @@ subroutine SED_ParsePrimaryFileData( InitInp, RootName, interval, FileInfo_In, I
    CurLine = CurLine + 1
       ! GenDOF -  Generator DOF (flag)
    call ParseVar( FileInfo_In, CurLine, "GenDOF", InputFileData%GenDOF, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! YawDOF -  Yaw DOF (flag)
+   call ParseVar( FileInfo_In, CurLine, "YawDOF", InputFileData%YawDOF, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
 
 
@@ -303,6 +310,7 @@ subroutine SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat,
    p%numOuts   = InputFileData%NumOuts
    p%IntMethod = InputFileData%IntMethod
    p%GenDOF    = InputFileData%GenDOF
+   p%YawDOF    = InputFileData%YawDOF
 
    ! geometry
    p%NumBl     = InputFileData%NumBl

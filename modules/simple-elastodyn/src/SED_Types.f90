@@ -39,6 +39,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT      !< Time step for module time integration [s]
     INTEGER(IntKi)  :: IntMethod      !< Integration method {1: RK4, 2: AB4, or 3: ABM4} [-]
     LOGICAL  :: GenDOF      !< whether the generator is fixed or free [-]
+    LOGICAL  :: YawDOF      !< Yaw controlled by controller, or fixed [-]
     REAL(R8Ki)  :: Azimuth      !< Initial azimuth angle for blade 1 [deg]
     REAL(ReKi)  :: BlPitch      !< Initial blade pitch angles [radians]
     REAL(ReKi)  :: RotSpeed      !< Initial or fixed rotor speed [RPM]
@@ -127,13 +128,14 @@ IMPLICIT NONE
 ! =======================
 ! =========  SED_OtherStateType  =======
   TYPE, PUBLIC :: SED_OtherStateType
-    INTEGER(IntKi)  :: DummyOtherState      !<  [-]
+    REAL(ReKi)  :: NacYaw      !<  [-]
   END TYPE SED_OtherStateType
 ! =======================
 ! =========  SED_ParameterType  =======
   TYPE, PUBLIC :: SED_ParameterType
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: GenDOF      !< whether the generator DOF is on (free) or off (fixed) [-]
+    LOGICAL  :: YawDOF      !< Yaw controlled by controller, or fixed [-]
     REAL(DbKi)  :: DT      !< Time step for module time integration [s]
     INTEGER(IntKi)  :: IntMethod      !< Integration method {1: RK4, 2: AB4, or 3: ABM4} [-]
     REAL(ReKi)  :: J_DT      !< Drivetrain inertia (blades+hub+shaft+generator) [kgm^2]
@@ -184,6 +186,7 @@ CONTAINS
     DstInputFileData%DT = SrcInputFileData%DT
     DstInputFileData%IntMethod = SrcInputFileData%IntMethod
     DstInputFileData%GenDOF = SrcInputFileData%GenDOF
+    DstInputFileData%YawDOF = SrcInputFileData%YawDOF
     DstInputFileData%Azimuth = SrcInputFileData%Azimuth
     DstInputFileData%BlPitch = SrcInputFileData%BlPitch
     DstInputFileData%RotSpeed = SrcInputFileData%RotSpeed
@@ -270,6 +273,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
       Int_BufSz  = Int_BufSz  + 1  ! GenDOF
+      Int_BufSz  = Int_BufSz  + 1  ! YawDOF
       Db_BufSz   = Db_BufSz   + 1  ! Azimuth
       Re_BufSz   = Re_BufSz   + 1  ! BlPitch
       Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
@@ -328,6 +332,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%IntMethod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%GenDOF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%YawDOF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%Azimuth
     Db_Xferred = Db_Xferred + 1
@@ -420,6 +426,8 @@ ENDIF
     OutData%IntMethod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%GenDOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%GenDOF)
+    Int_Xferred = Int_Xferred + 1
+    OutData%YawDOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%YawDOF)
     Int_Xferred = Int_Xferred + 1
     OutData%Azimuth = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
@@ -2540,7 +2548,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
+    DstOtherStateData%NacYaw = SrcOtherStateData%NacYaw
  END SUBROUTINE SED_CopyOtherState
 
  SUBROUTINE SED_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -2589,7 +2597,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! DummyOtherState
+      Re_BufSz   = Re_BufSz   + 1  ! NacYaw
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2617,8 +2625,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%DummyOtherState
-    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%NacYaw
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SED_PackOtherState
 
  SUBROUTINE SED_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2647,8 +2655,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%DummyOtherState = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
+    OutData%NacYaw = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SED_UnPackOtherState
 
  SUBROUTINE SED_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -2668,6 +2676,7 @@ ENDIF
    ErrMsg  = ""
     DstParamData%RootName = SrcParamData%RootName
     DstParamData%GenDOF = SrcParamData%GenDOF
+    DstParamData%YawDOF = SrcParamData%YawDOF
     DstParamData%DT = SrcParamData%DT
     DstParamData%IntMethod = SrcParamData%IntMethod
     DstParamData%J_DT = SrcParamData%J_DT
@@ -2759,6 +2768,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! GenDOF
+      Int_BufSz  = Int_BufSz  + 1  ! YawDOF
       Db_BufSz   = Db_BufSz   + 1  ! DT
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
       Re_BufSz   = Re_BufSz   + 1  ! J_DT
@@ -2834,6 +2844,8 @@ ENDIF
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%GenDOF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%YawDOF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
@@ -2948,6 +2960,8 @@ ENDIF
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     OutData%GenDOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%GenDOF)
+    Int_Xferred = Int_Xferred + 1
+    OutData%YawDOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%YawDOF)
     Int_Xferred = Int_Xferred + 1
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1

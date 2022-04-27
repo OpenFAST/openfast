@@ -809,8 +809,8 @@ print*,'VTK_tWidth:   ',DvrSettings%VTK_tWidth
       if (ErrStat >= AbortErrLev) return
    call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%NacelleMotion,  trim(DvrSettings%VTK_OutFileRoot)//'.NacelleMotion',  ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
-!   call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%HubPtMotion,    trim(DvrSettings%VTK_OutFileRoot)//'.HubPtMotion',    ErrStat, ErrMsg)
-!      if (ErrStat >= AbortErrLev) return
+   call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%HubPtMotion,    trim(DvrSettings%VTK_OutFileRoot)//'.HubPtMotion',    ErrStat, ErrMsg)
+      if (ErrStat >= AbortErrLev) return
 !   do i=1,p%NumBl
 !      call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%BladeRootMotion(i), trim(DvrSettings%VTK_OutFileRoot)//'.BladeRootMotion'//trim(Num2LStr(i)), ErrStat, ErrMsg)
 !         if (ErrStat >= AbortErrLev) return
@@ -836,8 +836,8 @@ subroutine WrVTK_Meshes(DvrSettings, p, y, N_Global, ErrStat,ErrMsg)
       if (ErrStat >= AbortErrLev) return
    call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%NacelleMotion,  trim(DvrSettings%VTK_OutFileRoot)//'.NacelleMotion',  N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
       if (ErrStat >= AbortErrLev) return
-!   call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%HubPtMotion,    trim(DvrSettings%VTK_OutFileRoot)//'.HubPtMotion',    N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
-!      if (ErrStat >= AbortErrLev) return
+   call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%HubPtMotion,    trim(DvrSettings%VTK_OutFileRoot)//'.HubPtMotion',    N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
+      if (ErrStat >= AbortErrLev) return
 !   do i=1,p%NumBl
 !      call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%BladeRootMotion(i), trim(DvrSettings%VTK_OutFileRoot)//'.BladeRootMotion'//trim(Num2LStr(i)), N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
 !         if (ErrStat >= AbortErrLev) return

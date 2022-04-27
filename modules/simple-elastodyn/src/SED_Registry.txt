@@ -19,6 +19,7 @@ typedef  SED/SED  SED_InputFile     LOGICAL              Echo              -  - 
 typedef  ^        SED_InputFile     DBKi                 DT                -  - -   "Time step for module time integration" s
 typedef  ^        SED_InputFile     IntKi                IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
 typedef  ^        SED_InputFile     LOGICAL              GenDOF            -  - -   "whether the generator is fixed or free" -
+typedef  ^        SED_InputFile     LOGICAL              YawDOF            -  - -   "Yaw controlled by controller, or fixed" -
 typedef  ^        SED_InputFile     R8Ki                 Azimuth           -  - -   "Initial azimuth angle for blade 1" deg
 typedef  ^        SED_InputFile     ReKi                 BlPitch           -  - -   "Initial blade pitch angles" radians
 typedef  ^        SED_InputFile     ReKi                 RotSpeed          -  - -   "Initial or fixed rotor speed" RPM
@@ -103,13 +104,14 @@ typedef  ^       DiscreteStateType     ReKi             DummyDiscreteState -  - 
 typedef  ^       ConstraintStateType   ReKi              DummyConstrState  -  - -   "" -
 
 # any other states
-typedef  ^       OtherStateType        IntKi             DummyOtherState   -  - -   "" -
+typedef  ^       OtherStateType        ReKi              NacYaw            -  - -   "" -
 
 
 # ..... Parameters.................................................................................................................
 # unchanging parameters:
 typedef  ^        ParameterType        CHARACTER(1024)   RootName          -  - -   "RootName for writing output files" -
 typedef  ^        ParameterType        LOGICAL           GenDOF            -  - -   "whether the generator DOF is on (free) or off (fixed)" -
+typedef  ^        ParameterType        LOGICAL           YawDOF            -  - -   "Yaw controlled by controller, or fixed" -
 typedef  ^        ParameterType        DbKi              DT                -  - -   "Time step for module time integration" s
 typedef  ^        ParameterType        IntKi             IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
 typedef  ^        ParameterType        ReKi              J_DT              -  - -   "Drivetrain inertia (blades+hub+shaft+generator)" "kgm^2"

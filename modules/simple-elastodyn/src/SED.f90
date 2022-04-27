@@ -116,17 +116,23 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat2, ErrMsg2 )
    if (Failed()) return;
 
+   ! Set States
+   call Init_States(ErrStat2,ErrMsg2);    if (Failed())  return
+
+   ! Set Meshes
+   call Init_Mesh(ErrStat2,ErrMsg2);      if (Failed())  return
+
    ! Set outputs
-   call Init_Y(ErrStat2,ErrMsg2);   if (Failed())  return
+   call Init_Y(ErrStat2,ErrMsg2);         if (Failed())  return
 
    ! Set inputs
-   call Init_U(ErrStat2,ErrMsg2);   if (Failed())  return
+   call Init_U(ErrStat2,ErrMsg2);         if (Failed())  return
 
-   ! Set some other stuff that the framework requires
-   call Init_OtherStuff(ErrStat2,ErrMsg2);  if (Failed())  return
+   ! Set miscvars (mesh mappings i here
+   call Init_Misc(ErrStat2,ErrMsg2);      if (Failed())  return
 
    ! Set InitOutputs
-   call Init_InitY(ErrStat2,ErrMsg2);  if (Failed())  return
+   call Init_InitY(ErrStat2,ErrMsg2);     if (Failed())  return
 
    ! This should be caught by glue code
    if (InitInp%Linearize) then
@@ -142,12 +148,36 @@ contains
         !if (Failed) call CleanUp()
    end function Failed
 
-   !> Initialize the outputs in Y
-   subroutine Init_Y(ErrStat3,ErrMSg3)
+   !> Initialize states
+   subroutine Init_States(ErrStat3,ErRMsg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+
+      ! Allocate states (only two states -- azimuth and rotor speed)
+      call AllocAry( x%QT,  1, 'x%QT',  ErrStat3, ErrMsg3);    if (ErrStat3 >= AbortErrLev) return
+      call AllocAry( x%QDT, 1, 'x%QDT', ErrStat3, ErrMsg3);    if (ErrStat3 >= AbortErrLev) return
+
+      ! Set initial conditions
+      x%QT( DOF_Az)  = InputFileData%Azimuth
+      x%QDT(DOF_Az)  = InputFileData%RotSpeed
+
+      ! Set yaw
+      OtherState%NacYaw = InputFileData%NacYaw
+
+      ! Unused states
+      xd%DummyDiscreteState      = 0.0_ReKi
+      z%DummyConstrState         = 0.0_ReKi
+   end subroutine Init_States
+
+   !> Initialize the meshes
+   subroutine Init_Mesh(ErrStat3,ErrMSg3)
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
       real(ReKi)                       :: Pos(3)
       real(R8Ki)                       :: Orient(3,3)
+      integer(IntKi)                   :: i
 
       !-------------------------
       ! Set output platform mesh
@@ -174,13 +204,6 @@ contains
       call MeshConstructElement( y%PlatformPtMesh, ELEMENT_POINT, errStat3, errMsg3, p1=1 );    if (errStat3 >= AbortErrLev) return
       call MeshCommit(y%PlatformPtMesh, errStat3, errMsg3 );                                    if (errStat3 >= AbortErrLev) return
 
-      ! Initial node positions (stays at 0,0,0)
-      y%PlatformPtMesh%TranslationDisp(1:3,1) = real(Pos,R8Ki)
-
-      ! Initial node orientations
-      call SmllRotTrans( 'platform displacement (SED)', 0.0_R8Ki, real(p%PtfmPitch,R8Ki), 0.0_R8Ki, &
-          y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat3, errmsg=ErrMsg3 )
-
 
       !-----------------
       ! Set TowerLn2Mesh
@@ -198,12 +221,12 @@ contains
                      )
          if (errStat3 >= AbortErrLev) return
 
-      ! Position/orientation of tower base
+      ! Position/orientation of tower base ref
       Pos = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
       call Eye(Orient, ErrStat3, ErrMsg3);                                                         if (errStat3 >= AbortErrLev) return
       call MeshPositionNode(y%TowerLn2Mesh, 1, Pos, errStat3, errMsg3, Orient);                    if (errStat3 >= AbortErrLev) return
 
-      ! Position/orientation of tower top
+      ! Position/orientation of tower top ref
       Pos = (/ 0.0_ReKi, 0.0_ReKi, p%TowerHt /)
       call Eye(Orient, ErrStat3, ErrMsg3);                                                         if (errStat3 >= AbortErrLev) return
       call MeshPositionNode(y%TowerLn2Mesh, 2, Pos, errStat3, errMsg3, Orient);                    if (errStat3 >= AbortErrLev) return
@@ -211,18 +234,6 @@ contains
       ! Construct/commit
       call MeshConstructElement( y%TowerLn2Mesh, ELEMENT_LINE2, errStat3, errMsg3, p1=1, p2=2 );   if (errStat3 >= AbortErrLev) return
       call MeshCommit(y%TowerLn2Mesh, errStat3, errMsg3 );                                         if (errStat3 >= AbortErrLev) return
-
-      ! Initial node positions (node 1 stays at 0,0,0,  Top tips forward and down with PtfmPitch)
-      y%TowerLn2Mesh%TranslationDisp(1:3,1) = y%PlatformPtMesh%TranslationDisp(1:3,1)
-      Pos(1) = sin(p%PtfmPitch)*p%TowerHt
-      Pos(2) = 0.0_ReKi
-      Pos(3) = cos(p%PtfmPitch)*p%TowerHt
-      Pos = Pos - y%TowerLn2Mesh%Position(1:3,2)
-      y%TowerLn2Mesh%TranslationDisp(1:3,2) = real(Pos,R8Ki)
-
-      ! Initial node orientations (same as ptfm)
-      y%TowerLn2Mesh%Orientation(:,:,1) = y%PlatformPtMesh%Orientation(:,:,1)
-      y%TowerLn2Mesh%Orientation(:,:,2) = y%PlatformPtMesh%Orientation(:,:,1)
 
 
       !------------------------
@@ -239,6 +250,7 @@ contains
                      ,RotationAcc     = .true.    &
                      ,TranslationAcc  = .false.   &
                      )
+!FIXME: do we need rotationAcc and RotationVel in this mesh?
          if (errStat3 >= AbortErrLev) return
 
       ! Position/orientation of ref
@@ -250,19 +262,134 @@ contains
       call MeshConstructElement( y%NacelleMotion, ELEMENT_POINT, errStat3, errMsg3, p1=1 );  if (errStat3 >= AbortErrLev) return
       call MeshCommit(y%NacelleMotion, errStat3, errMsg3 );                                  if (errStat3 >= AbortErrLev) return
 
-      ! Initial node positions
+
+      !--------------------------
+      ! Set hub point motion mesh
+      call MeshCreate ( BlankMesh  = y%HubPtMotion  &
+                     ,IOS       = COMPONENT_INPUT &
+                     ,Nnodes    = 1               &
+                     ,ErrStat   = ErrStat3        &
+                     ,ErrMess   = ErrMsg3         &
+                     ,Orientation     = .true.    &
+                     ,TranslationDisp = .true.    &
+                     ,RotationVel     = .true.    &
+                     ,TranslationVel  = .false.   &
+                     ,RotationAcc     = .true.    &
+                     ,TranslationAcc  = .false.   &
+                     )
+         if (errStat3 >= AbortErrLev) return
+
+      ! Position/orientation of ref
+      Pos = y%NacelleMotion%Position(1:3,1) + (/ cos(p%ShftTilt) * p%OverHang, 0.0_ReKi, p%Twr2Shft + sin(p%ShftTilt) * p%OverHang/)
+      call SmllRotTrans( 'rotor azimuth', 0.0_R8Ki, -real(p%ShftTilt,R8Ki), 0.0_R8Ki, &
+            Orient, errstat=ErrStat3, errmsg=ErrMsg3 )
+         if (errStat3 >= AbortErrLev) return
+      call MeshPositionNode(y%HubPtMotion, 1, Pos, errStat3, errMsg3, Orient);               if (errStat3 >= AbortErrLev) return
+
+      ! Construct/commit
+      call MeshConstructElement( y%HubPtMotion, ELEMENT_POINT, errStat3, errMsg3, p1=1 );    if (errStat3 >= AbortErrLev) return
+      call MeshCommit(y%HubPtMotion, errStat3, errMsg3 );                                    if (errStat3 >= AbortErrLev) return
+
+
+      !--------------------
+      ! Set BladeRootMotion
+      allocate( y%BladeRootMotion(p%NumBl), Stat=ErrStat3 )
+      if (ErrStat3 /=0) then
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = "Could not allocate y%BladeRootMotion mesh"
+         return
+      endif
+      do i=1,p%NumBl
+!       call MeshCreate ( BlankMesh  = y%BladeRootMotion(i)  &
+!                      ,IOS       = COMPONENT_INPUT &
+!                      ,Nnodes    = 1               &
+!                      ,ErrStat   = ErrStat3        &
+!                      ,ErrMess   = ErrMsg3         &
+!                      ,Orientation     = .true.    &
+!                      ,TranslationDisp = .true.    &
+!                      ,RotationVel     = .true.    &
+!                      ,TranslationVel  = .true.    &
+!                      ,RotationAcc     = .true.    &
+!                      ,TranslationAcc  = .true.    &
+!                      )
+!          if (errStat3 >= AbortErrLev) return
+
+         ! Set position/orientation of ref
+      enddo
+
+   end subroutine Init_Mesh
+
+
+   !> Initialize the outputs in Y -- most of this could probably be moved to CalcOutput
+   subroutine Init_Y(ErrStat3,ErrMSg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      real(ReKi)                       :: Pos(3)
+      real(R8Ki)                       :: tmpR8(3)
+      real(R8Ki)                       :: R33(3,3)
+      real(R8Ki)                       :: Orient(3,3)
+
+      !-------------------------
+      ! Set output platform mesh initial position (stays at 0,0,0)
+      y%PlatformPtMesh%TranslationDisp(1:3,1) = (/ 0.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki /)
+
+      ! Initial orientations
+      call SmllRotTrans( 'platform displacement (SED)', 0.0_R8Ki, real(p%PtfmPitch,R8Ki), 0.0_R8Ki, &
+            y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat3, errmsg=ErrMsg3 )
+         if (errStat3 >= AbortErrLev) return
+
+      !-------------------------
+      ! Set TowerLn2Mesh positions (node 1 stays at 0,0,0,  Top tips forward and down with PtfmPitch)
+      y%TowerLn2Mesh%TranslationDisp(1:3,1) = y%PlatformPtMesh%TranslationDisp(1:3,1)
+      Pos(1) = sin(p%PtfmPitch)*p%TowerHt
+      Pos(2) = 0.0_ReKi
+      Pos(3) = cos(p%PtfmPitch)*p%TowerHt
+      Pos = Pos - y%TowerLn2Mesh%Position(1:3,2)
+      y%TowerLn2Mesh%TranslationDisp(1:3,2) = real(Pos,R8Ki)
+
+      ! Initial node orientations (same as ptfm)
+      y%TowerLn2Mesh%Orientation(:,:,1) = y%PlatformPtMesh%Orientation(:,:,1)
+      y%TowerLn2Mesh%Orientation(:,:,2) = y%PlatformPtMesh%Orientation(:,:,1)
+
+
+      !-------------------------
+      ! Set output nacelle mesh position -- nacelle yaw dof exists, but no tower top motion
       y%NacelleMotion%TranslationDisp(1:3,1) = y%TowerLn2Mesh%TranslationDisp(1:3,2)
 
       ! Initial orientation (rotate about tower top (pitched position)
-      call SmllRotTrans( 'nacelle yaw', 0.0_R8Ki, 0.0_R8Ki, real(InputFileData%NacYaw,R8Ki), &
+      call SmllRotTrans( 'nacelle yaw', 0.0_R8Ki, 0.0_R8Ki, real(OtherState%NacYaw,R8Ki), &
           Orient, errstat=ErrStat3, errmsg=ErrMsg3 )
+         if (errStat3 >= AbortErrLev) return
       y%NacelleMotion%Orientation(:,:,1) = matmul(Orient, y%TowerLn2Mesh%Orientation(:,:,2))
 
-      ! Initial node motions
+      ! Initial nacelle motions
       y%NacelleMotion%RotationVel(:,1) = 0.0_ReKi
       y%NacelleMotion%RotationAcc(:,1) = 0.0_ReKi
 
 
+      !--------------------------
+      ! Set hub point motion mesh position
+      !  Note: the following works only because nacelle ref orientation is identity
+      tmpR8(1:3) = real(y%NacelleMotion%Position(1:3,1),R8Ki) - real(y%HubPtMotion%Position(1:3,1),R8Ki)
+      y%HubPtMotion%TranslationDisp(1:3,1)   = y%NacelleMotion%TranslationDisp(1:3,1) + (tmpR8 - matmul(tmpR8(1:3), y%NacelleMotion%Orientation(1:3,1:3,1)))
+      ! turbine pitch and yaw (included in the Nacelle motion already)
+      y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%RefOrientation(1:3,1:3,1), y%NacelleMotion%Orientation(1:3,1:3,1))
+      ! include azimuth -- rotate about Hub_X
+      R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(1,1:3,1) )
+      call Eye(Orient,ErrStat3,ErrMsg3)
+         if (errStat3 >= AbortErrLev) return
+      ! Rodriguez formula for rotation about a vector
+      Orient = Orient + sin(real(x%QT(DOF_Az),R8Ki)) * R33 + (1-cos(real(x%QT(DOF_Az),R8Ki))) * matmul(R33,R33)
+      y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(Orient))
+
+
+      !--------------------
+      ! Set BladeRootMotion
+!FIXME:
+
+
+
+!FIXME: might move all the initial settings to CalcOutput and call that here
       !--------
       ! Outputs
       call AllocAry(y%WriteOutput,p%NumOuts,'WriteOutput',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
@@ -276,12 +403,14 @@ contains
       return
    end subroutine Init_U
 
-   !> Initialize other stuff that the framework requires, but isn't used here
-   subroutine Init_OtherStuff(ErrStat3,ErRMsg3)
+   !> Initialize miscvars
+   subroutine Init_Misc(ErrStat3,ErRMsg3)
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
+!FIXME: set mappings of meshes
+
       if (allocated(m%AllOuts)) deallocate(m%AllOuts)
       allocate(m%AllOuts(0:MaxOutPts),STAT=ErrStat3)
       if (ErrStat3 /= 0) then
@@ -290,7 +419,7 @@ contains
          return
       endif
       m%AllOuts = 0.0_SiKi
-   end subroutine Init_OtherStuff
+   end subroutine Init_Misc
 
    !> Initialize the InitOutput
    subroutine Init_InitY(ErrStat3,ErrMsg3)
