@@ -20,6 +20,7 @@ set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GE
 set(module_name "nwtc_library")
 set(module_directory "nwtc-library")
 set(module_library "nwtclibs")
+#set(module_library "versioninfo")
 
 file(MAKE_DIRECTORY ${build_testdirectory}/${module_directory})
 file(WRITE ${build_testdirectory}/${module_directory}/testSuites.inc "")
@@ -31,8 +32,7 @@ include_directories(
 )
 
 set(testlist
-    NWTC_Library_test_tools
-    test_NWTC_IO_CheckArgs
+    NWTC_Library_test_tools #    test_NWTC_IO_CheckArgs
     test_NWTC_IO_FileInfo
     test_NWTC_RandomNumber
 )
