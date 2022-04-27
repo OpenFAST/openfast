@@ -1,7 +1,7 @@
 module test_NWTC_IO_CheckArgs
 
     use pFUnit_mod
-    use NWTC_IO
+    use VersionInfo
     use nwtc_library_test_tools
     
     implicit none
