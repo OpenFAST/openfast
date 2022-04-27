@@ -295,7 +295,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(SeaSt_Interp_InitInputType)       :: SeaSt_Interp_InitInp
 !      TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 module initialization
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
-      INTEGER                                :: I, J, k, iBody                                ! Generic counters
+      INTEGER                                :: I                                   ! Generic counters
       REAL(SiKi)                             :: WaveNmbr                            ! Wavenumber of the current frequency component (1/meter)
          ! These are dummy variables to satisfy the framework, but are not used 
          
@@ -318,16 +318,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(Current_OutputType)               :: Current_y                           ! Current module outputs   
       TYPE(Current_MiscVarType)              :: Current_m                           ! Current module misc/optimization data 
       
-      Real(ReKi)                             :: Np      
-      Real(ReKi)                             :: dftreal
-      Real(ReKi)                             :: dftimag 
-   
-         ! WAMIT Mesh
-      real(R8Ki)                             :: theta(3), orientation(3,3)        
       
          ! Wave Stretching Data
       REAL(SiKi), ALLOCATABLE  :: tmpWaveKinzi(:    )
-      INTEGER                  :: tmpNWaveElev
       REAL(SiKi), ALLOCATABLE  :: tmpWaveElevxi(:    )
       REAL(SiKi), ALLOCATABLE  :: tmpWaveElevyi(:    )
       REAL(SiKi), ALLOCATABLE  :: tmpWaveElevXY(:,:  )
@@ -1291,18 +1284,18 @@ SUBROUTINE SeaSt_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
 
       REAL(DbKi),                         INTENT(IN   )  :: t               !< Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   )  :: n               !< Current step of the simulation: t = n*Interval
-      TYPE(SeaSt_InputType),           INTENT(INOUT ) :: Inputs(:)       !< Inputs at InputTimes
+      TYPE(SeaSt_InputType),              INTENT(INOUT ) :: Inputs(:)       !< Inputs at InputTimes
       REAL(DbKi),                         INTENT(IN   )  :: InputTimes(:)   !< Times in seconds associated with Inputs
-      TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p               !< Parameters
-      TYPE(SeaSt_ContinuousStateType), INTENT(INOUT)  :: x               !< Input: Continuous states at t;
+      TYPE(SeaSt_ParameterType),          INTENT(IN   )  :: p               !< Parameters
+      TYPE(SeaSt_ContinuousStateType),    INTENT(INOUT)  :: x               !< Input: Continuous states at t;
                                                                             !!   Output: Continuous states at t + Interval
-      TYPE(SeaSt_DiscreteStateType),   INTENT(INOUT)  :: xd              !< Input: Discrete states at t;
+      TYPE(SeaSt_DiscreteStateType),      INTENT(INOUT)  :: xd              !< Input: Discrete states at t;
                                                                             !!   Output: Discrete states at t + Interval
-      TYPE(SeaSt_ConstraintStateType), INTENT(INOUT)  :: z               !< Input: Constraint states at t;
+      TYPE(SeaSt_ConstraintStateType),    INTENT(INOUT)  :: z               !< Input: Constraint states at t;
                                                                             !!   Output: Constraint states at t + Interval
-      TYPE(SeaSt_OtherStateType),      INTENT(INOUT)  :: OtherState      !< Other states: Other states at t;
+      TYPE(SeaSt_OtherStateType),         INTENT(INOUT)  :: OtherState      !< Other states: Other states at t;
                                                                             !!   Output: Other states at t + Interval
-      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m               !< Initial misc/optimization variables           
+      TYPE(SeaSt_MiscVarType),            INTENT(INOUT)  :: m               !< Initial misc/optimization variables           
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat         !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -1323,22 +1316,23 @@ END SUBROUTINE SeaSt_UpdateStates
 SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
    
       REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      TYPE(SeaSt_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (note that this is intent out because we're copying the u%WAMITMesh into m%u_wamit%mesh)
-      TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-      TYPE(SeaSt_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(SeaSt_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
-      TYPE(SeaSt_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(SeaSt_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
-      TYPE(SeaSt_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
+      TYPE(SeaSt_InputType),              INTENT(INOUT)  :: u           !< Inputs at Time (note that this is intent out because we're copying the u%WAMITMesh into m%u_wamit%mesh)
+      TYPE(SeaSt_ParameterType),          INTENT(IN   )  :: p           !< Parameters
+      TYPE(SeaSt_ContinuousStateType),    INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(SeaSt_DiscreteStateType),      INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(SeaSt_ConstraintStateType),    INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(SeaSt_OtherStateType),         INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(SeaSt_OutputType),             INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
                                                                         !!   nectivity information does not have to be recalculated)
-      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(SeaSt_MiscVarType),            INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !! Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !! Error message if ErrStat /= ErrID_None
 
-      INTEGER                                            :: I, J        ! Generic counters
+      INTEGER                                            :: I           ! Generic counters
       
       INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
       CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+      character(*), parameter                            :: RoutineName = 'SeaSt_CalcOutput'
 
     
       REAL(SiKi)                           :: WaveElev (p%NWaveElev) ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
@@ -1348,7 +1342,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       REAL(SiKi)                           :: WaveAcc(3,p%NWaveKin)
       REAL(SiKi)                           :: WaveDynP(p%NWaveKin)
       REAL(ReKi)                           :: AllOuts(MaxSeaStOutputs)  
-      integer(IntKi)                       :: iBody, indxStart, indxEnd, iWAMIT  ! Counters
+      integer(IntKi)                       :: indxStart, indxEnd, iWAMIT  ! Counters
       real(ReKi)                           :: positionXYZ(3), positionXY(2)
   
       REAL(ReKi)                           :: zeta
@@ -1385,7 +1379,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       !      ! Waves2_CalcOutput is called only so that the wave elevations can be output (if requested).
       !   CALL Waves2_CalcOutput( Time, m%u_Waves2, p%Waves2, x%Waves2, xd%Waves2,  &
       !                          z%Waves2, OtherState%Waves2, y%Waves2, m%Waves2, ErrStat2, ErrMsg2 )
-      !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )                  
+      !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
       !END IF
 
       DO i = 1, p%NWaveKin
@@ -1393,10 +1387,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          IF (p%WaveStMod > 0) THEN ! Wave stretching enabled
             positionXY = (/p%WaveKinxi(i),p%WaveKinyi(i)/)
             zeta1 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             IF (associated(p%Waves2%WaveElev2)) THEN
                zeta2 = SeaSt_Interp_3D( Time, positionXY, p%Waves2%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                zeta =  zeta1 + zeta2
             ELSE
                zeta =  zeta1 
@@ -1407,32 +1401,32 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                   IF (p%WaveKinzi(i)<=0.0) THEN ! Probe is below SWL
                   ! Evaluate wave kinematics as usual
                      CALL SeaSt_Interp_Setup( Time, positionXYZ, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel,  m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   ELSE ! Probe is above SWL
                      ! Get wave kinematics at the SWL first
                      positionXY0 = (/p%WaveKinxi(i),p%WaveKinyi(i),-0.00001_SiKi/)
                      CALL SeaSt_Interp_Setup( Time, positionXY0, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel,  m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      IF (p%WaveStMod == 2) THEN ! extrapolation stretching
                         ! Extrapolate
                         WaveVel(:,i) = WaveVel(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
-                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         WaveAcc(:,i) = WaveAcc(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
-                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         WaveDynP(i)  = WaveDynP(i)  + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
-                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      END IF            
                   END IF
                ELSE IF (p%WaveStMod == 3) THEN ! Wheeler stretching
@@ -1440,13 +1434,13 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                   zp = p%WtrDpth * ( p%WtrDpth + p%WaveKinzi(i) )/( p%WtrDpth + zeta ) - p%WtrDpth
                   positionXYZp = (/p%WaveKinxi(i),p%WaveKinyi(i),zp/)
                   CALL SeaSt_Interp_Setup( Time, positionXYZp, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel,  m%seast_interp_m, ErrStat2, ErrMsg2 )
-                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
-                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                END IF
             ELSE ! Probe out of water
                ! Zero everthing
@@ -1461,13 +1455,13 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                END IF
                ! Evaluate wave kinematics as usual
                CALL SeaSt_Interp_Setup( Time, positionXYZ, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                WaveVel(:,i) = SeaSt_Interp_4D_Vec( p%WaveVel,  m%seast_interp_m, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             ELSE ! Probe above SWL
                ! Zero everthing
                WaveVel(:,i) = (/0.0,0.0,0.0/)
@@ -1483,11 +1477,11 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
 
          WaveElev1(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         
          if (associated(p%Waves2%WaveElev2)) then
             WaveElev2(i) = SeaSt_Interp_3D( Time, positionXY, p%Waves2%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             WaveElev(i) =  WaveElev1(i) + WaveElev2(i)
          else
             WaveElev(i) =  WaveElev1(i) 
@@ -1502,12 +1496,12 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
            
       IF ( (p%OutSwtch == 1 .OR. p%OutSwtch == 3) .AND. ( Time > m%LastOutTime ) ) THEN    
          CALL SeaStOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )         
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )                  
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
       END IF
 
          ! Map calculated results into the AllOuts Array
       CALL SeaStOut_MapOutputs( Time, p, p%NWaveElev, WaveElev, WaveElev1, WaveElev2, p%NWaveKin, WaveVel, WaveAcc, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
       
       DO I = 1,p%NumOuts
             y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )

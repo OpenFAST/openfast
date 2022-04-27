@@ -86,7 +86,6 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
     TYPE(SS_Exc_MiscVarType),         INTENT(inout)  :: m           !< Initial misc/optimization variables            
     INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
     CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-   real(ReKi)     :: positionXY(2)
     
     real(SiKi)  :: GetWaveElevation(p%NBody)
     TYPE(SS_Exc_InputType)        :: u_out  ! extra_interp result

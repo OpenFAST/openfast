@@ -543,34 +543,28 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
    CHARACTER(*),                          INTENT (   OUT )  :: errMsg              ! Error message if errStat /= ErrID_None
 
    INTEGER                                     :: I, J, II
-   REAL(ReKi)                                  :: l                   ! length of an element
    LOGICAL                                     :: filledFlag          ! flag indicating if element is filled/flooded
-   CHARACTER(2)                                :: strFmt
-   CHARACTER(ChanLen)                          :: strNodeType         ! string indicating type of node: End, Interior, Super
    REAL(ReKi)                                  :: ident(3,3)          ! identity matrix
    REAL(ReKi)                                  :: ExtBuoyancy(6)      ! sum of all external buoyancy forces lumped at (0,0,0)
    REAL(ReKi)                                  :: IntBuoyancy(6)      ! sum of all internal buoyancy forces lumped at (0,0,0)
    REAL(ReKi)                                  :: MG_Wt(6)            ! weight of the marine growth as applied to (0,0,0)
    TYPE(MeshType)                              :: WRP_Mesh            ! mesh representing the WAMIT reference point (0,0,0)
    TYPE(MeshType)                              :: WRP_Mesh_position   ! mesh representing the WAMIT reference point (0,0,0)   (with no displaced position)
-   TYPE(MeshMapType)                           :: M_L_2_P             ! Map  Morison Line2 to  WRP_Mesh point
    TYPE(MeshMapType)                           :: M_P_2_P             ! Map  Morison Point to  WRP_Mesh point
-   REAL(ReKi)                                  :: elementVol            ! displaced volume of an element
    REAL(ReKi)                                  :: totalDisplVol       ! total displaced volume of the structure
    REAL(ReKi)                                  :: totalVol            ! total volume of structure
    REAL(ReKi)                                  :: MGvolume            ! volume of the marine growth material
    REAL(ReKi)                                  :: totalMGVol          !
    REAL(ReKi)                                  :: totalFillVol        !
-   REAL(ReKi)                                  :: elemCentroid(3)     ! location of the element centroid
    REAL(ReKi)                                  :: COB(3)              ! center of buoyancy location in global coordinates
-   INTEGER                                     :: m1, m2              ! Indices of the markers which surround the requested output location
+   INTEGER                                     :: m1                  ! Indices of the markers which surround the requested output location
    REAL(ReKi)                                  :: s                   ! The linear interpolation factor for the requested location
    REAL(ReKi)                                  :: outloc(3)           ! Position of the requested member output
    real(ReKi)                                  :: pos(3), pos2(3)     ! Position of a node or joint in the MSL inertial system
    INTEGER                                     :: mbrIndx, nodeIndx, c, N
    CHARACTER(ChanLen)                          :: tmpName
-   REAL(ReKi)                                  :: totalFillMass, mass_fill, fillVol, memberVol
-   REAL(ReKi)                                  :: totalMGMass, mass_MG
+   REAL(ReKi)                                  :: totalFillMass, mass_fill, memberVol
+   REAL(ReKi)                                  :: totalMGMass
    TYPE(Morison_NodeType)                      ::  node1, node2
    real(ReKi)                                  :: ptLoad(6)
    logical                                     :: fillFlag
@@ -1148,9 +1142,9 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
    type(Morison_NodeType),    allocatable, intent(in   )  :: nodes(:)
    type(Morison_MemberType),               intent(inout)  :: member
    
-   type(Morison_NodeType)                      :: node, node1, node2
-   integer(IntKi)                              :: i, j
-   real(ReKi)                                  :: s, Cd, CdMG, Ca, CaMG, Cp, CpMG, AxCa, AxCp, AxCaMG, AxCpMG
+   type(Morison_NodeType)                      :: node
+   integer(IntKi)                              :: i
+   real(ReKi)                                  :: s, CdMG, CaMG, CpMG, AxCaMG, AxCpMG
   
    select case ( MCoefMod )
       
@@ -1214,7 +1208,7 @@ SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, MSL2SWL, tMG, MGdensity )
    real(ReKi),                               intent( inout )  :: tMG
    real(ReKi),                               intent( inout )  :: MGdensity
    
-   INTEGER                 :: I, J
+   INTEGER                 :: J
    REAL(ReKi)              :: z
    INTEGER                 :: indx1, indx2
    REAL(ReKi)              :: dd, s
@@ -1430,8 +1424,8 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
 
    integer(IntKi) :: N, i
    real(ReKi)     :: WtrDepth,s, dl
-   type(Morison_NodeType) :: node1, node2
-   real(ReKi)     :: vec(3), vecLen
+   type(Morison_NodeType) :: node2
+   real(ReKi)     :: vec(3)
    real(ReKi)     :: memLength 
    real(ReKi)     :: Za 
    real(ReKi)     :: Zb 
@@ -1880,21 +1874,11 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
 
    TYPE(Morison_MemberType) :: member    ! the current member
-   type(Morison_MemberInputType) :: inpMember ! current input file-based member
-   INTEGER                  :: N, i, j, k, count
-   REAL(ReKi)               :: dl
-   REAL(ReKi)               :: vec(3),v2D(3,1), pos(3)
-   REAL(ReKi)               :: phi    ! member tilt angle
-   REAL(ReKi)               :: beta   ! member tilt heading
-   REAL(ReKi)               :: cosPhi
-   REAL(ReKi)               :: sinPhi
-   REAL(ReKi)               :: tanPhi
-   REAL(ReKi)               :: sinBeta
-   REAL(ReKi)               :: cosBeta
+   INTEGER                  :: N, i, j, k
+   REAL(ReKi)               :: v2D(3,1), pos(3)
    REAL(ReKi)               :: Za
    REAL(ReKi)               :: Zb
-   real(ReKi)               :: memLength ! reference member length
-   real(ReKi)               :: An(3), An_drag(3), Vn(3), I_n(3), Z0, sgn, Amag, Amag_drag, Vmag, Imag, Ir_MG_end, Il_MG_end, R_I(3,3), IRl_mat(3,3), tMG, MGdens, F_I(3), F_DP(3), af(3), VnDotAf
+   real(ReKi)               :: An(3), An_drag(3), Vn(3), I_n(3), sgn, Amag, Amag_drag, Vmag, Imag, Ir_MG_end, Il_MG_end, R_I(3,3), IRl_mat(3,3), tMG, MGdens, F_I(3), F_DP(3), af(3), VnDotAf
    integer(IntKi)           :: MemberEndIndx, ncommon
    INTEGER, ALLOCATABLE       :: commonNodeLst(:)
    LOGICAL, ALLOCATABLE       :: usedJointList(:)
@@ -2516,8 +2500,8 @@ SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, m, errStat, e
 
          ! Local variables
                   
-      INTEGER(IntKi)                                    :: errStat2    ! Error status of the operation (occurs after initial error)
-      CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
+!      INTEGER(IntKi)                                    :: errStat2    ! Error status of the operation (occurs after initial error)
+!      CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
                         
          ! Initialize errStat
          
@@ -2624,18 +2608,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   
    INTEGER(IntKi)                                    :: errStat2    ! Error status of the operation (occurs after initial error)
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
+   character(*), parameter                           :: RoutineName = 'Morison_CalcOutput'
       
-   REAL(ReKi)                                        :: F_DP(6), kvec(3), v(3),  vf(3), vrel(3), vmag
-   INTEGER                                           :: I, J, K, nodeIndx, IntWrapIndx
+   REAL(ReKi)                                        :: F_DP(6), kvec(3), vf(3), vrel(3), vmag
+   INTEGER                                           :: I, J, K, IntWrapIndx
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6) ,qdotdot2(3)     ! The structural acceleration of a mesh node
    !REAL(ReKi)                                        :: accel_fluid(6) ! Acceleration of fluid at the mesh node
    REAL(ReKi)                                        :: dragFactor     ! The lumped drag factor
    REAL(ReKi)                                        :: AnProd         ! Dot product of the directional area of the joint
-   REAL(ReKi)                                        :: C(3,3)
-   REAL(ReKi)                                        :: sgn
    REAL(ReKi)                                        :: D_AM_M(6,6)
-   REAL(ReKi)                                        :: nodeInWater
    REAL(ReKi)                                        :: D_dragConst     ! The distributed drag factor
   ! REAL(ReKi)                                        :: InterpolationSlope 
 
@@ -2646,8 +2628,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: dl      ! Element length within a given member, m
    REAL(ReKi)               :: vec(3)  ! Vector pointing from a member's 1st node to its last node
    REAL(ReKi)               :: phi, phi1, phi2     ! member tilt angle
-   REAL(ReKi)               :: beta    ! member tilt heading
-   real(ReKi)               :: vecLen  ! distance between member end nodes (joints) [this should never be zero but we test for it just in case]
    REAL(ReKi)               :: cosPhi, cosPhi1, cosPhi2
    REAL(ReKi)               :: sinPhi, sinPhi1, sinPhi2
    REAL(ReKi)               :: tanPhi
@@ -2658,12 +2638,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: z2
    REAL(ReKi)               :: r1
    REAL(ReKi)               :: r2
-   real(ReKi)               :: p1(3), p2(3)
+   real(ReKi)               :: p2(3)
    REAL(ReKi)               :: dRdl_mg     ! shorthand for taper including marine growth of element i
-   REAL(ReKi)               :: Rmid  
-   REAL(ReKi)               :: RmidMG
-   REAL(ReKi)               :: Rmidin
-   REAL(ReKi)               :: Lmid  
    real(ReKi)               :: g     ! gravity constant
    REAL(ReKi)               :: h0    ! distances along cylinder centerline from point 1 to the waterplane
    real(ReKi)               :: k_hat(3), k_hat1(3), k_hat2(3) ! Elemental unit vector pointing from 1st node to 2nd node of the element
@@ -2695,7 +2671,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: Imat(3,3)
    real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal
    real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h
-   real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_A(6), F_I(6), F_D(6), F_B1(6), F_B2(6)
+   real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B1(6), F_B2(6)
 
    ! Local variables needed for wave stretching and load smoothing/redistribution
    INTEGER(IntKi)           :: FSElem
@@ -2757,10 +2733,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! Compute the free surface elevation at the x/y position of all nodes
       positionXY = (/pos1(1),pos1(2)/)      
       m%WaveElev1(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (associated(p%WaveElev2)) THEN
         m%WaveElev2(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         m%WaveElev(j) =  m%WaveElev1(j) + m%WaveElev2(j)
       ELSE
         m%WaveElev(j) =  m%WaveElev1(j) 
@@ -2772,13 +2748,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
           IF ( pos1(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
               ! Use location to obtain interpolated values of kinematics         
               call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               m%vrel(:,j) = m%FV(:,j) - u%Mesh%TranslationVel(:,j)
               m%nodeInWater(j) = 1_IntKi
           ELSE ! Node is above the SWL
@@ -2801,32 +2777,32 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
           
                       ! Use location to obtain interpolated values of kinematics         
                       call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           
                   ELSE ! Node is above SWL - need wave stretching
           
                       ! Vertical wave stretching
                       m%FV(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveVel0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       m%FA(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAcc0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       m%FDynP(j) = SeaSt_Interp_3D    ( Time, positionXY, p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       
                       ! Extrapoled wave stretching
                       IF (p%WaveStMod == 2) THEN 
                         m%FV(:,j)  = m%FV(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
-                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         m%FA(:,j)  = m%FA(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
-                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         m%FDynP(j) = m%FDynP(j) + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
-                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       END IF
           
                   END IF ! Node is submerged
@@ -2839,13 +2815,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   
                   ! Obtain the wave-field variables by interpolation with the mapped position.
                   call SeaSt_Interp_Setup( Time, pos1Prime, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               
               END IF
           
@@ -2896,9 +2872,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   IF ( pos1(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
                      ! Use location to obtain interpolated values of kinematics         
                      call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   ELSE ! Node is above the SWL
                      m%FAMCF(:,j)  = 0.0
                   END IF
@@ -2912,20 +2888,20 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                         IF ( pos1(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
                            ! Use location to obtain interpolated values of kinematics         
                            call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                            m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         ELSE ! Node is above SWL - need wave stretching
                            
                            
                            ! Vertical wave stretching
                            m%FAMCF(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAccMCF0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
-                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                            
                            ! Extrapoled wave stretching
                            IF (p%WaveStMod == 2) THEN 
                               m%FAMCF(:,j)  = m%FAMCF(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAccMCF0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
-                                 call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                                 call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                            END IF
           
                         END IF ! Node is submerged
@@ -2938,9 +2914,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   
                         ! Obtain the wave-field variables by interpolation with the mapped position.
                         call SeaSt_Interp_Setup( Time, pos1Prime, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               
                     END IF
         
@@ -3453,32 +3429,32 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               
               ! Use location to obtain interpolated values of kinematics
               CALL SeaSt_Interp_Setup( Time, FSInt, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               FVFSInt = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               FAFSInt = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               FDynPFSInt = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            
            ELSE ! Intersection is above SWL - need wave stretching
               
               ! Vertical wave stretching
               FVFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               FAFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               FDynPFSInt = SeaSt_Interp_3D    ( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               
               ! Extrapolated wave stretching
               IF (p%WaveStMod == 2) THEN 
                 FVFSInt    = FVFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                 FAFSInt    = FAFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                 FDynPFSInt = FDynPFSInt + SeaSt_Interp_3D    ( Time, FSInt(1:2), p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               END IF
               
            END IF
@@ -3488,11 +3464,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            ! Points on the free surface is always mapped back to z=0 of the unstretched wave field
            ! Can evaluate the wave-field variables in the same way as vertical stretching
            FVFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p, ErrStat2, ErrMsg2 )
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            FAFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p, ErrStat2, ErrMsg2 )
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            FDynPFSInt = SeaSt_Interp_3D( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            
         END IF
 
@@ -3504,20 +3480,20 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               
               ! Use location to obtain interpolated values of kinematics
               CALL SeaSt_Interp_Setup( Time, FSInt, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               FAMCFFSInt = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
               ELSE ! Intersection is above SWL - need wave stretching
               
                  ! Vertical wave stretching
                  FAMCFFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
-                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                  ! Extrapolated wave stretching
                  IF (p%WaveStMod == 2) THEN 
                     FAMCFFSInt    = FAMCFFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAccMCF0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
-                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  END IF
               
               END IF
@@ -3527,7 +3503,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               ! Points on the free surface is always mapped back to z=0 of the unstretched wave field
               ! Can evaluate the wave-field variables in the same way as vertical stretching
               FAMCFFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaSt_CalcOutput' )
+                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            END IF
         END IF
 

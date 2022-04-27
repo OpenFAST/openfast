@@ -185,7 +185,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    integer(IntKi)                               :: startIndx, endIndx   ! indices into working arrays
    INTEGER, ALLOCATABLE                         :: tmpArray(:)          ! Temporary array storage of the joint output list
    REAL(ReKi), ALLOCATABLE                      :: tmpReArray(:)        ! Temporary array storage of the joint output list
-   CHARACTER(1)                                 :: Line1                ! The first character of an input line
    INTEGER(IntKi)                               :: CurLine              !< Current entry in FileInfo_In%Lines array
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2
@@ -1219,7 +1218,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    REAL(ReKi)                                       :: l
    REAL(ReKi)                                       :: lvec(3)
    LOGICAL, ALLOCATABLE                             :: foundMask(:)
-   INTEGER                                          :: WaveModIn
    
    INTEGER(IntKi)                                   :: ErrStat2, IOS
    CHARACTER(ErrMsgLen)                             :: ErrMsg2

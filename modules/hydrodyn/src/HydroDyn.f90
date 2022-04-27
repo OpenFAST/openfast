@@ -255,7 +255,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 !      LOGICAL                                :: hasMorisonOuts                      ! Are there any Morison-related outputs
 !      INTEGER                                :: numHydroOuts                        ! total number of WAMIT and Morison outputs
       INTEGER                                :: I, J, k, iBody                                ! Generic counters
-      REAL(SiKi)                             :: WaveNmbr                            ! Wavenumber of the current frequency component (1/meter)
          ! These are dummy variables to satisfy the framework, but are not used 
          
  
@@ -272,9 +271,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       TYPE(FIT_InitOutputType)               :: FIT_InitOut                       ! Initialization Outputs from the FIT module initialization
 #endif
 
-      Real(ReKi)                             :: Np      
-      Real(ReKi)                             :: dftreal
-      Real(ReKi)                             :: dftimag 
    
          ! WAMIT Mesh
       real(R8Ki)                             :: theta(3), orientation(3,3)        
@@ -1335,10 +1331,8 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
          ! Local variables
-      INTEGER                                            :: I, iWAMIT, iBody ! Generic loop counters
+      INTEGER                                            :: I, iWAMIT       ! Generic loop counters
 !      TYPE(HydroDyn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
-      TYPE(HydroDyn_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
-      TYPE(HydroDyn_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
       TYPE(HydroDyn_InputType)                           :: u               ! Instantaneous inputs
       INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
       CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
@@ -1355,7 +1349,6 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       TYPE(FIT_ContinuousStateType)      :: FIT_x              ! Input: Continuous states at t;
 #endif      
       
-      REAL(ReKi)                         :: rotdisp(3)
          ! Initialize variables
 
       ErrStat   = ErrID_None           ! no error has occurred
@@ -1514,7 +1507,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotsq(6*p%NBody), qdotdot(6*p%NBody)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
       REAL(ReKi)                           :: AllOuts(MaxHDOutputs)  
-      integer(IntKi)                       :: iBody, indxStart, indxEnd, iWAMIT  ! Counters
+      integer(IntKi)                       :: iBody, indxStart, indxEnd  ! Counters
       
          ! Initialize ErrStat
          
@@ -2470,8 +2463,6 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian_y'
-   LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
-   logical, allocatable                              :: AllOut(:)
    
    
    
@@ -2644,9 +2635,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k, index, index_last, nu, i_meshField, m, meshFieldCount
-   REAL(R8Ki)                    :: MaxThrust, MaxTorque, perturb_t, perturb
-   REAL(R8Ki)                    :: ScaleLength
+   INTEGER(IntKi)                :: i, j, k, index, nu, i_meshField, m, meshFieldCount
+   REAL(R8Ki)                    :: perturb_t, perturb
    LOGICAL                       :: FieldMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
 
    
@@ -3041,7 +3031,6 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
       ! local variables:
 
    integer(IntKi)                                    :: indx_first             ! index indicating next value of dY to be filled 
-   logical                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
    integer(IntKi)                                    :: k
    
    
@@ -3090,7 +3079,6 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
 
    INTEGER(IntKi)                                    :: i, j, k, index, nu
-   INTEGER(IntKi)                                    :: ny
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_GetOP'

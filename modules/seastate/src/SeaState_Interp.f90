@@ -73,8 +73,8 @@ SUBROUTINE SeaSt_Interp_Init(InitInp, p, ErrStat, ErrMsg)
   ! INTEGER(IntKi)                                              :: UnitWind          ! Use this unit number if you need to read in a file.
 
       ! Temporary variables for error handling
-   INTEGER(IntKi)                                              :: ErrStat2         ! Temp variable for the error status
-   CHARACTER(ErrMsgLen)                                        :: ErrMsg2          ! temporary error message
+!   INTEGER(IntKi)                                              :: ErrStat2         ! Temp variable for the error status
+!   CHARACTER(ErrMsgLen)                                        :: ErrMsg2          ! temporary error message
    CHARACTER(*), PARAMETER                                     :: RoutineName = 'SeaSt_Interp_Init'
 
       !-------------------------------------------------------------------------------------------------
@@ -106,77 +106,6 @@ END SUBROUTINE SeaSt_Interp_Init
 
 !====================================================================================================
 
-!-------------------------------------------------------------------------------------------------
-!>  This routine and its subroutines calculate the wind velocity at a set of points given in
-!!  PositionXYZ.  The UVW velocities are returned in OutData%Velocity
-!-------------------------------------------------------------------------------------------------
-SUBROUTINE SeaSt_Interp_CalcOutput(Time, PositionXYZ, p, pWaveKinXX, WaveKinVal, ErrStat, ErrMsg)
-
-   IMPLICIT                                                       NONE
-
-   CHARACTER(*),           PARAMETER                           :: RoutineName="SeaSt_Interp_CalcOutput"
-
-
-      ! Passed Variables
-   REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
-   REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
-   TYPE(SeaSt_Interp_ParameterType),            INTENT(IN   )  :: p                 !< Parameters
-   REAL(ReKi),                                  INTENT(IN   )  :: pWaveKinXX(:,:,:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
-   REAL(ReKi),                                  INTENT(  out)  :: WaveKinVal
-      ! Error handling
-   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< error status
-   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< The error message
-
-
-      ! local counters
-   INTEGER(IntKi)                                              :: PointNum          ! a loop counter for the current point
-
-      ! local variables
-   INTEGER(IntKi)                                              :: NumPoints         ! Number of points passed in
-
-      ! temporary variables
-   INTEGER(IntKi)                                              :: ErrStat2        ! temporary error status
-   CHARACTER(ErrMsgLen)                                        :: ErrMsg2         ! temporary error message
-
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Initialize some things
-      !-------------------------------------------------------------------------------------------------
-
-   ErrStat     = ErrID_None
-   ErrMsg      = ""
-
-   WaveKinVal = 0.0_ReKi
-
-      ! The array is transposed so that the number of points is the second index, x/y/z is the first.
-      ! This is just in case we only have a single point, the SIZE command returns the correct number of points.
-   !NumPoints   =  SIZE(PositionXYZ,DIM=2)
-   !
-   !
-   !   ! Step through all the positions and get the velocities
-   !DO PointNum = 1, NumPoints
-   !
-   !
-   !      ! Calculate the velocity for the position
-   !   Velocity(:,PointNum) = Interp4D(Time, PositionXYZ(:,PointNum), p, m, ErrStat2, ErrMsg2 )
-   !
-   !
-   !      ! Error handling
-   !   IF (ErrStat2 /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
-   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//" [position=("//   &
-   !                                         TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
-   !                                         TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
-   !                                         TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in wind-file coordinates]" )
-   !      IF (ErrStat >= AbortErrLev) RETURN
-   !   END IF
-   !   
-   !   
-   !ENDDO
-
-   RETURN
-
-END SUBROUTINE SeaSt_Interp_CalcOutput
 
 subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, ErrMsg)
    REAL(ReKi),                                  INTENT(IN   )  :: p              !<
@@ -189,7 +118,6 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, E
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
-   integer(IntKi)                                              :: i
    real(ReKi)                                                  :: Tmp
    
    ErrStat = ErrID_None
@@ -241,7 +169,6 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
-   integer(IntKi)                                              :: i
    real(ReKi)                                                  :: Tmp
    
    ErrStat = ErrID_None
@@ -294,7 +221,7 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
-   integer(IntKi)                                              :: i, mult
+   integer(IntKi)                                              :: mult
    real(ReKi)                                                  :: Tmp
    
    ErrStat = ErrID_None
@@ -339,8 +266,8 @@ subroutine SeaSt_Interp_Setup( Time, Position, p, m, ErrStat, ErrMsg )
 
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: Position(3)       !< Array of XYZ coordinates, 3
-   TYPE(SeaSt_Interp_ParameterType),         INTENT(IN   )  :: p                 !< Parameters
-   TYPE(SeaSt_Interp_MiscVarType),           INTENT(INOUT)  :: m                !< MiscVars
+   TYPE(SeaSt_Interp_ParameterType),            INTENT(IN   )  :: p                 !< Parameters
+   TYPE(SeaSt_Interp_MiscVarType),              INTENT(INOUT)  :: m                 !< MiscVars
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -349,13 +276,10 @@ subroutine SeaSt_Interp_Setup( Time, Position, p, m, ErrStat, ErrMsg )
 
       ! Local variables
 
-   INTEGER(IntKi)                      :: i                                         ! loop counter
-   INTEGER(IntKi)                      :: ic                                        ! wind-component counter
-   
+   INTEGER(IntKi)                       :: i                                        ! loop counter
+    
    REAL(SiKi)                           :: isopc(4)                                 ! isoparametric coordinates 
 
-   REAL(SiKi)                           :: u(16)                                    ! size 2^n
-   REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
    integer(IntKi)                       :: ErrStat2
    character(ErrMsgLen)                 :: ErrMsg2
    
@@ -535,9 +459,7 @@ FUNCTION SeaSt_Interp_3D( Time, Position, pKinXX, p, ErrStat, ErrMsg )
    real(ReKi)                           :: N3D(8)
    integer(IntKi)                       :: Indx_Lo(3), Indx_Hi(3)
    INTEGER(IntKi)                       :: i                                         ! loop counter
-   INTEGER(IntKi)                       :: ic                                        ! wind-component counter   
    REAL(SiKi)                           :: isopc(3)                                 ! isoparametric coordinates 
-   REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
    integer(IntKi)                       :: ErrStat2
    character(ErrMsgLen)                 :: ErrMsg2
 
@@ -608,9 +530,7 @@ FUNCTION SeaSt_Interp_3D_VEC ( Time, Position, pKinXX, p, ErrStat, ErrMsg )
    real(ReKi)                           :: N3D(8)
    integer(IntKi)                       :: Indx_Lo(3), Indx_Hi(3)
    INTEGER(IntKi)                       :: i                                        ! loop counter
-   INTEGER(IntKi)                       :: ic                                       ! wind-component counter   
    REAL(SiKi)                           :: isopc(3)                                 ! isoparametric coordinates 
-   REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
    integer(IntKi)                       :: ErrStat2
    character(ErrMsgLen)                 :: ErrMsg2
 
@@ -681,9 +601,7 @@ FUNCTION SeaSt_Interp_3D_VEC6 ( Time, Position, pKinXX, p, ErrStat, ErrMsg )
    real(ReKi)                           :: N3D(8)
    integer(IntKi)                       :: Indx_Lo(3), Indx_Hi(3)
    INTEGER(IntKi)                       :: i                                        ! loop counter
-   INTEGER(IntKi)                       :: ic                                       ! wind-component counter   
    REAL(SiKi)                           :: isopc(3)                                 ! isoparametric coordinates 
-   REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
    integer(IntKi)                       :: ErrStat2
    character(ErrMsgLen)                 :: ErrMsg2
 
