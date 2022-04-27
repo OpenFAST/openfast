@@ -799,8 +799,6 @@ subroutine WrVTK_refMeshes(DvrSettings, p, y, ErrStat,ErrMsg)
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
    DvrSettings%VTK_tWidth = CEILING( log10( real(DvrSettings%NumTimeSteps,ReKi) ) ) + 1
-print*,'NumTimeSteps: ',DvrSettings%NumTimeSteps
-print*,'VTK_tWidth:   ',DvrSettings%VTK_tWidth
 
    ! Write reference meshes
    call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%PlatformPtMesh, trim(DvrSettings%VTK_OutFileRoot)//'.PlatformPtMesh', ErrStat, ErrMsg)
@@ -811,10 +809,10 @@ print*,'VTK_tWidth:   ',DvrSettings%VTK_tWidth
       if (ErrStat >= AbortErrLev) return
    call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%HubPtMotion,    trim(DvrSettings%VTK_OutFileRoot)//'.HubPtMotion',    ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
-!   do i=1,p%NumBl
-!      call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%BladeRootMotion(i), trim(DvrSettings%VTK_OutFileRoot)//'.BladeRootMotion'//trim(Num2LStr(i)), ErrStat, ErrMsg)
-!         if (ErrStat >= AbortErrLev) return
-!   enddo
+   do i=1,p%NumBl
+      call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%BladeRootMotion(i), trim(DvrSettings%VTK_OutFileRoot)//'.BladeRootMotion'//trim(Num2LStr(i)), ErrStat, ErrMsg)
+         if (ErrStat >= AbortErrLev) return
+   enddo
 end subroutine WrVTK_refMeshes
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -838,10 +836,10 @@ subroutine WrVTK_Meshes(DvrSettings, p, y, N_Global, ErrStat,ErrMsg)
       if (ErrStat >= AbortErrLev) return
    call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%HubPtMotion,    trim(DvrSettings%VTK_OutFileRoot)//'.HubPtMotion',    N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
       if (ErrStat >= AbortErrLev) return
-!   do i=1,p%NumBl
-!      call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%BladeRootMotion(i), trim(DvrSettings%VTK_OutFileRoot)//'.BladeRootMotion'//trim(Num2LStr(i)), N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
-!         if (ErrStat >= AbortErrLev) return
-!   enddo
+   do i=1,p%NumBl
+      call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%BladeRootMotion(i), trim(DvrSettings%VTK_OutFileRoot)//'.BladeRootMotion'//trim(Num2LStr(i)), N_Global, .true., ErrStat, ErrMsg, DvrSettings%VTK_tWidth)
+         if (ErrStat >= AbortErrLev) return
+   enddo
 end subroutine WrVTK_Meshes
 
 END MODULE SED_Driver_Subs

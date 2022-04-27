@@ -176,7 +176,13 @@ contains
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
       real(ReKi)                       :: Pos(3)
+      real(ReKi)                       :: Vec(3)
+      real(R8Ki)                       :: VecR8(3)
+      real(R8Ki)                       :: R33(3,3)
+      real(R8Ki)                       :: R33b(3,3)
+      real(R8Ki)                       :: R33c(3,3)
       real(R8Ki)                       :: Orient(3,3)
+      real(R8Ki)                       :: RootAz
       integer(IntKi)                   :: i
 
       !-------------------------
@@ -300,21 +306,43 @@ contains
          return
       endif
       do i=1,p%NumBl
-!       call MeshCreate ( BlankMesh  = y%BladeRootMotion(i)  &
-!                      ,IOS       = COMPONENT_INPUT &
-!                      ,Nnodes    = 1               &
-!                      ,ErrStat   = ErrStat3        &
-!                      ,ErrMess   = ErrMsg3         &
-!                      ,Orientation     = .true.    &
-!                      ,TranslationDisp = .true.    &
-!                      ,RotationVel     = .true.    &
-!                      ,TranslationVel  = .true.    &
-!                      ,RotationAcc     = .true.    &
-!                      ,TranslationAcc  = .true.    &
-!                      )
-!          if (errStat3 >= AbortErrLev) return
+         call MeshCreate ( BlankMesh  = y%BladeRootMotion(i)  &
+                        ,IOS       = COMPONENT_INPUT &
+                        ,Nnodes    = 1               &
+                        ,ErrStat   = ErrStat3        &
+                        ,ErrMess   = ErrMsg3         &
+                        ,Orientation     = .true.    &
+                        ,TranslationDisp = .true.    &
+                        ,RotationVel     = .true.    &
+                        ,TranslationVel  = .true.    &
+                        ,RotationAcc     = .true.    &
+                        ,TranslationAcc  = .true.    &
+                        )
+            if (errStat3 >= AbortErrLev) return
 
-         ! Set position/orientation of ref
+         ! For blade 1, the reference orientation is the hub reference orientation
+         ! tilted about the hub y axis by the precone angle.  Using the Rodrigues
+         ! formula for rotating about the hub y
+         R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%RefOrientation(2,1:3,1) )   ! y axis
+         call Eye(R33b,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
+         ! Rodrigues formula for rotation about a vector
+         R33b = R33b + sin(real(p%PreCone,R8Ki)) * R33 + (1-cos(real(p%PreCone,R8Ki))) * matmul(R33,R33)
+         R33b(1:3,1:3) = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(R33b))
+
+         ! now apply azimuth rotation about hub X
+         RootAz = real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
+         R33c(1:3,1:3) = SkewSymMat( y%HubPtMotion%RefOrientation(1,1:3,1) )     ! x axis
+         call Eye(Orient,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
+         ! Rodrigues formula for rotation about a vector
+         Orient = Orient + sin(RootAz) * R33c + (1-cos(RootAz)) * matmul(R33c,R33c)
+
+         ! for position, just locate along the Z axis
+         Pos = y%HubPtMotion%Position(1:3,1) + p%HubRad * real(Orient(3,1:3), ReKi)
+
+         call MeshPositionNode(y%BladeRootMotion(i), 1, Pos, errStat3, errMsg3, Orient);              if (errStat3 >= AbortErrLev) return
+         ! Construct/commit
+         call MeshConstructElement( y%BladeRootMotion(i), ELEMENT_POINT, errStat3, errMsg3, p1=1 );   if (errStat3 >= AbortErrLev) return
+         call MeshCommit(y%BladeRootMotion(i), errStat3, errMsg3 );                                   if (errStat3 >= AbortErrLev) return
       enddo
 
    end subroutine Init_Mesh
@@ -376,9 +404,8 @@ contains
       y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%RefOrientation(1:3,1:3,1), y%NacelleMotion%Orientation(1:3,1:3,1))
       ! include azimuth -- rotate about Hub_X
       R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(1,1:3,1) )
-      call Eye(Orient,ErrStat3,ErrMsg3)
-         if (errStat3 >= AbortErrLev) return
-      ! Rodriguez formula for rotation about a vector
+      call Eye(Orient,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
+      ! Rodrigues formula for rotation about a vector
       Orient = Orient + sin(real(x%QT(DOF_Az),R8Ki)) * R33 + (1-cos(real(x%QT(DOF_Az),R8Ki))) * matmul(R33,R33)
       y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(Orient))
 
