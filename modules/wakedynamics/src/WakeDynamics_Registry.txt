@@ -122,6 +122,8 @@ typedef   ^         MiscVarType   ReKi  r_wake  {:}    - -   ""
 typedef   ^         MiscVarType   ReKi  Vx_high {:}    - -   ""    
 typedef   ^         MiscVarType   ReKi  Vx_polar {:}    - -   "Vx as function of r for Carteisna implementation"    
 typedef   ^         MiscVarType   ReKi  Vt_wake {:}    - -   "Vx as function of r for Carteisna implementation"    
+typedef   ^         MiscVarType   ReKi  GammaCurl  -   - -   "Circulation used in Curled wake model"     
+typedef   ^         MiscVarType   ReKi  Ct_avg     -   - -   "Circulation used in Curled wake model"     
  
 
 # ..... Parameters ................................................................................................................

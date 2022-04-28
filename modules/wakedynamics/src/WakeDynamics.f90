@@ -746,7 +746,6 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    real(ReKi)                                   :: dvdr, r_tmp, C, S, dvdtheta_r
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz            ! indices on y and z
-   real(ReKi)                                   :: Ct_avg            ! Rotor-disk averaged Ct
    real(ReKi)                                   :: vt_min            ! Minimum Eddy viscosity
 
    errStat = ErrID_None
@@ -944,6 +943,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    xd%Cq_azavg_filt (:) = xd%Cq_azavg_filt(:)*p%filtParam + u%Cq_azavg(:)*p%oneMinusFiltParam
    
    ! --- Set velocity at disk plane
+   m%GammaCurl = 0.0_ReKi ! Storing for outputs
+   m%Ct_avg    = 0.0_ReKi ! Storing for outputs
    if (p%Mod_Wake == Mod_Wake_Polar) then
 
       ! Compute wake deficit of first plane based on rotor loading, outputs: Vx_Wake, m
@@ -964,12 +965,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       call FilterVx(xd%Vx_wake2(:,:,0), p%FilterInit) ! don't filter if FilterInit is 0
       !call Axisymmetric2CartesianVx(m%Vx_polar * sin(xd%chi_skew_filt), p%r, p%y, p%z, xd%Vy_wake2(:,:,0))
       !xd%Vy_wake2(:,:,0) = xd%Vx_wake2(:,:,0) * sin(xd%chi_skew_filt)
-      Ct_avg =  get_Ctavg(p%r, xd%Ct_azavg_filt, xd%D_rotor_filt(0))
+      m%Ct_avg =  get_Ctavg(p%r, xd%Ct_azavg_filt, xd%D_rotor_filt(0))
       ! --- Compute Vy
       ! --- Add V/W from vorticies 
       if (p%Mod_Wake == Mod_Wake_Curl) then
          call AddVelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, p%NumVortices, xd%D_Rotor_filt(0)/2., &
-                           xd%psi_skew_filt, p%y, p%z, Ct_avg, p%sigma_D, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
+                           xd%psi_skew_filt, p%y, p%z, m%Ct_avg, p%sigma_D, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0), m%GammaCurl)
 
       endif
       ! --- Add Swirl
@@ -1161,7 +1162,7 @@ subroutine lamb_oseen_2d(y, z, Gamma, sigma, v, w)
 end subroutine
 
 ! A subroutine to compute the spanwise velocities from curl
-subroutine AddVelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, sigma_d, Vy_curl, Vz_curl)
+subroutine AddVelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, sigma_d, Vy_curl, Vz_curl, Gamma0)
  
    real(ReKi), intent(in) :: Vx                         ! The inflow velocity
    real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle (rad)
@@ -1174,7 +1175,8 @@ subroutine AddVelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, si
    real(ReKi),                 intent(in)    :: sigma_d ! The width of Gaussian kernel for the vortices divided by diameter (-)
    real(ReKi), dimension(:,:), intent(inout) :: Vy_curl ! Curl velocity in the y direction (m/s)
    real(ReKi), dimension(:,:), intent(inout) :: Vz_curl ! Curl velocity in the z direction (m/s)
-   real(ReKi) Gamma0, dR, G, zp, y0, z0, v, w, sigma, w_mean, v_mean
+   real(ReKi)                , intent(  out) :: Gamma0  ! Circulation used
+   real(ReKi) dR, G, zp, y0, z0, v, w, sigma, w_mean, v_mean
    integer(intKi) ir, iy, iz, iIn
    
    ! The width of the Guassian vortices
@@ -1281,9 +1283,10 @@ subroutine WD_TEST_AddVelocityCurl()
    real(ReKi) :: Vz_curl_ref(2,2)
    real(ReKi) :: y(2)=(/ 0., 2./)
    real(ReKi) :: z(2)=(/-1.,1./)
+   real(ReKi) :: Gamma0
 
    call AddVelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
-      y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl)
+      y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl, Gamma0=Gamma0)
 
    if (abs(Vy_curl(1,1)-0.2171091922)>1e-5) then
       print*,'Test fail for vy'

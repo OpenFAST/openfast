@@ -2006,11 +2006,33 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          
             ! Rotor-disk-averaged relative wind speed (normal to disk, including structural motion and wakes from upstream turbines, but not including local induction), m/s
          farm%m%AllOuts(RtVRelT(nt)) = farm%FWrap(nt)%y%DiskAvg_Vx_Rel
+
+
+         if (nt==1) then
+            farm%m%AllOuts(ZZPsiIT1) = farm%FWrap(1)%y%psi_skew      *R2D
+            farm%m%AllOuts(ZZChiIT1) = farm%FWrap(1)%y%chi_skew      *R2D
+            farm%m%AllOuts(ZZPsiFT1) = farm%WD(1)%xd%psi_skew_filt   *R2D
+            farm%m%AllOuts(ZZChiFT1) = farm%WD(1)%xd%chi_skew_filt   *R2D
+            farm%m%AllOuts(ZZCtAgT1) = farm%WD(1)%m%Ct_avg  
+            farm%m%AllOuts(ZZGCrlT1) = farm%WD(1)%m%GammaCurl
+            farm%m%AllOuts(ZZVxwFT1) = farm%WD(1)%xd%Vx_wind_disk_filt(0)
+            farm%m%AllOuts(ZZDrtFT1) = farm%WD(1)%xd%D_rotor_filt(0)
+         else if (nt==2) then
+            farm%m%AllOuts(ZZPsiIT2) = farm%FWrap(2)%y%psi_skew      *R2D
+            farm%m%AllOuts(ZZChiIT2) = farm%FWrap(2)%y%chi_skew      *R2D
+            farm%m%AllOuts(ZZPsiFT2) = farm%WD(2)%xd%psi_skew_filt   *R2D
+            farm%m%AllOuts(ZZChiFT2) = farm%WD(2)%xd%chi_skew_filt   *R2D
+            farm%m%AllOuts(ZZCtAgT2) = farm%WD(2)%m%Ct_avg  
+            farm%m%AllOuts(ZZGCrlT2) = farm%WD(2)%m%GammaCurl
+            farm%m%AllOuts(ZZVxwFT2) = farm%WD(2)%xd%Vx_wind_disk_filt(0)
+            farm%m%AllOuts(ZZDrtFT2) = farm%WD(2)%xd%D_rotor_filt(0)
+         endif
          
             ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
          do ir = 1, farm%p%NOutRadii
             farm%m%AllOuts(CtTN(ir, nt)) = farm%FWrap(nt)%y%AzimAvg_Ct(farm%p%OutRadii(ir)+1)  ! y%AzimAvg_Ct is a 1-based array but the user specifies 0-based node indices, so we need to add 1
          end do
+
          
          !.......................................................................................
          ! Wake (for an Individual Rotor)

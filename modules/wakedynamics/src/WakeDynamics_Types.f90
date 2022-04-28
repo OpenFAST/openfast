@@ -147,6 +147,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_high      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_polar      !< Vx as function of r for Carteisna implementation [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vt_wake      !< Vx as function of r for Carteisna implementation [-]
+    REAL(ReKi)  :: GammaCurl      !< Circulation used in Curled wake model [-]
+    REAL(ReKi)  :: Ct_avg      !< Circulation used in Curled wake model [-]
   END TYPE WD_MiscVarType
 ! =======================
 ! =========  WD_ParameterType  =======
@@ -2816,6 +2818,8 @@ IF (ALLOCATED(SrcMiscData%Vt_wake)) THEN
   END IF
     DstMiscData%Vt_wake = SrcMiscData%Vt_wake
 ENDIF
+    DstMiscData%GammaCurl = SrcMiscData%GammaCurl
+    DstMiscData%Ct_avg = SrcMiscData%Ct_avg
  END SUBROUTINE WD_CopyMisc
 
  SUBROUTINE WD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -3032,6 +3036,8 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! Vt_wake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vt_wake)  ! Vt_wake
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! GammaCurl
+      Re_BufSz   = Re_BufSz   + 1  ! Ct_avg
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3459,6 +3465,10 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%GammaCurl
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Ct_avg
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE WD_PackMisc
 
  SUBROUTINE WD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3953,6 +3963,10 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+    OutData%GammaCurl = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Ct_avg = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE WD_UnPackMisc
 
  SUBROUTINE WD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
