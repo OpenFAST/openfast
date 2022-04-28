@@ -908,9 +908,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    end if
    xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0) / norm2_xhat_plane
    
-   xd%psi_skew_filt        =  filter_angles(xd%psi_skew_filt, u%psi_skew, p%filtParam, p%oneMinusFiltParam)
-   xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
-   !call filter_angles2(xd%psi_skew_filt, xd%chi_skew_filt, u%psi_skew, u%chi_skew, p%filtParam, p%oneMinusFiltParam)
+   !xd%psi_skew_filt        =  filter_angles(xd%psi_skew_filt, u%psi_skew, p%filtParam, p%oneMinusFiltParam)
+   !xd%chi_skew_filt        =  xd%chi_skew_filt *p%filtParam + u%chi_skew*p%oneMinusFiltParam
+   call filter_angles2(xd%psi_skew_filt, xd%chi_skew_filt, u%psi_skew, u%chi_skew, p%filtParam, p%oneMinusFiltParam)
    
    xd%YawErr_filt      (0) =  xd%YawErr_filt(0)*p%filtParam + u%YawErr  *p%oneMinusFiltParam
   
@@ -1328,7 +1328,7 @@ subroutine filter_angles2(psi_filt, chi_filt, psi, chi, alpha, alpha_bar)
    errStat = ErrID_None
    errMsg  = ""
    
-   print*,'Input     ', psi_filt, chi_filt
+   !print*,'Input     ', psi_filt, chi_filt
    ! Compute the DCMs of the skew-related inputs and filtered states:
    DCM1 = EulerConstruct( (/ psi_filt, 0.0_ReKi, chi_filt /) )
    DCM2 = EulerConstruct( (/ psi, 0.0_ReKi, chi /) )
@@ -1343,10 +1343,10 @@ subroutine filter_angles2(psi_filt, chi_filt, psi, chi, alpha, alpha_bar)
    DCM_interp = DCM_exp( lambda_interp )
    !Convert back to angles:
    theta_out = EulerExtract( DCM_interp )
-   print*,'Output Old',filter_angles(psi_filt, psi, alpha, alpha_bar),filter_angles(chi_filt, chi, alpha, alpha_bar)
+   !print*,'Output Old',filter_angles(psi_filt, psi, alpha, alpha_bar),filter_angles(chi_filt, chi, alpha, alpha_bar)
    psi_filt = theta_out(1)
    chi_filt = theta_out(3)
-   print*,'Output    ', psi_filt, chi_filt, theta_out(2)
+   !print*,'Output    ', psi_filt, chi_filt, theta_out(2)
 end subroutine filter_angles2
 
 !> Weighted average of two angles
