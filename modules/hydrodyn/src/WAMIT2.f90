@@ -4226,10 +4226,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                                  ! See if the diagonal mirror one (WvDir2,WvDir1) value is not filled,
                                  ! and fill it if empty
-                              IF ( .NOT. Data3D%DataMask( I, K, J, L )  ) THEN
-                                 Data3D%DataSet ( I, K, J, L ) = Data3D%DataSet( I, J, K, L )
-                                 Data3D%DataMask( I, K, J, L ) = .TRUE.
-                              ENDIF
+                                 IF ( .NOT. Data3D%DataMask( I, K, J, L )  ) THEN
+                                    Data3D%DataSet ( I, K, J, L ) = Data3D%DataSet( I, J, K, L )
+                                    Data3D%DataMask( I, K, J, L ) = .TRUE.
+                                 ENDIF
                            ENDIF
                         ENDIF ! Check that wave directions will pair.
                      ENDIF
