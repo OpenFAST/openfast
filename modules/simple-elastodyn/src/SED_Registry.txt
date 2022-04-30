@@ -138,5 +138,6 @@ typedef  ^        ParameterType        OutParmType       OutParam         {:} - 
 typedef  ^        MiscVarType          ReKi              AllOuts          {:} - -   "Array of all outputs"                             -
 #typedef  ^        MiscVarType          MeshMapType       mapPtf2Twr        -  - -   "Mesh mapping from Ptfm to Tower line" -
 #typedef  ^        MiscVarType          MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
-#typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
+typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
+typedef  ^        MiscVarType          MeshMapType       mapHub2Root      {:} - -   "Mesh mapping from Hub to BladeRootMotion" -
 

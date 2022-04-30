@@ -124,6 +124,7 @@ subroutine SED_ParsePrimaryFileData( InitInp, RootName, interval, FileInfo_In, I
       ! RotSpeed - Initial or fixed rotor speed (rpm)
    call ParseVar( FileInfo_In, CurLine, "RotSpeed", InputFileData%RotSpeed, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
+   InputFileData%RotSpeed = InputFileData%RotSpeed * RPM2RPS
 
       ! NacYaw - Initial or fixed nacelle-yaw angle (degrees)
    call ParseVar( FileInfo_In, CurLine, "NacYaw", InputFileData%NacYaw, ErrStat2, ErrMsg2, UnEc )

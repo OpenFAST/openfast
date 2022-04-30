@@ -220,6 +220,7 @@ contains
       real(R8Ki)                       :: VecR8(3)
       real(R8Ki)                       :: R33(3,3)
       real(R8Ki)                       :: R33b(3,3)
+      real(R8Ki)                       :: R33c(3,3)
       real(R8Ki)                       :: Orient(3,3)
       real(R8Ki)                       :: RootAz
       integer(IntKi)                   :: i
@@ -227,7 +228,7 @@ contains
       !-------------------------
       ! Set output platform mesh
       call MeshCreate ( BlankMesh  = y%PlatformPtMesh  &
-                     ,IOS       = COMPONENT_INPUT &
+                     ,IOS       = COMPONENT_OUTPUT &
                      ,Nnodes    = 1               &
                      ,ErrStat   = ErrStat3        &
                      ,ErrMess   = ErrMsg3         &
@@ -253,7 +254,7 @@ contains
       !-----------------
       ! Set TowerLn2Mesh
       call MeshCreate ( BlankMesh  = y%TowerLn2Mesh  &
-                     ,IOS       = COMPONENT_INPUT &
+                     ,IOS       = COMPONENT_OUTPUT &
                      ,Nnodes    = 2               &
                      ,ErrStat   = ErrStat3        &
                      ,ErrMess   = ErrMsg3         &
@@ -284,7 +285,7 @@ contains
       !------------------------
       ! Set output nacelle mesh -- nacelle yaw dof exists, but no tower top motion
       call MeshCreate ( BlankMesh  = y%NacelleMotion  &
-                     ,IOS       = COMPONENT_INPUT &
+                     ,IOS       = COMPONENT_OUTPUT &
                      ,Nnodes    = 1               &
                      ,ErrStat   = ErrStat3        &
                      ,ErrMess   = ErrMsg3         &
@@ -292,10 +293,9 @@ contains
                      ,TranslationDisp = .true.    &
                      ,RotationVel     = .true.    &
                      ,TranslationVel  = .false.   &
-                     ,RotationAcc     = .true.    &
+                     ,RotationAcc     = .false.   &
                      ,TranslationAcc  = .false.   &
                      )
-!FIXME: do we need rotationAcc and RotationVel in this mesh?
          if (errStat3 >= AbortErrLev) return
 
       ! Position/orientation of ref
@@ -311,7 +311,7 @@ contains
       !--------------------------
       ! Set hub point motion mesh
       call MeshCreate ( BlankMesh  = y%HubPtMotion  &
-                     ,IOS       = COMPONENT_INPUT &
+                     ,IOS       = COMPONENT_OUTPUT &
                      ,Nnodes    = 1               &
                      ,ErrStat   = ErrStat3        &
                      ,ErrMess   = ErrMsg3         &
@@ -320,15 +320,13 @@ contains
                      ,RotationVel     = .true.    &
                      ,TranslationVel  = .false.   &
                      ,RotationAcc     = .false.   &
-                     ,TranslationAcc  = .false.   &
+                     ,TranslationAcc  = .false.   &      ! gets set automatically
                      )
          if (errStat3 >= AbortErrLev) return
 
       ! Position/orientation of ref
       Pos = y%NacelleMotion%Position(1:3,1) + (/ cos(p%ShftTilt) * p%OverHang, 0.0_ReKi, p%Twr2Shft + sin(p%ShftTilt) * p%OverHang/)
-      call SmllRotTrans( 'rotor azimuth', 0.0_R8Ki, -real(p%ShftTilt,R8Ki), 0.0_R8Ki, &
-            Orient, errstat=ErrStat3, errmsg=ErrMsg3 )
-         if (errStat3 >= AbortErrLev) return
+      Orient = EulerConstruct( (/ 0.0_R8Ki, -real(p%ShftTilt,R8Ki), 0.0_R8Ki /) )
       call MeshPositionNode(y%HubPtMotion, 1, Pos, errStat3, errMsg3, Orient);               if (errStat3 >= AbortErrLev) return
 
       ! Construct/commit
@@ -346,7 +344,7 @@ contains
       endif
       do i=1,p%NumBl
          call MeshCreate ( BlankMesh  = y%BladeRootMotion(i)  &
-                        ,IOS       = COMPONENT_INPUT &
+                        ,IOS       = COMPONENT_OUTPUT &
                         ,Nnodes    = 1               &
                         ,ErrStat   = ErrStat3        &
                         ,ErrMess   = ErrMsg3         &
@@ -354,8 +352,8 @@ contains
                         ,TranslationDisp = .true.    &
                         ,RotationVel     = .true.    &
                         ,TranslationVel  = .true.    &
-                        ,RotationAcc     = .true.    &
-                        ,TranslationAcc  = .true.    &
+                        ,RotationAcc     = .false.   &
+                        ,TranslationAcc  = .false.   &
                         )
             if (errStat3 >= AbortErrLev) return
 
@@ -366,14 +364,17 @@ contains
          call Eye(R33b,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
          ! Rodrigues formula for rotation about a vector
          R33b = R33b + sin(real(p%PreCone,R8Ki)) * R33 + (1-cos(real(p%PreCone,R8Ki))) * matmul(R33,R33)
-         R33b(1:3,1:3) = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(R33b))
+         ! apply to ref orientation of hub
+         Orient = matmul(y%HubPtMotion%RefOrientation(1:3,1:3,1),transpose(R33b))
 
          ! now apply azimuth rotation about hub X
-         R33 = real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
-         R33b(1:3,1:3) = SkewSymMat( y%HubPtMotion%RefOrientation(1,1:3,1) )     ! x axis
-         call Eye(Orient,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
+         RootAz = real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
+         R33c(1:3,1:3) = SkewSymMat( y%HubPtMotion%RefOrientation(1,1:3,1) )     ! x axis
+         call Eye(R33b,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
          ! Rodrigues formula for rotation about a vector
-         Orient = Orient + sin(R33) * R33b + (1-cos(R33)) * matmul(R33b,R33b)
+         R33b = R33b + sin(RootAz) * R33c + (1-cos(RootAz)) * matmul(R33c,R33c)
+         ! apply to orientation with cone
+         Orient = matmul(Orient,transpose(R33b))
 
          ! for position, just locate along the Z axis
          Pos = y%HubPtMotion%Position(1:3,1) + p%HubRad * real(Orient(3,1:3), ReKi)
@@ -391,6 +392,15 @@ contains
    subroutine Init_U(ErrStat3,ErrMsg3)
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
+
+      u%AeroTrq   = 0.0_ReKi
+      u%HSSBrTrqC = 0.0_ReKi
+      u%GenTrq    = 0.0_ReKi
+      call AllocAry( u%BlPitchCom, p%NumBl, 'u%BlPitchCom', ErrStat3, ErrMsg3 ); if (errStat3 >= AbortErrLev) return
+      u%BlPitchCom   = 0.0_ReKi
+      u%Yaw       = InputFileData%NacYaw
+      u%YawRate   = 0.0_ReKi
+
       return
    end subroutine Init_U
 
@@ -398,10 +408,39 @@ contains
    subroutine Init_Misc(ErrStat3,ErRMsg3)
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
+      integer(IntKi)                   :: i
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
-!FIXME: set mappings of meshes
 
+      !--------------
+      ! Mesh mappings
+      !     These mesh mappings are only valid for the reference frames.  During CalcOutput, we will use this mapping
+      !     to update the fields on the next connected mesh, then manually add values like yaw or pitch.  Mapping to
+      !     the next connection point will propogate these changes forward.
+
+      ! map platform to tower
+      !     NOTE: this mesh is never needed since Platform Pitch is constant
+      !call MeshMapCreate( y%PlatformPtMesh, y%TowerLn2Mesh, m%mapPtf2Twr, Errstat3, ErrMsg3 );  if (errStat3 >= AbortErrLev) return
+
+      ! map Tower to nacelle (does not account for yaw rotation, add manually at calcoutput)
+      !     NOTE: this mesh mapping is not actually needed since constant platform pitch and no tower flexibility
+      !call MeshMapCreate( y%TowerLn2Mesh, y%NacelleMotion, m%mapTwr2Nac, Errstat3, ErrMsg3 );   if (errStat3 >= AbortErrLev) return
+
+      ! map nacelle to hub (does not account for hub rotation, add manually at calcoutput)
+      call MeshMapCreate( y%NacelleMotion, y%HubPtMotion, m%mapNac2Hub, Errstat3, ErrMsg3 );    if (errStat3 >= AbortErrLev) return
+
+      ! map hub to blade roots (does not account for blade pitch, add manually at calcoutput)
+      allocate(m%mapHub2Root(p%NumBl),STAT=ErrStat3)
+      if (ErrStat3 /= 0) then
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = "Cannot allocate m%mapHub2Root"
+         return
+      endif
+      do i=1,p%NumBl
+         call MeshMapCreate( y%HubPtMotion, y%BladeRootMotion(i), m%mapHub2Root(i), Errstat3, ErrMsg3 ); if (errStat3 >= AbortErrLev) return
+      enddo
+
+      ! outputs
       if (allocated(m%AllOuts)) deallocate(m%AllOuts)
       allocate(m%AllOuts(0:MaxOutPts),STAT=ErrStat3)
       if (ErrStat3 /= 0) then
@@ -416,9 +455,10 @@ contains
    subroutine Init_InitY(ErrStat3,ErrMsg3)
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
+      real(R8Ki)                       :: theta(3)
       integer(IntKi)                   :: i
-      call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat3,ErrMsg3); if (errStat3 >= AbortErrLev) return
+      call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat3,ErrMsg3); if (errStat3 >= AbortErrLev) return
       do i=1,p%NumOuts
          InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
          InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
@@ -433,11 +473,12 @@ contains
       InitOut%HubRad       = p%HubRad
       InitOut%GenDOF       = p%GenDOF
 
-      ! from states
-!FIXME: populate this using states, not inputfiledata
-!      InitOut%BlPitch      = InputFileData%BlPitch
-!      InitOut%PlatformPos  =    ....small angle for (4:6)
-!      InitOut%RotSpeed     = InputFileData%RotSpeed
+      call AllocAry( InitOut%BlPitch, p%NumBl, 'InitOut%BlPitch', ErrStat3, ErrMsg3 );    if (errStat3 >= AbortErrLev) return
+      InitOut%BlPitch      = InputFileData%BlPitch
+      InitOut%RotSpeed     = x%QDT(DOF_Az)
+      InitOut%PlatformPos(1:3)   = real(y%PlatformPtMesh%Position(1:3,1), ReKi) + real(y%PlatformPtMesh%TranslationDisp(1:3,1), ReKi)
+      theta(1:3) = GetSmllRotAngs(y%PlatformPtMesh%Orientation(1:3,1:3,1), ErrStat3, ErrMsg3); if (errStat3 >= AbortErrLev) return
+      InitOut%PlatformPos(4:6)   = real(theta, ReKi)
    end subroutine Init_InitY
 
    !> Initialize the outputs in Y -- most of this could probably be moved to CalcOutput
@@ -587,8 +628,9 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    real(R8Ki)                                      :: R33(3,3)
    real(R8Ki)                                      :: R33b(3,3)
    real(R8Ki)                                      :: Orient(3,3)
-   real(ReKi)                                      :: YawRateVec(3)
+   real(ReKi)                                      :: YawRotVel(3)
    real(ReKi)                                      :: YawAng
+   real(ReKi)                                      :: AzRotVel(3)
    integer(IntKi)                                  :: i              !< Generic counter
    logical                                         :: CalcWriteOutput
    type(SED_ContinuousStateType)                   :: dxdt           !< Derivatives of continuous states at t
@@ -618,6 +660,7 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
          y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat2, errmsg=ErrMsg2 )
       if (Failed())  return;
 
+
    !-------------------------
    ! TowerLn2Mesh mesh (stationary also)
    !     The lower node stays at the PlatformPtMesh position,
@@ -642,71 +685,51 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
 
    if (p%YawDOF) then
       YawAng = u%Yaw
-      YawRateVec = (/ 0.0_ReKi, 0.0_ReKi, u%YawRate /)
+      YawRotVel = (/ 0.0_ReKi, 0.0_ReKi, u%YawRate /)    ! Nacelle coordinate frame
    else
       YawAng = p%InitYaw
-      YawRateVec = (/ 0.0_ReKi, 0.0_ReKi, u%YawRate /)
+      YawRotVel = (/ 0.0_ReKi, 0.0_ReKi, 0.0_Reki /)
    endif
 
    ! Orientation (rotate about tower top (pitched position)
-   call SmllRotTrans( 'nacelle yaw', 0.0_R8Ki, 0.0_R8Ki, real(YawAng,R8Ki), &
-          Orient, errstat=ErrStat2, errmsg=ErrMsg2 )
-      if (Failed())  return;
+   Orient = EulerConstruct( (/  0.0_R8Ki, 0.0_R8Ki, real(YawAng,R8Ki) /) )
    y%NacelleMotion%Orientation(:,:,1) = matmul(Orient, y%TowerLn2Mesh%Orientation(:,:,2))
 
    ! Nacelle motions
-   y%NacelleMotion%RotationVel(:,1) = matmul(YawRateVec, y%TowerLn2Mesh%Orientation(:,:,2))
+   y%NacelleMotion%RotationVel(:,1) = matmul(YawRotVel,real(y%NacelleMotion%Orientation(:,:,1),ReKi))
 
 
-!FIXME: we may need to change how this is calculated!!!!  The translation vel of the hub due to the yawing motion is not captured!!!!
    !--------------------------
    ! Hub point motion mesh
-   !     There is a built in assumption here about the reference orientation of the Nacelle as the identity matrix
-   tmpR8(1:3) = real(y%NacelleMotion%Position(1:3,1),R8Ki) - real(y%HubPtMotion%Position(1:3,1),R8Ki)
-   y%HubPtMotion%TranslationDisp(1:3,1)   = y%NacelleMotion%TranslationDisp(1:3,1) + (tmpR8 - matmul(tmpR8(1:3), y%NacelleMotion%Orientation(1:3,1:3,1)))
-
-   ! turbine pitch and yaw (included in the Nacelle motion already)
-   y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%RefOrientation(1:3,1:3,1), y%NacelleMotion%Orientation(1:3,1:3,1))
+   ! Transfer nacelle motions (does not include the hub rotation)
+   call Transfer_Point_to_Point( y%NacelleMotion, y%HubPtMotion, m%mapNac2Hub, ErrStat2, ErrMsg2 );   if (Failed())  return;
 
    ! include azimuth -- rotate about Hub_X
-   R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(1,1:3,1) )
+   R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(1,1:3,1) )   ! hub x-axis
    call Eye(Orient,ErrStat2,ErrMsg2);     if (Failed())  return;
    ! Rodrigues formula for rotation about a vector
    Orient = Orient + sin(real(x%QT(DOF_Az),R8Ki)) * R33 + (1-cos(real(x%QT(DOF_Az),R8Ki))) * matmul(R33,R33)
    y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(Orient))
 
-   ! Set the rotation Vel
+   ! Now include the velocity terms from rotor rotation
+   AzRotVel = (/ real(x%QDT(DOF_Az),ReKi), 0.0_ReKi, 0.0_ReKi /)     ! Hub coordinate frame
+   y%HubPtMotion%RotationVel(1:3,1) = y%HubPtMotion%RotationVel(1:3,1) + matmul(AzRotVel, real(y%HubPtMotion%Orientation(1:3,1:3,1),ReKi))
 
 
-!FIXME: we may need to change how this is calculated!!!!  The translation vel of the hub due to the yawing motion is not captured!!!!
    !--------------------
    ! Set BladeRootMotion
    do i=1,p%NumBl
-      ! For blade 1, the reference orientation is the hub reference orientation
-      ! tilted about the hub y axis by the precone angle.  Using the Rodrigues
-      ! formula for rotating about the hub y
-      R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(2,1:3,1) )   ! y axis
-      call Eye(R33b,ErrStat2,ErrMsg2);     if (Failed())  return;
-      ! Rodrigues formula for rotation about a vector
-      R33b = R33b + sin(real(p%PreCone,R8Ki)) * R33 + (1-cos(real(p%PreCone,R8Ki))) * matmul(R33,R33)
-      R33b(1:3,1:3) = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(R33b))
+      ! Transfer hub motions (does not include the blade pitch)
+      call Transfer_Point_to_Point( y%HubPtMotion, y%BladeRootMotion(i), m%mapHub2Root(i), ErrStat2, ErrMsg2 );   if (Failed())  return;
 
-      ! now apply azimuth rotation about hub X
-      R33 = real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
-      R33b(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(1,1:3,1) )     ! x axis
+      ! include blade pitch -- rotate about Blade_Z
+      R33(1:3,1:3) = SkewSymMat( y%BladeRootMotion(i)%Orientation(3,1:3,1) )  ! blade z-axis
       call Eye(Orient,ErrStat2,ErrMsg2);     if (Failed())  return;
       ! Rodrigues formula for rotation about a vector
-      Orient = Orient + sin(R33) * R33b + (1-cos(R33)) * matmul(R33b,R33b)
+      Orient = Orient + sin(real(u%BlPitchCom(i),R8Ki)) * R33 + (1-cos(real(u%BlPitchCom(i),R8Ki))) * matmul(R33,R33)
+      y%BladeRootMotion(i)%Orientation(1:3,1:3,1)   = matmul(y%BladeRootMotion(i)%Orientation(1:3,1:3,1),transpose(Orient))
 
-      ! for position vector, just locate along the Z axis from hub
-      Pos = y%HubPtMotion%Position(1:3,1) + p%HubRad * real(Orient(3,1:3), ReKi)
-
-      ! TranslationDisp
-      y%BladeRootMotion(i)%TranslationDisp(1:3,1) = real(Pos - y%BladeRootMotion(i)%Position(1:3,1), R8Ki)
-
-      ! Add Blade pitch
-!FIXME: need to include all yaw motion effects!!!!
-
+      ! We don't have a blade pitching rate, so we will not include it here
    enddo
 
 
