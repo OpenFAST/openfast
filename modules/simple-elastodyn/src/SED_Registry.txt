@@ -104,7 +104,7 @@ typedef  ^       DiscreteStateType     ReKi             DummyDiscreteState -  - 
 typedef  ^       ConstraintStateType   ReKi              DummyConstrState  -  - -   "" -
 
 # any other states
-typedef  ^       OtherStateType        ReKi              NacYaw            -  - -   "" -
+typedef  ^       OtherStateType        ReKi              DummyOtherState   -  - -   "" -
 
 
 # ..... Parameters.................................................................................................................
@@ -116,6 +116,7 @@ typedef  ^        ParameterType        DbKi              DT                -  - 
 typedef  ^        ParameterType        IntKi             IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
 typedef  ^        ParameterType        ReKi              J_DT              -  - -   "Drivetrain inertia (blades+hub+shaft+generator)" "kgm^2"
 typedef  ^        ParameterType        ReKi              PtfmPitch         -  - -   "Static platform tilt angle" rad
+typedef  ^        ParameterType        ReKi              InitYaw           -  - -   "Initial or fixed nacelle yaw -- store in case YawDOF is off" deg
 typedef  ^        ParameterType        ReKi              RotIner           -  - -   "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)" "kg m^2"
 typedef  ^        ParameterType        ReKi              GenIner           -  - -   "Generator inertia about HSS" "kg m^2"
 typedef  ^        ParameterType        ReKi              GBoxEff           -  - -   "Gearbox efficiency" "percent"
@@ -135,7 +136,7 @@ typedef  ^        ParameterType        OutParmType       OutParam         {:} - 
 
 # ..... Misc/Optimization variables.................................................................................................
 typedef  ^        MiscVarType          ReKi              AllOuts          {:} - -   "Array of all outputs"                             -
-typedef  ^        MiscVarType          MeshMapType       mapPtf2Twr        -  - -   "Mesh mapping from Ptfm to Tower line" -
-typedef  ^        MiscVarType          MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
-typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
+#typedef  ^        MiscVarType          MeshMapType       mapPtf2Twr        -  - -   "Mesh mapping from Ptfm to Tower line" -
+#typedef  ^        MiscVarType          MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
+#typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
 

@@ -112,9 +112,16 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL SEDInput_ValidateInput( InitInp, InputFileData, ErrStat2, ErrMsg2 )
    if (Failed()) return;
 
+   ! This should be caught by glue code.  Check it here after validation so we can
+   ! provide something meaningful in error messages about the input file
+   if (InitInp%Linearize) then
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = 'SED cannot perform linearization analysis.'
+      if (Failed()) return
+   end if
+
    ! Set parameters
-   CALL SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat2, ErrMsg2 )
-   if (Failed()) return;
+   CALL SED_SetParameters(ErrStat2,ErrMsg2); if (Failed()) return;
 
    ! Set States
    call Init_States(ErrStat2,ErrMsg2);    if (Failed())  return
@@ -122,24 +129,17 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Set Meshes
    call Init_Mesh(ErrStat2,ErrMsg2);      if (Failed())  return
 
-   ! Set outputs
-   call Init_Y(ErrStat2,ErrMsg2);         if (Failed())  return
-
    ! Set inputs
    call Init_U(ErrStat2,ErrMsg2);         if (Failed())  return
 
    ! Set miscvars (mesh mappings i here
    call Init_Misc(ErrStat2,ErrMsg2);      if (Failed())  return
 
+   ! Set outputs
+   call Init_Y(ErrStat2,ErrMsg2);         if (Failed())  return
+
    ! Set InitOutputs
    call Init_InitY(ErrStat2,ErrMsg2);     if (Failed())  return
-
-   ! This should be caught by glue code
-   if (InitInp%Linearize) then
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = 'SED cannot perform linearization analysis.'
-      if (Failed()) return
-   end if
 
 contains
    logical function Failed()
@@ -148,8 +148,50 @@ contains
         !if (Failed) call CleanUp()
    end function Failed
 
+   !> Store parameters
+   subroutine SED_SetParameters(ErrStat3,ErrMsg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      ! Set parameters
+      p%RootName     = InitInp%RootName
+      p%DT           = InputFileData%DT
+      Interval       = p%DT                        ! Tell glue code what we want for DT
+      p%numOuts      = InputFileData%NumOuts
+      p%IntMethod    = InputFileData%IntMethod
+      p%GenDOF       = InputFileData%GenDOF
+      p%YawDOF       = InputFileData%YawDOF
+      p%InitYaw      = InputFileData%NacYaw
+
+      ! geometry
+      p%NumBl        = InputFileData%NumBl
+      p%TipRad       = InputFileData%TipRad
+      p%HubRad       = InputFileData%HubRad
+      p%PreCone      = InputFileData%PreCone
+      p%OverHang     = InputFileData%OverHang
+      p%ShftTilt     = InputFileData%ShftTilt
+      p%Twr2Shft     = InputFileData%Twr2Shft
+      p%TowerHt      = InputFileData%TowerHt
+      p%PtfmPitch    = InputFileData%PtfmPitch
+      p%HubHt        = p%TowerHt + p%Twr2Shft + p%OverHang*sin(p%ShftTilt)
+   !FIXME: Do we need to account for cone????  ED does not
+      p%BladeLength  = p%TipRad - p%HubRad
+
+      ! inertia / drivetrain
+      p%RotIner      = InputFileData%RotIner
+      p%GenIner      = InputFileData%GenIner
+      p%GBoxEff      = InputFileData%GBoxEff
+      p%GBoxRatio    = InputFileData%GBoxRatio
+
+      ! system inertia
+      p%J_DT   = p%RotIner + p%GBoxRatio**2_IntKi * p%GenIner
+
+      ! Set the outputs
+      call SetOutParam(InputFileData%OutList, p, ErrStat3, ErrMsg3 )
+   end subroutine SED_SetParameters
+
+
    !> Initialize states
-   subroutine Init_States(ErrStat3,ErRMsg3)
+   subroutine Init_States(ErrStat3,ErrMsg3)
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
       ErrStat3 = ErrID_None
@@ -163,10 +205,8 @@ contains
       x%QT( DOF_Az)  = InputFileData%Azimuth
       x%QDT(DOF_Az)  = InputFileData%RotSpeed
 
-      ! Set yaw
-      OtherState%NacYaw = InputFileData%NacYaw
-
       ! Unused states
+      OtherState%DummyOtherState = 0.0_ReKi
       xd%DummyDiscreteState      = 0.0_ReKi
       z%DummyConstrState         = 0.0_ReKi
    end subroutine Init_States
@@ -180,7 +220,6 @@ contains
       real(R8Ki)                       :: VecR8(3)
       real(R8Ki)                       :: R33(3,3)
       real(R8Ki)                       :: R33b(3,3)
-      real(R8Ki)                       :: R33c(3,3)
       real(R8Ki)                       :: Orient(3,3)
       real(R8Ki)                       :: RootAz
       integer(IntKi)                   :: i
@@ -280,7 +319,7 @@ contains
                      ,TranslationDisp = .true.    &
                      ,RotationVel     = .true.    &
                      ,TranslationVel  = .false.   &
-                     ,RotationAcc     = .true.    &
+                     ,RotationAcc     = .false.   &
                      ,TranslationAcc  = .false.   &
                      )
          if (errStat3 >= AbortErrLev) return
@@ -330,15 +369,16 @@ contains
          R33b(1:3,1:3) = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(R33b))
 
          ! now apply azimuth rotation about hub X
-         RootAz = real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
-         R33c(1:3,1:3) = SkewSymMat( y%HubPtMotion%RefOrientation(1,1:3,1) )     ! x axis
+         R33 = real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
+         R33b(1:3,1:3) = SkewSymMat( y%HubPtMotion%RefOrientation(1,1:3,1) )     ! x axis
          call Eye(Orient,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
          ! Rodrigues formula for rotation about a vector
-         Orient = Orient + sin(RootAz) * R33c + (1-cos(RootAz)) * matmul(R33c,R33c)
+         Orient = Orient + sin(R33) * R33b + (1-cos(R33)) * matmul(R33b,R33b)
 
          ! for position, just locate along the Z axis
          Pos = y%HubPtMotion%Position(1:3,1) + p%HubRad * real(Orient(3,1:3), ReKi)
 
+         ! no blade pitch in the reference
          call MeshPositionNode(y%BladeRootMotion(i), 1, Pos, errStat3, errMsg3, Orient);              if (errStat3 >= AbortErrLev) return
          ! Construct/commit
          call MeshConstructElement( y%BladeRootMotion(i), ELEMENT_POINT, errStat3, errMsg3, p1=1 );   if (errStat3 >= AbortErrLev) return
@@ -346,82 +386,6 @@ contains
       enddo
 
    end subroutine Init_Mesh
-
-
-   !> Initialize the outputs in Y -- most of this could probably be moved to CalcOutput
-   subroutine Init_Y(ErrStat3,ErrMSg3)
-      integer(IntKi),   intent(  out)  :: ErrStat3
-      character(*),     intent(  out)  :: ErrMsg3
-      real(ReKi)                       :: Pos(3)
-      real(R8Ki)                       :: tmpR8(3)
-      real(R8Ki)                       :: R33(3,3)
-      real(R8Ki)                       :: Orient(3,3)
-
-      !-------------------------
-      ! Set output platform mesh initial position (stays at 0,0,0)
-      y%PlatformPtMesh%TranslationDisp(1:3,1) = (/ 0.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki /)
-
-      ! Initial orientations
-      call SmllRotTrans( 'platform displacement (SED)', 0.0_R8Ki, real(p%PtfmPitch,R8Ki), 0.0_R8Ki, &
-            y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat3, errmsg=ErrMsg3 )
-         if (errStat3 >= AbortErrLev) return
-
-      !-------------------------
-      ! Set TowerLn2Mesh positions (node 1 stays at 0,0,0,  Top tips forward and down with PtfmPitch)
-      y%TowerLn2Mesh%TranslationDisp(1:3,1) = y%PlatformPtMesh%TranslationDisp(1:3,1)
-      Pos(1) = sin(p%PtfmPitch)*p%TowerHt
-      Pos(2) = 0.0_ReKi
-      Pos(3) = cos(p%PtfmPitch)*p%TowerHt
-      Pos = Pos - y%TowerLn2Mesh%Position(1:3,2)
-      y%TowerLn2Mesh%TranslationDisp(1:3,2) = real(Pos,R8Ki)
-
-      ! Initial node orientations (same as ptfm)
-      y%TowerLn2Mesh%Orientation(:,:,1) = y%PlatformPtMesh%Orientation(:,:,1)
-      y%TowerLn2Mesh%Orientation(:,:,2) = y%PlatformPtMesh%Orientation(:,:,1)
-
-
-      !-------------------------
-      ! Set output nacelle mesh position -- nacelle yaw dof exists, but no tower top motion
-      y%NacelleMotion%TranslationDisp(1:3,1) = y%TowerLn2Mesh%TranslationDisp(1:3,2)
-
-      ! Initial orientation (rotate about tower top (pitched position)
-      call SmllRotTrans( 'nacelle yaw', 0.0_R8Ki, 0.0_R8Ki, real(OtherState%NacYaw,R8Ki), &
-          Orient, errstat=ErrStat3, errmsg=ErrMsg3 )
-         if (errStat3 >= AbortErrLev) return
-      y%NacelleMotion%Orientation(:,:,1) = matmul(Orient, y%TowerLn2Mesh%Orientation(:,:,2))
-
-      ! Initial nacelle motions
-      y%NacelleMotion%RotationVel(:,1) = 0.0_ReKi
-      y%NacelleMotion%RotationAcc(:,1) = 0.0_ReKi
-
-
-      !--------------------------
-      ! Set hub point motion mesh position
-      !  Note: the following works only because nacelle ref orientation is identity
-      tmpR8(1:3) = real(y%NacelleMotion%Position(1:3,1),R8Ki) - real(y%HubPtMotion%Position(1:3,1),R8Ki)
-      y%HubPtMotion%TranslationDisp(1:3,1)   = y%NacelleMotion%TranslationDisp(1:3,1) + (tmpR8 - matmul(tmpR8(1:3), y%NacelleMotion%Orientation(1:3,1:3,1)))
-      ! turbine pitch and yaw (included in the Nacelle motion already)
-      y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%RefOrientation(1:3,1:3,1), y%NacelleMotion%Orientation(1:3,1:3,1))
-      ! include azimuth -- rotate about Hub_X
-      R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(1,1:3,1) )
-      call Eye(Orient,ErrStat3,ErrMsg3);     if (errStat3 >= AbortErrLev) return
-      ! Rodrigues formula for rotation about a vector
-      Orient = Orient + sin(real(x%QT(DOF_Az),R8Ki)) * R33 + (1-cos(real(x%QT(DOF_Az),R8Ki))) * matmul(R33,R33)
-      y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(Orient))
-
-
-      !--------------------
-      ! Set BladeRootMotion
-!FIXME:
-
-
-
-!FIXME: might move all the initial settings to CalcOutput and call that here
-      !--------
-      ! Outputs
-      call AllocAry(y%WriteOutput,p%NumOuts,'WriteOutput',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
-      y%WriteOutput = 0.0_ReKi
-   end subroutine Init_Y
 
    !> Initialize the inputs in u
    subroutine Init_U(ErrStat3,ErrMsg3)
@@ -474,8 +438,21 @@ contains
 !      InitOut%BlPitch      = InputFileData%BlPitch
 !      InitOut%PlatformPos  =    ....small angle for (4:6)
 !      InitOut%RotSpeed     = InputFileData%RotSpeed
-
    end subroutine Init_InitY
+
+   !> Initialize the outputs in Y -- most of this could probably be moved to CalcOutput
+   subroutine Init_Y(ErrStat3,ErrMSg3)
+      integer(IntKi),   intent(  out)  :: ErrStat3
+      character(*),     intent(  out)  :: ErrMsg3
+      !--------
+      ! Outputs
+      call AllocAry(y%WriteOutput,p%NumOuts,'WriteOutput',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
+      y%WriteOutput = 0.0_ReKi
+
+      ! Set the meshes with initial conditions
+      call SED_CalcOutput( 0.0_DbKi, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+   end subroutine Init_Y
+
 END SUBROUTINE SED_Init
 
 
@@ -587,41 +564,175 @@ end subroutine SED_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, NeedWriteOutput )
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
-   type(SED_InputType),            intent(in   )  :: u           !< Inputs at t
-   type(SED_ParameterType),        intent(in   )  :: p           !< Parameters
-   type(SED_ContinuousStateType),  intent(in   )  :: x           !< Continuous states at t
-   type(SED_DiscreteStateType),    intent(in   )  :: xd          !< Discrete states at t
-   type(SED_ConstraintStateType),  intent(in   )  :: z           !< Constraint states at t
-   type(SED_OtherStateType),       intent(in   )  :: OtherState  !< Other states at t
-   type(SED_MiscVarType),          intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-   type(SED_OutputType),           intent(inout)  :: y           !< Outputs computed at t (Input only for mesh)
+   type(SED_InputType),             intent(in   )  :: u           !< Inputs at t
+   type(SED_ParameterType),         intent(in   )  :: p           !< Parameters
+   type(SED_ContinuousStateType),   intent(in   )  :: x           !< Continuous states at t
+   type(SED_DiscreteStateType),     intent(in   )  :: xd          !< Discrete states at t
+   type(SED_ConstraintStateType),   intent(in   )  :: z           !< Constraint states at t
+   type(SED_OtherStateType),        intent(in   )  :: OtherState  !< Other states at t
+   type(SED_MiscVarType),           intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+   type(SED_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only for mesh)
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   logical,             optional,   intent(in   )  :: NeedWriteOutput   !< Flag to determine if WriteOutput values need to be calculated in this call
 
    ! local variables
    integer(IntKi)                                  :: ErrStat2        ! local error status
    character(ErrMsgLen)                            :: ErrMsg2         ! local error message
    character(*), parameter                         :: RoutineName = 'SED_CalcOutput'
+   real(ReKi)                                      :: Pos(3)
+   real(R8Ki)                                      :: tmpR8(3)
+   real(R8Ki)                                      :: R33(3,3)
+   real(R8Ki)                                      :: R33b(3,3)
+   real(R8Ki)                                      :: Orient(3,3)
+   real(ReKi)                                      :: YawRateVec(3)
+   real(ReKi)                                      :: YawAng
+   integer(IntKi)                                  :: i              !< Generic counter
+   logical                                         :: CalcWriteOutput
+   type(SED_ContinuousStateType)                   :: dxdt           !< Derivatives of continuous states at t
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
+   m%AllOuts = 0.0_SiKi
 
-   ! Compute outputs here:
-   !y%DummyOutput    = 2.0_ReKi
+   if (present(NeedWriteOutput)) then
+      CalcWriteOutput = NeedWriteOutput
+   else
+      CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
+   end if
 
-   y%WriteOutput(1) = REAL(t,ReKi)
-   y%WriteOutput(2) = 1.0_ReKi
 
+   !---------------------------------------------------------------------------
+   !  Meshes
+   !     The mesh fields will be set explicitely here using the state and input information
+
+   !-------------------------
+   ! Platform mesh (stionary)
+   y%PlatformPtMesh%TranslationDisp(1:3,1) = (/ 0.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki /)
+
+   ! Initial orientations
+   call SmllRotTrans( 'platform displacement (SED)', 0.0_R8Ki, real(p%PtfmPitch,R8Ki), 0.0_R8Ki, &
+         y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat2, errmsg=ErrMsg2 )
+      if (Failed())  return;
+
+   !-------------------------
+   ! TowerLn2Mesh mesh (stationary also)
+   !     The lower node stays at the PlatformPtMesh position,
+   !     Upper node is stationary, but we set it here just in case we later add this DOF
+   y%TowerLn2Mesh%TranslationDisp(1:3,1) = y%PlatformPtMesh%TranslationDisp(1:3,1)
+   Pos(1) = sin(p%PtfmPitch)*p%TowerHt
+   Pos(2) = 0.0_ReKi
+   Pos(3) = cos(p%PtfmPitch)*p%TowerHt
+   Pos = Pos - y%TowerLn2Mesh%Position(1:3,2)
+   y%TowerLn2Mesh%TranslationDisp(1:3,2) = real(Pos,R8Ki)
+
+   ! Initial node orientations (same as ptfm)
+   y%TowerLn2Mesh%Orientation(:,:,1) = y%PlatformPtMesh%Orientation(:,:,1)
+   y%TowerLn2Mesh%Orientation(:,:,2) = y%PlatformPtMesh%Orientation(:,:,1)
+
+
+   !-------------------------
+   ! Nacelle mesh position
+   !     Yaw DOF will enable this to rotate
+   !     NOTE: we do not make any checks for consistency on the input for YawRate!!!!
+   y%NacelleMotion%TranslationDisp(1:3,1) = y%TowerLn2Mesh%TranslationDisp(1:3,2)
+
+   if (p%YawDOF) then
+      YawAng = u%Yaw
+      YawRateVec = (/ 0.0_ReKi, 0.0_ReKi, u%YawRate /)
+   else
+      YawAng = p%InitYaw
+      YawRateVec = (/ 0.0_ReKi, 0.0_ReKi, u%YawRate /)
+   endif
+
+   ! Orientation (rotate about tower top (pitched position)
+   call SmllRotTrans( 'nacelle yaw', 0.0_R8Ki, 0.0_R8Ki, real(YawAng,R8Ki), &
+          Orient, errstat=ErrStat2, errmsg=ErrMsg2 )
+      if (Failed())  return;
+   y%NacelleMotion%Orientation(:,:,1) = matmul(Orient, y%TowerLn2Mesh%Orientation(:,:,2))
+
+   ! Nacelle motions
+   y%NacelleMotion%RotationVel(:,1) = matmul(YawRateVec, y%TowerLn2Mesh%Orientation(:,:,2))
+
+
+!FIXME: we may need to change how this is calculated!!!!  The translation vel of the hub due to the yawing motion is not captured!!!!
+   !--------------------------
+   ! Hub point motion mesh
+   !     There is a built in assumption here about the reference orientation of the Nacelle as the identity matrix
+   tmpR8(1:3) = real(y%NacelleMotion%Position(1:3,1),R8Ki) - real(y%HubPtMotion%Position(1:3,1),R8Ki)
+   y%HubPtMotion%TranslationDisp(1:3,1)   = y%NacelleMotion%TranslationDisp(1:3,1) + (tmpR8 - matmul(tmpR8(1:3), y%NacelleMotion%Orientation(1:3,1:3,1)))
+
+   ! turbine pitch and yaw (included in the Nacelle motion already)
+   y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%RefOrientation(1:3,1:3,1), y%NacelleMotion%Orientation(1:3,1:3,1))
+
+   ! include azimuth -- rotate about Hub_X
+   R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(1,1:3,1) )
+   call Eye(Orient,ErrStat2,ErrMsg2);     if (Failed())  return;
+   ! Rodrigues formula for rotation about a vector
+   Orient = Orient + sin(real(x%QT(DOF_Az),R8Ki)) * R33 + (1-cos(real(x%QT(DOF_Az),R8Ki))) * matmul(R33,R33)
+   y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(Orient))
+
+   ! Set the rotation Vel
+
+
+!FIXME: we may need to change how this is calculated!!!!  The translation vel of the hub due to the yawing motion is not captured!!!!
+   !--------------------
+   ! Set BladeRootMotion
+   do i=1,p%NumBl
+      ! For blade 1, the reference orientation is the hub reference orientation
+      ! tilted about the hub y axis by the precone angle.  Using the Rodrigues
+      ! formula for rotating about the hub y
+      R33(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(2,1:3,1) )   ! y axis
+      call Eye(R33b,ErrStat2,ErrMsg2);     if (Failed())  return;
+      ! Rodrigues formula for rotation about a vector
+      R33b = R33b + sin(real(p%PreCone,R8Ki)) * R33 + (1-cos(real(p%PreCone,R8Ki))) * matmul(R33,R33)
+      R33b(1:3,1:3) = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(R33b))
+
+      ! now apply azimuth rotation about hub X
+      R33 = real((i-1),R8Ki) * TwoPi_R8 / real(p%NumBl,R8Ki)
+      R33b(1:3,1:3) = SkewSymMat( y%HubPtMotion%Orientation(1,1:3,1) )     ! x axis
+      call Eye(Orient,ErrStat2,ErrMsg2);     if (Failed())  return;
+      ! Rodrigues formula for rotation about a vector
+      Orient = Orient + sin(R33) * R33b + (1-cos(R33)) * matmul(R33b,R33b)
+
+      ! for position vector, just locate along the Z axis from hub
+      Pos = y%HubPtMotion%Position(1:3,1) + p%HubRad * real(Orient(3,1:3), ReKi)
+
+      ! TranslationDisp
+      y%BladeRootMotion(i)%TranslationDisp(1:3,1) = real(Pos - y%BladeRootMotion(i)%Position(1:3,1), R8Ki)
+
+      ! Add Blade pitch
+!FIXME: need to include all yaw motion effects!!!!
+
+   enddo
+
+
+   !---------------------------------------------------------------------------
+   ! Compute outputs:
+   if (CalcWriteOutput) then
+      ! Get derivative of continuous states
+      call SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if (Failed()) return;
+      ! Set the outputs
+      call Calc_WriteOutput( u, p, x, dxdt, y, m, ErrStat2, ErrMsg2, CalcWriteOutput );         if (Failed())  return;
+      ! Place the selected output channels into the WriteOutput(:)
+      do i = 1,p%NumOuts  ! Loop through all selected output channels
+         y%WriteOutput(i) = p%OutParam(i)%SignM * m%AllOuts( p%OutParam(i)%Indx )
+      end do
+   endif
+
+   return;
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
-        !if (Failed) call CleanUp()
+        if (Failed) call CleanUp()
    end function Failed
-
+   subroutine CleanUp()
+      y%WriteOutput = 0.0_ReKi   ! clear any jibberish in outputs since they are not set
+   end subroutine CleanUp
 END SUBROUTINE SED_CalcOutput
 
 
@@ -650,15 +761,30 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    ErrMsg  = ""
 
       ! Compute the first time derivatives of the continuous states here:
-   !dxdt%DummyContState = 0.0_ReKi
+   if (.not. allocated(dxdt%QT) ) then
+      call AllocAry( dxdt%QT,  size(x%qt),  'dxdt%QT',  ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+   endif
+
+   if (.not. allocated(dxdt%QDT) ) then
+      call AllocAry( dxdt%QDT, size(x%QDT), 'dxdt%QDT', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+   endif
+
+   ! First derivative, just copy over
+   dxdt%QT = x%QDT
+
+   dxdt%QDT = 0.0
+
+!FIXME: calculate the derivatives here...
+
 
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
+        !if (Failed) call CleanUp()
    end function Failed
-
 END SUBROUTINE SED_CalcContStateDeriv
 
 

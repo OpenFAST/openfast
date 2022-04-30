@@ -287,66 +287,15 @@ subroutine SEDInput_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
 end subroutine SEDInput_ValidateInput
 
 
-!> validate and process input file data (some was done during parsing of input file)
-subroutine SEDInput_SetParameters( InitInp, Interval, InputFileData, p, ErrStat, ErrMsg )
-   type(SED_InitInputType),   intent(in   )  :: InitInp              !< Input data for initialization
-   real(DbKi),                intent(inout)  :: Interval             !< Coupling interval in seconds
-   type(SED_InputFile),       intent(inout)  :: InputFileData        !< The data for initialization
-   type(SED_ParameterType),   intent(inout)  :: p                    !<
-   integer(IntKi),            intent(  out)  :: ErrStat              !< Error status  from this subroutine
-   character(*),              intent(  out)  :: ErrMsg               !< Error message from this subroutine
-   integer(IntKi)                            :: ErrStat2             !< Temporary error status  for subroutine and function calls
-   character(ErrMsgLen)                      :: ErrMsg2              !< Temporary error message for subroutine and function calls
-   character(*),              parameter      :: RoutineName="SEDInput_SetParameters"
-
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   ! Set parameters
-   p%RootName  = InitInp%RootName
-   p%DT        = InputFileData%DT
-   Interval    = p%DT                        ! Tell glue code what we want for DT
-   p%numOuts   = InputFileData%NumOuts
-   p%IntMethod = InputFileData%IntMethod
-   p%GenDOF    = InputFileData%GenDOF
-   p%YawDOF    = InputFileData%YawDOF
-
-   ! geometry
-   p%NumBl     = InputFileData%NumBl
-   p%TipRad    = InputFileData%TipRad
-   p%HubRad    = InputFileData%HubRad
-   p%PreCone   = InputFileData%PreCone
-   p%OverHang  = InputFileData%OverHang
-   p%ShftTilt  = InputFileData%ShftTilt
-   p%Twr2Shft  = InputFileData%Twr2Shft
-   p%TowerHt   = InputFileData%TowerHt
-   p%PtfmPitch = InputFileData%PtfmPitch
-   p%HubHt     = p%TowerHt + p%Twr2Shft + p%OverHang*sin(p%ShftTilt)
-!FIXME: Do we need to account for cone????  ED does not
-   p%BladeLength  = p%TipRad - p%HubRad
-
-   ! inertia / drivetrain
-   p%RotIner   = InputFileData%RotIner
-   p%GenIner   = InputFileData%GenIner
-   p%GBoxEff   = InputFileData%GBoxEff
-   p%GBoxRatio = InputFileData%GBoxRatio
-
-   ! system inertia
-   p%J_DT   = p%RotIner + p%GBoxRatio**2_IntKi * p%GenIner
-
-   ! Set the outputs
-   call SetOutParam(InputFileData%OutList, p, ErrStat, ErrMsg )
-end subroutine SEDInput_SetParameters
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> this routine fills the AllOuts array, which is used to send data to the glue code to be written to an output file.
 !! NOTE: AllOuts is ReKi, but most calculations in this module are in single precision. This requires a bunch of conversions at this
 !! stage.
-subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
+subroutine Calc_WriteOutput( u, p, x, dxdt, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    type(SED_InputType),          intent(in   )  :: u                 !< The inputs at time T
    type(SED_ParameterType),      intent(in   )  :: p                 !< The module parameters
+   type(SED_ContinuousStateType),intent(in   )  :: x                 !< Continuous states at t
+   type(SED_ContinuousStateType),intent(in   )  :: dxdt              !< Derivative of continuous states at t
    type(SED_OutputType),         intent(in   )  :: y                 !< outputs
    type(SED_MiscVarType),        intent(inout)  :: m                 !< misc/optimization variables (for computing mesh transfers)
    integer(IntKi),               intent(  out)  :: ErrStat           !< The error status code
@@ -362,13 +311,15 @@ subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    ! Initialize
    ErrStat = ErrID_None
    ErrMsg  = ""
-   m%AllOuts = 0.0_ReKi
 
-!   m%AllOuts( Azimuth  ) =
-!   m%AllOuts( RotSpeed ) =
-!   m%AllOuts( RotAcc   ) =
-!   m%AllOuts( GenSpeed ) =
-!   m%AllOuts( GenAcc   ) =
+   ! return if we are not providing outputs
+   if (.not. CalcWriteOutput) return
+
+   m%AllOuts( Azimuth  ) = x%QT( DOF_Az)
+   m%AllOuts( RotSpeed ) = x%QDT(DOF_Az)
+   m%AllOuts( RotAcc   ) = dxdt%QDT(DOF_Az)
+   m%AllOuts( GenSpeed ) = x%QDT(DOF_Az)    * p%GBoxRatio
+   m%AllOuts( GenAcc   ) = dxdt%QDT(DOF_Az) * p%GBoxRatio
 end subroutine Calc_WriteOutput
 
 

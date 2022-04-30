@@ -885,6 +885,9 @@ subroutine Calc_WriteOutput( u, p, y, m, ErrStat, ErrMsg, CalcWriteOutput )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! return if we are not providing outputs
+   if (.not. CalcWriteOutput) return
+
    ! rotation matrix
 !FIXME: make sure this is actually correct and not the transpose of what we want
    Rxyz(1:3,1) = real(m%x_hat, ReKi)
