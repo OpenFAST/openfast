@@ -39,13 +39,16 @@ if (ispc && built_with_visualStudio)
 else    
 %% defaults for cmake builds:
 
-    if ( ispc ) % Windows PC
+    if ( ismac )  % Apple MacOS
+        installDir = '../../../install';
+        outDir = fullfile(installDir, 'lib');
+    elseif ( ispc ) % Windows PC
         installDir = '../../../install';
         outDir = fullfile(installDir, 'lib');
         % If there are shared libraries does it work for outDir to be the local directory?
     else
-        installDir = '/usr/local';
-        outDir = '.';
+        installDir = '../../../install';
+        outDir = fullfile(installDir, 'lib');
     end
 
     libDir = fullfile(installDir, 'lib');

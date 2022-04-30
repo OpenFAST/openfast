@@ -408,11 +408,12 @@ The external forces :math:`\vec{F}_{_{TMD_Z/O_N}}` are given by
          F_{X_{_{TMD_Z/O_N}}} + m_z a_{_{G_X/O_N}} \\
          F_{Y_{_{TMD_Z/O_N}}} + m_z a_{_{G_Y/O_N}} \\
          - c_z \dot{z}_{_{TMD_Z/P_N}} - k_z z_{_{TMD_Z/P_N}}
-         + m_z a_{_{G_Z/O_N}} + F_{ext_z} + F_{StopFrc_{Z}}
+         + m_z a_{_{G_Z/O_N}} + F_{ext_z} + F_{StopFrc_{Z}} + F_{Z_{PreLoad}}
       \end{array}
    \right]
 
-
+where :math:`F_{Z_{PreLoad}}` is a spring pre-load to shift the neutral position
+when gravity acts upon the mass for the :math:`TMD_Z`.
 :math:`TMD_Z` is fixed to frame :math:`N` in the :math:`x` and :math:`y`
 directions so that
 
@@ -466,7 +467,7 @@ Therefore :math:`\ddot{z}_{_{TMD_Z/P_N}}` is governed by the equations
             + \dot{\phi}_{_{N/O_N}}^2-\frac{k_z}{m_z}) z_{_{TMD_Z/P_N}}
             - (\frac{c_z}{m_z}) \dot{z}_{_{TMD_Z/P_N}} 
             -\ddot{z}_{_{P/O_N}} + a_{_{G_Z/O_N}}\\
-         &+ \frac{1}{m_z} (F_{ext_Z} + F_{StopFrc_{Z}})
+         &+ \frac{1}{m_z} (F_{ext_Z} + F_{StopFrc_{Z}} + F_{Z_{PreLoad}})
    \end{aligned}
    :label: EOM_Zz
 
@@ -575,15 +576,16 @@ and
 
 .. math::
    B(\vec{u}) = \left[
-      \begin{array}{c}
+      \begin{array}{l}
          0 \\
          -\ddot{x}_{_{P/O_N}}+a_{_{G_X/O_N}} + \frac{1}{m_x} ( F_{ext_X} + F_{StopFrc_{X}}) \\
          0 \\
          -\ddot{y}_{_{P/O_N}}+a_{_{G_Y/O_N}} + \frac{1}{m_y} (F_{ext_Y}+ F_{StopFrc_{Y}}) \\
          0 \\
-         -\ddot{z}_{_{P/O_N}}+a_{_{G_Z/O_N}} + \frac{1}{m_z} (F_{ext_Z}+ F_{StopFrc_{Z}})
+         -\ddot{z}_{_{P/O_N}}+a_{_{G_Z/O_N}} + \frac{1}{m_z} (F_{ext_Z}+ F_{StopFrc_{Z}} + F_{Z_{PreLoad}})
       \end{array}
    \right]
+   :label: Bu
 
 The inputs are coupled to the state variables, resulting in A and B as
 :math:`f(\vec{u})`.
@@ -612,13 +614,14 @@ The output includes reaction forces corresponding to
 .. math::
    \begin{aligned}
       \vec{F}_{_{P_G}} = R^T_{_{N/G}} & \left[
-         \begin{array}{c}
+         \begin{array}{l}
             k_x {x}_{_{TMD/P_N}} + c_x \dot{x}_{_{TMD/P_N}} - F_{StopFrc_{X}} - F_{ext_x} - F_{X_{_{TMD_Y/O_N}}} - F_{X_{_{TMD_Z/O_N}}} \\ 
             k_y {y}_{_{TMD/P_N}} + c_y \dot{y}_{_{TMD/P_N}} - F_{StopFrc_{Y}} - F_{ext_y} - F_{Y_{_{TMD_X/O_N}}} - F_{Y_{_{TMD_Z/O_N}}} \\ 
-            k_z {z}_{_{TMD/P_N}} + c_z \dot{z}_{_{TMD/P_N}} - F_{StopFrc_{Z}} - F_{ext_z} - F_{Z_{_{TMD_X/O_N}}} - F_{Z_{_{TMD_Y/O_N}}}
+            k_z {z}_{_{TMD/P_N}} + c_z \dot{z}_{_{TMD/P_N}} - F_{StopFrc_{Z}} - F_{ext_z} - F_{Z_{_{TMD_X/O_N}}} - F_{Z_{_{TMD_Y/O_N}}} - F_{Z_{PreLoad}}
          \end{array}
       \right]
    \end{aligned}
+   :label: OutputForces
 
 and
 
@@ -663,6 +666,20 @@ respectively, the stop forces have the form
 where :math:`\Delta x` is the distance the mass has traveled beyond the
 stop position and :math:`k_S` and :math:`c_S` are large stiffness and
 damping constants.
+
+
+.. _SrvD-StCz-PreLoad:
+
+Pre-Load Forces
+~~~~~~~~~~~~~~~
+
+The extra force :math:`F_{Z_{PreLoad}}` is added to the output forces as a
+method to shift the at rest position of the TMD_Z when gravity is acting on it.
+This is particularly useful for substructure mounted StCs when very large masses
+with soft spring constants are used. This appears in the term
+:math:`\vec{F}_{_{TMD_Z/O_N}}` and in eq equations of motion given by :eq:`Bu`
+and resulting forces in :eq:`OutputForces`.
+
 
 Code Modifications
 ==================

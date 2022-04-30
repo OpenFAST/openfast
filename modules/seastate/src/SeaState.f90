@@ -310,24 +310,24 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(SeaSt_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
                                                                         !!   only the output mesh is initialized)
       TYPE(SeaSt_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables           
-      REAL(DbKi),                         INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
-                                                                        !!   (1) SeaSt_UpdateStates() is called in loose coupling &
-                                                                        !!   (2) SeaSt_UpdateDiscState() is called in tight coupling.
-                                                                        !!   Input is the suggested time from the glue code; 
-                                                                        !!   Output is the actual coupling interval that will be used 
-                                                                        !!   by the glue code.
+      REAL(DbKi),                      INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
+                                                                     !!   (1) SeaSt_UpdateStates() is called in loose coupling &
+                                                                     !!   (2) SeaSt_UpdateDiscState() is called in tight coupling.
+                                                                     !!   Input is the suggested time from the glue code; 
+                                                                     !!   Output is the actual coupling interval that will be used 
+                                                                     !!   by the glue code.
       TYPE(SeaSt_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       
          ! Local variables
          
       CHARACTER(1024)                        :: SummaryName                         ! name of the SeaState summary file   
-      TYPE(SeaSt_InputFile)               :: InputFileData                       !< Data from input file
+      TYPE(SeaSt_InputFile)                  :: InputFileData                       !< Data from input file
       TYPE(FileInfoType)                     :: InFileInfo                          !< The derived type for holding the full input file for parsing -- we may pass this in the future
       TYPE(Waves_InitOutputType)             :: Waves_InitOut                       ! Initialization Outputs from the Waves module initialization
-      TYPE(SeaSt_Interp_InitInputType)    :: SeaSt_Interp_InitInp
+      TYPE(SeaSt_Interp_InitInputType)       :: SeaSt_Interp_InitInp
 !      TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 module initialization
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
       INTEGER                                :: I, J, k, iBody                                ! Generic counters
@@ -382,7 +382,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
       CHARACTER(*), PARAMETER                :: RoutineName = 'SeaSt_Init'
    
-      CHARACTER(64)                              :: Frmt
+      CHARACTER(64)                          :: Frmt
       CHARACTER(2)                           :: Delim
       
          ! Initialize ErrStat
@@ -390,6 +390,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
+      u%DummyInput = 0  ! initialize dummy variable to make the compiler warnings go away
+
       
 #ifdef BETA_BUILD
    CALL DispBetaNotice( "This is a beta version of SeaState and is for testing purposes only."//NewLine//"This version includes user waves, WaveMod=6 and the ability to write example user waves." )
@@ -1015,6 +1017,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%MSL2SWL = InputFileData%MSL2SWL
       p%WtrDpth       = InitOut%WtrDpth  
       
+      InitOut%WaveMultiDir = InputFileData%Waves%WaveMultiDir
       InitOut%MCFD    = InputFileData%Waves%MCFD
  
       CALL SeaStOut_Init( SeaSt_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1147,7 +1150,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WaveDirMax   =  Waves_InitOut%WaveDirMax          ! For WAMIT and WAMIT2
        InitOut%WaveDir      =  Waves_InitOut%WaveDir             ! For WAMIT for use in SS_Excitation
        !InitOut%WaveNDir     =  Waves_InitOut%WaveNDir            ! Not needed
-       InitOut%WaveMultiDir =  Waves_InitOut%WaveMultiDir        ! For WAMIT2
        InitOut%WaveDOmega   =  Waves_InitOut%WaveDOmega          ! For WAMIT and WAMIT2, FIT
        !InitOut%WaveKinzi    =  Waves_InitOut%WaveKinzi           ! Not needed
        InitOut%WaveDynP     => Waves_InitOut%WaveDynP            ! For Morison
@@ -1574,18 +1576,18 @@ END SUBROUTINE SeaSt_CalcOutput
 SUBROUTINE SeaSt_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
    
       REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      TYPE(SeaSt_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)
-      TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p           !< Parameters                             
-      TYPE(SeaSt_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(SeaSt_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
-      TYPE(SeaSt_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(SeaSt_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states                    
-      TYPE(SeaSt_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
-      TYPE(SeaSt_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
+      TYPE(SeaSt_InputType),              INTENT(INOUT)  :: u           !< Inputs at Time (intent OUT only because we're copying the input mesh)
+      TYPE(SeaSt_ParameterType),          INTENT(IN   )  :: p           !< Parameters                             
+      TYPE(SeaSt_ContinuousStateType),    INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(SeaSt_DiscreteStateType),      INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(SeaSt_ConstraintStateType),    INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(SeaSt_OtherStateType),         INTENT(IN   )  :: OtherState  !< Other states                    
+      TYPE(SeaSt_MiscVarType),            INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(SeaSt_ContinuousStateType),    INTENT(INOUT)  :: dxdt        !< Continuous state derivatives at Time
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-      integer(IntKi)             :: iWAMIT        ! loop counter
-      CHARACTER(*), PARAMETER    :: RoutineName = 'SeaSt_CalcContStateDeriv'
+      integer(IntKi)                                     :: iWAMIT        ! loop counter
+      CHARACTER(*), PARAMETER                            :: RoutineName = 'SeaSt_CalcContStateDeriv'
                
          ! Initialize ErrStat
          

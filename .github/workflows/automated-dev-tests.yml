@@ -106,7 +106,7 @@ jobs:
             install_deps: brew install gcovr
           - os: ubuntu-20.04
             FORTRAN_COMPILER: gfortran-10
-            install_deps: sudo apt-get install -y gcovr
+            install_deps: sudo apt-get update && sudo apt-get install -y gcovr
 
     name: regression-test-debug-${{ matrix.os }}-${{ matrix.FORTRAN_COMPILER }}
     steps:

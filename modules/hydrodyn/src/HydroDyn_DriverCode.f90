@@ -198,8 +198,7 @@ PROGRAM HydroDynDriver
       ! Parse the driver input file and run the simulation based on that file
    CALL ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
    IF ( ErrStat /= 0 ) THEN
-      CALL WrScr( ErrMsg )
-      STOP
+      CALL ProgAbort( ErrMsg )
    END IF
    InitInData%Gravity      = drvrInitInp%Gravity
    InitInData%defWtrDens   = drvrInitInp%WtrDens
@@ -324,17 +323,15 @@ PROGRAM HydroDynDriver
       CALL GetNewUnit( UnPRPInp ) 
       CALL OpenFInpFile ( UnPRPInp, drvrInitInp%PRPInputsFile, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) THEN
-            call WrScr( ErrMsg )
-            STOP
+            call ProgAbort( ErrMsg )
          ENDIF
       
       
       ALLOCATE ( PRPin(drvrInitInp%NSteps, 19), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = '  Error allocating space for PRPin array.'
-         CALL WrScr( ErrMsg )
          CLOSE( UnPRPInp )
-         STOP
+         CALL ProgAbort( ErrMsg )
       END IF 
       
       DO n = 1,drvrInitInp%NSteps
@@ -342,8 +339,7 @@ PROGRAM HydroDynDriver
             
             IF ( ErrStat /= 0 ) THEN
                ErrMsg = '  Error reading the PRP input time-series file. '
-               CALL WrScr( ErrMsg )
-               STOP
+               CALL ProgAbort( ErrMsg )
             END IF 
       END DO  
       
@@ -359,17 +355,15 @@ PROGRAM HydroDynDriver
       CALL GetNewUnit( UnPRPInp ) 
       CALL OpenFInpFile ( UnPRPInp, drvrInitInp%PRPInputsFile, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) THEN
-            call WrScr( ErrMsg )
-            STOP
+            call ProgAbort( ErrMsg )
          ENDIF
       
       
       ALLOCATE ( PRPin(drvrInitInp%NSteps, 7+6*NBODY), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = '  Error allocating space for PRPin array.'
-         CALL WrScr( ErrMsg )
          CLOSE( UnPRPInp )
-         STOP
+         CALL ProgAbort( ErrMsg )
       END IF 
       
       PRINT *, 'NBody is '//trim(Num2LStr(NBody))//' and planning to read in  '//trim(Num2LStr(7+6*NBODY))//' columns from the input file'
@@ -379,8 +373,7 @@ PROGRAM HydroDynDriver
             
             IF ( ErrStat /= 0 ) THEN
                ErrMsg = '  Error reading the WAMIT input time-series file (for multiple bodies). '
-               CALL WrScr( ErrMsg )
-               STOP
+               CALL ProgAbort( ErrMsg )
             END IF 
       END DO  
       
@@ -773,14 +766,15 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CALL GetNewUnit( UnIn ) 
    CALL OpenFInpFile ( UnIn, FileName, ErrStat, ErrMsg ) 
       IF (ErrStat >=AbortErrLev) THEN
-         call WrScr( ErrMsg )
-         STOP
+         call ProgAbort( ErrMsg )
+         RETURN
       ENDIF
 
    
    CALL WrScr( 'Opening HydroDyn Driver input file:  '//FileName )
    
-
+!bjj: we are treating ALL errors here as fatal, but if the calling routine doesn't do the same, there will be issues...
+   
    !-------------------------------------------------------------------------------------------------
    ! File header
    !-------------------------------------------------------------------------------------------------

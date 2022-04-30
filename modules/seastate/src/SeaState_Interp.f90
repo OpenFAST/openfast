@@ -120,7 +120,7 @@ SUBROUTINE SeaSt_Interp_CalcOutput(Time, PositionXYZ, p, pWaveKinXX, WaveKinVal,
       ! Passed Variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
-   TYPE(SeaSt_Interp_ParameterType),          INTENT(IN   )  :: p                 !< Parameters
+   TYPE(SeaSt_Interp_ParameterType),            INTENT(IN   )  :: p                 !< Parameters
    REAL(ReKi),                                  INTENT(IN   )  :: pWaveKinXX(:,:,:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
    REAL(ReKi),                                  INTENT(  out)  :: WaveKinVal
       ! Error handling
@@ -147,6 +147,7 @@ SUBROUTINE SeaSt_Interp_CalcOutput(Time, PositionXYZ, p, pWaveKinXX, WaveKinVal,
    ErrStat     = ErrID_None
    ErrMsg      = ""
 
+   WaveKinVal = 0.0_ReKi
 
       ! The array is transposed so that the number of points is the second index, x/y/z is the first.
       ! This is just in case we only have a single point, the SIZE command returns the correct number of points.

@@ -723,45 +723,9 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\Current.txt">
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\Current_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
@@ -988,165 +952,8 @@
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\Waves.txt">
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\Waves2.txt">
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\Waves2_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\Waves_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\seastate\src\SeaState.txt">
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\SeaState_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\SeaState_Interp.txt">
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\seastate\src\SeaState_Interp_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\hydrodyn\src\Conv_Radiation.f90"/>
-		<File RelativePath="..\..\modules\seastate\src\Current.f90"/>
-		<File RelativePath="..\..\modules\seastate\src\SeaState.f90"/>
-		<File RelativePath="..\..\modules\seastate\src\SeaState_Interp.f90"/>
-		<File RelativePath="..\..\modules\seastate\src\SeaState_Input.f90"/>
-		<File RelativePath="..\..\modules\seastate\src\SeaState_Output.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_Input.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_Output.f90"/>
@@ -1154,12 +961,9 @@
 		<File RelativePath="..\..\modules\hydrodyn\src\Morison_Output.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.f90"/>
-		<File RelativePath="..\..\modules\seastate\src\UserWaves.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/>
-		<File RelativePath="..\..\modules\seastate\src\Waves.f90"/>
-		<File RelativePath="..\..\modules\seastate\src\Waves2.f90"/></Filter>
+		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/></Filter>
 		<Filter Name="Ice">
 		<Filter Name="IceDyn">
 		<Filter Name="RegistryFiles">
@@ -2375,6 +2179,206 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\openfoam\src\OpenFOAM.f90"/></Filter>
+		<Filter Name="SeaState">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\seastate\src\Current.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\modules\seastate\src\Current_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\Current_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\SeaState.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState" Description="Running Registry for SeaState" Outputs="..\..\modules\seastate\src\SeaState_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\SeaState_Interp.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SeaState_Interp" Description="Running Registry for SeaState_Interp" Outputs="..\..\modules\seastate\src\SeaState_Interp_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\SeaState_Interp_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\SeaState_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\Waves.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\modules\seastate\src\Waves_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\Waves2.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\modules\seastate\src\Waves2_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\Waves2_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\seastate\src\Waves_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\seastate\src\Current.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\SeaState.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\SeaState_Input.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\SeaState_Interp.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\SeaState_Output.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\UserWaves.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\Waves.f90"/>
+		<File RelativePath="..\..\modules\seastate\src\Waves2.f90"/></Filter>
 		<Filter Name="ServoDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\servodyn\src\ServoDyn_Registry.txt">
@@ -2454,6 +2458,7 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\servodyn\src\BladedInterface.F90"/>
+		<File RelativePath="..\..\modules\servodyn\src\BladedInterface_EX.F90"/>
 		<File RelativePath="..\..\modules\servodyn\src\PitchCntrl_ACH.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\ServoDyn.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\ServoDyn_IO.f90"/>

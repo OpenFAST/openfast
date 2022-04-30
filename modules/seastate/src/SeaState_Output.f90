@@ -743,59 +743,58 @@ SUBROUTINE SeaStOut_Init( SeaSt_ProgDesc, OutRootName, InputFileData, y,  p, m, 
    ! Check that the variables in OutList are valid      
    !-------------------------------------------------------------------------------------------------      
       
+   CALL SeaStOUT_ChkOutLst( InputFileData%OutList, y, p, ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+   ! Aggregate the sub-module initialization outputs for the glue code
+
+   p%NumTotalOuts = p%NumOuts
+   m%LastOutTime  = 0.0_DbKi
+   m%Decimate     = 0
+   p%OutDec       = 1             !TODO: Remove this once the parameter has been added to the HD input file GJH 7/8/2014
+
    
-   CALL SeaStOUT_ChkOutLst( InputFileData%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
-   IF ( ErrStat /= 0 ) RETURN
-
-         ! Aggregate the sub-module initialization outputs for the glue code
-
-         p%NumTotalOuts = p%NumOuts
-         m%LastOutTime  = 0.0_DbKi
-         m%Decimate     = 0
-         p%OutDec       = 1             !TODO: Remove this once the parameter has been added to the HD input file GJH 7/8/2014
-
-      
-            ! Allocate the aggregate arrays
-         
-         ALLOCATE ( InitOut%WriteOutputHdr ( p%NumTotalOuts ) , STAT=ErrStat )
-         IF ( ErrStat /= 0 )  THEN
-            ErrMsg  = ' Error allocating memory for the WriteOutputHdr array.'
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
-         
-         ALLOCATE ( InitOut%WriteOutputUnt ( p%NumTotalOuts ) , STAT=ErrStat )
-         IF ( ErrStat /= 0 )  THEN
-            ErrMsg  = ' Error allocating memory for the WriteOutputUnt array.'
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
-         
-         ALLOCATE ( y%WriteOutput         ( p%NumTotalOuts ) , STAT=ErrStat )
-         IF ( ErrStat /= 0 )  THEN
-            ErrMsg  = ' Error allocating memory for the WriteOutput array.'
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
-         y%WriteOutput = 0.0_ReKi  ! bjj added this only so the Intel Inspector wouldn't complain about uninitialized memory access (was harmless)
-         
-                  
-            ! Initialize the HD-level Hdr and Unt elements
-         DO I = 1,p%NumOuts
-         
-            InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
-            InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
-      
-         END DO    
+      ! Allocate the aggregate arrays
+   
+   ALLOCATE ( InitOut%WriteOutputHdr ( p%NumTotalOuts ) , STAT=ErrStat )
+   IF ( ErrStat /= 0 )  THEN
+      ErrMsg  = ' Error allocating memory for the WriteOutputHdr array.'
+      ErrStat = ErrID_Fatal
+      RETURN
+   END IF
+   
+   ALLOCATE ( InitOut%WriteOutputUnt ( p%NumTotalOuts ) , STAT=ErrStat )
+   IF ( ErrStat /= 0 )  THEN
+      ErrMsg  = ' Error allocating memory for the WriteOutputUnt array.'
+      ErrStat = ErrID_Fatal
+      RETURN
+   END IF
+   
+   ALLOCATE ( y%WriteOutput         ( p%NumTotalOuts ) , STAT=ErrStat )
+   IF ( ErrStat /= 0 )  THEN
+      ErrMsg  = ' Error allocating memory for the WriteOutput array.'
+      ErrStat = ErrID_Fatal
+      RETURN
+   END IF
+   y%WriteOutput = 0.0_ReKi  ! bjj added this only so the Intel Inspector wouldn't complain about uninitialized memory access (was harmless)
+   
             
-            
-         J = p%NumOuts + 1
+      ! Initialize the HD-level Hdr and Unt elements
+   DO I = 1,p%NumOuts
+   
+      InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
+      InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
+   
+   END DO    
+      
+      
+   J = p%NumOuts + 1
       
 
-      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
-         CALL SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName, p, InitOut, ErrStat, ErrMsg )
-         IF (ErrStat >= AbortErrLev ) RETURN
-      END IF
+   IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
+      CALL SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName, p, InitOut, ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev ) RETURN
+   END IF
       
       
 
@@ -1004,12 +1003,12 @@ SUBROUTINE SeaStOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    
       ! Passed variables
       
-   TYPE(SeaSt_OutputType),     INTENT( INOUT ) :: y                                ! This module's internal data
-   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
+   TYPE(SeaSt_OutputType),          INTENT( INOUT ) :: y                                ! This module's internal data
+   TYPE(SeaSt_ParameterType),       INTENT( INOUT ) :: p                                   ! parameter data for this instance of the HD module   
 !   INTEGER,                 INTENT(IN   ) :: NumMemberNodes(*)                         ! the number of nodes on each of the first 9 members
-   CHARACTER(ChanLen),            INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ChanLen), ALLOCATABLE, INTENT( IN    ) :: OutList (:)                               ! An array holding the names of the requested output channels.         
+   INTEGER,                         INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables.
    
@@ -1042,7 +1041,10 @@ SUBROUTINE SeaStOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
 
       ! Set index, name, and units for all of the output channels.
       ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
-
+   p%OutParam(0)%Name = 'Time'
+   p%OutParam(0)%SignM = 1
+   p%OutParam(0)%Units = '(s)'
+   
    DO I = 1,p%NumOuts
 
       p%OutParam(I)%Name  = OutList(I)
