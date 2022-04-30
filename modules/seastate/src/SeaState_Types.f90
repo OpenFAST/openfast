@@ -213,7 +213,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SeaSt_InputType  =======
   TYPE, PUBLIC :: SeaSt_InputType
-    REAL(SiKi)  :: DummyInput      !< Remove this variable if you have discrete states [-]
+    REAL(SiKi)  :: DummyInput      !< Remove this variable if you have inputs [-]
   END TYPE SeaSt_InputType
 ! =======================
 ! =========  SeaSt_OutputType  =======

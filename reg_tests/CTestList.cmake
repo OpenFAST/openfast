@@ -162,6 +162,15 @@ function(ifw_py_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ifw_py_regression)
 
+# seastate
+function(seast_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSeaStateRegressionCase.py")
+  set(SEASTATE_EXECUTABLE "${CTEST_SEASTATE_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/seastate")
+  regression(${TEST_SCRIPT} ${SEASTATE_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(seast_regression)
+
 #===============================================================================
 # Regression tests
 #===============================================================================
@@ -195,7 +204,7 @@ of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn
 of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm")
 of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf")
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
-of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore")
+of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
@@ -211,6 +220,8 @@ of_regression_linear("Ideal_Beam_Fixed_Free_Linear" "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
 of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;servodyn")
 of_regression_linear("5MW_OC4Semi_Linear"           "openfast;linear;hydrodyn;servodyn")
+of_regression_linear("StC_test_OC4Semi_Linear_Nac"  "openfast;linear;servodyn;stc")
+of_regression_linear("StC_test_OC4Semi_Linear_Tow"  "openfast;linear;servodyn;stc")
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)
@@ -264,3 +275,8 @@ sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore")
 # InflowWind regression tests
 ifw_regression("ifw_turbsimff"                                "inflowwind")
 ifw_py_regression("ifw_py_turbsimff"                          "inflowwind;python")
+
+# SeaState regression tests
+seast_regression("seastate1"                                 "seastate")
+seast_regression("seastate_wavemod5"                         "seastate")
+seast_regression("seastate_wr_kin1"                          "seastate")

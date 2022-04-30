@@ -291,7 +291,7 @@ subroutine BEMT_InitOtherStates( OtherState, p, errStat, errMsg )
 
    errStat = ErrID_None
    errMsg  = ""
-   
+     
    allocate ( OtherState%ValidPhi( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
       call SetErrStat( ErrID_Fatal, 'Error allocating memory for OtherState%ValidPhi.', errStat, errMsg, RoutineName )

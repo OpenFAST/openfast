@@ -8,7 +8,7 @@ MODULE AeroAcoustics_IO
 
    implicit none
 
-   type(ProgDesc), parameter  :: AA_Ver = ProgDesc( 'AeroAcoustics', 'v1.00.00', '18-Aug-2016' )
+   type(ProgDesc), parameter  :: AA_Ver = ProgDesc( 'AeroAcoustics', '', '' )
    character(*),   parameter  :: AA_Nickname = 'AA'
 
 

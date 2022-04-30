@@ -2003,8 +2003,6 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! For the case where either RdtnMod=0 and ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid then we do not have states, so simply return
       ! The key here is to never allocate the dXdu and related state Jacobian arrays because then the glue-code will behave properly
       
-      if ( p%totalStates == 0 ) return
-   
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
 
       ! allocate dXdu if necessary
@@ -2177,8 +2175,6 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   if ( p%totalStates == 0 ) return
-   
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    
       
