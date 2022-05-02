@@ -2227,9 +2227,6 @@ SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, E
 
 
          ! Local Variables:
-      INTEGER(IntKi)                                     :: I                          ! Generic index
-      REAL(SiKi)                                         :: WaveElev2Temp(p%NWaveElev)
-      REAL(ReKi)                                         :: AllOuts(MaxWaves2Outputs)
 
  
 

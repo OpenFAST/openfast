@@ -1142,9 +1142,8 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
    type(Morison_NodeType),    allocatable, intent(in   )  :: nodes(:)
    type(Morison_MemberType),               intent(inout)  :: member
    
-   type(Morison_NodeType)                      :: node
    integer(IntKi)                              :: i
-   real(ReKi)                                  :: s, CdMG, CaMG, CpMG, AxCaMG, AxCpMG
+   real(ReKi)                                  :: s
   
    select case ( MCoefMod )
       
@@ -1424,7 +1423,6 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
 
    integer(IntKi) :: N, i
    real(ReKi)     :: WtrDepth,s, dl
-   type(Morison_NodeType) :: node2
    real(ReKi)     :: vec(3)
    real(ReKi)     :: memLength 
    real(ReKi)     :: Za 
@@ -1874,12 +1872,10 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
 
    TYPE(Morison_MemberType) :: member    ! the current member
-   INTEGER                  :: N, i, j, k
+   INTEGER                  :: i, j, k
    REAL(ReKi)               :: v2D(3,1), pos(3)
-   REAL(ReKi)               :: Za
-   REAL(ReKi)               :: Zb
-   real(ReKi)               :: An(3), An_drag(3), Vn(3), I_n(3), sgn, Amag, Amag_drag, Vmag, Imag, Ir_MG_end, Il_MG_end, R_I(3,3), IRl_mat(3,3), tMG, MGdens, F_I(3), F_DP(3), af(3), VnDotAf
-   integer(IntKi)           :: MemberEndIndx, ncommon
+   real(ReKi)               :: An(3), An_drag(3), Vn(3), I_n(3), sgn, Amag, Amag_drag, Vmag, Imag, Ir_MG_end, Il_MG_end, R_I(3,3), IRl_mat(3,3), tMG, MGdens
+   integer(IntKi)           :: MemberEndIndx
    INTEGER, ALLOCATABLE       :: commonNodeLst(:)
    LOGICAL, ALLOCATABLE       :: usedJointList(:)
    integer(IntKi)           :: errStat2              ! returns a non-zero value when an error occurs            
@@ -2610,16 +2606,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
    character(*), parameter                           :: RoutineName = 'Morison_CalcOutput'
       
-   REAL(ReKi)                                        :: F_DP(6), kvec(3), vf(3), vrel(3), vmag
-   INTEGER                                           :: I, J, K, IntWrapIndx
+   REAL(ReKi)                                        :: vmag
+   INTEGER                                           :: I, J
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
-   REAL(ReKi)                                        :: qdotdot(6) ,qdotdot2(3)     ! The structural acceleration of a mesh node
-   !REAL(ReKi)                                        :: accel_fluid(6) ! Acceleration of fluid at the mesh node
-   REAL(ReKi)                                        :: dragFactor     ! The lumped drag factor
-   REAL(ReKi)                                        :: AnProd         ! Dot product of the directional area of the joint
-   REAL(ReKi)                                        :: D_AM_M(6,6)
-   REAL(ReKi)                                        :: D_dragConst     ! The distributed drag factor
-  ! REAL(ReKi)                                        :: InterpolationSlope 
+   REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
 
 
       
@@ -2638,28 +2628,23 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: z2
    REAL(ReKi)               :: r1
    REAL(ReKi)               :: r2
-   real(ReKi)               :: p2(3)
    REAL(ReKi)               :: dRdl_mg     ! shorthand for taper including marine growth of element i
    real(ReKi)               :: g     ! gravity constant
    REAL(ReKi)               :: h0    ! distances along cylinder centerline from point 1 to the waterplane
    real(ReKi)               :: k_hat(3), k_hat1(3), k_hat2(3) ! Elemental unit vector pointing from 1st node to 2nd node of the element
    REAL(ReKi)               :: rh    ! radius of cylinder at point where its centerline crosses the waterplane
-   REAL(ReKi)               :: l1    ! distance from cone end to bottom node
    REAL(ReKi)               :: Vs    ! segment submerged volume
    REAL(ReKi)               :: a0    ! waterplane ellipse shape
    REAL(ReKi)               :: b0    
    REAL(ReKi)               :: cr    ! centroid of segment submerged volume relative to its lower node
    REAL(ReKi)               :: cl 
    REAL(ReKi)               :: cx 
-   REAL(ReKi)               :: cz 
    REAL(ReKi)               :: pwr   ! exponent for buoyancy node distribution smoothing
    REAL(ReKi)               :: alpha ! final load distribution factor for element
    REAL(ReKi)               :: Fb    !buoyant force
    REAL(ReKi)               :: Fr    !radial component of buoyant force
    REAL(ReKi)               :: Fl    !axial component of buoyant force
    REAL(ReKi)               :: Moment     !moment induced about the center of the cylinder's bottom face
-   REAL(ReKi)               :: BuoyF(3) ! buoyancy force vector aligned with an element
-   REAL(ReKi)               :: BuoyM(3) ! buoyancy moment vector aligned with an element
    integer(IntKi)           :: im    ! counter   
    real(ReKi)               :: a_s1(3)       
    real(ReKi)               :: alpha_s1(3)
@@ -2671,7 +2656,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: Imat(3,3)
    real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal
    real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h, h_c_AM, deltal_AM
-   real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_A(6), F_I(6), F_D(6), F_B1(6), F_B2(6)
+   real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B1(6), F_B2(6)
 
    ! Local variables needed for wave stretching and load smoothing/redistribution
    INTEGER(IntKi)           :: FSElem
@@ -2680,11 +2665,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: Zeta2
    REAL(ReKi)               :: FSInt(3)
    REAL(ReKi)               :: F_D0(3)
-   REAL(ReKi)               :: F_A0(3)   
    REAL(ReKi)               :: F_I0(3)
    REAL(ReKi)               :: F_0(3)
    REAL(ReKi)               :: F_DS(3)
-   REAL(ReKi)               :: F_AS(3)
    REAL(ReKi)               :: F_IS(3)
    REAL(ReKi)               :: F_S(3)
    REAL(ReKi)               :: f_redist

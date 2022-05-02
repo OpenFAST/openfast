@@ -349,7 +349,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
    CHARACTER(1024)                            :: WvName                     ! complete filename for one of the output files
    CHARACTER(5)                               :: extension(7)     
    INTEGER                                    :: i, j, k, m, iFile
-   CHARACTER(64)                              :: Frmt, Frmt2, Sfrmt
+   CHARACTER(64)                              :: Frmt, Sfrmt
    CHARACTER(ChanLen)                         :: Delim
    real(ReKi)                                 :: x_gridPts(NGrid(1)), y_gridPts(NGrid(2)), z_gridPts(NGrid(3))
       ! Initialize ErrStat      
@@ -539,12 +539,10 @@ subroutine SeaStOut_WriteWaveElev0( Rootname, SeaSt_Prog, NStepWave, WaveDT, NGr
       ! Local variables
    INTEGER                                    :: UnWv                       ! file unit for writing the various wave kinematics files
    CHARACTER(1024)                            :: WvName                     ! complete filename for one of the output files
-   CHARACTER(5)                               :: extension(7)     
-   INTEGER                                    :: i, j, k, m, iFile
-   CHARACTER(64)                              :: Frmt, Frmt2, Sfrmt
-   CHARACTER(ChanLen)                         :: Delim
-   real(ReKi)                                 :: x_gridPts(NGrid(1)), y_gridPts(NGrid(2)), z_gridPts(NGrid(3))
-      ! Initialize ErrStat      
+   INTEGER                                    :: i, j, m
+   CHARACTER(64)                              :: Frmt, Frmt2
+
+   ! Initialize ErrStat      
    ErrStat = ErrID_None         
    ErrMsg  = "" 
    Frmt = '(F12.4,ES12.4e2)'
@@ -598,9 +596,9 @@ subroutine SeaStOut_MapOutputs( CurrentTime, p, NWaveElev, WaveElev, WaveElev1, 
    INTEGER(IntKi),                     intent(   out )  :: ErrStat        ! Error status of the operation
    CHARACTER(*),                       intent(   out )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
-   integer                                              :: I, iBody, startIndx, endIndx
-   integer(IntKi)                                       :: ErrStat2
-   character(ErrMsgLen)                                 :: ErrMsg2
+   integer                                              :: I
+!   integer(IntKi)                                       :: ErrStat2
+!   character(ErrMsgLen)                                 :: ErrMsg2
   
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -710,10 +708,6 @@ SUBROUTINE SeaStOut_Init( SeaSt_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
    INTEGER                                        :: J                    ! Generic loop counter      
-!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-!   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-!   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
-   LOGICAL                                        :: hasWaves2Outs        ! Are there any WAMIT-related outputs
    
    
    

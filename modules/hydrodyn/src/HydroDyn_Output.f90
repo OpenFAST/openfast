@@ -974,7 +974,7 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, F_Add, F_Wave
    INTEGER(IntKi),                        INTENT(   OUT )  :: ErrStat        ! Error status of the operation
    CHARACTER(*),                          INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
-   INTEGER                                                 :: I, iBody, startIndx, endIndx
+   INTEGER                                                 :: iBody, startIndx, endIndx
    integer(IntKi)                                          :: ErrStat2
    character(ErrMsgLen)                                    :: ErrMsg2
    real(ReKi)                                              :: rotdisp(3)
@@ -1124,13 +1124,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
    INTEGER                                        :: J                    ! Generic loop counter      
-   INTEGER                                        :: iWAMIT                ! loop counter over WAMIT objects
-!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-!   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-!   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
-   LOGICAL                                        :: hasWAMITOuts         ! Are there any WAMIT-related outputs
    LOGICAL                                        :: hasWAMIT2Outs        ! Are there any WAMIT-related outputs
-   LOGICAL                                        :: hasWaves2Outs        ! Are there any WAMIT-related outputs
    LOGICAL                                        :: hasMorisonOuts       ! Are there any Morison-related outputs
    
    
@@ -1254,8 +1248,6 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
    
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
-   INTEGER                                        :: iWAMIT               ! loop counter  for WAMIT Objects    
-!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
    CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
    CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
                 

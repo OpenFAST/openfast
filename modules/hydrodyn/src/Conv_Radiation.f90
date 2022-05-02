@@ -95,7 +95,6 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, 
       REAL(DbKi), ALLOCATABLE                :: RdtnTime  (:)                        ! Simulation times at which the instantaneous values of the wave radiation kernel are determined (sec)
       LOGICAL                                :: RdtnFrmAM                            ! Determine the wave radiation kernel from the frequency-dependent hydrodynamic added mass matrix? (.TRUE = yes, .FALSE. = determine the wave radiation kernel from the frequency-dependent hydrodynamic damping matrix) !JASON: SHOULD YOU MAKE THIS AN INPUT???<--JASON: IT IS NOT WISE TO COMPUTE THE RADIATION KERNEL FROM THE FREQUENCY-DEPENDENT ADDED MASS MATRIX, UNLESS A CORRECTION IS APPLIED.  THIS IS DESCRIBED IN THE WAMIT USER'S GUIDE!!!!
       INTEGER                                :: NStepRdtn2                           ! ( NStepRdtn-1 )/2
-      INTEGER                                :: Indx                                 ! Cycles through the upper-triangular portion (diagonal and above) of the frequency-dependent hydrodynamic added mass and damping matrices from the radiation problem
       INTEGER                                :: I                                    ! Generic index
       INTEGER                                :: J                                    ! Generic index
       INTEGER                                :: K                                    ! Generic index
@@ -628,7 +627,6 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, Er
       CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
           ! Local Variables
-      REAL(ReKi)                           :: IncrmntUD                  ! Incremental change in UD over a single radiation time step (m/s, rad/s)
       REAL(ReKi)                           :: RdtnRmndr                  ! Fractional amount of the p%RdtnDT timestep
       INTEGER(IntKi)                       :: J                          ! Generic index
       INTEGER(IntKi)                       :: K                          ! Generic index

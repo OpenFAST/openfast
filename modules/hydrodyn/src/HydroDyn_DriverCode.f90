@@ -71,17 +71,13 @@ PROGRAM HydroDynDriver
   
    REAL(DbKi)                                          :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
    REAL(DbKi)                                          :: Interval             ! HD module requested time interval
-   INTEGER(B1Ki), ALLOCATABLE                          :: SaveAry(:)           ! Array to store packed data structure
 
    type(SeaSt_InitInputType)                        :: InitInData_SeaSt           ! Input data for initialization
    type(SeaSt_InitOutputType)                       :: InitOutData_SeaSt          ! Output data from initialization
 
    type(SeaSt_ContinuousStateType)                  :: x_SeaSt                    ! Continuous states
-   type(SeaSt_ContinuousStateType)                  :: x_new_SeaSt                ! Continuous states at updated time
    type(SeaSt_DiscreteStateType)                    :: xd_SeaSt                   ! Discrete states
-   type(SeaSt_DiscreteStateType)                    :: xd_new_SeaSt               ! Discrete states at updated time
    type(SeaSt_ConstraintStateType)                  :: z_SeaSt                    ! Constraint states
-   type(SeaSt_ConstraintStateType)                  :: z_residual_SeaSt           ! Residual of the constraint state equations (Z)
    type(SeaSt_OtherStateType)                       :: OtherState_SeaSt           ! Other states
    type(SeaSt_MiscVarType)                          :: m_SeaSt                    ! Misc/optimization variables
 
@@ -90,7 +86,6 @@ PROGRAM HydroDynDriver
    type(SeaSt_InputType)                            :: u_SeaSt(NumInp)            ! System inputs
    type(SeaSt_OutputType)                           :: y_SeaSt                    ! System outputs
 
-   type(SeaSt_ContinuousStateType)                  :: dxdt_SeaSt                 ! First time derivatives of the continuous states
 
    
    TYPE(HydroDyn_InitInputType)                        :: InitInData           ! Input data for initialization
@@ -101,7 +96,6 @@ PROGRAM HydroDynDriver
    TYPE(HydroDyn_DiscreteStateType)                    :: xd                   ! Discrete states
    TYPE(HydroDyn_DiscreteStateType)                    :: xd_new               ! Discrete states at updated time
    TYPE(HydroDyn_ConstraintStateType)                  :: z                    ! Constraint states
-   TYPE(HydroDyn_ConstraintStateType)                  :: z_residual           ! Residual of the constraint state equations (Z)
    TYPE(HydroDyn_OtherStateType)                       :: OtherState           ! Other states
    TYPE(HydroDyn_MiscVarType)                          :: m                    ! Misc/optimization variables
 
@@ -110,14 +104,10 @@ PROGRAM HydroDynDriver
    TYPE(HydroDyn_InputType)                            :: u(NumInp)            ! System inputs
    TYPE(HydroDyn_OutputType)                           :: y                    ! System outputs
 
-   TYPE(HydroDyn_ContinuousStateType)                  :: dxdt                 ! First time derivatives of the continuous states
 
 
    INTEGER(IntKi)                                     :: UnPRPInp            ! PRP Inputs file identifier
-   INTEGER(IntKi)                                     :: UnMorisonInp          ! Morison Inputs file identifier
-   INTEGER(IntKi)                                     :: UnHD_Out              ! Output file identifier
    REAL(ReKi), ALLOCATABLE                            :: PRPin(:,:)          ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
-   REAL(ReKi), ALLOCATABLE                            :: Morisonin(:,:)        ! Variable for storing time, forces, and body velocities, in m/s or rad/s for Morison elements
    
    INTEGER(IntKi)                                     :: NBody                 ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
    
@@ -136,24 +126,16 @@ PROGRAM HydroDynDriver
    real(ReKi)                                     :: UsrTime1                                ! User CPU time for simulation initialization
    real(ReKi)                                     :: UsrTime2                                ! User CPU time for simulation (without intialization)
    real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
-   real(DbKi)                                     :: t_global                                ! Current simulation time (for global/FAST simulation)
    real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
    integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
 
-   type(MeshType)                                 :: RefPtMesh                               ! 1-node Point mesh located at (0,0,0) in global system where all PRP-related driver inputs are set
    type(MeshMapType)                              :: HD_Ref_2_WB_P                           ! Mesh mapping between Reference pt mesh and WAMIT body(ies) mesh
    type(MeshMapType)                              :: HD_Ref_2_M_P                            ! Mesh mapping between Reference pt mesh and Morison mesh
-   real(R8Ki)                                     :: theta(3)                                ! mesh creation helper data
    
    ! For testing
-   LOGICAL                                            :: DoTight = .FALSE.
    REAL(DbKi)                                         :: maxAngle             ! For debugging, see what the largest rotational angle input is for the simulation
-   CHARACTER(10)                                      :: AngleMsg             ! For debugging, a string version of the largest rotation input
-   INTEGER                                            :: UnMeshDebug
-   CHARACTER(50)                                      :: MeshDebugFile
 
    CHARACTER(20)                    :: FlagArg       ! Flag argument from command line
-   CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
 
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
 
@@ -718,21 +700,12 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables  
-         
-   INTEGER                                          :: I                    ! generic integer for counting
-   INTEGER                                          :: J                    ! generic integer for counting
-   CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
 
    INTEGER                                          :: UnIn                 ! Unit number for the input file
    INTEGER                                          :: UnEchoLocal          ! The local unit number for this module's echo file
    CHARACTER(1024)                                  :: EchoFile             ! Name of HydroDyn echo file  
-   CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line   
    CHARACTER(1024)                                  :: PriPath              ! Temporary storage for relative path name
-   CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
    CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file  
-
-   REAL(ReKi)                                       :: TmpRealVar2(2)       !< Temporary real    array size 2
-   INTEGER(IntKi)                                   :: TmpIntVar2(2)        !< Temporary integer array size 2
 
    integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                             :: errMsg2       ! temporary error message 

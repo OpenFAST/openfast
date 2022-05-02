@@ -364,7 +364,6 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    CHARACTER(1024)                                 :: FileName           ! complete filename for one of the output files
    INTEGER                                         :: i, j, k, m, icount ! Generic index
    INTEGER                                         :: iFile              ! Generic index
-   CHARACTER(64)                                   :: Frmt, Sfrmt
    CHARACTER(10)                                   :: Delim
    CHARACTER(64), ALLOCATABLE                      :: WaveDataStr(:)
    REAL(SiKi), ALLOCATABLE                         :: WaveData(:)
@@ -994,9 +993,8 @@ SUBROUTINE GetFileLength(UnitDataFile, Filename, NumDataColumns, NumDataLines, N
    INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
    CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
    REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
-   CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
    CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
-   INTEGER(IntKi)                                     :: i,j,k             !< simple integer counters
+   INTEGER(IntKi)                                     :: i                 !< simple integer counter
    INTEGER(IntKi)                                     :: LineNumber        !< the line I am on
    LOGICAL                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
    LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.

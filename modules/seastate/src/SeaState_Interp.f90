@@ -221,7 +221,6 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
-   integer(IntKi)                                              :: mult
    real(ReKi)                                                  :: Tmp
    
    ErrStat = ErrID_None

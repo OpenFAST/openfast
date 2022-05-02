@@ -227,7 +227,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Local Variables
       INTEGER(IntKi)                                     :: IBody                !< Counter for current body
       INTEGER(IntKi)                                     :: ThisDim              !< Counter to currrent dimension
-      INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: Idx                  !< Generic counter
       REAL(R8Ki)                                         :: theta(3)             !< rotation about z for the current body (0 about x,y)
       REAL(R8Ki)                                         :: orientation(3,3)     !< Orientation matrix for orientation of the current body

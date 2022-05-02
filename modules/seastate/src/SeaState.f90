@@ -1342,7 +1342,6 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       REAL(SiKi)                           :: WaveAcc(3,p%NWaveKin)
       REAL(SiKi)                           :: WaveDynP(p%NWaveKin)
       REAL(ReKi)                           :: AllOuts(MaxSeaStOutputs)  
-      integer(IntKi)                       :: indxStart, indxEnd, iWAMIT  ! Counters
       real(ReKi)                           :: positionXYZ(3), positionXY(2)
   
       REAL(ReKi)                           :: zeta
@@ -1545,7 +1544,6 @@ SUBROUTINE SeaSt_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, 
       TYPE(SeaSt_ContinuousStateType),    INTENT(INOUT)  :: dxdt        !< Continuous state derivatives at Time
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-      integer(IntKi)                                     :: iWAMIT        ! loop counter
       CHARACTER(*), PARAMETER                            :: RoutineName = 'SeaSt_CalcContStateDeriv'
                
          ! Initialize ErrStat
