@@ -39,7 +39,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     2  - above + all position/orientation info
    !     3  - above + input files (if direct passed)
    !     4  - above + meshes
-   integer(IntKi),   parameter            :: debugverbose = 1
+   integer(IntKi),   parameter            :: debugverbose = 0
 
    !------------------------------------------------------------------------------------
    !  Error handling
@@ -239,7 +239,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    ! Time
    real(c_double),            intent(in   )  :: T_initial_C
    real(c_double),            intent(in   )  :: DT_C                                   !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
-   real(c_double),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation (used to set arrays for wave kinematics)
+   real(c_double),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation
    ! Flags
    logical(c_bool),           intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
    integer(c_int),            intent(in   )  :: WrVTK_in                               !< Write VTK outputs [0: none, 1: init only, 2: animation]
@@ -566,7 +566,7 @@ CONTAINS
       call WrScr("       ADinputFilePassed_C            "//TmpFlag )
       call WrScr("       ADinputFileString_C (ptr addr) "//trim(Num2LStr(LOC(ADinputFileString_C))) )
       call WrScr("       ADinputFileStringLength_C      "//trim(Num2LStr( ADinputFileStringLength_C )) )
-      call WrScr("       OutRootName_C                  "//trim(TRANSFER( OutRootName_C, OutRootName )) )
+      call WrScr("       OutRootName_C (not truncated)  "//trim(TRANSFER( OutRootName_C, OutRootName )) )
       call WrScr("   Environment variables")
       call WrScr("       gravity_C                      "//trim(Num2LStr( gravity_C     )) )
       call WrScr("       defFldDens_C                   "//trim(Num2LStr( defFldDens_C  )) )
@@ -795,7 +795,7 @@ CONTAINS
       ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
       ! create the VTK directory if it does not exist
       call GetPath ( OutRootName, VTK_OutFileRoot, TmpFileName ) ! the returned VTK_OutFileRoot includes a file separator character at the end
-      VTK_OutFileRoot = trim(VTK_OutFileRoot) // 'vtk'
+      VTK_OutFileRoot = trim(VTK_OutFileRoot) // 'vtk-ADI'
       call MKDIR( trim(VTK_OutFileRoot) )
       VTK_OutFileRoot = trim( VTK_OutFileRoot ) // PathSep // trim(TmpFileName)
 
