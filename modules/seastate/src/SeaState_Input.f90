@@ -533,10 +533,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
       ! Passed variables
 
-   type(SeaSt_InitInputType),  intent( in    )   :: InitInp              ! the SeaState data
-   type(SeaSt_ParameterType),  intent( inout )   :: p                    ! the SeaState parameter data
+   type(SeaSt_InitInputType),     intent( in    )   :: InitInp              ! the SeaState data
+   type(SeaSt_ParameterType),     intent( inout )   :: p                    ! the SeaState parameter data
    real(DbKi),                    intent( in    )   :: Interval             ! The DT supplied by the glue code/driver
-   type(SeaSt_InputFile),      intent( inout )   :: InputFileData        ! the SeaState input file data
+   type(SeaSt_InputFile),         intent( inout )   :: InputFileData        ! the SeaState input file data
    integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs
    character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
