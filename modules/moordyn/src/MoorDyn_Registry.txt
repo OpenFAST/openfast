@@ -383,13 +383,8 @@ typedef   ^       ^                    CHARACTER(1)        Delim          -     
 typedef   ^       ^                    IntKi               MDUnOut        -     -    -   "Unit number of main output file"
 typedef   ^       ^                    CHARACTER(1024)     PriPath        -     -    -   "The path to the primary MoorDyn input file, used if looking for additional input files"
 typedef   ^       ^                    IntKi               writeLog       -     -    -   "Switch for level of log file output"
-<<<<<<< HEAD
 #NOTE: there may be an issue with start/restart with the UnLog stored in parameters. We'll ignore this for now -- ADP
 typedef   ^       ^                    IntKi               UnLog          -     -1   -   "Unit number of log file"
-=======
-# Note from Andy: there could be a potential start/restart issue with UnLog. May need to revisit.
-typedef   ^       ^                    IntKi               UnLog          -    -1    -   "Unit number of log file"
->>>>>>> 58d0febd (MoorDyn updates: linearization, wave stretching, buoyancy, print:)
 typedef   ^       ^                    IntKi               WaveKin        -     -    -   "Flag for whether or how to consider water kinematics"
 typedef   ^       ^                    IntKi               Current        -     -    -   "Flag for whether or how to consider water kinematics"
 typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0"
