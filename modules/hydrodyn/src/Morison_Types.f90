@@ -275,6 +275,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDpth      !< Water depth (positive-valued) [m]
     REAL(ReKi)  :: MSL2SWL      !< Mean Sea Level to Still Water Level offset [m]
     INTEGER(IntKi)  :: WaveDisp      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
+    INTEGER(IntKi)  :: AMMod      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 2: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NJoints      !< Number of user-specified joints [-]
     INTEGER(IntKi)  :: NNodes      !< Total number of nodes in the final software model [-]
     TYPE(Morison_JointType) , DIMENSION(:), ALLOCATABLE  :: InpJoints      !< Array of user-specified joints [-]
@@ -394,6 +395,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDpth      !< Water depth (positive-valued) [m]
     REAL(ReKi)  :: MSL2SWL      !< Mean Sea Level to Still Water Level offset [m]
     INTEGER(IntKi)  :: WaveDisp      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
+    INTEGER(IntKi)  :: AMMod      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 2: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NMembers      !< number of members [-]
     TYPE(Morison_MemberType) , DIMENSION(:), ALLOCATABLE  :: Members      !< Array of Morison members used during simulation [-]
     INTEGER(IntKi)  :: NNodes      !<  [-]
@@ -5955,6 +5957,7 @@ ENDIF
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
     DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
     DstInitInputData%WaveDisp = SrcInitInputData%WaveDisp
+    DstInitInputData%AMMod = SrcInitInputData%AMMod
     DstInitInputData%NJoints = SrcInitInputData%NJoints
     DstInitInputData%NNodes = SrcInitInputData%NNodes
 IF (ALLOCATED(SrcInitInputData%InpJoints)) THEN
@@ -6558,6 +6561,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
       Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! WaveDisp
+      Int_BufSz  = Int_BufSz  + 1  ! AMMod
       Int_BufSz  = Int_BufSz  + 1  ! NJoints
       Int_BufSz  = Int_BufSz  + 1  ! NNodes
   Int_BufSz   = Int_BufSz   + 1     ! InpJoints allocated yes/no
@@ -6966,6 +6970,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveDisp
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%AMMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NJoints
     Int_Xferred = Int_Xferred + 1
@@ -7916,6 +7922,8 @@ ENDIF
     OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%WaveDisp = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%AMMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NJoints = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -11080,6 +11088,7 @@ ENDIF
     DstParamData%WtrDpth = SrcParamData%WtrDpth
     DstParamData%MSL2SWL = SrcParamData%MSL2SWL
     DstParamData%WaveDisp = SrcParamData%WaveDisp
+    DstParamData%AMMod = SrcParamData%AMMod
     DstParamData%NMembers = SrcParamData%NMembers
 IF (ALLOCATED(SrcParamData%Members)) THEN
   i1_l = LBOUND(SrcParamData%Members,1)
@@ -11698,6 +11707,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
       Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! WaveDisp
+      Int_BufSz  = Int_BufSz  + 1  ! AMMod
       Int_BufSz  = Int_BufSz  + 1  ! NMembers
   Int_BufSz   = Int_BufSz   + 1     ! Members allocated yes/no
   IF ( ALLOCATED(InData%Members) ) THEN
@@ -11975,6 +11985,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveDisp
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%AMMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NMembers
     Int_Xferred = Int_Xferred + 1
@@ -12836,6 +12848,8 @@ ENDIF
     OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%WaveDisp = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%AMMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NMembers = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

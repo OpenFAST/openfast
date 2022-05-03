@@ -1919,10 +1919,19 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%OutSwtch   = InitInp%OutSwtch
    p%MSL2SWL    = InitInp%MSL2SWL
    p%WaveDisp   = InitInp%WaveDisp
+   p%AMMod      = InitInp%AMMod
+   p%WaveStMod  = InitInp%WaveStMod
+
+   ! Only compute added-mass force up to the free surface if wave stretching is enabled
+   IF ( p%WaveStMod .EQ. 0_IntKi ) THEN
+       ! Setting AMMod to zero just in case. Probably redundant.
+       p%AMMod = 0_IntKi
+   END IF
+
    p%WaveElev1  => InitInp%WaveElev1
-   if (associated(InitInp%WaveElev2)) then
+   IF (associated(InitInp%WaveElev2)) THEN
       p%WaveElev2 => InitInp%WaveElev2
-   end if
+   END IF
 
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat )
    IF ( errStat /= ErrID_None ) THEN
@@ -2198,7 +2207,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%seast_interp_p = InitInp%seast_interp_p
 
    ! Setup 3D SWL grids needed for wave stretching
-   p%WaveStMod = InitInp%WaveStMod
+   
    IF (p%WaveStMod > 0_IntKi) THEN ! Wave stretching enabled
       
       ! Allocate variables for the wave dynamics at the SWL - Needed for wave stretching
@@ -3401,34 +3410,36 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            IF ( .NOT. mem%PropPot ) THEN
               !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
               Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
-              !f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) ) * m%nodeInWater(mem%NodeIndx(i))
               f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
-              ! Due to stability issues with flexible structure, need to compute the added-mass force without 
-              ! wave stretching and load smoothing for now. In other words, the added-mass force is zeroed for
-              ! nodes above MSL based on their undisplaced position given by u%Mesh%Position.
-              z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL
-              IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL at its reference position; zero added-mass force
-                  f_hydro = 0.0_ReKi
-              ELSE
-                 ! Need to compute deltal_AM and h_c_AM based on the formulation without wave stretching.
-                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
-                 IF ( z2 > 0.0_ReKi ) THEN ! Element i crosses the SWL
-                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
-                    deltal_AM = mem%dl/2.0 + h
-                    h_c_AM    = 0.5*(h-mem%dl/2.0)
+
+              IF ( p%AMMod .EQ. 0_IntKi ) THEN ! Compute added-mass force up to the SWL
+                 z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL ! Undisplaced z-position of the current node
+                 IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL undisplaced; zero added-mass force
+                    f_hydro = 0.0_ReKi
                  ELSE
-                    deltal_AM = deltal;
-                    h_c_AM    = h_c
+                    ! Need to compute deltal_AM and h_c_AM based on the formulation without wave stretching.
+                    z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL ! Undisplaced z-position of the next node
+                    IF ( z2 > 0.0_ReKi ) THEN ! Element i crosses the SWL
+                       h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
+                       deltal_AM = mem%dl/2.0 + h
+                       h_c_AM    = 0.5*(h-mem%dl/2.0)
+                    ELSE
+                       deltal_AM = deltal;
+                       h_c_AM    = h_c
+                    END IF
+                    ! Note: Do not overwrite deltal and h_c here. Still need them for the fluid inertia and drag forces.
+                    CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal_AM, h_c_AM, m%memberLoads(im)%F_A(:, i) )
                  END IF
-              END IF
-              
-              !CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
-              CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal_AM, h_c_AM, m%memberLoads(im)%F_A(:, i) )
+              ELSE ! Compute added-mass force up to the instantaneous free surface
+                 f_hydro = f_hydro * m%nodeInWater(mem%NodeIndx(i)) ! Zero the force if node above free surface
+                 CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+                 IF (i == FSElem) THEN ! Save the distributed load at the first node below the free surface
+                    F_A0 = f_hydro
+                 END IF
+              END IF ! AMMod 0 or 1
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
-              !IF (i == FSElem) THEN ! Save the distributed load at the first node below the free surface
-              !   F_A0 = f_hydro
-              !END IF
+              
            
               !--------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
               IF (mem%PropMCF) THEN
@@ -3562,13 +3573,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
         ! Hydrodynamic added mass and inertia loads
         IF ( .NOT. mem%PropPot ) THEN
-           ! Because the added-mass force is not computed with wave stretching, no need to perform load smoothing related calculations.
+           
            ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
-           !Am =      mem%Ca(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*mem%Ak + &
-           !    2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p*mem%kkt
-           !F_AS = -matmul( Am, &
-           !           SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
-           !      (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
+           IF (p%AMMod > 0_IntKi) THEN
+              Am =      mem%Ca(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*mem%Ak + &
+                  2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p*mem%kkt
+              F_AS = -matmul( Am, &
+                         SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
+                    (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
+           END IF
          
            ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
            IF ( mem%PropMCF) THEN
@@ -3609,21 +3622,23 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
         ! Hydrodynamic added mass and inertia loads
         IF ( .NOT. mem%PropPot ) THEN
-           ! Because the added-mass force is not computed with wave stretching, no need to perform load smoothing related calculations.
-           !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
-           ! Apply load redistribution to the first node below the free surface
-           !Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
-           !CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
-           !m%memberLoads(im)%F_A(:, FSElem) = m%memberLoads(im)%F_A(:, FSElem) + Df_hydro_lumped
-           !y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
-           !y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(4:6)
+           
+           IF ( p%AMMod > 0_IntKi ) THEN
+              !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
+              ! Apply load redistribution to the first node below the free surface
+              Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
+              CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+              m%memberLoads(im)%F_A(:, FSElem) = m%memberLoads(im)%F_A(:, FSElem) + Df_hydro_lumped
+              y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
+              y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(4:6)
         
-           ! Apply load redistribution to the second node below the free surface
-           !Df_hydro = f_redist * F_A0
-           !CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
-           !m%memberLoads(im)%F_A(:, FSElem-1) = m%memberLoads(im)%F_A(:, FSElem-1) + Df_hydro_lumped
-           !y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
-           !y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+              ! Apply load redistribution to the second node below the free surface
+              Df_hydro = f_redist * F_A0
+              CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+              m%memberLoads(im)%F_A(:, FSElem-1) = m%memberLoads(im)%F_A(:, FSElem-1) + Df_hydro_lumped
+              y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
+              y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+           END IF
            
            !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
            ! Apply load redistribution to the first node below the free surface
@@ -3645,21 +3660,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         !----------------------------------------------------------------------------------------------------!
         !                     Perform moment correction to compensate for load redistribution                !
         !----------------------------------------------------------------------------------------------------!
-        ! Moment correction to the first node below the free surface
+        ! Moment correction to the first and second nodes below the free surface
         F_S = F_DS
-        IF ( .NOT. mem%PropPot) THEN
-           !F_S = F_S + F_AS + F_IS
-           F_S = F_S + F_IS
-        END IF
-        DM_hydro = 0.5_ReKi * SubRatio**2 * deltal * cross_product(mem%k, F_S)
-        y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + DM_hydro * deltal
-        
-        ! Moment correction to the second node below the free surface
         F_0 = F_D0
         IF ( .NOT. mem%PropPot) THEN
-           !F_0 = F_0 + F_A0 + F_I0
+           F_S = F_S + F_IS
            F_0 = F_0 + F_I0
+           IF ( p%AMMod > 0_IntKi) THEN
+              F_S = F_S + F_AS
+              F_0 = F_0 + F_A0
+           END IF
         END IF
+        ! First node below the free surface
+        DM_hydro = 0.5_ReKi * SubRatio**2 * deltal * cross_product(mem%k, F_S)
+        y%Mesh%Moment(:,mem%NodeIndx(FSElem))   = y%Mesh%Moment(:,mem%NodeIndx(FSElem))   + DM_hydro * deltal
+        ! Second node below the free surface
         DM_hydro =               f_redist * deltal * cross_product(mem%k, F_0)
         y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
 
