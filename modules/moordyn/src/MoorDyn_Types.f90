@@ -414,7 +414,7 @@ IMPLICIT NONE
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     INTEGER(IntKi)  :: MDUnOut      !< Unit number of main output file [-]
     CHARACTER(1024)  :: PriPath      !< The path to the primary MoorDyn input file, used if looking for additional input files [-]
-    INTEGER(IntKi)  :: writeLog      !< Switch for level of log file output [-]
+    INTEGER(IntKi)  :: writeLog = -1      !< Switch for level of log file output [-]
     INTEGER(IntKi)  :: UnLog = -1      !< Unit number of log file [-]
     INTEGER(IntKi)  :: WaveKin      !< Flag for whether or how to consider water kinematics [-]
     INTEGER(IntKi)  :: Current      !< Flag for whether or how to consider water kinematics [-]

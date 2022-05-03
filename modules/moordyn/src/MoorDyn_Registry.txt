@@ -382,7 +382,7 @@ typedef   ^       ^                    MD_OutParmType      OutParam       {:}   
 typedef   ^       ^                    CHARACTER(1)        Delim          -     -    -   "Column delimiter for output text files"     -
 typedef   ^       ^                    IntKi               MDUnOut        -     -    -   "Unit number of main output file"
 typedef   ^       ^                    CHARACTER(1024)     PriPath        -     -    -   "The path to the primary MoorDyn input file, used if looking for additional input files"
-typedef   ^       ^                    IntKi               writeLog       -     -    -   "Switch for level of log file output"
+typedef   ^       ^                    IntKi               writeLog       -     -1   -   "Switch for level of log file output"
 #NOTE: there may be an issue with start/restart with the UnLog stored in parameters. We'll ignore this for now -- ADP
 typedef   ^       ^                    IntKi               UnLog          -     -1   -   "Unit number of log file"
 typedef   ^       ^                    IntKi               WaveKin        -     -    -   "Flag for whether or how to consider water kinematics"
