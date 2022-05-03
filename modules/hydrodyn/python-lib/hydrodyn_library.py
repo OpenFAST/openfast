@@ -2,7 +2,7 @@
 # LICENSING
 # Copyright (C) 2021 National Renewable Energy Laboratory
 #
-# This file is part of InflowWind.
+# This file is part of HydroDyn.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,15 +67,11 @@ from ctypes import (
     POINTER,
     create_string_buffer,
     byref,
-    c_byte,
     c_int,
     c_double,
     c_float, 
     c_char,
     c_char_p,
-    c_wchar,
-    c_wchar_p,
-    c_bool
 )
 import numpy as np
 import datetime
@@ -466,7 +462,7 @@ class HydroDynLib(CDLL):
     @property
     def output_channel_names(self):
         if len(self._channel_names_c.value.split()) == 0:
-             return []
+            return []
         output_channel_names = self._channel_names_c.value.split()
         output_channel_names = [n.decode('UTF-8') for n in output_channel_names]
         return output_channel_names
