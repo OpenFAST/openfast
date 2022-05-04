@@ -260,22 +260,36 @@ ENDIF
     DstInitInputData%C_obj%TowerBaseHeight = SrcInitInputData%C_obj%TowerBaseHeight
  END SUBROUTINE OpFM_CopyInitInput
 
- SUBROUTINE OpFM_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(InitInputData%StructBldRNodes)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitInputData%StructBldRNodes)
   InitInputData%StructBldRNodes => NULL()
   InitInputData%C_obj%StructBldRNodes = C_NULL_PTR
   InitInputData%C_obj%StructBldRNodes_Len = 0
 ENDIF
 IF (ASSOCIATED(InitInputData%StructTwrHNodes)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitInputData%StructTwrHNodes)
   InitInputData%StructTwrHNodes => NULL()
   InitInputData%C_obj%StructTwrHNodes = C_NULL_PTR
@@ -620,22 +634,35 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE OpFM_CopyInitOutput
 
- SUBROUTINE OpFM_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
 ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE OpFM_DestroyInitOutput
 
  SUBROUTINE OpFM_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1082,60 +1109,80 @@ IF (ALLOCATED(SrcMiscData%Line2_to_Point_Motions)) THEN
 ENDIF
  END SUBROUTINE OpFM_CopyMisc
 
- SUBROUTINE OpFM_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MiscData%ActForceLoads)) THEN
 DO i1 = LBOUND(MiscData%ActForceLoads,1), UBOUND(MiscData%ActForceLoads,1)
-  CALL MeshDestroy( MiscData%ActForceLoads(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ActForceLoads(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ActForceLoads)
 ENDIF
 IF (ALLOCATED(MiscData%ActForceMotions)) THEN
 DO i1 = LBOUND(MiscData%ActForceMotions,1), UBOUND(MiscData%ActForceMotions,1)
-  CALL MeshDestroy( MiscData%ActForceMotions(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ActForceMotions(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ActForceMotions)
 ENDIF
 IF (ALLOCATED(MiscData%ActForceMotionsPoints)) THEN
 DO i1 = LBOUND(MiscData%ActForceMotionsPoints,1), UBOUND(MiscData%ActForceMotionsPoints,1)
-  CALL MeshDestroy( MiscData%ActForceMotionsPoints(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ActForceMotionsPoints(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ActForceMotionsPoints)
 ENDIF
 IF (ALLOCATED(MiscData%ActForceLoadsPoints)) THEN
 DO i1 = LBOUND(MiscData%ActForceLoadsPoints,1), UBOUND(MiscData%ActForceLoadsPoints,1)
-  CALL MeshDestroy( MiscData%ActForceLoadsPoints(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ActForceLoadsPoints(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ActForceLoadsPoints)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Line2_Loads)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Line2_Loads,1), UBOUND(MiscData%Line2_to_Line2_Loads,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Loads(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Loads(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Line2_Loads)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Line2_Motions)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Line2_Motions,1), UBOUND(MiscData%Line2_to_Line2_Motions,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Motions(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Motions(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Line2_Motions)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Point_Loads)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Point_Loads,1), UBOUND(MiscData%Line2_to_Point_Loads,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Loads(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Loads(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Point_Loads)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Point_Motions)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Point_Motions,1), UBOUND(MiscData%Line2_to_Point_Motions,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Motions(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Motions(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Point_Motions)
 ENDIF
@@ -2298,22 +2345,36 @@ ENDIF
     DstParamData%C_obj%TowerBaseHeight = SrcParamData%C_obj%TowerBaseHeight
  END SUBROUTINE OpFM_CopyParam
 
- SUBROUTINE OpFM_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(ParamData%forceBldRnodes)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ParamData%forceBldRnodes)
   ParamData%forceBldRnodes => NULL()
   ParamData%C_obj%forceBldRnodes = C_NULL_PTR
   ParamData%C_obj%forceBldRnodes_Len = 0
 ENDIF
 IF (ASSOCIATED(ParamData%forceTwrHnodes)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ParamData%forceTwrHnodes)
   ParamData%forceTwrHnodes => NULL()
   ParamData%C_obj%forceTwrHnodes = C_NULL_PTR
@@ -2926,112 +2987,141 @@ IF (ASSOCIATED(SrcInputData%forceNodesChord)) THEN
 ENDIF
  END SUBROUTINE OpFM_CopyInput
 
- SUBROUTINE OpFM_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(InputData%pxVel)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pxVel)
   InputData%pxVel => NULL()
   InputData%C_obj%pxVel = C_NULL_PTR
   InputData%C_obj%pxVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pyVel)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pyVel)
   InputData%pyVel => NULL()
   InputData%C_obj%pyVel = C_NULL_PTR
   InputData%C_obj%pyVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pzVel)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pzVel)
   InputData%pzVel => NULL()
   InputData%C_obj%pzVel = C_NULL_PTR
   InputData%C_obj%pzVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pxForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pxForce)
   InputData%pxForce => NULL()
   InputData%C_obj%pxForce = C_NULL_PTR
   InputData%C_obj%pxForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pyForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pyForce)
   InputData%pyForce => NULL()
   InputData%C_obj%pyForce = C_NULL_PTR
   InputData%C_obj%pyForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pzForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pzForce)
   InputData%pzForce => NULL()
   InputData%C_obj%pzForce = C_NULL_PTR
   InputData%C_obj%pzForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%xdotForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%xdotForce)
   InputData%xdotForce => NULL()
   InputData%C_obj%xdotForce = C_NULL_PTR
   InputData%C_obj%xdotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%ydotForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%ydotForce)
   InputData%ydotForce => NULL()
   InputData%C_obj%ydotForce = C_NULL_PTR
   InputData%C_obj%ydotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%zdotForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%zdotForce)
   InputData%zdotForce => NULL()
   InputData%C_obj%zdotForce = C_NULL_PTR
   InputData%C_obj%zdotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pOrientation)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pOrientation)
   InputData%pOrientation => NULL()
   InputData%C_obj%pOrientation = C_NULL_PTR
   InputData%C_obj%pOrientation_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fx)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%fx)
   InputData%fx => NULL()
   InputData%C_obj%fx = C_NULL_PTR
   InputData%C_obj%fx_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fy)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%fy)
   InputData%fy => NULL()
   InputData%C_obj%fy = C_NULL_PTR
   InputData%C_obj%fy_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fz)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%fz)
   InputData%fz => NULL()
   InputData%C_obj%fz = C_NULL_PTR
   InputData%C_obj%fz_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momentx)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%momentx)
   InputData%momentx => NULL()
   InputData%C_obj%momentx = C_NULL_PTR
   InputData%C_obj%momentx_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momenty)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%momenty)
   InputData%momenty => NULL()
   InputData%C_obj%momenty = C_NULL_PTR
   InputData%C_obj%momenty_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momentz)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%momentz)
   InputData%momentz => NULL()
   InputData%C_obj%momentz = C_NULL_PTR
   InputData%C_obj%momentz_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%forceNodesChord)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%forceNodesChord)
   InputData%forceNodesChord => NULL()
   InputData%C_obj%forceNodesChord = C_NULL_PTR
@@ -4296,28 +4386,43 @@ IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
 ENDIF
  END SUBROUTINE OpFM_CopyOutput
 
- SUBROUTINE OpFM_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(OutputData%u)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%u)
   OutputData%u => NULL()
   OutputData%C_obj%u = C_NULL_PTR
   OutputData%C_obj%u_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%v)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%v)
   OutputData%v => NULL()
   OutputData%C_obj%v = C_NULL_PTR
   OutputData%C_obj%v_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%w)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%w)
   OutputData%w => NULL()
   OutputData%C_obj%w = C_NULL_PTR

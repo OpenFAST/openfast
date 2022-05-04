@@ -306,15 +306,27 @@ ENDIF
     DstInitInputData%MCFD = SrcInitInputData%MCFD
  END SUBROUTINE Waves_CopyInitInput
 
- SUBROUTINE Waves_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitInputData%WaveElevxi)) THEN
   DEALLOCATE(InitInputData%WaveElevxi)
 ENDIF
@@ -336,7 +348,8 @@ ENDIF
 IF (ALLOCATED(InitInputData%CurrVyi)) THEN
   DEALLOCATE(InitInputData%CurrVyi)
 ENDIF
-  CALL NWTC_Library_Destroynwtc_randomnumber_parametertype( InitInputData%RNG, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroynwtc_randomnumber_parametertype( InitInputData%RNG, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Waves_DestroyInitInput
 
  SUBROUTINE Waves_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1302,16 +1315,29 @@ ENDIF
     DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
  END SUBROUTINE Waves_CopyInitOutput
 
- SUBROUTINE Waves_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(InitOutputData%WaveElevC0)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveElevC0)
   InitOutputData%WaveElevC0 => NULL()
 ENDIF
@@ -1319,6 +1345,7 @@ IF (ALLOCATED(InitOutputData%WaveElevC)) THEN
   DEALLOCATE(InitOutputData%WaveElevC)
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveDirArr)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveDirArr)
   InitOutputData%WaveDirArr => NULL()
 ENDIF
@@ -1326,38 +1353,47 @@ IF (ALLOCATED(InitOutputData%WaveKinzi)) THEN
   DEALLOCATE(InitOutputData%WaveKinzi)
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveDynP)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveDynP)
   InitOutputData%WaveDynP => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveAcc)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveAcc)
   InitOutputData%WaveAcc => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveAccMCF)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveAccMCF)
   InitOutputData%WaveAccMCF => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveVel)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveVel)
   InitOutputData%WaveVel => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%PWaveDynP0)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%PWaveDynP0)
   InitOutputData%PWaveDynP0 => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%PWaveAcc0)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%PWaveAcc0)
   InitOutputData%PWaveAcc0 => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%PWaveAccMCF0)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%PWaveAccMCF0)
   InitOutputData%PWaveAccMCF0 => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%PWaveVel0)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%PWaveVel0)
   InitOutputData%PWaveVel0 => NULL()
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveElev)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveElev)
   InitOutputData%WaveElev => NULL()
 ENDIF
@@ -1365,6 +1401,7 @@ IF (ALLOCATED(InitOutputData%WaveElev0)) THEN
   DEALLOCATE(InitOutputData%WaveElev0)
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveTime)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveTime)
   InitOutputData%WaveTime => NULL()
 ENDIF
@@ -2465,15 +2502,27 @@ ENDIF
     DstContStateData%DummyContState = SrcContStateData%DummyContState
  END SUBROUTINE Waves_CopyContState
 
- SUBROUTINE Waves_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Waves_DestroyContState
 
  SUBROUTINE Waves_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2590,15 +2639,27 @@ ENDIF
     DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
  END SUBROUTINE Waves_CopyDiscState
 
- SUBROUTINE Waves_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Waves_DestroyDiscState
 
  SUBROUTINE Waves_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2715,15 +2776,27 @@ ENDIF
     DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
  END SUBROUTINE Waves_CopyConstrState
 
- SUBROUTINE Waves_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Waves_DestroyConstrState
 
  SUBROUTINE Waves_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2840,15 +2913,27 @@ ENDIF
     DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
  END SUBROUTINE Waves_CopyOtherState
 
- SUBROUTINE Waves_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Waves_DestroyOtherState
 
  SUBROUTINE Waves_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2965,15 +3050,27 @@ ENDIF
     DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
  END SUBROUTINE Waves_CopyMisc
 
- SUBROUTINE Waves_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Waves_DestroyMisc
 
  SUBROUTINE Waves_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3094,15 +3191,27 @@ ENDIF
     DstParamData%WaveMultiDir = SrcParamData%WaveMultiDir
  END SUBROUTINE Waves_CopyParam
 
- SUBROUTINE Waves_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Waves_DestroyParam
 
  SUBROUTINE Waves_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3239,15 +3348,27 @@ ENDIF
     DstInputData%DummyInput = SrcInputData%DummyInput
  END SUBROUTINE Waves_CopyInput
 
- SUBROUTINE Waves_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Waves_DestroyInput
 
  SUBROUTINE Waves_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3364,15 +3485,27 @@ ENDIF
     DstOutputData%DummyOutput = SrcOutputData%DummyOutput
  END SUBROUTINE Waves_CopyOutput
 
- SUBROUTINE Waves_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE Waves_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Waves_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Waves_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Waves_DestroyOutput
 
  SUBROUTINE Waves_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

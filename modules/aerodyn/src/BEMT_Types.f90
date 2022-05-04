@@ -332,15 +332,27 @@ ENDIF
     DstInitInputData%SumPrint = SrcInitInputData%SumPrint
  END SUBROUTINE BEMT_CopyInitInput
 
- SUBROUTINE BEMT_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitInputData%chord)) THEN
   DEALLOCATE(InitInputData%chord)
 ENDIF
@@ -944,16 +956,29 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE BEMT_CopyInitOutput
 
- SUBROUTINE BEMT_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Version, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Version, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BEMT_DestroyInitOutput
 
  SUBROUTINE BEMT_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1156,17 +1181,31 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE BEMT_CopyContState
 
- SUBROUTINE BEMT_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL UA_DestroyContState( ContStateData%UA, ErrStat, ErrMsg )
-  CALL DBEMT_DestroyContState( ContStateData%DBEMT, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL UA_DestroyContState( ContStateData%UA, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL DBEMT_DestroyContState( ContStateData%DBEMT, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BEMT_DestroyContState
 
  SUBROUTINE BEMT_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1451,16 +1490,29 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE BEMT_CopyDiscState
 
- SUBROUTINE BEMT_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL UA_DestroyDiscState( DiscStateData%UA, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL UA_DestroyDiscState( DiscStateData%UA, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BEMT_DestroyDiscState
 
  SUBROUTINE BEMT_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1673,15 +1725,27 @@ IF (ALLOCATED(SrcConstrStateData%phi)) THEN
 ENDIF
  END SUBROUTINE BEMT_CopyConstrState
 
- SUBROUTINE BEMT_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ConstrStateData%phi)) THEN
   DEALLOCATE(ConstrStateData%phi)
 ENDIF
@@ -1868,17 +1932,31 @@ ENDIF
     DstOtherStateData%nodesInitialized = SrcOtherStateData%nodesInitialized
  END SUBROUTINE BEMT_CopyOtherState
 
- SUBROUTINE BEMT_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL UA_DestroyOtherState( OtherStateData%UA, ErrStat, ErrMsg )
-  CALL DBEMT_DestroyOtherState( OtherStateData%DBEMT, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL UA_DestroyOtherState( OtherStateData%UA, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL DBEMT_DestroyOtherState( OtherStateData%DBEMT, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(OtherStateData%ValidPhi)) THEN
   DEALLOCATE(OtherStateData%ValidPhi)
 ENDIF
@@ -2385,23 +2463,39 @@ ENDIF
     DstMiscData%BEM_weight = SrcMiscData%BEM_weight
  END SUBROUTINE BEMT_CopyMisc
 
- SUBROUTINE BEMT_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL UA_DestroyMisc( MiscData%UA, ErrStat, ErrMsg )
-  CALL DBEMT_DestroyMisc( MiscData%DBEMT, ErrStat, ErrMsg )
-  CALL UA_DestroyOutput( MiscData%y_UA, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL UA_DestroyMisc( MiscData%UA, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL DBEMT_DestroyMisc( MiscData%DBEMT, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL UA_DestroyOutput( MiscData%y_UA, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%u_UA)) THEN
 DO i3 = LBOUND(MiscData%u_UA,3), UBOUND(MiscData%u_UA,3)
 DO i2 = LBOUND(MiscData%u_UA,2), UBOUND(MiscData%u_UA,2)
 DO i1 = LBOUND(MiscData%u_UA,1), UBOUND(MiscData%u_UA,1)
-  CALL UA_DestroyInput( MiscData%u_UA(i1,i2,i3), ErrStat, ErrMsg )
+  CALL UA_DestroyInput( MiscData%u_UA(i1,i2,i3), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
 ENDDO
@@ -2409,7 +2503,8 @@ ENDDO
 ENDIF
 IF (ALLOCATED(MiscData%u_DBEMT)) THEN
 DO i1 = LBOUND(MiscData%u_DBEMT,1), UBOUND(MiscData%u_DBEMT,1)
-  CALL DBEMT_DestroyInput( MiscData%u_DBEMT(i1), ErrStat, ErrMsg )
+  CALL DBEMT_DestroyInput( MiscData%u_DBEMT(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%u_DBEMT)
 ENDIF
@@ -3577,15 +3672,27 @@ IF (ALLOCATED(SrcParamData%FixedInductions)) THEN
 ENDIF
  END SUBROUTINE BEMT_CopyParam
 
- SUBROUTINE BEMT_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%chord)) THEN
   DEALLOCATE(ParamData%chord)
 ENDIF
@@ -3601,8 +3708,10 @@ ENDIF
 IF (ALLOCATED(ParamData%zHub)) THEN
   DEALLOCATE(ParamData%zHub)
 ENDIF
-  CALL UA_DestroyParam( ParamData%UA, ErrStat, ErrMsg )
-  CALL DBEMT_DestroyParam( ParamData%DBEMT, ErrStat, ErrMsg )
+  CALL UA_DestroyParam( ParamData%UA, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL DBEMT_DestroyParam( ParamData%DBEMT, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%FixedInductions)) THEN
   DEALLOCATE(ParamData%FixedInductions)
 ENDIF
@@ -4387,15 +4496,27 @@ IF (ALLOCATED(SrcInputData%UserProp)) THEN
 ENDIF
  END SUBROUTINE BEMT_CopyInput
 
- SUBROUTINE BEMT_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputData%theta)) THEN
   DEALLOCATE(InputData%theta)
 ENDIF
@@ -5161,15 +5282,27 @@ IF (ALLOCATED(SrcOutputData%Cpmin)) THEN
 ENDIF
  END SUBROUTINE BEMT_CopyOutput
 
- SUBROUTINE BEMT_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE BEMT_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BEMT_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BEMT_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%Vrel)) THEN
   DEALLOCATE(OutputData%Vrel)
 ENDIF

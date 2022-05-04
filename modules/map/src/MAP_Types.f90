@@ -285,16 +285,29 @@ CONTAINS
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE MAP_CopyInitInput
 
- SUBROUTINE MAP_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MAP_Fortran_Destroylin_initinputtype( InitInputData%LinInitInp, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL MAP_Fortran_Destroylin_initinputtype( InitInputData%LinInitInp, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE MAP_DestroyInitInput
 
  SUBROUTINE MAP_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -661,23 +674,37 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE MAP_CopyInitOutput
 
- SUBROUTINE MAP_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitOutputData%writeOutputHdr)) THEN
   DEALLOCATE(InitOutputData%writeOutputHdr)
 ENDIF
 IF (ALLOCATED(InitOutputData%writeOutputUnt)) THEN
   DEALLOCATE(InitOutputData%writeOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
-  CALL MAP_Fortran_Destroylin_initoutputtype( InitOutputData%LinInitOut, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MAP_Fortran_Destroylin_initoutputtype( InitOutputData%LinInitOut, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE MAP_DestroyInitOutput
 
  SUBROUTINE MAP_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1118,15 +1145,27 @@ ENDIF
     DstContStateData%C_obj%dummy = SrcContStateData%C_obj%dummy
  END SUBROUTINE MAP_CopyContState
 
- SUBROUTINE MAP_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE MAP_DestroyContState
 
  SUBROUTINE MAP_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1283,15 +1322,27 @@ ENDIF
     DstDiscStateData%C_obj%dummy = SrcDiscStateData%C_obj%dummy
  END SUBROUTINE MAP_CopyDiscState
 
- SUBROUTINE MAP_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE MAP_DestroyDiscState
 
  SUBROUTINE MAP_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1687,106 +1738,134 @@ IF (ASSOCIATED(SrcOtherStateData%Fz_anchor)) THEN
 ENDIF
  END SUBROUTINE MAP_CopyOtherState
 
- SUBROUTINE MAP_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(OtherStateData%H)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%H)
   OtherStateData%H => NULL()
   OtherStateData%C_obj%H = C_NULL_PTR
   OtherStateData%C_obj%H_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%V)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%V)
   OtherStateData%V => NULL()
   OtherStateData%C_obj%V = C_NULL_PTR
   OtherStateData%C_obj%V_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Ha)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%Ha)
   OtherStateData%Ha => NULL()
   OtherStateData%C_obj%Ha = C_NULL_PTR
   OtherStateData%C_obj%Ha_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Va)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%Va)
   OtherStateData%Va => NULL()
   OtherStateData%C_obj%Va = C_NULL_PTR
   OtherStateData%C_obj%Va_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%x)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%x)
   OtherStateData%x => NULL()
   OtherStateData%C_obj%x = C_NULL_PTR
   OtherStateData%C_obj%x_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%y)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%y)
   OtherStateData%y => NULL()
   OtherStateData%C_obj%y = C_NULL_PTR
   OtherStateData%C_obj%y_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%z)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%z)
   OtherStateData%z => NULL()
   OtherStateData%C_obj%z = C_NULL_PTR
   OtherStateData%C_obj%z_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%xa)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%xa)
   OtherStateData%xa => NULL()
   OtherStateData%C_obj%xa = C_NULL_PTR
   OtherStateData%C_obj%xa_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%ya)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%ya)
   OtherStateData%ya => NULL()
   OtherStateData%C_obj%ya = C_NULL_PTR
   OtherStateData%C_obj%ya_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%za)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%za)
   OtherStateData%za => NULL()
   OtherStateData%C_obj%za = C_NULL_PTR
   OtherStateData%C_obj%za_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fx_connect)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%Fx_connect)
   OtherStateData%Fx_connect => NULL()
   OtherStateData%C_obj%Fx_connect = C_NULL_PTR
   OtherStateData%C_obj%Fx_connect_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fy_connect)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%Fy_connect)
   OtherStateData%Fy_connect => NULL()
   OtherStateData%C_obj%Fy_connect = C_NULL_PTR
   OtherStateData%C_obj%Fy_connect_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fz_connect)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%Fz_connect)
   OtherStateData%Fz_connect => NULL()
   OtherStateData%C_obj%Fz_connect = C_NULL_PTR
   OtherStateData%C_obj%Fz_connect_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fx_anchor)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%Fx_anchor)
   OtherStateData%Fx_anchor => NULL()
   OtherStateData%C_obj%Fx_anchor = C_NULL_PTR
   OtherStateData%C_obj%Fx_anchor_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fy_anchor)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%Fy_anchor)
   OtherStateData%Fy_anchor => NULL()
   OtherStateData%C_obj%Fy_anchor = C_NULL_PTR
   OtherStateData%C_obj%Fy_anchor_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fz_anchor)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OtherStateData%Fz_anchor)
   OtherStateData%Fz_anchor => NULL()
   OtherStateData%C_obj%Fz_anchor = C_NULL_PTR
@@ -3007,40 +3086,57 @@ IF (ASSOCIATED(SrcConstrStateData%z)) THEN
 ENDIF
  END SUBROUTINE MAP_CopyConstrState
 
- SUBROUTINE MAP_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(ConstrStateData%H)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ConstrStateData%H)
   ConstrStateData%H => NULL()
   ConstrStateData%C_obj%H = C_NULL_PTR
   ConstrStateData%C_obj%H_Len = 0
 ENDIF
 IF (ASSOCIATED(ConstrStateData%V)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ConstrStateData%V)
   ConstrStateData%V => NULL()
   ConstrStateData%C_obj%V = C_NULL_PTR
   ConstrStateData%C_obj%V_Len = 0
 ENDIF
 IF (ASSOCIATED(ConstrStateData%x)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ConstrStateData%x)
   ConstrStateData%x => NULL()
   ConstrStateData%C_obj%x = C_NULL_PTR
   ConstrStateData%C_obj%x_Len = 0
 ENDIF
 IF (ASSOCIATED(ConstrStateData%y)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ConstrStateData%y)
   ConstrStateData%y => NULL()
   ConstrStateData%C_obj%y = C_NULL_PTR
   ConstrStateData%C_obj%y_Len = 0
 ENDIF
 IF (ASSOCIATED(ConstrStateData%z)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ConstrStateData%z)
   ConstrStateData%z => NULL()
   ConstrStateData%C_obj%z = C_NULL_PTR
@@ -3519,16 +3615,29 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE MAP_CopyParam
 
- SUBROUTINE MAP_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MAP_Fortran_Destroylin_paramtype( ParamData%LinParams, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL MAP_Fortran_Destroylin_paramtype( ParamData%LinParams, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE MAP_DestroyParam
 
  SUBROUTINE MAP_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3881,34 +3990,50 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE MAP_CopyInput
 
- SUBROUTINE MAP_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(InputData%x)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%x)
   InputData%x => NULL()
   InputData%C_obj%x = C_NULL_PTR
   InputData%C_obj%x_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%y)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%y)
   InputData%y => NULL()
   InputData%C_obj%y = C_NULL_PTR
   InputData%C_obj%y_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%z)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%z)
   InputData%z => NULL()
   InputData%C_obj%z = C_NULL_PTR
   InputData%C_obj%z_Len = 0
 ENDIF
-  CALL MeshDestroy( InputData%PtFairDisplacement, ErrStat, ErrMsg )
+  CALL MeshDestroy( InputData%PtFairDisplacement, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE MAP_DestroyInput
 
  SUBROUTINE MAP_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4404,28 +4529,43 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE MAP_CopyOutput
 
- SUBROUTINE MAP_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE MAP_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MAP_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(OutputData%Fx)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%Fx)
   OutputData%Fx => NULL()
   OutputData%C_obj%Fx = C_NULL_PTR
   OutputData%C_obj%Fx_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%Fy)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%Fy)
   OutputData%Fy => NULL()
   OutputData%C_obj%Fy = C_NULL_PTR
   OutputData%C_obj%Fy_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%Fz)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%Fz)
   OutputData%Fz => NULL()
   OutputData%C_obj%Fz = C_NULL_PTR
@@ -4435,12 +4575,14 @@ IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
 IF (ASSOCIATED(OutputData%wrtOutput)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%wrtOutput)
   OutputData%wrtOutput => NULL()
   OutputData%C_obj%wrtOutput = C_NULL_PTR
   OutputData%C_obj%wrtOutput_Len = 0
 ENDIF
-  CALL MeshDestroy( OutputData%ptFairleadLoad, ErrStat, ErrMsg )
+  CALL MeshDestroy( OutputData%ptFairleadLoad, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE MAP_DestroyOutput
 
  SUBROUTINE MAP_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

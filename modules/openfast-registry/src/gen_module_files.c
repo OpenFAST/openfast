@@ -1022,8 +1022,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         else { //if (r->type->type_type == DERIVED) { // && ! r->type->usefrom ) {
            char nonick2[NAMELEN];
            remove_nickname(r->type->module->nickname, r->type->name, nonick2);
-//           fprintf(fp, "  CALL %s_Destroy%s( %sData%%%s%s, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )\n",
-           fprintf(fp, "  CALL %s_Destroy%s( %sData%%%s%s, ErrStat2, ErrMsg2 )\n",
+           fprintf(fp, "  CALL %s_Destroy%s( %sData%%%s%s, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )\n",
                 r->type->module->nickname, fast_interface_type_shortname(nonick2), nonick, r->name, dimstr(r->ndims));
            fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
         }
