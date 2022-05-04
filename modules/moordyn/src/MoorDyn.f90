@@ -3652,6 +3652,8 @@ SUBROUTINE MD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
       end do
    end do
    
+   dl_slack_min = 0.5*dl_slack_min  ! apply 0.5 safety factor
+   
    !TODO: consider attachment radii to also produce a rotational perturbation size from the above
    
    
