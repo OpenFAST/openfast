@@ -484,7 +484,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    CurLine = CurLine + 1
   
    IF ( InputFileData%Morison%NAxCoefs > 0 ) THEN
-      CALL AllocAry( tmpReArray, 4, 'temporary array for AxialCoefs', ErrStat2, ErrMsg2 )
+      CALL AllocAry( tmpReArray, 7, 'temporary array for AxialCoefs', ErrStat2, ErrMsg2 )
          if (Failed())  return;
       
          ! Allocate memory for Axial Coef-related arrays
@@ -503,6 +503,9 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          InputFileData%Morison%AxialCoefs(I)%AxCd     =      tmpReArray(2)
          InputFileData%Morison%AxialCoefs(I)%AxCa     =      tmpReArray(3)
          InputFileData%Morison%AxialCoefs(I)%AxCp     =      tmpReArray(4)
+         InputFileData%Morison%AxialCoefs(I)%AxFDMod  = NINT(tmpReArray(5))
+         InputFileData%Morison%AxialCoefs(I)%AxVnCOff =      tmpReArray(6) 
+         InputFileData%Morison%AxialCoefs(I)%AxFDLoFSc =     tmpReArray(7)
       END DO
 
       if (allocated(tmpReArray))      deallocate(tmpReArray)

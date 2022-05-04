@@ -1359,7 +1359,9 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       ErrStat   = ErrID_None           ! no error has occurred
       ErrMsg    = ""
       
-      
+      ! Update the discrete states of Morison - The state of the high-pass velocity filter
+      CALL Morison_UpdateDiscState( t, u%Morison, p%Morison, x%Morison, xd%Morison, &
+                             z%Morison, OtherState%Morison, m%Morison, ErrStat2, ErrMsg2 )
          
          ! Return without doing any work if the we are not using a potential flow model
       IF ( p%PotMod == 0  ) RETURN

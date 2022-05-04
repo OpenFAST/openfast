@@ -1962,9 +1962,15 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       InitInp%Nodes(i)%JAxCd = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCd
       InitInp%Nodes(i)%JAxCa = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCa
       InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp
-      InitInp%Nodes(i)%JAxCd = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCd
-      InitInp%Nodes(i)%JAxCa = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCa
-      InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp  
+      
+      !InitInp%Nodes(i)%JAxCd = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCd
+      !InitInp%Nodes(i)%JAxCa = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCa
+      !InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp
+      
+      InitInp%Nodes(i)%JAxFDMod   = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxFDMod
+      InitInp%Nodes(i)%JAxVnCOff  = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxVnCOff
+      InitInp%Nodes(i)%JAxFDLoFSc = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxFDLoFSc
+  
       ! Redundant work (these are already assigned to the member data arrays, 
       ! but is needed on the joint data because we report the tMG, and MGDensity at each Joint node in the Summary File
       call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(i), InitInp%MSL2SWL, InitInp%Nodes(i)%tMG, InitInp%Nodes(i)%MGDensity )
@@ -2057,7 +2063,15 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! Define initial system states here:
 
    x%DummyContState           = 0
-   xd%DummyDiscState          = 0
+   !xd%DummyDiscState          = 0
+   ALLOCATE ( xd%V_rel_n_FiltStat(p%NJoints), STAT = ErrStat )
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Error allocating space for V_rel_n_FiltStat array.'
+      ErrStat = ErrID_Fatal
+      RETURN
+   END IF
+   xd%V_rel_n_FiltStat = 0.0_ReKi
+
    z%DummyConstrState         = 0
    OtherState%DummyOtherState = 0
    m%LastIndWave              = 1
@@ -2195,6 +2209,15 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
       END IF  ! InitInp%InpJoints(i)%Position(3) >= -p%WtrDpth
    
+      p%DragMod_End   (i) = InitInp%Nodes(i)%JAxFDMod
+      IF ( InitInp%Nodes(i)%JAxVnCOff .LE. 0.0_ReKi) THEN
+         p%VRelNFiltConst(i) = 1.0_ReKi
+         p%DragLoFSc_End (i) = 1.0_ReKi
+      ELSE
+         p%VRelNFiltConst(i) = exp(-2.0*Pi*InitInp%Nodes(i)%JAxVnCOff * p%DT)
+         p%DragLoFSc_End (i) = InitInp%Nodes(i)%JAxFDLoFSc
+      END IF
+
    END DO ! looping through nodes that are joints, i
           
          ! Define initial guess for the system inputs here:
@@ -2379,6 +2402,14 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    call AllocAry( p%Mass_MG_End  ,       p%NJoints, 'p%Mass_MG_End'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%AM_End       , 3, 3, p%NJoints, 'p%AM_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%DP_Const_End ,    3, p%NJoints, 'p%DP_Const_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+
+   call AllocAry( m%V_rel_n        ,     p%NJoints, 'm%V_rel_n'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%V_rel_n_HiPass ,     p%NJoints, 'm%V_rel_n_HiPass' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+
+   call AllocAry( p%DragMod_End ,     p%NJoints, 'p%DragMod_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%DragLoFSc_End ,     p%NJoints, 'p%DragLoFSc_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%VRelNFiltConst ,     p%NJoints, 'p%VRelNFiltConst' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+
    if (errStat == ErrID_Fatal) return
    
    m%nodeInWater   = 0
@@ -2408,6 +2439,8 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    p%F_WMG_End     = 0.0
    p%AM_End        = 0.0
    
+   m%V_rel_n        = 0.0_ReKi
+   m%V_rel_n_HiPass = 0.0_ReKi
 
    p%WaveVel    => InitInp%WaveVel      
    p%WaveAcc    => InitInp%WaveAcc
@@ -2420,6 +2453,10 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    p%WaveAccMCF => InitInp%WaveAccMCF
    p%PWaveAccMCF0 => InitInp%PWaveAccMCF0
    
+
+   
+
+
 END SUBROUTINE AllocateNodeLoadVariables
 
 
@@ -2629,7 +2666,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    INTEGER(IntKi)                                    :: errStat2    ! Error status of the operation (occurs after initial error)
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
       
-   REAL(ReKi)                                        :: F_DP(6), kvec(3), v(3),  vf(3), vrel(3), vmag
+   REAL(ReKi)                                        :: F_DP(6), kvec(3), v(3),  vf(3), vrel(3), vmag, vmagf
    INTEGER                                           :: I, J, K, nodeIndx, IntWrapIndx
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6) ,qdotdot2(3)     ! The structural acceleration of a mesh node
@@ -3954,12 +3991,28 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
       ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
       ! m%nodeInWater(j) is probably not necessary because m%vrel is zeroed when the node is out of water
-      vmag =  m%nodeInWater(j) * ( m%vrel(1,j)*p%An_End(1,J) + m%vrel(2,j)*p%An_End(2,J) + m%vrel(3,j)*p%An_End(3,J) )
+      vmag  = m%nodeInWater(j) * ( m%vrel(1,j)*p%An_End(1,J) + m%vrel(2,j)*p%An_End(2,J) + m%vrel(3,j)*p%An_End(3,J) )
+      ! High-pass filtering
+      vmagf = p%VRelNFiltConst(J) * (vmag + xd%v_rel_n_FiltStat(J))
+
+      ! Record most up-to-date vmagf and vmag at join J
+      m%v_rel_n(j) = vmag
+      m%v_rel_n_HiPass(j) = vmagf
          
       ! Evaluate drag force and combine all per-joint loads
       DO I=1,6
          IF (I < 4 ) THEN ! Three force components
-            m%F_D_End(i,j)       = p%An_End(i,j) * p%DragConst_End(j) * abs(vmag)*vmag  ! Note: vmag is zero if node is not in the water
+            IF ( p%DragMod_End(J) .EQ. 0_IntKi ) THEN
+               ! Note: vmag is zero if node is not in the water
+               m%F_D_End(i,j) = (1.0_ReKi - p%DragLoFSc_End(j)) * p%An_End(i,j) * p%DragConst_End(j) * abs(vmagf)*vmagf &   
+                                          + p%DragLoFSc_End(j)  * p%An_End(i,j) * p%DragConst_End(j) * abs(vmag )*vmag  
+            ELSE IF (p%DragMod_End(J) .EQ. 1_IntKi) THEN
+               ! Note: vmag is zero if node is not in the water
+               m%F_D_End(i,j) = (1.0_ReKi - p%DragLoFSc_End(j)) * p%An_End(i,j) * p%DragConst_End(j) * abs(vmagf)*max(vmagf,0.0_ReKi) &
+                                          + p%DragLoFSc_End(j)  * p%An_End(i,j) * p%DragConst_End(j) * abs(vmag) *max(vmag, 0.0_ReKi)
+               m%F_D_End(i,j) = 2.0_ReKi * m%F_D_End(i,j)
+            END IF
+            
             y%Mesh%Force(i,j)    = y%Mesh%Force(i,j)    + m%F_D_End(i,j) + m%F_I_End(i,j) + p%F_WMG_End(i,j) + m%F_B_End(i,j) + m%F_BF_End(i,j) + m%F_A_End(i,j) + m%F_IMG_End(i,j)
          ELSE ! Three moment components
             y%Mesh%Moment(i-3,j) = y%Mesh%Moment(i-3,j) + m%F_B_End(i,j) + m%F_BF_End(i,j)  + m%F_IMG_End(i,j)
@@ -4135,6 +4188,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
 
+      INTEGER(IntKi)           :: J                    
                
          ! Initialize errStat
          
@@ -4144,7 +4198,10 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       
          ! Update discrete states here:
       
-      ! StateData%DiscState = 
+      ! Update state of the velocity high-pass filter
+         DO J = 1, p%NJoints
+              xd%V_rel_n_FiltStat(J) = m%V_rel_n_HiPass(J)-m%V_rel_n(J)
+         END DO
 
 END SUBROUTINE Morison_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
