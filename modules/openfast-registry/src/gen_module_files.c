@@ -966,15 +966,26 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
-  fprintf(fp, " SUBROUTINE %s_Destroy%s( %sData, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick );
+  fprintf(fp, " SUBROUTINE %s_Destroy%s( %sData, ErrStat, ErrMsg, DEALLOCATEpointers )\n",ModName->nickname,nonick,nonick );
   fprintf(fp, "  TYPE(%s), INTENT(INOUT) :: %sData\n",addnick,nonick) ;
   fprintf(fp, "  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp, "  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n");
-  fprintf(fp, "  CHARACTER(*),    PARAMETER :: RoutineName = '%s_Destroy%s'\n", ModName->nickname, nonick);
+  fprintf(fp, "  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers\n");
+  fprintf(fp, "  \n");
   fprintf(fp, "  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 \n");
-  fprintf(fp,"! \n") ;
-  fprintf(fp,"  ErrStat = ErrID_None\n") ;
-  fprintf(fp, "  ErrMsg  = \"\"\n");
+  fprintf(fp, "  LOGICAL                        :: DEALLOCATEpointers_local\n");
+  fprintf(fp, "  INTEGER(IntKi)                 :: ErrStat2\n");
+  fprintf(fp, "  CHARACTER(ErrMsgLen)           :: ErrMsg2\n");
+  fprintf(fp, "  CHARACTER(*),    PARAMETER :: RoutineName = '%s_Destroy%s'\n\n", ModName->nickname, nonick);
+  fprintf(fp, "  ErrStat = ErrID_None\n");
+  fprintf(fp, "  ErrMsg  = \"\"\n\n");
+  fprintf(fp, "  IF (PRESENT(DEALLOCATEpointers)) THEN\n");
+  fprintf(fp, "     DEALLOCATEpointers_local = DEALLOCATEpointers\n");
+  fprintf(fp, "  ELSE\n");
+  fprintf(fp, "     DEALLOCATEpointers_local = .true.\n");
+  fprintf(fp, "  END IF\n");
+  fprintf(fp,"  \n") ;
+
 
 //  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
 //  sprintf(tmp,"%s",inoutlong) ;
@@ -1000,16 +1011,21 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         }
 
         if (!strcmp(r->type->name, "meshtype")) {
-           fprintf(fp, "  CALL MeshDestroy( %sData%%%s%s, ErrStat, ErrMsg )\n", nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "  CALL MeshDestroy( %sData%%%s%s, ErrStat2, ErrMsg2 )\n", nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
         }
         else if (!strcmp(r->type->name, "dll_type")) {
-           fprintf(fp, "  CALL FreeDynamicLib( %sData%%%s%s, ErrStat, ErrMsg )\n", nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "  CALL FreeDynamicLib( %sData%%%s%s, ErrStat2, ErrMsg2 )\n", nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
+
         }
         else { //if (r->type->type_type == DERIVED) { // && ! r->type->usefrom ) {
            char nonick2[NAMELEN];
            remove_nickname(r->type->module->nickname, r->type->name, nonick2);
-           fprintf(fp, "  CALL %s_Destroy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
-              r->type->module->nickname, fast_interface_type_shortname(nonick2), nonick, r->name, dimstr(r->ndims));
+//           fprintf(fp, "  CALL %s_Destroy%s( %sData%%%s%s, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )\n",
+           fprintf(fp, "  CALL %s_Destroy%s( %sData%%%s%s, ErrStat2, ErrMsg2 )\n",
+                r->type->module->nickname, fast_interface_type_shortname(nonick2), nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
         }
 
         for (d = r->ndims; d >= 1; d--) {
@@ -1017,6 +1033,9 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         }
      }
      if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
+         if (is_pointer(r)) {
+            fprintf(fp, " IF (DEALLOCATEpointers_local) &\n");
+         }
          fprintf(fp,"  DEALLOCATE(%sData%%%s)\n",nonick,r->name) ;
          if ( is_pointer(r) ) {
             fprintf(fp, "  %sData%%%s => NULL()\n",nonick,r->name) ;
