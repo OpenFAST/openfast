@@ -1870,6 +1870,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    TYPE(Morison_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
    INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
+   
+   character(*), parameter                           :: RoutineName = 'Morison_Init'
 
    TYPE(Morison_MemberType) :: member    ! the current member
    INTEGER                  :: i, j, k
@@ -1909,28 +1911,31 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       p%WaveElev2 => InitInp%WaveElev2
    end if
 
-   ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for MOutLst array.'
-      errStat = ErrID_Fatal
+   ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat2 )
+   IF ( errStat2 /= ErrID_None ) THEN
+      call SetErrStat(ErrID_Fatal,'Error allocating space for MOutLst array.', ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF
-   IF (ALLOCATED(InitInp%MOutLst) ) &
-      p%MOutLst =    InitInp%MOutLst           ! Member output data
+   IF (ALLOCATED(InitInp%MOutLst) ) then
+      do i=1,size(InitInp%MOutLst)
+         call  Morison_CopyMOutput( InitInp%MOutLst(i), p%MOutLst(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )                 ! Member output data
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Morison_Init' )
+      end do
+   end if
       
    p%NJOutputs = InitInp%NJOutputs                        ! Number of joints to output [ >=0 and <10]
       
-   ALLOCATE ( p%JOutLst(p%NJOutputs), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for JOutLst array.'
-      errStat = ErrID_Fatal
+   ALLOCATE ( p%JOutLst(p%NJOutputs), STAT = errStat2 )
+   IF ( errStat2 /= ErrID_None ) THEN
+      call SetErrStat(ErrID_Fatal,'Error allocating space for JOutLst array.', ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF
    IF (ALLOCATED(InitInp%JOutLst) ) &
       p%JOutLst =    InitInp%JOutLst            ! Joint output data
  
    ! ----------------------- set up the members -----------------------
-   call SetupMembers( InitInp, p, m, errStat2, errMsg2 ) ; call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Morison_Init' )
+   call SetupMembers( InitInp, p, m, errStat2, errMsg2 ) 
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if ( errStat >= AbortErrLev ) return
    
    !------------------------ set up joint (or joint-node) properties --
@@ -1947,7 +1952,9 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    end do
 
    ! allocate and copy in node-based load and hydrodynamic arrays
-   call AllocateNodeLoadVariables(InitInp, p, m, p%NNodes, errStat, errMsg )
+   call AllocateNodeLoadVariables(InitInp, p, m, p%NNodes, errStat2, errMsg2 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   if ( errStat >= AbortErrLev ) return
    call MOVE_ALLOC( InitInp%nodeInWater, p%nodeInWater )   
    
    ! Create the input and output meshes associated with loads at the nodes     
@@ -1955,7 +1962,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
                      ,IOS          = COMPONENT_INPUT        &
                      ,Nnodes       = p%NNodes      &
                      ,errStat      = errStat                &
-                     ,ErrMess      = errMsg                 &
+                     ,ErrMess      = errMsg2                &
                      ,TranslationDisp = .TRUE.              &
                      ,Orientation     = .TRUE.              &
                      ,TranslationVel  = .TRUE.              &
@@ -1963,7 +1970,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
                      ,TranslationAcc  = .TRUE.              &
                      ,RotationAcc     = .TRUE.               )
 
-   IF ( errStat >= AbortErrLev ) RETURN
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   if ( errStat >= AbortErrLev ) return
 
 !TODO: Do we still need this for visualization?  How is it used? GJH 3/26/2020 Actually need a line mesh to properly visualize the members
    !CALL AllocAry( Morison_Rad, numDistribMarkers, 'Morison_Rad', errStat, errMsg)
@@ -1978,10 +1986,11 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       CALL MeshPositionNode (u%Mesh                &
                         , i                        &      
                         , pos                      &  ! this info comes from HydroDyn input file and the subroutine: Morison_GenerateSimulationNodes
-                        , errStat                  &
-                        , errMsg                   &
+                        , errStat2                  &
+                        , errMsg2                   &
                         ) !, transpose(p%Nodes(I)%R_LToG)          )
-      IF ( errStat /= 0 ) RETURN
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      if ( errStat >= AbortErrLev ) return
 
 !TODO: Do we still need this for visualization?  How is it used? GJH 3/26/2020  Actually need a line mesh to properly visualize the members
      ! Morison_Rad(count) = p%Nodes(I)%R   ! set this for FAST visualization
@@ -1992,20 +2001,23 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    
       CALL MeshConstructElement (u%Mesh   &
                             , ELEMENT_POINT      &                                  
-                            , errStat            &
-                            , errMsg  &
+                            , errStat2            &
+                            , errMsg2  &
                             , i                  &
                                         )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         if ( errStat >= AbortErrLev ) return
+                            
 
    END DO
 
    CALL MeshCommit ( u%Mesh   &
-                      , errStat            &
-                      , errMsg             )
+                      , errStat2            &
+                      , errMsg2             )
    
-   IF ( errStat /= 0 ) THEN
-         RETURN
-   END IF 
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   if ( errStat >= AbortErrLev ) return
+
    
       ! Initialize the inputs
    DO I=1,u%Mesh%Nnodes
@@ -2023,10 +2035,12 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
                      ,DestMesh     = y%Mesh         &
                      ,CtrlCode     = MESH_SIBLING           &
                      ,IOS          = COMPONENT_OUTPUT       &
-                     ,errStat      = errStat                &
-                     ,ErrMess      = errMsg                 &
+                     ,errStat      = errStat2               &
+                     ,ErrMess      = errMsg2                &
                      ,Force        = .TRUE.                 &
                      ,Moment       = .TRUE.                 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   if ( errStat >= AbortErrLev ) return
    u%Mesh%RemapFlag = .TRUE.
    y%Mesh%RemapFlag = .TRUE.
 
@@ -2044,18 +2058,16 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    
    ! allocate and initialize joint-specific arrays   
       
-   ALLOCATE ( commonNodeLst(10), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for the commonNodeLst array.'
-      errStat = ErrID_Fatal
+   ALLOCATE ( commonNodeLst(10), STAT = errStat2 )
+   IF ( errStat2 /= 0 ) THEN
+      call SetErrStat(ErrID_Fatal,'Error allocating space for commonNodeLst array.', ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF 
    commonNodeLst = -1
    
-   ALLOCATE ( usedJointList(p%NJoints), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
-      errMsg  = ' Error allocating space for the UsedJointList array.'
-      errStat = ErrID_Fatal
+   ALLOCATE ( usedJointList(p%NJoints), STAT = errStat2 )
+   IF ( errStat2 /= 0 ) THEN
+      call SetErrStat(ErrID_Fatal,'Error allocating space for UsedJointList array.', ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF  
    usedJointList = .FALSE.
@@ -2187,14 +2199,16 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    IF (p%WaveStMod > 0_IntKi) THEN ! Wave stretching enabled
       
       ! Allocate variables for the wave dynamics at the SWL - Needed for wave stretching
-      ALLOCATE ( p%WaveDynP0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3)), STAT=errStat )
-         IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveDynP0.', ErrStat,ErrMsg,'Morison_Init')
-      ALLOCATE ( p%WaveVel0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
-         IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveVel0.', ErrStat,ErrMsg,'Morison_Init')
-      ALLOCATE ( p%WaveAcc0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat )
-         IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAcc0.', ErrStat,ErrMsg,'Morison_Init')
-      ALLOCATE ( p%WaveAccMCF0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errstat )
-         IF (errStat /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveAccMCF0.', ErrStat,ErrMsg,'Morison_Init')
+      ALLOCATE ( p%WaveDynP0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3)), STAT=errStat2 )
+         IF ( errStat2 /= 0 ) call SetErrStat(ErrID_Fatal,'Error allocating space for p%WaveDynP0.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( p%WaveVel0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat2 )
+         IF ( errStat2 /= 0 ) call SetErrStat(ErrID_Fatal,'Error allocating space for p%WaveVel0.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( p%WaveAcc0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat2 )
+         IF ( errStat2 /= 0 ) call SetErrStat(ErrID_Fatal,'Error allocating space for p%WaveAcc0.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( p%WaveAccMCF0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errstat2 )
+         IF ( errStat2 /= 0 ) call SetErrStat(ErrID_Fatal,'Error allocating space for p%WaveAccMCF0.', ErrStat, ErrMsg, RoutineName)
+         
+      if (ErrStat >= AbortErrLev) RETURN
    
       ! Copy the wave data at the SWL
       DO i = 1,p%seast_interp_p%n(2)
@@ -2223,14 +2237,16 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ! Initialize the outputs      
    IF ( p%OutSwtch > 0) then  !@mhall: moved this "if" to after allocations
    
-      CALL MrsnOUT_Init( InitInp, y, p, InitOut, errStat, errMsg )
-      IF ( errStat > AbortErrLev ) RETURN
+      CALL MrsnOUT_Init( InitInp, y, p, InitOut, errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      if ( errStat >= AbortErrLev ) return
       
          ! Determine if we need to perform output file handling
       
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN  
-         CALL MrsnOUT_OpenOutput( Morison_ProgDesc%Name, TRIM(InitInp%OutRootName), p, InitOut, errStat, errMsg )
-         IF ( errStat > AbortErrLev ) RETURN
+         CALL MrsnOUT_OpenOutput( Morison_ProgDesc%Name, TRIM(InitInp%OutRootName), p, InitOut, errStat2, errMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         if ( errStat >= AbortErrLev ) return
       END IF
       
    END IF  
@@ -2239,13 +2255,16 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ! Then we can use the computed load components in the Summary File
    ! NOTE: Morison module has no states, otherwise we could no do this. GJH
    
-   call Morison_CalcOutput(0.0_DbKi, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
+   call Morison_CalcOutput(0.0_DbKi, u, p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   if ( errStat >= AbortErrLev ) return
    
       ! Write Summary information now that everything has been initialized. 
    CALL WriteSummaryFile( InitInp%UnSum, InitInp%Gravity, InitInp%MSL2SWL, InitInp%WtrDpth, InitInp%NJoints, InitInp%NNodes, InitInp%Nodes, p%NMembers, p%Members, &
                           p%NumOuts, p%OutParam, p%NMOutputs, p%MOutLst,  p%NJOutputs, p%JOutLst, u%Mesh, y%Mesh, &
-                          p, m, errStat, errMsg )
-   IF ( errStat > AbortErrLev ) RETURN  
+                          p, m, errStat2, errMsg2 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   if ( errStat >= AbortErrLev ) return
                                                        
    !Contains:
    !   SUBROUTINE CleanUpInitOnErr
@@ -2355,7 +2374,7 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    call AllocAry( p%Mass_MG_End  ,       p%NJoints, 'p%Mass_MG_End'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%AM_End       , 3, 3, p%NJoints, 'p%AM_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%DP_Const_End ,    3, p%NJoints, 'p%DP_Const_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   if (errStat == ErrID_Fatal) return
+   if (errStat >= AbortErrLev) return
    
    m%nodeInWater   = 0
    m%vrel          = 0.0_ReKi
