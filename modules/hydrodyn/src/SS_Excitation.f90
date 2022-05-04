@@ -369,10 +369,8 @@ SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CALL SS_Exc_DestroyInput( u, ErrStat, ErrMsg )
 
 
-         ! Destroy the parameter data:
-      nullify(p%WaveElev1)
-      nullify(p%WaveTime)
-      CALL SS_Exc_DestroyParam( p, ErrStat, ErrMsg )
+         ! Destroy the parameter data, but don't deallocate SeaState data:
+      CALL SS_Exc_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
          ! Destroy the state data:

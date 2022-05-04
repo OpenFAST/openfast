@@ -2463,19 +2463,8 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          
          ! Destroy the parameter data:
          
-      ! First need to nullify pointers so that SeaState module data is not deallocation by HD
-      nullify(p%WaveTime)
-      nullify(p%WaveDynP)
-      nullify(p%WaveAcc)
-      nullify(p%WaveVel)
-      nullify(p%PWaveDynP0)
-      nullify(p%PWaveAcc0)
-      nullify(p%PWaveVel0)
-      nullify(p%WaveElev1)
-      nullify(p%WaveElev2)
-      nullify(p%WaveAccMCF)
-      nullify(p%PWaveAccMCF0)
-      CALL Morison_DestroyParam( p, errStat, errMsg )
+      ! Need to nullify pointers so that SeaState module data is not deallocation by HD (use DEALLOCATEpointers=.false.)
+      CALL Morison_DestroyParam( p, errStat, errMsg, DEALLOCATEpointers=.false. )
 
 
          ! Destroy the state data:

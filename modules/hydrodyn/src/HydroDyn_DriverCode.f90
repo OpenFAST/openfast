@@ -270,25 +270,11 @@ PROGRAM HydroDynDriver
    InitInData%WaveElev1      => InitOutData_SeaSt%WaveElev1
    InitInData%WaveElev2      => InitOutData_SeaSt%WaveElev2
    
-   ! Nullify these pointers because they are no longer needed
-   nullify(InitOutData_SeaSt%WaveDynP)   
-   nullify(InitOutData_SeaSt%WaveAcc)    
-   nullify(InitOutData_SeaSt%WaveVel)
-   nullify(InitOutData_SeaSt%PWaveDynP0)   
-   nullify(InitOutData_SeaSt%PWaveAcc0)    
-   nullify(InitOutData_SeaSt%PWaveVel0)     
-   nullify(InitOutData_SeaSt%WaveTime)
-   nullify(InitOutData_SeaSt%WaveElevC0)
-   nullify(InitOutData_SeaSt%WaveDirArr)
-   nullify(InitOutData_SeaSt%WaveElev1)
-   nullify(InitOutData_SeaSt%WaveElev2)
-   nullify(InitOutData_SeaSt%WaveAccMCF)
-   nullify(InitOutData_SeaSt%PWaveAccMCF0)
    
    call SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData%SeaSt_Interp_p, 0, ErrStat, ErrMsg )
    
-   ! Destroy SeaState InitOutput
-   CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat, ErrMsg )
+   ! Destroy SeaState InitOutput (and nullify pointers to SeaState data)
+   CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
    
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
@@ -367,25 +353,7 @@ PROGRAM HydroDynDriver
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
    CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
-   
-   ! 1) Nullify the HD Init Input pointers
-   ! 2) Now, when HydroDyn_DestroyInitInput is called and hence SeaSt_DestroyInitOutput, we will not deallocate data which is still in use because the is associated test will fail.
-    
-   nullify(InitInData%WaveElevC0)
-   nullify(InitInData%WaveDirArr)
-   nullify(InitInData%WaveDynP)   
-   nullify(InitInData%WaveAcc)    
-   nullify(InitInData%WaveVel)
-   nullify(InitInData%PWaveDynP0)   
-   nullify(InitInData%PWaveAcc0)    
-   nullify(InitInData%PWaveVel0)     
-   nullify(InitInData%WaveTime)
-   nullify(InitInData%WaveElev1)
-   nullify(InitInData%WaveElev2)
-   
-   nullify(InitInData%WaveAccMCF)
-   nullify(InitInData%PWaveAccMCF0)
-   
+      
    if (errStat >= AbortErrLev) then
          ! Clean up and exit 
       call HD_DvrCleanup()
@@ -400,16 +368,9 @@ PROGRAM HydroDynDriver
 
       ! Write the gridded wave elevation data to a file
 
-     
 
-   CALL HydroDyn_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
-   CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
-   
-! Nullify unneeded SeaState pointers so that we can then destroy the InitOutput data structure without deallocated needed data
-   !nullify(InitOutData_SeaSt%WaveElev0)
-   !nullify(InitOutData_SeaSt%WaveElevC0)
-   !nullify(InitOutData_SeaSt%WaveDirArr)
-
+   CALL HydroDyn_DestroyInitInput(  InitInData,  ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+   CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
    
    
    ! Create Mesh mappings
@@ -660,7 +621,8 @@ subroutine HD_DvrCleanup()
       
       call SeaSt_End( u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
-      call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2 )
+      
+      call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2, DEALLOCATEpointers=.false. )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       call HydroDyn_DestroyDiscState( xd_new, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
