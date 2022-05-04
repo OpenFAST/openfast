@@ -716,7 +716,7 @@ IF (ASSOCIATED(SrcInputData%toSC)) THEN
     END IF
     DstInputData%c_obj%toSC_Len = SIZE(DstInputData%toSC)
     IF (DstInputData%c_obj%toSC_Len > 0) &
-      DstInputData%c_obj%toSC = C_LOC( DstInputData%toSC(i1_l) ) 
+          DstInputData%c_obj%toSC = C_LOC( DstInputData%toSC( i1_l ) )
   END IF
     DstInputData%toSC = SrcInputData%toSC
 ENDIF
@@ -867,7 +867,7 @@ ENDIF
     END IF
     OutData%c_obj%toSC_Len = SIZE(OutData%toSC)
     IF (OutData%c_obj%toSC_Len > 0) &
-       OutData%c_obj%toSC = C_LOC( OutData%toSC(i1_l) ) 
+       OutData%c_obj%toSC = C_LOC( OutData%toSC( i1_l ) )
       DO i1 = LBOUND(OutData%toSC,1), UBOUND(OutData%toSC,1)
         OutData%toSC(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -925,7 +925,7 @@ ENDIF
        ELSE
           InputData%c_obj%toSC_Len = SIZE(InputData%toSC)
           IF (InputData%c_obj%toSC_Len > 0) &
-             InputData%c_obj%toSC = C_LOC( InputData%toSC( LBOUND(InputData%toSC,1) ) ) 
+             InputData%c_obj%toSC = C_LOC( InputData%toSC( LBOUND(InputData%toSC,1) ) )
        END IF
     END IF
  END SUBROUTINE SC_DX_F2C_CopyInput
@@ -956,7 +956,7 @@ IF (ASSOCIATED(SrcOutputData%fromSC)) THEN
     END IF
     DstOutputData%c_obj%fromSC_Len = SIZE(DstOutputData%fromSC)
     IF (DstOutputData%c_obj%fromSC_Len > 0) &
-      DstOutputData%c_obj%fromSC = C_LOC( DstOutputData%fromSC(i1_l) ) 
+          DstOutputData%c_obj%fromSC = C_LOC( DstOutputData%fromSC( i1_l ) )
   END IF
     DstOutputData%fromSC = SrcOutputData%fromSC
 ENDIF
@@ -971,7 +971,7 @@ IF (ASSOCIATED(SrcOutputData%fromSCglob)) THEN
     END IF
     DstOutputData%c_obj%fromSCglob_Len = SIZE(DstOutputData%fromSCglob)
     IF (DstOutputData%c_obj%fromSCglob_Len > 0) &
-      DstOutputData%c_obj%fromSCglob = C_LOC( DstOutputData%fromSCglob(i1_l) ) 
+          DstOutputData%c_obj%fromSCglob = C_LOC( DstOutputData%fromSCglob( i1_l ) )
   END IF
     DstOutputData%fromSCglob = SrcOutputData%fromSCglob
 ENDIF
@@ -1148,7 +1148,7 @@ ENDIF
     END IF
     OutData%c_obj%fromSC_Len = SIZE(OutData%fromSC)
     IF (OutData%c_obj%fromSC_Len > 0) &
-       OutData%c_obj%fromSC = C_LOC( OutData%fromSC(i1_l) ) 
+       OutData%c_obj%fromSC = C_LOC( OutData%fromSC( i1_l ) )
       DO i1 = LBOUND(OutData%fromSC,1), UBOUND(OutData%fromSC,1)
         OutData%fromSC(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -1169,7 +1169,7 @@ ENDIF
     END IF
     OutData%c_obj%fromSCglob_Len = SIZE(OutData%fromSCglob)
     IF (OutData%c_obj%fromSCglob_Len > 0) &
-       OutData%c_obj%fromSCglob = C_LOC( OutData%fromSCglob(i1_l) ) 
+       OutData%c_obj%fromSCglob = C_LOC( OutData%fromSCglob( i1_l ) )
       DO i1 = LBOUND(OutData%fromSCglob,1), UBOUND(OutData%fromSCglob,1)
         OutData%fromSCglob(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -1236,7 +1236,7 @@ ENDIF
        ELSE
           OutputData%c_obj%fromSC_Len = SIZE(OutputData%fromSC)
           IF (OutputData%c_obj%fromSC_Len > 0) &
-             OutputData%c_obj%fromSC = C_LOC( OutputData%fromSC( LBOUND(OutputData%fromSC,1) ) ) 
+             OutputData%c_obj%fromSC = C_LOC( OutputData%fromSC( LBOUND(OutputData%fromSC,1) ) )
        END IF
     END IF
 
@@ -1248,7 +1248,7 @@ ENDIF
        ELSE
           OutputData%c_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
           IF (OutputData%c_obj%fromSCglob_Len > 0) &
-             OutputData%c_obj%fromSCglob = C_LOC( OutputData%fromSCglob( LBOUND(OutputData%fromSCglob,1) ) ) 
+             OutputData%c_obj%fromSCglob = C_LOC( OutputData%fromSCglob( LBOUND(OutputData%fromSCglob,1) ) )
        END IF
     END IF
  END SUBROUTINE SC_DX_F2C_CopyOutput

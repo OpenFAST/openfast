@@ -468,7 +468,45 @@ reg_parse( FILE * infile )
               tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
 #endif
         field_struct->usefrom   = type_struct->usefrom ;
-
+        /* Error Checking for Fortran Pointers used outside of FAST Interfaces: InitInputType, InitOutputType, Parameter */
+        /* Note: Skip this check if the -ccode option is being used */
+        if (field_struct->ndims > 0) {
+            if (!sw_ccode && is_pointer(field_struct)) {
+                if (modname_struct->is_interface_type) {
+                    char nonick[NAMELEN];
+                    sprintf(tmpstr, "%s", make_lower_temp(ddtname));
+                    remove_nickname(modname_struct->nickname, tmpstr, nonick);
+                    if (!strcmp(nonick, "continuousstatetype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in ContinuousStateType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "discretestatetype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in DiscreteStateType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "constraintstatetype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in ConstraintStateType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "otherstatetype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in OtherStateType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "miscvartype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortr an Pointer Arrays cannot be used in MiscVarType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "inputtype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in InputType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "outputtype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in OutputType data\n");
+                        exit(9);
+                    }
+                }
+            }
+        }
         add_node_to_end( field_struct , &(type_struct->fields) ) ;
       } // not param
 
