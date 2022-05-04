@@ -143,7 +143,7 @@ Added in OpenFAST v3.0.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-ServoDyn                                      60   na              ---------------------- STRUCTURAL CONTROL --------------------------------------             NumBStC      - Number of blade structural controllers (integer)
+ServoDyn                                      60   na              ---------------------- STRUCTURAL CONTROL --------------------------------------
 ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
 ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
 ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
