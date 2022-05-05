@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <math.h>
+#include <cstring>
 
 
 FastLibAPI::FastLibAPI(std::string input_file):
