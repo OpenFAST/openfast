@@ -13,6 +13,11 @@ from typing import List
 import numpy as np
 import math
 
+
+IntfStrLen = 1025    # FAST_Library global
+NumFixedInputs = 51  # FAST_Library global
+
+
 class FastLibAPI(CDLL):
 
     def __init__(self, library_path: str, input_file_name: str):
@@ -110,7 +115,7 @@ class FastLibAPI(CDLL):
 
     def fast_init(self) -> None:
         _error_status = c_int(0)
-        _error_message = create_string_buffer(1025)
+        _error_message = create_string_buffer(IntfStrLen)
 
         self.FAST_AllocateTurbines(
             byref(self.n_turbines),
@@ -145,7 +150,7 @@ class FastLibAPI(CDLL):
 
     def fast_sim(self) -> None:
         _error_status = c_int(0)
-        _error_message = create_string_buffer(1025)
+        _error_message = create_string_buffer(IntfStrLen)
 
         self.FAST_Start(
             byref(self.i_turb),
@@ -182,7 +187,7 @@ class FastLibAPI(CDLL):
 
     def fast_deinit(self) -> None:
         _error_status = c_int(0)
-        _error_message = create_string_buffer(1025)
+        _error_message = create_string_buffer(IntfStrLen)
 
         if not self.ended:
             self.ended = True
