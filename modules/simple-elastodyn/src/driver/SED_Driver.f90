@@ -34,7 +34,7 @@ PROGRAM SED_Driver
 
 
 
-   integer(IntKi), parameter                          :: NumInp = 1           !< Number of inputs sent to SED_UpdateStates
+   integer(IntKi), parameter                          :: NumInp = 3           !< Number of inputs sent to SED_UpdateStates (InterpOrder+1)
 
       ! Program variables
    real(DbKi)                                         :: Time                 !< Variable for storing time, in seconds
@@ -43,25 +43,25 @@ PROGRAM SED_Driver
    real(DbKi)                                         :: TMax                 !< Maximum time if found by default
    integer(IntKi)                                     :: NumTSteps            !< number of timesteps
    logical                                            :: TimeIntervalFound    !< Interval between time steps, in seconds
-   real(DbKi)                                         :: InputTime(NumInp)    !< Variable for storing time associated with inputs, in seconds
+   real(DbKi)                                         :: uTimes(NumInp)       !< Variable for storing time associated with inputs, in seconds
    real(DbKi),                            allocatable :: CaseTime(:)          !< Timestamps for the case data
    real(ReKi),                            allocatable :: CaseData(:,:)        !< Data for the case.  Corresponds to CaseTime
 
    type(SED_InitInputType)                            :: InitInData           !< Input data for initialization
    type(SED_InitOutputType)                           :: InitOutData          !< Output data from initialization
-                                                    
+
    type(SED_ContinuousStateType)                      :: x                    !< Continuous states
    type(SED_DiscreteStateType)                        :: xd                   !< Discrete states
    type(SED_ConstraintStateType)                      :: z                    !< Constraint states
    type(SED_ConstraintStateType)                      :: Z_residual           !< Residual of the constraint state functions (Z)
    type(SED_OtherStateType)                           :: OtherState           !< Other states
    type(SED_MiscVarType)                              :: misc                 !< Optimization variables
-                                                    
+
    type(SED_ParameterType)                            :: p                    !< Parameters
    type(SED_InputType)                                :: u(NumInp)            !< System inputs
    type(SED_OutputType)                               :: y                    !< System outputs
-                                                    
-      ! Local variables for this code               
+
+      ! Local variables for this code
    TYPE(SEDDriver_Flags)                              :: CLSettingsFlags      ! Flags indicating which command line arguments were specified
    TYPE(SEDDriver_Settings)                           :: CLSettings           ! Command line arguments passed in
    TYPE(SEDDriver_Flags)                              :: SettingsFlags        ! Flags indicating which settings were specified (includes CL and ipt file)
@@ -244,6 +244,11 @@ PROGRAM SED_Driver
    CALL SED_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    call CheckErr('After Init: ');
 
+   do i = 2, NumInp
+      call SED_CopyInput(u(1),u(i),MESH_NEWCOPY, ErrStat, ErrMsg)
+      call CheckErr('CopyInput')
+   enddo
+
       ! Set the output file
    call GetRoot(Settings%SEDIptFileName,OutputFileRootName)
    call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
@@ -253,6 +258,7 @@ PROGRAM SED_Driver
    CALL SED_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
    CALL SED_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
 
+   n = 0
    if (Settings%WrVTK > 0_IntKi) then
       call WrVTK_refMeshes(Settings, p, y, ErrStat,ErrMsg)
       call CheckErr('After WrVTK_refMeshes: ');
@@ -263,40 +269,63 @@ PROGRAM SED_Driver
    !...............................................................................................................................
 
 
+   Time = TStart
+
+   ! Get values from table
+   do i = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here
+      u(i)%AeroTrq      = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      u(i)%HSSBrTrqC    = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
+      u(i)%GenTrq       = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
+      u(i)%BlPitchCom   = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
+      u(i)%Yaw          = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
+      u(i)%YawRate      = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
+      uTimes(i) = TStart - real((i-1),R8Ki) * TimeInterval
+   enddo
+
+      ! Calculate outputs at TStart
+   CALL SED_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
+   call CheckErr('After CalcOutput: ');
+
+   if (Settings%WrVTK > 1_IntKi) then
+      call WrVTK_Meshes(Settings, p, y, n, ErrStat,ErrMsg)
+      call CheckErr('Time: '//trim(Num2LStr(Time))//'After WrVTK_Meshes: ');
+   endif
+
+   call Dvr_WriteOutputLine(TStart,DvrOut,"ES20.12E2",y)
+
    TmpIdx = 0_IntKi
+   DO n = 1,NumTSteps
+      ! Step the states back one step
+      do i = NumInp-1, 1, -1
+         u(     i+1) = u(     i)
+         uTimes(i+1) = uTimes(i)
+      enddo
 
-   DO n = 0,NumTSteps
-      Time = n*TimeInterval+TStart
-      InputTime(1) = Time
+      uTimes(1) = n*TimeInterval+TStart
 
-      if (Settings%WrVTK > 1_IntKi) then
-         call WrVTK_Meshes(Settings, p, y, n, ErrStat,ErrMsg)
-         call CheckErr('Time: '//trim(Num2LStr(Time))//'After WrVTK_Meshes: ');
-      endif
-
-!     ! interpolate into the input data to get the displacement.  Set this as u then run
-!     do i=1,u(1)%SoilMesh%NNodes
-!        ! InterpStpReal( X, Xary, Yary, indx, size)
-!        do DimIdx=1,3
-!           u(1)%SoilMesh%TranslationDisp(DimIdx,i) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+1), TmpIdx(DimIdx), size(DisplacementList,1) )
-!        enddo
-!        do DimIdx=1,3
-!           Theta(DimIdx) =  InterpStpReal8( real(Time,R8Ki), DisplacementList(:,1), DisplacementList(:,DimIdx+4), TmpIdx(DimIdx), size(DisplacementList,1) )
-!        enddo
-!        u(1)%SoilMesh%Orientation(1:3,1:3,i) = EulerConstruct(Theta)
-!     enddo
-
-         ! Calculate outputs at n
-      CALL SED_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
-      call CheckErr('After CalcOutput: ');
+      ! InterpStpReal( T, Tary, Vary, TmpIdx, size)
+      u(1)%AeroTrq      = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      u(1)%HSSBrTrqC    = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
+      u(1)%GenTrq       = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
+      u(1)%BlPitchCom   = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
+      u(1)%Yaw          = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
+      u(1)%YawRate      = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
 
          ! There are no states to update in SED, but for completeness we add this.
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
-      CALL SED_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg );
+      CALL SED_UpdateStates( uTimes(2), n, u, uTimes, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg );
       call CheckErr('');
 
-      !call Dvr_WriteOutputLine(Time,DvrOut,p%OutFmt,y)
-      call Dvr_WriteOutputLine(Time,DvrOut,"ES20.12E2",y)
+         ! Calculate outputs at n
+      CALL SED_CalcOutput( uTimes(1), u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
+      call CheckErr('After CalcOutput: ');
+
+      if (Settings%WrVTK > 1_IntKi) then
+         call WrVTK_Meshes(Settings, p, y, n, ErrStat,ErrMsg)
+         call CheckErr('Time: '//trim(Num2LStr(uTimes(1)))//'After WrVTK_Meshes: ');
+      endif
+
+      call Dvr_WriteOutputLine(uTimes(1),DvrOut,"ES20.12E2",y)
    END DO
 
 

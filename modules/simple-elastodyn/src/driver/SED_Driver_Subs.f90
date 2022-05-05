@@ -711,6 +711,7 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
    integer(IntKi)                            :: ErrStat2                     ! Temporary Error status
    character(ErrMsgLen)                      :: ErrMsg2                      ! Temporary Error message
    character(*), parameter                   :: RoutineName = 'Dvr_InitializeOutputFile'
+   character(ChanLen)                        :: TmpChar
 
    ErrStat = ErrID_none
    ErrMsg  = ""
@@ -732,7 +733,8 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
    write (OutUnit,'()')
    write (OutUnit,'()')
 
-   call WrFileNR ( OutUnit, 'Time' )
+   TmpChar = 'Time'
+   call WrFileNR ( OutUnit, TmpChar )
 
    do i=1,NumOuts
       call WrFileNR ( OutUnit, tab//IntOutput%WriteOutputHdr(i) )
@@ -744,10 +746,11 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
       ! Write the units of the output parameters on one line:
       !......................................................
 
-   call WrFileNR ( OutUnit, '(s)' )
+   TmpChar = '(s)'
+   call WrFileNR ( OutUnit, TmpChar )
 
    do i=1,NumOuts
-      call WrFileNR ( Outunit, tab//trim(IntOutput%WriteOutputUnt(i)) )
+      call WrFileNR ( Outunit, tab//IntOutput%WriteOutputUnt(i) )
    end do ! i
 
    write (OutUnit,'()')
@@ -798,7 +801,7 @@ subroutine WrVTK_refMeshes(DvrSettings, p, y, ErrStat,ErrMsg)
 
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-   DvrSettings%VTK_tWidth = CEILING( log10( real(DvrSettings%NumTimeSteps,ReKi) ) ) + 1
+   DvrSettings%VTK_tWidth = CEILING( log10( real(DvrSettings%NumTimeSteps+1,ReKi) ) ) + 1
 
    ! Write reference meshes
    call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), y%PlatformPtMesh, trim(DvrSettings%VTK_OutFileRoot)//'.PlatformPtMesh', ErrStat, ErrMsg)
