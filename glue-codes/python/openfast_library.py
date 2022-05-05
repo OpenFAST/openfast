@@ -39,12 +39,12 @@ class FastLibAPI(CDLL):
         self.output_array = None
 
         # The inputs are meant to be from Simulink.
-        # If < 8, FAST_SetExternalInputs simply returns,
+        # If < 51, FAST_SetExternalInputs simply returns,
         # but this behavior may change to an error
-        ### MAKE THIS 8 OR 11
-        self.num_inputs = c_int(51)
-        self.inp_array = (c_double * 53)(0.0, )  # 10 is hard-coded in FAST_Library as MAXInitINPUTS
-        self.inp_array[0] = -1.0  # Sensor type - 
+        ### MAKE THIS 51
+        self.num_inputs = c_int(NumFixedInputs)
+        # inp_array is initialized with 0. See FAST_Library.FAST_SetExternalInputs for usage.
+        self.inp_array = (c_double * self.num_inputs.value)(0.0, )
 
         self.output_values = None
         self.ended = False
