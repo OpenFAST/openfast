@@ -32,7 +32,7 @@ class FastLibAPI(CDLL):
         self.i_turb = c_int(0)
         self.dt = c_double(0.0)
         self.t_max = c_double(0.0)
-        self.abort_error_level = c_int(99)
+        self.abort_error_level = c_int(4)  # Initialize to 4 (ErrID_Fatal) and reset to user-given value in FAST_Sizes
         self.end_early = c_bool(False)
         self.num_outs = c_int(0)
         self.channel_names = create_string_buffer(20 * 4000)
