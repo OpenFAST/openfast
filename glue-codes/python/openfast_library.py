@@ -45,7 +45,7 @@ class FastLibAPI(CDLL):
         self.ended = False
 
 
-    def _initialize_routines(self):
+    def _initialize_routines(self) -> None:
         self.FAST_AllocateTurbines.argtypes = [
             POINTER(c_int),
             POINTER(c_int),
@@ -108,7 +108,7 @@ class FastLibAPI(CDLL):
         return error_status.value >= self.abort_error_level.value
 
 
-    def fast_init(self):
+    def fast_init(self) -> None:
         _error_status = c_int(0)
         _error_message = create_string_buffer(1025)
 
@@ -143,7 +143,7 @@ class FastLibAPI(CDLL):
         self.output_array = (c_double * self.num_outs.value)(0.0, )
 
 
-    def fast_sim(self):
+    def fast_sim(self) -> None:
         _error_status = c_int(0)
         _error_message = create_string_buffer(1025)
 
@@ -180,7 +180,7 @@ class FastLibAPI(CDLL):
                 break
 
 
-    def fast_deinit(self):
+    def fast_deinit(self) -> None:
         _error_status = c_int(0)
         _error_message = create_string_buffer(1025)
 
@@ -203,14 +203,14 @@ class FastLibAPI(CDLL):
                 raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
 
-    def fast_run(self):
+    def fast_run(self) -> None:
         self.fast_init()
         self.fast_sim()
         self.fast_deinit()
 
 
     @property
-    def total_time_steps(self):
+    def total_time_steps(self) -> int:
         # From FAST_Subs FAST_Init:
         # p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
         # Then in FAST_Prog:
