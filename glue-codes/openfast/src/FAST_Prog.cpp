@@ -7,7 +7,7 @@
 
 int main(int argc, char** argv) {
    if (argc != 2) {
-      std::cerr << "Incorrect syntax. Try: openfastcpp inputfile.yaml" << std::endl ;
+      std::cerr << "Incorrect syntax. Expected syntax is `openfast_cpp input.fst`" << std::endl;
       return 1;
    }
 
@@ -15,4 +15,5 @@ int main(int argc, char** argv) {
 
    FastLibAPI fastlib = FastLibAPI(input_file_name);
    fastlib.fast_run();
+   return 0;
 }

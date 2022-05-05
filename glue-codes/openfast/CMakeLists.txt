@@ -23,8 +23,8 @@ set_property(TARGET openfast PROPERTY LINKER_LANGUAGE Fortran)
 include_directories(${CMAKE_SOURCE_DIR}/modules/openfast-library/src/)
 include_directories(${CMAKE_BINARY_DIR}/modules/openfoam/)
 include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
-add_executable(openfast_c src/FAST_Prog.cpp src/FastLibAPI.cpp)
-target_link_libraries(openfast_c openfastlib)
+add_executable(openfast_cpp src/FAST_Prog.cpp src/FastLibAPI.cpp)
+target_link_libraries(openfast_cpp openfastlib)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
@@ -36,5 +36,5 @@ if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
   set_source_files_properties(src/FAST_Prog.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 endif()
 
-install(TARGETS openfast
+install(TARGETS openfast openfast_cpp
   RUNTIME DESTINATION bin)
