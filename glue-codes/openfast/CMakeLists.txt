@@ -14,9 +14,17 @@
 # limitations under the License.
 #
 
+set (CMAKE_CXX_STANDARD 11)
+
 add_executable(openfast src/FAST_Prog.f90)
 target_link_libraries(openfast openfast_postlib foamfastlib)
 set_property(TARGET openfast PROPERTY LINKER_LANGUAGE Fortran)
+
+include_directories(${CMAKE_SOURCE_DIR}/modules/openfast-library/src/)
+include_directories(${CMAKE_BINARY_DIR}/modules/openfoam/)
+include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
+add_executable(openfast_c src/FAST_Prog.cpp src/FastLibAPI.cpp)
+target_link_libraries(openfast_c openfastlib)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
