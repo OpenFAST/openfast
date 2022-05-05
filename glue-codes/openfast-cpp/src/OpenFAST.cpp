@@ -107,8 +107,10 @@ void fast::OpenFAST::init() {
 
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 int nodeClusterType = 0;
-                if (forcePtsBladeDistributionType[iTurb] == 'chordClustered'):
+                if (forcePtsBladeDistributionType[iTurb] == "chordClustered")
+                {
                     nodeClusterType = 1;
+                }
                 std::copy(
                     FASTInputFileName[iTurb].data(),
                     FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
@@ -175,8 +177,10 @@ void fast::OpenFAST::init() {
 
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 int nodeClusterType = 0;
-                if (forcePtsBladeDistributionType[iTurb] == 'chordClustered'):
+                if (forcePtsBladeDistributionType[iTurb] == "chordClustered")
+                {
                     nodeClusterType = 1;
+                }
                 std::copy(
                     FASTInputFileName[iTurb].data(),
                     FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),

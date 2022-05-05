@@ -46,6 +46,7 @@ IMPLICIT NONE
     REAL(KIND=C_FLOAT) :: BladeLength 
     REAL(KIND=C_FLOAT) :: TowerHeight 
     REAL(KIND=C_FLOAT) :: TowerBaseHeight 
+    LOGICAL(KIND=C_BOOL) :: NodeClusterType 
   END TYPE OpFM_InitInputType_C
   TYPE, PUBLIC :: OpFM_InitInputType
     TYPE( OpFM_InitInputType_C ) :: C_obj
@@ -56,6 +57,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: BladeLength      !< Blade length [meters]
     REAL(ReKi)  :: TowerHeight      !< Tower Height [meters]
     REAL(ReKi)  :: TowerBaseHeight      !< Tower Base Height [meters]
+    LOGICAL  :: NodeClusterType      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE OpFM_InitInputType
 ! =======================
 ! =========  OpFM_InitOutputType_C  =======
@@ -106,6 +108,7 @@ IMPLICIT NONE
     REAL(KIND=C_FLOAT) :: BladeLength 
     REAL(KIND=C_FLOAT) :: TowerHeight 
     REAL(KIND=C_FLOAT) :: TowerBaseHeight 
+    LOGICAL(KIND=C_BOOL) :: NodeClusterType 
   END TYPE OpFM_ParameterType_C
   TYPE, PUBLIC :: OpFM_ParameterType
     TYPE( OpFM_ParameterType_C ) :: C_obj
@@ -121,6 +124,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: BladeLength      !< Blade length (same for all blades) [m]
     REAL(ReKi)  :: TowerHeight      !< Tower height [m]
     REAL(ReKi)  :: TowerBaseHeight      !< Tower base height [m]
+    LOGICAL  :: NodeClusterType      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE OpFM_ParameterType
 ! =======================
 ! =========  OpFM_InputType_C  =======
@@ -258,6 +262,8 @@ ENDIF
     DstInitInputData%C_obj%TowerHeight = SrcInitInputData%C_obj%TowerHeight
     DstInitInputData%TowerBaseHeight = SrcInitInputData%TowerBaseHeight
     DstInitInputData%C_obj%TowerBaseHeight = SrcInitInputData%C_obj%TowerBaseHeight
+    DstInitInputData%NodeClusterType = SrcInitInputData%NodeClusterType
+    DstInitInputData%C_obj%NodeClusterType = SrcInitInputData%C_obj%NodeClusterType
  END SUBROUTINE OpFM_CopyInitInput
 
  SUBROUTINE OpFM_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -333,6 +339,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! BladeLength
       Re_BufSz   = Re_BufSz   + 1  ! TowerHeight
       Re_BufSz   = Re_BufSz   + 1  ! TowerBaseHeight
+      Int_BufSz  = Int_BufSz  + 1  ! NodeClusterType
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -402,6 +409,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TowerBaseHeight
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%NodeClusterType, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE OpFM_PackInitInput
 
  SUBROUTINE OpFM_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -488,6 +497,9 @@ ENDIF
     OutData%TowerBaseHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
       OutData%C_obj%TowerBaseHeight = OutData%TowerBaseHeight
+    OutData%NodeClusterType = TRANSFER(IntKiBuf(Int_Xferred), OutData%NodeClusterType)
+    Int_Xferred = Int_Xferred + 1
+      OutData%C_obj%NodeClusterType = OutData%NodeClusterType
  END SUBROUTINE OpFM_UnPackInitInput
 
  SUBROUTINE OpFM_C2Fary_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers )
@@ -528,6 +540,7 @@ ENDIF
     InitInputData%BladeLength = InitInputData%C_obj%BladeLength
     InitInputData%TowerHeight = InitInputData%C_obj%TowerHeight
     InitInputData%TowerBaseHeight = InitInputData%C_obj%TowerBaseHeight
+    InitInputData%NodeClusterType = InitInputData%C_obj%NodeClusterType
  END SUBROUTINE OpFM_C2Fary_CopyInitInput
 
  SUBROUTINE OpFM_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
@@ -574,6 +587,7 @@ ENDIF
     InitInputData%C_obj%BladeLength = InitInputData%BladeLength
     InitInputData%C_obj%TowerHeight = InitInputData%TowerHeight
     InitInputData%C_obj%TowerBaseHeight = InitInputData%TowerBaseHeight
+    InitInputData%C_obj%NodeClusterType = InitInputData%NodeClusterType
  END SUBROUTINE OpFM_F2C_CopyInitInput
 
  SUBROUTINE OpFM_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2296,6 +2310,8 @@ ENDIF
     DstParamData%C_obj%TowerHeight = SrcParamData%C_obj%TowerHeight
     DstParamData%TowerBaseHeight = SrcParamData%TowerBaseHeight
     DstParamData%C_obj%TowerBaseHeight = SrcParamData%C_obj%TowerBaseHeight
+    DstParamData%NodeClusterType = SrcParamData%NodeClusterType
+    DstParamData%C_obj%NodeClusterType = SrcParamData%C_obj%NodeClusterType
  END SUBROUTINE OpFM_CopyParam
 
  SUBROUTINE OpFM_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -2376,6 +2392,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! BladeLength
       Re_BufSz   = Re_BufSz   + 1  ! TowerHeight
       Re_BufSz   = Re_BufSz   + 1  ! TowerBaseHeight
+      Int_BufSz  = Int_BufSz  + 1  ! NodeClusterType
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2455,6 +2472,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TowerBaseHeight
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%NodeClusterType, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE OpFM_PackParam
 
  SUBROUTINE OpFM_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2556,6 +2575,9 @@ ENDIF
     OutData%TowerBaseHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
       OutData%C_obj%TowerBaseHeight = OutData%TowerBaseHeight
+    OutData%NodeClusterType = TRANSFER(IntKiBuf(Int_Xferred), OutData%NodeClusterType)
+    Int_Xferred = Int_Xferred + 1
+      OutData%C_obj%NodeClusterType = OutData%NodeClusterType
  END SUBROUTINE OpFM_UnPackParam
 
  SUBROUTINE OpFM_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers )
@@ -2601,6 +2623,7 @@ ENDIF
     ParamData%BladeLength = ParamData%C_obj%BladeLength
     ParamData%TowerHeight = ParamData%C_obj%TowerHeight
     ParamData%TowerBaseHeight = ParamData%C_obj%TowerBaseHeight
+    ParamData%NodeClusterType = ParamData%C_obj%NodeClusterType
  END SUBROUTINE OpFM_C2Fary_CopyParam
 
  SUBROUTINE OpFM_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
@@ -2652,6 +2675,7 @@ ENDIF
     ParamData%C_obj%BladeLength = ParamData%BladeLength
     ParamData%C_obj%TowerHeight = ParamData%TowerHeight
     ParamData%C_obj%TowerBaseHeight = ParamData%TowerBaseHeight
+    ParamData%C_obj%NodeClusterType = ParamData%NodeClusterType
  END SUBROUTINE OpFM_F2C_CopyParam
 
  SUBROUTINE OpFM_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
