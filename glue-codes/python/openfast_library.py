@@ -36,7 +36,7 @@ class FastLibAPI(CDLL):
         self.end_early = c_bool(False)
         self.num_outs = c_int(0)
         self.channel_names = create_string_buffer(20 * 4000)
-        self.output_array = None
+        self.ended = False
 
         # The inputs are meant to be from Simulink.
         # If < 51, FAST_SetExternalInputs simply returns,
@@ -46,8 +46,11 @@ class FastLibAPI(CDLL):
         # inp_array is initialized with 0. See FAST_Library.FAST_SetExternalInputs for usage.
         self.inp_array = (c_double * self.num_inputs.value)(0.0, )
 
+        # These arrays hold the outputs from OpenFAST
+        # output_array is a 1D array for the values from a single step
+        # output_values is a 2D array for the values from all steps in the simulation
+        self.output_array = None
         self.output_values = None
-        self.ended = False
 
 
     def _initialize_routines(self) -> None:
