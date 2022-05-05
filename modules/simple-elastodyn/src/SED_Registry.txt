@@ -12,6 +12,7 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include   Registry_NWTC_Library.txt
 
+param   SED/SED   -   IntKi   SED_NMX   -   4   -   "Used in updating predictor-corrector values (size of state history)"   -
 
 # ..... Initialization data .......................................................................................................
 # SED input file
@@ -104,7 +105,14 @@ typedef  ^       DiscreteStateType     ReKi             DummyDiscreteState -  - 
 typedef  ^       ConstraintStateType   ReKi              DummyConstrState  -  - -   "" -
 
 # any other states
-typedef  ^       OtherStateType        ReKi              DummyOtherState   -  - -   "" -
+typedef  ^        OtherStateType       IntKi             n                 -  - -   "tracks time step for which OtherState was updated" -
+typedef  ^        OtherStateType SED_ContinuousStateType xdot       {SED_NMX} - -   "previous state deriv for multi-step" -
+typedef  ^        OtherStateType       IntKi             IC               {:} - -   "Array which stores pointers to predictor-corrector results" -
+typedef  ^        OtherStateType       ReKi              HSSBrTrq          -  - -   "HSSBrTrq from update states; a hack to get this working with a single integrator"   -
+typedef  ^        OtherStateType       ReKi              HSSBrTrqC         -  - -   "Commanded HSS brake torque (adjusted for sign)"   N-m
+typedef  ^        OtherStateType       IntKi             SgnPrvLSTQ        -  - -   "The sign of the low-speed shaft torque from the previous call to RtHS(). NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run!"   -
+typedef  ^        OtherStateType       IntKi             SgnLSTQ    {SED_NMX} - -   "history of sign of LSTQ"
+
 
 
 # ..... Parameters.................................................................................................................
@@ -113,10 +121,12 @@ typedef  ^        ParameterType        CHARACTER(1024)   RootName          -  - 
 typedef  ^        ParameterType        LOGICAL           GenDOF            -  - -   "whether the generator DOF is on (free) or off (fixed)" -
 typedef  ^        ParameterType        LOGICAL           YawDOF            -  - -   "Yaw controlled by controller, or fixed" -
 typedef  ^        ParameterType        DbKi              DT                -  - -   "Time step for module time integration" s
+typedef  ^        ParameterType        DbKi              DT24              -  - -   "Time step for solver" s
 typedef  ^        ParameterType        IntKi             IntMethod         -  - -   "Integration method {1: RK4, 2: AB4, or 3: ABM4}" -
 typedef  ^        ParameterType        ReKi              J_DT              -  - -   "Drivetrain inertia (blades+hub+shaft+generator)" "kgm^2"
 typedef  ^        ParameterType        ReKi              PtfmPitch         -  - -   "Static platform tilt angle" rad
 typedef  ^        ParameterType        ReKi              InitYaw           -  - -   "Initial or fixed nacelle yaw -- store in case YawDOF is off" deg
+typedef  ^        ParameterType        R8Ki              InitAzimuth       -  - -   "Initial azimuth angle for blade 1" deg
 typedef  ^        ParameterType        ReKi              RotIner           -  - -   "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)" "kg m^2"
 typedef  ^        ParameterType        ReKi              GenIner           -  - -   "Generator inertia about HSS" "kg m^2"
 typedef  ^        ParameterType        ReKi              GBoxEff           -  - -   "Gearbox efficiency" "percent"

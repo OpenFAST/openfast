@@ -24,9 +24,9 @@ MODULE SED_IO
 
    implicit none
 
-   integer(IntKi),   parameter   :: IMETHOD_RK4    = 1
-   integer(IntKi),   parameter   :: IMETHOD_AB4    = 2
-   integer(IntKi),   parameter   :: IMETHOD_ABM4   = 3
+   integer(IntKi),   parameter   :: Method_RK4  = 1
+   integer(IntKi),   parameter   :: Method_AB4  = 2
+   integer(IntKi),   parameter   :: Method_ABM4 = 3
 
 
    real(ReKi),       parameter   :: SmallAngleLimit_Deg  =  15.0     ! Largest input angle considered "small" (used as a check on input data), degrees
@@ -243,8 +243,8 @@ subroutine SEDInput_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    ! InitInput checks
    if (InitInp%Linearize)  call SetErrStat(ErrID_Fatal,'AeroDisk cannot perform linearization analysis.',ErrStat,ErrMsg,RoutineName)
    if (InputFileData%DT       <= 0.0_DbKi)   call SetErrStat(ErrID_Fatal,'DT must not be negative.',     ErrStat,ErrMsg,RoutineName)
-   if ((InputFileData%IntMethod /= IMETHOD_RK4) .and. (InputFileData%IntMethod /= IMETHOD_AB4) .and. (InputFileData%IntMethod /= IMETHOD_ABM4))   &
-      call SetErrStat(ErrID_Fatal,'IntMethod must be '//trim(Num2LStr(IMETHOD_RK4))//': RK4, '//trim(Num2LStr(IMETHOD_AB4))//': AB4, or '//trim(Num2LStr(IMETHOD_ABM4))//': ABM4',     ErrStat,ErrMsg,RoutineName)
+   if ((InputFileData%IntMethod /= Method_RK4) .and. (InputFileData%IntMethod /= Method_AB4) .and. (InputFileData%IntMethod /= Method_ABM4))   &
+      call SetErrStat(ErrID_Fatal,'IntMethod must be '//trim(Num2LStr(Method_RK4))//': RK4, '//trim(Num2LStr(Method_AB4))//': AB4, or '//trim(Num2LStr(Method_ABM4))//': ABM4',     ErrStat,ErrMsg,RoutineName)
 
    ! initial settings check
    if (abs(InputFileData%Azimuth) > TwoPi)     &
@@ -316,10 +316,16 @@ subroutine Calc_WriteOutput( u, p, x, dxdt, y, m, ErrStat, ErrMsg, CalcWriteOutp
    ! return if we are not providing outputs
    if (.not. CalcWriteOutput) return
 
+   ! Azimuth
    m%AllOuts( Azimuth  ) = x%QT( DOF_Az)
+   call Zero2TwoPi(m%AllOuts( Azimuth  ))    ! modulo
+
+   ! speed
    m%AllOuts( RotSpeed ) = x%QDT(DOF_Az)
-   m%AllOuts( RotAcc   ) = dxdt%QDT(DOF_Az)
    m%AllOuts( GenSpeed ) = x%QDT(DOF_Az)    * p%GBoxRatio
+
+   ! accel
+   m%AllOuts( RotAcc   ) = dxdt%QDT(DOF_Az)
    m%AllOuts( GenAcc   ) = dxdt%QDT(DOF_Az) * p%GBoxRatio
 end subroutine Calc_WriteOutput
 

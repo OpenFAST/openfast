@@ -33,6 +33,7 @@ MODULE SED_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SED_NMX = 4      ! Used in updating predictor-corrector values (size of state history) [-]
 ! =========  SED_InputFile  =======
   TYPE, PUBLIC :: SED_InputFile
     LOGICAL  :: Echo      !< Echo the input file [-]
@@ -128,7 +129,13 @@ IMPLICIT NONE
 ! =======================
 ! =========  SED_OtherStateType  =======
   TYPE, PUBLIC :: SED_OtherStateType
-    REAL(ReKi)  :: DummyOtherState      !<  [-]
+    INTEGER(IntKi)  :: n      !< tracks time step for which OtherState was updated [-]
+    TYPE(SED_ContinuousStateType) , DIMENSION(SED_NMX)  :: xdot      !< previous state deriv for multi-step [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IC      !< Array which stores pointers to predictor-corrector results [-]
+    REAL(ReKi)  :: HSSBrTrq      !< HSSBrTrq from update states; a hack to get this working with a single integrator [-]
+    REAL(ReKi)  :: HSSBrTrqC      !< Commanded HSS brake torque (adjusted for sign) [N-m]
+    INTEGER(IntKi)  :: SgnPrvLSTQ      !< The sign of the low-speed shaft torque from the previous call to RtHS(). NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run! [-]
+    INTEGER(IntKi) , DIMENSION(SED_NMX)  :: SgnLSTQ      !< history of sign of LSTQ [-]
   END TYPE SED_OtherStateType
 ! =======================
 ! =========  SED_ParameterType  =======
@@ -137,10 +144,12 @@ IMPLICIT NONE
     LOGICAL  :: GenDOF      !< whether the generator DOF is on (free) or off (fixed) [-]
     LOGICAL  :: YawDOF      !< Yaw controlled by controller, or fixed [-]
     REAL(DbKi)  :: DT      !< Time step for module time integration [s]
+    REAL(DbKi)  :: DT24      !< Time step for solver [s]
     INTEGER(IntKi)  :: IntMethod      !< Integration method {1: RK4, 2: AB4, or 3: ABM4} [-]
     REAL(ReKi)  :: J_DT      !< Drivetrain inertia (blades+hub+shaft+generator) [kgm^2]
     REAL(ReKi)  :: PtfmPitch      !< Static platform tilt angle [rad]
     REAL(ReKi)  :: InitYaw      !< Initial or fixed nacelle yaw -- store in case YawDOF is off [deg]
+    REAL(R8Ki)  :: InitAzimuth      !< Initial azimuth angle for blade 1 [deg]
     REAL(ReKi)  :: RotIner      !< Hub inertia about teeter axis (2-blader) or rotor axis (3-blader) [kg m^2]
     REAL(ReKi)  :: GenIner      !< Generator inertia about HSS [kg m^2]
     REAL(ReKi)  :: GBoxEff      !< Gearbox efficiency [percent]
@@ -2542,13 +2551,35 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'SED_CopyOtherState'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
+    DstOtherStateData%n = SrcOtherStateData%n
+    DO i1 = LBOUND(SrcOtherStateData%xdot,1), UBOUND(SrcOtherStateData%xdot,1)
+      CALL SED_CopyContState( SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+IF (ALLOCATED(SrcOtherStateData%IC)) THEN
+  i1_l = LBOUND(SrcOtherStateData%IC,1)
+  i1_u = UBOUND(SrcOtherStateData%IC,1)
+  IF (.NOT. ALLOCATED(DstOtherStateData%IC)) THEN 
+    ALLOCATE(DstOtherStateData%IC(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%IC.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOtherStateData%IC = SrcOtherStateData%IC
+ENDIF
+    DstOtherStateData%HSSBrTrq = SrcOtherStateData%HSSBrTrq
+    DstOtherStateData%HSSBrTrqC = SrcOtherStateData%HSSBrTrqC
+    DstOtherStateData%SgnPrvLSTQ = SrcOtherStateData%SgnPrvLSTQ
+    DstOtherStateData%SgnLSTQ = SrcOtherStateData%SgnLSTQ
  END SUBROUTINE SED_CopyOtherState
 
  SUBROUTINE SED_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -2560,6 +2591,12 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
+  CALL SED_DestroyContState( OtherStateData%xdot(i1), ErrStat, ErrMsg )
+ENDDO
+IF (ALLOCATED(OtherStateData%IC)) THEN
+  DEALLOCATE(OtherStateData%IC)
+ENDIF
  END SUBROUTINE SED_DestroyOtherState
 
  SUBROUTINE SED_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2597,7 +2634,36 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyOtherState
+      Int_BufSz  = Int_BufSz  + 1  ! n
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i1 = LBOUND(InData%xdot,1), UBOUND(InData%xdot,1)
+      Int_BufSz   = Int_BufSz + 3  ! xdot: size of buffers for each call to pack subtype
+      CALL SED_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%xdot(i1), ErrStat2, ErrMsg2, .TRUE. ) ! xdot 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! xdot
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! xdot
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! xdot
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+  Int_BufSz   = Int_BufSz   + 1     ! IC allocated yes/no
+  IF ( ALLOCATED(InData%IC) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! IC upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%IC)  ! IC
+  END IF
+      Re_BufSz   = Re_BufSz   + 1  ! HSSBrTrq
+      Re_BufSz   = Re_BufSz   + 1  ! HSSBrTrqC
+      Int_BufSz  = Int_BufSz  + 1  ! SgnPrvLSTQ
+      Int_BufSz  = Int_BufSz  + SIZE(InData%SgnLSTQ)  ! SgnLSTQ
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2625,8 +2691,63 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    ReKiBuf(Re_Xferred) = InData%DummyOtherState
+    IntKiBuf(Int_Xferred) = InData%n
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%xdot,1), UBOUND(InData%xdot,1)
+      CALL SED_PackContState( Re_Buf, Db_Buf, Int_Buf, InData%xdot(i1), ErrStat2, ErrMsg2, OnlySize ) ! xdot 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
+  IF ( .NOT. ALLOCATED(InData%IC) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%IC,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%IC,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%IC,1), UBOUND(InData%IC,1)
+        IntKiBuf(Int_Xferred) = InData%IC(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    ReKiBuf(Re_Xferred) = InData%HSSBrTrq
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%HSSBrTrqC
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%SgnPrvLSTQ
+    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%SgnLSTQ,1), UBOUND(InData%SgnLSTQ,1)
+      IntKiBuf(Int_Xferred) = InData%SgnLSTQ(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
  END SUBROUTINE SED_PackOtherState
 
  SUBROUTINE SED_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2642,6 +2763,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'SED_UnPackOtherState'
@@ -2655,8 +2777,82 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%DummyOtherState = ReKiBuf(Re_Xferred)
+    OutData%n = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%xdot,1)
+    i1_u = UBOUND(OutData%xdot,1)
+    DO i1 = LBOUND(OutData%xdot,1), UBOUND(OutData%xdot,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL SED_UnpackContState( Re_Buf, Db_Buf, Int_Buf, OutData%xdot(i1), ErrStat2, ErrMsg2 ) ! xdot 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! IC not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%IC)) DEALLOCATE(OutData%IC)
+    ALLOCATE(OutData%IC(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%IC.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%IC,1), UBOUND(OutData%IC,1)
+        OutData%IC(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    OutData%HSSBrTrq = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%HSSBrTrqC = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SgnPrvLSTQ = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%SgnLSTQ,1)
+    i1_u = UBOUND(OutData%SgnLSTQ,1)
+    DO i1 = LBOUND(OutData%SgnLSTQ,1), UBOUND(OutData%SgnLSTQ,1)
+      OutData%SgnLSTQ(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
  END SUBROUTINE SED_UnPackOtherState
 
  SUBROUTINE SED_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -2678,10 +2874,12 @@ ENDIF
     DstParamData%GenDOF = SrcParamData%GenDOF
     DstParamData%YawDOF = SrcParamData%YawDOF
     DstParamData%DT = SrcParamData%DT
+    DstParamData%DT24 = SrcParamData%DT24
     DstParamData%IntMethod = SrcParamData%IntMethod
     DstParamData%J_DT = SrcParamData%J_DT
     DstParamData%PtfmPitch = SrcParamData%PtfmPitch
     DstParamData%InitYaw = SrcParamData%InitYaw
+    DstParamData%InitAzimuth = SrcParamData%InitAzimuth
     DstParamData%RotIner = SrcParamData%RotIner
     DstParamData%GenIner = SrcParamData%GenIner
     DstParamData%GBoxEff = SrcParamData%GBoxEff
@@ -2771,10 +2969,12 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! GenDOF
       Int_BufSz  = Int_BufSz  + 1  ! YawDOF
       Db_BufSz   = Db_BufSz   + 1  ! DT
+      Db_BufSz   = Db_BufSz   + 1  ! DT24
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
       Re_BufSz   = Re_BufSz   + 1  ! J_DT
       Re_BufSz   = Re_BufSz   + 1  ! PtfmPitch
       Re_BufSz   = Re_BufSz   + 1  ! InitYaw
+      Db_BufSz   = Db_BufSz   + 1  ! InitAzimuth
       Re_BufSz   = Re_BufSz   + 1  ! RotIner
       Re_BufSz   = Re_BufSz   + 1  ! GenIner
       Re_BufSz   = Re_BufSz   + 1  ! GBoxEff
@@ -2851,6 +3051,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%DT24
+    Db_Xferred = Db_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%IntMethod
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%J_DT
@@ -2859,6 +3061,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%InitYaw
     Re_Xferred = Re_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%InitAzimuth
+    Db_Xferred = Db_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RotIner
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%GenIner
@@ -2969,6 +3173,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
+    OutData%DT24 = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
     OutData%IntMethod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%J_DT = ReKiBuf(Re_Xferred)
@@ -2977,6 +3183,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%InitYaw = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%InitAzimuth = REAL(DbKiBuf(Db_Xferred), R8Ki)
+    Db_Xferred = Db_Xferred + 1
     OutData%RotIner = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%GenIner = ReKiBuf(Re_Xferred)

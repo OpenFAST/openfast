@@ -132,7 +132,7 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Set inputs
    call Init_U(ErrStat2,ErrMsg2);         if (Failed())  return
 
-   ! Set miscvars (mesh mappings i here
+   ! Set miscvars (mesh mappings in here)
    call Init_Misc(ErrStat2,ErrMsg2);      if (Failed())  return
 
    ! Set outputs
@@ -156,11 +156,13 @@ contains
       p%RootName     = InitInp%RootName
       p%DT           = InputFileData%DT
       Interval       = p%DT                        ! Tell glue code what we want for DT
+      p%DT24 = p%DT/24.0_DbKi                      ! Time-step parameter needed for Solver().
       p%numOuts      = InputFileData%NumOuts
       p%IntMethod    = InputFileData%IntMethod
       p%GenDOF       = InputFileData%GenDOF
       p%YawDOF       = InputFileData%YawDOF
       p%InitYaw      = InputFileData%NacYaw
+      p%InitAzimuth  = InputFileData%Azimuth
 
       ! geometry
       p%NumBl        = InputFileData%NumBl
@@ -189,11 +191,11 @@ contains
       call SetOutParam(InputFileData%OutList, p, ErrStat3, ErrMsg3 )
    end subroutine SED_SetParameters
 
-
    !> Initialize states
    subroutine Init_States(ErrStat3,ErrMsg3)
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
+      integer(IntKi)                   :: I
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
 
@@ -206,9 +208,22 @@ contains
       x%QDT(DOF_Az)  = InputFileData%RotSpeed
 
       ! Unused states
-      OtherState%DummyOtherState = 0.0_ReKi
       xd%DummyDiscreteState      = 0.0_ReKi
       z%DummyConstrState         = 0.0_ReKi
+
+      ! Other states (for HSS brake)
+      OtherState%HSSBrTrq   = 0.0_ReKi
+      OtherState%HSSBrTrqC  = 0.0_ReKi
+      OtherState%SgnPrvLSTQ = 1
+      OtherState%SgnLSTQ    = 1
+      call AllocAry( OtherState%IC, SED_NMX, 'IC', ErrStat3, ErrMsg3 );   if ( ErrStat >= AbortErrLev ) return
+
+      ! Now initialize the IC array = (/NMX, NMX-1, ... , 1 /)
+      ! this keeps track of the position in the array of continuous states (stored in other states)
+      OtherState%IC(1) = SED_NMX
+      do I = 2,SED_NMX
+         OtherState%IC(I) = OtherState%IC(I-1) - 1
+      enddo
    end subroutine Init_States
 
    !> Initialize the meshes
@@ -394,10 +409,9 @@ contains
       character(*),     intent(  out)  :: ErrMsg3
 
       u%AeroTrq   = 0.0_ReKi
-      u%HSSBrTrqC = 0.0_ReKi
       u%GenTrq    = 0.0_ReKi
       call AllocAry( u%BlPitchCom, p%NumBl, 'u%BlPitchCom', ErrStat3, ErrMsg3 ); if (errStat3 >= AbortErrLev) return
-      u%BlPitchCom   = 0.0_ReKi
+      u%BlPitchCom= InputFileData%BlPitch
       u%Yaw       = InputFileData%NacYaw
       u%YawRate   = 0.0_ReKi
 
@@ -481,7 +495,7 @@ contains
       InitOut%PlatformPos(4:6)   = real(theta, ReKi)
    end subroutine Init_InitY
 
-   !> Initialize the outputs in Y -- most of this could probably be moved to CalcOutput
+   !> Initialize the outputs in Y
    subroutine Init_Y(ErrStat3,ErrMSg3)
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
@@ -549,11 +563,11 @@ END SUBROUTINE SED_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-SUBROUTINE SED_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+SUBROUTINE SED_UpdateStates( t, n, u, uTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    real(DbKi),                         intent(in   )  :: t               !< Current simulation time in seconds
    integer(IntKi),                     intent(in   )  :: n               !< Current step of the simulation: t = n*Interval
-   type(SED_InputType),                intent(inout)  :: Inputs(:)       !< Inputs at InputTimes (output for mesh connect)
-   real(DbKi),                         intent(in   )  :: InputTimes(:)   !< Times in seconds associated with Inputs
+   type(SED_InputType),                intent(inout)  :: u(:)            !< Inputs at InputTimes (output for mesh connect)
+   real(DbKi),                         intent(in   )  :: uTimes(:)       !< Times in seconds associated with Inputs
    type(SED_ParameterType),            intent(in   )  :: p               !< Parameters
    type(SED_ContinuousStateType),      intent(inout)  :: x               !< Input: Continuous states at t;
    type(SED_DiscreteStateType),        intent(inout)  :: xd              !< Input: Discrete states at t;
@@ -564,8 +578,6 @@ SUBROUTINE SED_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
    character(*),                       intent(  out)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
    ! Local variables
-   type(SED_ContinuousStateType)                     :: dxdt            ! Continuous state derivatives at t
-   type(SED_InputType)                               :: u               ! Instantaneous inputs
    integer(IntKi)                                     :: ErrStat2        ! local error status
    character(ErrMsgLen)                               :: ErrMsg2         ! local error message
    character(*), parameter                            :: RoutineName = 'SED_UpdateStates'
@@ -574,20 +586,139 @@ SUBROUTINE SED_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
 
-   ! Get the inputs at time t, based on the array of values sent by the glue code:
-   ! before calling ExtrapInterp routine, memory in u must be allocated; we can do that with a copy:
-   call SED_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 );   if (Failed()) return;
+   ! Simple case of constant RPM
+   if (.not. p%GenDOF) then
 
-   call SED_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 );   if (Failed()) return;
+      ! Azimuth angle
+      x%QT( DOF_Az)  = p%InitAzimuth + x%QDT(DOF_Az) * real(n,R8Ki) * p%DT
+      ! Rotor speed: constant in this case
+      !x%QDT(DOF_Az) = x%QDT(DOF_Az)
 
-   ! Get first time derivatives of continuous states (dxdt):
-   call SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 );   if (Failed()) return;
+   else
 
-   ! Integrate (update) continuous states (x) here:
-   !x = function of dxdt and x
+      select case (p%IntMethod)
+      case (Method_RK4)
+         call SED_RK4(  t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      case (Method_AB4)
+         call SED_AB4(  t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      case (Method_ABM4)
+         call SED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      case default
+         ErrStat = ErrID_Fatal
+         ErrMsg  = ' Error in SED_UpdateStates: p%method must be 1 (RK4), 2 (AB4), or 3 (ABM4)'
+         return
+      end select
 
-   ! Destroy local variables before returning
-   call cleanup()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   endif
+end subroutine SED_UpdateStates
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
+!!   Define constants k1, k2, k3, and k4 as
+!!        k1 = dt * f(t        , x_t        )
+!!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
+!!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
+!!        k4 = dt * f(t + dt   , x_t + k3   ).
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
+!!
+!! For details, see:
+!! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for
+!!   Runge-Kutta." Sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England:
+!!   Cambridge University Press, pp. 704-716, 1992.
+subroutine SED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   real(DbKi),                    intent(in   )  :: t           !< Current simulation time in seconds
+   integer(IntKi),                intent(in   )  :: n           !< time step number
+   type(SED_InputType),           intent(inout)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+   real(DbKi),                    intent(in   )  :: utimes(:)   !< times of input
+   type(SED_ParameterType),       intent(in   )  :: p           !< Parameters
+   type(SED_ContinuousStateType), intent(inout)  :: x           !< Continuous states at t on input at t + dt on output
+   type(SED_DiscreteStateType),   intent(in   )  :: xd          !< Discrete states at t
+   type(SED_ConstraintStateType), intent(in   )  :: z           !< Constraint states at t (possibly a guess)
+   type(SED_OtherStateType),      intent(inout)  :: OtherState  !< Other states
+   type(SED_MiscVarType),         intent(inout)  :: m           !< misc/optimization variables
+   integer(IntKi),                intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                  intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   ! local variables
+   type(SED_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states
+   type(SED_ContinuousStateType)                 :: k1          ! RK4 constant; see above
+   type(SED_ContinuousStateType)                 :: k2          ! RK4 constant; see above
+   type(SED_ContinuousStateType)                 :: k3          ! RK4 constant; see above
+   type(SED_ContinuousStateType)                 :: k4          ! RK4 constant; see above
+   type(SED_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
+   type(SED_InputType)                           :: u_interp    ! interpolated value of inputs
+   integer(IntKi)                                :: ErrStat2    ! local error status
+   character(ErrMsgLen)                          :: ErrMsg2     ! local error message (ErrMsg)
+   character(*), parameter                       :: RoutineName = 'RK4'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   call SED_CopyContState( x, k1,      MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed()) return
+   call SED_CopyContState( x, k2,      MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed()) return
+   call SED_CopyContState( x, k3,      MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed()) return
+   call SED_CopyContState( x, k4,      MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed()) return
+   call SED_CopyContState( x, x_tmp,   MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed()) return
+   call SED_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 );  if (Failed()) return
+
+   ! interpolate u to find u_interp = u(t)
+   call SED_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 );  if (Failed()) return
+
+   ! find xdot at t
+   call SED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
+      if (Failed()) return
+   k1%qt  = p%dt * xdot%qt
+   k1%qdt = p%dt * xdot%qdt
+
+   x_tmp%qt  = x%qt  + 0.5 * k1%qt
+   x_tmp%qdt = x%qdt + 0.5 * k1%qdt
+
+   ! interpolate u to find u_interp = u(t + dt/2)
+   call SED_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+   ! find xdot at t + dt/2
+   call SED_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
+      if (Failed()) return
+
+   k2%qt  = p%dt * xdot%qt
+   k2%qdt = p%dt * xdot%qdt
+
+   x_tmp%qt  = x%qt  + 0.5 * k2%qt
+   x_tmp%qdt = x%qdt + 0.5 * k2%qdt
+
+   ! find xdot at t + dt/2
+   call SED_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
+      if (Failed()) return
+
+   k3%qt  = p%dt * xdot%qt
+   k3%qdt = p%dt * xdot%qdt
+
+   x_tmp%qt  = x%qt  + k3%qt
+   x_tmp%qdt = x%qdt + k3%qdt
+
+   ! interpolate u to find u_interp = u(t + dt)
+   CALL SED_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+   ! find xdot at t + dt
+   call SED_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
+   if (Failed()) return
+
+   k4%qt  = p%dt * xdot%qt
+   k4%qdt = p%dt * xdot%qdt
+
+   x%qt  = x%qt  +  ( k1%qt  + 2. * k2%qt  + 2. * k3%qt  + k4%qt  ) / 6.
+   x%qdt = x%qdt +  ( k1%qdt + 2. * k2%qdt + 2. * k3%qdt + k4%qdt ) / 6.
+
+   call Cleanup()
 
 contains
    logical function Failed()
@@ -595,12 +726,423 @@ contains
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed
-   subroutine Cleanup()
-      ! Destroy data to prevent memory leaks
-      call SED_DestroyInput(       u,          ErrStat2, ErrMsg2)
-      call SED_DestroyContState(   dxdt,       ErrStat2, ErrMsg2)
-   end subroutine Cleanup
-end subroutine SED_UpdateStates
+   subroutine CleanUp()
+      integer(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      character(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
+      call SED_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
+      call SED_DestroyContState( k1,       ErrStat3, ErrMsg3 )
+      call SED_DestroyContState( k2,       ErrStat3, ErrMsg3 )
+      call SED_DestroyContState( k3,       ErrStat3, ErrMsg3 )
+      call SED_DestroyContState( k4,       ErrStat3, ErrMsg3 )
+      call SED_DestroyContState( x_tmp,    ErrStat3, ErrMsg3 )
+      call SED_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
+   end subroutine CleanUp
+end subroutine SED_RK4
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to adjust the HSSBrTrq value if the absolute
+!!   magnitudue of the HSS brake torque was strong enough to reverse
+!!   the direction of the HSS, which is a physically impossible
+!!   situation.  The problem arises since we are integrating in
+!!   discrete time, not continuous time.
+!FIXME: need to  checkes to make sure we don't go backwards when HSS Brake is active
+subroutine FixHSSBrTq ( Integrator, p, x, OtherState, m, ErrStat, ErrMsg )
+   type(SED_ParameterType),         intent(in   )  :: p                       !< Parameters of the structural dynamics module
+   type(SED_OtherStateType),        intent(inout)  :: OtherState              !< Other states of the structural dynamics module
+   type(SED_MiscVarType),           intent(inout)  :: m                       !< misc (optimization) variables
+   type(SED_ContinuousStateType),   intent(inout)  :: x                       !< Continuous states of the structural dynamics module at n+1
+   character(1),                    intent(in   )  :: Integrator              !< A string holding the current integrator being used.
+   integer(IntKi),                  intent(  out)  :: ErrStat                 !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
+
+   real(ReKi)                                      :: RqdFrcAz                ! The force term required to produce RqdQD2Az.
+   real(ReKi)                                      :: RqdQD2Az                ! The required QD2T(DOF_Az) to cause the HSS to stop rotating.
+   integer                                         :: I                       ! Loops through all DOFs.
+   integer(IntKi)                                  :: ErrStat2
+   character(ErrMsgLen)                            :: ErrMsg2
+   character(*), parameter                         :: RoutineName = 'FixHSSBrTq'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   if ( .not. p%GenDOF .OR. EqualRealNos(OtherState%HSSBrTrqC, 0.0_ReKi ) )  return
+
+   ! The absolute magnitude of the HSS brake must have been too great
+   !   that the HSS direction was reversed.  What should have happened
+   !   is that the HSS should have stopped rotating.  In other words,
+   !   QD(DOF_Az,IC(NMX)) should equal zero!  Determining what
+   !   QD2T(DOF_Az) will make QD(DOF_Az,IC(NMX)) = 0, depends on
+   !   which integrator we are using.
+   select case (Integrator)
+   case ('C')   ! Corrector
+      ! Find the required QD2T(DOF_Az) to cause the HSS to stop rotating (RqdQD2Az).
+      ! This is found by solving the corrector formula for QD2(DOF_Az,IC(NMX))
+      !   when QD(DOF_Az,IC(NMX)) equals zero.
+      RqdQD2Az = ( -      OtherState%xdot(OtherState%IC(1))%qt (DOF_Az)/ p%DT24 &
+                   - 19.0*OtherState%xdot(OtherState%IC(1))%qdt(DOF_Az)         &
+                   +  5.0*OtherState%xdot(OtherState%IC(2))%qdt(DOF_Az)         &
+                   -      OtherState%xdot(OtherState%IC(3))%qdt(DOF_Az)         ) / 9.0
+
+   case ('P')   ! Predictor
+      ! Find the required QD2T(DOF_Az) to cause the HSS to stop rotating (RqdQD2Az).
+      ! This is found by solving the predictor formula for QD2(DOF_Az,IC(1))
+      !   when QD(DOF_Az,IC(NMX)) equals zero.
+
+      RqdQD2Az = ( -      OtherState%xdot(OtherState%IC(1))%qt( DOF_Az)  / p%DT24 &
+                   + 59.0*OtherState%xdot(OtherState%IC(2))%qdt(DOF_Az) &
+                   - 37.0*OtherState%xdot(OtherState%IC(3))%qdt(DOF_Az) &
+                   +  9.0*OtherState%xdot(OtherState%IC(4))%qdt(DOF_Az)   )/55.0
+   end select
+
+!!!   ! Rearrange the augmented matrix of equations of motion to account
+!!!   !   for the known acceleration of the generator azimuth DOF.  To
+!!!   !   do this, make the known inertia like an applied force to the
+!!!   !   system.  Then set force QD2T(DOF_Az) to equal the known
+!!!   !   acceleration in the augmented matrix of equations of motion:
+!!!   ! Here is how the new equations are derived.  First partition the
+!!!   !   augmented matrix as follows, where Qa are the unknown
+!!!   !   accelerations, Qb are the known accelerations, Fa are the
+!!!   !   known forces, and Fb are the unknown forces:
+!!!   !      [Caa Cab]{Qa}={Fa}
+!!!   !      [Cba Cbb]{Qb}={Fb}
+!!!   !   By rearranging, the equations for the unknown and known
+!!!   !   accelerations are as follows:
+!!!   !      [Caa]{Qa}={Fa}-[Cab]{Qb} and [I]{Qb}={Qb}
+!!!   !   Combining these two sets of equations into one set yields:
+!!!   !      [Caa 0]{Qa}={{Fa}-[Cab]{Qb}}
+!!!   !      [  0 I]{Qb}={          {Qb}}
+!!!   !   Once this equation is solved, the unknown force can be found from:
+!!!   !      {Fb}=[Cba]{Qa}+[Cbb]{Qb}
+!!!
+!!!   m%OgnlAzRo    = m%AugMat(DOF_Az,:)  ! used for HSS Brake hack; copy this row before modifying the old matrix
+!!!
+!!!   do I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+!!!      m%AugMat(p%DOFs%SrtPS(I),    p%NAUG) = m%AugMat(p%DOFs%SrtPS(I),p%NAUG) &
+!!!                                                    - m%AugMat(p%DOFs%SrtPS(I),DOF_Az)*RqdQD2Az  ! {{Fa}-[Cab]{Qb}}
+!!!      m%AugMat(p%DOFs%SrtPS(I),DOF_Az)   = 0.0                                                     ! [0]
+!!!      m%AugMat(DOF_Az, p%DOFs%SrtPS(I))  = 0.0                                                     ! [0]
+!!!   enddo             ! I - All active (enabled) DOFs
+!!!
+!!!   m%AugMat(DOF_Az,DOF_Az) = 1.0                                                           ! [I]{Qb}={Qb}
+!!!   m%AugMat(DOF_Az,  p%NAUG) = RqdQD2Az                                                    !
+!!!
+!!!   ! Invert the matrix to solve for the new (updated) accelerations.  Like in
+!!!   !   CalcContStateDeriv(), the accelerations are returned by Gauss() in the first NActvDOF
+!!!   !   elements of the solution vector, SolnVec().  These are transfered to the
+!!!   !   proper index locations of the acceleration vector QD2T() using the
+!!!   !   vector subscript array SrtPS(), after Gauss() has been called:
+!!!   ! Invert the matrix to solve for the accelerations. The accelerations are returned by Gauss() in the first NActvDOF elements
+!!!   !   of the solution vector, SolnVec(). These are transfered to the proper index locations of the acceleration vector QD2T()
+!!!   !   using the vector subscript array SrtPS(), after Gauss() has been called:
+!!!   m%AugMat_factor = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1:p%DOFs%NActvDOF) )
+!!!   m%SolnVec       = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1+p%DOFs%NActvDOF) )
+!!!
+!!!   CALL LAPACK_getrf( M=p%DOFs%NActvDOF, N=p%DOFs%NActvDOF, A=m%AugMat_factor, IPIV=m%AugMat_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+!!!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+!!!      IF ( ErrStat >= AbortErrLev ) RETURN
+!!!
+!!!   CALL LAPACK_getrs( TRANS='N',N=p%DOFs%NActvDOF, A=m%AugMat_factor,IPIV=m%AugMat_pivot, B=m%SolnVec, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+!!!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!!!      IF ( ErrStat >= AbortErrLev ) RETURN
+!!!
+!!!   ! Find the force required to produce RqdQD2Az from the equations of
+!!!   !   motion using the new accelerations:
+!!!   RqdFrcAz = 0.0
+!!!   do I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+!!!      ! bjj: use m%SolnVec(I) instead of m%QD2T(p%DOFs%SrtPS(I)) here; then update m%QD2T(p%DOFs%SrtPS(I))
+!!!      !      later if necessary
+!!!      !RqdFrcAz = RqdFrcAz + OgnlAzRo(SrtPS(I))*m%QD2T(p%DOFs%SrtPS(I))  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}
+!!!      RqdFrcAz = RqdFrcAz + m%OgnlAzRo(p%DOFs%SrtPS(I))*m%SolnVec(I)  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}
+!!!   ENDDO             ! I - All active (enabled) DOFs
+!!!
+!!!   ! Find the HSSBrTrq necessary to bring about this force:
+!!!   OtherState%HSSBrTrq = OtherState%HSSBrTrqC &
+!!!                       + ( ( m%OgnlAzRo(p%NAUG) - RqdFrcAz )*m%RtHS%GBoxEffFac/ABS(p%GBRatio) )
+!!!
+!!!   ! Make sure this new HSSBrTrq isn't larger in absolute magnitude than
+!!!   !   the original HSSBrTrq.  Indeed, the new HSSBrTrq can't be larger than
+!!!   !   the old HSSBrTrq, since the old HSSBrTrq was found solely as a
+!!!   !   function of time--and is thus the maximum possible at the current
+!!!   !   time.  If the new HSSBrTrq is larger, then the reversal in direction
+!!!   !   was caused by factors other than the HSS brake--thus the original HSS
+!!!   !   brake torque values were OK to begin with.  Thus, restore the
+!!!   !   variables changed by this subroutine, back to their original values:
+!!!   if ( abs( OtherState%HSSBrTrq ) > abs( OtherState%HSSBrTrqC ) )  then
+!!!      OtherState%HSSBrTrq = OtherState%HSSBrTrqC !OtherState%HSSBrTrqC = SIGN( u%HSSBrTrqC, x%QDT(DOF_Az) )
+!!!   else
+!!!      ! overwrite QD2T with the new values
+!!!      m%QD2T = 0.0
+!!!      do I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+!!!         m%QD2T(p%DOFs%SrtPS(I)) = m%SolnVec(I)
+!!!      enddo             ! I - All active (enabled) DOFs
+!!!
+!!!      ! Use the new accelerations to update the DOF values.  Again, this
+!!!      !   depends on the integrator type:
+!!!      SELECT CASE (Integrator)
+!!!      case ('C')  ! Corrector
+!!!         ! Update QD and QD2 with the new accelerations using the corrector.
+!!!         ! This will make QD(DOF_Az,IC(NMX)) equal to zero and adjust all
+!!!         !    of the other QDs as necessary.
+!!!         ! The Q's are unnaffected by this change.
+!!!         x%qdt =                   OtherState%xdot(OtherState%IC(1))%qt &  ! qd at n
+!!!                 + p%DT24 * ( 9. * m%QD2T &                                ! the value we just changed
+!!!                           + 19. * OtherState%xdot(OtherState%IC(1))%qdt &
+!!!                           -  5. * OtherState%xdot(OtherState%IC(2))%qdt &
+!!!                           +  1. * OtherState%xdot(OtherState%IC(3))%qdt )
+!!!      case ('P')  ! Predictor
+!!!         ! Update QD and QD2 with the new accelerations using predictor.
+!!!         x%qdt =                OtherState%xdot(OtherState%IC(1))%qt + &  ! qd at n
+!!!                 p%DT24 * ( 55.*m%QD2T &                                  ! the value we just changed
+!!!                          - 59.*OtherState%xdot(OtherState%IC(2))%qdt  &
+!!!                          + 37.*OtherState%xdot(OtherState%IC(3))%qdt  &
+!!!                           - 9.*OtherState%xdot(OtherState%IC(4))%qdt )
+!!!
+!!!         OtherState%xdot ( OtherState%IC(1) )%qdt = m%QD2T        ! fix the history
+!!!      end select
+!!!   endif
+   return
+end subroutine FixHSSBrTq
+
+
+!!!!----------------------------------------------------------------------------------------------------------------------------------
+!!!!> This function calculates the sign (+/-1) of the low-speed shaft torque for
+!!!!!   this time step.  MomLPRot is the moment on the
+!!!!!   low-speed shaft at the teeter pin caused by the rotor.
+!!!function SignLSSTrq( p, m )
+!!!   type(SED_ParameterType),   intent(in)  :: p                 !< Parameters
+!!!   type(SED_MiscVarType),     intent(in)  :: m                 !< Misc variables
+!!!   integer(IntKi)                         :: SignLSSTrq        !< The sign of the LSS_Trq, output from this function
+!!!   real(ReKi)                             :: MomLPRot  (3)     ! The total moment on the low-speed shaft at point P caused by the rotor.
+!!!   integer(IntKi)                         :: I                 ! loop counter
+!!!
+!!!   MomLPRot = m%RtHS%MomLPRott ! Initialize MomLPRot using MomLPRott
+!!!   do I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+!!!      MomLPRot = MomLPRot + m%RtHS%PMomLPRot(:,p%DOFs%SrtPS(I))*m%QD2T(p%DOFs%SrtPS(I))  ! Add the moments associated with the accelerations of the DOFs
+!!!   enddo             ! I - All active (enabled) DOFs
+!!!
+!!!      ! MomLProt has now been found.  Now dot this with e1 to get the
+!!!      !   low-speed shaft torque and take the SIGN of the result:
+!!!   SignLSSTrq = nint( sign( 1.0_R8Ki, dot_product( MomLPRot, m%CoordSys%e1 ) ) )
+!!!end function SignLSSTrq
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential
+!! equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
+!!
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+subroutine SED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
+   integer(IntKi),                  intent(in   )  :: n           !< time step number
+   type(SED_InputType),             intent(inout)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+   real(DbKi),                      intent(in   )  :: utimes(:)   !< times of input
+   type(SED_ParameterType),         intent(in   )  :: p           !< Parameters
+   type(SED_ContinuousStateType),   intent(inout)  :: x           !< Continuous states at t on input at t + dt on output
+   type(SED_DiscreteStateType),     intent(in   )  :: xd          !< Discrete states at t
+   type(SED_ConstraintStateType),   intent(in   )  :: z           !< Constraint states at t (possibly a guess)
+   type(SED_OtherStateType),        intent(inout)  :: OtherState  !< Other states
+   type(SED_MiscVarType),           intent(inout)  :: m           !< misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   ! local variables
+   type(SED_InputType)                             :: u_interp
+   type(SED_ContinuousStateType)                   :: xdot
+   integer(IntKi)                                  :: ErrStat2    ! local error status
+   character(ErrMsgLen)                            :: ErrMsg2     ! local error message (ErrMsg)
+   character(*), parameter                         :: RoutineName = 'AB4'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   if (OtherState%n .lt. n) then
+      OtherState%n = n
+      ! Update IC() index so IC(1) is the location of xdot values at n.
+      ! (this allows us to shift the indices into the array, not copy all of the values)
+      OtherState%IC = CSHIFT( OtherState%IC, -1 ) ! circular shift of all values to the right
+   elseif (OtherState%n .gt. n) then
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = ' Backing up in time is not supported with a multistep method.'
+      if (Failed()) return
+   endif
+
+   ! Allocate the input arrays
+   call SED_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+      if (Failed()) return
+
+   ! need xdot at t
+   call SED_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+   if (EqualRealNos( x%qdt(DOF_Az) ,0.0_R8Ki ) ) then
+      OtherState%HSSBrTrqC = u_interp%HSSBrTrqC
+   else
+      OtherState%HSSBrTrqC  = SIGN( u_interp%HSSBrTrqC, real(x%qdt(DOF_Az),ReKi) ) ! hack for HSS brake (need correct sign)
+   endif
+   OtherState%HSSBrTrq   = OtherState%HSSBrTrqC
+!   OtherState%SgnPrvLSTQ = OtherState%SgnLSTQ(OtherState%IC(2))
+
+   call SED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
+      if (Failed()) return
+
+   call SED_CopyContState(xdot, OtherState%xdot ( OtherState%IC(1) ), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+   if (n .le. 2) then
+      call SED_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      if (Failed()) return
+   else
+      x%qt  = x%qt  + p%DT24 * ( 55.*OtherState%xdot(OtherState%IC(1))%qt  - 59.*OtherState%xdot(OtherState%IC(2))%qt   &
+                               + 37.*OtherState%xdot(OtherState%IC(3))%qt   - 9.*OtherState%xdot(OtherState%IC(4))%qt )
+
+      x%qdt = x%qdt + p%DT24 * ( 55.*OtherState%xdot(OtherState%IC(1))%qdt - 59.*OtherState%xdot(OtherState%IC(2))%qdt  &
+                               + 37.*OtherState%xdot(OtherState%IC(3))%qdt  - 9.*OtherState%xdot(OtherState%IC(4))%qdt )
+
+      ! Make sure the HSS brake will not reverse the direction of the HSS
+      !   for the next time step.  Do this by computing the predicted value
+      !   of x%qt(); QD(DOF_Az,IC(NMX)) as will be done during the next time step.
+      ! Only do this after the first few time steps since it doesn't work
+      !   for the Runga-Kutta integration scheme.
+      call FixHSSBrTq ( 'P', p, x, OtherState, m, ErrStat2, ErrMsg2 )
+         if (Failed()) return
+   endif
+
+!   OtherState%SgnPrvLSTQ = SignLSSTrq(p, m)
+!   OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ
+
+   call Cleanup()
+
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+   subroutine CleanUp()
+      integer(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      character(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
+      call SED_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
+      call SED_DestroyContState( xdot,     ErrStat2, ErrMsg3 )
+   end subroutine CleanUp
+end subroutine SED_AB4
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary
+!! differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
+!!
+!!   Adams-Bashforth Predictor: \n
+!!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!   Adams-Moulton Corrector: \n
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+subroutine SED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
+   integer(IntKi),                  intent(in   )  :: n           !< time step number
+   type(SED_InputType),             intent(inout)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+   real(DbKi),                      intent(in   )  :: utimes(:)   !< times of input
+   type(SED_ParameterType),         intent(in   )  :: p           !< Parameters
+   type(SED_ContinuousStateType),   intent(inout)  :: x           !< Continuous states at t on input at t + dt on output
+   type(SED_DiscreteStateType),     intent(in   )  :: xd          !< Discrete states at t
+   type(SED_ConstraintStateType),   intent(in   )  :: z           !< Constraint states at t (possibly a guess)
+   type(SED_OtherStateType),        intent(inout)  :: OtherState  !< Other states
+   type(SED_MiscVarType),           intent(inout)  :: m           !< misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   ! local variables
+   type(SED_InputType)                             :: u_interp    ! Inputs at t
+   type(SED_ContinuousStateType)                   :: x_pred      ! Continuous states at t
+   type(SED_ContinuousStateType)                   :: xdot_pred   ! Derivative of continuous states at t
+   integer(IntKi)                                  :: ErrStat2    ! local error status
+   character(ErrMsgLen)                            :: ErrMsg2     ! local error message (ErrMsg)
+   character(*), parameter                         :: RoutineName = 'ABM4'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Predict:
+   call SED_CopyContState(x, x_pred, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      if (Failed())  return
+
+   call SED_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      if (Failed())  return
+
+   ! Correct:
+   if (n .gt. 2_IntKi) then
+         ! allocate the arrays in u_interp
+      call SED_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         if (Failed())  return
+
+      call SED_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat2, ErrMsg2)
+         if (Failed())  return
+
+      u_interp%HSSBrTrqC = max(0.0_ReKi, min(u_interp%HSSBrTrqC, ABS( OtherState%HSSBrTrqC) )) ! hack for extrapolation of limits  (OtherState%HSSBrTrqC is HSSBrTrqC at t)
+      if (EqualRealNos( x_pred%qdt(DOF_Az) ,0.0_R8Ki ) ) then
+         OtherState%HSSBrTrqC = u_interp%HSSBrTrqC
+      else
+         OtherState%HSSBrTrqC  = SIGN( u_interp%HSSBrTrqC, real(x_pred%qdt(DOF_Az),ReKi) ) ! hack for HSS brake (need correct sign)
+      endif
+      OtherState%HSSBrTrq  = OtherState%HSSBrTrqC
+
+      call SED_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, ErrStat2, ErrMsg2 )
+         if (Failed())  return
+
+      x%qt  = x%qt  + p%DT24 * ( 9. * xdot_pred%qt +  19. * OtherState%xdot(OtherState%IC(1))%qt &
+                                                     - 5. * OtherState%xdot(OtherState%IC(2))%qt &
+                                                     + 1. * OtherState%xdot(OtherState%IC(3))%qt )
+
+      x%qdt = x%qdt + p%DT24 * ( 9. * xdot_pred%qdt + 19. * OtherState%xdot(OtherState%IC(1))%qdt &
+                                                    -  5. * OtherState%xdot(OtherState%IC(2))%qdt &
+                                                    +  1. * OtherState%xdot(OtherState%IC(3))%qdt )
+
+      ! Make sure the HSS brake has not reversed the direction of the HSS:
+      call FixHSSBrTq ( 'C', p, x, OtherState, m, ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+!      OtherState%SgnPrvLSTQ = SignLSSTrq(p, m)
+!      OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ
+   else
+      x%qt  = x_pred%qt
+      x%qdt = x_pred%qdt
+   endif
+
+   call Cleanup()
+
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+   subroutine CleanUp()
+      integer(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      character(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
+      call SED_DestroyContState( xdot_pred,  ErrStat3, ErrMsg3 )
+      call SED_DestroyContState( x_pred,     ErrStat3, ErrMsg3 )
+      call SED_DestroyInput(     u_interp,   ErrStat3, ErrMsg3 )
+   end subroutine CleanUp
+end subroutine SED_ABM4
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -733,6 +1275,14 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    enddo
 
 
+   !--------------------
+   ! Other outputs
+   y%LSSTipPxa =  x%QT( DOF_Az)
+   call Zero2TwoPi(y%LSSTipPxa)  ! Modulo
+   y%RotSpeed  = x%QDT(DOF_Az)
+   y%HSS_Spd   = x%QDT(DOF_Az)    * p%GBoxRatio
+
+
    !---------------------------------------------------------------------------
    ! Compute outputs:
    if (CalcWriteOutput) then
@@ -775,9 +1325,11 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
-   integer(IntKi)                                  :: ErrStat2        ! local error status
-   character(ErrMsgLen)                            :: ErrMsg2         ! local error message
+   integer(IntKi)                                  :: ErrStat2    ! local error status
+   character(ErrMsgLen)                            :: ErrMsg2     ! local error message
    character(*), parameter                         :: RoutineName = 'SED_CalcContStateDeriv'
+   real(ReKi)                                      :: GenTrqLSS   ! Generator torque, expressed on LSS
+   real(ReKi)                                      :: BrkTrqLSS   ! HSS brake torque, expressed on LSS
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -794,13 +1346,27 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
          if (Failed())  return;
    endif
 
-   ! First derivative, just copy over
-   dxdt%QT = x%QDT
 
-   dxdt%QDT = 0.0
+   ! First derivative of azimuth is rotor speed, so copy over
+   dxdt%QT( DOF_Az)  = x%QDT(DOF_Az)
 
-!FIXME: calculate the derivatives here...
-
+!TODO: double check if absolute values are needed on the GBoxRatio in this calculation
+   !> rotor acceleration -- only if Generator DOF is on
+   !!
+   !! \f$ \ddot{\psi} = \frac{1}{J_\text{DT}} \left( Q_g - Q_a + Q_b \right) \f$
+   !!
+   !! where
+   !!    -  \f$J_\text{DT}\f$ is the system inertia
+   !!    -  \f$Q_g = n_g Q_{g,\text{HSS}}\f$ is the generator torque projected to the LSS
+   !!    -  \f$Q_b = n_g Q_{b,\text{HSS}}\f$ is the HSS brake torque projected to the LSS
+   !!
+   if (p%GenDOF) then
+      GenTrqLSS = p%GBoxRatio * u%GenTrq
+      BrkTrqLSS = p%GBoxRatio * u%HSSBrTrqC
+      dxdt%QDT(DOF_Az)  = real((GenTrqLSS - u%AeroTrq + BrkTrqLSS)/p%J_DT, R8Ki)
+   else
+      dxdt%QDT(DOF_Az)  = 0.0_R8Ki
+   endif
 
 contains
    logical function Failed()
