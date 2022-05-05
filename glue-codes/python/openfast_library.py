@@ -30,16 +30,16 @@ class FastLibAPI(CDLL):
         self.abort_error_level = c_int(99)
         self.end_early = c_bool(False)
         self.num_outs = c_int(0)
-        self._channel_names = create_string_buffer(20 * 4000)
+        self.channel_names = create_string_buffer(20 * 4000)
         self.output_array = None
 
         # The inputs are meant to be from Simulink.
         # If < 8, FAST_SetExternalInputs simply returns,
         # but this behavior may change to an error
         ### MAKE THIS 8 OR 11
-        self._num_inputs = c_int(51)
-        self._inp_array = (c_double * 53)(0.0, )  # 10 is hard-coded in FAST_Library as MAXInitINPUTS
-        self._inp_array[0] = -1.0  # Sensor type - 
+        self.num_inputs = c_int(51)
+        self.inp_array = (c_double * 53)(0.0, )  # 10 is hard-coded in FAST_Library as MAXInitINPUTS
+        self.inp_array[0] = -1.0  # Sensor type - 
 
         self.output_values = None
         self.ended = False
@@ -129,7 +129,7 @@ class FastLibAPI(CDLL):
             byref(self.t_max),
             byref(_error_status),
             _error_message,
-            self._channel_names,
+            self.channel_names,
             None,   # Optional arguments must pass C-Null pointer; with ctypes, use None.
             None    # Optional arguments must pass C-Null pointer; with ctypes, use None.
         )
@@ -149,9 +149,9 @@ class FastLibAPI(CDLL):
 
         self.FAST_Start(
             byref(self.i_turb),
-            byref(self._num_inputs),
+            byref(self.num_inputs),
             byref(self.num_outs),
-            byref(self._inp_array),
+            byref(self.inp_array),
             byref(self.output_array),
             byref(_error_status),
             _error_message
@@ -164,9 +164,9 @@ class FastLibAPI(CDLL):
         for i in range( 1, self.total_time_steps ):
             self.FAST_Update(
                 byref(self.i_turb),
-                byref(self._num_inputs),
+                byref(self.num_inputs),
                 byref(self.num_outs),
-                byref(self._inp_array),
+                byref(self.inp_array),
                 byref(self.output_array),
                 byref(self.end_early),
                 byref(_error_status),
@@ -227,8 +227,8 @@ class FastLibAPI(CDLL):
 
     @property
     def output_channel_names(self) -> List:
-        if len(self._channel_names.value.split()) == 0:
+        if len(self.channel_names.value.split()) == 0:
             return []
-        output_channel_names = self._channel_names.value.split()
+        output_channel_names = self.channel_names.value.split()
         output_channel_names = [n.decode('UTF-8') for n in output_channel_names]        
         return output_channel_names
