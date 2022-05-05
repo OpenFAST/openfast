@@ -38,14 +38,21 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
 
   set(RUN_VERBOSE_FLAG "")
   if(CTEST_RUN_VERBOSE_FLAG)
-     set(RUN_VERBOSE_FLAG "-v")
+    set(RUN_VERBOSE_FLAG "-v")
   endif()
 
+  set(TESTDIR ${TESTNAME})
+
+  set(extra_args ${ARGN})
+  list(LENGTH extra_args n_args)
+  if(n_args EQUAL 1)
+    set(TESTDIR ${extra_args})
+  endif()
 
   add_test(
     ${TESTNAME} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
-       ${TESTNAME}
+       ${TESTDIR}
        ${EXECUTABLE}
        ${SOURCE_DIRECTORY}              # openfast source directory
        ${BUILD_DIRECTORY}               # build directory for test
@@ -71,6 +78,14 @@ function(of_regression TESTNAME LABEL)
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression)
+
+function(of_cpp_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
+  set(OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast_cpp")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} "${TESTNAME}_cpp" "${LABEL}" ${TESTNAME})
+endfunction(of_cpp_regression)
 
 # openfast aeroacoustic 
 function(of_regression_aeroacoustic TESTNAME LABEL)
@@ -100,13 +115,13 @@ function(of_regression_linear TESTNAME LABEL)
 endfunction(of_regression_linear)
 
 # openfast C++ interface
-function(of_regression_cpp TESTNAME LABEL)
+function(of_cpp_interface_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastCppRegressionCase.py")
   set(OPENFAST_CPP_EXECUTABLE "${CTEST_OPENFASTCPP_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast-cpp")
   regression(${TEST_SCRIPT} ${OPENFAST_CPP_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
-endfunction(of_regression_cpp)
+endfunction(of_cpp_interface_regression)
 
 # openfast Python-interface
 function(of_regression_py TESTNAME LABEL)
@@ -208,8 +223,12 @@ of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrod
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
-  of_regression_cpp("5MW_Land_DLL_WTurb_cpp" "openfast;openfastlib;cpp")
+  of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;openfastlib;cpp")
 endif()
+
+# OpenFAST C++ Driver test
+# This tests the FAST Library and FAST_Library.h
+of_cpp_regression("AWT_YFree_WSt"                   "openfast;openfastlib;cpp;elastodyn;aerodyn15;servodyn")
 
 # OpenFAST Python API test
 of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn")
