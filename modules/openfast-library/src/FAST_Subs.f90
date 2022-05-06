@@ -797,25 +797,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          
       end if
       
-      
-      ! Now that all modules have been handled their pointer data, we need to nullify some of the SeaState InitOut pointers
-      ! The modules which were handed the data will be deallocating it.
-      
-      ! NOTE: this may need to change once other modules start using SeaState
-      nullify(Init%OutData_SeaSt%WaveDynP)   
-      nullify(Init%OutData_SeaSt%WaveAcc)    
-      nullify(Init%OutData_SeaSt%WaveVel)  
-      nullify(Init%OutData_SeaSt%PWaveDynP0)   
-      nullify(Init%OutData_SeaSt%PWaveAcc0)    
-      nullify(Init%OutData_SeaSt%PWaveVel0)  
-      nullify(Init%OutData_SeaSt%WaveTime)
-      nullify(Init%OutData_SeaSt%WaveElevC0)
-      nullify(Init%OutData_SeaSt%WaveDirArr)
-      nullify(Init%OutData_SeaSt%WaveElev1)
-      nullify(Init%OutData_SeaSt%WaveElev2)
-      nullify(Init%OutData_SeaSt%WaveAccMCF)
-      nullify(Init%OutData_SeaSt%PWaveAccMCF0)
-      
    end if
    
    ! ........................
@@ -848,16 +829,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL HydroDyn_Init( Init%InData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), &
                           HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module( MODULE_HD ), Init%OutData_HD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      ! 1) Nullify the HD Init Input pointers (do this now in case HD_Init failed)
-      ! 2) Now, when HydroDyn_DestroyInitInput is called and hence SeaState_DestroyInitOutput, we will not deallocate data which is still in use because the is associated test will fail.
-      nullify(Init%InData_HD%WaveElevC0)
-      nullify(Init%InData_HD%WaveDirArr)
-      nullify(Init%InData_HD%WaveDynP)   
-      nullify(Init%InData_HD%WaveAcc)    
-      nullify(Init%InData_HD%WaveVel)      
-      nullify(Init%InData_HD%WaveTime)
-      nullify(Init%InData_HD%WaveElev1)
-      nullify(Init%InData_HD%WaveElev2)
   
       ! If HD_Init failed, cleanup and exit 
       IF (ErrStat >= AbortErrLev) THEN
@@ -1532,7 +1503,9 @@ CONTAINS
    !...............................................................................................................................
    ! Destroy initializion data
    !...............................................................................................................................
-      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2 )
+      ! We assume that all initializion data points to parameter data, so we just nullify the pointers instead of deallocate
+      ! data that they point to:
+      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    END SUBROUTINE Cleanup
@@ -7126,7 +7099,8 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
          Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
       end if
    END IF
-
+   
+   
    call cleanup()
 
 contains
@@ -7329,7 +7303,10 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
 
       ! deal with sibling meshes here:
    ! (ignoring for now; they are not going to be siblings on restart)
+   
+   Turbine%HD%p%PointsToSeaState = .false.  ! since the pointers aren't pointing to the same data as SeaState after restart, set this to avoid memory leaks and deallocation problems
 
+   
    ! deal with files that were open:
    IF (Turbine%p_FAST%WrTxtOutFile) THEN
       CALL OpenFunkFileAppend ( Turbine%y_FAST%UnOu, TRIM(Turbine%p_FAST%OutFileRoot)//'.out', ErrStat2, ErrMsg2)

@@ -247,6 +247,7 @@ typedef	 ^	                           ^                             Integer	    
 typedef	 ^	                           ^                             R8Ki	                  du	                         {:}	     -	        -	      "vector that determines size of perturbation for u (inputs)" -
 typedef	 ^	                           ^                             R8Ki	                  dx	                         {:}	     -	        -	      "vector that determines size of perturbation for x (continuous states)" -
 typedef	 ^	                           ^                             Integer	              Jac_ny	                      -	         -	        -	      "number of outputs in jacobian matrix"	-
+typedef	 ^	                           ParameterType                 LOGICAL	              PointsToSeaState                -          .TRUE.     -         "Flag that determines if the data contains pointers to SeaState module or if new copies (from restart)"	-
 #
 #
 # ..... Inputs ....................................................................................................................

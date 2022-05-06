@@ -370,6 +370,7 @@ SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
          ! Destroy the parameter data, but don't deallocate SeaState data:
+        ! Note, this is called only from the SS Excitation driver code, so there should not be any issues with pointers on restart
       CALL SS_Exc_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
