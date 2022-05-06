@@ -101,7 +101,7 @@ CONTAINS
       if (length_squared > 0) then
          scaler = newlength/sqrt(length_squared)
       else                   ! if original vector is zero, return zero
-         scaler = 0_DbKi
+         scaler = 0.0_DbKi
       end if
       
       DO J=1,3
