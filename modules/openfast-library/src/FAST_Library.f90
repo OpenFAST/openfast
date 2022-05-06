@@ -114,6 +114,13 @@ subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, tm
       ! initialize variables:   
    n_t_global = 0
 
+   IF (PRESENT(TMax) .AND. .NOT. PRESENT(InitInpAry)) THEN
+      ErrStat_c = ErrID_Fatal
+      ErrMsg  = "FAST_Sizes: TMax optional argument provided but it is invalid without InitInpAry optional argument. Provide InitInpAry to use TMax."
+      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+      RETURN
+   END IF
+
    IF (PRESENT(InitInpAry)) THEN
       IF (PRESENT(TMax)) THEN
          ExternInitData%TMax = TMax
