@@ -382,7 +382,7 @@ SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
     !-------------------------------------------------
     ! Call the main subroutine MD_UpdateStates
     !-------------------------------------------------
-    CALL MD_UpdateStates( InputTimes(INPUT_PRED), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), other(STATE_PRED), m, ErrStat, ErrMsg)
+    CALL MD_UpdateStates( InputTimes(INPUT_CURR), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), other(STATE_PRED), m, ErrStat, ErrMsg)
     LocMsg = "MD_UPDATESTATES_C: Main MD_UpdateStates subroutine failed!"
     IF (Failed(LocMsg)) RETURN
 
