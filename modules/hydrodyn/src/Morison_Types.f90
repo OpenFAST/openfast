@@ -315,8 +315,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(1:4032)  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry() [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: ValidOutList      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
-    INTEGER(IntKi)  :: OutSwtch      !<  [-]
-    LOGICAL  :: OutAll      !<  [-]
     CHARACTER(1024)  :: OutRootName      !<  [-]
     INTEGER(IntKi)  :: UnOutFile      !<  [-]
     INTEGER(IntKi)  :: UnSum      !<  [-]
@@ -428,8 +426,6 @@ IMPLICIT NONE
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
-    INTEGER(IntKi)  :: NumOutAll      !<  [-]
-    INTEGER(IntKi)  :: OutSwtch      !<  [-]
     INTEGER(IntKi)  :: UnOutFile      !<  [-]
     CHARACTER(20)  :: OutFmt      !<  [-]
     CHARACTER(20)  :: OutSFmt      !<  [-]
@@ -6327,8 +6323,6 @@ IF (ALLOCATED(SrcInitInputData%ValidOutList)) THEN
     DstInitInputData%ValidOutList = SrcInitInputData%ValidOutList
 ENDIF
     DstInitInputData%NumOuts = SrcInitInputData%NumOuts
-    DstInitInputData%OutSwtch = SrcInitInputData%OutSwtch
-    DstInitInputData%OutAll = SrcInitInputData%OutAll
     DstInitInputData%OutRootName = SrcInitInputData%OutRootName
     DstInitInputData%UnOutFile = SrcInitInputData%UnOutFile
     DstInitInputData%UnSum = SrcInitInputData%UnSum
@@ -6569,77 +6563,77 @@ ENDIF
   
 IF (ALLOCATED(InitInputData%InpJoints)) THEN
 DO i1 = LBOUND(InitInputData%InpJoints,1), UBOUND(InitInputData%InpJoints,1)
-  CALL Morison_Destroyjointtype( InitInputData%InpJoints(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroyjointtype( InitInputData%InpJoints(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%InpJoints)
 ENDIF
 IF (ALLOCATED(InitInputData%Nodes)) THEN
 DO i1 = LBOUND(InitInputData%Nodes,1), UBOUND(InitInputData%Nodes,1)
-  CALL Morison_Destroynodetype( InitInputData%Nodes(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroynodetype( InitInputData%Nodes(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%Nodes)
 ENDIF
 IF (ALLOCATED(InitInputData%AxialCoefs)) THEN
 DO i1 = LBOUND(InitInputData%AxialCoefs,1), UBOUND(InitInputData%AxialCoefs,1)
-  CALL Morison_Destroyaxialcoeftype( InitInputData%AxialCoefs(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroyaxialcoeftype( InitInputData%AxialCoefs(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%AxialCoefs)
 ENDIF
 IF (ALLOCATED(InitInputData%MPropSets)) THEN
 DO i1 = LBOUND(InitInputData%MPropSets,1), UBOUND(InitInputData%MPropSets,1)
-  CALL Morison_Destroymemberproptype( InitInputData%MPropSets(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroymemberproptype( InitInputData%MPropSets(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%MPropSets)
 ENDIF
 IF (ALLOCATED(InitInputData%CoefDpths)) THEN
 DO i1 = LBOUND(InitInputData%CoefDpths,1), UBOUND(InitInputData%CoefDpths,1)
-  CALL Morison_Destroycoefdpths( InitInputData%CoefDpths(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroycoefdpths( InitInputData%CoefDpths(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%CoefDpths)
 ENDIF
 IF (ALLOCATED(InitInputData%CoefMembers)) THEN
 DO i1 = LBOUND(InitInputData%CoefMembers,1), UBOUND(InitInputData%CoefMembers,1)
-  CALL Morison_Destroycoefmembers( InitInputData%CoefMembers(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroycoefmembers( InitInputData%CoefMembers(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%CoefMembers)
 ENDIF
 IF (ALLOCATED(InitInputData%InpMembers)) THEN
 DO i1 = LBOUND(InitInputData%InpMembers,1), UBOUND(InitInputData%InpMembers,1)
-  CALL Morison_Destroymemberinputtype( InitInputData%InpMembers(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroymemberinputtype( InitInputData%InpMembers(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%InpMembers)
 ENDIF
 IF (ALLOCATED(InitInputData%FilledGroups)) THEN
 DO i1 = LBOUND(InitInputData%FilledGroups,1), UBOUND(InitInputData%FilledGroups,1)
-  CALL Morison_Destroyfilledgrouptype( InitInputData%FilledGroups(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroyfilledgrouptype( InitInputData%FilledGroups(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%FilledGroups)
 ENDIF
 IF (ALLOCATED(InitInputData%MGDepths)) THEN
 DO i1 = LBOUND(InitInputData%MGDepths,1), UBOUND(InitInputData%MGDepths,1)
-  CALL Morison_Destroymgdepthstype( InitInputData%MGDepths(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroymgdepthstype( InitInputData%MGDepths(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%MGDepths)
 ENDIF
 IF (ALLOCATED(InitInputData%MOutLst)) THEN
 DO i1 = LBOUND(InitInputData%MOutLst,1), UBOUND(InitInputData%MOutLst,1)
-  CALL Morison_Destroymoutput( InitInputData%MOutLst(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroymoutput( InitInputData%MOutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%MOutLst)
 ENDIF
 IF (ALLOCATED(InitInputData%JOutLst)) THEN
 DO i1 = LBOUND(InitInputData%JOutLst,1), UBOUND(InitInputData%JOutLst,1)
-  CALL Morison_Destroyjoutput( InitInputData%JOutLst(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroyjoutput( InitInputData%JOutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%JOutLst)
@@ -6705,7 +6699,7 @@ ENDIF
 IF (ALLOCATED(InitInputData%nodeInWater)) THEN
   DEALLOCATE(InitInputData%nodeInWater)
 ENDIF
-  CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Morison_DestroyInitInput
 
@@ -7036,8 +7030,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%ValidOutList)  ! ValidOutList
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
-      Int_BufSz  = Int_BufSz  + 1  ! OutSwtch
-      Int_BufSz  = Int_BufSz  + 1  ! OutAll
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutRootName)  ! OutRootName
       Int_BufSz  = Int_BufSz  + 1  ! UnOutFile
       Int_BufSz  = Int_BufSz  + 1  ! UnSum
@@ -7683,10 +7675,6 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%NumOuts
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%OutSwtch
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%OutAll, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%OutRootName)
       IntKiBuf(Int_Xferred) = ICHAR(InData%OutRootName(I:I), IntKi)
@@ -8803,10 +8791,6 @@ ENDIF
       END DO
   END IF
     OutData%NumOuts = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%OutSwtch = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%OutAll = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutAll)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%OutRootName)
       OutData%OutRootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
@@ -10318,7 +10302,7 @@ IF (ALLOCATED(MiscData%nodeInWater)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%memberLoads)) THEN
 DO i1 = LBOUND(MiscData%memberLoads,1), UBOUND(MiscData%memberLoads,1)
-  CALL Morison_Destroymemberloads( MiscData%memberLoads(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroymemberloads( MiscData%memberLoads(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%memberLoads)
@@ -10341,7 +10325,7 @@ ENDIF
 IF (ALLOCATED(MiscData%F_BF_End)) THEN
   DEALLOCATE(MiscData%F_BF_End)
 ENDIF
-  CALL SeaSt_Interp_DestroyMisc( MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyMisc( MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Morison_DestroyMisc
 
@@ -11790,8 +11774,6 @@ IF (ALLOCATED(SrcParamData%OutParam)) THEN
     ENDDO
 ENDIF
     DstParamData%NumOuts = SrcParamData%NumOuts
-    DstParamData%NumOutAll = SrcParamData%NumOutAll
-    DstParamData%OutSwtch = SrcParamData%OutSwtch
     DstParamData%UnOutFile = SrcParamData%UnOutFile
     DstParamData%OutFmt = SrcParamData%OutFmt
     DstParamData%OutSFmt = SrcParamData%OutSFmt
@@ -11825,7 +11807,7 @@ ENDIF
   
 IF (ALLOCATED(ParamData%Members)) THEN
 DO i1 = LBOUND(ParamData%Members,1), UBOUND(ParamData%Members,1)
-  CALL Morison_Destroymembertype( ParamData%Members(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroymembertype( ParamData%Members(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%Members)
@@ -11931,26 +11913,26 @@ IF (ALLOCATED(ParamData%nodeInWater)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%MOutLst)) THEN
 DO i1 = LBOUND(ParamData%MOutLst,1), UBOUND(ParamData%MOutLst,1)
-  CALL Morison_Destroymoutput( ParamData%MOutLst(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroymoutput( ParamData%MOutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%MOutLst)
 ENDIF
 IF (ALLOCATED(ParamData%JOutLst)) THEN
 DO i1 = LBOUND(ParamData%JOutLst,1), UBOUND(ParamData%JOutLst,1)
-  CALL Morison_Destroyjoutput( ParamData%JOutLst(i1), ErrStat2, ErrMsg2 )
+  CALL Morison_Destroyjoutput( ParamData%JOutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%JOutLst)
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
-  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Morison_DestroyParam
 
@@ -12210,8 +12192,6 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
-      Int_BufSz  = Int_BufSz  + 1  ! NumOutAll
-      Int_BufSz  = Int_BufSz  + 1  ! OutSwtch
       Int_BufSz  = Int_BufSz  + 1  ! UnOutFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFmt)  ! OutFmt
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutSFmt)  ! OutSFmt
@@ -13040,10 +13020,6 @@ ENDIF
     END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%NumOuts
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumOutAll
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%OutSwtch
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%UnOutFile
     Int_Xferred = Int_Xferred + 1
@@ -14030,10 +14006,6 @@ ENDIF
     END DO
   END IF
     OutData%NumOuts = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NumOutAll = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%OutSwtch = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%UnOutFile = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

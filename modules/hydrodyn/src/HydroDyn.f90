@@ -839,14 +839,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 !==============================================================================
       
          InputFileData%Morison%seast_interp_p = InitInp%seast_interp_p
-
-            ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array
-            
-         IF ( InputFileData%OutSwtch > 0 ) THEN
-            InputFileData%Morison%OutSwtch     = 2  ! only HydroDyn or the Driver code will write outputs to the file, that's why we are forcing this to 2.
-         ELSE
-            InputFileData%Morison%OutSwtch     = 0
-         END IF
         
             ! Initialize the Morison Element Calculations 
       

@@ -6437,45 +6437,23 @@ MODULE Morison_Output
       ! ..... Public Subroutines ...................................................................................................
 
    PUBLIC :: MrsnOut_MapOutputs
-   PUBLIC :: MrsnOut_OpenOutput
-   PUBLIC :: MrsnOut_CloseOutput
    PUBLIC :: MrsnOut_WriteOutputNames
    PUBLIC :: MrsnOut_WriteOutputUnits
-   PUBLIC :: MrsnOut_WriteOutputs
    PUBLIC :: MrsnOut_Init
    PUBLIC :: MrsnOut_DestroyParam
    PUBLIC :: GetMorisonChannels
 CONTAINS
 
-
 !====================================================================================================
-SUBROUTINE SetInvalidOutputs(NMOutputs, MOutLst, NJOutputs, JOutLst, InvalidOutput)
-! This subroutine checks the user requested member and joint output lists and sets the unused items to
-! invalid.
-!---------------------------------------------------------------------------------------------------- 
-   INTEGER,                            INTENT( IN    )  :: NMOutputs
-   TYPE(Morison_MOutput),              INTENT( IN    )  :: MOutLst(:)
-   INTEGER,                            INTENT( IN    )  :: NJOutputs
-   TYPE(Morison_JOutput),              INTENT( IN    )  :: JOutLst(:)
-   LOGICAL,                            INTENT( INOUT )  :: InvalidOutput(:)
-   
-      
-   
-END SUBROUTINE SetInvalidOutputs
-
-!====================================================================================================
-SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg )
+SUBROUTINE MrsnOut_MapOutputs( y, p, u, m, AllOuts )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by HydroDyn_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
-   REAL(DbKi),                         INTENT( IN    )  :: CurrentTime          ! Current simulation time in seconds
    TYPE(Morison_OutputType),           INTENT( INOUT )  :: y                    ! Morison module's output data
    TYPE(Morison_ParameterType),        INTENT( IN    )  :: p                    ! Morison module's parameter data
    TYPE(Morison_InputType),            INTENT( IN    )  :: u                    ! Morison module's input data
    TYPE(Morison_MiscVarType),          INTENT( INOUT )  :: m                    ! Misc/optimization variables
    REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxMrsnOutputs)  ! Array of output data for all possible outputs
-   INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat              ! Error status of the operation
-   CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
    INTEGER                                              :: I, J
    
@@ -6484,9 +6462,7 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg
    real(ReKi)                                           :: dl           ! member element length (m)
    REAL(ReKi)                                           :: s            ! The linear interpolation factor for the requested location
    
-   
-   ErrStat = ErrID_None
-   ErrMsg = ""
+   AllOuts = 0.0_ReKi
    
       ! Only generate member-based outputs for the number of user-requested member outputs
       
@@ -6615,131 +6591,7 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg
    END IF 
 END SUBROUTINE MrsnOut_MapOutputs
 
-!====================================================================================================
-SUBROUTINE MrsnOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrMsg )
-! This subroutine initialized the output module, checking if the output parameter list (OutList)
-! contains valid names, and opening the output file if there are any requested outputs
-!----------------------------------------------------------------------------------------------------
 
-   
-
-      ! Passed variables
-
-   CHARACTER(*),                  INTENT( IN    ) :: ProgName
-   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
-   TYPE(Morison_ParameterType),   INTENT( INOUT ) :: p   
-   TYPE(Morison_InitOutPutType ), INTENT( IN    ) :: InitOut              !
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
-      ! Local variables
-   INTEGER                                        :: I                    ! Generic loop counter      
-!   INTEGER                                        :: J                    ! Generic loop counter      
-!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
-                 
-   !-------------------------------------------------------------------------------------------------      
-   ! Initialize local variables
-   !-------------------------------------------------------------------------------------------------      
-      
-         
-   ErrStat = ErrID_None         
-   ErrMsg  = ""  
-      
-   !TODO Finish error handling
-   
-   !-------------------------------------------------------------------------------------------------      
-   ! Open the output file, if necessary, and write the header
-   !-------------------------------------------------------------------------------------------------      
-   
-   IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
-      
-         ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'.MRSN.out'
-      CALL GetNewUnit( p%UnOutFile )
-   
-      CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
-      IF (ErrStat >=AbortErrLev) RETURN
-      
-      
-      
-         ! Write the output file header
-      
-      WRITE (p%UnOutFile,'(/,A/)', IOSTAT=ErrStat)  'These predictions were generated by '//TRIM(ProgName)//&
-                      ' on '//CurDate()//' at '//CurTime()//'.'
-   
-         ! Write the names of the output parameters:
-      
-      Frmt = '(A8,'//TRIM(Int2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutSFmt )//'))'
-   
-      WRITE(p%UnOutFile,Frmt)  TRIM( 'Time' ), ( p%Delim, TRIM( InitOut%WriteOutputHdr(I) ), I=1,p%NumOuts )
-      
-      
-      
-      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat)          ! write the line return
-      
-      
-         ! Write the units of the output parameters:
-         
-     
-   
-      WRITE(p%UnOutFile,Frmt)  TRIM( 's'), ( p%Delim, TRIM( InitOut%WriteOutputUnt(I) ), I=1,p%NumOuts )
-      
-      
-      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat)          ! write the line return                               
-      
-      
-   
-      
-   END IF   ! there are any requested outputs   
-
-   RETURN
-
-END SUBROUTINE MrsnOut_OpenOutput
-
-!====================================================================================================
-
-
-!====================================================================================================
-SUBROUTINE MrsnOut_CloseOutput ( p, ErrStat, ErrMsg )
-! This function cleans up after running the HydroDyn output module. It closes the output file,
-! releases memory, and resets the number of outputs requested to 0.
-!----------------------------------------------------------------------------------------------------
-
-         ! Passed variables
-
-   TYPE(Morison_ParameterType),  INTENT( INOUT )  :: p                    ! parameter data for this instance of the Morison module        
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
-!      ! Internal variables
-   LOGICAL                               :: Err
-
-
-   !-------------------------------------------------------------------------------------------------
-   ! Initialize error information
-   !-------------------------------------------------------------------------------------------------
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   Err     = .FALSE.
-
-   !-------------------------------------------------------------------------------------------------
-   ! Close our output file
-   !-------------------------------------------------------------------------------------------------
-   CLOSE( p%UnOutFile, IOSTAT = ErrStat )
-   IF ( ErrStat /= 0 ) Err = .TRUE.
-
-  
- 
-   !-------------------------------------------------------------------------------------------------
-   ! Make sure ErrStat is non-zero if an error occurred
-   !-------------------------------------------------------------------------------------------------
-   IF ( Err ) ErrStat = ErrID_Fatal
-   
-   RETURN
-
-END SUBROUTINE MrsnOut_CloseOutput
 !====================================================================================================
 
 
@@ -6784,51 +6636,6 @@ SUBROUTINE MrsnOut_WriteOutputUnits( UnOutFile, p, ErrStat, ErrMsg )
       
 END SUBROUTINE MrsnOut_WriteOutputUnits
 
-!====================================================================================================
-SUBROUTINE MrsnOut_WriteOutputs( UnOutFile, Time, y, p, ErrStat, ErrMsg )
-! This subroutine writes the data stored in WriteOutputs (and indexed in OutParam) to the file
-! opened in MrsnOut_Init()
-!---------------------------------------------------------------------------------------------------- 
-
-      ! Passed variables   
-   INTEGER,                      INTENT( IN    ) :: UnOutFile            ! file unit for the output file
-   REAL(DbKi),                   INTENT( IN    ) :: Time                 ! Time for this output
-   TYPE(Morison_OutputType),     INTENT( IN    ) :: y                    ! Morison module's output data
-   TYPE(Morison_ParameterType),  INTENT( IN    ) :: p                    ! Morison module's parameter data
-   INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
-   CHARACTER(*),                 INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
-      ! Local variables
-  ! REAL(ReKi)                             :: OutData (0:p%NumOuts)       ! an output array
-   INTEGER                                :: I                           ! Generic loop counter
-   CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
-   
-
-  
-      ! Initialize ErrStat and determine if it makes any sense to write output
-      
-   IF ( .NOT. ALLOCATED( p%OutParam ) .OR. UnOutFile < 0 )  THEN    
-      ErrStat = ErrID_Warn
-      ErrMsg  = ' To write outputs for HydroDyn there must be a valid file ID and OutParam must be allocated.'
-      RETURN
-   ELSE
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-   END IF
-
-
-      ! Write the output parameters to the file
-      
-   Frmt = '(F8.3,'//TRIM(Int2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-   !Frmt = '('//TRIM( p%OutFmt )//','//TRIM(Int2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-
-   WRITE(UnOutFile,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
-
-   
-   RETURN
-
-
-END SUBROUTINE MrsnOut_WriteOutputs
 
 SUBROUTINE GetNeighboringNodes(member, d, m1, m2, i1, i2, s, ErrStat, ErrMsg) 
 
@@ -6913,22 +6720,15 @@ if (p%NumOuts > 0 ) THEN
    CALL MrsnOut_ChkOutLst( InitInp%OutList(1:p%NumOuts), InitInp%ValidOutList(1:p%NumOuts), y, p,  ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev ) RETURN
 END IF   
-      ! Set the number of outputs related to the OutAll flag
-   
-   IF ( InitInp%OutAll  ) THEN
-     ! p%NumOutAll = InitInp%NMember*2*22 + InitInp%NJoints*19
-      p%NumOutAll = 0
-   ELSE
-      p%NumOutAll = 0
-   END IF
+
    
    !-------------------------------------------------------------------------------------------------      
    ! Open the output file, if necessary, and write the header
    !-------------------------------------------------------------------------------------------------      
 
-   IF ( InitInp%OutAll  .OR. ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) ) THEN           ! Output has been requested so let's open an output file            
+   IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
       
-      ALLOCATE( y%WriteOutput( p%NumOuts + p%NumOutAll ),  STAT = ErrStat )
+      ALLOCATE( y%WriteOutput( p%NumOuts ),  STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for WriteOutput array.'
          ErrStat = ErrID_Fatal
@@ -6961,14 +6761,14 @@ END IF
          ! These variables are to help follow the framework template, but the data in them is simply a copy of data
          ! already available in the OutParam data structure
       
-      ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts + p%NumOutAll), STAT = ErrStat )
+      ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
       
-      ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts + p%NumOutAll), STAT = ErrStat )
+      ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
          ErrStat = ErrID_Fatal
@@ -6982,15 +6782,7 @@ END IF
          InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
          InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
       
-      END DO   
-      
-      IF ( InitInp%OutAll ) THEN
-         ! Loop over joints
-         ! J1FDXi, ... 
-         ! Loop over members
-         ! M1BEGFDXi, M1ENDFDXi, ...
-         !InitOut%WriteOutputHdr(p%NOuts+count)
-      END IF
+      END DO
       
    END IF   ! there are any requested outputs   
 

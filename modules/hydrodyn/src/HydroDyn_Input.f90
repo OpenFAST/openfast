@@ -2540,7 +2540,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       ! Morison
       InputFileData%Morison%UnSum      = InputFileData%UnSum
       InputFileData%Morison%Gravity    = InitInp%Gravity
-      InputFileData%Morison%OutAll     = InputFileData%OutAll
 
          ! Process the input geometry and generate the simulation mesh representation
       call Morison_GenerateSimulationNodes( InputFileData%Morison%MSL2SWL, InputFileData%Morison%NJoints, InputFileData%Morison%InpJoints, InputFileData%Morison%NMembers, InputFileData%Morison%InpMembers, InputFileData%Morison%NNodes, InputFileData%Morison%Nodes, errStat2, errMsg2 )

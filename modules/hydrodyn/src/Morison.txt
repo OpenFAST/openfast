@@ -252,8 +252,6 @@ typedef   ^                            ^                             Morison_JOu
 typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {4032}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
 typedef   ^                            ^                             LOGICAL                  ValidOutList                     {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  OutSwtch                         -          -        -         ""    -
-typedef   ^                            ^                             LOGICAL                  OutAll                           -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                      -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnOutFile                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
@@ -377,8 +375,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_JOutput          JOutLst                         {:}        -         -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                        {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOutAll                       -          -         -         ""    -
-typedef   ^                            ^                             INTEGER                  OutSwtch                        -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  UnOutFile                       -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -         -        ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -

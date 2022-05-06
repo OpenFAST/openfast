@@ -39,20 +39,10 @@ MODULE Morison
    PUBLIC:: Morison_GenerateSimulationNodes
    
    PUBLIC :: Morison_Init                           ! Initialization routine
-   PUBLIC :: Morison_End                            ! Ending routine (includes clean up)
-   
-   PUBLIC :: Morison_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating 
-                                                    !   continuous states, and updating discrete states
    PUBLIC :: Morison_CalcOutput                     ! Routine for computing outputs
    
-   PUBLIC :: Morison_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-   PUBLIC :: Morison_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: Morison_UpdateDiscState                ! Tight coupling routine for updating discrete states
-      
-   
-   
 CONTAINS
-
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Morison_DirCosMtrx( pos0, pos1, DirCos )
 
 ! Compute the direction cosine matrix given two points along the axis of a cylinder
@@ -346,7 +336,7 @@ FUNCTION InterpWrappedStpLogical( XValIn, XAry, YAry, Ind, AryLen )
 
    RETURN
 END FUNCTION InterpWrappedStpLogical ! ( XVal, XAry, YAry, Ind, AryLen )
-
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat, errMsg)
    real(ReKi),   intent(in   ) :: p1(3),p2(3)
    real(ReKi),   intent(  out) :: phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat(3)
@@ -368,6 +358,7 @@ subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, sinBeta, co
          vecLen2D = SQRT(vec(1)**2+vec(2)**2)
          if ( vecLen < 0.000001 ) then
             call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, 'Morison_CalcOutput' )
+            return
          else
             k_hat = vec / vecLen 
             phi   = atan2(vecLen2D, vec(3))  ! incline angle   
@@ -384,8 +375,7 @@ subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, sinBeta, co
          cosBeta = cos(beta)
          
 end subroutine GetOrientationAngles
-
-
+!----------------------------------------------------------------------------------------------------------------------------------
 !function to return conical taper geometry calculations (volume and center of volume)
 SUBROUTINE TaperCalc(R1, R2, H, taperV, h_c)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1
@@ -410,8 +400,7 @@ SUBROUTINE TaperCalc(R1, R2, H, taperV, h_c)
    end if
    
 END SUBROUTINE TaperCalc
-
-
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE CylInertia(R1, R2, H, rho, Il, Ir)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1
    REAL(ReKi),                     INTENT    ( IN    )  :: R2
@@ -439,9 +428,7 @@ SUBROUTINE CylInertia(R1, R2, H, rho, Il, Ir)
    END IF
    
 END SUBROUTINE CylInertia
-
-
-
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE MarineGrowthPartSegment(R1, R2, Rmg1, Rmg2, L, rho,  Vinner, Vouter, m_mg, h_c, Ilmg, Irmg)
    
    REAL(ReKi),                     INTENT    ( IN    )  :: R1
@@ -491,8 +478,7 @@ SUBROUTINE MarineGrowthPartSegment(R1, R2, Rmg1, Rmg2, L, rho,  Vinner, Vouter, 
    Irmg = Irouter - Irinner
 
 END SUBROUTINE MarineGrowthPartSegment
-
-
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FloodedBallastPartSegment(R1, R2, L, rho, V, m, h_c, Il, Ir)
    
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
@@ -514,16 +500,12 @@ SUBROUTINE FloodedBallastPartSegment(R1, R2, L, rho, V, m, h_c, Il, Ir)
    call CylInertia(R1, R2, L, rho, Il, Ir)  ! inertias for filled section
 
 END SUBROUTINE FloodedBallastPartSegment
-
-
-SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, nodes, numMembers, members, &
-                             NOutputs, OutParam, NMOutputs, MOutLst,  NJOutputs, JOutLst, uMesh, yMesh, &
-                             p, m, errStat, errMsg ) 
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMembers, members, &
+                             NOutputs, OutParam, MOutLst, JOutLst, uMesh, yMesh, p, m, errStat, errMsg ) 
                              
    INTEGER,                               INTENT ( IN    )  :: UnSum
-   REAL(ReKi),                            INTENT ( IN    )  :: g                    ! gravity
    REAL(ReKi),                            INTENT ( IN    )  :: MSL2SWL
-   REAL(ReKi),                            INTENT ( IN    )  :: WtrDpth
    INTEGER,                               INTENT ( IN    )  :: numJoints
    INTEGER,                               INTENT ( IN    )  :: numNodes
    TYPE(Morison_NodeType),   ALLOCATABLE, INTENT ( IN    )  :: nodes(:)  
@@ -531,9 +513,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
    TYPE(Morison_MemberType), ALLOCATABLE, INTENT ( IN    )  :: members(:)
    INTEGER,                               INTENT ( IN    )  :: NOutputs
    TYPE(OutParmType),        ALLOCATABLE, INTENT ( IN    )  :: OutParam(:)
-   INTEGER,                               INTENT ( IN    )  :: NMOutputs
    TYPE(Morison_MOutput),    ALLOCATABLE, INTENT ( IN    )  :: MOutLst(:)
-   INTEGER,                               INTENT ( IN    )  :: NJOutputs
    TYPE(Morison_JOutput),    ALLOCATABLE, INTENT ( IN    )  :: JOutLst(:)
    TYPE(MeshType),                        INTENT ( INOUT )  :: uMesh
    TYPE(MeshType),                        INTENT ( INOUT )  :: yMesh
@@ -571,9 +551,18 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
    type(Morison_MemberType)                    :: mem
    REAL(ReKi)                                  :: Cd1, Cd2, Ca1, Ca2, Cp1, Cp2, AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2 ! tmp coefs
    real(ReKi)                                  :: F_B(6, numNodes), F_BF(6, numNodes), F_WMG(6, numNodes)
+   
+   INTEGER                                     :: ErrStat2
+   CHARACTER(ErrMsgLen)                        :: ErrMsg2
+   CHARACTER(*), PARAMETER                     :: RoutineName = 'WriteSummaryFile'
+   
       ! Initialize data
    errStat       = ErrID_None
    errMsg        = ""
+   
+   IF ( UnSum <= 0 ) RETURN ! can't write to the file (no summary file requested)
+
+      
    ExtBuoyancy   = 0.0
    totalFillMass = 0.0
    totalDisplVol = 0.0
@@ -589,28 +578,26 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       ! Create identity matrix
    CALL EYE(ident,errStat,errMsg)
    
-   IF ( UnSum > 0 ) THEN
-      do j = 1, numMembers   
-           
-         mem = members(j)
-         totalVol      = totalVol      + mem%Vouter
-         totalMGVol    = totalMGVol    + mem%Vouter - mem%Vinner
-         totalDisplVol = totalDisplVol + mem%Vsubmerged
-         totalFillVol  = totalFillVol  + mem%Vballast
+   do j = 1, numMembers   
+      mem = members(j)
+      totalVol      = totalVol      + mem%Vouter
+      totalMGVol    = totalMGVol    + mem%Vouter - mem%Vinner
+      totalDisplVol = totalDisplVol + mem%Vsubmerged
+      totalFillVol  = totalFillVol  + mem%Vballast
          
-       !  IF ( node2%Position(3) <= MSL2SWL .AND. node1%Position(3) >= -WtrDpth) totalDisplVol = totalDisplVol + elementVol
+      !  IF ( node2%Position(3) <= MSL2SWL .AND. node1%Position(3) >= -WtrDpth) totalDisplVol = totalDisplVol + elementVol
 
  
-         do i = 1, mem%NElements 
-            totalMGMass = totalMGMass + mem%m_mg_l(i)
-            totalMGMass = totalMGMass + mem%m_mg_u(i)
-         end do
-         do i = 1, mem%NElements+1 
-            F_B  (:,mem%NodeIndx(i)) = F_B  (:,mem%NodeIndx(i)) + m%memberLoads(j)%F_B  (:,i)
-            F_BF (:,mem%NodeIndx(i)) = F_BF (:,mem%NodeIndx(i)) + m%memberLoads(j)%F_BF (:,i)
-            F_WMG(:,mem%NodeIndx(i)) = F_WMG(:,mem%NodeIndx(i)) + m%memberLoads(j)%F_WMG(:,i)
-         end do
+      do i = 1, mem%NElements 
+         totalMGMass = totalMGMass + mem%m_mg_l(i)
+         totalMGMass = totalMGMass + mem%m_mg_u(i)
       end do
+      do i = 1, mem%NElements+1 
+         F_B  (:,mem%NodeIndx(i)) = F_B  (:,mem%NodeIndx(i)) + m%memberLoads(j)%F_B  (:,i)
+         F_BF (:,mem%NodeIndx(i)) = F_BF (:,mem%NodeIndx(i)) + m%memberLoads(j)%F_BF (:,i)
+         F_WMG(:,mem%NodeIndx(i)) = F_WMG(:,mem%NodeIndx(i)) + m%memberLoads(j)%F_WMG(:,i)
+      end do
+   end do
       
       
       WRITE( UnSum,  '(//)' ) 
@@ -629,35 +616,42 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       CALL MeshCreate( BlankMesh        = WRP_Mesh          &
                      ,IOS               = COMPONENT_INPUT   &
                      ,Nnodes            = 1                 &
-                     ,errStat           = errStat           &
-                     ,ErrMess           = errMsg            &
+                     ,errStat           = errStat2          &
+                     ,ErrMess           = errMsg2           &
                      ,Force             = .TRUE.            &
                      ,Moment            = .TRUE.            &
                      )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Create the node on the mesh
  
       CALL MeshPositionNode (WRP_Mesh                              &
                               , 1                                  &
                               , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)   &  
-                              , errStat                            &
-                              , errMsg                             &
+                              , errStat2                           &
+                              , errMsg2                            &
                               )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
-      IF ( errStat /= 0 ) RETURN
+      IF ( errStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
        
       
          ! Create the mesh element
       CALL MeshConstructElement (  WRP_Mesh            &
                                   , ELEMENT_POINT      &                         
-                                  , errStat            &
-                                  , errMsg             &
+                                  , errStat2           &
+                                  , errMsg2            &
                                   , 1                  &
                                 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
       CALL MeshCommit ( WRP_Mesh           &
-                      , errStat            &
-                      , errMsg             )
+                      , errStat2           &
+                      , errMsg2            )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
-      IF ( errStat /= ErrID_None ) RETURN
             
          ! we need the translation displacement mesh for loads transfer:
       CALL MeshCopy ( SrcMesh  = WRP_Mesh            &
@@ -665,10 +659,15 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
                     , CtrlCode = MESH_SIBLING        &
                     , IOS      = COMPONENT_INPUT     &
                     , TranslationDisp = .TRUE.       &
-                    , errStat  = errStat             &
-                    , ErrMess  = errMsg              )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
-                    
-      IF ( errStat /= ErrID_None ) RETURN
+                    , errStat  = errStat2            &
+                    , ErrMess  = errMsg2             )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
+      IF ( errStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
+      
       WRP_Mesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
       
       WRP_Mesh%RemapFlag  = .TRUE.
@@ -701,10 +700,14 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
    
          ! Transfer the loads from the distributed mesh to the (0,0,0) point mesh
          
-      CALL MeshMapCreate           ( yMesh, WRP_Mesh, M_P_2_P, errStat, errMsg                )
-        !CALL CheckError( errStat, 'Message from MeshMapCreate HD_M_L_2_ED_P: '//NewLine//errMsg )
-      CALL Transfer_Point_to_Point( yMesh, WRP_Mesh, M_P_2_P, errStat, errMsg, uMesh, WRP_Mesh_position )
+      CALL MeshMapCreate           ( yMesh, WRP_Mesh, M_P_2_P, errStat2, errMsg2               )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF ( errStat >= AbortErrLev ) then
+            call cleanup()
+            RETURN
+         end if
       
+      CALL Transfer_Point_to_Point( yMesh, WRP_Mesh, M_P_2_P, errStat2, errMsg2, uMesh, WRP_Mesh_position );  call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       ExtBuoyancy(1:3) = WRP_Mesh%Force (:,1)
       ExtBuoyancy(4:6) = WRP_Mesh%Moment(:,1)
     
@@ -734,7 +737,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       END DO ! DO J
        
       IntBuoyancy = 0.0
-      CALL Transfer_Point_to_Point( yMesh, WRP_Mesh, M_P_2_P, errStat, errMsg, uMesh, WRP_Mesh_position )
+      CALL Transfer_Point_to_Point( yMesh, WRP_Mesh, M_P_2_P, errStat2, errMsg2, uMesh, WRP_Mesh_position );  call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IntBuoyancy(1:3) = WRP_Mesh%Force(:,1)
       IntBuoyancy(4:6) = WRP_Mesh%Moment(:,1)
       
@@ -762,12 +765,10 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       END DO ! DO J
          
       MG_Wt = 0.0
-      CALL Transfer_Point_to_Point( yMesh, WRP_Mesh, M_P_2_P, errStat, errMsg, uMesh, WRP_Mesh_position )
+      CALL Transfer_Point_to_Point( yMesh, WRP_Mesh, M_P_2_P, errStat2, errMsg2, uMesh, WRP_Mesh_position );  call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       MG_Wt(1:3) = WRP_Mesh%Force(:,1)
       MG_Wt(4:6) = WRP_Mesh%Moment(:,1)
       !
-       CALL MeshMapDestroy( M_P_2_P, errStat, errMsg ); IF ( errStat /= ErrID_None ) CALL WrScr(TRIM(errMsg))
-     
            
       WRITE( UnSum,  '(//)' ) 
       WRITE( UnSum, '(A36)' ) 'Weight loads about ( 0.0, 0.0, 0.0 )'
@@ -777,8 +778,6 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       WRITE( UnSum, '(A18,6(2X,ES20.6))') 'Marine Growth:   ', MG_Wt(1), MG_Wt(2), MG_Wt(3), MG_Wt(4), MG_Wt(5), MG_Wt(6)
 
       
-      CALL MeshDestroy(WRP_Mesh, errStat, errMsg ); IF ( errStat /= ErrID_None ) CALL WrScr(TRIM(errMsg))
-      CALL MeshDestroy(WRP_Mesh_position, errStat, errMsg ); IF ( errStat /= ErrID_None ) CALL WrScr(TRIM(errMsg))
       !
       !   ! Write the header for this section
       WRITE( UnSum,  '(//)' ) 
@@ -940,13 +939,22 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       END DO
       
    
-   END IF
-
+   call cleanup()
+   
+contains
+!...................................
+   subroutine cleanup()
+      call MeshDestroy(WRP_Mesh, ErrStat2, ErrMsg2)
+      call MeshDestroy(WRP_Mesh_position, ErrStat2, ErrMsg2)
+      call MeshMapDestroy(M_P_2_P, ErrStat2, ErrMsg2)
+      
+      call Morison_DestroyNodeType(node1, ErrStat2, ErrMsg2)
+      call Morison_DestroyNodeType(node2, ErrStat2, ErrMsg2)
+      call Morison_DestroyMemberType(mem, ErrStat2, ErrMsg2)
+   end subroutine cleanup
 END SUBROUTINE WriteSummaryFile
 
-
-        
-      
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine Morison_GenerateSimulationNodes( MSL2SWL, numJoints, inpJoints, numMembers, inpMembers, numNodes, nodes, errStat, errMsg )
    ! This subdivides a Morison member according to its maximum desired 
    ! element length (MDivSize), allocating the member's arrays, and
@@ -984,7 +992,7 @@ subroutine Morison_GenerateSimulationNodes( MSL2SWL, numJoints, inpJoints, numMe
       j1 = inpMembers(I)%MJointID1Indx
       j2 = inpMembers(I)%MJointID2Indx
       call GetDistance(inpJoints(j1)%Position, inpJoints(j2)%Position, memLength)
-      if ( EqualRealNos(memLength, 0.0_ReKi) )then
+      if ( EqualRealNos(memLength, 0.0_ReKi) ) then
          errMsg  = ' Input file member with ID: '//trim(num2lstr(inpMembers(i)%MemberID))//' must have length greater than zero.'
          errStat = ErrID_Fatal
          return
@@ -999,8 +1007,8 @@ subroutine Morison_GenerateSimulationNodes( MSL2SWL, numJoints, inpJoints, numMe
    end do 
    
    ! Allocate nodes array
-   allocate ( nodes(maxNodes), STAT = errStat )
-      if ( errStat /= 0 ) then
+   allocate ( nodes(maxNodes), STAT = errStat2 )
+      if ( errStat2 /= 0 ) then
          errMsg  = ' Error allocating space for Nodes array for Morison Module.'
          errStat = ErrID_Fatal
          return
@@ -1112,10 +1120,9 @@ END SUBROUTINE SetDepthBasedCoefs
 
 
 !====================================================================================================
-!SUBROUTINE SetExternalHydroCoefs
 SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
                                    SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplMCF, CoefMembers,    &
-                                   NCoefDpth, CoefDpths, numNodes, nodes, member )   
+                                   NCoefDpth, CoefDpths, nodes, member )   
 !     This private subroutine generates the Cd, Ca, Cp, CdMG, CaMG and CpMG coefs for the member based on
 !     the input data.  
 !---------------------------------------------------------------------------------------------------- 
@@ -1138,7 +1145,6 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
    type(Morison_CoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
    integer(IntKi),                         intent(in   )  :: NCoefDpth
    type(Morison_CoefDpths),   allocatable, intent(in   )  :: CoefDpths(:)
-   integer(IntKi),                         intent(in   )  :: numNodes
    type(Morison_NodeType),    allocatable, intent(in   )  :: nodes(:)
    type(Morison_MemberType),               intent(inout)  :: member
    
@@ -1197,7 +1203,7 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
   
 end subroutine SetExternalHydroCoefs
 
-
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, MSL2SWL, tMG, MGdensity )
    ! sets the margine growth thickness of a single node (previously all nodes)
    INTEGER,                                  INTENT( IN    )  :: numMGDepths
@@ -1254,8 +1260,7 @@ SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, MSL2SWL, tMG, MGdensity )
 END SUBROUTINE SetNodeMG
 
 
-
-      
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    type(Morison_MemberType),     intent (inout)  :: member
    type(Morison_MemberLoads),    intent (inout)  :: memberLoads
@@ -1313,6 +1318,8 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry( memberLoads%F_If   , 6, member%NElements+1, 'memberLoads%F_If'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_WMG  , 6, member%NElements+1, 'memberLoads%F_WMG' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_IMG  , 6, member%NElements+1, 'memberLoads%F_IMG' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   
+   if (ErrStat >= AbortErrLev) return
 
    ! Initialize everything to zero
    member%NodeIndx      = 0.0_ReKi
@@ -1362,18 +1369,14 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    memberLoads%F_IMG    = 0.0_ReKi
 
 end subroutine AllocateMemberDataArrays
-
-subroutine FlipMemberNodeData( member, nodes, doSwap, errStat, errMsg )
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine FlipMemberNodeData( member, nodes, doSwap)
    type(Morison_MemberType),     intent (inout)  :: member
    type(Morison_NodeType),       intent (in   )  :: nodes(:)
    logical,                      intent (  out)  :: doSwap
-   integer(IntKi),               intent (  out)  :: errStat              ! returns a non-zero value when an error occurs            
-   character(*),                 intent (  out)  :: errMsg               ! Error message if errStat /= ErrID_None
    
    integer(IntKi) :: i, j1, j2, numMemNodes, indx
    
-   errStat = ErrID_None
-   errMSg  = ''
    
    doSwap = .FALSE.
    numMemNodes = member%NElements + 1
@@ -1407,7 +1410,7 @@ subroutine FlipMemberNodeData( member, nodes, doSwap, errStat, errMsg )
    end if    
    
 end subroutine FlipMemberNodeData
-
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
    real(ReKi),                   intent (in   )  :: MSL2SWL
    real(ReKi),                   intent (in   )  :: gravity
@@ -1483,7 +1486,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
 
    call SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
                                    InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, InitInp%SimplMCF, & 
-                                   InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%NNodes, InitInp%Nodes, member )       
+                                   InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%Nodes, member )
    
    ! calculate reference incline angle and heading, and related trig values.  Note: members are straight to start
    Za = InitInp%Nodes(member%NodeIndx(1  ))%Position(3) 
@@ -1784,7 +1787,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
  
 end subroutine SetMemberProperties
 
-
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
    type(Morison_InitInputType),  intent (inout)  :: InitInp
    type(Morison_ParameterType),  intent (inout)  :: p
@@ -1803,15 +1806,15 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
    
    ! allocate and copy in the InpMembers array
    p%NMembers = InitInp%NMembers
-   ALLOCATE ( p%Members(p%NMembers), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
+   ALLOCATE ( p%Members(p%NMembers), STAT = errStat2 )
+   IF ( errStat2 /= 0 ) THEN
       errMsg  = ' Error allocating space for the members array.'
       errStat = ErrID_Fatal
       RETURN
    END IF   
    
-   ALLOCATE ( m%MemberLoads(p%NMembers), STAT = errStat )
-   IF ( errStat /= ErrID_None ) THEN
+   ALLOCATE ( m%MemberLoads(p%NMembers), STAT = errStat2 )
+   IF ( errStat2 /= 0 ) THEN
       errMsg  = ' Error allocating space for the memberLoads array.'
       errStat = ErrID_Fatal
       RETURN
@@ -1825,12 +1828,14 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
       p%Members(i)%PropPot   = InitInp%InpMembers(i)%PropPot
       ! p%Members(i)%MCF       = InitInp%InpMembers(i)%MCF
       
-      call AllocateMemberDataArrays(p%Members(i), m%MemberLoads(i), errStat2, errMsg2) ; call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
+      call AllocateMemberDataArrays(p%Members(i), m%MemberLoads(i), errStat2, errMsg2)
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
+      if (ErrStat >= AbortErrLev) return
         
       p%Members(i)%NodeIndx  = InitInp%InpMembers(i)%NodeIndx ! now that the parameter version is allocated, copy the data from the InitInp version
       
       ! only reorder the nodes if the end nodes do not follow the necessary coordinate ordering rules
-      call FlipMemberNodeData(p%Members(i), InitInp%nodes, doSwap, errStat2, errMsg2) ; call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
+      call FlipMemberNodeData(p%Members(i), InitInp%nodes, doSwap)
       if (doSwap) then
             prop2Indx = InitInp%InpMembers(I)%MPropSetID1Indx
             prop1Indx = InitInp%InpMembers(I)%MPropSetID2Indx
@@ -1839,7 +1844,9 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
             prop2Indx = InitInp%InpMembers(I)%MPropSetID2Indx
       end if
       ! Now populate the various member data arrays using the HydroDyn input file data
-      call SetMemberProperties( InitInp%MSL2SWL, InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) ; call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
+      call SetMemberProperties( InitInp%MSL2SWL, InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
+      if (ErrStat >= AbortErrLev) return
    end do
       
 end subroutine SetupMembers
@@ -1903,7 +1910,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NStepWave  = InitInp%NStepWave
    p%NumOuts    = InitInp%NumOuts
    p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
-   p%OutSwtch   = InitInp%OutSwtch
    p%MSL2SWL    = InitInp%MSL2SWL
    p%WaveDisp   = InitInp%WaveDisp
    p%WaveElev1  => InitInp%WaveElev1
@@ -1912,7 +1918,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    end if
 
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat2 )
-   IF ( errStat2 /= ErrID_None ) THEN
+   IF ( errStat2 /= 0 ) THEN
       call SetErrStat(ErrID_Fatal,'Error allocating space for MOutLst array.', ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF
@@ -1926,7 +1932,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NJOutputs = InitInp%NJOutputs                        ! Number of joints to output [ >=0 and <10]
       
    ALLOCATE ( p%JOutLst(p%NJOutputs), STAT = errStat2 )
-   IF ( errStat2 /= ErrID_None ) THEN
+   IF ( errStat2 /= 0 ) THEN
       call SetErrStat(ErrID_Fatal,'Error allocating space for JOutLst array.', ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF
@@ -2051,9 +2057,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    z%DummyConstrState         = 0
    OtherState%DummyOtherState = 0
    m%LastIndWave              = 1
-
-   ! IF ( p%OutSwtch > 0 ) THEN  @mhall: I think the below need to be allocated in all cases
-
 
    
    ! allocate and initialize joint-specific arrays   
@@ -2235,21 +2238,9 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    END IF
    
    ! Initialize the outputs      
-   IF ( p%OutSwtch > 0) then  !@mhall: moved this "if" to after allocations
-   
-      CALL MrsnOUT_Init( InitInp, y, p, InitOut, errStat2, errMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      if ( errStat >= AbortErrLev ) return
-      
-         ! Determine if we need to perform output file handling
-      
-      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN  
-         CALL MrsnOUT_OpenOutput( Morison_ProgDesc%Name, TRIM(InitInp%OutRootName), p, InitOut, errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         if ( errStat >= AbortErrLev ) return
-      END IF
-      
-   END IF  
+   CALL MrsnOUT_Init( InitInp, y, p, InitOut, errStat2, errMsg2 )
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   if ( errStat >= AbortErrLev ) return
    
    ! We will call CalcOutput to compute the loads for the initial reference position
    ! Then we can use the computed load components in the Summary File
@@ -2259,10 +2250,9 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if ( errStat >= AbortErrLev ) return
    
-      ! Write Summary information now that everything has been initialized. 
-   CALL WriteSummaryFile( InitInp%UnSum, InitInp%Gravity, InitInp%MSL2SWL, InitInp%WtrDpth, InitInp%NJoints, InitInp%NNodes, InitInp%Nodes, p%NMembers, p%Members, &
-                          p%NumOuts, p%OutParam, p%NMOutputs, p%MOutLst,  p%NJOutputs, p%JOutLst, u%Mesh, y%Mesh, &
-                          p, m, errStat2, errMsg2 )
+      ! Write Summary information to *HydroDyn* summary file now that everything has been initialized. 
+   CALL WriteSummaryFile( InitInp%UnSum, InitInp%MSL2SWL, InitInp%NJoints, InitInp%NNodes, InitInp%Nodes, p%NMembers, p%Members, &
+                          p%NumOuts, p%OutParam, p%MOutLst, p%JOutLst, u%Mesh, y%Mesh, p, m, errStat2, errMsg2 )
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if ( errStat >= AbortErrLev ) return
                                                        
@@ -2272,8 +2262,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    !   END SUBROUTINE
 
 END SUBROUTINE Morison_Init
-
-
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE RodrigMat(a, R, errStat, errMsg)
    ! calculates rotation matrix R to rotate unit vertical vector to direction of input vector a
    
@@ -2314,7 +2303,7 @@ SUBROUTINE RodrigMat(a, R, errStat, errMsg)
    
 END SUBROUTINE RodrigMat
 
-
+!----------------------------------------------------------------------------------------------------------------------------------
 FUNCTION GetAlpha(R1,R2)
    ! calculates relative center of volume location for a (tapered) cylindrical element
    real(ReKi)    :: GetAlpha
@@ -2327,7 +2316,7 @@ FUNCTION GetAlpha(R1,R2)
    
 END FUNCTION GetAlpha
 
-
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    TYPE(Morison_InitInputType),       INTENT(IN   )  :: InitInp     ! Initialization inputs
    TYPE(Morison_ParameterType),       INTENT(INOUT)  :: p           ! parameter variables
@@ -2417,106 +2406,7 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    
 END SUBROUTINE AllocateNodeLoadVariables
 
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.
-SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
-!..................................................................................................................................
-
-      TYPE(Morison_InputType),           INTENT(INOUT)  :: u           !< System inputs
-      TYPE(Morison_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
-      TYPE(Morison_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
-      TYPE(Morison_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
-      TYPE(Morison_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
-      TYPE(Morison_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states            
-      TYPE(Morison_OutputType),          INTENT(INOUT)  :: y           !< System outputs
-      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
-      INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
-
-
-
-         ! Initialize errStat
-         
-      errStat = ErrID_None         
-      errMsg  = ""               
-      
-      
-         ! Place any last minute operations or calculations here:
-
-
-         ! Close files here:     
-                  
- 
-
-         ! Destroy the input data:
-         
-      CALL Morison_DestroyInput( u, errStat, errMsg )
-
-
-         ! Determine if we need to close the output file
-         
-      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN   
-         CALL MrsnOut_CloseOutput( p, errStat, errMsg )         
-      END IF 
-         
-         ! Destroy the parameter data:
-         
-      ! Need to nullify pointers so that SeaState module data is not deallocation by HD (use DEALLOCATEpointers=.false.)
-      CALL Morison_DestroyParam( p, errStat, errMsg, DEALLOCATEpointers=.false. )
-
-
-         ! Destroy the state data:
-         
-      CALL Morison_DestroyContState(   x,           errStat, errMsg )
-      CALL Morison_DestroyDiscState(   xd,          errStat, errMsg )
-      CALL Morison_DestroyConstrState( z,           errStat, errMsg )
-      CALL Morison_DestroyOtherState(  OtherState,  errStat, errMsg )
-         
-      CALL Morison_DestroyMisc( m, errStat, errMsg )
-
-         ! Destroy the output data:
-         
-      CALL Morison_DestroyOutput( y, errStat, errMsg )
-
-END SUBROUTINE Morison_End
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
-!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, m, errStat, errMsg )
-!..................................................................................................................................
-   
-      REAL(DbKi),                         INTENT(IN   ) :: Time        !< Current simulation time in seconds
-      TYPE(Morison_InputType),            INTENT(IN   ) :: u           !< Inputs at Time                    
-      TYPE(Morison_ParameterType),        INTENT(IN   ) :: p           !< Parameters                              
-      TYPE(Morison_ContinuousStateType),  INTENT(INOUT) :: x           !< Input: Continuous states at Time; 
-                                                                       !!   Output: Continuous states at Time + Interval
-      TYPE(Morison_DiscreteStateType),    INTENT(INOUT) :: xd          !< Input: Discrete states at Time; 
-                                                                       !!   Output: Discrete states at Time + Interval
-      TYPE(Morison_ConstraintStateType),  INTENT(INOUT) :: z           !< Input: Constraint states at Time;
-                                                                       !!   Output: Constraint states at Time + Interval
-      TYPE(Morison_OtherStateType),       INTENT(INOUT) :: OtherState  !< Input: Other states at Time;
-                                                                       !!   Output: Other states at Time + Interval
-      TYPE(Morison_MiscVarType),          INTENT(INOUT) :: m           !< Misc/optimization variables            
-      INTEGER(IntKi),                     INTENT(  OUT) :: errStat     !< Error status of the operation     
-      CHARACTER(*),                       INTENT(  OUT) :: errMsg      !< Error message if errStat /= ErrID_None
-
-         ! Local variables
-                  
-!      INTEGER(IntKi)                                    :: errStat2    ! Error status of the operation (occurs after initial error)
-!      CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
-                        
-         ! Initialize errStat
-         
-      errStat = ErrID_None         
-      errMsg  = ""               
-      
-           
-      
-
-      
-END SUBROUTINE Morison_UpdateStates
 !> This routine is similar to InterpWrappedStpReal, except it returns only the slope for the interpolation.
 !! By returning the slope based on Time, we don't have to calculate this for every variable (Yary) we want to interpolate.
 !! NOTE: p%WaveTime (and most arrays here) start with index of 0 instead of 1, so we will subtract 1 from "normal" interpolation
@@ -2570,6 +2460,7 @@ FUNCTION GetInterpolationSlope(Time, p, m, IntWrapIndx) RESULT( InterpSlope )
       END IF
       
 END FUNCTION GetInterpolationSlope
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
 FUNCTION InterpolateWithSlope(InterpSlope, Ind, YAry)
       REAL(ReKi), INTENT(IN)                            :: InterpSlope
@@ -2580,6 +2471,7 @@ FUNCTION InterpolateWithSlope(InterpSlope, Ind, YAry)
       InterpolateWithSlope = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
 
 END FUNCTION InterpolateWithSlope
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
 FUNCTION InterpolateWithSlopeR(InterpSlope, Ind, YAry)
       REAL(ReKi), INTENT(IN)                            :: InterpSlope
@@ -3928,30 +3820,17 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !---------------------------------------------------------------------------------------------------------------!
    !                                      External Hydrodynamic Joint Loads - End                                  !
    !---------------------------------------------------------------------------------------------------------------!    
+   ! Map calculated results into the AllOuts Array
+   CALL MrsnOut_MapOutputs(y, p, u, m, AllOuts)
         
-   ! OutSwtch determines whether or not to actually output results via the WriteOutput array
-   ! 1 = Morison will generate an output file of its own.  2 = the caller will handle the outputs, but
-   ! Morison needs to provide them.  3 = Both 1 and 2, 0 = No one needs the Morison outputs provided
-   ! via the WriteOutput array.
-   IF ( p%OutSwtch > 0 ) THEN
-     
-      ! Map calculated results into the AllOuts Array
-      CALL MrsnOut_MapOutputs(Time, y, p, u, m, AllOuts, errStat, errMsg)
-        
-      ! Put the output data in the WriteOutput array
-      DO I = 1,p%NumOuts
-         y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      END DO
+   ! Put the output data in the WriteOutput array
+   DO I = 1,p%NumOuts
+      y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+   END DO
 
-      ! Generate output into the output file
-      IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
-         CALL MrsnOut_WriteOutputs( p%UnOutFile, Time, y, p, errStat, errMsg )         
-      END IF
-      
-   END IF
 
 END SUBROUTINE Morison_CalcOutput
-
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )
    real(ReKi), intent(in   ) :: f_hydro(3)
    real(ReKi), intent(in   ) :: k_hat(3)
@@ -3963,7 +3842,7 @@ subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )
    lumpedLoad(1:3) = f_hydro*dl
    lumpedLoad(4:6) = cross_product(k_hat*h_c, f_hydro)*dl
 end subroutine LumpDistrHydroLoads
-
+!----------------------------------------------------------------------------------------------------------------------------------
 ! Takes loads on node i in element tilted frame and converts to 6DOF loads at node i and adjacent node
 SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, alpha, F1, F2)
    
@@ -4023,8 +3902,7 @@ SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, a
    !F2(6) = 0.0
 
 END SUBROUTINE DistributeElementLoads
-
-
+!----------------------------------------------------------------------------------------------------------------------------------
 ! Takes loads on end node i and converts to 6DOF loads, adding to the nodes existing loads
 SUBROUTINE AddEndLoad(Fl, M, sinPhi, cosPhi, SinBeta, cosBeta, Fi)
    
@@ -4045,96 +3923,5 @@ SUBROUTINE AddEndLoad(Fl, M, sinPhi, cosPhi, SinBeta, cosBeta, Fi)
 END SUBROUTINE AddEndLoad
 
 
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Tight coupling routine for computing derivatives of continuous states
-SUBROUTINE Morison_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, errStat, errMsg )  
-!..................................................................................................................................
-   
-      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                    
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters                             
-      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(Morison_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
-      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time                   
-      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
-      TYPE(Morison_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
-      INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation     
-      CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
-
-               
-         ! Initialize errStat
-         
-      errStat = ErrID_None         
-      errMsg  = ""               
-      
-      
-         ! Compute the first time derivatives of the continuous states here:
-      
-      dxdt%DummyContState = 0.0
-         
-
-END SUBROUTINE Morison_CalcContStateDeriv
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Tight coupling routine for updating discrete states
-SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat, errMsg )   
-!..................................................................................................................................
-   
-      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds   
-      TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters                                 
-      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(Morison_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at Time; 
-                                                                       !!   Output: Discrete states at Time + Interval
-      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time          
-      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
-      INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
-
-               
-         ! Initialize errStat
-         
-      errStat = ErrID_None         
-      errMsg  = ""               
-      
-      
-         ! Update discrete states here:
-      
-      ! StateData%DiscState = 
-
-END SUBROUTINE Morison_UpdateDiscState
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Tight coupling routine for solving for the residual of the constraint state equations
-SUBROUTINE Morison_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, errStat, errMsg )   
-!..................................................................................................................................
-   
-      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds   
-      TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters                           
-      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(Morison_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
-      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time       
-      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
-      TYPE(Morison_ConstraintStateType), INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using  
-                                                                       !!     the input values described above      
-      INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
-
-               
-         ! Initialize errStat
-         
-      errStat = ErrID_None         
-      errMsg  = ""               
-      
-      
-         ! Solve for the constraint states here:
-      
-      z_residual%DummyConstrState = 0.0_ReKi
-
-END SUBROUTINE Morison_CalcConstrStateResidual
-!----------------------------------------------------------------------------------------------------------------------------------
-   
 END MODULE Morison
 !**********************************************************************************************************************************
