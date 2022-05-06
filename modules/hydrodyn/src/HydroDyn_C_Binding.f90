@@ -810,7 +810,7 @@ SUBROUTINE HydroDyn_C_UpdateStates( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
 
 
    ! Call the main subroutine HydroDyn_UpdateStates to get the velocities
-   CALL HydroDyn_UpdateStates( InputTimes(INPUT_PRED), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherStates(STATE_PRED), m, ErrStat2, ErrMsg2 )
+   CALL HydroDyn_UpdateStates( InputTimes(INPUT_CURR), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherStates(STATE_PRED), m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
 
