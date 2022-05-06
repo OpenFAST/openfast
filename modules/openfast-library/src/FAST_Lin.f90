@@ -5167,7 +5167,7 @@ FUNCTION Indx_y_SD_Y1Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
 
-   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
+   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in SubDyn outputs
 
    SD_Out_Start = y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
 END FUNCTION Indx_y_SD_Y1Mesh_Start
@@ -5177,7 +5177,7 @@ FUNCTION Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
 
-   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
+   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in SubDyn outputs
 
    SD_Out_Start = Indx_y_SD_Y1Mesh_Start(y_SD, y_FAST) + y_SD%Y1Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y1Mesh data and get to the beginning of 
 END FUNCTION Indx_y_SD_Y2Mesh_Start
@@ -5186,9 +5186,9 @@ FUNCTION Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
    TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
 
-   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
+   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in SubDyn outputs
 
-   SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) + y_SD%Y2Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y1Mesh data and get to the beginning of 
+   SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) + y_SD%Y2Mesh%NNodes * 18    ! 6 fields (TranslationDisp, MASKID_Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc) with 3 components
 END FUNCTION Indx_y_SD_Y3Mesh_Start
 
 !----------------------------------------------------------------------------------------------------------------------------------
