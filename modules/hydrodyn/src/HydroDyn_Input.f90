@@ -1750,10 +1750,19 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       end if
 
    end if
- 
 
+   !-------------------------------------------------------------------------------------------------
+   ! Strip Theory Options Section
+   !-------------------------------------------------------------------------------------------------
 
-
+   IF ( InputFileData%Morison%WaveDisp /= 0 .AND. InputFileData%Morison%WaveDisp /= 1) THEN
+      CALL SetErrStat( ErrID_Fatal,'WaveDisp must be 0 or 1',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+   IF ( InputFileData%Morison%AMMod /= 0 .AND. InputFileData%Morison%AMMod /= 1) THEN
+      CALL SetErrStat( ErrID_Fatal,'AMMod must be 0 or 1',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Member Joints Section
@@ -1777,13 +1786,25 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       DO I = 1,InputFileData%Morison%NAxCoefs 
 
          IF (  InputFileData%Morison%AxialCoefs(I)%AxCd < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'AxCd must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'AxCd must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF   
          IF (  InputFileData%Morison%AxialCoefs(I)%AxCa < 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'AxCa must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'AxCa must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF   
+         IF (  InputFileData%Morison%AxialCoefs(I)%AxCp < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'AxCp must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF (  InputFileData%Morison%AxialCoefs(I)%AxFDMod /= 0_IntKi .AND. InputFileData%Morison%AxialCoefs(I)%AxFDMod /= 1_IntKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'AxFDMod must be 0 or 1.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF (  InputFileData%Morison%AxialCoefs(I)%AxFDLoFSc < 0_ReKi .OR. InputFileData%Morison%AxialCoefs(I)%AxFDLoFSc > 1_ReKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'AxFDLoFSc must be between 0 and 1 inclusive.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
          
             ! Make sure that the current AxCoefID is not used elsewhere in the table.
          DO J = I+1,InputFileData%Morison%NAxCoefs
