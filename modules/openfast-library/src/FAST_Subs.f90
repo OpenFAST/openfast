@@ -852,10 +852,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       nullify(Init%InData_HD%WaveDirArr)
       nullify(Init%InData_HD%WaveDynP)   
       nullify(Init%InData_HD%WaveAcc)    
-      nullify(Init%InData_HD%WaveVel)      
+      nullify(Init%InData_HD%WaveVel)
+      nullify(Init%InData_HD%PWaveDynP0)   
+      nullify(Init%InData_HD%PWaveAcc0)    
+      nullify(Init%InData_HD%PWaveVel0)    
       nullify(Init%InData_HD%WaveTime)
       nullify(Init%InData_HD%WaveElev1)
       nullify(Init%InData_HD%WaveElev2)
+      nullify(Init%InData_HD%WaveAccMCF)
+      nullify(Init%InData_HD%PWaveAccMCF0)
   
       ! If HD_Init failed, cleanup and exit 
       IF (ErrStat >= AbortErrLev) THEN
