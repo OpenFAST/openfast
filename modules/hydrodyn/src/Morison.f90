@@ -3142,9 +3142,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_IMG(4:6)
 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
-            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+            IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to free surface
+               CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
+               CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+            ELSE ! Without wave stretching, compute buoyancy based on SWL
+               Zeta1 = 0.0_ReKi
+               Zeta2 = 0.0_ReKi
+            END IF
 
             IF ( z1 < Zeta1 ) THEN  ! If element is at least partially submerged
 
@@ -3167,16 +3172,20 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   rh    = r1 + h0*dRdl_mg    
 
                   ! Estimate the free-surface normal at the free-surface intersection, n_hat
-                  CALL GetTotalWaveElev( Time, (/FSInt(1)+rh,FSInt(2)/), ZetaP, ErrStat2, ErrMsg2 )
-                  CALL GetTotalWaveElev( Time, (/FSInt(1)-rh,FSInt(2)/), ZetaM, ErrStat2, ErrMsg2 )
-                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-                  dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*rh)
-                  CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)+rh/), ZetaP, ErrStat2, ErrMsg2 )
-                  CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)-rh/), ZetaM, ErrStat2, ErrMsg2 )
-                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-                  dZetady = (ZetaP-ZetaM)/(2.0_ReKi*rh)
-                  n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-                  n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+                  IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute free surface normal
+                     CALL GetTotalWaveElev( Time, (/FSInt(1)+rh,FSInt(2)/), ZetaP, ErrStat2, ErrMsg2 )
+                     CALL GetTotalWaveElev( Time, (/FSInt(1)-rh,FSInt(2)/), ZetaM, ErrStat2, ErrMsg2 )
+                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+                     dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*rh)
+                     CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)+rh/), ZetaP, ErrStat2, ErrMsg2 )
+                     CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)-rh/), ZetaM, ErrStat2, ErrMsg2 )
+                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+                     dZetady = (ZetaP-ZetaM)/(2.0_ReKi*rh)
+                     n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
+                     n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+                  ELSE ! Without wave stretching, use the normal of the SWL
+                     n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
+                  END IF
 
                   ! Get other relevant unit vectors, t_hat, r_hat, and s_hat
                   t_hat    = Cross_Product(k_hat,n_hat)
@@ -3942,23 +3951,33 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          z2      = pos2(3)
 
          ! Get free surface elevation vertically above or below the end nodes
-         CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
-         CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, computed buoyancy based on free-surface elevation
+            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
+            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+         ELSE ! Without wave stretching, computed buoyancy based on SWL
+            Zeta1 = 0.0_ReKi
+            Zeta2 = 0.0_ReKi
+         END IF
 
          !----------------------- Check if the end plates are partially wetted: Start -----------------------!
          !-------- End plate of node 1 --------
-         ! Estimate the free-surface normal vertically above or below node 1, n_hat
-         CALL GetTotalWaveElev( Time, (/pos1(1)+r1,pos1(2)/), ZetaP, ErrStat2, ErrMsg2 )
-         CALL GetTotalWaveElev( Time, (/pos1(1)-r1,pos1(2)/), ZetaM, ErrStat2, ErrMsg2 )
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
-         CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)+r1/), ZetaP, ErrStat2, ErrMsg2 )
-         CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)-r1/), ZetaM, ErrStat2, ErrMsg2 )
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
-         n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-         n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute the normal of the free surface
+            ! Estimate the free-surface normal vertically above or below node 1, n_hat
+            CALL GetTotalWaveElev( Time, (/pos1(1)+r1,pos1(2)/), ZetaP, ErrStat2, ErrMsg2 )
+            CALL GetTotalWaveElev( Time, (/pos1(1)-r1,pos1(2)/), ZetaM, ErrStat2, ErrMsg2 )
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+            dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
+            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)+r1/), ZetaP, ErrStat2, ErrMsg2 )
+            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)-r1/), ZetaM, ErrStat2, ErrMsg2 )
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+            dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
+            n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
+            n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+         ELSE ! Without wave stretching, use normal of SWL
+            n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
+         END IF
+         
          ! Get t_hat and r_hat
          t_hat    = Cross_Product(k_hat,n_hat)
          sinGamma = SQRT(Dot_Product(t_hat,t_hat))
@@ -3974,17 +3993,22 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          END IF
 
          !-------- End plate of node N+1 --------
-         ! Estimate the free-surface normal vertically above or below node N+1, n_hat
-         CALL GetTotalWaveElev( Time, (/pos2(1)+r2,pos2(2)/), ZetaP, ErrStat2, ErrMsg2 )
-         CALL GetTotalWaveElev( Time, (/pos2(1)-r2,pos2(2)/), ZetaM, ErrStat2, ErrMsg2 )
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r2)
-         CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)+r2/), ZetaP, ErrStat2, ErrMsg2 )
-         CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)-r2/), ZetaM, ErrStat2, ErrMsg2 )
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r2)
-         n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-         n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute the normal of the free surface
+            ! Estimate the free-surface normal vertically above or below node N+1, n_hat
+            CALL GetTotalWaveElev( Time, (/pos2(1)+r2,pos2(2)/), ZetaP, ErrStat2, ErrMsg2 )
+            CALL GetTotalWaveElev( Time, (/pos2(1)-r2,pos2(2)/), ZetaM, ErrStat2, ErrMsg2 )
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+            dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r2)
+            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)+r2/), ZetaP, ErrStat2, ErrMsg2 )
+            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)-r2/), ZetaM, ErrStat2, ErrMsg2 )
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+            dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r2)
+            n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
+            n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+         ELSE ! Without wave stretching, use normal of SWL
+            n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
+         END IF
+         
          ! Get t_hat and r_hat
          t_hat    = Cross_Product(k_hat,n_hat)
          sinGamma = SQRT(Dot_Product(t_hat,t_hat))
@@ -4001,31 +4025,25 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          !------------------------ Check if the end plates are partially wetted: End ------------------------!
       
          if (mem%i_floor == 0) then  ! both ends above or at seabed
-            if (z2<= zeta2) then
-               ! Compute loads on both ends
-               Fl      = -p%WtrDens * g * pi *mem%RMG(1)**2*z1
-               Moment  = -p%WtrDens * g * pi *0.25*mem%RMG(1)**4*sinPhi
-               call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_B_End(:, mem%NodeIndx(1))) 
+            if ( z2 < Zeta2 ) then
+               ! Compute loads on the end plate of node N+1          
                Fl      =  p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
                Moment  =  p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
                call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
-            elseif ( z1< zeta1 ) then
-               ! Compute loads only on lower end
+            end if
+            if ( z1 < Zeta1 ) then
+               ! Compute loads on the end plate of node 1
                Fl      = -p%WtrDens * g * pi *mem%RMG(1)**2*z1
                Moment  = -p%WtrDens * g * pi *0.25*mem%RMG(1)**4*sinPhi
                call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_B_End(:, mem%NodeIndx(1)))
-            else
-               ! Entire member is above the still water line
             end if
-
-         ! elseif ( (mem%i_floor < mem%NElements) .and. (z2<= 0.0_ReKi) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if at or below free surface
-         elseif ( (mem%doEndBuoyancy) .and. (z2<= zeta2) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if at or below free surface
+         elseif ( (mem%doEndBuoyancy) .and. (z2 < Zeta2) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if below free surface
             ! Only compute the buoyancy contribution from the upper end
             Fl      = p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
             Moment  = p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
             call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
          else
-            ! entire member is buried below the seabed         
+            ! entire member is buried below the seabed
          end if
          
       end if   ! PropPot
