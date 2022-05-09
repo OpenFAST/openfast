@@ -3889,16 +3889,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       pos2(3) = pos2(3) - p%MSL2SWL
       z2 = pos2(3)
       
-      ! Check the member does not exhibit any of the following conditions
-      if (.not. mem%PropPot) then 
-         if ( abs(z2) < abs(mem%Rmg(N+1)*sinPhi2) ) then
-            call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-         end if
-         if ( abs(z1) < abs(mem%Rmg(1)*sinPhi1) ) then
-            call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-         end if
-      end if
-
+      !----------------------------------- filled buoyancy loads: starts -----------------------------------!
       !TODO: Do the equations below still work if z1 > z2 ?
       !TODO: Should not have to test seabed crossing in time-marching loop
       if ( mem%i_floor == 0 ) then   ! both ends are above seabed
@@ -3935,28 +3926,90 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! no loads because both end nodes are below seabed
       end if
 
+      !------------------------------------ filled buoyancy loads: ends ------------------------------------!
+
       ! --- no inertia loads from water ballast modeled on ends
 
-      ! --- external buoyancy loads: ends ---
-
+      !---------------------------------- external buoyancy loads: starts ----------------------------------!
       if ( .not. mem%PropPot ) then
-         ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1))   + u%Mesh%Position(:, mem%NodeIndx(1))
+
+         ! Get positions of member end nodes
+         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1)) + u%Mesh%Position(:, mem%NodeIndx(1)) 
          pos1(3) = pos1(3) - p%MSL2SWL
+         z1      = pos1(3)
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
          pos2(3) = pos2(3) - p%MSL2SWL
-         z1 = pos1(3)
-         z2 = pos2(3)
+         z2      = pos2(3)
+
+         ! Get free surface elevation vertically above or below the end nodes
+         CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
+         CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+
+         !----------------------- Check if the end plates are partially wetted: Start -----------------------!
+         !-------- End plate of node 1 --------
+         ! Estimate the free-surface normal vertically above or below node 1, n_hat
+         CALL GetTotalWaveElev( Time, (/pos1(1)+r1,pos1(2)/), ZetaP, ErrStat2, ErrMsg2 )
+         CALL GetTotalWaveElev( Time, (/pos1(1)-r1,pos1(2)/), ZetaM, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+         dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
+         CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)+r1/), ZetaP, ErrStat2, ErrMsg2 )
+         CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)-r1/), ZetaM, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+         dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
+         n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
+         n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+         ! Get t_hat and r_hat
+         t_hat    = Cross_Product(k_hat,n_hat)
+         sinGamma = SQRT(Dot_Product(t_hat,t_hat))
+         IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
+            t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   ! Arbitrary choice for t_hat
+            t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+         ELSE
+            t_hat = t_hat / sinGamma
+         END IF
+            r_hat = Cross_Product(t_hat,k_hat)
+         IF ( ABS((Zeta1-z1)*n_hat(3)) < r1*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
+            CALL SetErrStat(ErrID_Fatal, 'End plates cannot be partially wetted. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+         END IF
+
+         !-------- End plate of node N+1 --------
+         ! Estimate the free-surface normal vertically above or below node N+1, n_hat
+         CALL GetTotalWaveElev( Time, (/pos2(1)+r2,pos2(2)/), ZetaP, ErrStat2, ErrMsg2 )
+         CALL GetTotalWaveElev( Time, (/pos2(1)-r2,pos2(2)/), ZetaM, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+         dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r2)
+         CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)+r2/), ZetaP, ErrStat2, ErrMsg2 )
+         CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)-r2/), ZetaM, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
+         dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r2)
+         n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
+         n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
+         ! Get t_hat and r_hat
+         t_hat    = Cross_Product(k_hat,n_hat)
+         sinGamma = SQRT(Dot_Product(t_hat,t_hat))
+         IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
+            t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   ! Arbitrary choice for t_hat
+            t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+         ELSE
+            t_hat = t_hat / sinGamma
+         END IF
+            r_hat = Cross_Product(t_hat,k_hat)
+         IF ( ABS((Zeta2-z2)*n_hat(3)) < r2*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
+            CALL SetErrStat(ErrID_Fatal, 'End plates cannot be partially wetted. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+         END IF
+         !------------------------ Check if the end plates are partially wetted: End ------------------------!
+      
          if (mem%i_floor == 0) then  ! both ends above or at seabed
-            if (z2<= 0.0_ReKi) then
+            if (z2<= zeta2) then
                ! Compute loads on both ends
                Fl      = -p%WtrDens * g * pi *mem%RMG(1)**2*z1
                Moment  = -p%WtrDens * g * pi *0.25*mem%RMG(1)**4*sinPhi
                call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_B_End(:, mem%NodeIndx(1))) 
-               Fl      = p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
-               Moment  = p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
+               Fl      =  p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
+               Moment  =  p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
                call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
-            elseif ( z1< 0.0_ReKi ) then
+            elseif ( z1< zeta1 ) then
                ! Compute loads only on lower end
                Fl      = -p%WtrDens * g * pi *mem%RMG(1)**2*z1
                Moment  = -p%WtrDens * g * pi *0.25*mem%RMG(1)**4*sinPhi
@@ -3965,8 +4018,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                ! Entire member is above the still water line
             end if
 
-    !     elseif ( (mem%i_floor < mem%NElements) .and. (z2<= 0.0_ReKi) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if at or below free surface
-         elseif ( (mem%doEndBuoyancy) .and. (z2<= 0.0_ReKi) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if at or below free surface
+         ! elseif ( (mem%i_floor < mem%NElements) .and. (z2<= 0.0_ReKi) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if at or below free surface
+         elseif ( (mem%doEndBuoyancy) .and. (z2<= zeta2) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if at or below free surface
             ! Only compute the buoyancy contribution from the upper end
             Fl      = p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
             Moment  = p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
@@ -3976,7 +4029,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          end if
          
       end if   ! PropPot
-      
+      !----------------------------------- external buoyancy loads: ends -----------------------------------!
+
    end do ! im - looping through members
       
    !do j = 1, p%NNodes    
