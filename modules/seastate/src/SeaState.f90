@@ -625,11 +625,17 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%PWaveAcc0  => Waves_InitOut%PWaveAcc0
       p%PWaveDynP0 => Waves_InitOut%PWaveDynP0
       p%WaveAccMCF => Waves_InitOut%WaveAccMCF
+      
       ! Store user-requested wave elevation locations
       ALLOCATE ( p%WaveElevxi (InputFileData%NWaveElev), STAT=ErrStat2 )
          IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevxi.', ErrStat, ErrMsg, RoutineName)
       ALLOCATE ( p%WaveElevyi (InputFileData%NWaveElev), STAT=ErrStat2 )
          IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevyi.', ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call CleanUp()
+         return
+      end if
+         
       p%WaveElevxi = InputFileData%WaveElevxi
       p%WaveElevyi = InputFileData%WaveElevyi
       
@@ -640,6 +646,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveKinyi.', ErrStat, ErrMsg, RoutineName)
       ALLOCATE ( p%WaveKinzi (InputFileData%Waves%NWaveKin), STAT=ErrStat2 )
          IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveKinzi.', ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call CleanUp()
+         return
+      end if
+      
       p%NWaveKin  = InputFileData%NWaveKin
       p%WaveKinxi = InputFileData%WaveKinxi
       p%WaveKinyi = InputFileData%WaveKinyi
@@ -1163,7 +1174,7 @@ CONTAINS
 !................................
    SUBROUTINE CleanUp()
       
-      CALL SeaSt_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL SeaSt_DestroyInputFile( InputFileData,      ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
     !  CALL Waves_DestroyInitOutput(   Waves_InitOut,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 

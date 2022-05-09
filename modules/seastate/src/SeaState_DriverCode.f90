@@ -228,25 +228,10 @@ program SeaStateDriver
    end if
 
    
-   
-   ! Nullify these pointers because they are no longer needed
-   nullify(InitOutData%WaveDynP)   
-   nullify(InitOutData%WaveAcc)    
-   nullify(InitOutData%WaveVel)  
-   nullify(InitOutData%PWaveDynP0)   
-   nullify(InitOutData%PWaveAcc0)    
-   nullify(InitOutData%PWaveVel0)     
-   nullify(InitOutData%WaveTime)
-   !nullify(InitOutData%WaveElevC0)
-   !nullify(InitOutData%WaveDirArr)
-   !nullify(InitOutData%WaveElev)
-   nullify(InitOutData%WaveElev1)
-   nullify(InitOutData%WaveElev2)
-   
       ! Destroy initialization data
 
-   call SeaSt_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
-   call SeaSt_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
+   call SeaSt_DestroyInitInput(  InitInData,  ErrStat, ErrMsg, DEALLOCATEpointers = .false. )
+   call SeaSt_DestroyInitOutput( InitOutData, ErrStat, ErrMsg, DEALLOCATEpointers = .false. )
    
 
    if (errStat >= AbortErrLev) then
@@ -328,7 +313,7 @@ subroutine SeaSt_DvrCleanup()
       errStat2 = ErrID_None
       errMsg2  = ""
      
-      call SeaSt_DestroyInitInput( InitInData, errStat2, errMsg2 )
+      call SeaSt_DestroyInitInput( InitInData, errStat2, errMsg2, DEALLOCATEpointers = .false. )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'SeaSt_DvrCleanup' )
 
       call SeaSt_End( u(1), p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )
