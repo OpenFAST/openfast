@@ -1,0 +1,9 @@
+name: 'VersionInfo module tests'
+description: 'Run tests specific to the NWTC Library module'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+runs:
+  using: "composite"
+  steps: 
+    - run: ctest -VV -R versioninfo_utest
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash
