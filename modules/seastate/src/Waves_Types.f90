@@ -348,7 +348,7 @@ ENDIF
 IF (ALLOCATED(InitInputData%CurrVyi)) THEN
   DEALLOCATE(InitInputData%CurrVyi)
 ENDIF
-  CALL NWTC_Library_Destroynwtc_randomnumber_parametertype( InitInputData%RNG, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroynwtc_randomnumber_parametertype( InitInputData%RNG, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Waves_DestroyInitInput
 

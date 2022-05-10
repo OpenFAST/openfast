@@ -50,6 +50,9 @@ typedef   ^                            Morison_AxialCoefType         INTEGER    
 typedef   ^                            ^                             ReKi             AxCd                     -          -        -         "Axial Cd"    -
 typedef   ^                            ^                             ReKi             AxCa                     -          -        -         "Axial Ca"    -
 typedef   ^                            ^                             ReKi             AxCp                     -          -        -         "Axial Cp"    -
+typedef   ^                            ^                             ReKi             AxVnCOff                 -          -        -         "High-pass cut-off frequency for normal velocity when computing axial drag force" -
+typedef   ^                            ^                             ReKi             AxFDLoFSc                -          -        -         "Scaling factor for low frequency axial drag force" -
+typedef   ^                            ^                             IntKi            AxFDMod                  -          -        -         "Switch for the axial drag formulation {0: original formulation, 1: Away from member only}" -
 #
 typedef   ^                            Morison_MemberInputType       INTEGER          MemberID                 -          -        -         "User-supplied integer ID for this member"    -
 typedef   ^                            ^                             INTEGER          NodeIndx                 {:}        -        -         "Index of each of the member's nodes in the master node list"    -
@@ -80,6 +83,9 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi             JAxCd                    -          -        -         "Nodal lumped (joint) axial Cd"    -
 typedef   ^                            ^                             ReKi             JAxCa                    -          -        -         "Nodal lumped (joint) axial Cp"    -
 typedef   ^                            ^                             ReKi             JAxCp                    -          -        -         "Nodal lumped (joint) axial Ca"    -
+typedef   ^                            ^                             ReKi             JAxVnCOff                -          -        -         "High-pass cut-off frequency for normal velocity when computing axial drag force" -
+typedef   ^                            ^                             ReKi             JAxFDLoFSc               -          -        -         "Scaling factor for low frequency axial drag force" -
+typedef   ^                            ^                             IntKi            JAxFDMod                 -          -        -         "Switch for the axial drag formulation {0: original formulation, 1: Away from member only}" -
 typedef   ^                            ^                             ReKi             FillDensity              -          -        -         "Fill fluid density"   kg/m^3
 typedef   ^                            ^                             ReKi             tMG                      -          -        -         "Nodal thickness with marine growth "    m
 typedef   ^                            ^                             ReKi             MGdensity                -          -        -         "Nodal density of marine growth"    kg/m^3
@@ -212,6 +218,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
+typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 2: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
 typedef   ^                            ^                             INTEGER                  NNodes                           -          -        -         "Total number of nodes in the final software model"    -
 typedef   ^                            ^                             Morison_JointType        InpJoints                        {:}        -        -         "Array of user-specified joints"    -
@@ -289,7 +296,7 @@ typedef   ^                            ContinuousStateType           SiKi       
 #
 # Define discrete (nondifferentiable) states here:
 #
-typedef   ^                            DiscreteStateType             SiKi                     DummyDiscState           -          -         -         "Remove this variable if you have discrete states"        -
+typedef   ^                            DiscreteStateType             ReKi                     V_rel_n_FiltStat               {:}      -         -         "State of the high-pass filter for the joint relative normal velocity" m/s
 #
 #
 # Define constraint states here:
@@ -328,6 +335,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_IMG_End                     {:}{:}         -         -         "Joint marine growth intertia loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_A_End                      {:}{:}         -         -         "Lumped added mass loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}     -         -         ""        -
+typedef   ^                            ^                             ReKi                     V_rel_n                        {:}      -         -         "Normal relative flow velocity at joints"        m/s
+typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                 {:}      -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
 typedef   ^                            ^                             INTEGER                  LastIndWave                     -              -         -         "Last time index used in the wave kinematics arrays"   -
 typedef   ^                            ^                      SeaSt_Interp_MiscVarType       SeaSt_Interp_m            -       -      -  "misc var information from the SeaState Interpolation module"   -
 
@@ -341,6 +350,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                            ^                             INTEGER                  WaveDisp                -          -        -                  "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
+typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 2: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NMembers                        -          -         -         "number of members"        -
 typedef   ^                            ^                             Morison_MemberType       Members                         {:}             -        -         "Array of Morison members used during simulation"    -
 typedef   ^                            ^                             INTEGER                  NNodes                          -          -         -         ""        -
@@ -348,6 +358,9 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     I_MG_End                      {:}{:}{:}  -         -         "Inertial matrix associated with marine growth mass at joint"        -
 typedef   ^                            ^                             ReKi                     An_End                            {:}{:}     -         -         "directional area vector of each joint"        m^2
 typedef   ^                            ^                             ReKi                     DragConst_End                     {:}        -         -         ""        -
+typedef   ^                            ^                             ReKi                     VRelNFiltConst                       {:}        -         -         ""        -
+typedef   ^                            ^                             IntKi                    DragMod_End                          {:}        -         -         ""        -
+typedef   ^                            ^                             ReKi                     DragLoFSc_End                        {:}        -         -         ""        -
 typedef   ^                            ^                             ReKi                     F_WMG_End                      {:}{:}         -         -         "Joint marine growth weight loads, constant for all t"   N
 typedef   ^                            ^                             ReKi                     DP_Const_End                   {:}{:}         -         -         "Constant part of Joint dynamic pressure term"   N
 typedef   ^                            ^                             ReKi                     Mass_MG_End                    {:}         -         -         "Joint marine growth mass"   kg

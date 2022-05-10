@@ -377,11 +377,11 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Waves_DestroyInitInput( InputFileData%Waves, ErrStat2, ErrMsg2 )
+  CALL Waves_DestroyInitInput( InputFileData%Waves, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Waves2_DestroyInitInput( InputFileData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyInitInput( InputFileData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Current_DestroyInitInput( InputFileData%Current, ErrStat2, ErrMsg2 )
+  CALL Current_DestroyInitInput( InputFileData%Current, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputFileData%WaveElevxi)) THEN
   DEALLOCATE(InputFileData%WaveElevxi)
@@ -1203,7 +1203,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedFileData, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedFileData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitInputData%WaveElevXY)) THEN
   DEALLOCATE(InitInputData%WaveElevXY)
@@ -1860,7 +1860,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Waves2_DestroyInitOutput( InitOutputData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyInitOutput( InitOutputData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
@@ -1871,7 +1871,7 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WaveElevSeries)) THEN
   DEALLOCATE(InitOutputData%WaveElevSeries)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ASSOCIATED(InitOutputData%WaveElevC0)) THEN
  IF (DEALLOCATEpointers_local) &
@@ -1944,7 +1944,7 @@ IF (ASSOCIATED(InitOutputData%WaveTime)) THEN
   DEALLOCATE(InitOutputData%WaveTime)
   InitOutputData%WaveTime => NULL()
 ENDIF
-  CALL SeaSt_Interp_DestroyParam( InitOutputData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyParam( InitOutputData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_DestroyInitOutput
 
@@ -3493,7 +3493,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Waves2_DestroyContState( ContStateData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyContState( ContStateData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_DestroyContState
 
@@ -3715,7 +3715,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Waves2_DestroyDiscState( DiscStateData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyDiscState( DiscStateData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_DestroyDiscState
 
@@ -3937,7 +3937,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Waves2_DestroyConstrState( ConstrStateData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyConstrState( ConstrStateData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_DestroyConstrState
 
@@ -4159,7 +4159,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Waves2_DestroyOtherState( OtherStateData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyOtherState( OtherStateData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_DestroyOtherState
 
@@ -4390,11 +4390,11 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL SeaSt_Interp_DestroyMisc( MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyMisc( MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Waves2_DestroyMisc( MiscData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyMisc( MiscData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Waves2_DestroyInput( MiscData%u_Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyInput( MiscData%u_Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_DestroyMisc
 
@@ -5096,7 +5096,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Waves2_DestroyParam( ParamData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyParam( ParamData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ASSOCIATED(ParamData%WaveTime)) THEN
  IF (DEALLOCATEpointers_local) &
@@ -5170,12 +5170,12 @@ IF (ALLOCATED(ParamData%WaveKinzi)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
-  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_DestroyParam
 
@@ -6787,7 +6787,7 @@ ENDIF
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
-  CALL Waves2_DestroyOutput( OutputData%Waves2, ErrStat2, ErrMsg2 )
+  CALL Waves2_DestroyOutput( OutputData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_DestroyOutput
 

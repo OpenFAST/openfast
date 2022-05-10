@@ -226,7 +226,7 @@ IF (ASSOCIATED(InitInputData%WaveTime)) THEN
   DEALLOCATE(InitInputData%WaveTime)
   InitInputData%WaveTime => NULL()
 ENDIF
-  CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SS_Exc_DestroyInitInput
 
@@ -1364,7 +1364,7 @@ ENDIF
   END IF
   
 DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
-  CALL SS_Exc_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
  END SUBROUTINE SS_Exc_DestroyOtherState
@@ -1864,7 +1864,7 @@ IF (ASSOCIATED(ParamData%WaveTime)) THEN
   DEALLOCATE(ParamData%WaveTime)
   ParamData%WaveTime => NULL()
 ENDIF
-  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SS_Exc_DestroyParam
 

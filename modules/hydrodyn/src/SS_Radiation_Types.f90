@@ -1105,7 +1105,7 @@ ENDIF
   END IF
   
 DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
-  CALL SS_Rad_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
  END SUBROUTINE SS_Rad_DestroyOtherState

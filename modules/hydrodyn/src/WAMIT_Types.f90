@@ -429,7 +429,7 @@ ENDIF
 IF (ALLOCATED(InitInputData%PtfmCOByt)) THEN
   DEALLOCATE(InitInputData%PtfmCOByt)
 ENDIF
-  CALL Conv_Rdtn_DestroyInitInput( InitInputData%Conv_Rdtn, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyInitInput( InitInputData%Conv_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitInputData%WaveElev0)) THEN
   DEALLOCATE(InitInputData%WaveElev0)
@@ -457,7 +457,7 @@ IF (ASSOCIATED(InitInputData%WaveDirArr)) THEN
   DEALLOCATE(InitInputData%WaveDirArr)
   InitInputData%WaveDirArr => NULL()
 ENDIF
-  CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WAMIT_DestroyInitInput
 
@@ -1589,11 +1589,11 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL SS_Rad_DestroyContState( ContStateData%SS_Rdtn, ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyContState( ContStateData%SS_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyContState( ContStateData%SS_Exctn, ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyContState( ContStateData%SS_Exctn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyContState( ContStateData%Conv_Rdtn, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyContState( ContStateData%Conv_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WAMIT_DestroyContState
 
@@ -1991,11 +1991,11 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Conv_Rdtn_DestroyDiscState( DiscStateData%Conv_Rdtn, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyDiscState( DiscStateData%Conv_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyDiscState( DiscStateData%SS_Rdtn, ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyDiscState( DiscStateData%SS_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyDiscState( DiscStateData%SS_Exctn, ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyDiscState( DiscStateData%SS_Exctn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WAMIT_DestroyDiscState
 
@@ -2393,11 +2393,11 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL Conv_Rdtn_DestroyConstrState( ConstrStateData%Conv_Rdtn, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyConstrState( ConstrStateData%Conv_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyConstrState( ConstrStateData%SS_Rdtn, ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyConstrState( ConstrStateData%SS_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyConstrState( ConstrStateData%SS_Exctn, ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyConstrState( ConstrStateData%SS_Exctn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WAMIT_DestroyConstrState
 
@@ -2795,11 +2795,11 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL SS_Rad_DestroyOtherState( OtherStateData%SS_Rdtn, ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyOtherState( OtherStateData%SS_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyOtherState( OtherStateData%SS_Exctn, ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyOtherState( OtherStateData%SS_Exctn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyOtherState( OtherStateData%Conv_Rdtn, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyOtherState( OtherStateData%Conv_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WAMIT_DestroyOtherState
 
@@ -3277,23 +3277,23 @@ ENDIF
 IF (ALLOCATED(MiscData%F_PtfmAM)) THEN
   DEALLOCATE(MiscData%F_PtfmAM)
 ENDIF
-  CALL SS_Rad_DestroyMisc( MiscData%SS_Rdtn, ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyMisc( MiscData%SS_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyInput( MiscData%SS_Rdtn_u, ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyInput( MiscData%SS_Rdtn_u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyOutput( MiscData%SS_Rdtn_y, ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyOutput( MiscData%SS_Rdtn_y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyMisc( MiscData%SS_Exctn, ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyMisc( MiscData%SS_Exctn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyInput( MiscData%SS_Exctn_u, ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyInput( MiscData%SS_Exctn_u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyOutput( MiscData%SS_Exctn_y, ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyOutput( MiscData%SS_Exctn_y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyMisc( MiscData%Conv_Rdtn, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyMisc( MiscData%Conv_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyInput( MiscData%Conv_Rdtn_u, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyInput( MiscData%Conv_Rdtn_u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyOutput( MiscData%Conv_Rdtn_y, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyOutput( MiscData%Conv_Rdtn_y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WAMIT_DestroyMisc
 
@@ -4485,20 +4485,20 @@ ENDIF
 IF (ALLOCATED(ParamData%WaveExctnGrid)) THEN
   DEALLOCATE(ParamData%WaveExctnGrid)
 ENDIF
-  CALL Conv_Rdtn_DestroyParam( ParamData%Conv_Rdtn, ErrStat2, ErrMsg2 )
+  CALL Conv_Rdtn_DestroyParam( ParamData%Conv_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyParam( ParamData%SS_Rdtn, ErrStat2, ErrMsg2 )
+  CALL SS_Rad_DestroyParam( ParamData%SS_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyParam( ParamData%SS_Exctn, ErrStat2, ErrMsg2 )
+  CALL SS_Exc_DestroyParam( ParamData%SS_Exctn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
-  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
+  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WAMIT_DestroyParam
 

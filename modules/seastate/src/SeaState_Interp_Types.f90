@@ -278,7 +278,7 @@ CONTAINS
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_Interp_DestroyInitOutput
 
