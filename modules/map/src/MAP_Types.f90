@@ -306,7 +306,7 @@ CONTAINS
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL MAP_Fortran_Destroylin_initinputtype( InitInputData%LinInitInp, ErrStat2, ErrMsg2 )
+  CALL MAP_Fortran_Destroylin_initinputtype( InitInputData%LinInitInp, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE MAP_DestroyInitInput
 
@@ -701,9 +701,9 @@ ENDIF
 IF (ALLOCATED(InitOutputData%writeOutputUnt)) THEN
   DEALLOCATE(InitOutputData%writeOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MAP_Fortran_Destroylin_initoutputtype( InitOutputData%LinInitOut, ErrStat2, ErrMsg2 )
+  CALL MAP_Fortran_Destroylin_initoutputtype( InitOutputData%LinInitOut, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE MAP_DestroyInitOutput
 
@@ -3636,7 +3636,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL MAP_Fortran_Destroylin_paramtype( ParamData%LinParams, ErrStat2, ErrMsg2 )
+  CALL MAP_Fortran_Destroylin_paramtype( ParamData%LinParams, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE MAP_DestroyParam
 
