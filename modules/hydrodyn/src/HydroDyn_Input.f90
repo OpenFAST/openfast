@@ -462,7 +462,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    call ParseVar( FileInfo_In, CurLine, 'WaveDisp', InputFileData%Morison%WaveDisp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
       
-   ! AMMod - Method of computing distributed added-mass force. {0: nodes below SWL when undisplaced. 2: Up to the free surface} (switch)
+   ! AMMod - Method of computing distributed added-mass force. {0: nodes below SWL when undisplaced. 1: Up to the free surface} (switch)
    call ParseVar( FileInfo_In, CurLine, 'AMMod', InputFileData%Morison%AMMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 

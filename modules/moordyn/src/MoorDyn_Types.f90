@@ -2794,7 +2794,7 @@ ENDIF
 IF (ALLOCATED(InitOutputData%writeOutputUnt)) THEN
   DEALLOCATE(InitOutputData%writeOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%CableCChanRqst)) THEN
   DEALLOCATE(InitOutputData%CableCChanRqst)
@@ -3835,21 +3835,21 @@ ENDIF
   
 IF (ALLOCATED(MiscData%LineTypeList)) THEN
 DO i1 = LBOUND(MiscData%LineTypeList,1), UBOUND(MiscData%LineTypeList,1)
-  CALL MD_Destroylineprop( MiscData%LineTypeList(i1), ErrStat2, ErrMsg2 )
+  CALL MD_Destroylineprop( MiscData%LineTypeList(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%LineTypeList)
 ENDIF
 IF (ALLOCATED(MiscData%ConnectList)) THEN
 DO i1 = LBOUND(MiscData%ConnectList,1), UBOUND(MiscData%ConnectList,1)
-  CALL MD_Destroyconnect( MiscData%ConnectList(i1), ErrStat2, ErrMsg2 )
+  CALL MD_Destroyconnect( MiscData%ConnectList(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ConnectList)
 ENDIF
 IF (ALLOCATED(MiscData%LineList)) THEN
 DO i1 = LBOUND(MiscData%LineList,1), UBOUND(MiscData%LineList,1)
-  CALL MD_Destroyline( MiscData%LineList(i1), ErrStat2, ErrMsg2 )
+  CALL MD_Destroyline( MiscData%LineList(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%LineList)
@@ -4547,7 +4547,7 @@ ENDIF
   
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL MD_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL MD_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)

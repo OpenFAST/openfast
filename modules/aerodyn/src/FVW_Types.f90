@@ -1725,7 +1725,7 @@ ENDIF
   
 IF (ALLOCATED(ParamData%W)) THEN
 DO i1 = LBOUND(ParamData%W,1), UBOUND(ParamData%W,1)
-  CALL FVW_Destroywng_parametertype( ParamData%W(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroywng_parametertype( ParamData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%W)
@@ -2867,14 +2867,14 @@ ENDIF
   
 IF (ALLOCATED(ContStateData%W)) THEN
 DO i1 = LBOUND(ContStateData%W,1), UBOUND(ContStateData%W,1)
-  CALL FVW_Destroywng_continuousstatetype( ContStateData%W(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroywng_continuousstatetype( ContStateData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%W)
 ENDIF
 IF (ALLOCATED(ContStateData%UA)) THEN
 DO i1 = LBOUND(ContStateData%UA,1), UBOUND(ContStateData%UA,1)
-  CALL UA_DestroyContState( ContStateData%UA(i1), ErrStat2, ErrMsg2 )
+  CALL UA_DestroyContState( ContStateData%UA(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%UA)
@@ -3471,7 +3471,7 @@ ENDIF
   
 IF (ALLOCATED(OutputData%W)) THEN
 DO i1 = LBOUND(OutputData%W,1), UBOUND(OutputData%W,1)
-  CALL FVW_Destroywng_outputtype( OutputData%W(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroywng_outputtype( OutputData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%W)
@@ -4319,17 +4319,17 @@ ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%u_UA)) THEN
 DO i2 = LBOUND(Wng_MiscVarTypeData%u_UA,2), UBOUND(Wng_MiscVarTypeData%u_UA,2)
 DO i1 = LBOUND(Wng_MiscVarTypeData%u_UA,1), UBOUND(Wng_MiscVarTypeData%u_UA,1)
-  CALL UA_DestroyInput( Wng_MiscVarTypeData%u_UA(i1,i2), ErrStat2, ErrMsg2 )
+  CALL UA_DestroyInput( Wng_MiscVarTypeData%u_UA(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
   DEALLOCATE(Wng_MiscVarTypeData%u_UA)
 ENDIF
-  CALL UA_DestroyMisc( Wng_MiscVarTypeData%m_UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyMisc( Wng_MiscVarTypeData%m_UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL UA_DestroyOutput( Wng_MiscVarTypeData%y_UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyOutput( Wng_MiscVarTypeData%y_UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL UA_DestroyParam( Wng_MiscVarTypeData%p_UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyParam( Wng_MiscVarTypeData%p_UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(Wng_MiscVarTypeData%Vind_LL)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%Vind_LL)
@@ -6648,7 +6648,7 @@ ENDIF
   
 IF (ALLOCATED(MiscData%W)) THEN
 DO i1 = LBOUND(MiscData%W,1), UBOUND(MiscData%W,1)
-  CALL FVW_Destroywng_miscvartype( MiscData%W(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroywng_miscvartype( MiscData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%W)
@@ -6656,13 +6656,13 @@ ENDIF
 IF (ALLOCATED(MiscData%r_wind)) THEN
   DEALLOCATE(MiscData%r_wind)
 ENDIF
-  CALL FVW_DestroyContState( MiscData%dxdt, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyContState( MiscData%dxdt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FVW_DestroyContState( MiscData%x1, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyContState( MiscData%x1, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FVW_DestroyContState( MiscData%x2, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyContState( MiscData%x2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FVW_Destroyt_sgmt( MiscData%Sgmt, ErrStat2, ErrMsg2 )
+  CALL FVW_Destroyt_sgmt( MiscData%Sgmt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%CPs)) THEN
   DEALLOCATE(MiscData%CPs)
@@ -6672,7 +6672,7 @@ IF (ALLOCATED(MiscData%Uind)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%GridOutputs)) THEN
 DO i1 = LBOUND(MiscData%GridOutputs,1), UBOUND(MiscData%GridOutputs,1)
-  CALL FVW_Destroygridouttype( MiscData%GridOutputs(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroygridouttype( MiscData%GridOutputs(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%GridOutputs)
@@ -8074,14 +8074,14 @@ ENDIF
   
 IF (ALLOCATED(InputData%rotors)) THEN
 DO i1 = LBOUND(InputData%rotors,1), UBOUND(InputData%rotors,1)
-  CALL FVW_Destroyrot_inputtype( InputData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroyrot_inputtype( InputData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%rotors)
 ENDIF
 IF (ALLOCATED(InputData%W)) THEN
 DO i1 = LBOUND(InputData%W,1), UBOUND(InputData%W,1)
-  CALL FVW_Destroywng_inputtype( InputData%W(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroywng_inputtype( InputData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%W)
@@ -8658,7 +8658,7 @@ ENDIF
   
 IF (ALLOCATED(DiscStateData%UA)) THEN
 DO i1 = LBOUND(DiscStateData%UA,1), UBOUND(DiscStateData%UA,1)
-  CALL UA_DestroyDiscState( DiscStateData%UA(i1), ErrStat2, ErrMsg2 )
+  CALL UA_DestroyDiscState( DiscStateData%UA(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%UA)
@@ -9127,7 +9127,7 @@ ENDIF
   
 IF (ALLOCATED(ConstrStateData%W)) THEN
 DO i1 = LBOUND(ConstrStateData%W,1), UBOUND(ConstrStateData%W,1)
-  CALL FVW_Destroywng_constraintstatetype( ConstrStateData%W(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroywng_constraintstatetype( ConstrStateData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%W)
@@ -9410,7 +9410,7 @@ ENDIF
   
 IF (ALLOCATED(OtherStateData%UA)) THEN
 DO i1 = LBOUND(OtherStateData%UA,1), UBOUND(OtherStateData%UA,1)
-  CALL UA_DestroyOtherState( OtherStateData%UA(i1), ErrStat2, ErrMsg2 )
+  CALL UA_DestroyOtherState( OtherStateData%UA(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%UA)
@@ -10042,7 +10042,7 @@ ENDIF
   
 IF (ALLOCATED(InitInputData%W)) THEN
 DO i1 = LBOUND(InitInputData%W,1), UBOUND(InitInputData%W,1)
-  CALL FVW_Destroywng_initinputtype( InitInputData%W(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_Destroywng_initinputtype( InitInputData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%W)

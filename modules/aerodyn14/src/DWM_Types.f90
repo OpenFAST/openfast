@@ -5023,9 +5023,9 @@ ENDIF
 IF (ALLOCATED(ParamData%ElementRad)) THEN
   DEALLOCATE(ParamData%ElementRad)
 ENDIF
-  CALL DWM_Destroyread_turbine_position_data( ParamData%RTPD, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroyread_turbine_position_data( ParamData%RTPD, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyParam( ParamData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyParam( ParamData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyParam
 
@@ -5612,7 +5612,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL InflowWind_DestroyOtherState( OtherStateData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyOtherState( OtherStateData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyOtherState
 
@@ -5909,7 +5909,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL InflowWind_DestroyMisc( MiscData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyMisc( MiscData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%Nforce)) THEN
   DEALLOCATE(MiscData%Nforce)
@@ -5917,29 +5917,29 @@ ENDIF
 IF (ALLOCATED(MiscData%blade_dr)) THEN
   DEALLOCATE(MiscData%blade_dr)
 ENDIF
-  CALL DWM_Destroyturbine_average_velocity_data( MiscData%TAVD, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroyturbine_average_velocity_data( MiscData%TAVD, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroycvsd( MiscData%CalVelScale_data, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroycvsd( MiscData%CalVelScale_data, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroymeanderdata( MiscData%meandering_data, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroymeanderdata( MiscData%meandering_data, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroyweimethod( MiscData%weighting_method, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroyweimethod( MiscData%weighting_method, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroytidownstream( MiscData%TI_downstream_data, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroytidownstream( MiscData%TI_downstream_data, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroyturbkaimal( MiscData%Turbulence_KS, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroyturbkaimal( MiscData%Turbulence_KS, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroyshinozuka( MiscData%shinozuka_data, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroyshinozuka( MiscData%shinozuka_data, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroysmooth_out_wake_data( MiscData%SmoothOut, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroysmooth_out_wake_data( MiscData%SmoothOut, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroyswsv( MiscData%smooth_wake_shifted_velocity_data, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroyswsv( MiscData%smooth_wake_shifted_velocity_data, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroywake_deficit_data( MiscData%DWDD, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroywake_deficit_data( MiscData%DWDD, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroyturbine_blade( MiscData%DWM_tb, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroyturbine_blade( MiscData%DWM_tb, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_Destroywake_meandered_center( MiscData%WMC, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroywake_meandered_center( MiscData%WMC, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyMisc
 
@@ -7327,9 +7327,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL DWM_Destroyread_upwind_result( InputData%Upwind_result, ErrStat2, ErrMsg2 )
+  CALL DWM_Destroyread_upwind_result( InputData%Upwind_result, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyInput( InputData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyInput( InputData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyInput
 
@@ -7775,7 +7775,7 @@ ENDIF
 IF (ALLOCATED(OutputData%smoothed_velocity_array)) THEN
   DEALLOCATE(OutputData%smoothed_velocity_array)
 ENDIF
-  CALL InflowWind_DestroyOutput( OutputData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyOutput( OutputData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyOutput
 
@@ -8385,7 +8385,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL InflowWind_DestroyContState( ContStateData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyContState( ContStateData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyContState
 
@@ -8613,7 +8613,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL InflowWind_DestroyDiscState( DiscStateData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyDiscState( DiscStateData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyDiscState
 
@@ -8841,7 +8841,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL InflowWind_DestroyConstrState( ConstrStateData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyConstrState( ConstrStateData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyConstrState
 
@@ -9069,7 +9069,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL InflowWind_DestroyInitInput( InitInputData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyInitInput( InitInputData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyInitInput
 
@@ -9297,7 +9297,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL InflowWind_DestroyInitOutput( InitOutputData%IfW, ErrStat2, ErrMsg2 )
+  CALL InflowWind_DestroyInitOutput( InitOutputData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DWM_DestroyInitOutput
 

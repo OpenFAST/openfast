@@ -739,7 +739,7 @@ ENDIF
 IF (ALLOCATED(InitInputData%BladeRootRefOrient)) THEN
   DEALLOCATE(InitInputData%BladeRootRefOrient)
 ENDIF
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitInputData%CableControlRequestor)) THEN
   DEALLOCATE(InitInputData%CableControlRequestor)
@@ -1737,7 +1737,7 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
   DEALLOCATE(InitOutputData%LinNames_y)
@@ -3777,7 +3777,7 @@ IF (ALLOCATED(BladedDLLTypeData%toSC)) THEN
 ENDIF
 IF (ALLOCATED(BladedDLLTypeData%LogChannels_OutParam)) THEN
 DO i1 = LBOUND(BladedDLLTypeData%LogChannels_OutParam,1), UBOUND(BladedDLLTypeData%LogChannels_OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( BladedDLLTypeData%LogChannels_OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( BladedDLLTypeData%LogChannels_OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(BladedDLLTypeData%LogChannels_OutParam)
@@ -5376,28 +5376,28 @@ ENDIF
   
 IF (ALLOCATED(ContStateData%BStC)) THEN
 DO i1 = LBOUND(ContStateData%BStC,1), UBOUND(ContStateData%BStC,1)
-  CALL StC_DestroyContState( ContStateData%BStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyContState( ContStateData%BStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%BStC)
 ENDIF
 IF (ALLOCATED(ContStateData%NStC)) THEN
 DO i1 = LBOUND(ContStateData%NStC,1), UBOUND(ContStateData%NStC,1)
-  CALL StC_DestroyContState( ContStateData%NStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyContState( ContStateData%NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%NStC)
 ENDIF
 IF (ALLOCATED(ContStateData%TStC)) THEN
 DO i1 = LBOUND(ContStateData%TStC,1), UBOUND(ContStateData%TStC,1)
-  CALL StC_DestroyContState( ContStateData%TStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyContState( ContStateData%TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%TStC)
 ENDIF
 IF (ALLOCATED(ContStateData%SStC)) THEN
 DO i1 = LBOUND(ContStateData%SStC,1), UBOUND(ContStateData%SStC,1)
-  CALL StC_DestroyContState( ContStateData%SStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyContState( ContStateData%SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%SStC)
@@ -6088,28 +6088,28 @@ ENDIF
   
 IF (ALLOCATED(DiscStateData%BStC)) THEN
 DO i1 = LBOUND(DiscStateData%BStC,1), UBOUND(DiscStateData%BStC,1)
-  CALL StC_DestroyDiscState( DiscStateData%BStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyDiscState( DiscStateData%BStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%BStC)
 ENDIF
 IF (ALLOCATED(DiscStateData%NStC)) THEN
 DO i1 = LBOUND(DiscStateData%NStC,1), UBOUND(DiscStateData%NStC,1)
-  CALL StC_DestroyDiscState( DiscStateData%NStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyDiscState( DiscStateData%NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%NStC)
 ENDIF
 IF (ALLOCATED(DiscStateData%TStC)) THEN
 DO i1 = LBOUND(DiscStateData%TStC,1), UBOUND(DiscStateData%TStC,1)
-  CALL StC_DestroyDiscState( DiscStateData%TStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyDiscState( DiscStateData%TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%TStC)
 ENDIF
 IF (ALLOCATED(DiscStateData%SStC)) THEN
 DO i1 = LBOUND(DiscStateData%SStC,1), UBOUND(DiscStateData%SStC,1)
-  CALL StC_DestroyDiscState( DiscStateData%SStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyDiscState( DiscStateData%SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%SStC)
@@ -6800,28 +6800,28 @@ ENDIF
   
 IF (ALLOCATED(ConstrStateData%BStC)) THEN
 DO i1 = LBOUND(ConstrStateData%BStC,1), UBOUND(ConstrStateData%BStC,1)
-  CALL StC_DestroyConstrState( ConstrStateData%BStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyConstrState( ConstrStateData%BStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%BStC)
 ENDIF
 IF (ALLOCATED(ConstrStateData%NStC)) THEN
 DO i1 = LBOUND(ConstrStateData%NStC,1), UBOUND(ConstrStateData%NStC,1)
-  CALL StC_DestroyConstrState( ConstrStateData%NStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyConstrState( ConstrStateData%NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%NStC)
 ENDIF
 IF (ALLOCATED(ConstrStateData%TStC)) THEN
 DO i1 = LBOUND(ConstrStateData%TStC,1), UBOUND(ConstrStateData%TStC,1)
-  CALL StC_DestroyConstrState( ConstrStateData%TStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyConstrState( ConstrStateData%TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%TStC)
 ENDIF
 IF (ALLOCATED(ConstrStateData%SStC)) THEN
 DO i1 = LBOUND(ConstrStateData%SStC,1), UBOUND(ConstrStateData%SStC,1)
-  CALL StC_DestroyConstrState( ConstrStateData%SStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyConstrState( ConstrStateData%SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%SStC)
@@ -7607,28 +7607,28 @@ IF (ALLOCATED(OtherStateData%TTpBrFl)) THEN
 ENDIF
 IF (ALLOCATED(OtherStateData%BStC)) THEN
 DO i1 = LBOUND(OtherStateData%BStC,1), UBOUND(OtherStateData%BStC,1)
-  CALL StC_DestroyOtherState( OtherStateData%BStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyOtherState( OtherStateData%BStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%BStC)
 ENDIF
 IF (ALLOCATED(OtherStateData%NStC)) THEN
 DO i1 = LBOUND(OtherStateData%NStC,1), UBOUND(OtherStateData%NStC,1)
-  CALL StC_DestroyOtherState( OtherStateData%NStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyOtherState( OtherStateData%NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%NStC)
 ENDIF
 IF (ALLOCATED(OtherStateData%TStC)) THEN
 DO i1 = LBOUND(OtherStateData%TStC,1), UBOUND(OtherStateData%TStC,1)
-  CALL StC_DestroyOtherState( OtherStateData%TStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyOtherState( OtherStateData%TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%TStC)
 ENDIF
 IF (ALLOCATED(OtherStateData%SStC)) THEN
 DO i1 = LBOUND(OtherStateData%SStC,1), UBOUND(OtherStateData%SStC,1)
-  CALL StC_DestroyOtherState( OtherStateData%SStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyOtherState( OtherStateData%SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%SStC)
@@ -8645,7 +8645,7 @@ ENDIF
 IF (ALLOCATED(ModuleMapTypeData%u_BStC_Mot2_BStC)) THEN
 DO i2 = LBOUND(ModuleMapTypeData%u_BStC_Mot2_BStC,2), UBOUND(ModuleMapTypeData%u_BStC_Mot2_BStC,2)
 DO i1 = LBOUND(ModuleMapTypeData%u_BStC_Mot2_BStC,1), UBOUND(ModuleMapTypeData%u_BStC_Mot2_BStC,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%u_BStC_Mot2_BStC(i1,i2), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%u_BStC_Mot2_BStC(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -8653,21 +8653,21 @@ ENDDO
 ENDIF
 IF (ALLOCATED(ModuleMapTypeData%u_NStC_Mot2_NStC)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%u_NStC_Mot2_NStC,1), UBOUND(ModuleMapTypeData%u_NStC_Mot2_NStC,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%u_NStC_Mot2_NStC(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%u_NStC_Mot2_NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ModuleMapTypeData%u_NStC_Mot2_NStC)
 ENDIF
 IF (ALLOCATED(ModuleMapTypeData%u_TStC_Mot2_TStC)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%u_TStC_Mot2_TStC,1), UBOUND(ModuleMapTypeData%u_TStC_Mot2_TStC,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%u_TStC_Mot2_TStC(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%u_TStC_Mot2_TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ModuleMapTypeData%u_TStC_Mot2_TStC)
 ENDIF
 IF (ALLOCATED(ModuleMapTypeData%u_SStC_Mot2_SStC)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%u_SStC_Mot2_SStC,1), UBOUND(ModuleMapTypeData%u_SStC_Mot2_SStC,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%u_SStC_Mot2_SStC(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%u_SStC_Mot2_SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ModuleMapTypeData%u_SStC_Mot2_SStC)
@@ -8675,7 +8675,7 @@ ENDIF
 IF (ALLOCATED(ModuleMapTypeData%BStC_Frc2_y_BStC)) THEN
 DO i2 = LBOUND(ModuleMapTypeData%BStC_Frc2_y_BStC,2), UBOUND(ModuleMapTypeData%BStC_Frc2_y_BStC,2)
 DO i1 = LBOUND(ModuleMapTypeData%BStC_Frc2_y_BStC,1), UBOUND(ModuleMapTypeData%BStC_Frc2_y_BStC,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%BStC_Frc2_y_BStC(i1,i2), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%BStC_Frc2_y_BStC(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -8683,21 +8683,21 @@ ENDDO
 ENDIF
 IF (ALLOCATED(ModuleMapTypeData%NStC_Frc2_y_NStC)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%NStC_Frc2_y_NStC,1), UBOUND(ModuleMapTypeData%NStC_Frc2_y_NStC,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%NStC_Frc2_y_NStC(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%NStC_Frc2_y_NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ModuleMapTypeData%NStC_Frc2_y_NStC)
 ENDIF
 IF (ALLOCATED(ModuleMapTypeData%TStC_Frc2_y_TStC)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%TStC_Frc2_y_TStC,1), UBOUND(ModuleMapTypeData%TStC_Frc2_y_TStC,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%TStC_Frc2_y_TStC(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%TStC_Frc2_y_TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ModuleMapTypeData%TStC_Frc2_y_TStC)
 ENDIF
 IF (ALLOCATED(ModuleMapTypeData%SStC_Frc2_y_SStC)) THEN
 DO i1 = LBOUND(ModuleMapTypeData%SStC_Frc2_y_SStC,1), UBOUND(ModuleMapTypeData%SStC_Frc2_y_SStC,1)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SStC_Frc2_y_SStC(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SStC_Frc2_y_SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ModuleMapTypeData%SStC_Frc2_y_SStC)
@@ -10052,35 +10052,35 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL SrvD_Destroybladeddlltype( MiscData%dll_data, ErrStat2, ErrMsg2 )
+  CALL SrvD_Destroybladeddlltype( MiscData%dll_data, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%xd_BlPitchFilter)) THEN
   DEALLOCATE(MiscData%xd_BlPitchFilter)
 ENDIF
 IF (ALLOCATED(MiscData%BStC)) THEN
 DO i1 = LBOUND(MiscData%BStC,1), UBOUND(MiscData%BStC,1)
-  CALL StC_DestroyMisc( MiscData%BStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyMisc( MiscData%BStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%BStC)
 ENDIF
 IF (ALLOCATED(MiscData%NStC)) THEN
 DO i1 = LBOUND(MiscData%NStC,1), UBOUND(MiscData%NStC,1)
-  CALL StC_DestroyMisc( MiscData%NStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyMisc( MiscData%NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%NStC)
 ENDIF
 IF (ALLOCATED(MiscData%TStC)) THEN
 DO i1 = LBOUND(MiscData%TStC,1), UBOUND(MiscData%TStC,1)
-  CALL StC_DestroyMisc( MiscData%TStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyMisc( MiscData%TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%TStC)
 ENDIF
 IF (ALLOCATED(MiscData%SStC)) THEN
 DO i1 = LBOUND(MiscData%SStC,1), UBOUND(MiscData%SStC,1)
-  CALL StC_DestroyMisc( MiscData%SStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyMisc( MiscData%SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%SStC)
@@ -10088,7 +10088,7 @@ ENDIF
 IF (ALLOCATED(MiscData%u_BStC)) THEN
 DO i2 = LBOUND(MiscData%u_BStC,2), UBOUND(MiscData%u_BStC,2)
 DO i1 = LBOUND(MiscData%u_BStC,1), UBOUND(MiscData%u_BStC,1)
-  CALL StC_DestroyInput( MiscData%u_BStC(i1,i2), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyInput( MiscData%u_BStC(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -10097,7 +10097,7 @@ ENDIF
 IF (ALLOCATED(MiscData%u_NStC)) THEN
 DO i2 = LBOUND(MiscData%u_NStC,2), UBOUND(MiscData%u_NStC,2)
 DO i1 = LBOUND(MiscData%u_NStC,1), UBOUND(MiscData%u_NStC,1)
-  CALL StC_DestroyInput( MiscData%u_NStC(i1,i2), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyInput( MiscData%u_NStC(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -10106,7 +10106,7 @@ ENDIF
 IF (ALLOCATED(MiscData%u_TStC)) THEN
 DO i2 = LBOUND(MiscData%u_TStC,2), UBOUND(MiscData%u_TStC,2)
 DO i1 = LBOUND(MiscData%u_TStC,1), UBOUND(MiscData%u_TStC,1)
-  CALL StC_DestroyInput( MiscData%u_TStC(i1,i2), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyInput( MiscData%u_TStC(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -10115,7 +10115,7 @@ ENDIF
 IF (ALLOCATED(MiscData%u_SStC)) THEN
 DO i2 = LBOUND(MiscData%u_SStC,2), UBOUND(MiscData%u_SStC,2)
 DO i1 = LBOUND(MiscData%u_SStC,1), UBOUND(MiscData%u_SStC,1)
-  CALL StC_DestroyInput( MiscData%u_SStC(i1,i2), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyInput( MiscData%u_SStC(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -10123,33 +10123,33 @@ ENDDO
 ENDIF
 IF (ALLOCATED(MiscData%y_BStC)) THEN
 DO i1 = LBOUND(MiscData%y_BStC,1), UBOUND(MiscData%y_BStC,1)
-  CALL StC_DestroyOutput( MiscData%y_BStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyOutput( MiscData%y_BStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%y_BStC)
 ENDIF
 IF (ALLOCATED(MiscData%y_NStC)) THEN
 DO i1 = LBOUND(MiscData%y_NStC,1), UBOUND(MiscData%y_NStC,1)
-  CALL StC_DestroyOutput( MiscData%y_NStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyOutput( MiscData%y_NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%y_NStC)
 ENDIF
 IF (ALLOCATED(MiscData%y_TStC)) THEN
 DO i1 = LBOUND(MiscData%y_TStC,1), UBOUND(MiscData%y_TStC,1)
-  CALL StC_DestroyOutput( MiscData%y_TStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyOutput( MiscData%y_TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%y_TStC)
 ENDIF
 IF (ALLOCATED(MiscData%y_SStC)) THEN
 DO i1 = LBOUND(MiscData%y_SStC,1), UBOUND(MiscData%y_SStC,1)
-  CALL StC_DestroyOutput( MiscData%y_SStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyOutput( MiscData%y_SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%y_SStC)
 ENDIF
-  CALL SrvD_Destroymodulemaptype( MiscData%SrvD_MeshMap, ErrStat2, ErrMsg2 )
+  CALL SrvD_Destroymodulemaptype( MiscData%SrvD_MeshMap, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SrvD_DestroyMisc
 
@@ -12490,7 +12490,7 @@ IF (ALLOCATED(ParamData%TBDepISp)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
@@ -12499,28 +12499,28 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%BStC)) THEN
 DO i1 = LBOUND(ParamData%BStC,1), UBOUND(ParamData%BStC,1)
-  CALL StC_DestroyParam( ParamData%BStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyParam( ParamData%BStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%BStC)
 ENDIF
 IF (ALLOCATED(ParamData%NStC)) THEN
 DO i1 = LBOUND(ParamData%NStC,1), UBOUND(ParamData%NStC,1)
-  CALL StC_DestroyParam( ParamData%NStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyParam( ParamData%NStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%NStC)
 ENDIF
 IF (ALLOCATED(ParamData%TStC)) THEN
 DO i1 = LBOUND(ParamData%TStC,1), UBOUND(ParamData%TStC,1)
-  CALL StC_DestroyParam( ParamData%TStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyParam( ParamData%TStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%TStC)
 ENDIF
 IF (ALLOCATED(ParamData%SStC)) THEN
 DO i1 = LBOUND(ParamData%SStC,1), UBOUND(ParamData%SStC,1)
-  CALL StC_DestroyParam( ParamData%SStC(i1), ErrStat2, ErrMsg2 )
+  CALL StC_DestroyParam( ParamData%SStC(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%SStC)

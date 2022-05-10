@@ -545,7 +545,7 @@ IF (ALLOCATED(InitInputData%BlAFID)) THEN
 ENDIF
 IF (ALLOCATED(InitInputData%AFInfo)) THEN
 DO i1 = LBOUND(InitInputData%AFInfo,1), UBOUND(InitInputData%AFInfo,1)
-  CALL AFI_DestroyParam( InitInputData%AFInfo(i1), ErrStat2, ErrMsg2 )
+  CALL AFI_DestroyParam( InitInputData%AFInfo(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%AFInfo)
@@ -1122,7 +1122,7 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUntNodes)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUntNodes)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AA_DestroyInitOutput
 
@@ -1959,7 +1959,7 @@ IF (ALLOCATED(InputFileData%ObsZ)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%BladeProps)) THEN
 DO i1 = LBOUND(InputFileData%BladeProps,1), UBOUND(InputFileData%BladeProps,1)
-  CALL AA_Destroybladepropstype( InputFileData%BladeProps(i1), ErrStat2, ErrMsg2 )
+  CALL AA_Destroybladepropstype( InputFileData%BladeProps(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputFileData%BladeProps)
@@ -6377,7 +6377,7 @@ IF (ALLOCATED(ParamData%TI_Grid_In)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
@@ -6399,7 +6399,7 @@ IF (ALLOCATED(ParamData%BlAFID)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%AFInfo)) THEN
 DO i1 = LBOUND(ParamData%AFInfo,1), UBOUND(ParamData%AFInfo,1)
-  CALL AFI_DestroyParam( ParamData%AFInfo(i1), ErrStat2, ErrMsg2 )
+  CALL AFI_DestroyParam( ParamData%AFInfo(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%AFInfo)

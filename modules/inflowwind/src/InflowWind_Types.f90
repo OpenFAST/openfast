@@ -623,7 +623,7 @@ ENDIF
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
 ENDIF
-  CALL IfW_FFWind_DestroyInitInput( InputFileData%FF, ErrStat2, ErrMsg2 )
+  CALL IfW_FFWind_DestroyInitInput( InputFileData%FF, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_DestroyInputFile
 
@@ -1218,13 +1218,13 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedFileData, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedFileData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%WindType2Data, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%WindType2Data, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Lidar_DestroyInitInput( InitInputData%lidar, ErrStat2, ErrMsg2 )
+  CALL Lidar_DestroyInitInput( InitInputData%lidar, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_4Dext_DestroyInitInput( InitInputData%FDext, ErrStat2, ErrMsg2 )
+  CALL IfW_4Dext_DestroyInitInput( InitInputData%FDext, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_DestroyInitInput
 
@@ -1848,9 +1848,9 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_Destroywindfilemetadata( InitOutputData%WindFileInfo, ErrStat2, ErrMsg2 )
+  CALL InflowWind_Destroywindfilemetadata( InitOutputData%WindFileInfo, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
   DEALLOCATE(InitOutputData%LinNames_y)
@@ -2499,17 +2499,17 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL IfW_UniformWind_DestroyMisc( MiscData%UniformWind, ErrStat2, ErrMsg2 )
+  CALL IfW_UniformWind_DestroyMisc( MiscData%UniformWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_TSFFWind_DestroyMisc( MiscData%TSFFWind, ErrStat2, ErrMsg2 )
+  CALL IfW_TSFFWind_DestroyMisc( MiscData%TSFFWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_HAWCWind_DestroyMisc( MiscData%HAWCWind, ErrStat2, ErrMsg2 )
+  CALL IfW_HAWCWind_DestroyMisc( MiscData%HAWCWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_BladedFFWind_DestroyMisc( MiscData%BladedFFWind, ErrStat2, ErrMsg2 )
+  CALL IfW_BladedFFWind_DestroyMisc( MiscData%BladedFFWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_UserWind_DestroyMisc( MiscData%UserWind, ErrStat2, ErrMsg2 )
+  CALL IfW_UserWind_DestroyMisc( MiscData%UserWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_4Dext_DestroyMisc( MiscData%FDext, ErrStat2, ErrMsg2 )
+  CALL IfW_4Dext_DestroyMisc( MiscData%FDext, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%AllOuts)) THEN
   DEALLOCATE(MiscData%AllOuts)
@@ -3352,21 +3352,21 @@ ENDIF
 IF (ALLOCATED(ParamData%WindViXYZ)) THEN
   DEALLOCATE(ParamData%WindViXYZ)
 ENDIF
-  CALL IfW_UniformWind_DestroyParam( ParamData%UniformWind, ErrStat2, ErrMsg2 )
+  CALL IfW_UniformWind_DestroyParam( ParamData%UniformWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_TSFFWind_DestroyParam( ParamData%TSFFWind, ErrStat2, ErrMsg2 )
+  CALL IfW_TSFFWind_DestroyParam( ParamData%TSFFWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_BladedFFWind_DestroyParam( ParamData%BladedFFWind, ErrStat2, ErrMsg2 )
+  CALL IfW_BladedFFWind_DestroyParam( ParamData%BladedFFWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_HAWCWind_DestroyParam( ParamData%HAWCWind, ErrStat2, ErrMsg2 )
+  CALL IfW_HAWCWind_DestroyParam( ParamData%HAWCWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_UserWind_DestroyParam( ParamData%UserWind, ErrStat2, ErrMsg2 )
+  CALL IfW_UserWind_DestroyParam( ParamData%UserWind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_4Dext_DestroyParam( ParamData%FDext, ErrStat2, ErrMsg2 )
+  CALL IfW_4Dext_DestroyParam( ParamData%FDext, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
@@ -3374,7 +3374,7 @@ ENDIF
 IF (ALLOCATED(ParamData%OutParamLinIndx)) THEN
   DEALLOCATE(ParamData%OutParamLinIndx)
 ENDIF
-  CALL Lidar_DestroyParam( ParamData%lidar, ErrStat2, ErrMsg2 )
+  CALL Lidar_DestroyParam( ParamData%lidar, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_DestroyParam
 
@@ -4490,7 +4490,7 @@ ENDIF
 IF (ALLOCATED(InputData%PositionXYZ)) THEN
   DEALLOCATE(InputData%PositionXYZ)
 ENDIF
-  CALL Lidar_DestroyInput( InputData%lidar, ErrStat2, ErrMsg2 )
+  CALL Lidar_DestroyInput( InputData%lidar, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_DestroyInput
 
@@ -4797,7 +4797,7 @@ ENDIF
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
-  CALL Lidar_DestroyOutput( OutputData%lidar, ErrStat2, ErrMsg2 )
+  CALL Lidar_DestroyOutput( OutputData%lidar, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_DestroyOutput
 

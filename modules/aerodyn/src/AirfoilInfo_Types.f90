@@ -1064,7 +1064,7 @@ ENDIF
 IF (ALLOCATED(Table_TypeData%SplineCoefs)) THEN
   DEALLOCATE(Table_TypeData%SplineCoefs)
 ENDIF
-  CALL AFI_Destroyua_bl_type( Table_TypeData%UA_BL, ErrStat2, ErrMsg2 )
+  CALL AFI_Destroyua_bl_type( Table_TypeData%UA_BL, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AFI_DestroyTable_Type
 
@@ -1641,7 +1641,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AFI_DestroyInitOutput
 
@@ -1937,7 +1937,7 @@ IF (ALLOCATED(ParamData%Y_Coord)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%Table)) THEN
 DO i1 = LBOUND(ParamData%Table,1), UBOUND(ParamData%Table,1)
-  CALL AFI_Destroytable_type( ParamData%Table(i1), ErrStat2, ErrMsg2 )
+  CALL AFI_Destroytable_type( ParamData%Table(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%Table)

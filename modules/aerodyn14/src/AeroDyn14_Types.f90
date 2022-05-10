@@ -739,24 +739,24 @@ ENDIF
   
 IF (ALLOCATED(AeroConfigData%Blade)) THEN
 DO i1 = LBOUND(AeroConfigData%Blade,1), UBOUND(AeroConfigData%Blade,1)
-  CALL AD14_Destroymarker( AeroConfigData%Blade(i1), ErrStat2, ErrMsg2 )
+  CALL AD14_Destroymarker( AeroConfigData%Blade(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(AeroConfigData%Blade)
 ENDIF
-  CALL AD14_Destroymarker( AeroConfigData%Hub, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroymarker( AeroConfigData%Hub, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%RotorFurl, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroymarker( AeroConfigData%RotorFurl, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%Nacelle, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroymarker( AeroConfigData%Nacelle, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%TailFin, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroymarker( AeroConfigData%TailFin, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%Tower, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroymarker( AeroConfigData%Tower, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%SubStructure, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroymarker( AeroConfigData%SubStructure, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%Foundation, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroymarker( AeroConfigData%Foundation, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyAeroConfig
 
@@ -11390,12 +11390,12 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL AD14_Destroyaeroconfig( InitInputData%TurbineComponents, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyaeroconfig( InitInputData%TurbineComponents, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitInputData%TwrNodeLocs)) THEN
   DEALLOCATE(InitInputData%TwrNodeLocs)
 ENDIF
-  CALL DWM_DestroyInitInput( InitInputData%DWM, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyInitInput( InitInputData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyInitInput
 
@@ -11818,9 +11818,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_DestroyInitOutput( InitOutputData%DWM, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyInitOutput( InitOutputData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyInitOutput
 
@@ -12132,7 +12132,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL DWM_DestroyContState( ContStateData%DWM, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyContState( ContStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyContState
 
@@ -12354,7 +12354,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL DWM_DestroyDiscState( DiscStateData%DWM, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyDiscState( DiscStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyDiscState
 
@@ -12576,7 +12576,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL DWM_DestroyConstrState( ConstrStateData%DWM, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyConstrState( ConstrStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyConstrState
 
@@ -12798,7 +12798,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL DWM_DestroyOtherState( OtherStateData%DWM, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyOtherState( OtherStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyOtherState
 
@@ -13113,30 +13113,30 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL DWM_DestroyMisc( MiscData%DWM, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyMisc( MiscData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_DestroyInput( MiscData%DWM_Inputs, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyInput( MiscData%DWM_Inputs, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_DestroyOutput( MiscData%DWM_Outputs, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyOutput( MiscData%DWM_Outputs, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%ElPrNum)) THEN
   DEALLOCATE(MiscData%ElPrNum)
 ENDIF
-  CALL AD14_Destroyairfoil( MiscData%AirFoil, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyairfoil( MiscData%AirFoil, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroybeddoes( MiscData%Beddoes, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroybeddoes( MiscData%Beddoes, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroydyninflow( MiscData%DynInflow, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroydyninflow( MiscData%DynInflow, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyelement( MiscData%Element, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyelement( MiscData%Element, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyrotor( MiscData%Rotor, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyrotor( MiscData%Rotor, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroywind( MiscData%Wind, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroywind( MiscData%Wind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyinducedvel( MiscData%InducedVel, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyinducedvel( MiscData%InducedVel, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyeloutparms( MiscData%ElOut, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyeloutparms( MiscData%ElOut, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%StoredForces)) THEN
   DEALLOCATE(MiscData%StoredForces)
@@ -14503,25 +14503,25 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL AD14_Destroyairfoilparms( ParamData%AirFoil, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyairfoilparms( ParamData%AirFoil, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroybladeparms( ParamData%Blade, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroybladeparms( ParamData%Blade, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroybeddoesparms( ParamData%Beddoes, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroybeddoesparms( ParamData%Beddoes, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroydyninflowparms( ParamData%DynInflow, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroydyninflowparms( ParamData%DynInflow, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyelementparms( ParamData%Element, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyelementparms( ParamData%Element, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroytwrpropsparms( ParamData%TwrProps, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroytwrpropsparms( ParamData%TwrProps, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyinducedvelparms( ParamData%InducedVel, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyinducedvelparms( ParamData%InducedVel, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroywindparms( ParamData%Wind, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroywindparms( ParamData%Wind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyrotorparms( ParamData%Rotor, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyrotorparms( ParamData%Rotor, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_DestroyParam( ParamData%DWM, ErrStat2, ErrMsg2 )
+  CALL DWM_DestroyParam( ParamData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyParam
 
@@ -15696,7 +15696,7 @@ ENDDO
 ENDIF
   CALL MeshDestroy( InputData%Twr_InputMarkers, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyaeroconfig( InputData%TurbineComponents, ErrStat2, ErrMsg2 )
+  CALL AD14_Destroyaeroconfig( InputData%TurbineComponents, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputData%MulTabLoc)) THEN
   DEALLOCATE(InputData%MulTabLoc)

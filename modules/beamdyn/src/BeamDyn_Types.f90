@@ -802,7 +802,7 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%kp_coordinate)) THEN
   DEALLOCATE(InitOutputData%kp_coordinate)
@@ -1978,7 +1978,7 @@ ENDIF
 IF (ALLOCATED(InputFileData%kp_member)) THEN
   DEALLOCATE(InputFileData%kp_member)
 ENDIF
-  CALL BD_Destroybladeinputdata( InputFileData%InpBl, ErrStat2, ErrMsg2 )
+  CALL BD_Destroybladeinputdata( InputFileData%InpBl, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputFileData%kp_coordinate)) THEN
   DEALLOCATE(InputFileData%kp_coordinate)
@@ -4199,7 +4199,7 @@ IF (ALLOCATED(ParamData%node_elem_idx)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
@@ -4213,11 +4213,11 @@ ENDIF
 IF (ALLOCATED(ParamData%OutNd2NdElem)) THEN
   DEALLOCATE(ParamData%OutNd2NdElem)
 ENDIF
-  CALL BD_Destroyqpparam( ParamData%qp, ErrStat2, ErrMsg2 )
+  CALL BD_Destroyqpparam( ParamData%qp, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%BldNd_OutParam)) THEN
 DO i1 = LBOUND(ParamData%BldNd_OutParam,1), UBOUND(ParamData%BldNd_OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%BldNd_OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%BldNd_OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%BldNd_OutParam)
@@ -10426,11 +10426,11 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL MeshDestroy( MiscData%y_BldMotion_at_u, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL BD_Destroyeqmotionqp( MiscData%qp, ErrStat2, ErrMsg2 )
+  CALL BD_Destroyeqmotionqp( MiscData%qp, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%lin_A)) THEN
   DEALLOCATE(MiscData%lin_A)
@@ -10522,9 +10522,9 @@ ENDIF
 IF (ALLOCATED(MiscData%LP_indx)) THEN
   DEALLOCATE(MiscData%LP_indx)
 ENDIF
-  CALL BD_DestroyInput( MiscData%u, ErrStat2, ErrMsg2 )
+  CALL BD_DestroyInput( MiscData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL BD_DestroyInput( MiscData%u2, ErrStat2, ErrMsg2 )
+  CALL BD_DestroyInput( MiscData%u2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BD_DestroyMisc
 

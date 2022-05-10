@@ -139,7 +139,7 @@ CONTAINS
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL IfW_FFWind_DestroyInitInput( InitInputData%FF, ErrStat2, ErrMsg2 )
+  CALL IfW_FFWind_DestroyInitInput( InitInputData%FF, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE IfW_HAWCWind_DestroyInitInput
 
@@ -415,7 +415,7 @@ CONTAINS
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE IfW_HAWCWind_DestroyInitOutput
 
@@ -1334,7 +1334,7 @@ CONTAINS
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL IfW_FFWind_DestroyParam( ParamData%FF, ErrStat2, ErrMsg2 )
+  CALL IfW_FFWind_DestroyParam( ParamData%FF, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE IfW_HAWCWind_DestroyParam
 

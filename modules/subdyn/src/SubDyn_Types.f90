@@ -2461,7 +2461,7 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
   DEALLOCATE(InitOutputData%LinNames_y)
@@ -5656,7 +5656,7 @@ ENDIF
   
 IF (ALLOCATED(OtherStateData%xdot)) THEN
 DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
-  CALL SD_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2 )
+  CALL SD_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%xdot)
@@ -8015,7 +8015,7 @@ IF (ALLOCATED(ParamData%Elems)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%ElemProps)) THEN
 DO i1 = LBOUND(ParamData%ElemProps,1), UBOUND(ParamData%ElemProps,1)
-  CALL SD_Destroyelemproptype( ParamData%ElemProps(i1), ErrStat2, ErrMsg2 )
+  CALL SD_Destroyelemproptype( ParamData%ElemProps(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%ElemProps)
@@ -8037,14 +8037,14 @@ IF (ALLOCATED(ParamData%T_red_T)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%NodesDOF)) THEN
 DO i1 = LBOUND(ParamData%NodesDOF,1), UBOUND(ParamData%NodesDOF,1)
-  CALL SD_Destroyilist( ParamData%NodesDOF(i1), ErrStat2, ErrMsg2 )
+  CALL SD_Destroyilist( ParamData%NodesDOF(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%NodesDOF)
 ENDIF
 IF (ALLOCATED(ParamData%NodesDOFred)) THEN
 DO i1 = LBOUND(ParamData%NodesDOFred,1), UBOUND(ParamData%NodesDOFred,1)
-  CALL SD_Destroyilist( ParamData%NodesDOFred(i1), ErrStat2, ErrMsg2 )
+  CALL SD_Destroyilist( ParamData%NodesDOFred(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%NodesDOFred)
@@ -8183,28 +8183,28 @@ IF (ALLOCATED(ParamData%ID__F)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%MoutLst)) THEN
 DO i1 = LBOUND(ParamData%MoutLst,1), UBOUND(ParamData%MoutLst,1)
-  CALL SD_Destroymeshauxdatatype( ParamData%MoutLst(i1), ErrStat2, ErrMsg2 )
+  CALL SD_Destroymeshauxdatatype( ParamData%MoutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%MoutLst)
 ENDIF
 IF (ALLOCATED(ParamData%MoutLst2)) THEN
 DO i1 = LBOUND(ParamData%MoutLst2,1), UBOUND(ParamData%MoutLst2,1)
-  CALL SD_Destroymeshauxdatatype( ParamData%MoutLst2(i1), ErrStat2, ErrMsg2 )
+  CALL SD_Destroymeshauxdatatype( ParamData%MoutLst2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%MoutLst2)
 ENDIF
 IF (ALLOCATED(ParamData%MoutLst3)) THEN
 DO i1 = LBOUND(ParamData%MoutLst3,1), UBOUND(ParamData%MoutLst3,1)
-  CALL SD_Destroymeshauxdatatype( ParamData%MoutLst3(i1), ErrStat2, ErrMsg2 )
+  CALL SD_Destroymeshauxdatatype( ParamData%MoutLst3(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%MoutLst3)
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)

@@ -671,7 +671,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Version, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Version, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
@@ -1576,7 +1576,7 @@ ENDIF
 IF (ALLOCATED(ContStateData%element)) THEN
 DO i2 = LBOUND(ContStateData%element,2), UBOUND(ContStateData%element,2)
 DO i1 = LBOUND(ContStateData%element,1), UBOUND(ContStateData%element,1)
-  CALL UA_Destroyelementcontinuousstatetype( ContStateData%element(i1,i2), ErrStat2, ErrMsg2 )
+  CALL UA_Destroyelementcontinuousstatetype( ContStateData%element(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -4538,7 +4538,7 @@ IF (ALLOCATED(OtherStateData%n)) THEN
   DEALLOCATE(OtherStateData%n)
 ENDIF
 DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
-  CALL UA_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2 )
+  CALL UA_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 IF (ALLOCATED(OtherStateData%t_vortexBegin)) THEN

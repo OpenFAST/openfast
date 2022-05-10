@@ -661,7 +661,7 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE OpFM_DestroyInitOutput
 
@@ -1160,28 +1160,28 @@ ENDDO
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Line2_Loads)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Line2_Loads,1), UBOUND(MiscData%Line2_to_Line2_Loads,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Loads(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Loads(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Line2_Loads)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Line2_Motions)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Line2_Motions,1), UBOUND(MiscData%Line2_to_Line2_Motions,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Motions(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Motions(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Line2_Motions)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Point_Loads)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Point_Loads,1), UBOUND(MiscData%Line2_to_Point_Loads,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Loads(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Loads(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Point_Loads)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Point_Motions)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Point_Motions,1), UBOUND(MiscData%Line2_to_Point_Motions,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Motions(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Motions(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Point_Motions)

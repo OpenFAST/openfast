@@ -977,7 +977,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Version, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Version, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BEMT_DestroyInitOutput
 
@@ -1202,9 +1202,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL UA_DestroyContState( ContStateData%UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyContState( ContStateData%UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DBEMT_DestroyContState( ContStateData%DBEMT, ErrStat2, ErrMsg2 )
+  CALL DBEMT_DestroyContState( ContStateData%DBEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BEMT_DestroyContState
 
@@ -1511,7 +1511,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL UA_DestroyDiscState( DiscStateData%UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyDiscState( DiscStateData%UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BEMT_DestroyDiscState
 
@@ -1953,9 +1953,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL UA_DestroyOtherState( OtherStateData%UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyOtherState( OtherStateData%UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DBEMT_DestroyOtherState( OtherStateData%DBEMT, ErrStat2, ErrMsg2 )
+  CALL DBEMT_DestroyOtherState( OtherStateData%DBEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(OtherStateData%ValidPhi)) THEN
   DEALLOCATE(OtherStateData%ValidPhi)
@@ -2484,17 +2484,17 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL UA_DestroyMisc( MiscData%UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyMisc( MiscData%UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DBEMT_DestroyMisc( MiscData%DBEMT, ErrStat2, ErrMsg2 )
+  CALL DBEMT_DestroyMisc( MiscData%DBEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL UA_DestroyOutput( MiscData%y_UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyOutput( MiscData%y_UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%u_UA)) THEN
 DO i3 = LBOUND(MiscData%u_UA,3), UBOUND(MiscData%u_UA,3)
 DO i2 = LBOUND(MiscData%u_UA,2), UBOUND(MiscData%u_UA,2)
 DO i1 = LBOUND(MiscData%u_UA,1), UBOUND(MiscData%u_UA,1)
-  CALL UA_DestroyInput( MiscData%u_UA(i1,i2,i3), ErrStat2, ErrMsg2 )
+  CALL UA_DestroyInput( MiscData%u_UA(i1,i2,i3), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -2503,7 +2503,7 @@ ENDDO
 ENDIF
 IF (ALLOCATED(MiscData%u_DBEMT)) THEN
 DO i1 = LBOUND(MiscData%u_DBEMT,1), UBOUND(MiscData%u_DBEMT,1)
-  CALL DBEMT_DestroyInput( MiscData%u_DBEMT(i1), ErrStat2, ErrMsg2 )
+  CALL DBEMT_DestroyInput( MiscData%u_DBEMT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%u_DBEMT)
@@ -3708,9 +3708,9 @@ ENDIF
 IF (ALLOCATED(ParamData%zHub)) THEN
   DEALLOCATE(ParamData%zHub)
 ENDIF
-  CALL UA_DestroyParam( ParamData%UA, ErrStat2, ErrMsg2 )
+  CALL UA_DestroyParam( ParamData%UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DBEMT_DestroyParam( ParamData%DBEMT, ErrStat2, ErrMsg2 )
+  CALL DBEMT_DestroyParam( ParamData%DBEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%FixedInductions)) THEN
   DEALLOCATE(ParamData%FixedInductions)

@@ -386,7 +386,7 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE DBEMT_DestroyInitOutput
 
@@ -799,7 +799,7 @@ ENDIF
 IF (ALLOCATED(ContStateData%element)) THEN
 DO i2 = LBOUND(ContStateData%element,2), UBOUND(ContStateData%element,2)
 DO i1 = LBOUND(ContStateData%element,1), UBOUND(ContStateData%element,1)
-  CALL DBEMT_Destroyelementcontinuousstatetype( ContStateData%element(i1,i2), ErrStat2, ErrMsg2 )
+  CALL DBEMT_Destroyelementcontinuousstatetype( ContStateData%element(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
@@ -1389,7 +1389,7 @@ IF (ALLOCATED(OtherStateData%n)) THEN
   DEALLOCATE(OtherStateData%n)
 ENDIF
 DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
-  CALL DBEMT_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2 )
+  CALL DBEMT_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
  END SUBROUTINE DBEMT_DestroyOtherState
@@ -2295,7 +2295,7 @@ ENDIF
 IF (ALLOCATED(InputData%element)) THEN
 DO i2 = LBOUND(InputData%element,2), UBOUND(InputData%element,2)
 DO i1 = LBOUND(InputData%element,1), UBOUND(InputData%element,1)
-  CALL DBEMT_Destroyelementinputtype( InputData%element(i1,i2), ErrStat2, ErrMsg2 )
+  CALL DBEMT_Destroyelementinputtype( InputData%element(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO

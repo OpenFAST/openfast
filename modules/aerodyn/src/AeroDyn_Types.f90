@@ -791,12 +791,12 @@ ENDIF
   
 IF (ALLOCATED(InitInputData%rotors)) THEN
 DO i1 = LBOUND(InitInputData%rotors,1), UBOUND(InitInputData%rotors,1)
-  CALL AD_Destroyrotinitinputtype( InitInputData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotinitinputtype( InitInputData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%rotors)
 ENDIF
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyInitInput
 
@@ -2119,7 +2119,7 @@ IF (ALLOCATED(RotInitOutputTypeData%WriteOutputUnt)) THEN
 ENDIF
 IF (ALLOCATED(RotInitOutputTypeData%BladeShape)) THEN
 DO i1 = LBOUND(RotInitOutputTypeData%BladeShape,1), UBOUND(RotInitOutputTypeData%BladeShape,1)
-  CALL AD_Destroybladeshape( RotInitOutputTypeData%BladeShape(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroybladeshape( RotInitOutputTypeData%BladeShape(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(RotInitOutputTypeData%BladeShape)
@@ -2147,7 +2147,7 @@ IF (ALLOCATED(RotInitOutputTypeData%IsLoad_u)) THEN
 ENDIF
 IF (ALLOCATED(RotInitOutputTypeData%BladeProps)) THEN
 DO i1 = LBOUND(RotInitOutputTypeData%BladeProps,1), UBOUND(RotInitOutputTypeData%BladeProps,1)
-  CALL AD_Destroybladepropstype( RotInitOutputTypeData%BladeProps(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroybladepropstype( RotInitOutputTypeData%BladeProps(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(RotInitOutputTypeData%BladeProps)
@@ -3037,12 +3037,12 @@ ENDIF
   
 IF (ALLOCATED(InitOutputData%rotors)) THEN
 DO i1 = LBOUND(InitOutputData%rotors,1), UBOUND(InitOutputData%rotors,1)
-  CALL AD_Destroyrotinitoutputtype( InitOutputData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotinitoutputtype( InitOutputData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitOutputData%rotors)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyInitOutput
 
@@ -3450,7 +3450,7 @@ ENDIF
   
 IF (ALLOCATED(RotInputFileData%BladeProps)) THEN
 DO i1 = LBOUND(RotInputFileData%BladeProps,1), UBOUND(RotInputFileData%BladeProps,1)
-  CALL AD_Destroybladepropstype( RotInputFileData%BladeProps(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroybladepropstype( RotInputFileData%BladeProps(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(RotInputFileData%BladeProps)
@@ -4005,7 +4005,7 @@ IF (ALLOCATED(InputFileData%BldNd_OutList)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%rotors)) THEN
 DO i1 = LBOUND(InputFileData%rotors,1), UBOUND(InputFileData%rotors,1)
-  CALL AD_Destroyrotinputfile( InputFileData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotinputfile( InputFileData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputFileData%rotors)
@@ -4706,9 +4706,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL BEMT_DestroyContState( RotContinuousStateTypeData%BEMT, ErrStat2, ErrMsg2 )
+  CALL BEMT_DestroyContState( RotContinuousStateTypeData%BEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AA_DestroyContState( RotContinuousStateTypeData%AA, ErrStat2, ErrMsg2 )
+  CALL AA_DestroyContState( RotContinuousStateTypeData%AA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyRotContinuousStateType
 
@@ -5034,12 +5034,12 @@ ENDIF
   
 IF (ALLOCATED(ContStateData%rotors)) THEN
 DO i1 = LBOUND(ContStateData%rotors,1), UBOUND(ContStateData%rotors,1)
-  CALL AD_Destroyrotcontinuousstatetype( ContStateData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotcontinuousstatetype( ContStateData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%rotors)
 ENDIF
-  CALL FVW_DestroyContState( ContStateData%FVW, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyContState( ContStateData%FVW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyContState
 
@@ -5385,9 +5385,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL BEMT_DestroyDiscState( RotDiscreteStateTypeData%BEMT, ErrStat2, ErrMsg2 )
+  CALL BEMT_DestroyDiscState( RotDiscreteStateTypeData%BEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AA_DestroyDiscState( RotDiscreteStateTypeData%AA, ErrStat2, ErrMsg2 )
+  CALL AA_DestroyDiscState( RotDiscreteStateTypeData%AA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyRotDiscreteStateType
 
@@ -5713,12 +5713,12 @@ ENDIF
   
 IF (ALLOCATED(DiscStateData%rotors)) THEN
 DO i1 = LBOUND(DiscStateData%rotors,1), UBOUND(DiscStateData%rotors,1)
-  CALL AD_Destroyrotdiscretestatetype( DiscStateData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotdiscretestatetype( DiscStateData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%rotors)
 ENDIF
-  CALL FVW_DestroyDiscState( DiscStateData%FVW, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyDiscState( DiscStateData%FVW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyDiscState
 
@@ -6064,9 +6064,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL BEMT_DestroyConstrState( RotConstraintStateTypeData%BEMT, ErrStat2, ErrMsg2 )
+  CALL BEMT_DestroyConstrState( RotConstraintStateTypeData%BEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AA_DestroyConstrState( RotConstraintStateTypeData%AA, ErrStat2, ErrMsg2 )
+  CALL AA_DestroyConstrState( RotConstraintStateTypeData%AA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyRotConstraintStateType
 
@@ -6392,12 +6392,12 @@ ENDIF
   
 IF (ALLOCATED(ConstrStateData%rotors)) THEN
 DO i1 = LBOUND(ConstrStateData%rotors,1), UBOUND(ConstrStateData%rotors,1)
-  CALL AD_Destroyrotconstraintstatetype( ConstrStateData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotconstraintstatetype( ConstrStateData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%rotors)
 ENDIF
-  CALL FVW_DestroyConstrState( ConstrStateData%FVW, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyConstrState( ConstrStateData%FVW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyConstrState
 
@@ -6743,9 +6743,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL BEMT_DestroyOtherState( RotOtherStateTypeData%BEMT, ErrStat2, ErrMsg2 )
+  CALL BEMT_DestroyOtherState( RotOtherStateTypeData%BEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AA_DestroyOtherState( RotOtherStateTypeData%AA, ErrStat2, ErrMsg2 )
+  CALL AA_DestroyOtherState( RotOtherStateTypeData%AA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyRotOtherStateType
 
@@ -7086,12 +7086,12 @@ ENDIF
   
 IF (ALLOCATED(OtherStateData%rotors)) THEN
 DO i1 = LBOUND(OtherStateData%rotors,1), UBOUND(OtherStateData%rotors,1)
-  CALL AD_Destroyrototherstatetype( OtherStateData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrototherstatetype( OtherStateData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%rotors)
 ENDIF
-  CALL FVW_DestroyOtherState( OtherStateData%FVW, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyOtherState( OtherStateData%FVW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(OtherStateData%WakeLocationPoints)) THEN
   DEALLOCATE(OtherStateData%WakeLocationPoints)
@@ -7766,19 +7766,19 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL BEMT_DestroyMisc( RotMiscVarTypeData%BEMT, ErrStat2, ErrMsg2 )
+  CALL BEMT_DestroyMisc( RotMiscVarTypeData%BEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL BEMT_DestroyOutput( RotMiscVarTypeData%BEMT_y, ErrStat2, ErrMsg2 )
+  CALL BEMT_DestroyOutput( RotMiscVarTypeData%BEMT_y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 DO i1 = LBOUND(RotMiscVarTypeData%BEMT_u,1), UBOUND(RotMiscVarTypeData%BEMT_u,1)
-  CALL BEMT_DestroyInput( RotMiscVarTypeData%BEMT_u(i1), ErrStat2, ErrMsg2 )
+  CALL BEMT_DestroyInput( RotMiscVarTypeData%BEMT_u(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
-  CALL AA_DestroyMisc( RotMiscVarTypeData%AA, ErrStat2, ErrMsg2 )
+  CALL AA_DestroyMisc( RotMiscVarTypeData%AA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AA_DestroyOutput( RotMiscVarTypeData%AA_y, ErrStat2, ErrMsg2 )
+  CALL AA_DestroyOutput( RotMiscVarTypeData%AA_y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AA_DestroyInput( RotMiscVarTypeData%AA_u, ErrStat2, ErrMsg2 )
+  CALL AA_DestroyInput( RotMiscVarTypeData%AA_u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(RotMiscVarTypeData%DisturbedInflow)) THEN
   DEALLOCATE(RotMiscVarTypeData%DisturbedInflow)
@@ -7820,7 +7820,7 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(RotMiscVarTypeData%B_L_2_H_P)) THEN
 DO i1 = LBOUND(RotMiscVarTypeData%B_L_2_H_P,1), UBOUND(RotMiscVarTypeData%B_L_2_H_P,1)
-  CALL NWTC_Library_Destroymeshmaptype( RotMiscVarTypeData%B_L_2_H_P(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( RotMiscVarTypeData%B_L_2_H_P(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(RotMiscVarTypeData%B_L_2_H_P)
@@ -7843,7 +7843,7 @@ ENDDO
 ENDIF
 IF (ALLOCATED(RotMiscVarTypeData%B_L_2_R_P)) THEN
 DO i1 = LBOUND(RotMiscVarTypeData%B_L_2_R_P,1), UBOUND(RotMiscVarTypeData%B_L_2_R_P,1)
-  CALL NWTC_Library_Destroymeshmaptype( RotMiscVarTypeData%B_L_2_R_P(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroymeshmaptype( RotMiscVarTypeData%B_L_2_R_P(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(RotMiscVarTypeData%B_L_2_R_P)
@@ -9704,21 +9704,21 @@ ENDIF
   
 IF (ALLOCATED(MiscData%rotors)) THEN
 DO i1 = LBOUND(MiscData%rotors,1), UBOUND(MiscData%rotors,1)
-  CALL AD_Destroyrotmiscvartype( MiscData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotmiscvartype( MiscData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%rotors)
 ENDIF
 IF (ALLOCATED(MiscData%FVW_u)) THEN
 DO i1 = LBOUND(MiscData%FVW_u,1), UBOUND(MiscData%FVW_u,1)
-  CALL FVW_DestroyInput( MiscData%FVW_u(i1), ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyInput( MiscData%FVW_u(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%FVW_u)
 ENDIF
-  CALL FVW_DestroyOutput( MiscData%FVW_y, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyOutput( MiscData%FVW_y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FVW_DestroyMisc( MiscData%FVW, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyMisc( MiscData%FVW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyMisc
 
@@ -10426,9 +10426,9 @@ ENDIF
 IF (ALLOCATED(RotParameterTypeData%TwrTI)) THEN
   DEALLOCATE(RotParameterTypeData%TwrTI)
 ENDIF
-  CALL BEMT_DestroyParam( RotParameterTypeData%BEMT, ErrStat2, ErrMsg2 )
+  CALL BEMT_DestroyParam( RotParameterTypeData%BEMT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AA_DestroyParam( RotParameterTypeData%AA, ErrStat2, ErrMsg2 )
+  CALL AA_DestroyParam( RotParameterTypeData%AA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(RotParameterTypeData%Jac_u_indx)) THEN
   DEALLOCATE(RotParameterTypeData%Jac_u_indx)
@@ -10441,14 +10441,14 @@ IF (ALLOCATED(RotParameterTypeData%dx)) THEN
 ENDIF
 IF (ALLOCATED(RotParameterTypeData%OutParam)) THEN
 DO i1 = LBOUND(RotParameterTypeData%OutParam,1), UBOUND(RotParameterTypeData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( RotParameterTypeData%OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( RotParameterTypeData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(RotParameterTypeData%OutParam)
 ENDIF
 IF (ALLOCATED(RotParameterTypeData%BldNd_OutParam)) THEN
 DO i1 = LBOUND(RotParameterTypeData%BldNd_OutParam,1), UBOUND(RotParameterTypeData%BldNd_OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( RotParameterTypeData%BldNd_OutParam(i1), ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyoutparmtype( RotParameterTypeData%BldNd_OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(RotParameterTypeData%BldNd_OutParam)
@@ -11474,19 +11474,19 @@ ENDIF
   
 IF (ALLOCATED(ParamData%rotors)) THEN
 DO i1 = LBOUND(ParamData%rotors,1), UBOUND(ParamData%rotors,1)
-  CALL AD_Destroyrotparametertype( ParamData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotparametertype( ParamData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%rotors)
 ENDIF
 IF (ALLOCATED(ParamData%AFI)) THEN
 DO i1 = LBOUND(ParamData%AFI,1), UBOUND(ParamData%AFI,1)
-  CALL AFI_DestroyParam( ParamData%AFI(i1), ErrStat2, ErrMsg2 )
+  CALL AFI_DestroyParam( ParamData%AFI(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%AFI)
 ENDIF
-  CALL FVW_DestroyParam( ParamData%FVW, ErrStat2, ErrMsg2 )
+  CALL FVW_DestroyParam( ParamData%FVW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_DestroyParam
 
@@ -12917,7 +12917,7 @@ ENDIF
   
 IF (ALLOCATED(InputData%rotors)) THEN
 DO i1 = LBOUND(InputData%rotors,1), UBOUND(InputData%rotors,1)
-  CALL AD_Destroyrotinputtype( InputData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotinputtype( InputData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%rotors)
@@ -13756,7 +13756,7 @@ ENDIF
   
 IF (ALLOCATED(OutputData%rotors)) THEN
 DO i1 = LBOUND(OutputData%rotors,1), UBOUND(OutputData%rotors,1)
-  CALL AD_Destroyrotoutputtype( OutputData%rotors(i1), ErrStat2, ErrMsg2 )
+  CALL AD_Destroyrotoutputtype( OutputData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%rotors)

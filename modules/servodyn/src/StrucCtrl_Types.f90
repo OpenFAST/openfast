@@ -1087,9 +1087,9 @@ ENDIF
 IF (ALLOCATED(InitInputData%InitRefOrient)) THEN
   DEALLOCATE(InitInputData%InitRefOrient)
 ENDIF
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrescribeFrcData, ErrStat2, ErrMsg2 )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrescribeFrcData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE StC_DestroyInitInput
 
