@@ -14,10 +14,21 @@
 # limitations under the License.
 #
 
+"""
+    This program executes OpenFAST via the Python interface, and checks the results
+    in a regression test for a single test case.
+    The test data is contained in a git submodule, r-test, which must be initialized
+    prior to running. See the r-test README or OpenFAST documentation for more info.
+
+    Get usage with: `executePythonRegressionCase.py -h`
+"""
+
 import os
 import sys
-basepath = os.path.dirname(os.path.abspath(__file__))
+basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
+sys.path.insert(0, os.path.sep.join([basepath, "..", "glue-codes", "python"]))
+import platform
 import argparse
 import shutil
 import subprocess
@@ -25,6 +36,7 @@ import rtestlib as rtl
 import openfastDrivers
 import pass_fail
 from errorPlotting import exportCaseSummary
+import openfast_library
 
 ##### Helper functions
 def ignoreBaselineItems(directory, contents):
@@ -43,7 +55,7 @@ pythonCommand = sys.executable
 ### Verify input arguments
 parser = argparse.ArgumentParser(description="Executes OpenFAST and a regression test for a single test case.")
 parser.add_argument("caseName", metavar="Case-Name", type=str, nargs=1, help="The name of the test case.")
-parser.add_argument("executable", metavar="OpenFAST", type=str, nargs=1, help="The path to the OpenFAST executable.")
+parser.add_argument("executable", metavar="NotUsed", type=str, nargs=1, help="Not used in this script, but kept for API compatibility.")
 parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str, nargs=1, help="The path to the OpenFAST repository.")
 parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
@@ -55,8 +67,7 @@ parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help=
 
 args = parser.parse_args()
 
-caseName = args.caseName[0]
-executable = os.path.abspath(args.executable[0])
+caseName = args.caseName[0].replace("_py", "")
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
@@ -67,7 +78,6 @@ noExec = args.noExec
 verbose = args.verbose
 
 # validate inputs
-rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
     os.makedirs(buildDirectory)
@@ -93,11 +103,12 @@ if outputType not in supportedBaselines:
 print("-- Using gold standard files with machine-compiler type {}".format(outputType))
 
 ### Build the filesystem navigation variables for running openfast on the test case
-rtest = os.path.join(sourceDirectory, "reg_tests", "r-test")
-moduleDirectory = os.path.join(rtest, "glue-codes", "openfast-cpp")
-openfast_gluecode_directory = os.path.join(rtest, "glue-codes", "openfast")
+regtests = os.path.join(sourceDirectory, "reg_tests")
+lib = os.path.join(regtests, "lib")
+rtest = os.path.join(regtests, "r-test")
+moduleDirectory = os.path.join(rtest, "glue-codes", "openfast")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
-targetOutputDirectory = os.path.join(openfast_gluecode_directory, caseName.replace('_cpp', ''), outputType)
+targetOutputDirectory = os.path.join(inputsDirectory, outputType)
 testBuildDirectory = os.path.join(buildDirectory, caseName)
 
 # verify all the required directories exist
@@ -109,8 +120,14 @@ if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
 # create the local output directory if it does not already exist
+# and initialize it with input files for all test cases
+for data in ["AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
+    dataDir = os.path.join(buildDirectory, data)
+    if not os.path.isdir(dataDir):
+        shutil.copytree(os.path.join(moduleDirectory, data), dataDir)
+
 dst = os.path.join(buildDirectory, "5MW_Baseline")
-src = os.path.join(openfast_gluecode_directory, "5MW_Baseline")
+src = os.path.join(moduleDirectory, "5MW_Baseline")
 if not os.path.isdir(dst):
     shutil.copytree(src, dst)
 else:
@@ -131,21 +148,30 @@ if not os.path.isdir(testBuildDirectory):
 
 ### Run openfast on the test case
 if not noExec:
-    cwd = os.getcwd()
-    os.chdir(testBuildDirectory)
-    caseInputFile = os.path.abspath("cDriver.yaml")
-    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
-    if returnCode != 0:
-        rtl.exitWithError("")
-    os.chdir(cwd)
-    
+    caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
+    openfastlib_path = os.path.join(buildDirectory, "..", "..", "..", "modules", "openfast-library", "libopenfastlib")
+    if platform.system() == 'Linux':
+        openfastlib_path += ".so"
+    elif platform.system() == 'Darwin':
+        openfastlib_path += ".dylib"
+    elif platform.system() == 'Windows':
+        openfastlib_path += ".dll"
+    else:
+        raise SystemError("Platform could not be determined: platform.system -> {}".format(platform.system()))
+
+    openfastlib = openfast_library.FastLibAPI(openfastlib_path, caseInputFile)
+    openfastlib.fast_run()
+
+    output_channel_names = openfastlib.output_channel_names
+
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName.replace('_cpp', '') + ".outb")
-rtl.validateFileOrExit(localOutFile)
+baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
 rtl.validateFileOrExit(baselineOutFile)
 
-testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
+testInfo = {
+    "attribute_names": output_channel_names
+}
+testData = openfastlib.output_values
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 performance = pass_fail.calculateNorms(testData, baselineData)
 normalizedNorm = performance[:, 1]
