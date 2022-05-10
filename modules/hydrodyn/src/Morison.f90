@@ -3193,8 +3193,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   cosGamma = Dot_Product(k_hat,n_hat)
                   tanGamma = sinGamma/cosGamma
                   IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
-                     t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   ! Arbitrary choice for t_hat
-                     t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+                     ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
+                     IF ( k_hat(3) < 0.999999_ReKi ) THEN
+                        t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   
+                        t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+                     ELSE ! k_hat is close to vertical (0,0,1)
+                        t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
+                     END IF
                   ELSE
                      t_hat = t_hat / sinGamma
                   END IF
@@ -3982,8 +3987,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          t_hat    = Cross_Product(k_hat,n_hat)
          sinGamma = SQRT(Dot_Product(t_hat,t_hat))
          IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
-            t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   ! Arbitrary choice for t_hat
-            t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+            ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
+            IF ( k_hat(3) < 0.999999_ReKi ) THEN
+               t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   
+               t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+            ELSE ! k_hat is close to vertical (0,0,1)
+               t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
+            END IF
          ELSE
             t_hat = t_hat / sinGamma
          END IF
@@ -4013,8 +4023,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          t_hat    = Cross_Product(k_hat,n_hat)
          sinGamma = SQRT(Dot_Product(t_hat,t_hat))
          IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
-            t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   ! Arbitrary choice for t_hat
-            t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+            ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
+            IF ( k_hat(3) < 0.999999_ReKi ) THEN
+               t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   
+               t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+            ELSE ! k_hat is close to vertical (0,0,1)
+               t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
+            END IF
          ELSE
             t_hat = t_hat / sinGamma
          END IF
