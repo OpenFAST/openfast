@@ -1,3 +1,10 @@
+---
+name: Bug report
+about: Report a bug to help us improve
+title: 'Bug report'
+labels: "Type: Bug"
+---
+
 <?
 Is this pull request ready to be merged?
 i.e. tests pass or are expected to fail; all development is finished; appropriate documentation is included.
