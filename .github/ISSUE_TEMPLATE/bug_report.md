@@ -1,3 +1,9 @@
+---
+name: Bug report
+about: Report a bug to help us improve
+title: 'Bug report'
+labels: "Type: Bug"
+---
 
 <?
 NOTE: Is your issue a bug or a usage question?
