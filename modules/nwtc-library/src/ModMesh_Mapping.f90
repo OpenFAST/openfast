@@ -36,15 +36,15 @@ MODULE ModMesh_Mapping
 
    !bjj: these types require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90 (though they are auto_generated with that code):
 
-      !> Type that describes characteristics of the mapping between two meshes
+   !> Type that describes characteristics of the mapping between two meshes
    TYPE, PUBLIC :: MapType
-      INTEGER(IntKi) :: OtherMesh_Element    !< Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src
-      REAL(R8Ki)     :: distance             !< magnitude of couple_arm
-      REAL(R8Ki)     :: couple_arm(3)        !< Vector between a point and node 1 of an element (p_ODR - p_OSR)
-      REAL(R8Ki)     :: shape_fn(2)          !< shape functions: 1-D element-level location [0,1] based on closest-line projection of point
+      INTEGER(IntKi) :: OtherMesh_Element    !< Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src [-]
+      REAL(R8Ki)     :: distance             !< magnitude of couple_arm [m]
+      REAL(R8Ki)     :: couple_arm(3)        !< Vector between a point and node 1 of an element (p_ODR - p_OSR) [m]
+      REAL(R8Ki)     :: shape_fn(2)          !< shape functions: 1-D element-level location [0,1] based on closest-line projection of point [-]
    END TYPE MapType
 
-      !> data structures (for linearization) containing jacobians of mapping between fields on different meshes
+   !> data structures (for linearization) containing jacobians of mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapLinearizationType
          ! values for motions:
       REAL(R8Ki),     ALLOCATABLE :: mi(:,:)           !< block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh) [-]
@@ -62,21 +62,21 @@ MODULE ModMesh_Mapping
    END TYPE MeshMapLinearizationType
    
    
-      !> data structures to determine full mapping between fields on different meshes
+   !> data structures to determine full mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapType
-      TYPE(MapType),  ALLOCATABLE :: MapLoads(:)               !< mapping data structure for loads on the mesh
+      TYPE(MapType),  ALLOCATABLE :: MapLoads(:)               !< mapping data structure for loads on the mesh [-]
       TYPE(MapType),  ALLOCATABLE :: MapMotions(:)             !< mapping data structure for motions and/or scalars on the mesh [-]
-      TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)          !< for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination
-      TYPE(MeshType)              :: Augmented_Ln2_Src         !< the augmented source mesh needed for some mapping types
-      TYPE(MeshType)              :: Lumped_Points_Src         !< a lumped mesh needed for some mapping types, stored here for efficiency
+      TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)          !< for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination [-]
+      TYPE(MeshType)              :: Augmented_Ln2_Src         !< the augmented source mesh needed for some mapping types [-]
+      TYPE(MeshType)              :: Lumped_Points_Src         !< a lumped mesh needed for some mapping types, stored here for efficiency [-]
 #ifdef MESH_DEBUG     
       TYPE(MeshType)              :: Lumped_Points_Dest        
 #endif
-      INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorization of LoadLn2_A_Mat
-      REAL(R8Ki),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency)
-      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The n-by-n (n=3xNNodes) matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
-      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
-      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
+      INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorization of LoadLn2_A_Mat [-]
+      REAL(R8Ki),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency) [m]
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The n-by-n (n=3xNNodes) matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping [-]
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element) [-]
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element) [-]
       
       TYPE(MeshMapLinearizationType) :: dM                     !< type that contains information for linearization matrices, partial M partial u (or y)                  
    END TYPE MeshMapType

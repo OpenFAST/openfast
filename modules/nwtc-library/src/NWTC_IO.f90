@@ -6221,6 +6221,7 @@ END SUBROUTINE CheckR16Var
 
          ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
 !         RETURN ! finish reading the file instead of returning first
 
       ELSE
@@ -6228,6 +6229,7 @@ END SUBROUTINE CheckR16Var
          CALL GetWords ( OutLine, CharAry((AryLenRead - NumWords + 1):AryLenRead), NumWords )
 
       END IF
+
 
    END DO
 
@@ -6318,6 +6320,7 @@ END SUBROUTINE CheckR16Var
 
          ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
 !        RETURN ! finish processing the OutList variable before returning
 
       ELSE
