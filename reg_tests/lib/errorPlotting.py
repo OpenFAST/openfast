@@ -66,6 +66,12 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     p2.grid.grid_line_alpha = 0
     p2.xaxis.axis_label = 'Time (s)'
     p2.line(xseries, abs(y2series - y1series), color='blue')
+
+    atol = 1e-4
+    rtol = 1e-6
+    passfail_line = atol + rtol * abs(y2series)
+    p2.line(xseries, passfail_line, color='red')
+
     p2.add_tools(HoverTool(tooltips=[('Time','@x'), ('Error', '@y')], mode='vline'))
 
     grid = gridplot([[p1, p2]], plot_width=650, plot_height=375, sizing_mode="scale_both")
@@ -117,7 +123,7 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
         rtl.exitWithError("Error: Invalid channel name--{}".format(e))
 
     title1 = attribute + " (" + info1["attribute_units"][channel] + ")"
-    title2 = "Max norm"
+    title2 = "ABS(Local - Baseline)"
     xlabel = 'Time (s)'
 
     timevec = dict1[:, 0]
