@@ -21,6 +21,25 @@ HydroDyn integrates with OpenFAST through the FAST modularization framework.
 HydroDyn can also be driven as a standalone code to compute hydrodynamic
 loading uncoupled from OpenFAST.
 
+In addition to this documentation, the following materials including presentation slides,
+development plans, and publications are made available for reference.
+Note that some of these may be outdated and pertain to older versions
+of HydroDyn.
+
+- :download:`Computation of Wave Loads Under Multidirectional Sea States for Floating Offshore Wind Turbines <https://www.nrel.gov/docs/fy14osti/61161.pdf>`
+- :download:`Effects of Second-Order Hydrodynamic Forces on Floating Offshore Wind Turbines <https://www.nrel.gov/docs/fy14osti/60966.pdf>`
+- :download:`State-Space Realization of the Wave-Radiation Force within FAST <https://www.nrel.gov/docs/fy13osti/58099.pdf>`
+- :download:`Dynamics of Offshore Floating Wind Turbines—Model Development and Verification <https://dx.doi.org/10.1002/we.347>`
+- :download:`Dynamics Modeling and Loads Analysis of an Offshore Floating Wind Turbine <https://www.nrel.gov/docs/fy08osti/41958.pdf>`
+- :download:`Draft Implementation Plan - Changes in HydroDyn to Support Time-Varying Buoyancy Loads on Morison Members <../../../OtherSupporting/HydroDyn/HydroDyn_Plan_TCF_Morison.docx>`
+- :download:`Implementation Plan - Modifications to State-Space Modules in HydroDyn to Support Multiple WAMIT Bodies <../../../OtherSupporting/HydroDyn/HydroDyn_Plan_TCF_NBodyStateSpace.docx>`
+- :download:`Implementation Plan (Revised) - Changes in HydroDyn to Support Multiple WAMIT Bodies <../../../OtherSupporting/HydroDyn/HydroDyn_Plan_TCF_NBody.docx>`
+- :download:`Implementation Plan - 2nd-order Forces Within HydroDyn <../../../OtherSupporting/HydroDyn/HydroDyn_2ndOrderForces_Plan.pdf>`
+- :download:`Implementation Plan - 2nd-order Wave Kinematics Within HydroDyn <../../../OtherSupporting/HydroDyn/WAVE2_document.pdf>`
+- :download:`Plan for Adding Wave Stretching to HydroDyn <../../../OtherSupporting/HydroDyn/HydroDyn_WaveStretching_Plan.docx>`
+- :download:`Breaking Wave Modeling Approach for FAST <../../../OtherSupporting/HydroDyn/Breaking_Wave_Modeling_Approach_for_FAST.docx>`
+
+
 HydroDyn allows for multiple approaches for calculating the hydrodynamic
 loads on a structure:
 

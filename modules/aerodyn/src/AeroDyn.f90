@@ -276,7 +276,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (Failed()) return;
       NumBlades(iR)          = InitInp%rotors(iR)%NumBlades
       p%rotors(iR)%NumBlades = InitInp%rotors(iR)%NumBlades
-      if (size(InitInp%rotors)>1) then
+      if (nRotors > 1) then
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD.R'//trim(num2lstr(iR))
       else
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD'
@@ -325,6 +325,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          
       
       ! set the rest of the parameters
+   p%SkewMod = InputFileData%SkewMod
    do iR = 1, nRotors
       p%rotors(iR)%AeroProjMod = InitInp%rotors(iR)%AeroProjMod
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
@@ -517,7 +518,7 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
       do IR=1, size(p%rotors)
          call BEMT_ReInit(p%rotors(iR)%BEMT,x%rotors(iR)%BEMT,xd%rotors(iR)%BEMT,z%rotors(iR)%BEMT,OtherState%rotors(iR)%BEMT,m%rotors(iR)%BEMT,ErrStat,ErrMsg)
 
-         if (p%rotors(iR)%BEMT%UA_Flag) then
+         if (p%UA_Flag) then
             call UA_ReInit( p%rotors(iR)%BEMT%UA, x%rotors(iR)%BEMT%UA, xd%rotors(iR)%BEMT%UA, OtherState%rotors(iR)%BEMT%UA, m%rotors(iR)%BEMT%UA, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          end if
@@ -1032,7 +1033,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
             
          ! set node initial position/orientation
       position = InitInp%NacellePosition
-      position(1:2) = 0
+
       call MeshPositionNode(u%NacelleMotion, 1, position, errStat2, errMsg2, orient=InitInp%NacelleOrientation)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
@@ -1070,6 +1071,8 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
+   p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   
    p_AD%DT            = InputFileData%DTAero
    p_AD%WakeMod       = InputFileData%WakeMod
    p%TwrPotent        = InputFileData%TwrPotent
@@ -1078,7 +1081,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%CavitCheck       = InputFileData%CavitCheck
    
 
-   
    if (InitInp%Linearize .and. InputFileData%WakeMod == WakeMod_BEMT) then
       p%FrozenWake = InputFileData%FrozenWake
    else
@@ -1159,7 +1161,8 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-      integer :: iW
+      
+      integer                                      :: iW
 
 
 
@@ -1173,7 +1176,7 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! End the FVW submodule
       if (p%WakeMod == WakeMod_FVW ) then
 
-         if ( m%FVW%UA_Flag ) then
+         if ( p%UA_Flag ) then
             do iW=1,p%FVW%nWings
                call UA_End(m%FVW%W(iW)%p_UA)
             enddo
@@ -1405,7 +1408,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
             ! Now we need to populate the blade node outputs here
          if (p%rotors(iR)%NumBlades > 0) then
-            call Calc_WriteAllBldNdOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, y%rotors(iR), OtherState%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+            call Calc_WriteAllBldNdOutput( p%rotors(iR), p, u%rotors(iR), m%rotors(iR), m, x%rotors(iR), y%rotors(iR), OtherState%rotors(iR), indx, iR, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          endif
       enddo
@@ -1658,7 +1661,7 @@ subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
    ErrMsg  = ""
    
    ! Disturbed inflow on blade (if tower shadow present)
-   call SetDisturbedInflow(p, u, m, errStat, errMsg)
+   call SetDisturbedInflow(p, p_AD, u, m, errStat, errMsg)
 
    if (p_AD%WakeMod /= WakeMod_FVW) then
          ! This needs to extract the inputs from the AD data types (mesh) and massage them for the BEMT module
@@ -1667,14 +1670,18 @@ subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
    endif
 end subroutine SetInputs
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Disturbed inflow on the blade if tower shadow or tower influence are enabled
-subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
+subroutine SetDisturbedInflow(p, p_AD, u, m, errStat, errMsg)
    type(RotParameterType),       intent(in   )  :: p                      !< AD parameters
+   type(AD_ParameterType),       intent(in   )  :: p_AD                   !< AD parameters
    type(RotInputType),           intent(in   )  :: u                      !< AD Inputs at Time
    type(RotMiscVarType),         intent(inout)  :: m                      !< Misc/optimization variables
    integer(IntKi),               intent(  out)  :: errStat                !< Error status of the operation
    character(*),                 intent(  out)  :: errMsg                 !< Error message if ErrStat /= ErrID_None
    ! local variables             
+   real(R8Ki)                                   :: x_hat_disk(3)
+   integer(intKi)                               :: j,k
    integer(intKi)                               :: errStat2
    character(ErrMsgLen)                         :: errMsg2
    character(*), parameter                      :: RoutineName = 'SetDisturbedInflow'
@@ -1686,6 +1693,16 @@ subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
    else
       m%DisturbedInflow = u%InflowOnBlade
    end if
+
+   if (p_AD%SkewMod == SkewMod_Orthogonal) then
+      x_hat_disk = u%HubMotion%Orientation(1,:,1)
+  
+      do k=1,p%NumBlades
+         do j=1,p%NumBlNds         
+            m%DisturbedInflow(:,j,k) = dot_product( m%DisturbedInflow(:,j,k), x_hat_disk ) * x_hat_disk
+         enddo
+      enddo
+   endif
 
 end subroutine SetDisturbedInflow
 
@@ -1790,8 +1807,10 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
   
    m%BEMT_u(indx)%UserProp = u%UserProp
    
-   ! ................ TSR .....................
    
+   !..........................
+   ! TSR
+   !..........................
    if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
       m%BEMT_u(indx)%TSR = 0.0_ReKi
    else
@@ -2008,7 +2027,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
       endif
       do iR =1, size(p%rotors)
          ! Disturbed inflow for UA on Lifting line Mesh Points
-         call SetDisturbedInflow(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), errStat, errMsg)
+         call SetDisturbedInflow(p%rotors(iR), p, u(tIndx)%rotors(iR), m%rotors(iR), errStat, errMsg)
          do k=1,p%rotors(iR)%NumBlades
             iW=p%FVW%Bld2Wings(iR,k)
             m%FVW_u(tIndx)%W(iW)%Vwnd_LL(1:3,:) = m%rotors(iR)%DisturbedInflow(1:3,:,k)
@@ -2171,7 +2190,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Cd_dyn    = AFI_interp%Cd
             Cm_dyn    = AFI_interp%Cm
             
-            if (m%FVW%UA_Flag) then
+            if (p%UA_Flag) then
                u_UA => m%FVW%W(iW)%u_UA(j,InputIndex) ! Alias
                ! ....... compute inputs to UA ...........
                u_UA%alpha    = alpha
@@ -2228,7 +2247,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
       end do !k=blades
    end do ! iR rotors
 
-   if ( m%FVW%UA_Flag ) then
+   if ( p%UA_Flag ) then
       ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
       do iW=1,p%FVW%nWings
          call UA_WriteOutputToFile(t, m%FVW%W(iW)%p_UA, m%FVW%W(iW)%y_UA)
@@ -2328,7 +2347,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
          call SetErrStat( ErrID_Fatal, 'IndToler must be greater than 0.', ErrStat, ErrMsg, RoutineName )
    
-      if ( InputFileData%SkewMod /= SkewMod_Uncoupled .and. InputFileData%SkewMod /= SkewMod_PittPeters) &  !  .and. InputFileData%SkewMod /= SkewMod_Coupled )
+      if ( InputFileData%SkewMod /= SkewMod_Orthogonal .and. InputFileData%SkewMod /= SkewMod_Uncoupled .and. InputFileData%SkewMod /= SkewMod_PittPeters) &  !  .and. InputFileData%SkewMod /= SkewMod_Coupled )
            call SetErrStat( ErrID_Fatal, 'SkewMod must be 1, or 2.  Option 3 will be implemented in a future version.', ErrStat, ErrMsg, RoutineName )      
       
    end if !BEMT/DBEMT checks
@@ -2772,7 +2791,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
      end do
   end do
    
-   InitInp%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   InitInp%UA_Flag       = p_AD%UA_Flag
    InitInp%UAMod         = InputFileData%UAMod
    InitInp%Flookup       = InputFileData%Flookup
    InitInp%a_s           = InputFileData%SpdSound
@@ -2935,7 +2954,7 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
       enddo ! iB, blades
 
       ! Unsteady Aero Data
-      InitInp%UA_Flag    = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+      InitInp%UA_Flag    = p%UA_Flag
       InitInp%UAMod      = InputFileData%UAMod
       InitInp%Flookup    = InputFileData%Flookup
       InitInp%a_s        = InputFileData%SpdSound

@@ -31,6 +31,7 @@ False           Echo         - Echo input parameters to "<rootname>.ech"?
           -7    Overhang(1)     - Overhang (m)
           -6    ShftTilt(1)     - Shaft tilt (deg)
           -4    Precone(1)      - Blade precone (deg)
+     3.09343    Twr2Shft(1)     - Vertical distance from the tower-top to the rotor shaft (m)
 ----- Turbine(1) Motion [used only when AnalysisType=1] ---------------------------------
 1               BaseMotionType(1)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
 1               DegreeOfFreedom(1)     - {1:xg, 2:yg, 3:zg, 4:theta_xg, 5:theta_yg, 6:theta_zg} [used only when BaseMotionType=1] (flag)

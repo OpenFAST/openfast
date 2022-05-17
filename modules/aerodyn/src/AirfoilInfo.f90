@@ -37,7 +37,7 @@ MODULE AirfoilInfo
 
    TYPE(ProgDesc), PARAMETER                    :: AFI_Ver = ProgDesc( 'AirfoilInfo', '', '')    ! The name, version, and date of AirfoilInfo.
 
-integer, parameter                           :: MaxNumAFCoeffs = 7 !cl,cd,cm,cpMin, UA:f_st, FullySeparate, FullyAttached
+   integer, parameter                           :: MaxNumAFCoeffs = 7 !cl,cd,cm,cpMin, UA:f_st, FullySeparate, FullyAttached
 
 CONTAINS
 
@@ -385,7 +385,7 @@ CONTAINS
       TYPE (FileInfoType)                     :: FileInfo                      ! The derived type for holding the file information.
       INTEGER(IntKi)                          :: NumCoefsTab                   ! The number of aerodynamic coefficients to be stored.
 
-      INTEGER(IntKi)                          :: DefaultInterpOrd              ! value of default interp order
+      INTEGER(IntKi), parameter               :: DefaultInterpOrd = 1          ! value of default interp order
       INTEGER(IntKi)                          :: ErrStat2                      ! Error status local to this routine.
       CHARACTER(ErrMsgLen)                    :: ErrMsg2
       CHARACTER(*), PARAMETER                 :: RoutineName = 'ReadAFfile'
@@ -397,7 +397,7 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
       defaultStr = ""
-
+      
       ! Getting parent folder of airfoils data (e.g. "Arifoils/")
       CALL GetPath( InitInp%FileName, PriPath )
 
@@ -417,9 +417,6 @@ CONTAINS
 
       CurLine = 1
       
-      ! Default to linear interpolation
-   DefaultInterpOrd = 1      
-      
       CALL ParseVarWDefault ( FileInfo, CurLine, 'InterpOrd', p%InterpOrd, DefaultInterpOrd, ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) THEN
@@ -434,8 +431,8 @@ CONTAINS
             !call WrScr('Skipping. RelThickness not found on line 7 of Profile file: '//trim(InitInp%FileName) )
          else
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         endif
-
+         end if
+         
          
          ! NonDimArea is currently unused by AirfoilInfo or codes using AirfoilInfo.  GJH 9/13/2017
       CALL ParseVar ( FileInfo, CurLine, 'NonDimArea', p%NonDimArea, ErrStat2, ErrMsg2, UnEc )
@@ -480,15 +477,12 @@ CONTAINS
          ENDDO ! Row
 
       ENDIF
-      
+
       ! Reading Boundary layer file  for aeroacoustics
       CALL ParseVar ( FileInfo, CurLine, 'BL_file' , p%BL_file , ErrStat2, ErrMsg2, UnEc )
          IF (ErrStat2 >= AbortErrLev) p%BL_file = "NOT_SET_IN_AIRFOIL_FILE"
          !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( p%BL_file ) )  p%BL_file=trim(PriPath)//trim(p%BL_file)
-         
-    ! How many columns do we need to read in the input and how many total coefficients will be used?
-
 
          ! How many columns do we need to read in the input and how many total coefficients will be used?
 
@@ -859,8 +853,10 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       REAL(ReKi)                              :: slope
       REAL(ReKi) , PARAMETER                  :: CnSlopeThreshold = 0.90;
       REAL(ReKi) , PARAMETER                  :: fAtCriticalCn    = 0.7;
+      REAL(ReKi)                              :: LimitAlphaRange
 
       
+      LimitAlphaRange = 20.0_ReKi * D2R ! range we're limiting our equations to (in radians)
       
 
       col_fs = ColUAf + 1
@@ -905,7 +901,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          ! Calculate based on airfoil polar:
          !-------------------------------------
             ! if Cd is constant, does this cause issues???
-         iCdMin = minloc(p%Coefs(:,ColCd),DIM=1)
+         iCdMin = minloc(p%Coefs(:,ColCd),DIM=1, MASK=abs(p%alpha)<=LimitAlphaRange)
          if (CalcDefaults%Cd0) p%UA_BL%Cd0 = p%Coefs(iCdMin,ColCd)
          
          alphaAtCdMin = p%alpha(iCdMin)
@@ -929,7 +925,8 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          CnSlopeAtCdMin = InterpStp( alphaAtCdMin, alpha_, CnSlope_, iLow, p%NumAlf-1 )
          
             !find alphaUpper (using smoothed Cn values):
-         iHigh = minloc( abs( alpha_ - 20.0_ReKi*D2R ),DIM=1 ) ! we can limit this to ~20 degrees
+         iHigh = minloc( alpha_ ,DIM=1, MASK=alpha_ >= LimitAlphaRange ) ! we can limit this to ~20 degrees
+         iHigh2 = iHigh
          if (CalcDefaults%alphaUpper) then
             
             if (iHigh<iCdMin) iHigh = p%NumAlf-1 !this should be an error?
@@ -954,19 +951,20 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          end if
          
             !find alphaLower
-         iLow = minloc( abs( alpha_ + 20.0_ReKi*D2R ), DIM=1 ) ! we can limit this to ~-20 degrees
+         iLow = maxloc( alpha_ , DIM=1, MASK=alpha_ <= -LimitAlphaRange) ! we can limit this to ~-20 degrees
          if (CalcDefaults%alphaLower) then
-            
             if (iLow>iCdMin) iLow = 1
 
             maxCnSlope = CnSlopeAtCdMin
-            iLow2 = min(iCdMin, p%NumAlf-1)
+            iLow2 = min(iHigh2-1, iCdMin-1, p%NumAlf-1)
 
-            do Row = min(iCdMin, p%NumAlf-1) ,iLow,-1
+            do Row = min(iHigh2-1, iCdMin-1, p%NumAlf-1) ,iLow,-1
                iLow2 = Row
                if (CnSlope_(Row) > maxCnSlope) then
                   maxCnSlope = CnSlope_(Row);
                end if
+
+
                if ( CnSlope_(Row) < CnSlopeThreshold*maxCnSlope ) exit
             end do
             
@@ -1020,7 +1018,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                p%Coefs(:,col_fa) = 0.0_ReKi
                call ComputeUASeparationFunction_zero(p, ColUAf, p%Coefs(:,ColCl)) ! just to initialize these values... UA will turn off without using them
             else
-         
+            
                do Row=1,p%NumAlf
             
                   if (EqualRealNos( p%alpha(Row), p%UA_BL%alpha0)) then
@@ -1030,7 +1028,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
             
                      cl_ratio = p%Coefs(Row,ColCl) / ( p%UA_BL%c_lalpha*(p%alpha(Row) - p%UA_BL%alpha0))
                      cl_ratio = max(0.0_ReKi, cl_ratio)
-
+            
                      f_st = ( 2.0_ReKi * sqrt(cl_ratio) - 1.0_ReKi )**2
                   
                      if (f_st < 1.0_ReKi) then 
@@ -1054,7 +1052,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                ! Compute variables to help x3 state with +/-180-degree wrap-around issues
                ! and make sure that the separation function is monotonic before iLow and after iHigh:
                call ComputeUASeparationFunction_zero(p, ColUAf, p%Coefs(:,ColCl)) ! this was comparing with alpha0, but now we compaer with alphaUpper and alphaLower
-
+            
             
                ! Ensuring everything is in harmony 
                do Row=1,p%NumAlf
@@ -1074,7 +1072,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                
                
             end if ! c_lalpha == 0
-         
+            
          else
          
             call ComputeUASeparationFunction(p, ColUAf, cn)
@@ -1203,11 +1201,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          iLow = p%NumAlf - 1 ! we can't have IndLower > IndUpper, so fix it here.
       end if
          ! figure out which side of iLow to compute the slope later:
-      if (p%UA_BL%alphaLower < p%alpha(iLow) .and. iLow > 1) then
-         iLow_2= iLow - 1
-      else
-         iLow_2 = iLow + 1
-      end if
+      iLow_2 = iLow + 1
       iLow_1 = iLow
       
          ! get value
@@ -1228,13 +1222,9 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
          end if
       end if
          ! figure out which side of iHigh to compute the slope later:
-      if (p%UA_BL%alphaUpper < p%alpha(iHigh) .or. iHigh == p%NumAlf) then
-         iHigh_2= iHigh - 1
-      else
-         iHigh_2 = iHigh + 1
-      end if
+      iHigh_2= iHigh - 1
       iHigh_1 = iHigh
-
+      
       p%UA_BL%c_alphaUpper = InterpStp( p%UA_BL%alphaUpper, p%alpha, cn_cl, iHigh, p%NumAlf )
       
       !------------------------------------------------
@@ -1610,6 +1600,10 @@ subroutine AFI_ComputeAirfoilCoefs( AOA, Re, UserProp, p, AFI_interp, errStat, e
    else !if ( p%AFTabMod == AFITable_2User ) then
       call AFI_ComputeAirfoilCoefs2D( AOA, UserProp, p, AFI_interp, errStat, errMsg )
    end if
+   
+   ! put some limits on the separation function:
+   AFI_interp%f_st = min( max( AFI_interp%f_st, 0.0_ReKi), 1.0_ReKi)  ! separation function
+
    
 end subroutine AFI_ComputeAirfoilCoefs
 
