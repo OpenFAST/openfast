@@ -18,7 +18,7 @@
     This library provides tools for comparing a test solution to a baseline solution
     for any structured output file generated within the OpenFAST framework.
 """
-import sys, os
+import sys
 import numpy as np
 from numpy import linalg as LA
 from fast_io import load_output
@@ -72,10 +72,14 @@ def calculateNorms(test_data, baseline_data):
     relative_norm = calculate_max_norm_over_range(test_data, baseline_data)
     max_norm = calculate_max_norm(test_data, baseline_data)
     relative_l2_norm = calculate_relative_norm(test_data, baseline_data)
-    results = np.hstack((
-        relative_norm.reshape(-1, 1), relative_l2_norm.reshape(-1, 1),
-        max_norm.reshape(-1, 1)
-    ))
+    results = np.stack(
+        (
+            relative_norm,
+            relative_l2_norm,
+            max_norm
+        ),
+        axis=1
+    )
     return results
     
 if __name__=="__main__":
@@ -84,22 +88,18 @@ if __name__=="__main__":
 
     testSolution = sys.argv[1]
     baselineSolution = sys.argv[2]
-    tolerance = sys.argv[3]
-
-    try:
-        tolerance = float(tolerance)
-    except ValueError:
-        rtl.exitWithError("Error: invalid tolerance given, {}".format(tolerance))
+    tolerance = float(sys.argv[3])
 
     rtl.validateFileOrExit(testSolution)
     rtl.validateFileOrExit(baselineSolution)
 
     testData, testInfo, testPack = readFASTOut(testSolution)
-    baselineData, baselineInfo, basePack = readFASTOut(baselineSolution)
-    
-    normalizedNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
-    if passRegressionTest(normalizedNorm, tolerance):
-        sys.exit(0)
-    else:
-        dict1, info1, pack1 = readFASTOut(testSolution)
-        sys.exit(1)
+    baselineData, baselineInfo, _ = readFASTOut(baselineSolution)
+    relative_norm, normalized_norm, max_norm = calculateNorms(testData, baselineData)
+    print(relative_norm)
+    print(normalized_norm)
+    print(max_norm)
+
+    # if not passRegressionTest(normalizedNorm, tolerance):
+    #     dict1, info1, pack1 = readFASTOut(testSolution)
+    #     sys.exit(1)

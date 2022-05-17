@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.dirname(os.path.abspath(__file__))
+basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
@@ -158,7 +158,7 @@ baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
-testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
+testData, testInfo, _ = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 performance = pass_fail.calculateNorms(testData, baselineData)
 normalizedNorm = performance[:, 1]
