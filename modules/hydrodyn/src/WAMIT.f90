@@ -225,7 +225,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! Copy Output Init data from Waves Module Init call
          
       p%NStepWave    = InitInp%NStepWave
-      p%NumOuts      = InitInp%NumOuts
       p%ExctnMod     = InitInp%ExctnMod
       p%ExctnDisp    = InitInp%ExctnDisp
       p%NBodyMod     = InitInp%NBodyMod

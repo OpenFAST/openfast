@@ -8886,21 +8886,18 @@ END DO
 IF ( GetMorisonChannels > 0 ) THEN
    
    count = 1
-   ! Test that num channels does not exceed max possible channels due to size of OutList
-   !ALLOCATE ( OutList(GetWAMITChannels) , STAT=ErrStat )
-   IF ( ErrStat /= 0 )  THEN
-      ErrMsg  = ' Error allocating memory for the OutList array in the GetMorisonChannels function.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
    
    DO I = 1,NUserOutputs
       IF ( newFoundMask(I) ) THEN
-         OutList(count) = UserOutputs(I)
+         if (count <= size(OutList)) OutList(count) = UserOutputs(I)
          count = count + 1
       END IF
-      
    END DO
+   
+   if (count > size(OutList)) then
+      ErrMsg  = 'Number of requested Morison outputs ('//trim(num2lstr(count))//')exceeds the maximum allowed ('//trim(num2lstr(size(OutList)))//').'
+      ErrStat = ErrID_Severe
+   end if
    
 END IF
 

@@ -42,7 +42,6 @@ typedef     ^                 ^                 LOGICAL              WaveMultiDi
 typedef     ^                 ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction assigned to each frequency"    (degrees)
 typedef     ^                 ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction from Waves module"    -
 typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction from Waves module"    -
-#typedef     ^                 ^                 SiKi                 WaveTime          {*}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here." -
 
@@ -97,7 +96,6 @@ typedef     ^                 ^                 ReKi                 F_Waves2   
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-#typedef     ^                 ParameterType     SiKi                 WaveTime          {*}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 typedef     ^                 ParameterType    IntKi                NStepWave         -        -        -        "Number of wave time steps"                           -
 typedef     ^                 ^                 DbKi                 DT                -        -        -        ""                                                    -
 typedef     ^                 ^                 INTEGER              NBody             -        -        -        "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -

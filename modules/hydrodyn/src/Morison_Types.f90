@@ -319,7 +319,7 @@ IMPLICIT NONE
     TYPE(Morison_MOutput) , DIMENSION(:), ALLOCATABLE  :: MOutLst      !<  [-]
     INTEGER(IntKi)  :: NJOutputs      !<  [-]
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
-    CHARACTER(ChanLen) , DIMENSION(1:4032)  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry() [-]
+    CHARACTER(ChanLen) , DIMENSION(1:4626)  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: ValidOutList      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
     CHARACTER(1024)  :: OutRootName      !<  [-]

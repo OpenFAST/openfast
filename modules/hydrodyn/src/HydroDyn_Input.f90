@@ -2501,12 +2501,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          RETURN
       END IF
       foundMask = .FALSE.
-         ! Extract Waves2 list
-!      InputFileData%Waves2%NumOuts  = GetWaves2Channels   ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   
-!         ! Extract WAMIT2 list
-!      InputFileData%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!
+      
          ! Extract Morison list
          !foundMask = .FALSE.
       InputFileData%Morison%NumOuts = GetMorisonChannels  ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%Morison%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2553,13 +2548,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    ! Populate data in sub-types from parent or other module types
    !----------------------------------------------------------
 
-     
-      
-
       ! WAMIT
       InputFileData%WAMIT%WtrDens      = InputFileData%Morison%WtrDens
       InputFileData%WAMIT%WaveMod      = InitInp%WaveMod
-      InputFileData%WAMIT%OutAll       = InputFileData%OutAll
       InputFileData%WAMIT%HasWAMIT     = InputFileData%PotMod == 1
       ! WAMIT2
       InputFileData%WAMIT2%WtrDens     = InputFileData%Morison%WtrDens
