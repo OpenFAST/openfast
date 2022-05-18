@@ -624,10 +624,13 @@ subroutine HD_DvrCleanup()
       
       call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2, DEALLOCATEpointers=.false. )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      
       call HydroDyn_DestroyDiscState( xd_new, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      
       call HydroDyn_DestroyContState( x_new, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      
       call HydroDyn_End( u(1), p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       
@@ -642,9 +645,10 @@ subroutine HD_DvrCleanup()
             ErrMsg = 'at simulation time '//trim(Num2LStr(time))//' of '//trim(Num2LStr(InitInData%TMax))//' seconds'
          end if
                     
-         
-         CALL ProgAbort( 'HydroDyn encountered an error '//trim(errMsg)//'.'//NewLine//' Simulation error level: '&
+         if (ErrStat >= AbortErrLev) then
+            CALL ProgAbort( 'HydroDyn encountered an error '//trim(errMsg)//'.'//NewLine//' Simulation error level: '&
                          //trim(GetErrStr(errStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+         end if
       end if
       
      ! Print *, time
