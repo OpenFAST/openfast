@@ -51,15 +51,6 @@ MODULE Waves2
       ! ..... Public Subroutines ...................................................................................................
 
    PUBLIC :: Waves2_Init                           !< Initialization routine
-   PUBLIC :: Waves2_End                            !< Ending routine (includes clean up)
-
-   PUBLIC :: Waves2_UpdateStates                   !< Loose coupling routine for solving for constraint states, integrating
-                                                   !!   continuous states, and updating discrete states
-   PUBLIC :: Waves2_CalcOutput                     !< Routine for computing outputs
-
-   PUBLIC :: Waves2_CalcConstrStateResidual        !< Tight coupling routine for returning the constraint state residual
-   PUBLIC :: Waves2_CalcContStateDeriv             !< Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: Waves2_UpdateDiscState                !< Tight coupling routine for updating discrete states
 
 
 CONTAINS
@@ -67,20 +58,11 @@ CONTAINS
 !> @brief
 !!    This routine is called at the start of the simulation to perform initialization steps.
 !!    The parameters that are set here are not changed during the simulation.
-!!    The initial states and initial guess for the input are defined.
-SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(Waves2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
-      TYPE(Waves2_InputType),             INTENT(  OUT)  :: u                    !< An initial guess for the input; input mesh must be defined
       TYPE(Waves2_ParameterType),         INTENT(  OUT)  :: p                    !< Parameters
-      TYPE(Waves2_ContinuousStateType),   INTENT(  OUT)  :: x                    !< Initial continuous states
-      TYPE(Waves2_DiscreteStateType),     INTENT(  OUT)  :: xd                   !< Initial discrete states
-      TYPE(Waves2_ConstraintStateType),   INTENT(  OUT)  :: z                    !< Initial guess of the constraint states
-      TYPE(Waves2_OtherStateType),        INTENT(  OUT)  :: OtherState           !< Initial other states
-      TYPE(Waves2_OutputType),            INTENT(  OUT)  :: y                    !< Initial system outputs (outputs are not calculated; only the output mesh is initialized)
-      TYPE(Waves2_MiscVarType),           INTENT(  OUT)  :: misc                 !< Misc/optimization variables
-      REAL(DbKi),                         INTENT(INOUT)  :: Interval             !< Coupling interval in seconds: don't change it from the glue code provided value.
       TYPE(Waves2_InitOutputType),        INTENT(  OUT)  :: InitOut              !< Output for initialization routine
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
@@ -213,10 +195,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
       ErrStatTmp  = ErrID_None
       ErrMsg      = ""
       ErrMsgTmp   = ""
-      y%DummyOutput = 0  ! initialize dummy variable to make the compiler warnings go away
 
-         ! Initialize the data storage
-      misc%LastIndWave = 1_IntKi
 
          ! Initialize the NWTC Subroutine Library and display the information about this module.
 
@@ -308,9 +287,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
       p%NStepWave2   = InitInp%NStepWave2
 
 
-         ! Time related information
-
-      p%DT                    =  Interval                   ! Timestep from calling program
 
 
          ! Allocate array for the WaveTime information -- array of times to generate output for.  NOTE: can't use MOVE_ALLOC since InitInp is intent in.
@@ -1345,14 +1321,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
          IF (ALLOCATED(TmpFreqSeries))    DEALLOCATE(TmpFreqSeries,     STAT=ErrStatTmp)
          IF (ALLOCATED(TmpFreqSeries2))   DEALLOCATE(TmpFreqSeries2,    STAT=ErrStatTmp)
 
-
-         ! initialize dummy variables for the framework, so that compilers don't complain that the INTENT(OUT) variables have not been set:
-         u%DummyInput               = 0.0_SiKi
-         x%DummyContState           = 0.0_SiKi
-         xd%DummyDiscState          = 0.0_SiKi
-         z%DummyConstrState         = 0.0_SiKi
-         OtherState%DummyOtherState = 0_IntKi
-
          RETURN
 
 
@@ -2110,254 +2078,6 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
 
 END SUBROUTINE Waves2_Init
-
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.  The purpose of this routine is to destroy any data that is leftover.  If
-!! we don't do this, we may leave memory tied up after the simulation ends.
-!! To destroy the data, we call several routines that are generated by the FAST registry, so any issues with the destroy routines
-!! should be addressed by the registry.exe which generates the Waves2_Types.f90 file.
-!!
-SUBROUTINE Waves2_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      TYPE(Waves2_InputType),             INTENT(INOUT)  :: u              !< System inputs
-      TYPE(Waves2_ParameterType),         INTENT(INOUT)  :: p              !< Parameters
-      TYPE(Waves2_ContinuousStateType),   INTENT(INOUT)  :: x              !< Continuous states
-      TYPE(Waves2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Discrete states
-      TYPE(Waves2_ConstraintStateType),   INTENT(INOUT)  :: z              !< Constraint states
-      TYPE(Waves2_OtherStateType),        INTENT(INOUT)  :: OtherState     !< Other states
-      TYPE(Waves2_OutputType),            INTENT(INOUT)  :: y              !< System outputs
-      TYPE(Waves2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-         !> Place any last minute operations or calculations here.  For Waves2, most calculations all performed
-         !! during the initialization, so there are no final calculations that need to be performed.
-
-
-         ! Close files here.  The Waves2 module does not open any files, so there should be nothing to close. 
-
-
-         !> Destroy the input data:
-
-      CALL Waves2_DestroyInput( u, ErrStat, ErrMsg )
-
-
-         !> Destroy the parameter data:
-
-      CALL Waves2_DestroyParam( p, ErrStat, ErrMsg )
-
-
-         !> Destroy the state data:
-
-      CALL Waves2_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL Waves2_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL Waves2_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL Waves2_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-
-
-         !> Destroy the output data:
-
-      CALL Waves2_DestroyOutput( y, ErrStat, ErrMsg )
-
-
-END SUBROUTINE Waves2_End
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-!> Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-SUBROUTINE Waves2_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: t              !< Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n              !< Current step of the simulation: t = n*Interval
-      TYPE(Waves2_InputType),             INTENT(IN   )  :: Inputs(:)      !< Inputs at InputTimes
-      REAL(DbKi),                         INTENT(IN   )  :: InputTimes(:)  !< Times in seconds associated with Inputs
-      TYPE(Waves2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(Waves2_ContinuousStateType),   INTENT(INOUT)  :: x              !< Input: Continuous states at t;
-                                                                           !!Output: Continuous states at t + Interval
-      TYPE(Waves2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Input: Discrete states at t;
-                                                                           !!Output: Discrete states at t + Interval
-      TYPE(Waves2_ConstraintStateType),   INTENT(INOUT)  :: z              !< Input: Constraint states at t;
-                                                                           !!Output: Constraint states at t + Interval
-      TYPE(Waves2_OtherStateType),        INTENT(INOUT)  :: OtherState     !< Input: Other states at t;
-                                                                           !!Output: Other states at t + Interval
-      TYPE(Waves2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No States to update in Waves2 module. *Waves2_UpdateStates was called*"
-
-
-END SUBROUTINE Waves2_UpdateStates
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Routine for computing outputs, used in both loose and tight coupling.
-!! The Waves2 module second order wave kinematic corrections are processed at initialization and passed to other modules (such as
-!! Morrison) for processing.  As a result, there is nothing that needs to be calculated by the CalcOutput routine other than the
-!! WriteOutput values at each timestep.
-SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      TYPE(Waves2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(Waves2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(Waves2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(Waves2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(Waves2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(Waves2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(Waves2_OutputType),            INTENT(INOUT)  :: y              !< Outputs computed at Time (Input only so that mesh
-                                                                           !!   connectivity information does not have to be recalculated)
-      TYPE(Waves2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-
-         ! Local Variables:
-
- 
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-END SUBROUTINE Waves2_CalcOutput
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this routine calculates the derivative of the continuous states.
-!! As this routine is not necessary in the Waves2 module, it simply issues a warning and returns.
-!! @note A few values will be set so that compilers are happy, but nothing of value is done.
-SUBROUTINE Waves2_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      TYPE(Waves2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(Waves2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(Waves2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(Waves2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(Waves2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(Waves2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(Waves2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      TYPE(Waves2_ContinuousStateType),   INTENT(  OUT)  :: dxdt           !< Continuous state derivatives at Time
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No States to take derivative of in Waves2 module. *Waves2::CalcContStateDeriv was called.  It "// &
-                  "is not necessary in the Waves2 module, so it does nothing.*"
-
-
-         ! Compute the first time derivatives of the continuous states here: None to calculate, so no code here.
-
-         ! Dummy output value for dxdt -- this is only here to prevent the compiler from complaining.
-   dxdt%DummyContState = 0.0_SiKi
-
-
-END SUBROUTINE Waves2_CalcContStateDeriv
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this routine is used to update discrete states, by
-!! So, this routine will simply issue a warning and return.
-SUBROUTINE Waves2_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n              !< Current step of the simulation: t = n*Interval
-      TYPE(Waves2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(Waves2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(Waves2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(Waves2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Input: Discrete states at Time;
-                                                                           !!   Output: Discrete states at Time + Interval
-      TYPE(Waves2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(Waves2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(Waves2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No Discrete States to update in Waves2 module. *Waves2::UpdateDiscState was called.  It is not "// &
-                  "necessary in the Waves2 module, so it does nothing.*"
-
-         ! Code to update the discrete states would live here, but there are no discrete states to update, hence no code.
-
-
-END SUBROUTINE Waves2_UpdateDiscState
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this is a tight coupling routine for solving for the residual of the constraint state equations
-!! So, this routine will simply issue a warning and return.
-!! @note A few values will be set so that compilers are happy, but nothing of value is done.
-SUBROUTINE Waves2_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      TYPE(Waves2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(Waves2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(Waves2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(Waves2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(Waves2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time (possibly a guess)
-      TYPE(Waves2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(Waves2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      TYPE(Waves2_ConstraintStateType),   INTENT(  OUT)  :: z_residual     !< Residual of the constraint state equations using
-                                                                           !!  the input values described above
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No States in Waves2 module. *Waves2::CalcConstrStateResidual was called.  It is not needed in "//&
-                  "the Waves2 module, so it does nothing useful."
-
-
-
-         ! Solve for the constraint states here: Since there are no constraint states to solve for in Waves2, there is no code here.
-
-      z_residual%DummyConstrState = 0.0_SiKi    ! This exists just so that we can make the compiler happy.
-
-END SUBROUTINE Waves2_CalcConstrStateResidual
 
 
 

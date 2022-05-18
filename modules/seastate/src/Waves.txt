@@ -97,21 +97,6 @@ typedef     ^                 ^                 INTEGER              NStepWave  
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 
 
-# ..... States ....................................................................................................................
-# Define continuous (differentiable) states here:
-typedef     ^              ContinuousStateType  SiKi                 DummyContState    -        -        -        "Remove this variable if you have continuous states"  -
-
-
-# Define discrete (nondifferentiable) states here:
-typedef     ^              DiscreteStateType    SiKi                 DummyDiscState    -        -        -        "Remove this variable if you have discrete states" -
-
-
-# Define constraint states here:
-typedef     ^              ConstraintStateType  SiKi                 DummyConstrState  -        -        -        "Remove this variable if you have constraint states"  -
-
-
-# Define any other states, including integer or logical states here:
-typedef     ^              OtherStateType       INTEGER              DummyOtherState   -        -        -        "Remove this variable if you have other states" -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -128,15 +113,3 @@ typedef     ^                 ^                 INTEGER              NStepWave  
 typedef     ^                 ^                 INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
 typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
 
-
-# ..... Inputs ....................................................................................................................
-# Define inputs that are contained on the mesh here:
-#typedef    ^                 InputType         MeshType             MeshedInput       -        -        -        "Meshed input data"  -
-
-# Define inputs that are not on this mesh here:
-typedef     ^                 InputType         SiKi                 DummyInput        -        -        -        "Remove this variable if you have input data"   -
-
-
-# ..... Outputs ...................................................................................................................
-# Define outputs that are not on this mesh here:
-typedef     ^                 OutputType        SiKi                 DummyOutput       -        -        -        "Remove this variable if you have output data"  -

@@ -161,7 +161,6 @@ typedef   ^                            HD_ModuleMapType              MeshMapType
 #
 typedef   ^                            ContinuousStateType           WAMIT_ContinuousStateType            WAMIT               {:}        -          -         "continuous states from the wamit module"        -
 typedef   ^                            ContinuousStateType           WAMIT2_ContinuousStateType           WAMIT2              {:}        -          -         "continuous states from the wamit2 module"        -
-#typedef   ^                            ContinuousStateType           Waves2_ContinuousStateType           Waves2              -          -          -         "continuous states from the waves2 module"        -
 typedef   ^                            ContinuousStateType           Morison_ContinuousStateType          Morison             -          -          -         "continuous states from the Morison module"        -
 #
 #
@@ -170,7 +169,6 @@ typedef   ^                            ContinuousStateType           Morison_Con
 typedef   ^                            DiscreteStateType             WAMIT_DiscreteStateType              WAMIT               {:}        -          -         "discrete states from the wamit module"        -
 typedef   ^                            DiscreteStateType             WAMIT2_DiscreteStateType             WAMIT2              {:}        -          -         "discrete states from the wamit2 module"        -
 #typedef   ^                            DiscreteStateType             FIT_DiscreteStateType                FIT                 -          -          -         "discrete states from the FIT module"        -
-#typedef   ^                            DiscreteStateType             Waves2_DiscreteStateType             Waves2              -          -          -         "discrete states from the waves2 module"        -
 typedef   ^                            DiscreteStateType             Morison_DiscreteStateType            Morison             -          -          -         "discrete states from the Morison module"        -
 #
 #
@@ -178,7 +176,6 @@ typedef   ^                            DiscreteStateType             Morison_Dis
 #
 typedef   ^                            ConstraintStateType           WAMIT_ConstraintStateType           WAMIT  -        -          -                      "constraint states from WAMIT (may be empty)"        -
 typedef   ^                            ConstraintStateType           WAMIT2_ConstraintStateType          WAMIT2 -          -          -                      "constraint states from WAMIT2 (may be empty)"        -
-#typedef   ^                            ConstraintStateType           Waves2_ConstraintStateType          Waves2 -          -          -                      "constraint states from the waves2 module"        -
 typedef   ^                            ConstraintStateType           Morison_ConstraintStateType         Morison -         -          -                      "constraint states from the Morison module"        -
 #
 #
@@ -187,7 +184,6 @@ typedef   ^                            ConstraintStateType           Morison_Con
 typedef   ^                            OtherStateType                WAMIT_OtherStateType     WAMIT                           {:}        -          -         "OtherState information from the WAMIT module"   -
 typedef   ^                            OtherStateType                WAMIT2_OtherStateType    WAMIT2                          {:}        -          -         "OtherState information from the WAMIT2 module"   -
 #typedef   ^                            OtherStateType                FIT_OtherStateType       FIT                             -          -          -         "OtherState information from the FIT module"   -
-#typedef   ^                            OtherStateType                Waves2_OtherStateType    Waves2                          -          -          -         "OtherState information from the Waves2 module"   -
 typedef   ^                            ^                             Morison_OtherStateType   Morison                         -          -          -         "OtherState information from the Morison module"   -
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -203,11 +199,9 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_Waves                         {:}        -          -         "The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules)"   -
 typedef   ^                            ^                             WAMIT_MiscVarType        WAMIT                           {:}        -          -          "misc var information from the WAMIT module"   -
 typedef   ^                            ^                             WAMIT2_MiscVarType       WAMIT2                          {:}        -          -         "misc var information from the WAMIT2 module"   -
-#typedef   ^                            ^                             Waves2_MiscVarType       Waves2                          -          -          -         "misc var information from the Waves2 module"   -
 typedef   ^                            ^                             Morison_MiscVarType      Morison                         -          -          -         "misc var information from the Morison module"   -
 typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                        {:}         -          -         "WAMIT module inputs" -
 typedef   ^                            ^                             WAMIT2_InputType         u_WAMIT2                       {:}         -          -         "WAMIT2 module inputs" -
-#typedef   ^                            ^                             Waves2_InputType         u_Waves2                        -          -          -         "Waves2 module inputs" -
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -218,7 +212,6 @@ typedef   ^                            ^                             WAMIT_Param
 typedef   ^                            ^                             WAMIT2_ParameterType     WAMIT2                          {:}        -          -         "Parameter data for the WAMIT2 module"  -
 typedef   ^                            ^                             LOGICAL                  WAMIT2used                      -          .FALSE.    -         "Indicates when WAMIT2 is used.  Shortcuts some calculations" -
 #typedef   ^                            ^                             FIT_ParameterType        FIT                             -          -          -         "Parameter data for the FIT module"        -
-#typedef   ^                            ^                             Waves2_ParameterType     Waves2                          -          -          -         "Parameter data for the Waves2 module"  -
 typedef   ^                            ^                             Morison_ParameterType    Morison                         -          -          -         "Parameter data for the Morison module"        -
 typedef   ^                            ^                             INTEGER                  PotMod                          -          -          -         "1 if using WAMIT model, 0 if no potential flow model, or 2 if FIT model"    -
 typedef   ^                            ^                             INTEGER                  NBody                           -          -          -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
@@ -262,7 +255,6 @@ typedef   ^                            InputType                     MeshType   
 # Define outputs that are contained on the mesh here:
 typedef   ^                            OutputType                   WAMIT_OutputType          WAMIT                           {:}        -          -         "WAMIT module outputs"  -
 typedef   ^                            OutputType                   WAMIT2_OutputType         WAMIT2                          {:}        -          -         "WAMIT2 module outputs"  -
-#typedef   ^                            OutputType                   Waves2_OutputType         Waves2                          -          -          -         "Waves2 module outputs"  -
 typedef   ^                            ^                            Morison_OutputType        Morison                         -          -          -         "Morison module outputs"  -
 typedef   ^                            OutputType                   MeshType                  WAMITMesh                       -        -          -           "Point Loads at the WAMIT reference point(s) in the inertial frame" -
 typedef   ^                            ^                            ReKi                      WriteOutput                    {:}         -          -         "Outputs to be written to the output file(s)"  -

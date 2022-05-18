@@ -35,7 +35,6 @@ MODULE Current
       ! ..... Public Subroutines ...................................................................................................
 
    PUBLIC :: Current_Init                           ! Initialization routine
-   PUBLIC :: Current_End                            ! Ending routine (includes clean up)
       
 CONTAINS
 
@@ -154,25 +153,10 @@ END SUBROUTINE Calc_Current
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE Current_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Current_Init( InitInp, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(Current_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
-   TYPE(Current_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
-   TYPE(Current_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
-   TYPE(Current_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
-   TYPE(Current_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
-   TYPE(Current_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
-   TYPE(Current_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states            
-   TYPE(Current_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
-                                                                    !!   only the output mesh is initialized)
-   TYPE(Current_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables            
-   REAL(DbKi),                        INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
-                                                                    !!   (1) Current_UpdateStates() is called in loose coupling &
-                                                                    !!   (2) Current_UpdateDiscState() is called in tight coupling.
-                                                                    !!   Input is the suggested time from the glue code; 
-                                                                    !!   Output is the actual coupling interval that will be used 
-                                                                    !!   by the glue code.
    TYPE(Current_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -247,77 +231,8 @@ SUBROUTINE Current_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    InitOut%PCurrVyiPz0 = ( CurrVyi0 - CurrVyiS )/SmllNmbr                    ! yi-direction
    
    
-   u%DummyInput = 0.0
-   p%DT = Interval
-   x%DummyContState = 0.0
-   xd%DummyDiscState = 0.0
-   z%DummyConstrState = 0.0
-   OtherState%DummyOtherState = 0
-   y%DummyOutput = 0.0
-   m%DummyMiscVar = 0
-   
 END SUBROUTINE Current_Init
 
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.
-SUBROUTINE Current_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      TYPE(Current_InputType),           INTENT(INOUT)  :: u           !< System inputs
-      TYPE(Current_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
-      TYPE(Current_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
-      TYPE(Current_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
-      TYPE(Current_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
-      TYPE(Current_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states            
-      TYPE(Current_OutputType),          INTENT(INOUT)  :: y           !< System outputs
-      TYPE(Current_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
-         ! Place any last minute operations or calculations here:
-
-
-         ! Close files here:     
-                  
-                  
-
-         ! Destroy the input data:
-         
-      CALL Current_DestroyInput( u, ErrStat, ErrMsg )
-
-
-         ! Destroy the parameter data:
-         
-      CALL Current_DestroyParam( p, ErrStat, ErrMsg )
-
-
-         ! Destroy the state data:
-         
-      CALL Current_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL Current_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL Current_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL Current_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-         
-      CALL Current_DestroyMisc( m, ErrStat, ErrMsg )
-
-         ! Destroy the output data:
-         
-      CALL Current_DestroyOutput( y, ErrStat, ErrMsg )
-
-
-      
-
-END SUBROUTINE Current_End
-!----------------------------------------------------------------------------------------------------------------------------------
    
 END MODULE Current
 !**********************************************************************************************************************************

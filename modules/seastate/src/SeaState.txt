@@ -121,19 +121,19 @@ typedef   ^                  ^                  SiKi                 MCFD       
 #                            
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef   ^                  ContinuousStateType           Waves2_ContinuousStateType           Waves2              -          -          -         "continuous states from the waves2 module"        -
+typedef   ^                  ContinuousStateType           R8Ki           UnusedStates              -          -          -         "placeholder for states"        -
 #   
 #
 # Define discrete (nondifferentiable) states here:                                  
-typedef   ^                            DiscreteStateType             Waves2_DiscreteStateType             Waves2              -          -          -         "discrete states from the waves2 module"        -
+typedef   ^                            DiscreteStateType             R8Ki             UnusedStates              -          -          -         "placeholder for states"        -
 #  
 #
 # Define constraint states here:                                                    
-typedef   ^                            ConstraintStateType           Waves2_ConstraintStateType          Waves2 -          -          -                      "constraint states from the waves2 module"        -
+typedef   ^                            ConstraintStateType           R8Ki          UnusedStates -          -          -                      "placeholder for states"        -
 # 
 #
 # Define any other states, including integer or logical states here:                
-typedef   ^                            OtherStateType                Waves2_OtherStateType    Waves2                          -          -          -         "OtherState information from the Waves2 module"   -
+typedef   ^                            OtherStateType                R8Ki    UnusedStates                          -          -          -         "placeholder for states"   -
 #
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -142,8 +142,7 @@ typedef   ^                  MiscVarType            INTEGER                  Dec
 typedef   ^                  ^                      DbKi                     LastOutTime       -       -      -  "Last time step which was written to the output file (sec)"    -
 typedef   ^                  ^                      INTEGER                  LastIndWave       -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
 typedef   ^                  ^                      SeaSt_Interp_MiscVarType       SeaSt_Interp_m            -       -      -  "misc var information from the SeaState Interpolation module"   -
-typedef   ^                  ^                      Waves2_MiscVarType       Waves2            -       -      -  "misc var information from the Waves2 module"   -
-typedef   ^                  ^                      Waves2_InputType         u_Waves2          -       -      -  "Waves2 module inputs" -
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -206,4 +205,3 @@ typedef   ^                  InputType              SiKi                     Dum
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef   ^                  OutputType             ReKi                     WriteOutput       {:}     -      -  "Outputs to be written to the output file(s)"  -
-typedef   ^                  ^                      Waves2_OutputType        Waves2            -       -      -  "Waves2 module outputs"  -
