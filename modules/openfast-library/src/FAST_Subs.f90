@@ -6148,8 +6148,8 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
    TYPE(MAP_InputType),       INTENT(IN)  :: u_MAP          !< MAP inputs
    TYPE(BD_InputType),        INTENT(IN)  :: u_BD(:)        !< BeamDyn inputs
    CHARACTER(*),              INTENT(IN)  :: FileName       !< Name of file to write this information to
-   INTEGER(IntKi)             INTENT(OUT) :: ErrStat        !< Error status of the operation
-   CHARACTER(*)               INTENT(OUT) :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),            INTENT(OUT) :: ErrStat        !< Error status of the operation
+   CHARACTER(*),              INTENT(OUT) :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)           :: unOut
    INTEGER(IntKi)           :: K_local
