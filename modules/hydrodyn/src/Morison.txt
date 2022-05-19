@@ -199,14 +199,14 @@ typedef   ^                            Morison_MGDepthsType          ReKi       
 typedef   ^                            ^                             ReKi             MGThck                   -          -        -         "Marine growth thickness"    m
 typedef   ^                            ^                             ReKi             MGDens                   -          -        -         "Marine growth density"    kg/m^3
 typedef   ^                            Morison_MOutput               INTEGER          MemberID                 -          -        -         "Member ID for requested output"    -
-typedef   ^                            ^                             INTEGER          NOutLoc                  -          -        -         "The number of requested output locations"    -
-typedef   ^                            ^                             ReKi             NodeLocs                 {:}        -        -         "Normalized locations along user-specified member for the outputs"    -
-typedef   ^                            ^                             INTEGER          MemberIDIndx             -          -        -         "Index for member in the master list"    -
-typedef   ^                            ^                             INTEGER          MeshIndx1                  {:}        -        -         "Index of node in Mesh for the start of the member element"    -
-typedef   ^                            ^                             INTEGER          MeshIndx2                  {:}        -        -         "Index of node in Mesh for the end of the member element"    -
-typedef   ^                            ^                             INTEGER          MemberIndx1                  {:}        -        -         "Index of Member nodes for the start of the member element"    -
-typedef   ^                            ^                             INTEGER          MemberIndx2                  {:}        -        -         "Index of Member nodes for the end of the member element"    -
-typedef   ^                            ^                             ReKi             s                        {:}        -        -         "Linear interpolation factor between node1 and node2 for the output location"    -
+typedef   ^                            Morison_MOutput               INTEGER          NOutLoc                  -          -        -         "The number of requested output locations"    -
+typedef   ^                            Morison_MOutput               ReKi             NodeLocs                 {:}        -        -         "Normalized locations along user-specified member for the outputs"    -
+typedef   ^                            Morison_MOutput               INTEGER          MemberIDIndx             -          -        -         "Index for member in the master list"    -
+typedef   ^                            Morison_MOutput               INTEGER          MeshIndx1                  {:}        -        -         "Index of node in Mesh for the start of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MeshIndx2                  {:}        -        -         "Index of node in Mesh for the end of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MemberIndx1                  {:}        -        -         "Index of Member nodes for the start of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MemberIndx2                  {:}        -        -         "Index of Member nodes for the end of the member element"    -
+typedef   ^                            Morison_MOutput               ReKi             s                        {:}        -        -         "Linear interpolation factor between node1 and node2 for the output location"    -
 typedef   ^                            Morison_JOutput               INTEGER          JointID                  -          -        -         "Joint ID for the requested output"    -
 typedef   ^                            ^                             INTEGER          JointIDIndx              -          -        -         "Joint index in the master list"    -
 # ..... Initialization data .......................................................................................................
@@ -218,7 +218,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
-typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 2: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
+typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
 typedef   ^                            ^                             INTEGER                  NNodes                           -          -        -         "Total number of nodes in the final software model"    -
 typedef   ^                            ^                             Morison_JointType        InpJoints                        {:}        -        -         "Array of user-specified joints"    -
@@ -259,8 +259,6 @@ typedef   ^                            ^                             Morison_JOu
 typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {4032}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
 typedef   ^                            ^                             LOGICAL                  ValidOutList                     {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  OutSwtch                         -          -        -         ""    -
-typedef   ^                            ^                             LOGICAL                  OutAll                           -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                      -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnOutFile                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
@@ -352,7 +350,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                            ^                             INTEGER                  WaveDisp                -          -        -                  "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
-typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 2: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
+typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NMembers                        -          -         -         "number of members"        -
 typedef   ^                            ^                             Morison_MemberType       Members                         {:}             -        -         "Array of Morison members used during simulation"    -
 typedef   ^                            ^                             INTEGER                  NNodes                          -          -         -         ""        -
@@ -390,8 +388,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_JOutput          JOutLst                         {:}        -         -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                        {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOutAll                       -          -         -         ""    -
-typedef   ^                            ^                             INTEGER                  OutSwtch                        -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  UnOutFile                       -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -         -        ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -

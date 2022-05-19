@@ -71,13 +71,10 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    character(*),                  INTENT(  OUT) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
       ! Local variables
-   integer                                      :: i, j, k, count       ! generic integer for counting
-   character(   2)                              :: strI                 ! string version of the loop counter
    integer                                      :: UnEc                 ! The local unit number for this module's echo file
    character(1024)                              :: EchoFile             ! Name of SeaState echo file
    character(1024)                              :: Line                 ! String to temporarially hold value of read line
    real(ReKi), allocatable                      :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
-   integer(IntKi)                               :: startIndx, endIndx   ! indices into working arrays
    integer, allocatable                         :: tmpArray(:)          ! Temporary array storage of the joint output list
    real(ReKi), allocatable                      :: tmpReArray(:)        ! Temporary array storage of the joint output list
    character(1)                                 :: Line1                ! The first character of an input line
@@ -102,7 +99,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
          if (Failed()) return;
 
    if ( InputFileData%Echo ) then
-      EchoFile = trim(OutRootName)//'.SEA.ech'
+      EchoFile = trim(OutRootName)//'.ech'
       call OpenEcho ( UnEc, trim(EchoFile), ErrStat2, ErrMsg2 )
          if (Failed())  return;
       write(UnEc, '(A)') 'Echo file for SeaState primary input file: '//trim(InputFileName)
@@ -533,10 +530,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
       ! Passed variables
 
-   type(SeaSt_InitInputType),  intent( in    )   :: InitInp              ! the SeaState data
-   type(SeaSt_ParameterType),  intent( inout )   :: p                    ! the SeaState parameter data
+   type(SeaSt_InitInputType),     intent( in    )   :: InitInp              ! the SeaState data
+   type(SeaSt_ParameterType),     intent( inout )   :: p                    ! the SeaState parameter data
    real(DbKi),                    intent( in    )   :: Interval             ! The DT supplied by the glue code/driver
-   type(SeaSt_InputFile),      intent( inout )   :: InputFileData        ! the SeaState input file data
+   type(SeaSt_InputFile),         intent( inout )   :: InputFileData        ! the SeaState input file data
    integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs
    character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -544,17 +541,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
    integer                                          :: J                    ! Generic loop counter index
    integer                                          :: K                    ! Generic loop counter index
    character(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-   logical                                          :: FoundID              ! Boolean flag indicating whether an ID from one tables is found in one of the other input table
-   real(ReKi)                                       :: MinDepth             ! The minimum depth entry in the Depth-based Hydrodynamic coefficents table
-   real(ReKi)                                       :: MaxDepth             ! The maximum depth entry in the Depth-based Hydrodynamic coefficents table
-   real(ReKi)                                       :: z1
-   real(ReKi)                                       :: z2
-   real(ReKi)                                       :: MinMembrDpth
-   real(ReKi)                                       :: MaxMembrDpth
-!   CHARACTER(ChanLen), ALLOCATABLE                       :: tmpOutLst(:)         !
-   logical                                          :: TmpFileExist         ! Temporary variable in checking the existance of an input file.
-   real(ReKi)                                       :: l, xpos, ypos, zpos
-   real(ReKi)                                       :: lvec(3)
+   real(ReKi)                                       :: xpos, ypos, zpos
    logical, allocatable                             :: foundMask(:)
    integer                                          :: WaveModIn
 
@@ -1213,7 +1200,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
          ! Attach remaining items to the SeaState list
          !foundMask = .FALSE.
-      call Allocary(InputFileData%OutList, InputFileData%NUserOutputs, "InputFileData%OutList", ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry(InputFileData%OutList, InputFileData%NUserOutputs, "InputFileData%OutList", ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       InputFileData%NumOuts       = SeaStOut_GetChannels ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%OutList        , foundMask, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call PrintBadChannelWarning(InputFileData%NUserOutputs, InputFileData%UserOutputs , foundMask, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 

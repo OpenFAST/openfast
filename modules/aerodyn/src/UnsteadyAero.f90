@@ -1511,7 +1511,7 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
    do j=1, AFInfo%NumTabs
       if ( .not. AFInfo%Table(j)%InclUAdata ) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = 'UA parameters are not included in airfoil (airfoil has likely has constant polars).'
+         ErrMsg  = 'UA parameters are not included in airfoil (airfoil likely has constant polars).'
          return
       end if
    end do

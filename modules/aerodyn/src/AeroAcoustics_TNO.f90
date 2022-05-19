@@ -169,7 +169,7 @@ END FUNCTION f_int2
 FUNCTION Pressure(k1_in)
     ! Variables
    REAL(TNOKi)  :: a,b,answer
-   REAL(TNOKi)  :: omega
+!  REAL(TNOKi)  :: omega
    REAL(TNOKi)  :: abserr,resabs,resasc
    REAL(TNOKi)  :: k1_in
    real(TNOKi)  :: Pressure

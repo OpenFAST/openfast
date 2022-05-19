@@ -162,7 +162,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       REAL(ReKi), ALLOCATABLE                :: WAMITWvDir(:)                        ! Wave direction components as ordered in the WAMIT output files (degrees)
 
       INTEGER                                :: I,iGrid,iX,iY                        ! Generic index
-      INTEGER                                :: Indx                                 ! Cycles through the upper-triangular portion (diagonal and above) of the frequency-dependent hydrodynamic added mass and damping matrices from the radiation problem
       INTEGER                                :: InsertInd                            ! The lowest sorted index whose associated frequency component is higher than the current frequency component -- this is to sort the frequency components from lowest to highest
       INTEGER                                :: J                                    ! Generic index
       INTEGER                                :: K                                    ! Generic index
@@ -1526,15 +1525,13 @@ CONTAINS
    
       ! destroy local variables that are types in the framework:
       
-      CALL Conv_Rdtn_DestroyInitInput(  Conv_Rdtn_InitInp,  ErrStat2, ErrMsg2 )
-      CALL Conv_Rdtn_DestroyInitOutput( Conv_Rdtn_InitOut,  ErrStat2, ErrMsg2 )
+      CALL Conv_Rdtn_DestroyInitInput(  Conv_Rdtn_InitInp,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL Conv_Rdtn_DestroyInitOutput( Conv_Rdtn_InitOut,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
 
-      CALL SS_Rad_DestroyInitInput(     SS_Rdtn_InitInp,    ErrStat2, ErrMsg2 )
-      CALL SS_Rad_DestroyInitOutput(    SS_Rdtn_InitOut,    ErrStat2, ErrMsg2 )
-      nullify(SS_Exctn_InitInp%WaveTime)
-      nullify(SS_Exctn_InitInp%WaveElev1)
-      CALL SS_Exc_DestroyInitInput(     SS_Exctn_InitInp,    ErrStat2, ErrMsg2 )
-      CALL SS_Exc_DestroyInitOutput(    SS_Exctn_InitOut,    ErrStat2, ErrMsg2 )
+      CALL SS_Rad_DestroyInitInput(     SS_Rdtn_InitInp,    ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL SS_Rad_DestroyInitOutput(    SS_Rdtn_InitOut,    ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL SS_Exc_DestroyInitInput(     SS_Exctn_InitInp,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL SS_Exc_DestroyInitOutput(    SS_Exctn_InitOut,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
       
       
       ! destroy local variables that are allocatable arrays:
@@ -1594,9 +1591,7 @@ SUBROUTINE WAMIT_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
          ! Destroy the parameter data:
-      nullify(p%SS_Exctn%WaveElev1) 
-      nullify(p%SS_Exctn%WaveTime) 
-      CALL WAMIT_DestroyParam( p, ErrStat, ErrMsg )
+      CALL WAMIT_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
          ! Destroy the state data:
@@ -1790,11 +1785,8 @@ SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, E
       !REAL(ReKi)                           :: F_Waves  (6)                            ! Total load contribution from incident waves (i.e., the diffraction problem) (N, N-m)   
       !REAL(ReKi)                           :: F_Rdtn   (6)                            ! Total load contribution from wave radiation damping (i.e., the diffraction problem) (N, N-m)
       INTEGER(IntKi)                       :: I,iStart                                ! Generic index
-      INTEGER(IntKi)                       :: J                                       ! Generic index
-      INTEGER(IntKi)                       :: K                                       ! Generic index
       REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotdot(6*p%NBody)  ! kinematics for all WAMIT bodies
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
-      REAL(ReKi)                           :: AllOuts(MaxWAMITOutputs)
       integer(IntKi)                       :: iBody                                   ! Counter for WAMIT bodies.  If NBodyMod > 1 then NBody = 1, and hence iBody = 1
       integer(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
       real(ReKi)                           :: bodyPosition(2)                         ! x-y displaced location of a WAMIT body (relative to 

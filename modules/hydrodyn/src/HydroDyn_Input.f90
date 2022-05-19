@@ -185,7 +185,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    integer(IntKi)                               :: startIndx, endIndx   ! indices into working arrays
    INTEGER, ALLOCATABLE                         :: tmpArray(:)          ! Temporary array storage of the joint output list
    REAL(ReKi), ALLOCATABLE                      :: tmpReArray(:)        ! Temporary array storage of the joint output list
-   CHARACTER(1)                                 :: Line1                ! The first character of an input line
    INTEGER(IntKi)                               :: CurLine              !< Current entry in FileInfo_In%Lines array
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2
@@ -208,7 +207,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          if (Failed()) return;
 
    if ( InputFileData%Echo ) then
-      EchoFile = TRIM(OutRootName)//'.HD.ech'
+      EchoFile = TRIM(OutRootName)//'.ech'
       CALL OpenEcho ( UnEc, TRIM(EchoFile), ErrStat2, ErrMsg2 )
          if (Failed())  return;
       WRITE(UnEc, '(A)') 'Echo file for AeroDyn 15 primary input file: '//trim(InputFileName)
@@ -463,7 +462,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    call ParseVar( FileInfo_In, CurLine, 'WaveDisp', InputFileData%Morison%WaveDisp, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
       
-   ! AMMod - Method of computing distributed added-mass force. {0: nodes below SWL when undisplaced. 2: Up to the free surface} (switch)
+   ! AMMod - Method of computing distributed added-mass force. {0: nodes below SWL when undisplaced. 1: Up to the free surface} (switch)
    call ParseVar( FileInfo_In, CurLine, 'AMMod', InputFileData%Morison%AMMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
@@ -1226,7 +1225,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    REAL(ReKi)                                       :: l
    REAL(ReKi)                                       :: lvec(3)
    LOGICAL, ALLOCATABLE                             :: foundMask(:)
-   INTEGER                                          :: WaveModIn
    
    INTEGER(IntKi)                                   :: ErrStat2, IOS
    CHARACTER(ErrMsgLen)                             :: ErrMsg2
@@ -2570,7 +2568,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       ! Morison
       InputFileData%Morison%UnSum      = InputFileData%UnSum
       InputFileData%Morison%Gravity    = InitInp%Gravity
-      InputFileData%Morison%OutAll     = InputFileData%OutAll
 
          ! Process the input geometry and generate the simulation mesh representation
       call Morison_GenerateSimulationNodes( InputFileData%Morison%MSL2SWL, InputFileData%Morison%NJoints, InputFileData%Morison%InpJoints, InputFileData%Morison%NMembers, InputFileData%Morison%InpMembers, InputFileData%Morison%NNodes, InputFileData%Morison%Nodes, errStat2, errMsg2 )

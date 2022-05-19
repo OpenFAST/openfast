@@ -349,7 +349,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
    CHARACTER(1024)                            :: WvName                     ! complete filename for one of the output files
    CHARACTER(5)                               :: extension(7)     
    INTEGER                                    :: i, j, k, m, iFile
-   CHARACTER(64)                              :: Frmt, Frmt2, Sfrmt
+   CHARACTER(64)                              :: Frmt, Sfrmt
    CHARACTER(ChanLen)                         :: Delim
    real(ReKi)                                 :: x_gridPts(NGrid(1)), y_gridPts(NGrid(2)), z_gridPts(NGrid(3))
       ! Initialize ErrStat      
@@ -539,12 +539,10 @@ subroutine SeaStOut_WriteWaveElev0( Rootname, SeaSt_Prog, NStepWave, WaveDT, NGr
       ! Local variables
    INTEGER                                    :: UnWv                       ! file unit for writing the various wave kinematics files
    CHARACTER(1024)                            :: WvName                     ! complete filename for one of the output files
-   CHARACTER(5)                               :: extension(7)     
-   INTEGER                                    :: i, j, k, m, iFile
-   CHARACTER(64)                              :: Frmt, Frmt2, Sfrmt
-   CHARACTER(ChanLen)                         :: Delim
-   real(ReKi)                                 :: x_gridPts(NGrid(1)), y_gridPts(NGrid(2)), z_gridPts(NGrid(3))
-      ! Initialize ErrStat      
+   INTEGER                                    :: i, j, m
+   CHARACTER(64)                              :: Frmt, Frmt2
+
+   ! Initialize ErrStat      
    ErrStat = ErrID_None         
    ErrMsg  = "" 
    Frmt = '(F12.4,ES12.4e2)'
@@ -598,9 +596,9 @@ subroutine SeaStOut_MapOutputs( CurrentTime, p, NWaveElev, WaveElev, WaveElev1, 
    INTEGER(IntKi),                     intent(   out )  :: ErrStat        ! Error status of the operation
    CHARACTER(*),                       intent(   out )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
-   integer                                              :: I, iBody, startIndx, endIndx
-   integer(IntKi)                                       :: ErrStat2
-   character(ErrMsgLen)                                 :: ErrMsg2
+   integer                                              :: I
+!   integer(IntKi)                                       :: ErrStat2
+!   character(ErrMsgLen)                                 :: ErrMsg2
   
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -698,22 +696,18 @@ SUBROUTINE SeaStOut_Init( SeaSt_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ! Passed variables
 
    TYPE(ProgDesc),                INTENT( IN    ) :: SeaSt_ProgDesc    ! 
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! The name of the output file 
-   TYPE(SeaSt_InputFile ),     INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
-   TYPE(SeaSt_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
-   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p 
-   TYPE(SeaSt_MiscVarType),    INTENT( INOUT ) :: m
-   TYPE(SeaSt_InitOutputType), INTENT( INOUT ) :: InitOut
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! The name of the output file 
+   TYPE(SeaSt_InputFile ),        INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
+   TYPE(SeaSt_OutputType),        INTENT( INOUT ) :: y                    ! This module's internal data
+   TYPE(SeaSt_ParameterType),     INTENT( INOUT ) :: p 
+   TYPE(SeaSt_MiscVarType),       INTENT( INOUT ) :: m
+   TYPE(SeaSt_InitOutputType),    INTENT( INOUT ) :: InitOut
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
    INTEGER                                        :: J                    ! Generic loop counter      
-!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-!   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-!   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
-   LOGICAL                                        :: hasWaves2Outs        ! Are there any WAMIT-related outputs
    
    
    
@@ -776,7 +770,7 @@ SUBROUTINE SeaStOut_Init( SeaSt_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ErrStat = ErrID_Fatal
       RETURN
    END IF
-   y%WriteOutput = 0.0_ReKi  ! bjj added this only so the Intel Inspector wouldn't complain about uninitialized memory access (was harmless)
+   y%WriteOutput = 0.0_ReKi  ! If there is an error at initialization, y%WriteOutput can be written in the SeaState_End() routine, so this needs some initial value.
    
             
       ! Initialize the HD-level Hdr and Unt elements
@@ -813,9 +807,9 @@ SUBROUTINE SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName,  p, InitOut, ErrSta
       ! Passed variables
 
    TYPE(ProgDesc)               , INTENT( IN    ) :: SeaSt_ProgDesc
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! Root name for the output file
-   TYPE(SeaSt_ParameterType),  INTENT( INOUT ) :: p   
-   TYPE(SeaSt_InitOutPutType ),INTENT( IN    ) :: InitOut            !
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
+   TYPE(SeaSt_ParameterType),     INTENT( INOUT ) :: p   
+   TYPE(SeaSt_InitOutPutType ),   INTENT( IN    ) :: InitOut              !
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -840,7 +834,7 @@ SUBROUTINE SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName,  p, InitOut, ErrSta
    IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0  ) THEN           ! Output has been requested so let's open an output file            
       
          ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'.SeaSt.out'
+      OutFileName = TRIM(OutRootName)//'.out'
       CALL GetNewUnit( p%UnOutFile )
    
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 

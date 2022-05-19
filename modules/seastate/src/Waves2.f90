@@ -203,7 +203,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
          ! Temporary error trapping variables
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for holding the error status  returned from a CALL statement
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for holding the error message returned from a CALL statement
-
+      character(*), parameter                            :: RoutineName = 'Waves2_Init'
 
          ! Subroutine contents
 
@@ -245,8 +245,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
          IF ( ( InitInp%WvHiCOffD < InitInp%WvLowCOffD ) .OR. ( InitInp%WvLowCOffD < 0.0 ) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to Waves2_Init: '//NewLine// &
                   '           WvHiCOffD must be larger than WvLowCOffD. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'Waves2_Init')
-            CALL CleanUp
+                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
+            CALL CleanUp()
             RETURN
          END IF
       END IF
@@ -258,7 +258,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
          IF ( ( InitInp%WvHiCOffS < InitInp%WvLowCOffS ) .OR. ( InitInp%WvLowCOffS < 0.0 ) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to Waves2_Init: '//NewLine// &
                   '           WvHiCOffS must be larger than WvLowCOffS. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'Waves2_Init')
+                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
             CALL CleanUp
             RETURN
          END IF
@@ -278,7 +278,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%NStepWave2 + 1))// &
                ' (2x(NStepWave2+1)), but instead received array of size '// &
                TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,2)))//'.', &
-               ErrStat, ErrMsg, 'Waves2_Init')
+               ErrStat, ErrMsg, RoutineName)
          CALL CleanUp
          RETURN
       END IF
@@ -291,7 +291,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                '        --> Expected array for WaveTime to be of size '//TRIM(Num2LStr(InitInp%NStepWave + 1))// &
                ' (NStepWave+1), but instead received array of size '// &
                TRIM(Num2LStr(SIZE(InitInp%WaveTime)))//'.', &
-               ErrStat, ErrMsg, 'Waves2_Init')
+               ErrStat, ErrMsg, RoutineName)
          CALL CleanUp
          RETURN
       END IF
@@ -325,7 +325,11 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
          ! The wave elevation information in frequency space -- we need to normalize this by NStepWave2
       ALLOCATE ( WaveElevC0Norm(0:InitInp%NStepWave2) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0Norm.',ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) then
+         CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0Norm.',ErrStat,ErrMsg,RoutineName)
+         CALL CleanUp()
+         RETURN
+      END IF
 
       DO I=0,InitInp%NStepWave2
          WaveElevC0Norm(I) = CMPLX( InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I), SiKi ) / REAL(InitInp%NStepWave2,SiKi)
@@ -369,10 +373,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
          ! ALLOCATE the WaveKinzi0Prime(:) array and compute its elements here:
 
          ALLOCATE ( WaveKinzi0Prime(NWaveKin0Prime) , STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveKinzi0Prime.',ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveKinzi0Prime.',ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveKinPrimeMap(NWaveKin0Prime) , STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveKinPrimeMap.',ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveKinPrimeMap.',ErrStat,ErrMsg,RoutineName)
 
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -397,14 +401,14 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
 
       !CASE ( 1, 2 )              ! Vertical stretching or extrapolation stretching.
-      !   CALL SetErrStat(ErrID_Fatal,' Vertical and extrapolation stretching not supported in second order calculations.',ErrStat,ErrMsg,'Waves2_Init')
+      !   CALL SetErrStat(ErrID_Fatal,' Vertical and extrapolation stretching not supported in second order calculations.',ErrStat,ErrMsg,RoutineName)
       !
       !
       !CASE ( 3 )                 ! Wheeler stretching.
-      !   CALL SetErrStat(ErrID_Fatal,' Wheeler stretching not supported in second order calculations.',ErrStat,ErrMsg,'Waves2_Init')
+      !   CALL SetErrStat(ErrID_Fatal,' Wheeler stretching not supported in second order calculations.',ErrStat,ErrMsg,RoutineName)
       !
       !CASE DEFAULT
-      !   CALL SetErrStat(ErrID_Fatal,' Stretching is not supported in the second order waves kinematics calculations.',ErrStat,ErrMsg,'Waves2_Init')
+      !   CALL SetErrStat(ErrID_Fatal,' Stretching is not supported in the second order waves kinematics calculations.',ErrStat,ErrMsg,RoutineName)
       !
       !
       !ENDSELECT
@@ -424,25 +428,25 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
       ALLOCATE ( p%WaveElev2 (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
      ! ALLOCATE ( p%WaveElev2 (0:InitInp%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveElev2.', ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveElev2.', ErrStat,ErrMsg,RoutineName)
 
       ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2D.',  ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2D.',  ErrStat,ErrMsg,RoutineName)
       
       ALLOCATE ( InitOut%WaveAcc2D  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc2D.',  ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc2D.',  ErrStat,ErrMsg,RoutineName)
       
       ALLOCATE ( InitOut%WaveDynP2D (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2D.', ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2D.', ErrStat,ErrMsg,RoutineName)
       
       ALLOCATE ( InitOut%WaveVel2S  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2S.',  ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2S.',  ErrStat,ErrMsg,RoutineName)
       
       ALLOCATE ( InitOut%WaveAcc2S  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc2S.',  ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc2S.',  ErrStat,ErrMsg,RoutineName)
       
       ALLOCATE ( InitOut%WaveDynP2S (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2S.', ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2S.', ErrStat,ErrMsg,RoutineName)
 
          ! Now check if all the allocations worked properly
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -465,23 +469,27 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
          ! For calculating the 2nd-order wave elevation corrections, we need a temporary array to hold the information.
       ALLOCATE ( TmpTimeSeries(0:InitInp%NStepWave), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpTimeSeries.', ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpTimeSeries.', ErrStat,ErrMsg,RoutineName)
       ALLOCATE ( TmpTimeSeries2(0:InitInp%NStepWave), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpTimeSeries2.', ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpTimeSeries2.', ErrStat,ErrMsg,RoutineName)
 
       ALLOCATE ( TmpFreqSeries(0:InitInp%NStepWave2), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFreqSeries.', ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFreqSeries.', ErrStat,ErrMsg,RoutineName)
       ALLOCATE ( TmpFreqSeries2(0:InitInp%NStepWave2), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFreqSeries2.', ErrStat,ErrMsg,'Waves2_Init')
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFreqSeries2.', ErrStat,ErrMsg,RoutineName)
 
-
+         ! Now check if all the allocations worked properly
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
 
       !--------------------------------------------------------------------------------
       ! Setup the FFT working arrays
       !--------------------------------------------------------------------------------
 
       CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,'Waves2_Init')
+      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
          RETURN
@@ -517,21 +525,21 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
             ! Frequency space arrays:
 
          ALLOCATE ( WaveVel2xCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCDiff.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2yCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCDiff.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2zCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCDiff.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveAcc2xCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCDiff.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2yCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCDiff.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2zCDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCDiff.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveDynP2CDiff   (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CDiff.',  ErrStat,ErrMsg,RoutineName)
 
             ! Now check if all the allocations worked properly
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -542,21 +550,21 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
             ! Time domain arrays:
          ALLOCATE ( WaveVel2xDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xDiff.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2yDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yDiff.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2zDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zDiff.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveAcc2xDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xDiff.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2yDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yDiff.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2zDiff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zDiff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zDiff.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveDynP2Diff   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2Diff.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2Diff.',  ErrStat,ErrMsg,RoutineName)
 
             ! Now check if all the allocations worked properly
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -582,7 +590,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(2) + 1
             CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'Waves2_Init')
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
@@ -726,21 +734,21 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                !> ### Apply the inverse FFT to each of the components to get the time domain result ###
                !> *   \f$ V(t) = 2 \operatorname{IFFT}\left[H^-\right] \f$
             CALL ApplyFFT_cx(  WaveVel2xDiff(:),  WaveVel2xCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2yDiff(:),  WaveVel2yCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2zDiff(:),  WaveVel2zCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveAcc2xDiff(:),  WaveAcc2xCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2yDiff(:),  WaveAcc2yCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2zDiff(:),  WaveAcc2zCDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveDynP2Diff(:),  WaveDynP2CDiff(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
 
 
 
@@ -843,39 +851,39 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
             ! Frequency space arrays:  Term 1 (n=m term)
 
          ALLOCATE ( WaveVel2xCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCSumT1.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2yCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCSumT1.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2zCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCSumT1.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveAcc2xCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCSumT1.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2yCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCSumT1.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2zCSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCSumT1.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveDynP2CSumT1    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CSumT1.',  ErrStat,ErrMsg,RoutineName)
 
             ! Term 2 (n/=m term)
          ALLOCATE ( WaveVel2xCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xCSumT2.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2yCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2yCSumT2.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2zCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zCSumT2.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveAcc2xCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xCSumT2.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2yCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2yCSumT2.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2zCSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zCSumT2.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveDynP2CSumT2    (0:InitInp%NStepWave2), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2CSumT2.',  ErrStat,ErrMsg,RoutineName)
 
             ! Now check if all the allocations worked properly
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -887,39 +895,39 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
             ! Time domain arrays: Term 1 (n=m term)
 
          ALLOCATE ( WaveVel2xSumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xSumT1.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2ySumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2ySumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2ySumT1.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2zSumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zSumT1.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveAcc2xSumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xSumT1.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2ySumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2ySumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2ySumT1.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2zSumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zSumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zSumT1.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveDynP2SumT1   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2SumT1.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2SumT1.',  ErrStat,ErrMsg,RoutineName)
 
             ! Term 2 (n/=m term)
          ALLOCATE ( WaveVel2xSumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2xSumT2.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2ySumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2ySumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2ySumT2.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveVel2zSumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2zSumT2.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveAcc2xSumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2xSumT2.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2ySumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2ySumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2ySumT2.',  ErrStat,ErrMsg,RoutineName)
          ALLOCATE ( WaveAcc2zSumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zSumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2zSumT2.',  ErrStat,ErrMsg,RoutineName)
 
          ALLOCATE ( WaveDynP2SumT2   (0:InitInp%NStepWave), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2SumT2.',  ErrStat,ErrMsg,'Waves2_Init')
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2SumT2.',  ErrStat,ErrMsg,RoutineName)
 
             ! Now check if all the allocations worked properly
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -946,7 +954,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(2) + 1
             CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'Waves2_Init')
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
@@ -1212,38 +1220,38 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                !> *   \f$ V^{(2)+}(t)  =  \operatorname{IFFT}\left[K^+\right]
                !!                      + 2\operatorname{IFFT}\left[H^+\right]     \f$
             CALL ApplyFFT_cx(  WaveVel2xSumT1(:),  WaveVel2xCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2ySumT1(:),  WaveVel2yCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2zSumT1(:),  WaveVel2zCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveAcc2xSumT1(:),  WaveAcc2xCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2ySumT1(:),  WaveAcc2yCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2zSumT1(:),  WaveAcc2zCSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveDynP2SumT1(:),  WaveDynP2CSumT1(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveVel2xSumT2(:),  WaveVel2xCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2ySumT2(:),  WaveVel2yCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveVel2zSumT2(:),  WaveVel2zCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on V_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveAcc2xSumT2(:),  WaveAcc2xCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_x.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2ySumT2(:),  WaveAcc2yCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_y.',ErrStat,ErrMsg,RoutineName)
             CALL ApplyFFT_cx(  WaveAcc2zSumT2(:),  WaveAcc2zCSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on Acc_z.',ErrStat,ErrMsg,RoutineName)
 
             CALL ApplyFFT_cx(  WaveDynP2SumT2(:),  WaveDynP2CSumT2(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,'Waves2_Init')
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT on DynP2.',ErrStat,ErrMsg,RoutineName)
 
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -1324,7 +1332,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
 
          CALL  ExitFFT(FFT_Data, ErrStatTmp)
-         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,'Waves2_Init')
+         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
@@ -2227,9 +2235,6 @@ SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, E
 
 
          ! Local Variables:
-      INTEGER(IntKi)                                     :: I                          ! Generic index
-      REAL(SiKi)                                         :: WaveElev2Temp(p%NWaveElev)
-      REAL(ReKi)                                         :: AllOuts(MaxWaves2Outputs)
 
  
 

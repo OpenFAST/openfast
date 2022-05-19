@@ -255,7 +255,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 !      LOGICAL                                :: hasMorisonOuts                      ! Are there any Morison-related outputs
 !      INTEGER                                :: numHydroOuts                        ! total number of WAMIT and Morison outputs
       INTEGER                                :: I, J, k, iBody                                ! Generic counters
-      REAL(SiKi)                             :: WaveNmbr                            ! Wavenumber of the current frequency component (1/meter)
          ! These are dummy variables to satisfy the framework, but are not used 
          
  
@@ -272,9 +271,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       TYPE(FIT_InitOutputType)               :: FIT_InitOut                       ! Initialization Outputs from the FIT module initialization
 #endif
 
-      Real(ReKi)                             :: Np      
-      Real(ReKi)                             :: dftreal
-      Real(ReKi)                             :: dftimag 
    
          ! WAMIT Mesh
       real(R8Ki)                             :: theta(3), orientation(3,3)        
@@ -308,6 +304,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
+      p%PointsToSeaState = .true.  ! this should be true unless we are initializing from restart (in a different driver/routine)
       
 #ifdef BETA_BUILD
    CALL DispBetaNotice( "This is a beta version of HydroDyn and is for testing purposes only."//NewLine//"This version includes user waves, WaveMod=6 and the ability to write example user waves." )
@@ -398,7 +395,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       IF ( InputFileData%HDSum ) THEN 
          
-         SummaryName = TRIM(InitInp%OutRootName)//'.HD.sum'
+         SummaryName = TRIM(InitInp%OutRootName)//'.sum'
          CALL HDOut_OpenSum( InputFileData%UnSum, SummaryName, HydroDyn_ProgDesc, ErrStat2, ErrMsg2 )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
@@ -843,14 +840,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 !==============================================================================
       
          InputFileData%Morison%seast_interp_p = InitInp%seast_interp_p
-
-            ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array
-            
-         IF ( InputFileData%OutSwtch > 0 ) THEN
-            InputFileData%Morison%OutSwtch     = 2  ! only HydroDyn or the Driver code will write outputs to the file, that's why we are forcing this to 2.
-         ELSE
-            InputFileData%Morison%OutSwtch     = 0
-         END IF
         
             ! Initialize the Morison Element Calculations 
       
@@ -862,26 +851,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF
          
-  
-         
-         IF ( u%Morison%Mesh%Committed ) THEN
-                  ! we need the translation displacement mesh for loads transfer:
-            CALL MeshCopy ( SrcMesh  = u%Morison%Mesh            &
-                    , DestMesh = m%MrsnMesh_position   &
-                    , CtrlCode = MESH_NEWCOPY        &
-                    , IOS      = COMPONENT_INPUT     &
-                    , TranslationDisp = .TRUE.       &
-                    , ErrStat  = ErrStat2            &
-                    , ErrMess  = ErrMsg2              )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
-                    
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%MrsnMesh_position')
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL CleanUp()
-                  RETURN
-               END IF
-            m%MrsnMesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
-            
-         END IF
          
             ! Verify that Morison_Init() did not request a different Interval!
       
@@ -1194,29 +1163,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 CONTAINS
 !................................
    SUBROUTINE CleanUp()
-      ! Nullify pointers to avoid deallocation of data at the wrong time and by the wrong module
-      ! NOTE: All of this data originated in SeaState, and SeaState is responsible for deallocating the data
+      ! Use DEALLOCATEpointers = .false.
+      ! NOTE: All of the pointer data originated in SeaState, and SeaState is responsible for deallocating the data
       !        all other modules are responsible for nullifying their versions of the pointers when they are done with the data
-   
-      nullify(InputFileData%Morison%WaveDynP)   
-      nullify(InputFileData%Morison%WaveAcc)    
-      nullify(InputFileData%Morison%WaveVel) 
-      nullify(InputFileData%Morison%PWaveDynP0)   
-      nullify(InputFileData%Morison%PWaveAcc0)    
-      nullify(InputFileData%Morison%PWaveVel0)     
-      nullify(InputFileData%Morison%WaveTime)
-      nullify(InputFileData%Morison%WaveElev1)
-      nullify(InputFileData%Morison%WaveElev2)
-      nullify(InputFileData%WAMIT%WaveElevC0)
-      nullify(InputFileData%WAMIT%WaveDirArr)     
-      nullify(InputFileData%WAMIT%WaveElev1) 
-      nullify(InputFileData%WAMIT%WaveTime)
-      nullify(InputFileData%WAMIT2%WaveElevC0)
-      nullify(InputFileData%WAMIT2%WaveDirArr)      
-      nullify(InputFileData%Morison%WaveAccMCF)
-      nullify(InputFileData%Morison%PWaveAccMCF0)
-      
-      CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
 
    END SUBROUTINE CleanUp
@@ -1269,27 +1220,9 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! Destroy the parameter data:
       
-      ! First need to nullify pointers so that SeaState module data is not deallocation by HD
-      nullify(p%WaveTime)
-      !NOTE: Since we don't call Morison_End() here, we need to first nullify the Morison pointers, otherwise the Morison_DestroyParam() routine [ called by
-      !      Hydrodyn_DestroyParam ]  would try to deallocate the data attached to the Morison versions, but since SeaState created the data, it needs to do the deallocation.
-      nullify(p%Morison%WaveTime)
-      nullify(p%Morison%WaveDynP)
-      nullify(p%Morison%WaveAcc)
-      nullify(p%Morison%WaveVel)
-      nullify(p%Morison%PWaveDynP0)
-      nullify(p%Morison%PWaveAcc0)
-      nullify(p%Morison%PWaveVel0)
-      nullify(p%Morison%WaveElev1)
-      nullify(p%Morison%WaveElev2)
-      nullify(p%Morison%WaveAccMCF)
-      nullify(p%Morison%PWaveAccMCF0)
-      do i = 1,p%NBody
-         nullify(p%WAMIT(i)%SS_Exctn%WaveElev1)
-         nullify(p%WAMIT(i)%SS_Exctn%WaveTime)
-      end do
-      CALL HydroDyn_DestroyParam( p, ErrStat, ErrMsg )
-
+      ! Need to nullify pointers so that SeaState module data is not deallocated by HD (i.e., use DEALLOCATEpointers=.false. when it points to SeaState data)
+      ! on restart, the data is a separate copy of the SeaState module data, hence the PointsToSeaState parameter
+      CALL HydroDyn_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
          ! Destroy the state data:
          
@@ -1300,7 +1233,7 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          
          ! Destroy misc variables:
       
-      CALL HydroDyn_DestroyMisc( m, ErrStat, ErrMsg )
+      CALL HydroDyn_DestroyMisc( m, ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
          ! Destroy the output data:
          
@@ -1333,10 +1266,8 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
          ! Local variables
-      INTEGER                                            :: I, iWAMIT, iBody ! Generic loop counters
+      INTEGER                                            :: I, iWAMIT       ! Generic loop counters
 !      TYPE(HydroDyn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
-      TYPE(HydroDyn_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
-      TYPE(HydroDyn_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
       TYPE(HydroDyn_InputType)                           :: u               ! Instantaneous inputs
       INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
       CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
@@ -1353,7 +1284,6 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       TYPE(FIT_ContinuousStateType)      :: FIT_x              ! Input: Continuous states at t;
 #endif      
       
-      REAL(ReKi)                         :: rotdisp(3)
          ! Initialize variables
 
       ErrStat   = ErrID_None           ! no error has occurred
@@ -1514,7 +1444,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotsq(6*p%NBody), qdotdot(6*p%NBody)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
       REAL(ReKi)                           :: AllOuts(MaxHDOutputs)  
-      integer(IntKi)                       :: iBody, indxStart, indxEnd, iWAMIT  ! Counters
+      integer(IntKi)                       :: iBody, indxStart, indxEnd  ! Counters
       
          ! Initialize ErrStat
          
@@ -1687,7 +1617,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       END IF
       
          ! Integrate all the mesh loads onto the platfrom reference Point (PRP) at (0,0,0)
-      m%F_Hydro = CalcLoadsAtWRP( y, u, m%AllHdroOrigin, u%PRPMesh, m%MrsnMesh_position, m%HD_MeshMap, ErrStat2, ErrMsg2 )
+      m%F_Hydro = CalcLoadsAtWRP( y, u, m%AllHdroOrigin, m%HD_MeshMap, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
         
       
@@ -1826,13 +1756,11 @@ END SUBROUTINE HydroDyn_CalcConstrStateResidual
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, MeshMapData, ErrStat, ErrMsg )
+function CalcLoadsAtWRP( y, u, AllHdroOrigin, MeshMapData, ErrStat, ErrMsg )
 
    type(HydroDyn_OutputType),  intent(inout)  :: y                        ! Hydrodyn outputs
    type(HydroDyn_InputType),   intent(in   )  :: u                        ! Hydrodyn inputs
    type(MeshType),             intent(inout)  :: AllHdroOrigin            ! This is the mesh which data is mapped onto.  We pass it in to avoid allocating it at each call
-   type(MeshType),             intent(inout)  :: PRP_Position             ! These are the kinematics associated the PRP at (0,0,0).  We pass it in to avoid allocating it at each call
-   type(MeshType),             intent(in   )  :: MrsnMesh_Position        ! These are the kinematics associated with the Morison loads mesh.  We pass it in to avoid allocating it at each call
    type(HD_ModuleMapType),     intent(inout)  :: MeshMapData              ! Mesh mapping data structures 
    integer(IntKi),             intent(  out)  :: ErrStat                  ! Error status of the operation
    character(*),               intent(  out)  :: ErrMsg                   ! Error message if ErrStat /= ErrID_None                                                         
@@ -1847,7 +1775,7 @@ function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, 
    if ( y%WAMITMesh%Committed  ) then
 
       ! Just transfer the loads because the meshes are at the same location (0,0,0)
-      call Transfer_Point_to_Point( y%WAMITMesh, AllHdroOrigin, MeshMapData%W_P_2_PRP_P, ErrStat2, ErrMsg2, u%WAMITMesh, PRP_Position )
+      call Transfer_Point_to_Point( y%WAMITMesh, AllHdroOrigin, MeshMapData%W_P_2_PRP_P, ErrStat2, ErrMsg2, u%WAMITMesh, u%PRPMesh )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
             if (ErrStat >= AbortErrLev) return
             
@@ -1859,7 +1787,7 @@ function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, 
    
    if ( y%Morison%Mesh%Committed ) then 
 
-      call Transfer_Point_to_Point( y%Morison%Mesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2,  u%Morison%Mesh, PRP_Position )
+      call Transfer_Point_to_Point( y%Morison%Mesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2,  u%Morison%Mesh, u%PRPMesh )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
             if (ErrStat >= AbortErrLev) return
  
@@ -1910,7 +1838,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(HydroDyn_ContinuousStateType)                      :: x_m
    TYPE(HydroDyn_InputType)                                :: u_perturb
    REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, offsetJ, n_du_plus1
+   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, n_du_plus1
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -2466,12 +2394,10 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
    
       ! local variables:
-   INTEGER(IntKi)                :: i,j,k, index_last, index_next
+   INTEGER(IntKi)                :: i,index_last, index_next
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian_y'
-   LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
-   logical, allocatable                              :: AllOut(:)
    
    
    
@@ -2644,9 +2570,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k, index, index_last, nu, i_meshField, m, meshFieldCount
-   REAL(R8Ki)                    :: MaxThrust, MaxTorque, perturb_t, perturb
-   REAL(R8Ki)                    :: ScaleLength
+   INTEGER(IntKi)                :: i, j, index, nu, i_meshField, m, meshFieldCount
+   REAL(R8Ki)                    :: perturb_t, perturb
    LOGICAL                       :: FieldMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
 
    
@@ -3041,7 +2966,6 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
       ! local variables:
 
    integer(IntKi)                                    :: indx_first             ! index indicating next value of dY to be filled 
-   logical                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
    integer(IntKi)                                    :: k
    
    
@@ -3089,8 +3013,7 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
 
 
-   INTEGER(IntKi)                                    :: i, j, k, index, nu
-   INTEGER(IntKi)                                    :: ny
+   INTEGER(IntKi)                                    :: i, j, index, nu
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_GetOP'

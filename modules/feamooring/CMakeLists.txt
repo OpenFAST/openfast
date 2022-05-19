@@ -33,7 +33,7 @@ install(TARGETS feamlib
   LIBRARY DESTINATION lib)
 
 add_executable(feam_driver src/FEAM_Driver.f90)
-target_link_libraries(feam_driver feamlib)
+target_link_libraries(feam_driver feamlib versioninfolib)
 
 install(TARGETS feam_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

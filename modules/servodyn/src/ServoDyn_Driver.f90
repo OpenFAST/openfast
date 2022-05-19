@@ -23,6 +23,7 @@ PROGRAM SrvD_Driver
    USE NWTC_Library
    USE ServoDyn
    USE ServoDyn_Types
+   USE VersionInfo
 
    IMPLICIT NONE
 

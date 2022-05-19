@@ -71,17 +71,13 @@ PROGRAM HydroDynDriver
   
    REAL(DbKi)                                          :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
    REAL(DbKi)                                          :: Interval             ! HD module requested time interval
-   INTEGER(B1Ki), ALLOCATABLE                          :: SaveAry(:)           ! Array to store packed data structure
 
    type(SeaSt_InitInputType)                        :: InitInData_SeaSt           ! Input data for initialization
    type(SeaSt_InitOutputType)                       :: InitOutData_SeaSt          ! Output data from initialization
 
    type(SeaSt_ContinuousStateType)                  :: x_SeaSt                    ! Continuous states
-   type(SeaSt_ContinuousStateType)                  :: x_new_SeaSt                ! Continuous states at updated time
    type(SeaSt_DiscreteStateType)                    :: xd_SeaSt                   ! Discrete states
-   type(SeaSt_DiscreteStateType)                    :: xd_new_SeaSt               ! Discrete states at updated time
    type(SeaSt_ConstraintStateType)                  :: z_SeaSt                    ! Constraint states
-   type(SeaSt_ConstraintStateType)                  :: z_residual_SeaSt           ! Residual of the constraint state equations (Z)
    type(SeaSt_OtherStateType)                       :: OtherState_SeaSt           ! Other states
    type(SeaSt_MiscVarType)                          :: m_SeaSt                    ! Misc/optimization variables
 
@@ -90,7 +86,6 @@ PROGRAM HydroDynDriver
    type(SeaSt_InputType)                            :: u_SeaSt(NumInp)            ! System inputs
    type(SeaSt_OutputType)                           :: y_SeaSt                    ! System outputs
 
-   type(SeaSt_ContinuousStateType)                  :: dxdt_SeaSt                 ! First time derivatives of the continuous states
 
    
    TYPE(HydroDyn_InitInputType)                        :: InitInData           ! Input data for initialization
@@ -101,7 +96,6 @@ PROGRAM HydroDynDriver
    TYPE(HydroDyn_DiscreteStateType)                    :: xd                   ! Discrete states
    TYPE(HydroDyn_DiscreteStateType)                    :: xd_new               ! Discrete states at updated time
    TYPE(HydroDyn_ConstraintStateType)                  :: z                    ! Constraint states
-   TYPE(HydroDyn_ConstraintStateType)                  :: z_residual           ! Residual of the constraint state equations (Z)
    TYPE(HydroDyn_OtherStateType)                       :: OtherState           ! Other states
    TYPE(HydroDyn_MiscVarType)                          :: m                    ! Misc/optimization variables
 
@@ -110,14 +104,10 @@ PROGRAM HydroDynDriver
    TYPE(HydroDyn_InputType)                            :: u(NumInp)            ! System inputs
    TYPE(HydroDyn_OutputType)                           :: y                    ! System outputs
 
-   TYPE(HydroDyn_ContinuousStateType)                  :: dxdt                 ! First time derivatives of the continuous states
 
 
    INTEGER(IntKi)                                     :: UnPRPInp            ! PRP Inputs file identifier
-   INTEGER(IntKi)                                     :: UnMorisonInp          ! Morison Inputs file identifier
-   INTEGER(IntKi)                                     :: UnHD_Out              ! Output file identifier
    REAL(ReKi), ALLOCATABLE                            :: PRPin(:,:)          ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
-   REAL(ReKi), ALLOCATABLE                            :: Morisonin(:,:)        ! Variable for storing time, forces, and body velocities, in m/s or rad/s for Morison elements
    
    INTEGER(IntKi)                                     :: NBody                 ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
    
@@ -136,24 +126,16 @@ PROGRAM HydroDynDriver
    real(ReKi)                                     :: UsrTime1                                ! User CPU time for simulation initialization
    real(ReKi)                                     :: UsrTime2                                ! User CPU time for simulation (without intialization)
    real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
-   real(DbKi)                                     :: t_global                                ! Current simulation time (for global/FAST simulation)
    real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
    integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
 
-   type(MeshType)                                 :: RefPtMesh                               ! 1-node Point mesh located at (0,0,0) in global system where all PRP-related driver inputs are set
    type(MeshMapType)                              :: HD_Ref_2_WB_P                           ! Mesh mapping between Reference pt mesh and WAMIT body(ies) mesh
    type(MeshMapType)                              :: HD_Ref_2_M_P                            ! Mesh mapping between Reference pt mesh and Morison mesh
-   real(R8Ki)                                     :: theta(3)                                ! mesh creation helper data
    
    ! For testing
-   LOGICAL                                            :: DoTight = .FALSE.
    REAL(DbKi)                                         :: maxAngle             ! For debugging, see what the largest rotational angle input is for the simulation
-   CHARACTER(10)                                      :: AngleMsg             ! For debugging, a string version of the largest rotation input
-   INTEGER                                            :: UnMeshDebug
-   CHARACTER(50)                                      :: MeshDebugFile
 
    CHARACTER(20)                    :: FlagArg       ! Flag argument from command line
-   CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
 
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
 
@@ -188,12 +170,9 @@ PROGRAM HydroDynDriver
    CALL CheckArgs( drvrFilename, Flag=FlagArg )
    IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
 
-      ! Display the copyright notice
+   ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( version%Name )
-     ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-     ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
+   CALL DispCompileRuntimeInfo( version%Name )
    
       ! Parse the driver input file and run the simulation based on that file
    CALL ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
@@ -206,7 +185,7 @@ PROGRAM HydroDynDriver
    InitInData%defMSL2SWL   = drvrInitInp%MSL2SWL
    InitInData%UseInputFile = .TRUE. 
    InitInData%InputFile    = drvrInitInp%HDInputFile
-   InitInData%OutRootName  = drvrInitInp%OutRootName
+   InitInData%OutRootName  = trim(drvrInitInp%OutRootName)//'.HD'
    InitInData%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
    InitInData%Linearize    = drvrInitInp%Linearize
   
@@ -233,9 +212,10 @@ PROGRAM HydroDynDriver
    InitInData_SeaSt%defMSL2SWL   = drvrInitInp%MSL2SWL
    InitInData_SeaSt%UseInputFile = .TRUE. 
    InitInData_SeaSt%InputFile    = drvrInitInp%SeaStateInputFile
-   InitInData_SeaSt%OutRootName  = drvrInitInp%OutRootName
+   InitInData_SeaSt%OutRootName  = trim(drvrInitInp%OutRootName)//'.SEA'
    InitInData_SeaSt%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
    Interval = drvrInitInp%TimeInterval
+   
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
@@ -290,25 +270,11 @@ PROGRAM HydroDynDriver
    InitInData%WaveElev1      => InitOutData_SeaSt%WaveElev1
    InitInData%WaveElev2      => InitOutData_SeaSt%WaveElev2
    
-   ! Nullify these pointers because they are no longer needed
-   nullify(InitOutData_SeaSt%WaveDynP)   
-   nullify(InitOutData_SeaSt%WaveAcc)    
-   nullify(InitOutData_SeaSt%WaveVel)
-   nullify(InitOutData_SeaSt%PWaveDynP0)   
-   nullify(InitOutData_SeaSt%PWaveAcc0)    
-   nullify(InitOutData_SeaSt%PWaveVel0)     
-   nullify(InitOutData_SeaSt%WaveTime)
-   nullify(InitOutData_SeaSt%WaveElevC0)
-   nullify(InitOutData_SeaSt%WaveDirArr)
-   nullify(InitOutData_SeaSt%WaveElev1)
-   nullify(InitOutData_SeaSt%WaveElev2)
-   nullify(InitOutData_SeaSt%WaveAccMCF)
-   nullify(InitOutData_SeaSt%PWaveAccMCF0)
    
    call SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData%SeaSt_Interp_p, 0, ErrStat, ErrMsg )
    
-   ! Destroy SeaState InitOutput
-   CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat, ErrMsg )
+   ! Destroy SeaState InitOutput (and nullify pointers to SeaState data)
+   CALL SeaSt_DestroyInitOutput( InitOutData_SeaSt, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
    
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
@@ -387,25 +353,7 @@ PROGRAM HydroDynDriver
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
    CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
-   
-   ! 1) Nullify the HD Init Input pointers
-   ! 2) Now, when HydroDyn_DestroyInitInput is called and hence SeaSt_DestroyInitOutput, we will not deallocate data which is still in use because the is associated test will fail.
-    
-   nullify(InitInData%WaveElevC0)
-   nullify(InitInData%WaveDirArr)
-   nullify(InitInData%WaveDynP)   
-   nullify(InitInData%WaveAcc)    
-   nullify(InitInData%WaveVel)
-   nullify(InitInData%PWaveDynP0)   
-   nullify(InitInData%PWaveAcc0)    
-   nullify(InitInData%PWaveVel0)     
-   nullify(InitInData%WaveTime)
-   nullify(InitInData%WaveElev1)
-   nullify(InitInData%WaveElev2)
-   
-   nullify(InitInData%WaveAccMCF)
-   nullify(InitInData%PWaveAccMCF0)
-   
+      
    if (errStat >= AbortErrLev) then
          ! Clean up and exit 
       call HD_DvrCleanup()
@@ -420,16 +368,9 @@ PROGRAM HydroDynDriver
 
       ! Write the gridded wave elevation data to a file
 
-     
 
-   CALL HydroDyn_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
-   CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
-   
-! Nullify unneeded SeaState pointers so that we can then destroy the InitOutput data structure without deallocated needed data
-   !nullify(InitOutData_SeaSt%WaveElev0)
-   !nullify(InitOutData_SeaSt%WaveElevC0)
-   !nullify(InitOutData_SeaSt%WaveDirArr)
-
+   CALL HydroDyn_DestroyInitInput(  InitInData,  ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+   CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
    
    
    ! Create Mesh mappings
@@ -668,26 +609,6 @@ call HD_DvrCleanup()
 
    CONTAINS
 
-      
-!====================================================================================================
-SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
-!     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to 
-!     any existing echo information
-!----------------------------------------------------------------------------------------------------  
-   LOGICAL,                       INTENT( IN    )   :: EchoFlag             ! local version of echo flag
-   INTEGER,                       INTENT( IN    )   :: UnEcho               !  echo unit number
-   
-   
-      ! Close this module's echo file
-      
-   IF ( EchoFlag ) THEN
-    CLOSE(UnEcho)
-   END IF
-   
-  
-   
-END SUBROUTINE CleanupEchoFile
-
 subroutine HD_DvrCleanup()
    
          ! Local variables
@@ -700,7 +621,8 @@ subroutine HD_DvrCleanup()
       
       call SeaSt_End( u_SeaSt(1), p_SeaSt, x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
-      call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2 )
+      
+      call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2, DEALLOCATEpointers=.false. )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       call HydroDyn_DestroyDiscState( xd_new, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
@@ -734,78 +656,55 @@ end subroutine HD_DvrCleanup
 
 SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
 
-   CHARACTER(1024),               INTENT( IN    )   :: inputFile
+   CHARACTER(*),                  INTENT( IN    )   :: inputFile
    TYPE(HD_Drvr_InitInput),       INTENT(   OUT )   :: InitInp
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables  
-         
-   INTEGER                                          :: I                    ! generic integer for counting
-   INTEGER                                          :: J                    ! generic integer for counting
-   CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
 
    INTEGER                                          :: UnIn                 ! Unit number for the input file
    INTEGER                                          :: UnEchoLocal          ! The local unit number for this module's echo file
    CHARACTER(1024)                                  :: EchoFile             ! Name of HydroDyn echo file  
-   CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line   
-   CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-   CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
+   CHARACTER(1024)                                  :: PriPath              ! Temporary storage for relative path name
    CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file  
 
-   REAL(ReKi)                                       :: TmpRealVar2(2)       !< Temporary real    array size 2
-   INTEGER(IntKi)                                   :: TmpIntVar2(2)        !< Temporary integer array size 2
-
+   integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
+   character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
+   character(*), parameter                          :: RoutineName = 'ReadDriverInputFile'
    
    
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEchoLocal = -1
+   ErrStat = ErrID_None
+   ErrMsg = ""
    
    FileName = TRIM(inputFile)
    
    CALL GetNewUnit( UnIn ) 
-   CALL OpenFInpFile ( UnIn, FileName, ErrStat, ErrMsg ) 
-      IF (ErrStat >=AbortErrLev) THEN
-         call ProgAbort( ErrMsg )
-         RETURN
-      ENDIF
+   CALL OpenFInpFile ( UnIn, FileName, ErrStat2, ErrMsg2 ) 
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
-   
+
    CALL WrScr( 'Opening HydroDyn Driver input file:  '//FileName )
-   
-!bjj: we are treating ALL errors here as fatal, but if the calling routine doesn't do the same, there will be issues...
+   call GetPath( TRIM(inputFile), PriPath ) ! store path name in case any of the file names are relative to the primary input file
+
    
    !-------------------------------------------------------------------------------------------------
    ! File header
    !-------------------------------------------------------------------------------------------------
    
-   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat, ErrMsg )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
-      RETURN
-   END IF
+   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat2, ErrMsg2 )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
 
-   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat, ErrMsg )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
-      RETURN
-   END IF
+   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat2, ErrMsg2 )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
-   
+
      ! Echo Input Files.
-      
-   CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat, ErrMsg )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
-      RETURN
-   END IF
+   CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2 )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
    
    
       ! If we are Echoing the input then we should re-read the first three lines so that we can echo them
@@ -816,49 +715,22 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       
       EchoFile = TRIM(FileName)//'.ech'
       CALL GetNewUnit( UnEchoLocal )   
-      CALL OpenEcho ( UnEchoLocal, EchoFile, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) THEN
-         !ErrMsg  = ' Failed to open Echo file.'
-         ErrStat = ErrID_Fatal
-         CLOSE( UnIn )
-         RETURN
-      END IF
+      CALL OpenEcho ( UnEchoLocal, EchoFile, ErrStat2, ErrMsg2 )
+      if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+
       
       REWIND(UnIn)
       
-      CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat, ErrMsg, UnEchoLocal )
-   
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read HydroDyn Driver input file header line 1.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
+      CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEchoLocal )
+      if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
+      CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat2, ErrMsg2, UnEchoLocal )
+      if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
-      CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat, ErrMsg, UnEchoLocal )
-   
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read HydroDyn Driver input file header line 2.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-
-   
          ! Echo Input Files. Note this line is prevented from being echoed by the ReadVar routine.
-      
-      CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat, ErrMsg, UnEchoLocal )
-      !WRITE (UnEchoLocal,Frmt      ) InitInp%Echo, 'Echo', 'Echo input file'
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read Echo parameter.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
+      CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEchoLocal )
+      if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+
       
    END IF
    !-------------------------------------------------------------------------------------------------
@@ -866,161 +738,59 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat, ErrMsg, UnEchoLocal )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
-
+   CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
       ! Gravity - Gravity.
-      
-   CALL ReadVar ( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Gravity parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
+   CALL ReadVar ( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
       ! WtrDens - Water density.
-      
-   CALL ReadVar ( UnIn, FileName, InitInp%WtrDens, 'WtrDens', 'Water density', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read WtrDens parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
+   CALL ReadVar ( UnIn, FileName, InitInp%WtrDens, 'WtrDens', 'Water density', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
       ! WtrDpth - Water depth.
-      
-   CALL ReadVar ( UnIn, FileName, InitInp%WtrDpth, 'WtrDpth', 'Water depth', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read WtrDpth parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
+   CALL ReadVar ( UnIn, FileName, InitInp%WtrDpth, 'WtrDpth', 'Water depth', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
 
       ! MSL2SWL - Offset between still-water level and mean sea level.
-      
-   CALL ReadVar ( UnIn, FileName, InitInp%MSL2SWL, 'MSL2SWL', 'Offset between still-water level and mean sea level', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read MSL2SWL parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
+   CALL ReadVar ( UnIn, FileName, InitInp%MSL2SWL, 'MSL2SWL', 'Offset between still-water level and mean sea level', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
    
    !-------------------------------------------------------------------------------------------------
    ! HYDRODYN section
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'HYDRODYN header', ErrStat, ErrMsg, UnEchoLocal )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
-   
+   CALL ReadCom( UnIn, FileName, 'HYDRODYN header', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
    
       ! HDInputFile
-      
-   CALL ReadVar ( UnIn, FileName, InitInp%HDInputFile, 'HDInputFile', &
-                                    'HydroDyn input filename', ErrStat, ErrMsg, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%HDInputFile, 'HDInputFile', 'HydroDyn input filename', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+   IF ( PathIsRelative( InitInp%HDInputFile ) ) InitInp%HDInputFile = TRIM(PriPath)//TRIM(InitInp%HDInputFile)
 
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read HDInputFile parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF 
-   
        ! SeaStInputFile
-      
-   CALL ReadVar ( UnIn, FileName, InitInp%SeaStateInputFile, 'SeaStateInputFile', &
-                                    'SeaState input filename', ErrStat, ErrMsg, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%SeaStateInputFile, 'SeaStateInputFile', 'SeaState input filename', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+   IF ( PathIsRelative( InitInp%SeaStateInputFile ) ) InitInp%SeaStateInputFile = TRIM(PriPath)//TRIM(InitInp%SeaStateInputFile)
 
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read SeaStateInputFile parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
-   
       ! OutRootName
-   
-   CALL ReadVar ( UnIn, FileName, InitInp%OutRootName, 'OutRootName', &
-                                    'HydroDyn output root filename', ErrStat, ErrMsg, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%OutRootName, 'OutRootName', 'HydroDyn output root filename', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+   IF ( PathIsRelative( InitInp%OutRootName ) ) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
 
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read OutRootName parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF   
-     
        ! Linearize
-   
-   CALL ReadVar ( UnIn, FileName, InitInp%Linearize, 'Linearize', &
-                                    'Linearize parameter', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Linearize parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF   
+   CALL ReadVar ( UnIn, FileName, InitInp%Linearize, 'Linearize', 'Linearize parameter', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
   
       ! NSteps
-   
-   CALL ReadVar ( UnIn, FileName, InitInp%NSteps, 'NSteps', &
-                                    'Number of time steps in the HydroDyn simulation', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read NSteps parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF   
- 
+   CALL ReadVar ( UnIn, FileName, InitInp%NSteps, 'NSteps', 'Number of time steps in the HydroDyn simulation', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
    
       ! TimeInterval   
-   
-   CALL ReadVar ( UnIn, FileName, InitInp%TimeInterval, 'TimeInterval', &
-                                    'Time interval for any HydroDyn inputs', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read TimeInterval parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF   
+   CALL ReadVar ( UnIn, FileName, InitInp%TimeInterval, 'TimeInterval', 'Time interval for any HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
    
    
    !-------------------------------------------------------------------------------------------------
@@ -1028,45 +798,17 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
-      
-   CALL ReadCom( UnIn, FileName, 'PRP INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
- 
-   
+   CALL ReadCom( UnIn, FileName, 'PRP INPUTS header', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
    
       ! PRPInputsMod      
-       
-   CALL ReadVar ( UnIn, FileName, InitInp%PRPInputsMod, 'PRPInputsMod', &
-                                    'Model for the PRP (principal reference point) inputs', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read PRPInputsMod parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF   
-   
+   CALL ReadVar ( UnIn, FileName, InitInp%PRPInputsMod, 'PRPInputsMod', 'Model for the PRP (principal reference point) inputs', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
    
       ! PRPInputsFile      
-       
-   CALL ReadVar ( UnIn, FileName, InitInp%PRPInputsFile, 'PRPInputsFile', &
-                                    'Filename for the PRP HydroDyn inputs', ErrStat, ErrMsg, UnEchoLocal )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read PRPInputsFile parameter.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF   
+   CALL ReadVar ( UnIn, FileName, InitInp%PRPInputsFile, 'PRPInputsFile', 'Filename for the PRP HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+   IF ( PathIsRelative( InitInp%PRPInputsFile ) ) InitInp%PRPInputsFile = TRIM(PriPath)//TRIM(InitInp%PRPInputsFile)
    
    
    !-------------------------------------------------------------------------------------------------
@@ -1074,59 +816,21 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
 
       ! Header
+   CALL ReadCom( UnIn, FileName, 'PRP STEADY STATE INPUTS header', ErrStat2, ErrMsg2, UnEchoLocal )
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+
+      ! uPRPInSteady
+   CALL ReadAry ( UnIn, FileName, InitInp%uPRPInSteady, 6, 'uPRPInSteady', 'PRP Steady-state displacements and rotations.', ErrStat2,  ErrMsg2, UnEchoLocal)
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+   
+      ! uDotPRPInSteady
+   CALL ReadAry ( UnIn, FileName, InitInp%uDotPRPInSteady, 6, 'uDotPRPInSteady', 'PRP Steady-state translational and rotational velocities.', ErrStat2,  ErrMsg2, UnEchoLocal)
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
       
-   CALL ReadCom( UnIn, FileName, 'PRP STEADY STATE INPUTS header', ErrStat, ErrMsg, UnEchoLocal )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   END IF
-   
-   
-   
-         ! uPRPInSteady
-         
-      CALL ReadAry ( UnIn, FileName, InitInp%uPRPInSteady, 6, 'uPRPInSteady', &
-                           'PRP Steady-state displacements and rotations.', ErrStat,  ErrMsg, UnEchoLocal)         
-       
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uPRPInSteady parameter.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-   
-   
-         ! uDotPRPInSteady
-         
-      CALL ReadAry ( UnIn, FileName, InitInp%uDotPRPInSteady, 6, 'uDotPRPInSteady', &
-                           'PRP Steady-state translational and rotational velocities.', ErrStat,  ErrMsg, UnEchoLocal)         
-       
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uDotPRPInSteady parameter.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
-      
-      
-         ! uDotDotPRPInSteady
-         
-      CALL ReadAry ( UnIn, FileName, InitInp%uDotDotPRPInSteady, 6, 'uDotDotPRPInSteady', &
-                           'PRP Steady-state translational and rotational accelerations.', ErrStat,  ErrMsg, UnEchoLocal)         
-       
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read uDotDotPRPInSteady parameter.'
-         ErrStat = ErrID_Fatal
-         CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-         CLOSE( UnIn )
-         RETURN
-      END IF
+      ! uDotDotPRPInSteady
+   CALL ReadAry ( UnIn, FileName, InitInp%uDotDotPRPInSteady, 6, 'uDotDotPRPInSteady', 'PRP Steady-state translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEchoLocal)
+   if (Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)) return
+
       
    IF ( InitInp%PRPInputsMod /= 1 ) THEN
       InitInp%uPRPInSteady       = 0.0
@@ -1135,11 +839,34 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    END IF
 
 
-   CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-   CLOSE( UnIn )
+   CALL cleanup(UnIn, UnEchoLocal)
    
 END SUBROUTINE ReadDriverInputFile
 
+ ! because these routines are called from ReadDriverInputFile, which is already in a CONTAINS block, we have to put them outside the ReadDriverInputFile subroutine give them arguments
+
+   logical function Failed(UnIn, UnEchoLocal,ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   integer(IntKi),         intent(in   )   :: UnIn
+   integer(IntKi),         intent(in   )   :: UnEchoLocal
+   INTEGER,                INTENT(IN   )   :: ErrStat2              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),           INTENT(IN   )   :: ErrMsg2               ! Error message if ErrStat /= ErrID_None
+   INTEGER,                INTENT(INOUT)   :: ErrStat              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),           INTENT(INOUT)   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   character(*),           INTENT(IN   )   :: RoutineName
+      
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call Cleanup(UnIn, UnEchoLocal)
+        
+   end function Failed
+
+subroutine Cleanup(UnIn, UnEchoLocal)
+   integer(IntKi), intent(in) :: UnIn
+   integer(IntKi), intent(in) :: UnEchoLocal
+      
+   CLOSE( UnIn )
+   IF ( UnEchoLocal > 0 ) CLOSE( UnEchoLocal )
+end subroutine Cleanup
 
 !----------------------------------------------------------------------------------------------------------------------------------
 

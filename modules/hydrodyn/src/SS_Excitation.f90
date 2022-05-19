@@ -86,7 +86,6 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
     TYPE(SS_Exc_MiscVarType),         INTENT(inout)  :: m           !< Initial misc/optimization variables            
     INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
     CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-   real(ReKi)     :: positionXY(2)
     
     real(SiKi)  :: GetWaveElevation(p%NBody)
     TYPE(SS_Exc_InputType)        :: u_out  ! extra_interp result
@@ -370,10 +369,9 @@ SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CALL SS_Exc_DestroyInput( u, ErrStat, ErrMsg )
 
 
-         ! Destroy the parameter data:
-      nullify(p%WaveElev1)
-      nullify(p%WaveTime)
-      CALL SS_Exc_DestroyParam( p, ErrStat, ErrMsg )
+         ! Destroy the parameter data, but don't deallocate SeaState data:
+        ! Note, this is called only from the SS Excitation driver code, so there should not be any issues with pointers on restart
+      CALL SS_Exc_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
          ! Destroy the state data:

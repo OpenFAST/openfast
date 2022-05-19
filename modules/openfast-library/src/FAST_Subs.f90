@@ -24,6 +24,7 @@ MODULE FAST_Subs
    USE FAST_Solver
    USE FAST_Linear
    USE SC_DataEx
+   USE VersionInfo
 
    IMPLICIT NONE
 
@@ -735,7 +736,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SeaSt%defMSL2SWL    = p_FAST%MSL2SWL
       Init%InData_SeaSt%UseInputFile  = .TRUE.
       Init%InData_SeaSt%InputFile     = p_FAST%SeaStFile
-      Init%InData_SeaSt%OutRootName   = p_FAST%OutFileRoot
+      Init%InData_SeaSt%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SeaSt))
+      
       Init%InData_SeaSt%TMax          = p_FAST%TMax
       
       CALL SeaSt_Init( Init%InData_SeaSt, SeaSt%Input(1), SeaSt%p,  SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
@@ -795,25 +797,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          
       end if
       
-      
-      ! Now that all modules have been handled their pointer data, we need to nullify some of the SeaState InitOut pointers
-      ! The modules which were handed the data will be deallocating it.
-      
-      ! NOTE: this may need to change once other modules start using SeaState
-      nullify(Init%OutData_SeaSt%WaveDynP)   
-      nullify(Init%OutData_SeaSt%WaveAcc)    
-      nullify(Init%OutData_SeaSt%WaveVel)  
-      nullify(Init%OutData_SeaSt%PWaveDynP0)   
-      nullify(Init%OutData_SeaSt%PWaveAcc0)    
-      nullify(Init%OutData_SeaSt%PWaveVel0)  
-      nullify(Init%OutData_SeaSt%WaveTime)
-      nullify(Init%OutData_SeaSt%WaveElevC0)
-      nullify(Init%OutData_SeaSt%WaveDirArr)
-      nullify(Init%OutData_SeaSt%WaveElev1)
-      nullify(Init%OutData_SeaSt%WaveElev2)
-      nullify(Init%OutData_SeaSt%WaveAccMCF)
-      nullify(Init%OutData_SeaSt%PWaveAccMCF0)
-      
    end if
    
    ! ........................
@@ -834,7 +817,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_HD%defMSL2SWL    = p_FAST%MSL2SWL
       Init%InData_HD%UseInputFile  = .TRUE.
       Init%InData_HD%InputFile     = p_FAST%HydroFile
-      Init%InData_HD%OutRootName   = p_FAST%OutFileRoot
+      Init%InData_HD%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
       Init%InData_HD%TMax          = p_FAST%TMax
       Init%InData_HD%hasIce        = p_FAST%CompIce /= Module_None
       Init%InData_HD%Linearize     = p_FAST%Linearize
@@ -846,21 +829,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL HydroDyn_Init( Init%InData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), &
                           HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module( MODULE_HD ), Init%OutData_HD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      ! 1) Nullify the HD Init Input pointers (do this now in case HD_Init failed)
-      ! 2) Now, when HydroDyn_DestroyInitInput is called and hence SeaState_DestroyInitOutput, we will not deallocate data which is still in use because the is associated test will fail.
-      nullify(Init%InData_HD%WaveElevC0)
-      nullify(Init%InData_HD%WaveDirArr)
-      nullify(Init%InData_HD%WaveDynP)   
-      nullify(Init%InData_HD%WaveAcc)    
-      nullify(Init%InData_HD%WaveVel)
-      nullify(Init%InData_HD%PWaveDynP0)   
-      nullify(Init%InData_HD%PWaveAcc0)    
-      nullify(Init%InData_HD%PWaveVel0)    
-      nullify(Init%InData_HD%WaveTime)
-      nullify(Init%InData_HD%WaveElev1)
-      nullify(Init%InData_HD%WaveElev2)
-      nullify(Init%InData_HD%WaveAccMCF)
-      nullify(Init%InData_HD%PWaveAccMCF0)
   
       ! If HD_Init failed, cleanup and exit 
       IF (ErrStat >= AbortErrLev) THEN
@@ -1535,7 +1503,9 @@ CONTAINS
    !...............................................................................................................................
    ! Destroy initializion data
    !...............................................................................................................................
-      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2 )
+      ! We assume that all initializion data points to parameter data, so we just nullify the pointers instead of deallocate
+      ! data that they point to:
+      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    END SUBROUTINE Cleanup
@@ -1638,48 +1608,6 @@ CONTAINS
 END SUBROUTINE FAST_InitializeAll
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This function returns a string describing the glue code and some of the compilation options we're using.
-FUNCTION GetVersion(ThisProgVer)
-
-   ! Passed Variables:
-
-   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
-   CHARACTER(1024)                 :: GetVersion      !< String containing a description of the compiled precision.
-
-   CHARACTER(200)                  :: git_commit
-
-   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
-
-   IF ( Cmpl4SFun )  THEN     ! FAST has been compiled as an S-Function for Simulink
-      GetVersion = TRIM(GetVersion)//' as a DLL S-Function for Simulink'
-   ELSEIF ( Cmpl4LV )  THEN     ! FAST has been compiled as a DLL for Labview
-      GetVersion = TRIM(GetVersion)//' as a DLL for LabVIEW'
-   ENDIF
-
-   GetVersion = TRIM(GetVersion)//' as a '//TRIM(Num2LStr(BITS_IN_ADDR))//'-bit application using'
-
-   ! determine precision
-
-      IF ( ReKi == SiKi )  THEN     ! Single precision
-         GetVersion = TRIM(GetVersion)//' single'
-      ELSEIF ( ReKi == R8Ki )  THEN ! Double precision
-         GetVersion = TRIM(GetVersion)// ' double'
-      ELSE                          ! Unknown precision
-         GetVersion = TRIM(GetVersion)//' unknown'
-      ENDIF
-
-
-!   GetVersion = TRIM(GetVersion)//' precision with '//OS_Desc
-   GetVersion = TRIM(GetVersion)//' precision'
-
-   ! add git info
-   git_commit = QueryGitVersion()
-   GetVersion = TRIM(GetVersion)//' at commit '//git_commit
-
-   RETURN
-END FUNCTION GetVersion
-
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
@@ -1689,10 +1617,9 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    ! sets the pi constants, open console for output, etc...
    CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
 
-   ! Display the copyright notice
+   ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( ThisProgVer%Name )
-
-   CALL DispCompileRuntimeInfo
+   CALL DispCompileRuntimeInfo( ThisProgVer%Name )
 
 END SUBROUTINE FAST_ProgStart
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1809,6 +1736,7 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    y_FAST%Module_Ver( Module_AD14   )%Name = 'AeroDyn14'
    y_FAST%Module_Ver( Module_AD     )%Name = 'AeroDyn'
    y_FAST%Module_Ver( Module_SrvD   )%Name = 'ServoDyn'
+   y_FAST%Module_Ver( Module_HD     )%Name = 'SeaState'
    y_FAST%Module_Ver( Module_HD     )%Name = 'HydroDyn'
    y_FAST%Module_Ver( Module_SD     )%Name = 'SubDyn'
    y_FAST%Module_Ver( Module_ExtPtfm)%Name = 'ExtPtfm_MCKF'
@@ -1827,6 +1755,7 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    y_FAST%Module_Abrev( Module_AD14   ) = 'AD'
    y_FAST%Module_Abrev( Module_AD     ) = 'AD'
    y_FAST%Module_Abrev( Module_SrvD   ) = 'SrvD'
+   y_FAST%Module_Abrev( Module_HD     ) = 'SEA'
    y_FAST%Module_Abrev( Module_HD     ) = 'HD'
    y_FAST%Module_Abrev( Module_SD     ) = 'SD'
    y_FAST%Module_Abrev( Module_ExtPtfm) = 'ExtPtfm'
@@ -1836,7 +1765,7 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    y_FAST%Module_Abrev( Module_Orca   ) = 'Orca'
    y_FAST%Module_Abrev( Module_IceF   ) = 'IceF'
    y_FAST%Module_Abrev( Module_IceD   ) = 'IceD'
-
+   
    p%n_substeps = 1                                                ! number of substeps for between modules and global/FAST time
    p%BD_OutputSibling = .false.
 
@@ -2138,7 +2067,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    !......................................................
    ! Set the description lines to be printed in the output file
    !......................................................
-   y_FAST%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(FAST_Ver))
+   y_FAST%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(FAST_Ver, Cmpl4SFun, Cmpl4LV))
    y_FAST%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
    y_FAST%FileDescLines(3)  = 'Description from the FAST input file: '//TRIM(p_FAST%FTitle)
 
@@ -7170,7 +7099,8 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
          Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
       end if
    END IF
-
+   
+   
    call cleanup()
 
 contains
@@ -7373,7 +7303,10 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
 
       ! deal with sibling meshes here:
    ! (ignoring for now; they are not going to be siblings on restart)
+   
+   Turbine%HD%p%PointsToSeaState = .false.  ! since the pointers aren't pointing to the same data as SeaState after restart, set this to avoid memory leaks and deallocation problems
 
+   
    ! deal with files that were open:
    IF (Turbine%p_FAST%WrTxtOutFile) THEN
       CALL OpenFunkFileAppend ( Turbine%y_FAST%UnOu, TRIM(Turbine%p_FAST%OutFileRoot)//'.out', ErrStat2, ErrMsg2)

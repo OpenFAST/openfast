@@ -974,7 +974,7 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, F_Add, F_Wave
    INTEGER(IntKi),                        INTENT(   OUT )  :: ErrStat        ! Error status of the operation
    CHARACTER(*),                          INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
-   INTEGER                                                 :: I, iBody, startIndx, endIndx
+   INTEGER                                                 :: iBody, startIndx, endIndx
    integer(IntKi)                                          :: ErrStat2
    character(ErrMsgLen)                                    :: ErrMsg2
    real(ReKi)                                              :: rotdisp(3)
@@ -1112,7 +1112,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ! Passed variables
 
    TYPE(ProgDesc),                INTENT( IN    ) :: HydroDyn_ProgDesc    ! 
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! The name of the output file 
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! The name of the output file 
    TYPE(HydroDyn_InputFile ),     INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
    TYPE(HydroDyn_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p 
@@ -1124,13 +1124,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, 
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
    INTEGER                                        :: J                    ! Generic loop counter      
-   INTEGER                                        :: iWAMIT                ! loop counter over WAMIT objects
-!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-!   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-!   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
-   LOGICAL                                        :: hasWAMITOuts         ! Are there any WAMIT-related outputs
    LOGICAL                                        :: hasWAMIT2Outs        ! Are there any WAMIT-related outputs
-   LOGICAL                                        :: hasWaves2Outs        ! Are there any WAMIT-related outputs
    LOGICAL                                        :: hasMorisonOuts       ! Are there any Morison-related outputs
    
    
@@ -1246,7 +1240,7 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
       ! Passed variables
 
    TYPE(ProgDesc)               , INTENT( IN    ) :: HydroDyn_ProgDesc
-   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! Root name for the output file
+   CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p   
    TYPE(HydroDyn_InitOutPutType ),INTENT( IN    ) :: InitOut            !
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
@@ -1254,8 +1248,6 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
    
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
-   INTEGER                                        :: iWAMIT               ! loop counter  for WAMIT Objects    
-!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
    CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
    CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
                 
@@ -1275,7 +1267,7 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
         (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0 ) ) THEN           ! Output has been requested so let's open an output file            
       
          ! Open the file for output
-      OutFileName = TRIM(OutRootName)//'.HD.out'
+      OutFileName = TRIM(OutRootName)//'.out'
       CALL GetNewUnit( p%UnOutFile )
    
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
