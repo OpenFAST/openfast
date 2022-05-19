@@ -1793,20 +1793,20 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    p%nBeams = 0               ! initialize number of BeamDyn instances (will be set later)
 
       ! determine what kind of turbine we're modeling:
-   IF ( p%CompHydro == Module_HD .and. p%MHK == 0) THEN
+   IF ( p%MHK == 1 ) THEN
+         p%TurbineType = Type_MHK_Fixed
+   ELSEIF ( p%MHK == 2 ) THEN
+         p%TurbineType = Type_MHK_Floating
+   ELSEIF ( p%CompHydro == Module_HD ) THEN
       IF ( p%CompSub == Module_SD ) THEN
          p%TurbineType = Type_Offshore_Fixed
       ELSE
          p%TurbineType = Type_Offshore_Floating
       END IF
-   ELSEIF ( p%CompMooring == Module_Orca .and. p%MHK == 0) THEN
+   ELSEIF ( p%CompMooring == Module_Orca ) THEN
       p%TurbineType = Type_Offshore_Floating
-   ELSEIF ( p%CompSub == Module_ExtPtfm .and. p%MHK == 0) THEN
+   ELSEIF ( p%CompSub == Module_ExtPtfm ) THEN
       p%TurbineType = Type_Offshore_Fixed
-   ELSEIF ( p%MHK == 1 ) THEN
-         p%TurbineType = Type_MHK_Fixed
-   ELSEIF ( p%MHK == 2 ) THEN
-         p%TurbineType = Type_MHK_Floating
    ELSE      
       p%TurbineType = Type_LandBased
    END IF
@@ -1826,7 +1826,6 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    !...............................................................................................................................
    call ValidateInputData(p, m_FAST, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
 
 
    IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1919,6 +1918,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       IF (p%CompMooring == Module_Orca) CALL SetErrStat( ErrID_Fatal, 'HydroDyn cannot be used if OrcaFlex is used. Set CompHydro = 0 or CompMooring < 4 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
       IF (p%CompSub == Module_ExtPtfm) CALL SetErrStat( ErrID_Fatal, 'HydroDyn cannot be used if ExtPtfm_MCKF is used. Set CompHydro = 0 or CompSub < 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    END IF
+   
+   IF (p%CompMooring == Module_Orca .and. p%CompSub /= Module_None) CALL SetErrStat( ErrID_Fatal, 'SubDyn and ExtPtfm cannot be used if OrcaFlex is used. Set CompSub = 0 or CompMooring < 4 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
 
    IF (p%CompIce == Module_IceF) THEN

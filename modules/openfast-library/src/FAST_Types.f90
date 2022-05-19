@@ -630,10 +630,8 @@ IMPLICIT NONE
     TYPE(MeshMapType)  :: HD_W_P_2_ED_P      !< Map HydroDyn WAMIT Point from y%WAMITMesh to ElastoDyn PlatformPtMesh [-]
     TYPE(MeshMapType)  :: ED_P_2_HD_M_P      !< Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point [-]
     TYPE(MeshMapType)  :: HD_M_P_2_ED_P      !< Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh [-]
-    TYPE(MeshMapType)  :: ED_P_2_Mooring_P      !< Map ElastoDyn PlatformPtMesh to MAP/FEAM/MoorDyn/OrcaFlex point mesh [-]
-    TYPE(MeshMapType)  :: Mooring_P_2_ED_P      !< Map FEAM/MAP/MoorDyn/OrcaFlex point mesh to ElastoDyn PlatformPtMesh [-]
-    TYPE(MeshMapType)  :: SDy3_P_2_Mooring_P      !< Map SD Motions (y3Mesh) to MAP/FEAM/MoorDyn/OrcaFlex point mesh [-]
-    TYPE(MeshMapType)  :: Mooring_P_2_SD_P      !< Map FEAM/MAP/MoorDyn/OrcaFlex point mesh to SD point loads (LMesh) mesh [-]
+    TYPE(MeshMapType)  :: Structure_2_Mooring      !< Map SD Motions (y3Mesh) to MAP/FEAM/MoorDyn/OrcaFlex point mesh [Motions]
+    TYPE(MeshMapType)  :: Mooring_2_Structure      !< Map FEAM/MAP/MoorDyn/OrcaFlex mesh to SD (LMesh)/ED (PlatformPtMesh)/ExtPtfm mesh [Loads]
     TYPE(MeshMapType)  :: ED_P_2_SD_TP      !< Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh [-]
     TYPE(MeshMapType)  :: SD_TP_2_ED_P      !< Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh [-]
     TYPE(MeshMapType)  :: SD_P_2_HD_M_P      !< Map SubDyn y2Mesh Point to HydroDyn Morison Point [-]
@@ -37868,16 +37866,10 @@ ENDIF
       CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%HD_M_P_2_ED_P, DstModuleMapTypeData%HD_M_P_2_ED_P, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%ED_P_2_Mooring_P, DstModuleMapTypeData%ED_P_2_Mooring_P, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%Structure_2_Mooring, DstModuleMapTypeData%Structure_2_Mooring, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%Mooring_P_2_ED_P, DstModuleMapTypeData%Mooring_P_2_ED_P, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SDy3_P_2_Mooring_P, DstModuleMapTypeData%SDy3_P_2_Mooring_P, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%Mooring_P_2_SD_P, DstModuleMapTypeData%Mooring_P_2_SD_P, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%Mooring_2_Structure, DstModuleMapTypeData%Mooring_2_Structure, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
       CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%ED_P_2_SD_TP, DstModuleMapTypeData%ED_P_2_SD_TP, CtrlCode, ErrStat2, ErrMsg2 )
@@ -38423,13 +38415,9 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%HD_M_P_2_ED_P, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%Structure_2_Mooring, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%Mooring_2_Structure, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%ED_P_2_SD_TP, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -38848,71 +38836,37 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! ED_P_2_Mooring_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2, .TRUE. ) ! ED_P_2_Mooring_P 
+      Int_BufSz   = Int_BufSz + 3  ! Structure_2_Mooring: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%Structure_2_Mooring, ErrStat2, ErrMsg2, .TRUE. ) ! Structure_2_Mooring 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! ED_P_2_Mooring_P
+      IF(ALLOCATED(Re_Buf)) THEN ! Structure_2_Mooring
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! ED_P_2_Mooring_P
+      IF(ALLOCATED(Db_Buf)) THEN ! Structure_2_Mooring
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! ED_P_2_Mooring_P
+      IF(ALLOCATED(Int_Buf)) THEN ! Structure_2_Mooring
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! Mooring_P_2_ED_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, .TRUE. ) ! Mooring_P_2_ED_P 
+      Int_BufSz   = Int_BufSz + 3  ! Mooring_2_Structure: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%Mooring_2_Structure, ErrStat2, ErrMsg2, .TRUE. ) ! Mooring_2_Structure 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Mooring_P_2_ED_P
+      IF(ALLOCATED(Re_Buf)) THEN ! Mooring_2_Structure
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Mooring_P_2_ED_P
+      IF(ALLOCATED(Db_Buf)) THEN ! Mooring_2_Structure
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Mooring_P_2_ED_P
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-      Int_BufSz   = Int_BufSz + 3  ! SDy3_P_2_Mooring_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2, .TRUE. ) ! SDy3_P_2_Mooring_P 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN ! SDy3_P_2_Mooring_P
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! SDy3_P_2_Mooring_P
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! SDy3_P_2_Mooring_P
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-      Int_BufSz   = Int_BufSz + 3  ! Mooring_P_2_SD_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, .TRUE. ) ! Mooring_P_2_SD_P 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN ! Mooring_P_2_SD_P
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Mooring_P_2_SD_P
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Mooring_P_2_SD_P
+      IF(ALLOCATED(Int_Buf)) THEN ! Mooring_2_Structure
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -40194,7 +40148,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2, OnlySize ) ! ED_P_2_Mooring_P 
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%Structure_2_Mooring, ErrStat2, ErrMsg2, OnlySize ) ! Structure_2_Mooring 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -40222,63 +40176,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, OnlySize ) ! Mooring_P_2_ED_P 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2, OnlySize ) ! SDy3_P_2_Mooring_P 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, OnlySize ) ! Mooring_P_2_SD_P 
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%Mooring_2_Structure, ErrStat2, ErrMsg2, OnlySize ) ! Mooring_2_Structure 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -42470,7 +42368,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 ) ! ED_P_2_Mooring_P 
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%Structure_2_Mooring, ErrStat2, ErrMsg2 ) ! Structure_2_Mooring 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -42510,87 +42408,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2 ) ! Mooring_P_2_ED_P 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2 ) ! SDy3_P_2_Mooring_P 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2 ) ! Mooring_P_2_SD_P 
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%Mooring_2_Structure, ErrStat2, ErrMsg2 ) ! Mooring_2_Structure 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

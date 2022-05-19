@@ -2156,12 +2156,12 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
       
          ! NOTE: Assumes at least one MAP Fairlead point    
       
-         CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_ED%PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_ED%PlatformPtMesh) !MAPp%Input(1)%ptFairleadLoad and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+         CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_ED%PlatformPtMesh, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_ED%PlatformPtMesh) !MAPp%Input(1)%ptFairleadLoad and y_ED%PlatformPtMesh contain the displaced positions for load calculations
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
-            ! HD is source in the mapping, so we want M_{uSm}
-         if (allocated(MeshMapData%Mooring_P_2_ED_P%dM%m_us )) then
-            call SetBlockMatrix( dUdu, MeshMapData%Mooring_P_2_ED_P%dM%m_us, ED_Start_mt, MAP_Start )
+            ! MAP is source in the mapping, so we want M_{uSm}
+         if (allocated(MeshMapData%Mooring_2_Structure%dM%m_us )) then
+            call SetBlockMatrix( dUdu, MeshMapData%Mooring_2_Structure%dM%m_us, ED_Start_mt, MAP_Start )
          end if
    
       end if
@@ -2318,12 +2318,12 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
       
          ! NOTE: Assumes at least one MAP Fairlead point    
      
-         CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y3Mesh) !MAPp%Input(1)%ptFairleadLoad and y_SD%Y3Mesh contain the displaced positions for load calculations
+         CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y3Mesh) !MAPp%Input(1)%ptFairleadLoad and y_SD%Y3Mesh contain the displaced positions for load calculations
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
             ! SD is source in the mapping, so we want M_{uSm}
-         if (allocated(MeshMapData%Mooring_P_2_SD_P%dM%m_us )) then
-            call SetBlockMatrix( dUdu, MeshMapData%Mooring_P_2_SD_P%dM%m_us, SD_Start, MAP_Start )
+         if (allocated(MeshMapData%Mooring_2_Structure%dM%m_us )) then
+            call SetBlockMatrix( dUdu, MeshMapData%Mooring_2_Structure%dM%m_us, SD_Start, MAP_Start )
          end if
    
       end if
@@ -2435,15 +2435,15 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
       if ( MAPp%y%ptFairleadLoad%Committed  ) then ! meshes for floating
          !!! ! This linearization was done in forming dUdu (see Linear_SD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         !       CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y3Mesh) !MAPp%Input(1)%ptFairleadLoad and y_ED%Y3Mesh contain the displaced positions for load calculations
+         !       CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_SD%LMesh, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_SD%Y3Mesh) !MAPp%Input(1)%ptFairleadLoad and y_ED%Y3Mesh contain the displaced positions for load calculations
          MAP_Out_Start = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
          SD_Start      = Indx_u_SD_LMesh_Start(u_SD, y_FAST) ! start of u_SD%LMesh%TranslationDisp field
-         call Assemble_dUdy_Loads(MAPp%y%ptFairLeadLoad, u_SD%LMesh, MeshMapData%Mooring_P_2_SD_P, SD_Start, MAP_Out_Start, dUdy)
+         call Assemble_dUdy_Loads(MAPp%y%ptFairLeadLoad, u_SD%LMesh, MeshMapData%Mooring_2_Structure, SD_Start, MAP_Out_Start, dUdy)
       
          ! SD translation displacement-to-SD moment transfer (dU^{SD}/dy^{SD}):
          SD_Start = Indx_u_SD_LMesh_Start(u_SD, y_FAST) + u_SD%LMesh%NNodes*3   ! start of u_ED%LMesh%Moment field (skip the SD forces)
          SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y3Mesh%TranslationDisp field
-         call SumBlockMatrix( dUdy, MeshMapData%Mooring_P_2_SD_P%dM%m_uD, SD_Start, SD_Out_Start )
+         call SumBlockMatrix( dUdy, MeshMapData%Mooring_2_Structure%dM%m_uD, SD_Start, SD_Out_Start )
       end if     
    end if
 END SUBROUTINE Linear_SD_InputSolve_dy  
@@ -3236,15 +3236,15 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
          if ( MAPp%y%ptFairleadLoad%Committed  ) then ! meshes for floating
             !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
             !!! ! while forming dUdy, too.
-            !       CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_ED%PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_ED%PlatformPtMesh) !MAPp%Input(1)%ptFairleadLoad and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+            !       CALL Linearize_Point_to_Point( MAPp%y%ptFairleadLoad, u_ED%PlatformPtMesh, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement, y_ED%PlatformPtMesh) !MAPp%Input(1)%ptFairleadLoad and y_ED%PlatformPtMesh contain the displaced positions for load calculations
             MAP_Out_Start = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
             ED_Start      = Indx_u_ED_Platform_Start(u_ED, y_FAST) ! start of u_ED%PlatformPtMesh%TranslationDisp field
-            call Assemble_dUdy_Loads(MAPp%y%ptFairLeadLoad, u_ED%PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ED_Start, MAP_Out_Start, dUdy)
+            call Assemble_dUdy_Loads(MAPp%y%ptFairLeadLoad, u_ED%PlatformPtMesh, MeshMapData%Mooring_2_Structure, ED_Start, MAP_Out_Start, dUdy)
       
             ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
             ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
             ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-            call SumBlockMatrix( dUdy, MeshMapData%Mooring_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+            call SumBlockMatrix( dUdy, MeshMapData%Mooring_2_Structure%dM%m_uD, ED_Start, ED_Out_Start )
          end if
          
       end if
@@ -3891,14 +3891,14 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
       if ( p_FAST%CompSub == Module_SD ) THEN
          ! dU^{MAP}/dy^{SD}
          SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y3Mesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MAP%PtFairDisplacement, MeshMapData%SDy3_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(y_SD%Y3Mesh    , u_MAP%PtFairDisplacement, MeshMapData%SDy3_P_2_Mooring_P, MAP_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+         call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         call Assemble_dUdy_Motions(y_SD%Y3Mesh    , u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, MAP_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.true.)
 
       else if ( p_FAST%CompSub == Module_None ) THEN
          ! dU^{MAP}/dy^{ED}
          ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, MAP_Start, ED_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, MAP_Start, ED_Out_Start, dUdy, OnlyTranslationDisp=.true.)
 
        end if  
       
