@@ -29,11 +29,11 @@ set(ORCAFLEX_SOURCES
   src/OrcaFlexInterface_Types.f90
 )
 
-add_library(orcaflexlib ${ORCAFLEX_SOURCES})
-target_link_libraries(orcaflexlib nwtclibs)
-
 add_library(orcaflexlib_obj OBJECT ${ORCAFLEX_SOURCES})
 target_link_libraries(orcaflexlib_obj nwtclibs_obj)
+
+add_library(orcaflexlib $<TARGET_OBJECTS:orcaflexlib_obj>)
+target_link_libraries(orcaflexlib nwtclibs)
 
 add_executable(orca_driver
   src/OrcaDriver_Subs.f90

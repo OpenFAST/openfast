@@ -24,11 +24,11 @@ set(EXTPTFM_SOURCES
   src/ExtPtfm_MCKF_Types.f90
 )
 
-add_library(extptfm_mckflib ${EXTPTFM_SOURCES})
-target_link_libraries(extptfm_mckflib nwtclibs)
-
 add_library(extptfm_mckflib_obj OBJECT ${EXTPTFM_SOURCES})
 target_link_libraries(extptfm_mckflib_obj nwtclibs_obj)
+
+add_library(extptfm_mckflib $<TARGET_OBJECTS:extptfm_mckflib_obj>)
+target_link_libraries(extptfm_mckflib nwtclibs)
 
 install(TARGETS extptfm_mckflib extptfm_mckflib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

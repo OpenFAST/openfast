@@ -26,11 +26,11 @@ set(BD_SOURCES
   src/BeamDyn_Types.f90
   )
 
-add_library(beamdynlib ${BD_SOURCES})
-target_link_libraries(beamdynlib nwtclibs)
-
 add_library(beamdynlib_obj OBJECT ${BD_SOURCES})
 target_link_libraries(beamdynlib_obj nwtclibs_obj)
+
+add_library(beamdynlib $<TARGET_OBJECTS:beamdynlib_obj>)
+target_link_libraries(beamdynlib nwtclibs)
 
 install(TARGETS beamdynlib beamdynlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

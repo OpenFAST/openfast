@@ -28,14 +28,17 @@ endif()
 file(GLOB MAP_CLIB_SOURCES src/*.c src/*.cc src/*/*.c src/*/*.cc)
 file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)
 
-add_library(mapcpplib ${MAP_CLIB_SOURCES} src/MAP_Types.f90 src/MAP_Fortran_Types.f90)
+add_library(mapcpplib_obj OBJECT ${MAP_CLIB_SOURCES} src/MAP_Types.f90 src/MAP_Fortran_Types.f90)
 
-target_include_directories(mapcpplib PUBLIC
+target_include_directories(mapcpplib_obj PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/bstring>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/cminpack>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/lapack>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/simclist>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+target_link_libraries(mapcpplib_obj nwtclibs_obj)
+
+add_library(mapcpplib $<TARGET_OBJECTS:mapcpplib_obj>)
 target_link_libraries(mapcpplib nwtclibs)
 
 set(MAP_F_SOURCES
@@ -47,8 +50,8 @@ set(MAP_F_SOURCES
 add_library(maplib ${MAP_F_SOURCES})
 target_link_libraries(maplib mapcpplib)
 
-add_library(maplib_obj OBJECT ${MAP_CLIB_SOURCES} ${MAP_F_SOURCES})
-target_link_libraries(maplib_obj nwtclibs)
+add_library(maplib_obj OBJECT $<TARGET_OBJECTS:mapcpplib_obj> src/map.f90)
+target_link_libraries(maplib_obj nwtclibs_obj)
 
 install(TARGETS maplib mapcpplib maplib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

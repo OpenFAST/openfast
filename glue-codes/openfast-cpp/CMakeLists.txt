@@ -38,19 +38,80 @@ include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
 include_directories(${MPI_INCLUDE_PATH})
 
 add_library(openfastcpplib
-  src/OpenFAST.cpp src/SC.cpp)
+  src/OpenFAST.cpp 
+  src/SC.cpp
+  $<TARGET_OBJECTS:openfastlib_common_obj>
+  $<TARGET_OBJECTS:openfast_prelib_obj>
+  $<TARGET_OBJECTS:maplib_obj>
+  $<TARGET_OBJECTS:nwtcbaselib_obj> 
+  $<TARGET_OBJECTS:nwtcsyslib_obj>
+  $<TARGET_OBJECTS:nwtclibs_obj>
+  $<TARGET_OBJECTS:ifwlib_obj>
+  $<TARGET_OBJECTS:fvwlib_obj>
+  $<TARGET_OBJECTS:uaaerolib_obj>
+  $<TARGET_OBJECTS:afinfolib_obj>
+  $<TARGET_OBJECTS:aeroacoustics_obj>
+  $<TARGET_OBJECTS:aerodynlib_obj>
+  $<TARGET_OBJECTS:aerodyn14lib_obj>
+  $<TARGET_OBJECTS:servodynlib_obj>
+  $<TARGET_OBJECTS:elastodynlib_obj>
+  $<TARGET_OBJECTS:beamdynlib_obj>
+  $<TARGET_OBJECTS:subdynlib_obj>
+  $<TARGET_OBJECTS:hydrodynlib_obj>
+  $<TARGET_OBJECTS:orcaflexlib_obj>
+  $<TARGET_OBJECTS:extptfm_mckflib_obj>
+  $<TARGET_OBJECTS:openfoamtypeslib_obj>
+  $<TARGET_OBJECTS:foamfastlib_obj>
+  $<TARGET_OBJECTS:scdataextypeslib_obj>
+  $<TARGET_OBJECTS:scdataexlib_obj>
+  $<TARGET_OBJECTS:feamlib_obj>
+  $<TARGET_OBJECTS:moordynlib_obj>
+  $<TARGET_OBJECTS:icedynlib_obj>
+  $<TARGET_OBJECTS:icefloelib_obj>
+  $<TARGET_OBJECTS:openfast_postlib_obj>
+  $<TARGET_OBJECTS:versioninfolib_obj>
+)
 set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(openfastcpplib
-  openfastlib
-  ${HDF5_C_LIBRARIES}
-  ${HDF5_HL_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-  ${LIBXML2_LIBRARIES}
-  ${MPI_LIBRARIES}
-  ${CMAKE_DL_LIBS})
+openfast_prelib_obj
+maplib_obj
+nwtclibs_obj
+nwtcsyslib_obj
+nwtcbaselib_obj
+ifwlib
+fvwlib
+uaaerolib
+afinfolib
+aeroacoustics
+aerodynlib
+aerodyn14lib
+servodynlib
+elastodynlib
+beamdynlib
+subdynlib
+hydrodynlib
+orcaflexlib
+extptfm_mckflib
+openfoamtypeslib
+foamfastlib
+scdataextypeslib
+scdataexlib
+feamlib
+moordynlib
+icedynlib
+icefloelib
+openfast_postlib
+versioninfolib
+${HDF5_C_LIBRARIES}
+${HDF5_HL_LIBRARIES}
+${ZLIB_LIBRARIES}
+${LIBXML2_LIBRARIES}
+${MPI_LIBRARIES}
+${CMAKE_DL_LIBS}
+)
 
 add_executable(openfastcpp src/FAST_Prog.cpp)
-target_link_libraries(openfastcpp openfastcpplib openfastlib
+target_link_libraries(openfastcpp openfastcpplib
   ${MPI_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
   ${HDF5_C_LIBRARIES}

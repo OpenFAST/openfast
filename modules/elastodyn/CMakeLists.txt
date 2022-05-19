@@ -26,11 +26,11 @@ set(ED_SOURCES
   src/ElastoDyn_Types.f90
   )
 
-add_library(elastodynlib ${ED_SOURCES})
-target_link_libraries(elastodynlib servodynlib nwtclibs)
-
 add_library(elastodynlib_obj OBJECT ${ED_SOURCES})
 target_link_libraries(elastodynlib_obj servodynlib_obj nwtclibs_obj)
+
+add_library(elastodynlib $<TARGET_OBJECTS:elastodynlib_obj>)
+target_link_libraries(elastodynlib servodynlib nwtclibs)
 
 install(TARGETS elastodynlib elastodynlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

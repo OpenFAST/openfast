@@ -23,11 +23,11 @@ set(ICEDYN_SOURCES
   src/IceDyn_Types.f90
 )
 
-add_library(icedynlib ${ICEDYN_SOURCES})
-target_link_libraries(icedynlib nwtclibs)
-
 add_library(icedynlib_obj OBJECT ${ICEDYN_SOURCES})
 target_link_libraries(icedynlib_obj nwtclibs_obj)
+
+add_library(icedynlib $<TARGET_OBJECTS:icedynlib_obj>)
+target_link_libraries(icedynlib nwtclibs)
 
 install(TARGETS icedynlib icedynlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

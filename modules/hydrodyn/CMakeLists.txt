@@ -56,11 +56,11 @@ set(HYDRODYN_SOURCES
   src/Waves2_Types.f90
 )
 
-add_library(hydrodynlib ${HYDRODYN_SOURCES})
-target_link_libraries(hydrodynlib nwtclibs)
-
 add_library(hydrodynlib_obj OBJECT ${HYDRODYN_SOURCES})
 target_link_libraries(hydrodynlib_obj nwtclibs_obj)
+
+add_library(hydrodynlib $<TARGET_OBJECTS:hydrodynlib_obj>)
+target_link_libraries(hydrodynlib nwtclibs)
 
 add_executable(hydrodyn_driver src/HydroDyn_DriverCode.f90)
 target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs versioninfolib)

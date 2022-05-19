@@ -24,11 +24,11 @@ set(MOORDYN_LIBS_SOURCES
   src/MoorDyn_Types.f90
 )
 
-add_library(moordynlib ${MOORDYN_LIBS_SOURCES})
-target_link_libraries(moordynlib nwtclibs)
-
 add_library(moordynlib_obj OBJECT ${MOORDYN_LIBS_SOURCES})
 target_link_libraries(moordynlib_obj nwtclibs_obj)
+
+add_library(moordynlib $<TARGET_OBJECTS:moordynlib_obj>)
+target_link_libraries(moordynlib nwtclibs)
 
 install(TARGETS moordynlib moordynlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

@@ -27,9 +27,9 @@ else()
 endif()
 add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
 
-add_library(versioninfolib src/VersionInfo.f90)
-
 add_library(versioninfolib_obj OBJECT src/VersionInfo.f90)
+
+add_library(versioninfolib $<TARGET_OBJECTS:versioninfolib_obj>)
 
 install(TARGETS versioninfolib versioninfolib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

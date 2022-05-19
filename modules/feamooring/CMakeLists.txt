@@ -23,11 +23,11 @@ set(FEAM_LIBS_SOURCES
   src/FEAMooring_Types.f90
 )
 
-add_library(feamlib ${FEAM_LIBS_SOURCES})
-target_link_libraries(feamlib nwtclibs)
-
 add_library(feamlib_obj OBJECT ${FEAM_LIBS_SOURCES})
 target_link_libraries(feamlib_obj nwtclibs_obj)
+
+add_library(feamlib $<TARGET_OBJECTS:feamlib_obj>)
+target_link_libraries(feamlib nwtclibs)
 
 install(TARGETS feamlib feamlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
