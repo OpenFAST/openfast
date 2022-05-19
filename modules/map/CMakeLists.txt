@@ -47,13 +47,14 @@ set(MAP_F_SOURCES
   src/MAP_Fortran_Types.f90
 )
 
-add_library(maplib ${MAP_F_SOURCES})
-target_link_libraries(maplib mapcpplib)
+add_library(maplib_obj OBJECT src/map.f90)
+target_link_libraries(maplib_obj mapcpplib_obj nwtclibs_obj)
 
-add_library(maplib_obj OBJECT $<TARGET_OBJECTS:mapcpplib_obj> src/map.f90)
-target_link_libraries(maplib_obj nwtclibs_obj)
+add_library(maplib $<TARGET_OBJECTS:mapcpplib_obj> $<TARGET_OBJECTS:maplib_obj>)
+target_link_libraries(maplib maplib_obj mapcpplib_obj)
 
-install(TARGETS maplib mapcpplib maplib_obj
+
+install(TARGETS maplib mapcpplib maplib_obj mapcpplib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib

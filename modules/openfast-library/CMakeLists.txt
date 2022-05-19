@@ -119,6 +119,7 @@ versioninfolib
 add_library(openfastlib
   $<TARGET_OBJECTS:openfastlib_common_obj>
   $<TARGET_OBJECTS:openfast_prelib_obj>
+  $<TARGET_OBJECTS:mapcpplib_obj>
   $<TARGET_OBJECTS:maplib_obj>
   $<TARGET_OBJECTS:nwtcbaselib_obj> 
   $<TARGET_OBJECTS:nwtcsyslib_obj>
@@ -166,6 +167,7 @@ if(BUILD_OPENFAST_SIMULINK_API)
   add_library(openfastlib_mex
     $<TARGET_OBJECTS:openfastlib_common_obj>
     $<TARGET_OBJECTS:openfast_prelib_obj>
+    $<TARGET_OBJECTS:mapcpplib_obj>
     $<TARGET_OBJECTS:maplib_obj>
     $<TARGET_OBJECTS:nwtcbaselib_obj> 
     $<TARGET_OBJECTS:nwtclibs_obj>
