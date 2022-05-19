@@ -433,18 +433,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%NStepWave    = InitInp%NStepWave
       
       p%WaveTime =>  InitInp%WaveTime
-      !CALL MOVE_ALLOC( Waves_InitOut%WaveElev, p%WaveElev1 ) ! allocate p%WaveElev1, set p%WaveElev1 = Waves_InitOut%WaveElev, and deallocate Waves_InitOut%WaveElev
-      
-         ! Copy the first order wave elevation information to p%WaveElev1 so that we can output the total, first, and second order wave elevation separately
-     
-      !p%WaveElev = p%WaveElev1
-
-
 
       m%LastIndWave = 1
 
-      
-     
    
             ! Is there a WAMIT body? 
          
@@ -791,12 +782,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       IF ( InputFileData%Morison%NMembers > 0 ) THEN
 
          
-                ! Copy Waves initialization output into the initialization input type for the Morison module                              
+                ! Copy SeaState initialization output into the initialization input type for the Morison module
          
          InputFileData%Morison%NStepWave =  InitInp%NStepWave
          InputFileData%Morison%WaveTime  => InitInp%WaveTime
          
-            ! Permanently move these wave values to Morison init input (and note they are potentially modified by 2nd order stuff before being sent to Morison)
          InputFileData%Morison%WaveAcc    => InitInp%WaveAcc         
          InputFileData%Morison%WaveDynP   => InitInp%WaveDynP        
          InputFileData%Morison%WaveVel    => InitInp%WaveVel  
@@ -1186,17 +1176,17 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(HydroDyn_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
       TYPE(HydroDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states            
       TYPE(HydroDyn_OutputType),          INTENT(INOUT)  :: y           !< System outputs
-      TYPE(HydroDyn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(HydroDyn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-      integer(IntKi) :: i
+      
+      integer(IntKi)                                     :: i
 
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
-      
+
       
          ! Place any last minute operations or calculations here:
 
@@ -1215,7 +1205,7 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! Destroy the input data:
          
-      CALL HydroDyn_DestroyInput( u, ErrStat, ErrMsg )
+      CALL HydroDyn_DestroyInput( u, ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
 
          ! Destroy the parameter data:
@@ -1226,10 +1216,10 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! Destroy the state data:
          
-      CALL HydroDyn_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL HydroDyn_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+      CALL HydroDyn_DestroyContState(   x,           ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyConstrState( z,           ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
          
          ! Destroy misc variables:
       
@@ -1237,7 +1227,7 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! Destroy the output data:
          
-      CALL HydroDyn_DestroyOutput( y, ErrStat, ErrMsg )
+      CALL HydroDyn_DestroyOutput( y, ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
       
 
 END SUBROUTINE HydroDyn_End

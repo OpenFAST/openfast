@@ -607,7 +607,11 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       InitOut%WaveDOmega = 0.0
-      InitOut%WaveTime   = (/ 0.0_DbKi, 1.0_DbKi, 2.0_DbKi /)   ! We must have at least two different time steps in the interpolation
+      
+      InitOut%WaveTime(0)   = 0.0_DbKi ! We must have at least two different time steps in the interpolation
+      InitOut%WaveTime(1)   = 1.0_DbKi ! We must have at least two different time steps in the interpolation
+      InitOut%WaveTime(2)   = 2.0_DbKi ! We must have at least two different time steps in the interpolation
+      
       InitOut%WaveElev0 = 0.0
       InitOut%WaveElevC0 = 0.0
       InitOut%WaveElev   = 0.0

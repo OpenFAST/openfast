@@ -43,8 +43,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave      !< Number of timesteps in the WaveTime array [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Wave elevation time history at origin [m]
-    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation [-]
-    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Times where wave elevation is known [s]
+    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation (points to SeaState module data) [-]
+    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Times where wave elevation is known (points to SeaState module data) [s]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
   END TYPE SS_Exc_InitInputType
 ! =======================
@@ -93,8 +93,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: numStates = 0      !< Number of states [-]
     REAL(DbKi)  :: Tc      !< Time shift [s]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Wave elevation time history at origin [m]
-    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation [-]
-    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Times where wave elevation is known [s]
+    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation (points to SeaState module data) [-]
+    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Times where wave elevation is known (points to SeaState module data) [s]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
   END TYPE SS_Exc_ParameterType
 ! =======================

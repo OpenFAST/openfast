@@ -36,10 +36,10 @@ typedef     ^                 ^                 ReKi                 WtrDens    
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
 typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth (positive-valued)"    (m)
 
-typedef     ^                 ^                 SiKi                 WaveElevC0        {*}{*}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
+typedef     ^                 ^                 SiKi                 WaveElevC0        {*}{*}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part (points to SeaState module data)"   (meters)
 typedef     ^                 ^                 SiKi                 WaveDir           -        -        -        "Mean incident wave propagation heading direction"    (degrees)
 typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
-typedef     ^                 ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction assigned to each frequency"    (degrees)
+typedef     ^                 ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction assigned to each frequency (points to SeaState module data)"    (degrees)
 typedef     ^                 ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction from Waves module"    -
 typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction from Waves module"    -
 

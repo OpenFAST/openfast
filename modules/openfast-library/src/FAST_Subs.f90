@@ -710,7 +710,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       ! get wave elevation data for visualization
    if ( p_FAST%WrVTK > VTK_None ) then
-      call SetVTKParameters_B4HD(p_FAST, Init%OutData_ED, Init%InData_HD, BD, ErrStat2, ErrMsg2)
+      call SetVTKParameters_B4SeaSt(p_FAST, Init%OutData_ED, Init%InData_SeaSt, BD, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
@@ -1432,7 +1432,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! Initialize data for VTK output
    ! -------------------------------------------------------------------------
    if ( p_FAST%WrVTK > VTK_None ) then
-      call SetVTKParameters(p_FAST, Init%OutData_ED, Init%OutData_AD, Init%InData_HD, Init%OutData_HD, ED, BD, AD, HD, ErrStat2, ErrMsg2)
+      call SetVTKParameters(p_FAST, Init%OutData_ED, Init%OutData_AD, Init%InData_SeaSt, Init%OutData_SeaSt, ED, BD, AD, HD, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
 
@@ -3349,12 +3349,12 @@ CONTAINS
 END SUBROUTINE FAST_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up some of the information needed for plotting VTK surfaces. It initializes only the data needed before
-!! HD initialization. (HD needs some of this data so it can return the wave elevation data we want.)
-SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrStat, ErrMsg)
+!! SeaState initialization. (SeaSt needs some of this data so it can return the wave elevation data we want.)
+SUBROUTINE SetVTKParameters_B4SeaSt(p_FAST, InitOutData_ED, InitInData_SeaSt, BD, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
    TYPE(ED_InitOutputType),      INTENT(IN   ) :: InitOutData_ED   !< The initialization output from structural dynamics module
-   TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInData_HD    !< The initialization input to HydroDyn
+   TYPE(SeaSt_InitInputType),    INTENT(INOUT) :: InitInData_SeaSt !< The initialization input to SeaState
    TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
@@ -3365,7 +3365,7 @@ SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrS
    INTEGER(IntKi)                          :: i, j, n
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
-   CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters_B4HD'
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters_B4SeaSt'
 
 
    ErrStat = ErrID_None
@@ -3386,12 +3386,12 @@ SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrS
    !........................................................................................................
 
       ! initialize wave elevation data:
-   if ( p_FAST%CompHydro == Module_HD ) then
+   if ( p_FAST%CompSeaSt == Module_SeaSt ) then
 
       p_FAST%VTK_surface%NWaveElevPts(1) = 25
       p_FAST%VTK_surface%NWaveElevPts(2) = 25
 
-      call allocAry( InitInData_HD%WaveElevXY, 2, p_FAST%VTK_surface%NWaveElevPts(1)*p_FAST%VTK_surface%NWaveElevPts(2), 'WaveElevXY', ErrStat2, ErrMsg2)
+      call allocAry( InitInData_SeaSt%WaveElevXY, 2, p_FAST%VTK_surface%NWaveElevPts(1)*p_FAST%VTK_surface%NWaveElevPts(2), 'WaveElevXY', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
 
@@ -3403,8 +3403,8 @@ SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrS
       n = 1
       do i=1,p_FAST%VTK_surface%NWaveElevPts(1)
          do j=1,p_FAST%VTK_surface%NWaveElevPts(2)
-            InitInData_HD%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 !+ p_FAST%TurbinePos(1) ! HD takes p_FAST%TurbinePos into account already
-            InitInData_HD%WaveElevXY(2,n) = dy*(j-1) - WidthBy2 !+ p_FAST%TurbinePos(2)
+            InitInData_SeaSt%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 !+ p_FAST%TurbinePos(1) ! HD takes p_FAST%TurbinePos into account already
+            InitInData_SeaSt%WaveElevXY(2,n) = dy*(j-1) - WidthBy2 !+ p_FAST%TurbinePos(2)
             n = n+1
          end do
       end do
@@ -3412,16 +3412,16 @@ SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrS
    end if
 
 
-END SUBROUTINE SetVTKParameters_B4HD
+END SUBROUTINE SetVTKParameters_B4SeaSt
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
-SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_HD, InitOutData_HD, ED, BD, AD, HD, ErrStat, ErrMsg)
+SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_SeaSt, InitOutData_SeaSt, ED, BD, AD, HD, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
    TYPE(ED_InitOutputType),      INTENT(IN   ) :: InitOutData_ED   !< The initialization output from structural dynamics module
    TYPE(AD_InitOutputType),      INTENT(INOUT) :: InitOutData_AD   !< The initialization output from AeroDyn
-   TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInData_HD    !< The initialization input to HydroDyn
-   TYPE(HydroDyn_InitOutputType),INTENT(INOUT) :: InitOutData_HD   !< The initialization output from HydroDyn
+   TYPE(SeaSt_InitInputType),    INTENT(INOUT) :: InitInData_SeaSt    !< The initialization input to SeaState
+   TYPE(SeaSt_InitOutputType),   INTENT(INOUT) :: InitOutData_SeaSt   !< The initialization output from SeaState
    TYPE(ElastoDyn_Data),         INTENT(IN   ) :: ED               !< ElastoDyn data
    TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
    TYPE(AeroDyn_Data),           INTENT(IN   ) :: AD               !< AeroDyn data
@@ -3469,19 +3469,19 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    ! initialize the vtk data
 
    p_FAST%VTK_Surface%NumSectors = 25
-   ! NOTE: we set p_FAST%VTK_Surface%GroundRad and p_FAST%VTK_Surface%HubRad in SetVTKParameters_B4HD
+   ! NOTE: we set p_FAST%VTK_Surface%GroundRad and p_FAST%VTK_Surface%HubRad in SetVTKParameters_B4SeaSt
 
 
    ! write the ground or seabed reference polygon:
    RefPoint = p_FAST%TurbinePos
-   if (p_FAST%CompHydro == MODULE_HD) then
+   if (p_FAST%CompSeaSt == MODULE_SeaSt) then
       RefLengths = p_FAST%VTK_Surface%GroundRad*VTK_GroundFactor/2.0_SiKi
 
       ! note that p_FAST%TurbinePos(3) must be 0 for offshore turbines
-      RefPoint(3) = p_FAST%TurbinePos(3) - InitOutData_HD%WtrDpth
+      RefPoint(3) = p_FAST%TurbinePos(3) - p_FAST%WtrDpth
       call WrVTK_Ground ( RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.SeabedSurface', ErrStat2, ErrMsg2 )
 
-      RefPoint(3) = p_FAST%TurbinePos(3) - InitOutData_HD%MSL2SWL
+      RefPoint(3) = p_FAST%TurbinePos(3) - p_FAST%MSL2SWL
       call WrVTK_Ground ( RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.StillWaterSurface', ErrStat2, ErrMsg2 )
    else
       RefLengths = p_FAST%VTK_Surface%GroundRad !array = scalar
@@ -3599,9 +3599,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    !.......................
 
    !bjj: interpolate here instead of each time step?
-   if ( allocated(InitOutData_HD%WaveElevSeries) ) then
-      call move_alloc( InitInData_HD%WaveElevXY, p_FAST%VTK_Surface%WaveElevXY )
-      call move_alloc( InitOutData_HD%WaveElevSeries, p_FAST%VTK_Surface%WaveElev )
+   if ( allocated(InitOutData_SeaSt%WaveElevSeries) ) then
+      call move_alloc( InitInData_SeaSt%WaveElevXY, p_FAST%VTK_Surface%WaveElevXY )
+      call move_alloc( InitOutData_SeaSt%WaveElevSeries, p_FAST%VTK_Surface%WaveElev )
 
          ! put the following lines in loops to avoid stack-size issues:
       do k=1,size(p_FAST%VTK_Surface%WaveElevXY,2)

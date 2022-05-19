@@ -340,7 +340,7 @@ CONTAINS
        
 END SUBROUTINE SS_Exc_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation. It does NOT deallocate pointers to SeaState data.
 SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -356,7 +356,6 @@ SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
-
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -366,28 +365,28 @@ SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! Place any last minute operations or calculations here:
          ! Destroy the input data:
          
-      CALL SS_Exc_DestroyInput( u, ErrStat, ErrMsg )
+      CALL SS_Exc_DestroyInput( u, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
          ! Destroy the parameter data, but don't deallocate SeaState data:
-        ! Note, this is called only from the SS Excitation driver code, so there should not be any issues with pointers on restart
+        ! **** Note, this is called only from the SS Excitation driver code, so there should not be any issues with pointers on restart***
       CALL SS_Exc_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
          ! Destroy the state data:
          
-      CALL SS_Exc_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL SS_Exc_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL SS_Exc_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL SS_Exc_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+      CALL SS_Exc_DestroyContState(   x,           ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+      CALL SS_Exc_DestroyDiscState(   xd,          ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+      CALL SS_Exc_DestroyConstrState( z,           ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+      CALL SS_Exc_DestroyOtherState(  OtherState,  ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
          
          ! Destroy misc vars:
-      CALL SS_Exc_DestroyMisc(  m,  ErrStat, ErrMsg )
+      CALL SS_Exc_DestroyMisc(  m,  ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
       
       
          ! Destroy the output data:
          
-      CALL SS_Exc_DestroyOutput( y, ErrStat, ErrMsg )
+      CALL SS_Exc_DestroyOutput( y, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
       

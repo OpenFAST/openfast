@@ -14,7 +14,6 @@
 # make sure that the file name does not have any trailing white spaces!
 include  Registry_NWTC_Library.txt
 
-param       Waves2/Waves2     unused            INTEGER              MaxWaves2Outputs  -        9       -        ""    -
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 #   e.g.,  the name of the input file,  the file root name,etc.
@@ -55,11 +54,6 @@ typedef     ^                 ^                 SiKi                 WvHiCOffD  
 typedef     ^                 ^                 SiKi                 WvLowCOffS        -        -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                 WvHiCOffS         -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 
-#typedef     ^                 ^                 CHARACTER(ChanLen)   OutList           {18}     -        -        "This should really be dimensioned with MaxOutPts"    -
-#typedef     ^                 ^                 LOGICAL              OutAll            -        -        -        ""    -
-#typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""    -
-#typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
-
 
 # Define outputs from the initialization routine here:
 #
@@ -69,6 +63,7 @@ typedef     ^                 ^                 SiKi                 WaveAcc2S  
 typedef     ^                 ^                 SiKi                 WaveDynP2S        {:}{:}{:}{:}   -        -  "Instantaneous 2nd-order sum        frequency correction for the dynamic pressure of incident waves                                                              , at each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
 typedef     ^                 ^                 SiKi                 WaveVel2D         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order difference frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
 typedef     ^                 ^                 SiKi                 WaveVel2S         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
+typedef     ^                 InitOutputType    SiKi                 WaveElev2         {*}{*}{*}   -        -     "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
 
 #typedef     ^                 ^                 SiKi                 WaveAcc2D0        {:}{:}{:}{:}{:} -      -  "Instantaneous 2nd-order difference frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (m/s^2)
 #typedef     ^                 ^                 SiKi                 WaveDynP2D0       {:}{:}{:}{:}   -        - "Instantaneous 2nd-order difference frequency correction for the dynamic pressure of incident waves                                                              , at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
@@ -87,7 +82,7 @@ typedef     ^                 ParameterType     LOGICAL              WvSumQTFF  
 typedef     ^                 ParameterType     INTEGER              NWaveElev         -        -        -        "Number of points where the incident wave elevations can be output"  -
 typedef     ^                 ParameterType     INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ParameterType     INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
-typedef     ^                 ParameterType     SiKi                 WaveElev2         {*}{*}{*}   -        -     "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
+
 #typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 #typedef     ^                 ^                 SiKi                 WaveElev2D        {:}{:}{:}   -        -     "Instantaneous 2nd-order sum frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (m)
 #typedef     ^                 ^                 SiKi                 WaveElev2S        {:}{:}{:}   -        -     "Instantaneous 2nd-order sum frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (m)

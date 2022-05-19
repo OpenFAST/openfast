@@ -2553,8 +2553,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
    character(*), parameter                           :: RoutineName = 'Morison_CalcOutput'
       
-   REAL(ReKi)                                        :: F_DP(6), kvec(3), v(3),  vf(3), vrel(3), vmag, vmagf
-   INTEGER                                           :: I, J, K, nodeIndx, IntWrapIndx
+   REAL(ReKi)                                        :: F_DP(6), vmag, vmagf
+   INTEGER                                           :: I, J, K
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
 
@@ -2608,7 +2608,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: pos1(3), pos2(3), positionXY(2)   
    real(ReKi)               :: Imat(3,3)
    real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal
-   real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h, h_c_AM, deltal_AM
+   real(ReKi)               :: C_1, C_2, a0b0, h, h_c_AM, deltal_AM
    real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B1(6), F_B2(6)
 
    ! Local variables needed for wave stretching and load smoothing/redistribution

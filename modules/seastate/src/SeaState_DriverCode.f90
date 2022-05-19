@@ -81,8 +81,6 @@ program SeaStateDriver
    type(SeaSt_InputType)                            :: u(NumInp)            ! System inputs
    type(SeaSt_OutputType)                           :: y                    ! System outputs
 
-   type(SeaSt_ContinuousStateType)                  :: dxdt                 ! First time derivatives of the continuous states
-
    integer(IntKi)                                      :: UnSeaSt_Out          ! Output file identifier 
    integer(IntKi)                                      :: I                    ! Generic loop counter
    integer(IntKi)                                      :: J                    ! Generic loop counter
@@ -147,16 +145,14 @@ program SeaStateDriver
 
       ! Display the copyright notice
    call DispCopyrightLicense( version%Name )
-     ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-     ! Tell our users what they're running
-   call WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
+   CALL DispCompileRuntimeInfo( version%Name )
+   
    
       ! Parse the driver input file and run the simulation based on that file
    call ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
-   if ( ErrStat /= 0 ) then
-      call WrScr( ErrMsg )
-      stop
+   if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+      call SeaSt_DvrCleanup()
    end if
    InitInData%Gravity      = drvrInitInp%Gravity
    InitInData%defWtrDens   = drvrInitInp%WtrDens
@@ -213,9 +209,8 @@ program SeaStateDriver
    end if
 
    if ( Interval /= drvrInitInp%TimeInterval) then
-      call WrScr('The SeaState Module attempted to change timestep interval, but this is not allowed.  The SeaState Module must use the Driver Interval.')
+      call SetErrStat( ErrID_Fatal, 'The SeaState Module attempted to change timestep interval, but this is not allowed.  The SeaState Module must use the Driver Interval.', ErrStat, ErrMsg, 'Driver')
       call SeaSt_DvrCleanup() 
-      
    end if
 
 
@@ -284,25 +279,7 @@ call SeaSt_DvrCleanup()
 
    contains
 
-      
-!====================================================================================================
-SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
-!     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to 
-!     any existing echo information
-!----------------------------------------------------------------------------------------------------  
-   logical,                       intent( in    )   :: EchoFlag             ! local version of echo flag
-   integer,                       intent( in    )   :: UnEcho               !  echo unit number
    
-   
-      ! Close this module's echo file
-      
-   if ( EchoFlag ) then
-    close(UnEcho)
-   end if
-   
-  
-   
-end SUBROUTINE CleanupEchoFile
 
 subroutine SeaSt_DvrCleanup()
    
@@ -330,9 +307,10 @@ subroutine SeaSt_DvrCleanup()
             ErrMsg = 'at simulation time '//trim(Num2LStr(time))//' of '//trim(Num2LStr(InitInData%TMax))//' seconds'
          end if
                     
-         
-         call ProgAbort( 'SeaState encountered an error '//trim(errMsg)//'.'//NewLine//' Simulation error level: '&
+         if (ErrStat >= AbortErrLev) then
+            call ProgAbort( 'SeaState encountered an error '//trim(errMsg)//'.'//NewLine//' Simulation error level: '&
                          //trim(GetErrStr(errStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+         end if
       end if
       
       call RunTimes( StrtTime, real(UsrTime1,ReKi), SimStrtTime, real(UsrTime2,ReKi), time )
@@ -389,8 +367,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
    call ReadCom( UnIn, FileName, 'SeaState Driver input file header line 1', ErrStat, ErrMsg )
    
-   if ( ErrStat /= ErrID_None ) then
-      ErrStat = ErrID_Fatal
+   if ( ErrStat >=AbortErrLev ) then
       close( UnIn )
       return
    end if
@@ -398,8 +375,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
 
    call ReadCom( UnIn, FileName, 'SeaState Driver input file header line 2', ErrStat, ErrMsg )
    
-   if ( ErrStat /= ErrID_None ) then
-      ErrStat = ErrID_Fatal
+   if ( ErrStat >=AbortErrLev ) then
       close( UnIn )
       return
    end if
@@ -409,8 +385,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       
    call ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat, ErrMsg )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrStat = ErrID_Fatal
+   if ( ErrStat>=AbortErrLev ) then
       close( UnIn )
       return
    end if
@@ -425,9 +400,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       EchoFile = TRIM(FileName)//'.ech'
       call GetNewUnit( UnEchoLocal )   
       call OpenEcho ( UnEchoLocal, EchoFile, ErrStat, ErrMsg )
-      if ( ErrStat /= ErrID_None ) then
-         !ErrMsg  = ' Failed to open Echo file.'
-         ErrStat = ErrID_Fatal
+      if ( ErrStat >= AbortErrLev ) then
          close( UnIn )
          return
       end if
@@ -436,10 +409,8 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       
       call ReadCom( UnIn, FileName, 'SeaState Driver input file header line 1', ErrStat, ErrMsg, UnEchoLocal )
    
-      if ( ErrStat /= ErrID_None ) then
-         ErrMsg  = ' Failed to read SeaState Driver input file header line 1.'
-         ErrStat = ErrID_Fatal
-         call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
          close( UnIn )
          return
       end if
@@ -447,10 +418,8 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
 
       call ReadCom( UnIn, FileName, 'SeaState Driver input file header line 2', ErrStat, ErrMsg, UnEchoLocal )
    
-      if ( ErrStat /= ErrID_None ) then
-         ErrMsg  = ' Failed to read SeaState Driver input file header line 2.'
-         ErrStat = ErrID_Fatal
-         call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
          close( UnIn )
          return
       end if
@@ -460,10 +429,8 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       
       call ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat, ErrMsg, UnEchoLocal )
       !write (UnEchoLocal,Frmt      ) InitInp%Echo, 'Echo', 'Echo input file'
-      if ( ErrStat /= ErrID_None ) then
-         ErrMsg  = ' Failed to read Echo parameter.'
-         ErrStat = ErrID_Fatal
-         call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
          close( UnIn )
          return
       end if
@@ -477,62 +444,52 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       
    call ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat, ErrMsg, UnEchoLocal )
    
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
 
 
       ! Gravity - Gravity.
       
    call ReadVar ( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read Gravity parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
 
       ! WtrDens - Water density.
       
    call ReadVar ( UnIn, FileName, InitInp%WtrDens, 'WtrDens', 'Water density', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read WtrDens parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
 
       ! WtrDpth - Water depth.
       
    call ReadVar ( UnIn, FileName, InitInp%WtrDpth, 'WtrDpth', 'Water depth', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read WtrDpth parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
 
       ! MSL2SWL - Offset between still-water level and mean sea level.
       
    call ReadVar ( UnIn, FileName, InitInp%MSL2SWL, 'MSL2SWL', 'Offset between still-water level and mean sea level', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read MSL2SWL parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
    
    !-------------------------------------------------------------------------------------------------
    ! SeaState section
@@ -542,13 +499,11 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       
    call ReadCom( UnIn, FileName, 'SeaState header', ErrStat, ErrMsg, UnEchoLocal )
    
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
    
    
       ! HDInputFile
@@ -556,13 +511,11 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    call ReadVar ( UnIn, FileName, InitInp%SeaStateInputFile, 'SeaStateInputFile', &
                                     'SeaState input filename', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read SeaStateInputFile parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if 
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
    
    
       ! OutRootName
@@ -570,29 +523,26 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    call ReadVar ( UnIn, FileName, InitInp%OutRootName, 'OutRootName', &
                                     'SeaState output root filename', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read OutRootName parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if   
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
      
      ! WrWvKinMod - Write Kinematics?
       
    call ReadVar ( UnIn, FileName, InitInp%WrWvKinMod, 'WrWvKinMod', 'WrWvKinMod', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read WrWvKinMod parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
+      
    if ( InitInp%WrWvKinMod < 0 .or. InitInp%WrWvKinMod > 2 ) then
       ErrMsg  = ' WrWvKinMod parameter must be 0, 1, or 2'
       ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
       close( UnIn )
       return
    end if
@@ -603,13 +553,11 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    call ReadVar ( UnIn, FileName, InitInp%NSteps, 'NSteps', &
                                     'Number of time steps in the SeaState simulation', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read NSteps parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if   
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
  
    
       ! TimeInterval   
@@ -617,13 +565,11 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    call ReadVar ( UnIn, FileName, InitInp%TimeInterval, 'TimeInterval', &
                                     'Time interval for any SeaState inputs', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read TimeInterval parameter.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if   
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
    
    
    !-------------------------------------------------------------------------------------------------
@@ -632,30 +578,23 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
 
       !> Header
 
-call ReadCom( UnIn, FileName, 'Waves multipoint elevation output header', ErrStat, ErrMsg, UnEchoLocal )
+   call ReadCom( UnIn, FileName, 'Waves multipoint elevation output header', ErrStat, ErrMsg, UnEchoLocal )
 
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read Comment line.'
-      ErrStat = ErrID_Fatal
-      call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
 
       !> WaveElevSeriesFlag   -- are we doing multipoint wave elevation output?
    call ReadVar ( UnIn, FileName, InitInp%WaveElevSeriesFlag, 'WaveElevSeriesFlag', 'WaveElevSeriesFlag', ErrStat, ErrMsg )
-   if ( ErrStat /= ErrID_None ) then
-      ErrMsg  = ' Failed to read WaveElevSeriesFlag parameter.'
-      ErrStat = ErrID_Fatal
-      close( UnIn )
-      return
-   end if
+      if ( ErrStat >= AbortErrLev ) then
+         if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
+         close( UnIn )
+         return
+      end if
 
-
-
-
-
-   call CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+   if (InitInp%Echo .and. UnEchoLocal>0)  close(UnEchoLocal)
    close( UnIn )
    
 end SUBROUTINE ReadDriverInputFile

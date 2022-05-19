@@ -288,10 +288,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
 
 
 
-
-         ! Allocate array for the WaveTime information -- array of times to generate output for.  NOTE: can't use MOVE_ALLOC since InitInp is intent in.
-   
-
          ! Difference QTF
       p%WvDiffQTFF            =  InitInp%WvDiffQTFF           ! Flag for calculation
 
@@ -402,9 +398,9 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
       ! Setup the output arrays
       !--------------------------------------------------------------------------------
 
-      ALLOCATE ( p%WaveElev2 (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveElev2 (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
      ! ALLOCATE ( p%WaveElev2 (0:InitInp%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveElev2.', ErrStat,ErrMsg,RoutineName)
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev2.', ErrStat,ErrMsg,RoutineName)
 
       ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2D.',  ErrStat,ErrMsg,RoutineName)
@@ -432,13 +428,13 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
 
 
          !Initialize the output arrays to zero.  We will only fill it in for the points we calculate.
-      p%WaveElev2          =  0.0_SiKi
+      InitOut%WaveElev2    =  0.0_SiKi
       InitOut%WaveVel2D    =  0.0_SiKi
       InitOut%WaveAcc2D    =  0.0_SiKi
       InitOut%WaveDynP2D   =  0.0_SiKi
-      InitOut%WaveVel2S  =  0.0_SiKi
-      InitOut%WaveAcc2S  =  0.0_SiKi
-      InitOut%WaveDynP2S =  0.0_SiKi
+      InitOut%WaveVel2S    =  0.0_SiKi
+      InitOut%WaveAcc2S    =  0.0_SiKi
+      InitOut%WaveDynP2S   =  0.0_SiKi
 
 
 
@@ -571,7 +567,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                CALL CleanUp()
                RETURN
             END IF
-            p%WaveElev2(:,I,J) = TmpTimeSeries(:)
+            InitOut%WaveElev2(:,I,J) = TmpTimeSeries(:)
          ENDDO    ! Wave elevation points requested
 
 
@@ -936,7 +932,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                RETURN
             END IF
                ! Add to the series since the difference is already included
-            p%WaveElev2(:,I,J) = p%WaveElev2(:,I,J) + TmpTimeSeries(:)
+            InitOut%WaveElev2(:,I,J) = InitOut%WaveElev2(:,I,J) + TmpTimeSeries(:)
          ENDDO    ! Wave elevation points requested
 
          !--------------------------------------------------------------------------------
