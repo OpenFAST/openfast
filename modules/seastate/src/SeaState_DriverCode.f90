@@ -636,9 +636,9 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
       if ( ErrStat >= AbortErrLev ) return
    end if
 
-   if (associated(SeaState_p%Waves2%WaveElev2)) then
-      maxWaveVal = MAXVAL(SeaState_p%WaveElev1+SeaState_p%Waves2%WaveElev2)
-      minWaveVal = MINVAL(SeaState_p%WaveElev1+SeaState_p%Waves2%WaveElev2)
+   if (associated(SeaState_p%WaveElev2)) then
+      maxWaveVal = MAXVAL(SeaState_p%WaveElev1+SeaState_p%WaveElev2)
+      minWaveVal = MINVAL(SeaState_p%WaveElev1+SeaState_p%WaveElev2)
    else
       maxWaveVal = MAXVAL(SeaState_p%WaveElev1)
       minWaveVal = MINVAL(SeaState_p%WaveElev1)
@@ -672,8 +672,8 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
          xpos = -SeaState_p%deltaGrid(1)*(SeaState_p%NGrid(1)-1)/2.0 + (J-1)*SeaState_p%deltaGrid(1)
          do k=1, SeaState_p%NGrid(2)
             ypos = -SeaState_p%deltaGrid(2)*(SeaState_p%NGrid(2)-1)/2.0 + (K-1)*SeaState_p%deltaGrid(2) 
-            if (associated(SeaState_p%Waves2%WaveElev2)) then
-               WaveElev =  SeaState_p%WaveElev1(I,J,K) + SeaState_p%Waves2%WaveElev2(I,J,K)
+            if (associated(SeaState_p%WaveElev2)) then
+               WaveElev =  SeaState_p%WaveElev1(I,J,K) + SeaState_p%WaveElev2(I,J,K)
             else
                WaveElev =  SeaState_p%WaveElev1(I,J,K)
             end if
