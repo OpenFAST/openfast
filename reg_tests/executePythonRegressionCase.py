@@ -25,11 +25,12 @@
 
 import os
 import sys
-basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 sys.path.insert(0, os.path.sep.join([basepath, "..", "glue-codes", "python"]))
 import platform
 import argparse
+import numpy as np
 import shutil
 import subprocess
 import rtestlib as rtl
@@ -59,8 +60,6 @@ parser.add_argument("executable", metavar="NotUsed", type=str, nargs=1, help="No
 parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str, nargs=1, help="The path to the OpenFAST repository.")
 parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
-parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
-parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
 parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
@@ -71,8 +70,6 @@ caseName = args.caseName[0].replace("_py", "")
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
-systemName = args.systemName[0]
-compilerId = args.compilerId[0]
 plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
@@ -82,25 +79,6 @@ rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
     os.makedirs(buildDirectory)
 
-### Map the system and compiler configurations to a solution set
-# Internal names -> Human readable names
-systemName_map = {
-    "darwin": "macos",
-    "linux": "linux",
-    "windows": "windows"
-}
-compilerId_map = {
-    "gnu": "gnu",
-    "intel": "intel"
-}
-# Build the target output directory name or choose the default
-supportedBaselines = ["macos-gnu", "linux-intel", "linux-gnu", "windows-intel"]
-targetSystem = systemName_map.get(systemName.lower(), "")
-targetCompiler = compilerId_map.get(compilerId.lower(), "")
-outputType = os.path.join(targetSystem+"-"+targetCompiler)
-if outputType not in supportedBaselines:
-    outputType = supportedBaselines[0]
-print("-- Using gold standard files with machine-compiler type {}".format(outputType))
 
 ### Build the filesystem navigation variables for running openfast on the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
@@ -108,7 +86,7 @@ lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
 moduleDirectory = os.path.join(rtest, "glue-codes", "openfast")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
-targetOutputDirectory = os.path.join(inputsDirectory, outputType)
+targetOutputDirectory = os.path.join(inputsDirectory)
 testBuildDirectory = os.path.join(buildDirectory, caseName)
 
 # verify all the required directories exist
@@ -126,6 +104,7 @@ for data in ["AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
     if not os.path.isdir(dataDir):
         shutil.copytree(os.path.join(moduleDirectory, data), dataDir)
 
+# Special copy for the 5MW_Baseline folder because the Windows python-only workflow may have already created data in the subfolder ServoData
 dst = os.path.join(buildDirectory, "5MW_Baseline")
 src = os.path.join(moduleDirectory, "5MW_Baseline")
 if not os.path.isdir(dst):
@@ -173,27 +152,29 @@ testInfo = {
 }
 testData = openfastlib.output_values
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-performance = pass_fail.calculateNorms(testData, baselineData)
-normalizedNorm = performance[:, 1]
+
+passing_channels = pass_fail.passing_channels(testData.T, baselineData.T)
+passing_channels = passing_channels.T
+
+norms = pass_fail.calculateNorms(testData, baselineData)
 
 # export all case summaries
-results = list(zip(testInfo["attribute_names"], [*performance]))
-results_max = performance.max(axis=0)
-exportCaseSummary(testBuildDirectory, caseName, results, results_max, tolerance)
-
-# failing case
-if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
-    if plotError:
-        from errorPlotting import finalizePlotDirectory, plotOpenfastError
-        for channel in testInfo["attribute_names"]:
-            try:
-                plotOpenfastError(localOutFile, baselineOutFile, channel)
-            except:
-                error = sys.exc_info()[1]
-                print("Error generating plots: {}".format(error))
-        finalizePlotDirectory(localOutFile, testInfo["attribute_names"], caseName)
-
-    sys.exit(1)
+channel_names = testInfo["attribute_names"]
+exportCaseSummary(testBuildDirectory, caseName, channel_names, passing_channels, norms)
 
 # passing case
-sys.exit(0)
+if np.all(passing_channels):
+    sys.exit(0)
+
+# failing case
+if plotError:
+    from errorPlotting import finalizePlotDirectory, plotOpenfastError
+    for channel in testInfo["attribute_names"]:
+        try:
+            plotOpenfastError(localOutFile, baselineOutFile, channel)
+        except:
+            error = sys.exc_info()[1]
+            print("Error generating plots: {}".format(error))
+    finalizePlotDirectory(localOutFile, testInfo["attribute_names"], caseName)
+
+sys.exit(1)
