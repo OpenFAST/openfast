@@ -107,7 +107,7 @@ typedef  ^       ConstraintStateType   ReKi              DummyConstrState  -  - 
 # any other states
 typedef  ^        OtherStateType       IntKi             n                 -  - -   "tracks time step for which OtherState was updated" -
 typedef  ^        OtherStateType SED_ContinuousStateType xdot       {SED_NMX} - -   "previous state deriv for multi-step" -
-typedef  ^        OtherStateType       IntKi             IC               {:} - -   "Array which stores pointers to predictor-corrector results" -
+typedef  ^        OtherStateType       IntKi             IC         {SED_NMX} - -   "Array which stores pointers to predictor-corrector results" -
 typedef  ^        OtherStateType       ReKi              HSSBrTrq          -  - -   "HSSBrTrq from update states; a hack to get this working with a single integrator"   -
 typedef  ^        OtherStateType       ReKi              HSSBrTrqC         -  - -   "Commanded HSS brake torque (adjusted for sign)"   N-m
 typedef  ^        OtherStateType       IntKi             SgnPrvLSTQ        -  - -   "The sign of the low-speed shaft torque from the previous call to RtHS(). NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run!"   -

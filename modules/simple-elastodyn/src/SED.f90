@@ -216,13 +216,19 @@ contains
       OtherState%HSSBrTrqC  = 0.0_ReKi
       OtherState%SgnPrvLSTQ = 1
       OtherState%SgnLSTQ    = 1
-      call AllocAry( OtherState%IC, SED_NMX, 'IC', ErrStat3, ErrMsg3 );   if ( ErrStat >= AbortErrLev ) return
+      OtherState%n          = -1    ! we haven't updated OtherState%xdot, yet
 
       ! Now initialize the IC array = (/NMX, NMX-1, ... , 1 /)
       ! this keeps track of the position in the array of continuous states (stored in other states)
       OtherState%IC(1) = SED_NMX
       do I = 2,SED_NMX
          OtherState%IC(I) = OtherState%IC(I-1) - 1
+      enddo
+      do i = lbound(OtherState%xdot,1), ubound(OtherState%xdot,1)
+         call SED_CopyContState( x, OtherState%xdot(i), MESH_NEWCOPY, ErrStat3, ErrMsg3)
+            if ( ErrStat3 >= AbortErrLev ) return
+         OtherState%xdot(i)%QT( DOF_Az) = x%QDT(DOF_Az)  ! first derivative of azimuth state is rotor speed
+         OtherState%xdot(i)%QDT(DOF_Az) = 0.0_R8Ki       ! assume no acceleration at start
       enddo
    end subroutine Init_States
 
@@ -766,7 +772,7 @@ subroutine FixHSSBrTq ( Integrator, p, x, OtherState, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if ( .not. p%GenDOF .OR. EqualRealNos(OtherState%HSSBrTrqC, 0.0_ReKi ) )  return
+   if ( (.not. p%GenDOF) .OR. EqualRealNos(OtherState%HSSBrTrqC, 0.0_ReKi ) )  return
 
    ! The absolute magnitude of the HSS brake must have been too great
    !   that the HSS direction was reversed.  What should have happened
@@ -928,7 +934,7 @@ end subroutine FixHSSBrTq
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential
+!> This subroutine implements the fourth-order Adams-Bashforth Method (AB4) for numerically integrating ordinary differential
 !! equations:
 !!
 !!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
@@ -1039,7 +1045,7 @@ end subroutine SED_AB4
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary
+!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (ABM4) for numerically integrating ordinary
 !! differential equations:
 !!
 !!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
@@ -1339,11 +1345,13 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    if (.not. allocated(dxdt%QT) ) then
       call AllocAry( dxdt%QT,  size(x%qt),  'dxdt%QT',  ErrStat2, ErrMsg2 )
          if (Failed())  return;
+      dxdt%QT = 0.0_R8Ki
    endif
 
    if (.not. allocated(dxdt%QDT) ) then
       call AllocAry( dxdt%QDT, size(x%QDT), 'dxdt%QDT', ErrStat2, ErrMsg2 )
          if (Failed())  return;
+      dxdt%QDT = 0.0_R8Ki
    endif
 
 

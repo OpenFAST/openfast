@@ -131,7 +131,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SED_OtherStateType
     INTEGER(IntKi)  :: n      !< tracks time step for which OtherState was updated [-]
     TYPE(SED_ContinuousStateType) , DIMENSION(SED_NMX)  :: xdot      !< previous state deriv for multi-step [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IC      !< Array which stores pointers to predictor-corrector results [-]
+    INTEGER(IntKi) , DIMENSION(SED_NMX)  :: IC      !< Array which stores pointers to predictor-corrector results [-]
     REAL(ReKi)  :: HSSBrTrq      !< HSSBrTrq from update states; a hack to get this working with a single integrator [-]
     REAL(ReKi)  :: HSSBrTrqC      !< Commanded HSS brake torque (adjusted for sign) [N-m]
     INTEGER(IntKi)  :: SgnPrvLSTQ      !< The sign of the low-speed shaft torque from the previous call to RtHS(). NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run! [-]
@@ -2564,18 +2564,7 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
-IF (ALLOCATED(SrcOtherStateData%IC)) THEN
-  i1_l = LBOUND(SrcOtherStateData%IC,1)
-  i1_u = UBOUND(SrcOtherStateData%IC,1)
-  IF (.NOT. ALLOCATED(DstOtherStateData%IC)) THEN 
-    ALLOCATE(DstOtherStateData%IC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%IC.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
     DstOtherStateData%IC = SrcOtherStateData%IC
-ENDIF
     DstOtherStateData%HSSBrTrq = SrcOtherStateData%HSSBrTrq
     DstOtherStateData%HSSBrTrqC = SrcOtherStateData%HSSBrTrqC
     DstOtherStateData%SgnPrvLSTQ = SrcOtherStateData%SgnPrvLSTQ
@@ -2594,9 +2583,6 @@ ENDIF
 DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
   CALL SED_DestroyContState( OtherStateData%xdot(i1), ErrStat, ErrMsg )
 ENDDO
-IF (ALLOCATED(OtherStateData%IC)) THEN
-  DEALLOCATE(OtherStateData%IC)
-ENDIF
  END SUBROUTINE SED_DestroyOtherState
 
  SUBROUTINE SED_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2655,11 +2641,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
     END DO
-  Int_BufSz   = Int_BufSz   + 1     ! IC allocated yes/no
-  IF ( ALLOCATED(InData%IC) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! IC upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%IC)  ! IC
-  END IF
       Re_BufSz   = Re_BufSz   + 1  ! HSSBrTrq
       Re_BufSz   = Re_BufSz   + 1  ! HSSBrTrqC
       Int_BufSz  = Int_BufSz  + 1  ! SgnPrvLSTQ
@@ -2723,21 +2705,10 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     END DO
-  IF ( .NOT. ALLOCATED(InData%IC) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%IC,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%IC,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%IC,1), UBOUND(InData%IC,1)
-        IntKiBuf(Int_Xferred) = InData%IC(i1)
-        Int_Xferred = Int_Xferred + 1
-      END DO
-  END IF
+    DO i1 = LBOUND(InData%IC,1), UBOUND(InData%IC,1)
+      IntKiBuf(Int_Xferred) = InData%IC(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
     ReKiBuf(Re_Xferred) = InData%HSSBrTrq
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%HSSBrTrqC
@@ -2823,24 +2794,12 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! IC not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%IC)) DEALLOCATE(OutData%IC)
-    ALLOCATE(OutData%IC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%IC.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%IC,1), UBOUND(OutData%IC,1)
-        OutData%IC(i1) = IntKiBuf(Int_Xferred)
-        Int_Xferred = Int_Xferred + 1
-      END DO
-  END IF
+    i1_l = LBOUND(OutData%IC,1)
+    i1_u = UBOUND(OutData%IC,1)
+    DO i1 = LBOUND(OutData%IC,1), UBOUND(OutData%IC,1)
+      OutData%IC(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
     OutData%HSSBrTrq = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%HSSBrTrqC = ReKiBuf(Re_Xferred)
