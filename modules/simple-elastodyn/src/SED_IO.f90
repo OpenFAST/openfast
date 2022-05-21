@@ -319,14 +319,15 @@ subroutine Calc_WriteOutput( u, p, x, dxdt, y, m, ErrStat, ErrMsg, CalcWriteOutp
    ! Azimuth
    m%AllOuts( Azimuth  ) = x%QT( DOF_Az)
    call Zero2TwoPi(m%AllOuts( Azimuth  ))    ! modulo
+   m%AllOuts( Azimuth  ) = m%AllOuts( Azimuth  ) * R2D
 
    ! speed
-   m%AllOuts( RotSpeed ) = x%QDT(DOF_Az)
-   m%AllOuts( GenSpeed ) = x%QDT(DOF_Az)    * p%GBoxRatio
+   m%AllOuts( RotSpeed ) = x%QDT(DOF_Az) * RPS2RPM
+   m%AllOuts( GenSpeed ) = x%QDT(DOF_Az) * RPS2RPM    * p%GBoxRatio
 
    ! accel
-   m%AllOuts( RotAcc   ) = dxdt%QDT(DOF_Az)
-   m%AllOuts( GenAcc   ) = dxdt%QDT(DOF_Az) * p%GBoxRatio
+   m%AllOuts( RotAcc   ) = dxdt%QDT(DOF_Az) * RPS2RPM
+   m%AllOuts( GenAcc   ) = dxdt%QDT(DOF_Az) * RPS2RPM * p%GBoxRatio
 end subroutine Calc_WriteOutput
 
 
