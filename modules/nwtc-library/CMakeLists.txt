@@ -147,13 +147,11 @@ if(BUILD_OPENFAST_SIMULINK_API)
   message(STATUS "In NWTC Matlab_MEX_LIBRARY: ${Matlab_MEX_LIBRARY}")
 
   add_library(nwtcsyslib_matlab_obj OBJECT ${NWTC_SYS_FILE_MATLAB})
-  target_link_libraries(nwtcsyslib_matlab_obj nwtclibs_obj nwtcbaselib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+  target_link_libraries(nwtcsyslib_matlab_obj nwtclibs_obj nwtcbaselib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS} ${Matlab_MEX_LIBRARY})
 
   if (USE_LOCAL_STATIC_LAPACK)
     add_dependencies(nwtcsyslib_matlab_obj lapack)
   endif()
-
-  target_link_libraries(nwtcsyslib_matlab_obj ${Matlab_MEX_LIBRARY})
 
   install(TARGETS nwtcsyslib_matlab_obj
     EXPORT "${CMAKE_PROJECT_NAME}Libraries"
