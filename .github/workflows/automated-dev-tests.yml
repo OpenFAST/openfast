@@ -404,6 +404,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target openfastlib -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target openfast_cpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
