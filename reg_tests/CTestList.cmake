@@ -291,3 +291,4 @@ adsk_regression("ad_timeseries_shutdown"                      "aerodisk")
 
 # SimplifiedElastoDyn regression tests
 sed_regression("sed_test_HSSbrk"                              "simple-elastodyn")
+sed_regression("sed_test_freewheel"                           "simple-elastodyn")
