@@ -5374,7 +5374,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
 END SUBROUTINE SolveOption1
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine implements the first part of the "option 2" solve for inputs that apply to BeamDyn and AeroDyn 
-SUBROUTINE SolveOption2a_Inp2BD(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat, ErrMsg, WriteThisStep)
+SUBROUTINE SolveOption2a_Inp2BD(this_time, this_state, p_FAST, m_FAST, ED, BD, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat, ErrMsg, WriteThisStep)
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
    INTEGER(IntKi)          , intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
 
@@ -5384,7 +5384,6 @@ SUBROUTINE SolveOption2a_Inp2BD(this_time, this_state, p_FAST, m_FAST, ED, BD, A
    TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  !< ElastoDyn data
    TYPE(BeamDyn_Data),       INTENT(INOUT) :: BD                  !< BeamDyn data
    TYPE(ServoDyn_Data),      INTENT(INOUT) :: SrvD                !< ServoDyn data
-   TYPE(AeroDyn14_Data),     INTENT(INOUT) :: AD14                !< AeroDyn14 data
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
@@ -5613,7 +5612,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
       ! SolveOption2* routines are being called in FAST_AdvanceStates, but the first time we call CalcOutputs_And_SolveForInputs, we haven't called the AdvanceStates routine
    IF (firstCall) THEN
       ! call ElastoDyn's CalcOutput & compute BD inputs from ED: 
-      CALL SolveOption2a_Inp2BD(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
+      CALL SolveOption2a_Inp2BD(this_time, this_state, p_FAST, m_FAST, ED, BD, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ! compute AD position inputs; compute all of IfW inputs from ED/BD outputs: 
       CALL SolveOption2b_Inp2IfW(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
@@ -5746,7 +5745,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
 
       ! BeamDyn doesn't like extrapolated rotations, so we will calculate them from ED and transfer instead of doing a correction step. 
       ! (Also calls ED_CalcOutput here so that we can use it for AeroDyn optimization, too):
-   CALL SolveOption2a_Inp2BD(t_global_next, STATE_PRED, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
+   CALL SolveOption2a_Inp2BD(t_global_next, STATE_PRED, p_FAST, m_FAST, ED, BD, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
    IF ( p_FAST%CompElast == Module_BD ) THEN
@@ -6225,6 +6224,10 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
          SrvD%InputTimes(1)  = t_global_next          
             
+         
+         !   ! put zero-order hold on SrvD inputs from Simulink (avoids extrapolation issues)
+         !CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )
+                  
       END IF  ! ServoDyn       
       
       ! HydroDyn

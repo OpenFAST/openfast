@@ -604,7 +604,7 @@ typedef	^	FAST_ModuleMapType	MeshMapType	HD_W_P_2_ED_P	-	-	-	"Map HydroDyn WAMIT
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_HD_M_P	-	-	-	"Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point"
 typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_P_2_ED_P	-	-	-	"Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh"
 # Structure (ED, SD, ExtPtfm) <-> Mooring (MAP, FEAM, MoorDyn, OrcaFlex)
-typedef	^	FAST_ModuleMapType	MeshMapType	Structure_2_Mooring	-	-	-	"Map SD Motions (y3Mesh) to MAP/FEAM/MoorDyn/OrcaFlex point mesh" "Motions"
+typedef	^	FAST_ModuleMapType	MeshMapType	Structure_2_Mooring	-	-	-	"Map structural SD (y3Mesh)/ED to MAP/FEAM/MoorDyn/OrcaFlex point mesh" "Motions"
 typedef	^	FAST_ModuleMapType	MeshMapType	Mooring_2_Structure	-	-	-	"Map FEAM/MAP/MoorDyn/OrcaFlex mesh to SD (LMesh)/ED (PlatformPtMesh)/ExtPtfm mesh" "Loads"
 # ED <-> SD or User-Platform (ExtPtfm_MCKF)
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SD_TP	-	-	-	"Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh"

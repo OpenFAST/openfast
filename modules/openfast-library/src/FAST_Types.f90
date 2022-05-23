@@ -630,7 +630,7 @@ IMPLICIT NONE
     TYPE(MeshMapType)  :: HD_W_P_2_ED_P      !< Map HydroDyn WAMIT Point from y%WAMITMesh to ElastoDyn PlatformPtMesh [-]
     TYPE(MeshMapType)  :: ED_P_2_HD_M_P      !< Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point [-]
     TYPE(MeshMapType)  :: HD_M_P_2_ED_P      !< Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh [-]
-    TYPE(MeshMapType)  :: Structure_2_Mooring      !< Map SD Motions (y3Mesh) to MAP/FEAM/MoorDyn/OrcaFlex point mesh [Motions]
+    TYPE(MeshMapType)  :: Structure_2_Mooring      !< Map structural SD (y3Mesh)/ED to MAP/FEAM/MoorDyn/OrcaFlex point mesh [Motions]
     TYPE(MeshMapType)  :: Mooring_2_Structure      !< Map FEAM/MAP/MoorDyn/OrcaFlex mesh to SD (LMesh)/ED (PlatformPtMesh)/ExtPtfm mesh [Loads]
     TYPE(MeshMapType)  :: ED_P_2_SD_TP      !< Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh [-]
     TYPE(MeshMapType)  :: SD_TP_2_ED_P      !< Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh [-]
