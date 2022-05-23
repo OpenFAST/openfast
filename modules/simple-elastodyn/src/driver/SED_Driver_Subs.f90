@@ -522,7 +522,9 @@ SUBROUTINE ParseDvrIptFile( DvrFileName, DvrFileInfo, DvrFlags, DvrSettings, Pro
       ! Set Time_(s)
       CaseTime(i)     = TmpDb7(1)
       ! Set AerTrq_(N-m)   HSSBrTrqC_(N-m)   GenTrq_(N-m)
-      CaseData(1:3,i) = real(TmpDb7(2:4),ReKi)
+      CaseData(1,i) =     real(TmpDb7(2),ReKi)
+      CaseData(2,i) = abs(real(TmpDb7(3),ReKi))    ! HSSBrTrqC should be positive vlaued
+      CaseData(3,i) =     real(TmpDb7(4),ReKi)
       ! Set BlPitchCom  (deg -> rad)
       CaseData(4,i)   = real(TmpDb7(5),ReKi) * D2R
       ! Set Yaw         (deg -> rad)

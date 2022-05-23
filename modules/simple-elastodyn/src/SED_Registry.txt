@@ -150,4 +150,5 @@ typedef  ^        MiscVarType          ReKi              AllOuts          {:} - 
 #typedef  ^        MiscVarType          MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
 typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
 typedef  ^        MiscVarType          MeshMapType       mapHub2Root      {:} - -   "Mesh mapping from Hub to BladeRootMotion" -
+typedef  ^        MiscVarType          R8Ki              QD2T             {:} - -   "Current estimate of first derivative of QD (acceleration matrix) for each degree of freedom"
 

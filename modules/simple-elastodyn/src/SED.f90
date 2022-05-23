@@ -228,7 +228,7 @@ contains
          call SED_CopyContState( x, OtherState%xdot(i), MESH_NEWCOPY, ErrStat3, ErrMsg3)
             if ( ErrStat3 >= AbortErrLev ) return
          OtherState%xdot(i)%QT( DOF_Az) = x%QDT(DOF_Az)  ! first derivative of azimuth state is rotor speed
-         OtherState%xdot(i)%QDT(DOF_Az) = 0.0_R8Ki       ! assume no acceleration at start
+         OtherState%xdot(i)%QDT(DOF_Az) = 0.0_R8Ki       ! assume no acceleration at start (brake torque not known)
       enddo
    end subroutine Init_States
 
@@ -469,6 +469,10 @@ contains
          return
       endif
       m%AllOuts = 0.0_SiKi
+
+      ! 2nd derivative (acceleration matrix) -- used only in HSS Brake
+      call AllocAry( m%QD2T, 1, 'm%QD2T', ErrStat3, ErrMsg3);    if (ErrStat3 >= AbortErrLev) return
+      m%QD2T = 0.0_R8Ki
    end subroutine Init_Misc
 
    !> Initialize the InitOutput
@@ -676,6 +680,7 @@ subroutine SED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
 
    ! interpolate u to find u_interp = u(t)
    call SED_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 );  if (Failed()) return
+   OtherState%HSSBrTrq = u_interp%HSSBrTrqC
 
    ! find xdot at t
    call SED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
@@ -753,7 +758,8 @@ end subroutine SED_RK4
 !!   situation.  The problem arises since we are integrating in
 !!   discrete time, not continuous time.
 !FIXME: need to  checkes to make sure we don't go backwards when HSS Brake is active
-subroutine FixHSSBrTq ( Integrator, p, x, OtherState, m, ErrStat, ErrMsg )
+subroutine FixHSSBrTq ( Integrator, u, p, x, OtherState, m, ErrStat, ErrMsg )
+   type(SED_InputType),             intent(in   )  :: u                       !< Inputs at t
    type(SED_ParameterType),         intent(in   )  :: p                       !< Parameters of the structural dynamics module
    type(SED_OtherStateType),        intent(inout)  :: OtherState              !< Other states of the structural dynamics module
    type(SED_MiscVarType),           intent(inout)  :: m                       !< misc (optimization) variables
@@ -764,6 +770,8 @@ subroutine FixHSSBrTq ( Integrator, p, x, OtherState, m, ErrStat, ErrMsg )
 
    real(ReKi)                                      :: RqdFrcAz                ! The force term required to produce RqdQD2Az.
    real(ReKi)                                      :: RqdQD2Az                ! The required QD2T(DOF_Az) to cause the HSS to stop rotating.
+   real(ReKi)                                      :: GenTrqLSS               ! Generator torque, expressed on LSS
+   real(ReKi)                                      :: BrkTrqLSS               ! HSS brake torque, expressed on LSS
    integer                                         :: I                       ! Loops through all DOFs.
    integer(IntKi)                                  :: ErrStat2
    character(ErrMsgLen)                            :: ErrMsg2
@@ -801,136 +809,92 @@ subroutine FixHSSBrTq ( Integrator, p, x, OtherState, m, ErrStat, ErrMsg )
                    +  9.0*OtherState%xdot(OtherState%IC(4))%qdt(DOF_Az)   )/55.0
    end select
 
-!!!   ! Rearrange the augmented matrix of equations of motion to account
-!!!   !   for the known acceleration of the generator azimuth DOF.  To
-!!!   !   do this, make the known inertia like an applied force to the
-!!!   !   system.  Then set force QD2T(DOF_Az) to equal the known
-!!!   !   acceleration in the augmented matrix of equations of motion:
-!!!   ! Here is how the new equations are derived.  First partition the
-!!!   !   augmented matrix as follows, where Qa are the unknown
-!!!   !   accelerations, Qb are the known accelerations, Fa are the
-!!!   !   known forces, and Fb are the unknown forces:
-!!!   !      [Caa Cab]{Qa}={Fa}
-!!!   !      [Cba Cbb]{Qb}={Fb}
-!!!   !   By rearranging, the equations for the unknown and known
-!!!   !   accelerations are as follows:
-!!!   !      [Caa]{Qa}={Fa}-[Cab]{Qb} and [I]{Qb}={Qb}
-!!!   !   Combining these two sets of equations into one set yields:
-!!!   !      [Caa 0]{Qa}={{Fa}-[Cab]{Qb}}
-!!!   !      [  0 I]{Qb}={          {Qb}}
-!!!   !   Once this equation is solved, the unknown force can be found from:
-!!!   !      {Fb}=[Cba]{Qa}+[Cbb]{Qb}
-!!!
-!!!   m%OgnlAzRo    = m%AugMat(DOF_Az,:)  ! used for HSS Brake hack; copy this row before modifying the old matrix
-!!!
-!!!   do I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-!!!      m%AugMat(p%DOFs%SrtPS(I),    p%NAUG) = m%AugMat(p%DOFs%SrtPS(I),p%NAUG) &
-!!!                                                    - m%AugMat(p%DOFs%SrtPS(I),DOF_Az)*RqdQD2Az  ! {{Fa}-[Cab]{Qb}}
-!!!      m%AugMat(p%DOFs%SrtPS(I),DOF_Az)   = 0.0                                                     ! [0]
-!!!      m%AugMat(DOF_Az, p%DOFs%SrtPS(I))  = 0.0                                                     ! [0]
-!!!   enddo             ! I - All active (enabled) DOFs
-!!!
-!!!   m%AugMat(DOF_Az,DOF_Az) = 1.0                                                           ! [I]{Qb}={Qb}
-!!!   m%AugMat(DOF_Az,  p%NAUG) = RqdQD2Az                                                    !
-!!!
-!!!   ! Invert the matrix to solve for the new (updated) accelerations.  Like in
-!!!   !   CalcContStateDeriv(), the accelerations are returned by Gauss() in the first NActvDOF
-!!!   !   elements of the solution vector, SolnVec().  These are transfered to the
-!!!   !   proper index locations of the acceleration vector QD2T() using the
-!!!   !   vector subscript array SrtPS(), after Gauss() has been called:
-!!!   ! Invert the matrix to solve for the accelerations. The accelerations are returned by Gauss() in the first NActvDOF elements
-!!!   !   of the solution vector, SolnVec(). These are transfered to the proper index locations of the acceleration vector QD2T()
-!!!   !   using the vector subscript array SrtPS(), after Gauss() has been called:
-!!!   m%AugMat_factor = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1:p%DOFs%NActvDOF) )
-!!!   m%SolnVec       = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1+p%DOFs%NActvDOF) )
-!!!
-!!!   CALL LAPACK_getrf( M=p%DOFs%NActvDOF, N=p%DOFs%NActvDOF, A=m%AugMat_factor, IPIV=m%AugMat_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
-!!!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-!!!      IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!   CALL LAPACK_getrs( TRANS='N',N=p%DOFs%NActvDOF, A=m%AugMat_factor,IPIV=m%AugMat_pivot, B=m%SolnVec, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
-!!!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!!!      IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!   ! Find the force required to produce RqdQD2Az from the equations of
-!!!   !   motion using the new accelerations:
-!!!   RqdFrcAz = 0.0
-!!!   do I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-!!!      ! bjj: use m%SolnVec(I) instead of m%QD2T(p%DOFs%SrtPS(I)) here; then update m%QD2T(p%DOFs%SrtPS(I))
-!!!      !      later if necessary
-!!!      !RqdFrcAz = RqdFrcAz + OgnlAzRo(SrtPS(I))*m%QD2T(p%DOFs%SrtPS(I))  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}
-!!!      RqdFrcAz = RqdFrcAz + m%OgnlAzRo(p%DOFs%SrtPS(I))*m%SolnVec(I)  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}
-!!!   ENDDO             ! I - All active (enabled) DOFs
-!!!
-!!!   ! Find the HSSBrTrq necessary to bring about this force:
-!!!   OtherState%HSSBrTrq = OtherState%HSSBrTrqC &
-!!!                       + ( ( m%OgnlAzRo(p%NAUG) - RqdFrcAz )*m%RtHS%GBoxEffFac/ABS(p%GBRatio) )
-!!!
-!!!   ! Make sure this new HSSBrTrq isn't larger in absolute magnitude than
-!!!   !   the original HSSBrTrq.  Indeed, the new HSSBrTrq can't be larger than
-!!!   !   the old HSSBrTrq, since the old HSSBrTrq was found solely as a
-!!!   !   function of time--and is thus the maximum possible at the current
-!!!   !   time.  If the new HSSBrTrq is larger, then the reversal in direction
-!!!   !   was caused by factors other than the HSS brake--thus the original HSS
-!!!   !   brake torque values were OK to begin with.  Thus, restore the
-!!!   !   variables changed by this subroutine, back to their original values:
-!!!   if ( abs( OtherState%HSSBrTrq ) > abs( OtherState%HSSBrTrqC ) )  then
-!!!      OtherState%HSSBrTrq = OtherState%HSSBrTrqC !OtherState%HSSBrTrqC = SIGN( u%HSSBrTrqC, x%QDT(DOF_Az) )
-!!!   else
-!!!      ! overwrite QD2T with the new values
-!!!      m%QD2T = 0.0
-!!!      do I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-!!!         m%QD2T(p%DOFs%SrtPS(I)) = m%SolnVec(I)
-!!!      enddo             ! I - All active (enabled) DOFs
-!!!
-!!!      ! Use the new accelerations to update the DOF values.  Again, this
-!!!      !   depends on the integrator type:
-!!!      SELECT CASE (Integrator)
-!!!      case ('C')  ! Corrector
-!!!         ! Update QD and QD2 with the new accelerations using the corrector.
-!!!         ! This will make QD(DOF_Az,IC(NMX)) equal to zero and adjust all
-!!!         !    of the other QDs as necessary.
-!!!         ! The Q's are unnaffected by this change.
-!!!         x%qdt =                   OtherState%xdot(OtherState%IC(1))%qt &  ! qd at n
-!!!                 + p%DT24 * ( 9. * m%QD2T &                                ! the value we just changed
-!!!                           + 19. * OtherState%xdot(OtherState%IC(1))%qdt &
-!!!                           -  5. * OtherState%xdot(OtherState%IC(2))%qdt &
-!!!                           +  1. * OtherState%xdot(OtherState%IC(3))%qdt )
-!!!      case ('P')  ! Predictor
-!!!         ! Update QD and QD2 with the new accelerations using predictor.
-!!!         x%qdt =                OtherState%xdot(OtherState%IC(1))%qt + &  ! qd at n
-!!!                 p%DT24 * ( 55.*m%QD2T &                                  ! the value we just changed
-!!!                          - 59.*OtherState%xdot(OtherState%IC(2))%qdt  &
-!!!                          + 37.*OtherState%xdot(OtherState%IC(3))%qdt  &
-!!!                           - 9.*OtherState%xdot(OtherState%IC(4))%qdt )
-!!!
-!!!         OtherState%xdot ( OtherState%IC(1) )%qdt = m%QD2T        ! fix the history
-!!!      end select
-!!!   endif
+   ! Rearrange the equations of motion to account
+   !   for the known acceleration of the azimuth DOF.  To
+   !   do this, make the known inertia like an applied force to the
+   !   system.
+   !!
+   !! \f$ F = Q_a - \ddot{\psi} J_\text{DT} - Q_g - Q_b \f$
+   !!
+   !! where
+   !!    - \f$F\f$ is the additional force required to make the rotor stop
+   !!    -  \f$J_\text{DT}\f$ is the system inertia
+   !!    -  \f$Q_g = n_g Q_{g,\text{HSS}}\f$ is the generator torque projected to the LSS
+   !!    -  \f$Q_b = n_g Q_{b,\text{HSS}}\f$ is the HSS brake torque projected to the LSS
+   !!
+
+   ! Find the force required to produce RqdQD2Az from the equations of
+   !   motion using the new accelerations:
+   GenTrqLSS = abs(p%GBoxRatio) * u%GenTrq
+   BrkTrqLSS = abs(p%GBoxRatio) * OtherState%HSSBrTrqC
+   RqdFrcAz = RqdQD2Az * p%J_DT - u%AeroTrq + GenTrqLSS + BrkTrqLSS
+
+   ! Find the HSSBrTrq necessary to bring about this force:
+   OtherState%HSSBrTrq = OtherState%HSSBrTrqC - RqdFrcAz/ABS(p%GBoxRatio)
+
+   ! Make sure this new HSSBrTrq isn't larger in absolute magnitude than
+   !   the original HSSBrTrq.  Indeed, the new HSSBrTrq can't be larger than
+   !   the old HSSBrTrq, since the old HSSBrTrq was found solely as a
+   !   function of time--and is thus the maximum possible at the current
+   !   time.  If the new HSSBrTrq is larger, then the reversal in direction
+   !   was caused by factors other than the HSS brake--thus the original HSS
+   !   brake torque values were OK to begin with.  Thus, restore the
+   !   variables changed by this subroutine, back to their original values:
+   if ( abs( OtherState%HSSBrTrq ) > abs( OtherState%HSSBrTrqC ) )  then
+      OtherState%HSSBrTrq = OtherState%HSSBrTrqC !OtherState%HSSBrTrqC = SIGN( u%HSSBrTrqC, x%QDT(DOF_Az) )
+   else
+      ! overwrite QD2T with the new values
+      m%QD2T(DOF_Az) = RqdQD2Az
+
+      ! Use the new accelerations to update the DOF values.  Again, this
+      !   depends on the integrator type:
+      SELECT CASE (Integrator)
+      case ('C')  ! Corrector
+         ! Update QD and QD2 with the new accelerations using the corrector.
+         ! This will make QD(DOF_Az,IC(NMX)) equal to zero and adjust all
+         !    of the other QDs as necessary.
+         ! The Q's are unnaffected by this change.
+         x%qdt =                   OtherState%xdot(OtherState%IC(1))%qt &  ! qd at n
+                 + p%DT24 * ( 9. * m%QD2T &                                ! the value we just changed
+                           + 19. * OtherState%xdot(OtherState%IC(1))%qdt &
+                           -  5. * OtherState%xdot(OtherState%IC(2))%qdt &
+                           +  1. * OtherState%xdot(OtherState%IC(3))%qdt )
+      case ('P')  ! Predictor
+         ! Update QD and QD2 with the new accelerations using predictor.
+         x%qdt =                OtherState%xdot(OtherState%IC(1))%qt + &  ! qd at n
+                 p%DT24 * ( 55.*m%QD2T &                                  ! the value we just changed
+                          - 59.*OtherState%xdot(OtherState%IC(2))%qdt  &
+                          + 37.*OtherState%xdot(OtherState%IC(3))%qdt  &
+                           - 9.*OtherState%xdot(OtherState%IC(4))%qdt )
+
+         OtherState%xdot ( OtherState%IC(1) )%qdt = m%QD2T        ! fix the history
+      end select
+   endif
    return
 end subroutine FixHSSBrTq
 
 
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!!> This function calculates the sign (+/-1) of the low-speed shaft torque for
-!!!!!   this time step.  MomLPRot is the moment on the
-!!!!!   low-speed shaft at the teeter pin caused by the rotor.
-!!!function SignLSSTrq( p, m )
-!!!   type(SED_ParameterType),   intent(in)  :: p                 !< Parameters
-!!!   type(SED_MiscVarType),     intent(in)  :: m                 !< Misc variables
-!!!   integer(IntKi)                         :: SignLSSTrq        !< The sign of the LSS_Trq, output from this function
-!!!   real(ReKi)                             :: MomLPRot  (3)     ! The total moment on the low-speed shaft at point P caused by the rotor.
-!!!   integer(IntKi)                         :: I                 ! loop counter
-!!!
-!!!   MomLPRot = m%RtHS%MomLPRott ! Initialize MomLPRot using MomLPRott
-!!!   do I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-!!!      MomLPRot = MomLPRot + m%RtHS%PMomLPRot(:,p%DOFs%SrtPS(I))*m%QD2T(p%DOFs%SrtPS(I))  ! Add the moments associated with the accelerations of the DOFs
-!!!   enddo             ! I - All active (enabled) DOFs
-!!!
-!!!      ! MomLProt has now been found.  Now dot this with e1 to get the
-!!!      !   low-speed shaft torque and take the SIGN of the result:
-!!!   SignLSSTrq = nint( sign( 1.0_R8Ki, dot_product( MomLPRot, m%CoordSys%e1 ) ) )
-!!!end function SignLSSTrq
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This function calculates the sign (+/-1) of the low-speed shaft torque for
+!!   this time step.  MomLPRot is the moment on the
+!!   low-speed shaft at the teeter pin caused by the rotor.
+function SignLSSTrq( u, p, m )
+   type(SED_InputType),       intent(in)  :: u                 !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+   type(SED_ParameterType),   intent(in)  :: p                 !< Parameters
+   type(SED_MiscVarType),     intent(in)  :: m                 !< Misc variables
+   integer(IntKi)                         :: SignLSSTrq        !< The sign of the LSS_Trq, output from this function
+   real(ReKi)                             :: MomLPRot          ! The total moment on the low-speed shaft at point P caused by the rotor.
+   real(ReKi)                             :: GenTrqLSS         ! Generator torque, expressed on LSS
+   real(ReKi)                             :: BrkTrqLSS         ! HSS brake torque, expressed on LSS
+
+   GenTrqLSS = abs(p%GBoxRatio) * u%GenTrq
+   BrkTrqLSS = abs(p%GBoxRatio) * u%HSSBrTrqC
+   MomLPRot  = u%AeroTrq - GenTrqLSS - BrkTrqLSS
+
+      ! MomLProt has now been found.  Now dot this with e1 to get the
+      !   low-speed shaft torque and take the SIGN of the result:
+   SignLSSTrq = nint( sign( 1.0_ReKi,MomLPRot ))
+end function SignLSSTrq
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -997,7 +961,7 @@ subroutine SED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       OtherState%HSSBrTrqC  = SIGN( u_interp%HSSBrTrqC, real(x%qdt(DOF_Az),ReKi) ) ! hack for HSS brake (need correct sign)
    endif
    OtherState%HSSBrTrq   = OtherState%HSSBrTrqC
-!   OtherState%SgnPrvLSTQ = OtherState%SgnLSTQ(OtherState%IC(2))
+   OtherState%SgnPrvLSTQ = OtherState%SgnLSTQ(OtherState%IC(2))
 
    call SED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
       if (Failed()) return
@@ -1005,7 +969,7 @@ subroutine SED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
    call SED_CopyContState(xdot, OtherState%xdot ( OtherState%IC(1) ), MESH_NEWCOPY, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-   if (n .le. 2) then
+   if (n .le. 3) then   ! to fully populate through IC(4), must use RK4 three times
       call SED_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       if (Failed()) return
    else
@@ -1020,12 +984,12 @@ subroutine SED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       !   of x%qt(); QD(DOF_Az,IC(NMX)) as will be done during the next time step.
       ! Only do this after the first few time steps since it doesn't work
       !   for the Runga-Kutta integration scheme.
-      call FixHSSBrTq ( 'P', p, x, OtherState, m, ErrStat2, ErrMsg2 )
+      call FixHSSBrTq ( 'P', u_interp, p, x, OtherState, m, ErrStat2, ErrMsg2 )
          if (Failed()) return
    endif
 
-!   OtherState%SgnPrvLSTQ = SignLSSTrq(p, m)
-!   OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ
+   OtherState%SgnPrvLSTQ = SignLSSTrq(u_interp, p, m)
+   OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ
 
    call Cleanup()
 
@@ -1124,10 +1088,10 @@ subroutine SED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMs
                                                     +  1. * OtherState%xdot(OtherState%IC(3))%qdt )
 
       ! Make sure the HSS brake has not reversed the direction of the HSS:
-      call FixHSSBrTq ( 'C', p, x, OtherState, m, ErrStat2, ErrMsg2 )
+      call FixHSSBrTq ( 'C', u_interp, p, x, OtherState, m, ErrStat2, ErrMsg2 )
          if (Failed())  return;
-!      OtherState%SgnPrvLSTQ = SignLSSTrq(p, m)
-!      OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ
+      OtherState%SgnPrvLSTQ = SignLSSTrq(u_interp, p, m)
+      OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ
    else
       x%qt  = x_pred%qt
       x%qdt = x_pred%qdt
@@ -1361,7 +1325,7 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
 !TODO: double check if absolute values are needed on the GBoxRatio in this calculation
    !> rotor acceleration -- only if Generator DOF is on
    !!
-   !! \f$ \ddot{\psi} = \frac{1}{J_\text{DT}} \left( Q_g - Q_a + Q_b \right) \f$
+   !! \f$ \ddot{\psi} = \frac{1}{J_\text{DT}} \left( Q_a - Q_g - Q_b \right) \f$
    !!
    !! where
    !!    -  \f$J_\text{DT}\f$ is the system inertia
@@ -1369,9 +1333,9 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    !!    -  \f$Q_b = n_g Q_{b,\text{HSS}}\f$ is the HSS brake torque projected to the LSS
    !!
    if (p%GenDOF) then
-      GenTrqLSS = p%GBoxRatio * u%GenTrq
-      BrkTrqLSS = p%GBoxRatio * u%HSSBrTrqC
-      dxdt%QDT(DOF_Az)  = real((GenTrqLSS - u%AeroTrq + BrkTrqLSS)/p%J_DT, R8Ki)
+      GenTrqLSS = abs(p%GBoxRatio) * u%GenTrq
+      BrkTrqLSS = abs(p%GBoxRatio) * OtherState%HSSBrTrq
+      dxdt%QDT(DOF_Az)  = real((u%AeroTrq - GenTrqLSS - BrkTrqLSS)/p%J_DT, R8Ki)
    else
       dxdt%QDT(DOF_Az)  = 0.0_R8Ki
    endif

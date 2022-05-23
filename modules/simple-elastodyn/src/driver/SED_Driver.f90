@@ -23,6 +23,7 @@ PROGRAM SED_Driver
    USE NWTC_Library
    USE VersionInfo
    USE SED
+   USE SED_IO
    USE SED_Types
    USE SED_Driver_Subs
    USE SED_Driver_Types
@@ -37,7 +38,7 @@ PROGRAM SED_Driver
    integer(IntKi), parameter                          :: NumInp = 3           !< Number of inputs sent to SED_UpdateStates (InterpOrder+1)
 
       ! Program variables
-   real(DbKi)                                         :: Time                 !< Variable for storing time, in seconds
+   real(DbKi)                                         :: T                    !< Variable for storing time, in seconds
    real(DbKi)                                         :: TimeInterval         !< Interval between time steps, in seconds
    real(DbKi)                                         :: TStart               !< Time to start
    real(DbKi)                                         :: TMax                 !< Maximum time if found by default
@@ -244,13 +245,22 @@ PROGRAM SED_Driver
    CALL SED_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, misc, TimeInterval, InitOutData, ErrStat, ErrMsg )
    call CheckErr('After Init: ');
 
+      ! Make sure don't use a High-speed brake with RK4 method
+   if (.not. EqualRealNos( maxval(abs(CaseData(2,:))), 0.0_ReKi)) then
+      if (p%IntMethod == Method_RK4) then ! only works with AB4 or ABM4
+         ErrStat  = ErrID_Fatal
+         ErrMsg   = 'Simplified-ElastoDyn (SED) must use the AB4 or ABM4 integration method to implement high-speed shaft braking.'
+         call CheckErr('')
+      endif
+   endif
+
    do i = 2, NumInp
       call SED_CopyInput(u(1),u(i),MESH_NEWCOPY, ErrStat, ErrMsg)
       call CheckErr('CopyInput')
    enddo
 
       ! Set the output file
-   call GetRoot(Settings%SEDIptFileName,OutputFileRootName)
+   call GetRoot(Settings%OutRootName,OutputFileRootName)
    call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
    call CheckErr('Setting output file');
 
@@ -269,26 +279,29 @@ PROGRAM SED_Driver
    !...............................................................................................................................
 
 
-   Time = TStart
+   T = TStart
 
    ! Get values from table
    do i = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here
-      u(i)%AeroTrq      = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
-      u(i)%HSSBrTrqC    = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
-      u(i)%GenTrq       = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
-      u(i)%BlPitchCom   = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
-      u(i)%Yaw          = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
-      u(i)%YawRate      = InterpStp( real(Time,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
+      u(i)%AeroTrq      = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      u(i)%HSSBrTrqC    = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
+      u(i)%GenTrq       = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
+      u(i)%BlPitchCom   = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
+      u(i)%Yaw          = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
+      u(i)%YawRate      = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
       uTimes(i) = TStart - real((i-1),R8Ki) * TimeInterval
    enddo
 
+
+
+
       ! Calculate outputs at TStart
-   CALL SED_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
+   CALL SED_CalcOutput( T, u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg );
    call CheckErr('After CalcOutput: ');
 
    if (Settings%WrVTK > 1_IntKi) then
       call WrVTK_Meshes(Settings, p, y, n, ErrStat,ErrMsg)
-      call CheckErr('Time: '//trim(Num2LStr(Time))//'After WrVTK_Meshes: ');
+      call CheckErr('Time: '//trim(Num2LStr(T))//'After WrVTK_Meshes: ');
    endif
 
    call Dvr_WriteOutputLine(TStart,DvrOut,"ES20.12E2",y)
@@ -304,12 +317,12 @@ PROGRAM SED_Driver
       uTimes(1) = n*TimeInterval+TStart
 
       ! InterpStpReal( T, Tary, Vary, TmpIdx, size)
-      u(1)%AeroTrq      = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
-      u(1)%HSSBrTrqC    = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
-      u(1)%GenTrq       = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
-      u(1)%BlPitchCom   = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
-      u(1)%Yaw          = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
-      u(1)%YawRate      = InterpStp( real(Time+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
+      u(1)%AeroTrq      = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      u(1)%HSSBrTrqC    = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
+      u(1)%GenTrq       = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
+      u(1)%BlPitchCom   = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
+      u(1)%Yaw          = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
+      u(1)%YawRate      = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
 
          ! There are no states to update in SED, but for completeness we add this.
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
@@ -351,6 +364,8 @@ CONTAINS
    end subroutine CheckErr
    subroutine ProgEnd()
       ! Placeholder for moment
+      if (DvrOut>0)  close(DvrOut)
+      CALL SED_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
       Call ProgAbort('Fatal error encountered.  Ending.')
    end subroutine ProgEnd
 END PROGRAM SED_Driver

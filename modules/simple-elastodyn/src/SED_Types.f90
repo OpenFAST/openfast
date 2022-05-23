@@ -173,6 +173,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< Array of all outputs [-]
     TYPE(MeshMapType)  :: mapNac2Hub      !< Mesh mapping from Nacelle to Hub [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: mapHub2Root      !< Mesh mapping from Hub to BladeRootMotion [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Current estimate of first derivative of QD (acceleration matrix) for each degree of freedom [-]
   END TYPE SED_MiscVarType
 ! =======================
 CONTAINS
@@ -3278,6 +3279,18 @@ IF (ALLOCATED(SrcMiscData%mapHub2Root)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+IF (ALLOCATED(SrcMiscData%QD2T)) THEN
+  i1_l = LBOUND(SrcMiscData%QD2T,1)
+  i1_u = UBOUND(SrcMiscData%QD2T,1)
+  IF (.NOT. ALLOCATED(DstMiscData%QD2T)) THEN 
+    ALLOCATE(DstMiscData%QD2T(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%QD2T.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%QD2T = SrcMiscData%QD2T
+ENDIF
  END SUBROUTINE SED_CopyMisc
 
  SUBROUTINE SED_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -3298,6 +3311,9 @@ DO i1 = LBOUND(MiscData%mapHub2Root,1), UBOUND(MiscData%mapHub2Root,1)
   CALL NWTC_Library_Destroymeshmaptype( MiscData%mapHub2Root(i1), ErrStat, ErrMsg )
 ENDDO
   DEALLOCATE(MiscData%mapHub2Root)
+ENDIF
+IF (ALLOCATED(MiscData%QD2T)) THEN
+  DEALLOCATE(MiscData%QD2T)
 ENDIF
  END SUBROUTINE SED_DestroyMisc
 
@@ -3381,6 +3397,11 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
     END DO
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! QD2T allocated yes/no
+  IF ( ALLOCATED(InData%QD2T) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! QD2T upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%QD2T)  ! QD2T
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -3492,6 +3513,21 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%QD2T) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%QD2T,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%QD2T,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%QD2T,1), UBOUND(InData%QD2T,1)
+        DbKiBuf(Db_Xferred) = InData%QD2T(i1)
+        Db_Xferred = Db_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE SED_PackMisc
 
@@ -3635,6 +3671,24 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! QD2T not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%QD2T)) DEALLOCATE(OutData%QD2T)
+    ALLOCATE(OutData%QD2T(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%QD2T.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%QD2T,1), UBOUND(OutData%QD2T,1)
+        OutData%QD2T(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE SED_UnPackMisc
 
