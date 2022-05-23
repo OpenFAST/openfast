@@ -169,9 +169,9 @@ if(BUILD_OPENFAST_SIMULINK_API)
     $<TARGET_OBJECTS:openfast_prelib_obj>
     $<TARGET_OBJECTS:mapcpplib_obj>
     $<TARGET_OBJECTS:maplib_obj>
+    $<TARGET_OBJECTS:nwtcsyslib_matlab_obj>
     $<TARGET_OBJECTS:nwtcbaselib_obj> 
     $<TARGET_OBJECTS:nwtclibs_obj>
-    $<TARGET_OBJECTS:nwtcsyslib_matlab_obj>
     $<TARGET_OBJECTS:ifwlib_obj>
     $<TARGET_OBJECTS:fvwlib_obj>
     $<TARGET_OBJECTS:uaaerolib_obj>
