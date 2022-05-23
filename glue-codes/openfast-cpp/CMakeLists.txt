@@ -120,6 +120,14 @@ target_link_libraries(openfastcpp openfastcpplib
   ${LIBXML2_LIBRARIES}
   ${CMAKE_DL_LIBS})
 
+if (OPENMP)
+  find_package(OpenMP)
+  if(OpenMP_CXX_FOUND)
+    target_link_libraries(openfastcpplib OpenMP::OpenMP_CXX)
+    target_link_libraries(openfastcpp OpenMP::OpenMP_CXX)
+  endif()
+endif(OPENMP)
+
 if(MPI_COMPILE_FLAGS)
   set_target_properties(openfastcpp PROPERTIES
     COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
