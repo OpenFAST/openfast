@@ -2114,12 +2114,12 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
                ! we're mapping loads, so we also need the sibling meshes' displacements:
             HD_Start = Indx_u_HD_Morison_Start(HD%Input(1), y_FAST)
             
-            call Linearize_Point_to_Point( HD%y%Morison%Mesh, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%Morison%Mesh, y_ED%PlatformPtMesh) !HD%Input(1)%Morison and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+            call Linearize_Point_to_Point( HD%y%Morison%Mesh, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%Morison%Mesh, y_ED%PlatformPtMesh) !HD%Input(1)%Morison and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
                ! HD is source in the mapping, so we want M_{uSm}
-            if (allocated(MeshMapData%HD_M_P_2_ED_P%dM%m_us )) then
-               call SetBlockMatrix( dUdu, MeshMapData%HD_M_P_2_ED_P%dM%m_us, ED_Start_mt, HD_Start )
+            if (allocated(MeshMapData%HD_M_P_2_SubStructure%dM%m_us )) then
+               call SetBlockMatrix( dUdu, MeshMapData%HD_M_P_2_SubStructure%dM%m_us, ED_Start_mt, HD_Start )
             end if
             
          end if   
@@ -2129,12 +2129,12 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
                ! we're mapping loads, so we also need the sibling meshes' displacements:
             HD_Start = Indx_u_HD_WAMIT_Start(HD%Input(1), y_FAST)
             
-            call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%WAMITMesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+            call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%WAMITMesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
                ! HD is source in the mapping, so we want M_{uSm}
-            if (allocated(MeshMapData%HD_W_P_2_ED_P%dM%m_us )) then
-               call SetBlockMatrix( dUdu, MeshMapData%HD_W_P_2_ED_P%dM%m_us, ED_Start_mt, HD_Start )
+            if (allocated(MeshMapData%HD_W_P_2_SubStructure%dM%m_us )) then
+               call SetBlockMatrix( dUdu, MeshMapData%HD_W_P_2_SubStructure%dM%m_us, ED_Start_mt, HD_Start )
             end if
             
          end if
@@ -2275,12 +2275,12 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
                ! we're mapping loads, so we also need the sibling meshes' displacements:
             HD_Start = Indx_u_HD_Morison_Start(HD%Input(1), y_FAST)
             
-            call Linearize_Point_to_Point( HD%y%Morison%Mesh, u_SD%LMesh, MeshMapData%HD_M_P_2_SD_P, ErrStat2, ErrMsg2, HD%Input(1)%Morison%Mesh, y_SD%Y2Mesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+            call Linearize_Point_to_Point( HD%y%Morison%Mesh, u_SD%LMesh, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%Morison%Mesh, y_SD%Y2Mesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
                ! HD is source in the mapping, so we want M_{uSm}
-            if (allocated(MeshMapData%HD_M_P_2_SD_P%dM%m_us )) then
-               call SetBlockMatrix( dUdu, MeshMapData%HD_M_P_2_SD_P%dM%m_us, SD_Start, HD_Start )
+            if (allocated(MeshMapData%HD_M_P_2_SubStructure%dM%m_us )) then
+               call SetBlockMatrix( dUdu, MeshMapData%HD_M_P_2_SubStructure%dM%m_us, SD_Start, HD_Start )
             end if
             
         
@@ -2293,12 +2293,12 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
                ! we're mapping loads, so we also need the sibling meshes' displacements:
             HD_Start = Indx_u_HD_WAMIT_Start(HD%Input(1), y_FAST)
             
-            call Linearize_Point_to_Point( HD%y%WAMITMesh, u_SD%LMesh, MeshMapData%HD_W_P_2_SD_P, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_SD%Y2Mesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+            call Linearize_Point_to_Point( HD%y%WAMITMesh, u_SD%LMesh, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_SD%Y2Mesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
                ! HD is source in the mapping, so we want M_{uSm}
-            if (allocated(MeshMapData%HD_W_P_2_SD_P%dM%m_us )) then
-               call SetBlockMatrix( dUdu, MeshMapData%HD_W_P_2_SD_P%dM%m_us, SD_Start, HD_Start )
+            if (allocated(MeshMapData%HD_W_P_2_SubStructure%dM%m_us )) then
+               call SetBlockMatrix( dUdu, MeshMapData%HD_W_P_2_SubStructure%dM%m_us, SD_Start, HD_Start )
             end if
             
            
@@ -2403,27 +2403,27 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
       if ( HD%y%Morison%Mesh%Committed  ) then ! meshes for floating
          !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         ! call Linearize_Point_to_Point( HD%y%Morison, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%Morison, y_ED%PlatformPtMesh) !HD%Input(1)%Morison and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+         ! call Linearize_Point_to_Point( HD%y%Morison, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%Morison, y_ED%PlatformPtMesh) !HD%Input(1)%Morison and y_ED%PlatformPtMesh contain the displaced positions for load calculations
          HD_Out_Start = Indx_y_HD_Morison_Start(HD%y, y_FAST)
          SD_Start     = Indx_u_SD_LMesh_Start(u_SD, y_FAST) ! start of u_SD%LMesh%Force field
-         call Assemble_dUdy_Loads(HD%y%Morison%Mesh, u_SD%LMesh, MeshMapData%HD_M_P_2_SD_P, SD_Start, HD_Out_Start, dUdy)
+         call Assemble_dUdy_Loads(HD%y%Morison%Mesh, u_SD%LMesh, MeshMapData%HD_M_P_2_SubStructure, SD_Start, HD_Out_Start, dUdy)
          
             ! SD translation displacement-to-SD moment transfer (dU^{SD}/dy^{SD}):
          SD_Start = Indx_u_SD_LMesh_Start(u_SD, y_FAST) + u_SD%LMesh%NNodes*3   ! start of u_SD%LMesh%Moment field (skip the SD forces) 
-         call SetBlockMatrix( dUdy, MeshMapData%HD_M_P_2_SD_P%dM%m_uD, SD_Start, SD_Out_Start )
+         call SetBlockMatrix( dUdy, MeshMapData%HD_M_P_2_SubStructure%dM%m_uD, SD_Start, SD_Out_Start )
 ! maybe this should be SumBlockMatrix with future changes to linearized modules???            
       end if      
       if ( HD%y%WAMITMesh%Committed  ) then ! meshes for floating
          !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         ! call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%WAMITMesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+         ! call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%WAMITMesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
          HD_Out_Start = Indx_y_HD_WAMIT_Start(HD%y, y_FAST)
          SD_Start     = Indx_u_SD_LMesh_Start(u_SD, y_FAST) ! start of u_SD%LMesh%Force field
-         call Assemble_dUdy_Loads(HD%y%WAMITMesh, u_SD%LMesh, MeshMapData%HD_W_P_2_SD_P, SD_Start, HD_Out_Start, dUdy)
+         call Assemble_dUdy_Loads(HD%y%WAMITMesh, u_SD%LMesh, MeshMapData%HD_W_P_2_SubStructure, SD_Start, HD_Out_Start, dUdy)
          
             ! SD translation displacement-to-SD moment transfer (dU^{SD}/dy^{SD}):
          SD_Start = Indx_u_SD_LMesh_Start(u_SD, y_FAST) + u_SD%LMesh%NNodes*3   ! start of u_SD%LMesh%Moment field (skip the SD forces)  
-         call SumBlockMatrix( dUdy, MeshMapData%HD_W_P_2_SD_P%dM%m_uD, SD_Start, SD_Out_Start )
+         call SumBlockMatrix( dUdy, MeshMapData%HD_W_P_2_SubStructure%dM%m_uD, SD_Start, SD_Out_Start )
 ! maybe this should be SumBlockMatrix with future changes to linearized modules???            
       end if
    end if
@@ -3116,7 +3116,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
                      ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
                   ED_Start     = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
                   ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST)                                  ! start of y_ED%PlatformPtMesh%TranslationDisp field
-                  call SumBlockMatrix( dUdy, MeshMapData%HD_M_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+                  call SumBlockMatrix( dUdy, MeshMapData%HD_M_P_2_SubStructure%dM%m_uD, ED_Start, ED_Out_Start )
                endif
             enddo
          endif
@@ -3203,27 +3203,27 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
             if ( HD%y%Morison%Mesh%Committed  ) then ! meshes for floating
                !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
                !!! ! while forming dUdy, too.
-               ! call Linearize_Point_to_Point( HD%y%Morison, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%Morison, y_ED%PlatformPtMesh) !HD%Input(1)%Morison and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+               ! call Linearize_Point_to_Point( HD%y%Morison, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%Morison, y_ED%PlatformPtMesh) !HD%Input(1)%Morison and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                HD_Out_Start = Indx_y_HD_Morison_Start(HD%y, y_FAST)
                ED_Start     = Indx_u_ED_Platform_Start(u_ED, y_FAST) ! start of u_ED%PlatformPtMesh%Force field
-               call Assemble_dUdy_Loads(HD%y%Morison%Mesh, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_ED_P, ED_Start, HD_Out_Start, dUdy)
+               call Assemble_dUdy_Loads(HD%y%Morison%Mesh, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_SubStructure, ED_Start, HD_Out_Start, dUdy)
          
                   ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
                ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces) 
-               call SumBlockMatrix( dUdy, MeshMapData%HD_M_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+               call SumBlockMatrix( dUdy, MeshMapData%HD_M_P_2_SubStructure%dM%m_uD, ED_Start, ED_Out_Start )
               
             end if      
             if ( HD%y%WAMITMesh%Committed  ) then ! meshes for floating
                !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
                !!! ! while forming dUdy, too.
-               ! call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%WAMITMesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+               ! call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%WAMITMesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                HD_Out_Start = Indx_y_HD_WAMIT_Start(HD%y, y_FAST)
                ED_Start     = Indx_u_ED_Platform_Start(u_ED, y_FAST) ! start of u_ED%PlatformPtMesh%Force field
-               call Assemble_dUdy_Loads(HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ED_Start, HD_Out_Start, dUdy)
+               call Assemble_dUdy_Loads(HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_SubStructure, ED_Start, HD_Out_Start, dUdy)
          
                   ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
                ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
-               call SumBlockMatrix( dUdy, MeshMapData%HD_W_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+               call SumBlockMatrix( dUdy, MeshMapData%HD_W_P_2_SubStructure%dM%m_uD, ED_Start, ED_Out_Start )
        
             end if
 
@@ -3655,7 +3655,7 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
       
             ! Transfer ED motions to HD motion input (HD inputs depend on previously calculated HD inputs from ED):
          if ( u_HD%Morison%Mesh%Committed ) then
-            call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
+            call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
             ! HD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
@@ -3664,14 +3664,14 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
             HD_Start_tr = HD_Start_td + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
          
                ! translational velocity:
-            if (allocated(MeshMapData%ED_P_2_HD_M_P%dM%tv_uD )) then             
-               call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_M_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
+            if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%tv_uD )) then             
+               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
             end if
          
                ! translational acceleration:
             HD_Start_tr = HD_Start_tr + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
-            if (allocated(MeshMapData%ED_P_2_HD_M_P%dM%ta_uD )) then            
-               call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_M_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
+            if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%ta_uD )) then            
+               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
             end if
          end if
       
@@ -3680,20 +3680,20 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
       !=================================================== 
          if ( u_HD%WAMITMesh%Committed ) then
 
-            call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
+            call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             HD_Start_td = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)   
             HD_Start_tr = HD_Start_td + u_HD%WAMITMesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field       
                ! translational velocity:
-            if (allocated(MeshMapData%ED_P_2_HD_W_P%dM%tv_uD )) then             
-               call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_W_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
+            if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%tv_uD )) then             
+               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
             end if
 
                ! translational acceleration:
             HD_Start_tr = HD_Start_tr + u_HD%WAMITMesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
 
-            if (allocated(MeshMapData%ED_P_2_HD_W_P%dM%ta_uD )) then
-               call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_W_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
+            if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%ta_uD )) then
+               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
             end if
          end if 
          
@@ -3707,7 +3707,7 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
          if ( u_HD%Morison%Mesh%Committed ) then
             ! Transfer ED motions to HD motion input (HD inputs depend on previously calculated HD inputs from ED):
          
-            call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SD_P_2_HD_M_P, ErrStat2, ErrMsg2 )
+            call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
             ! HD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
@@ -3716,14 +3716,14 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
             HD_Start_tr = HD_Start_td + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
          
                ! translational velocity:
-            if (allocated(MeshMapData%SD_P_2_HD_M_P%dM%tv_uD )) then             
-               call SetBlockMatrix( dUdu, MeshMapData%SD_P_2_HD_M_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
+            if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%tv_uD )) then             
+               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
             end if
          
                ! translational acceleration:
             HD_Start_tr = HD_Start_tr + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
-            if (allocated(MeshMapData%SD_P_2_HD_M_P%dM%ta_uD )) then            
-               call SetBlockMatrix( dUdu, MeshMapData%SD_P_2_HD_M_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
+            if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%ta_uD )) then            
+               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
             end if
          end if
       
@@ -3731,21 +3731,21 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
       !  y_SD%Y2Mesh and u_HD%WAMITMesh
       !===================================================    
          if ( u_HD%WAMITMesh%Committed ) then
-            call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%WAMITMesh, MeshMapData%SD_P_2_HD_W_P, ErrStat2, ErrMsg2 )
+            call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
             HD_Start_td = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  
             HD_Start_tr = HD_Start_td + u_HD%WAMITMesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field       
                ! translational velocity:
-            if (allocated(MeshMapData%SD_P_2_HD_W_P%dM%tv_uD )) then             
-               call SetBlockMatrix( dUdu, MeshMapData%SD_P_2_HD_W_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
+            if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%tv_uD )) then             
+               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
             end if
 
                ! translational acceleration:
             HD_Start_tr = HD_Start_tr + u_HD%WAMITMesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
 
-            if (allocated(MeshMapData%SD_P_2_HD_W_P%dM%ta_uD )) then
-               call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_W_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
+            if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%ta_uD )) then
+               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
             end if 
          end if
       
@@ -3799,10 +3799,10 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
             
          !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         !!!call Linearize_Point_to_Line2( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
+         !!!call Linearize_Point_to_Line2( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
       
          HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field
-         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%ED_P_2_HD_M_P, HD_Start, ED_Out_Start, dUdy, .false.)
+         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, HD_Start, ED_Out_Start, dUdy, .false.)
       END IF
 
          !...................................
@@ -3812,10 +3812,10 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
             
          !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         !!!call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
+         !!!call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
       
          HD_Start     = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
-         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%ED_P_2_HD_W_P, HD_Start, ED_Out_Start, dUdy, .false.)
+         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, HD_Start, ED_Out_Start, dUdy, .false.)
       END IF
       
    else if ( p_FAST%CompSub == Module_SD ) then
@@ -3828,10 +3828,10 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
             
          !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         !!!call Linearize_Point_to_Line2( y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SD_P_2_HD_M_P, ErrStat2, ErrMsg2 )
+         !!!call Linearize_Point_to_Line2( y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
       
          HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field              
-         call Assemble_dUdy_Motions(y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SD_P_2_HD_M_P, HD_Start, SD_Out_Start, dUdy, .false.)
+         call Assemble_dUdy_Motions(y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, HD_Start, SD_Out_Start, dUdy, .false.)
       END IF
 
          !...................................
@@ -3841,10 +3841,10 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
             
          !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         !!!call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%Mesh, MeshMapData%SD_P_2_HD_W_P, ErrStat2, ErrMsg2 )
+         !!!call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
       
          HD_Start     = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
-         call Assemble_dUdy_Motions(y_SD%Y2Mesh, u_HD%WAMITMesh, MeshMapData%SD_P_2_HD_W_P, HD_Start, SD_Out_Start, dUdy, .false.)
+         call Assemble_dUdy_Motions(y_SD%Y2Mesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, HD_Start, SD_Out_Start, dUdy, .false.)
       END IF
    
    end if
