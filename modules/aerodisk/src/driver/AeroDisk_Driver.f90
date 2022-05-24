@@ -263,7 +263,7 @@ PROGRAM AeroDisk_Driver
    END IF
 
       ! Set the output file
-   call GetRoot(Settings%ADskIptFileName,OutputFileRootName)
+   call GetRoot(Settings%OutRootName,OutputFileRootName)
    call Dvr_InitializeOutputFile(DvrOut, InitOutData, OutputFileRootName, ErrStat, ErrMsg)
    call CheckErr('Setting output file');
 

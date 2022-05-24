@@ -287,7 +287,7 @@ ifw_regression("ifw_turbsimff"                                "inflowwind")
 ifw_py_regression("ifw_py_turbsimff"                          "inflowwind;python")
 
 # AeroDisk regression tests
-adsk_regression("ad_timeseries_shutdown"                      "aerodisk")
+adsk_regression("adsk_timeseries_shutdown"                    "aerodisk")
 
 # SimplifiedElastoDyn regression tests
 sed_regression("sed_test_HSSbrk"                              "simple-elastodyn")
