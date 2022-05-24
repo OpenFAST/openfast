@@ -1991,15 +1991,15 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
          if ( allocated(SrvD%y%SStCLoadMesh) ) then
             do j=1,size(SrvD%y%SStCLoadMesh)
                if (SrvD%y%SStCLoadMesh(j)%Committed) then
-                  call Linearize_Point_to_Point( SrvD%y%SStCLoadMesh(j), u_ED%PlatformPtMesh, MeshMapData%SStC_P_P_2_ED_P(j), ErrStat2, ErrMsg2, SrvD%Input(1)%SStCMotionMesh(j), y_ED%PlatformPtMesh )
+                  call Linearize_Point_to_Point( SrvD%y%SStCLoadMesh(j), u_ED%PlatformPtMesh, MeshMapData%SStC_P_P_2_SubStructure(j), ErrStat2, ErrMsg2, SrvD%Input(1)%SStCMotionMesh(j), y_ED%PlatformPtMesh )
                      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                   ED_Start_mt = Indx_u_ED_Platform_Start(u_ED, y_FAST) &
                                 + u_ED%PlatformPtMesh%NNodes      * 3             ! 3 forces at the nacelle (so we start at the moments)
                   SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_u(1,j)
                   ! SrvD is source in the mapping, so we want M_{uSm} (moments)
-                  if (allocated(MeshMapData%SStC_P_P_2_ED_P(j)%dM%m_us )) then
-                     call SetBlockMatrix( dUdu, MeshMapData%SStC_P_P_2_ED_P(j)%dM%m_us, ED_Start_mt, SrvD_Start )
+                  if (allocated(MeshMapData%SStC_P_P_2_SubStructure(j)%dM%m_us )) then
+                     call SetBlockMatrix( dUdu, MeshMapData%SStC_P_P_2_SubStructure(j)%dM%m_us, ED_Start_mt, SrvD_Start )
                   endif
                endif
             enddo
@@ -2217,13 +2217,13 @@ SUBROUTINE Linear_SD_InputSolve_du( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
                               + u_SD%LMesh%NNodes * 3         ! 3 forces at each node (we're going to start at the moments)
          do j=1,size(SrvD%y%SStCLoadMesh)
             if (SrvD%y%SStCLoadMesh(j)%Committed) then
-               call Linearize_Point_to_Point( SrvD%y%SStCLoadMesh(j), u_SD%LMesh, MeshMapData%SStC_P_P_2_SD_P(j), ErrStat2, ErrMsg2, SrvD%Input(1)%SStCMotionMesh(j), y_SD%Y3Mesh )
+               call Linearize_Point_to_Point( SrvD%y%SStCLoadMesh(j), u_SD%LMesh, MeshMapData%SStC_P_P_2_SubStructure(j), ErrStat2, ErrMsg2, SrvD%Input(1)%SStCMotionMesh(j), y_SD%Y3Mesh )
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_u(1,j)
                ! SrvD is source in the mapping, so we want M_{uSm} (moments)
-               if (allocated(MeshMapData%SStC_P_P_2_SD_P(j)%dM%m_us )) then
-                  call SetBlockMatrix( dUdu, MeshMapData%SStC_P_P_2_SD_P(j)%dM%m_us, SD_Start, SrvD_Start )
+               if (allocated(MeshMapData%SStC_P_P_2_SubStructure(j)%dM%m_us )) then
+                  call SetBlockMatrix( dUdu, MeshMapData%SStC_P_P_2_SubStructure(j)%dM%m_us, SD_Start, SrvD_Start )
                endif
             endif
          enddo
@@ -2374,7 +2374,7 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
          do j=1,size(SrvD%y%SStCLoadMesh)
             if (SrvD%y%SStCLoadMesh(j)%Committed) then
                SrvD_Out_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_y(1,j)
-               call Assemble_dUdy_Loads(SrvD%y%SStCLoadMesh(j), u_SD%LMesh, MeshMapData%SStC_P_P_2_SD_P(j), SD_Start, SrvD_Out_Start, dUdy)
+               call Assemble_dUdy_Loads(SrvD%y%SStCLoadMesh(j), u_SD%LMesh, MeshMapData%SStC_P_P_2_SubStructure(j), SD_Start, SrvD_Out_Start, dUdy)
             endif
          enddo
       endif
@@ -2821,20 +2821,20 @@ SUBROUTINE Linear_SrvD_InputSolve_du( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
       if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
          do j=1,size(u_SrvD%SStCMotionMesh)
             if (u_SrvD%SStCMotionMesh(j)%Committed) then
-               CALL Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%ED_P_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
+               CALL Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%Substructure_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
                ! translational velocity:
-               if (allocated(MeshMapData%ED_P_2_SStC_P_P(j)%dM%tv_uD )) then
+               if (allocated(MeshMapData%Substructure_2_SStC_P_P(j)%dM%tv_uD )) then
                   SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j) + 6) ! skip translational displacement and orientation fields
-                  call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_SStC_P_P(j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+                  call SetBlockMatrix( dUdu, MeshMapData%Substructure_2_SStC_P_P(j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
                end if
    
                ! translational acceleration:
-               if (allocated(MeshMapData%ED_P_2_SStC_P_P(j)%dM%ta_uD )) then
+               if (allocated(MeshMapData%Substructure_2_SStC_P_P(j)%dM%ta_uD )) then
                   SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j) + 12) ! skip translational displacement and orientation fields
-                  call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_SStC_P_P(j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+                  call SetBlockMatrix( dUdu, MeshMapData%Substructure_2_SStC_P_P(j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
                end if
             endif
          enddo
@@ -2843,20 +2843,20 @@ SUBROUTINE Linear_SrvD_InputSolve_du( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
       if ( ALLOCATED(u_SrvD%SStCMotionMesh) ) then
          do j=1,size(u_SrvD%SStCMotionMesh)
             IF (u_SrvD%SStCMotionMesh(j)%Committed) then
-               CALL Linearize_Point_to_Point( SD%y%y3Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SDy3_P_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
+               CALL Linearize_Point_to_Point( SD%y%y3Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SubStructure_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                ! SrvD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
                ! translational velocity:
-               if (allocated(MeshMapData%SDy3_P_2_SStC_P_P(j)%dM%tv_uD )) then
+               if (allocated(MeshMapData%SubStructure_2_SStC_P_P(j)%dM%tv_uD )) then
                   SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j) + 6) ! skip translational displacement and orientation fields
-                  call SetBlockMatrix( dUdu, MeshMapData%SDy3_P_2_SStC_P_P(j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+                  call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_SStC_P_P(j)%dM%tv_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
                end if
    
                ! translational acceleration:
-               if (allocated(MeshMapData%SDy3_P_2_SStC_P_P(j)%dM%ta_uD )) then
+               if (allocated(MeshMapData%SubStructure_2_SStC_P_P(j)%dM%ta_uD )) then
                   SrvD_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j) + 12) ! skip translational displacement and orientation fields
-                  call SetBlockMatrix( dUdu, MeshMapData%SDy3_P_2_SStC_P_P(j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
+                  call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_SStC_P_P(j)%dM%ta_uD, SrvD_Start, y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) )
                end if
             endif
          enddo
@@ -2976,7 +2976,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
             if (u_SrvD%SStCMotionMesh(j)%Committed) then
                SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j))
                ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of %TranslationDisp field
-               call Assemble_dUdy_Motions( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%ED_P_2_SStC_P_P(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
+               call Assemble_dUdy_Motions( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%Substructure_2_SStC_P_P(j), SrvD_Start, ED_Out_Start, dUdy, .false.)
             endif
          enddo
       endif
@@ -2989,7 +2989,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, p_SrvD, u_SrvD, y_ED, BD, 
             if (u_SrvD%SStCMotionMesh(j)%Committed) then
                SrvD_Start   = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + (p_SrvD%Jac_Idx_SStC_u(1,j))
                SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST)   ! start of %TranslationDisp field
-               call Assemble_dUdy_Motions( y_SD%y3Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SDy3_P_2_SStC_P_P(j), SrvD_Start, SD_Out_Start, dUdy, .false.)
+               call Assemble_dUdy_Motions( y_SD%y3Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SubStructure_2_SStC_P_P(j), SrvD_Start, SD_Out_Start, dUdy, .false.)
             endif
          enddo
       endif
@@ -3111,7 +3111,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
                if (SrvD%y%SStCLoadMesh(j)%Committed) then
                   ED_Start       = Indx_u_ED_Platform_Start(u_ED, y_FAST)
                   SrvD_Out_Start = y_FAST%Lin%Modules(MODULE_SrvD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) - 1 + SrvD%p%Jac_Idx_SStC_y(1,j)
-                  call Assemble_dUdy_Loads(SrvD%y%SStCLoadMesh(j), u_ED%PlatformPtMesh, MeshMapData%SStC_P_P_2_ED_P(j), ED_Start, SrvD_Out_Start, dUdy)
+                  call Assemble_dUdy_Loads(SrvD%y%SStCLoadMesh(j), u_ED%PlatformPtMesh, MeshMapData%SStC_P_P_2_SubStructure(j), ED_Start, SrvD_Out_Start, dUdy)
 
                      ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
                   ED_Start     = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
