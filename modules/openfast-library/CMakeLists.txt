@@ -32,6 +32,7 @@ target_link_libraries(openfast_prelib
   aerodyn14lib
   servodynlib
   elastodynlib
+  sedlib
   beamdynlib
   subdynlib
   hydrodynlib
