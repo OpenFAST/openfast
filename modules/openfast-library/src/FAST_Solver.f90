@@ -344,10 +344,10 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
          IF ( ALLOCATED(y_SrvD%SStCLoadMesh) ) THEN        ! Platform
             do j=1,size(y_SrvD%SStCLoadMesh)
                IF (y_SrvD%SStCLoadMesh(j)%Committed) THEN
-                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(j), MeshMapData%u_ED_PlatformPtMesh, MeshMapData%SStC_P_P_2_SubStructure(j), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(j), y_ED%PlatformPtMesh )
+                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(j), MeshMapData%SubstructureLoads_Tmp, MeshMapData%SStC_P_P_2_SubStructure(j), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(j), y_ED%PlatformPtMesh )
                      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
-                  u_ED%PlatformPtMesh%Force  = u_ED%PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh%Force
-                  u_ED%PlatformPtMesh%Moment = u_ED%PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh%Moment
+                  u_ED%PlatformPtMesh%Force  = u_ED%PlatformPtMesh%Force  + MeshMapData%SubstructureLoads_Tmp%Force
+                  u_ED%PlatformPtMesh%Moment = u_ED%PlatformPtMesh%Moment + MeshMapData%SubstructureLoads_Tmp%Moment
                ENDIF
             enddo
          ENDIF
@@ -930,7 +930,7 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
    TYPE(InflowWind_OutputType),      INTENT(IN)     :: y_IfW        !< InflowWind outputs
    TYPE(OpFM_OutputType),            INTENT(IN)     :: y_OpFM       !< OpenFOAM outputs
    TYPE(BD_OutputType),              INTENT(IN)     :: y_BD(:)      !< BD Outputs
-   TYPE(SD_OutputType),              INTENT(IN)     :: y_SD         !< SD Outputs
+   TYPE(SD_OutputType),TARGET,       INTENT(IN)     :: y_SD         !< SD Outputs
    TYPE(FAST_ModuleMapType),         INTENT(INOUT)  :: MeshMapData  !< Data for mapping between modules
    INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat      !< Error status
    CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg       !< Error message
@@ -938,13 +938,17 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
 
    INTEGER(IntKi)                                   :: k            ! blade loop counter
    INTEGER(IntKi)                                   :: j            ! StC instance counter
-   TYPE(MeshType), POINTER                          :: PlatformMotion
+   TYPE(MeshType), POINTER                          :: SubStructureMotion
    
    INTEGER(IntKi)                                   :: ErrStat2                 ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                             :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
    CHARACTER(*), PARAMETER                          :: RoutineName = 'SrvD_InputSolve' 
    
-   PlatformMotion => y_ED%PlatformPtMesh
+   IF (p_FAST%CompSub == Module_SD) THEN
+      SubStructureMotion => y_ED%PlatformPtMesh
+   ELSE
+      SubStructureMotion => y_SD%y3Mesh
+   END IF
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1078,13 +1082,10 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
    ENDIF
 
    ! Platform
-   IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
-      call Transfer_ED_to_SStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
+   IF ( p_FAST%CompSub /= Module_None ) THEN
+      call Transfer_Substructure_to_SStC( u_SrvD, SubStructureMotion, MeshMapData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   ELSE
-      call Transfer_SD_to_SStC( u_SrvD, y_SD, MeshMapData, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   ENDIF
+   END IF
 
    ! Transfer any cable length info from SD or MD
    !  --> SrvD, SD, and MD are not setup for this yet.  Add here if feedback is ever required
@@ -1097,61 +1098,33 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
                         
 END SUBROUTINE SrvD_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the inputs for the SrvD%SStC mesh motion from ElastoDyn
-SUBROUTINE Transfer_ED_to_SStC( u_SrvD, y_ED, MeshMapData, ErrStat, ErrMsg )
-!..................................................................................................................................
-   TYPE(SrvD_InputType),        INTENT(INOUT) :: u_SrvD              !< ServoDyn input
-   TYPE(ED_OutputType),         INTENT(IN   ) :: y_ED                !< The outputs of the structural dynamics module
-   TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData         !< data for mapping meshes between modules
-   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat             !< Error status of the operation
-   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi)                             :: ErrStat2            ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                       :: ErrMsg2             ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)                             :: j                   ! Generic counter
-
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ''
-      !----------------------------------------------------------------------------------------------------
-      !  Map ElastoDyn platform point mesh motion to ServoDyn/SStC point mesh -- motions
-      !----------------------------------------------------------------------------------------------------
-      ! motions:
-   IF ( ALLOCATED(u_SrvD%SStCMotionMesh) ) THEN
-      do j=1,size(u_SrvD%SStCMotionMesh)
-         IF (u_SrvD%SStCMotionMesh(j)%Committed) THEN
-            CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%Substructure_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Transfer_ED_to_SStC')
-         ENDIF
-      enddo
-   ENDIF
-END SUBROUTINE Transfer_ED_to_SStC
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs for the SrvD%SStC mesh motion from SubDyn
-SUBROUTINE Transfer_SD_to_SStC( u_SrvD, y_SD, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE Transfer_Substructure_to_SStC( u_SrvD, SubstructureMotionMesh, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
-   TYPE(SrvD_InputType),        INTENT(INOUT) :: u_SrvD              !< ServoDyn input
-   TYPE(SD_OutputType),         INTENT(IN   ) :: y_SD                !< The outputs of the structural dynamics module
-   TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData         !< data for mapping meshes between modules
-   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat             !< Error status of the operation
-   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi)                             :: ErrStat2            ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                       :: ErrMsg2             ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)                             :: j                   ! Generic counter
+   TYPE(SrvD_InputType),        INTENT(INOUT) :: u_SrvD                  !< ServoDyn input
+   TYPE(MeshType),              INTENT(IN   ) :: SubstructureMotionMesh  !< The outputs of the structural dynamics module
+   TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData             !< data for mapping meshes between modules
+   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                 !< Error status of the operation
+   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                             :: ErrStat2                ! temporary Error status of the operation
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)                             :: j                       ! Generic counter
 
    ErrStat  =  ErrID_None
    ErrMsg   =  ''
       !----------------------------------------------------------------------------------------------------
-      !  Map SubDyn platform point mesh motion to ServoDyn/SStC point mesh -- motions
+      !  Map SubDyn or ElastoDyn platform point mesh motion to ServoDyn/SStC point mesh -- motions
       !----------------------------------------------------------------------------------------------------
       ! motions:
    IF ( ALLOCATED(u_SrvD%SStCMotionMesh) ) THEN
       do j=1,size(u_SrvD%SStCMotionMesh)
          IF (u_SrvD%SStCMotionMesh(j)%Committed) THEN
-            CALL Transfer_Point_to_Point( y_SD%y3Mesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SubStructure_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Transfer_SD_to_SStC')
+            CALL Transfer_Point_to_Point( SubstructureMotionMesh, u_SrvD%SStCMotionMesh(j), MeshMapData%SubStructure_2_SStC_P_P(j), ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Transfer_Substructure_to_SStC')
          ENDIF
       enddo
    ENDIF
-END SUBROUTINE Transfer_SD_to_SStC
+END SUBROUTINE Transfer_Substructure_to_SStC
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for ServoDyn from an external source (Simulink)
 SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
@@ -1201,9 +1174,9 @@ SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
 END SUBROUTINE SrvD_SetExternalInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine transfers the SD outputs into inputs required for HD
-SUBROUTINE Transfer_SD_to_HD( y_SD, u_HD_W_Mesh, u_HD_M_Mesh, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE Transfer_SubStructureMotion_to_HD( SubStructureMotionMesh2HD, u_HD_W_Mesh, u_HD_M_Mesh, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
-   TYPE(SD_OutputType),         INTENT(IN   ) :: y_SD                         !< The outputs of the structural dynamics module
+   TYPE(MeshType),              INTENT(IN   ) :: SubStructureMotionMesh2HD    !< The outputs of the structural dynamics module
    TYPE(MeshType),              INTENT(INOUT) :: u_HD_W_Mesh                  !< HydroDyn input mesh (separated here so that we can use temp meshes in ED_SD_HD_InputSolve)
    TYPE(MeshType),              INTENT(INOUT) :: u_HD_M_Mesh                  !< HydroDyn input mesh (separated here so that we can use temp meshes in ED_SD_HD_InputSolve)
    TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes
@@ -1222,19 +1195,19 @@ SUBROUTINE Transfer_SD_to_HD( y_SD, u_HD_W_Mesh, u_HD_M_Mesh, MeshMapData, ErrSt
    IF ( u_HD_W_Mesh%Committed ) THEN 
 
       ! These are the motions for the lumped point loads associated viscous drag on the WAMIT body and/or filled/flooded lumped forces of the WAMIT body
-      CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_HD_W_Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_SD_to_HD (u_HD%WAMITMesh)' )      
+      CALL Transfer_Point_to_Point( SubStructureMotionMesh2HD, u_HD_W_Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_SubStructureMotion_to_HD (u_HD%WAMITMesh)' )      
          
    END IF    
    IF ( u_HD_M_Mesh%Committed ) THEN 
 
       ! These are the motions for the lumped point loads associated viscous drag on the WAMIT body and/or filled/flooded lumped forces of the WAMIT body
-      CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_HD_M_Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_SD_to_HD (u_HD%Morison%Mesh)' )      
+      CALL Transfer_Point_to_Point( SubStructureMotionMesh2HD, u_HD_M_Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_SubStructureMotion_to_HD (u_HD%Morison%Mesh)' )      
          
    END IF
    
-END SUBROUTINE Transfer_SD_to_HD
+END SUBROUTINE Transfer_SubStructureMotion_to_HD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine transfers the platform motion output of the structural module (ED) into inputs required for HD
 SUBROUTINE Transfer_PlatformMotion_to_HD( PlatformMotion, u_HD, MeshMapData, ErrStat, ErrMsg )
@@ -1257,31 +1230,14 @@ SUBROUTINE Transfer_PlatformMotion_to_HD( PlatformMotion, u_HD, MeshMapData, Err
    
    ! This is for case of rigid substructure
    
-   !bjj: We do this without all the extra meshcopy/destroy calls with u_mapped because these inputs are only from one mesh
-   
    ! Transfer the ED outputs of the platform motions to the HD input of which represents the same data
    CALL Transfer_Point_to_Point( PlatformMotion, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_ED_to_HD (u_HD%PRPMesh)' )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//' (u_HD%PRPMesh)' )
          
-   IF ( u_HD%WAMITMesh%Committed ) THEN
- 
-      ! These are the motions for the lumped point loads associated the WAMIT body(ies) and include: hydrostatics, radiation memory effect,
-      !    wave kinematics, additional preload, additional stiffness, additional linear damping, additional quadratic damping,
-      !    hydrodynamic added mass
-
-      CALL Transfer_Point_to_Point( PlatformMotion, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName//' (u_HD%WAMITMesh)' )
-
-   END IF !WAMIT
-   
-   
-   IF ( u_HD%Morison%Mesh%Committed ) THEN 
-
-      ! These are the motions for the lumped point loads associated viscous drag on the WAMIT body and/or filled/flooded lumped forces of the WAMIT body
-      CALL Transfer_Point_to_Point( PlatformMotion, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName//' (u_HD%Morison%Mesh)' )
          
-   END IF
+   CALL Transfer_SubStructureMotion_to_HD( PlatformMotion, u_HD%WAMITMesh, u_HD%Morison%Mesh, MeshMapData, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
    
 END SUBROUTINE Transfer_PlatformMotion_to_HD
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1347,7 +1303,10 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
       CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_SD%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_SD%TPMesh' )
 
-      IF ( p_FAST%CompHydro == Module_HD ) call TransferEDToHD_PRP()
+      IF ( p_FAST%CompHydro == Module_HD ) THEN
+         CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName//' (u_HD%PRPMesh)' )
+      END IF
       
    ELSEIF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
       
@@ -1359,19 +1318,18 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
              ! Map ED outputs to HD inputs:
          CALL Transfer_PlatformMotion_to_HD( y_ED%PlatformPtMesh, u_HD, MeshMapData, ErrStat2, ErrMsg2 )                        
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
-         ! TODO: GJH Used to be the following GJH 5/13/2020
-         !  call TransferFixedBottomToHD()
+            
       end if
      
-                  
+
    ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
+   
          ! Map ED outputs to HD inputs:
       CALL Transfer_PlatformMotion_to_HD( y_ED%PlatformPtMesh, u_HD, MeshMapData, ErrStat2, ErrMsg2 )                        
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
             
    END IF
-   
-   
+
 
    
    IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
@@ -1383,7 +1341,6 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
       
    if (  p_FAST%CompSub /= Module_SD ) then
       IF ( p_FAST%CompMooring == Module_MAP  ) THEN
-   !TODO: GJH I do not have plan documentation for the External Platform connection to MAP GJH 8/11/2020      
             ! motions:
          CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MAP%PtFairDisplacement' )
@@ -1408,44 +1365,21 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm,
 
       ! Map motions for ServodDyn Structural control (TMD) if used.
    IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
-      call Transfer_ED_to_SStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
+      call Transfer_Substructure_to_SStC( u_SrvD, y_ED%PlatformPtMesh, MeshMapData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%SStCMotionMesh')
   ENDIF
 
-contains
-   subroutine TransferEDToHD_PRP()
-      
-         ! These are the motions for the lumped point loads associated the WAMIT body and include: hydrostatics, radiation memory effect,
-         !    wave kinematics, additional preload, additional stiffness, additional linear damping, additional quadratic damping,
-         !    hydrodynamic added mass
 
-         CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName//' (u_HD%PRPMesh)' )
-
-   end subroutine
-   
-   subroutine TransferFixedBottomToHD()
-      IF ( u_HD%WAMITMesh%Committed ) THEN
-!TODO: GJH Do we still need this?  ExtPtfm ?  GJH 5/11/2020
-         ! These are the motions for the lumped point loads associated the WAMIT body and include: hydrostatics, radiation memory effect,
-         !    wave kinematics, additional preload, additional stiffness, additional linear damping, additional quadratic damping,
-         !    hydrodynamic added mass
-
-         CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName//' (u_HD%Mesh)' )
-
-      END IF !WAMIT
-   end subroutine
 END SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for IceFloe.
-SUBROUTINE IceFloe_InputSolve( u_IceF, y_SD, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE IceFloe_InputSolve( u_IceF, SubstructureMotionMesh, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables
    TYPE(IceFloe_InputType),     INTENT(INOUT) :: u_IceF                       !< IceFloe input
-   TYPE(SD_OutputType),         INTENT(IN   ) :: y_SD                         !< SubDyn outputs
+   TYPE(MeshType),              INTENT(IN   ) :: SubstructureMotionMesh       !< Substructure motion (output) mesh
    TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes between modules
 
    INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                      !< Error status of the operation
@@ -1456,17 +1390,17 @@ SUBROUTINE IceFloe_InputSolve( u_IceF, y_SD, MeshMapData, ErrStat, ErrMsg )
       ! Map SD outputs to IceFloe inputs
       !----------------------------------------------------------------------------------------------------
       ! motions:
-   CALL Transfer_Point_to_Point( y_SD%y3Mesh, u_IceF%IceMesh, MeshMapData%SDy3_P_2_IceF_P, ErrStat, ErrMsg )
+   CALL Transfer_Point_to_Point( SubstructureMotionMesh, u_IceF%IceMesh, MeshMapData%SDy3_P_2_IceF_P, ErrStat, ErrMsg )
 
 END SUBROUTINE IceFloe_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for IceFloe.
-SUBROUTINE IceD_InputSolve( u_IceD, y_SD, MeshMapData, legNum, ErrStat, ErrMsg )
+SUBROUTINE IceD_InputSolve( u_IceD, SubstructureMotionMesh, MeshMapData, legNum, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables
    TYPE(IceD_InputType),        INTENT(INOUT) :: u_IceD                       !< IceDyn input
-   TYPE(SD_OutputType),         INTENT(IN   ) :: y_SD                         !< SubDyn outputs
+   TYPE(MeshType),              INTENT(IN   ) :: SubstructureMotionMesh       !< Substructure motion (output) mesh
    TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes between modules
    INTEGER(IntKi),              INTENT(IN   ) :: legNum                       !< which instance of IceDyn we're using
 
@@ -1478,7 +1412,7 @@ SUBROUTINE IceD_InputSolve( u_IceD, y_SD, MeshMapData, legNum, ErrStat, ErrMsg )
       ! Map SD outputs to IceFloe inputs
       !----------------------------------------------------------------------------------------------------
       ! motions:
-   CALL Transfer_Point_to_Point( y_SD%y3Mesh, u_IceD%PointMesh, MeshMapData%SDy3_P_2_IceD_P(legNum), ErrStat, ErrMsg )
+   CALL Transfer_Point_to_Point( SubstructureMotionMesh, u_IceD%PointMesh, MeshMapData%SDy3_P_2_IceD_P(legNum), ErrStat, ErrMsg )
 
 END SUBROUTINE IceD_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1558,79 +1492,6 @@ SUBROUTINE Transfer_ED_to_BD_tmp( y_ED, MeshMapData, ErrStat, ErrMsg )
    
 
 END SUBROUTINE Transfer_ED_to_BD_tmp
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine transfers the HD outputs into inputs required for ED. Note that this *adds* to the values already in 
-!! u_SD_LMesh (so initialize it before calling this routine).
-SUBROUTINE Transfer_HD_to_SD( u_mapped, u_SD_LMesh, u_mapped_positions, y_HD, u_HD_W_Mesh, u_HD_M_Mesh, MeshMapData, ErrStat, ErrMsg )
-!..................................................................................................................................
-   TYPE(MeshType),                 INTENT(INOUT)  :: u_mapped                 !< temporary copy of SD mesh (an argument to avoid another temporary mesh copy)
-   TYPE(MeshType),                 INTENT(INOUT)  :: u_SD_LMesh               !< SD Inputs on LMesh at t (separate so we can call from FullOpt1_InputOutputSolve with temp meshes)
-   TYPE(MeshType),                 INTENT(IN   )  :: u_mapped_positions       !< Mesh sibling of u_mapped, with displaced positions
-   TYPE(HydroDyn_OutputType),      INTENT(IN   )  :: y_HD                     !< HydroDyn outputs
-   TYPE(MeshType),                 INTENT(IN   )  :: u_HD_W_Mesh              !< HydroDyn WAMIT input mesh (separate so we can call from FullOpt1_InputOutputSolve with temp meshes)
-   TYPE(MeshType),                 INTENT(IN   )  :: u_HD_M_Mesh              !< HydroDyn Morison input mesh (separate so we can call from FullOpt1_InputOutputSolve with temp meshes)
-   
-   TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData              !< Data for mapping between modules
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                  !< Error status
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                   !< Error message
-   
-      ! local variables
-   INTEGER(IntKi)                                 :: ErrStat2                  ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                           :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
-
-   CHARACTER(*), PARAMETER                        :: RoutineName = 'Transfer_HD_to_SD'   
-   
-   ErrStat = ErrID_None
-   ErrMsg = ""
-         
-   !assumes u_SD%LMesh%Committed   (i.e., u_SD_LMesh%Committed)
-      IF ( y_HD%WAMITMesh%Committed ) THEN      
-         ! we're mapping loads, so we also need the sibling meshes' displacements:
-         CALL Transfer_Point_to_Point( y_HD%WAMITMesh, u_mapped, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, u_HD_W_Mesh, u_mapped_positions )   
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
-         
-         u_SD_LMesh%Force  = u_SD_LMesh%Force  + u_mapped%Force
-         u_SD_LMesh%Moment = u_SD_LMesh%Moment + u_mapped%Moment     
-         
-#ifdef DEBUG_MESH_TRANSFER              
-         CALL WrScr('********************************************************')
-         CALL WrScr('****   SD to HD point-to-point (WAMIT)             *****')
-         CALL WrScr('********************************************************')
-         CALL WriteMappingTransferToFile(u_mapped, u_mapped_positions, u_HD_W_Mesh, y_HD%WAMITMesh,&
-               MeshMapData%SubStructure_2_HD_W_P, MeshMapData%HD_M_P_2_SubStructure, &
-               'SD_y2_HD_WP_Meshes_t'//TRIM(Num2LStr(0))//'.bin' )
-         !print *
-         !pause
-         
-#endif                          
-      END IF   
-      
-      IF ( y_HD%Morison%Mesh%Committed ) THEN      
-         ! we're mapping loads, so we also need the sibling meshes' displacements:
-         CALL Transfer_Point_to_Point( y_HD%Morison%Mesh, u_mapped, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, u_HD_M_Mesh, u_mapped_positions )   
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
-         
-         u_SD_LMesh%Force  = u_SD_LMesh%Force  + u_mapped%Force
-         u_SD_LMesh%Moment = u_SD_LMesh%Moment + u_mapped%Moment     
-         
-#ifdef DEBUG_MESH_TRANSFER              
-         CALL WrScr('********************************************************')
-         CALL WrScr('****   SD to HD point-to-point (morison)           *****')
-         CALL WrScr('********************************************************')
-         CALL WriteMappingTransferToFile(u_mapped, u_mapped_positions, u_HD_M_Mesh, y_HD%Morison%Mesh,&
-               MeshMapData%SubStructure_2_HD_M_P, MeshMapData%HD_M_P_2_SubStructure, &
-               'SD_y2_HD_MP_Meshes_t'//TRIM(Num2LStr(0))//'.bin' )
-         !print *
-         !pause
-         
-#endif         
-                  
-      END IF
-      
-
-END SUBROUTINE Transfer_HD_to_SD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> function to return the size of perturbation in calculating jacobian with finite differences. Currently hard-coded to return 1.
 REAL(ReKi) FUNCTION GetPerturb(x)
@@ -2016,9 +1877,14 @@ CONTAINS
    REAL(ReKi)                        , INTENT(  OUT) :: U_Resid(NumInputs)
 
    integer(IntKi)                                    :: j                      ! Generic counter
+   TYPE(MeshType), POINTER                           :: SubstructureMotion
    TYPE(MeshType), POINTER                           :: PlatformMotions
+   TYPE(MeshType), POINTER                           :: SubstructureMotion2HD
    
-   PlatformMotions => y_ED2%PlatformPtMesh
+   ! SD cannot be used, so these all point to the same place. Using separate variables so they match with values in the full option 1 solve
+   PlatformMotions        => y_ED2%PlatformPtMesh 
+   SubstructureMotion     => y_ED2%PlatformPtMesh 
+   SubstructureMotion2HD  => y_ED2%PlatformPtMesh 
 
    ! This is only called is there is no flexible substructure model (RIGID substructure)
    
@@ -2031,50 +1897,51 @@ CONTAINS
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
          
          ! note: MAP_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)  
-         CALL Transfer_Point_to_Point( PlatformMotions, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL Transfer_Point_to_Point( SubstructureMotion, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                                  
-         CALL Transfer_Point_to_Point( y_MAP%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MAP%PtFairDisplacement, PlatformMotions ) !u_MAP and y_ED contain the displacements needed for moment calculations
+         CALL Transfer_Point_to_Point( y_MAP%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MAP%PtFairDisplacement, SubstructureMotion ) !u_MAP and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
          
          ! note: MD_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping) 
-         CALL Transfer_Point_to_Point( PlatformMotions, u_MD%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL Transfer_Point_to_Point( SubstructureMotion, u_MD%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  
-         CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, PlatformMotions ) !u_MD and y_ED contain the displacements needed for moment calculations
+         CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, SubstructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
          
          ! note: FEAM_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)
-         CALL Transfer_Point_to_Point( PlatformMotions, u_FEAM%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL Transfer_Point_to_Point( SubstructureMotion, u_FEAM%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  
-         CALL Transfer_Point_to_Point( y_FEAM%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_FEAM%PtFairleadDisplacement, PlatformMotions ) !u_FEAM and y_ED contain the displacements needed for moment calculations
+         CALL Transfer_Point_to_Point( y_FEAM%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_FEAM%PtFairleadDisplacement, SubstructureMotion ) !u_FEAM and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       ELSE
          
-         MeshMapData%u_ED_PlatformPtMesh%Force  = 0.0_ReKi
-         MeshMapData%u_ED_PlatformPtMesh%Moment = 0.0_ReKi
+         MeshMapData%SubstructureLoads_Tmp%Force  = 0.0_ReKi
+         MeshMapData%SubstructureLoads_Tmp%Moment = 0.0_ReKi
          
       END IF
 
 
       ! Map motions for ServodDyn Structural control (TMD) if used and forces from the TMD to the platform
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
-         call Transfer_ED_to_SStC( u_SrvD, y_ED, MeshMapData, ErrStat2, ErrMsg2 )
+         call Transfer_Substructure_to_SStC( u_SrvD, SubstructureMotion, MeshMapData, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%SStC%Mesh')
+            
             ! we're mapping loads, so we also need the sibling meshes' displacements:
           IF ( ALLOCATED(y_SrvD%SStCLoadMesh) ) THEN        ! Platform
             do j=1,size(y_SrvD%SStCLoadMesh)
                IF (y_SrvD%SStCLoadMesh(j)%Committed) THEN
-                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(j), MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%SStC_P_P_2_SubStructure(j), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(j), PlatformMotions )
+                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(j), MeshMapData%SubstructureLoads_Tmp2, MeshMapData%SStC_P_P_2_SubStructure(j), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(j), SubstructureMotion )
                      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
-                  MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-                  MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
+                  MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+                  MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
                ENDIF
             enddo
          ENDIF
@@ -2083,34 +1950,32 @@ CONTAINS
 
    ! we use copies of the input meshes (we don't need to update values in the original data structures):            
       
-!bjj: why don't we update u_HD2 here? shouldn't we update before using it to transfer the loads?
-      if ( y_HD2%WAMITMesh%Committed ) then
-            ! Need to transfer motions first
-         CALL Transfer_Point_to_Point( PlatformMotions, MeshMapData%u_HD_W_Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2) 
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-            ! we're mapping loads, so we also need the sibling meshes' displacements:
-         CALL Transfer_Point_to_Point( y_HD2%WAMITMesh, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, MeshMapData%u_HD_W_Mesh, PlatformMotions) !u_HD and u_mapped_positions contain the displaced positions for load calculations
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
-      end if                                 
-      if ( y_HD2%Morison%Mesh%Committed ) then
-            ! Need to transfer motions first
-         CALL Transfer_Point_to_Point( PlatformMotions, MeshMapData%u_HD_M_Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2) 
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-            ! we're mapping loads, so we also need the sibling meshes' displacements:
-         CALL Transfer_Point_to_Point( y_HD2%Morison%Mesh, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, MeshMapData%u_HD_M_Mesh, PlatformMotions) !u_HD and u_mapped_positions contain the displaced positions for load calculations
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
-      end if       
-      U_Resid( 1: 3) = u_in( 1: 3) - MeshMapData%u_ED_PlatformPtMesh%Force(:,1) / p_FAST%UJacSclFact
-      U_Resid( 4: 6) = u_in( 4: 6) - MeshMapData%u_ED_PlatformPtMesh%Moment(:,1) / p_FAST%UJacSclFact
+         ! Need to transfer motions first 
+      CALL Transfer_SubStructureMotion_to_HD( SubstructureMotion2HD, MeshMapData%u_HD_W_Mesh, MeshMapData%u_HD_M_Mesh, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+      if ( y_HD2%WAMITMesh%Committed ) then
+            ! we're mapping loads, so we also need the sibling meshes' displacements:
+         CALL Transfer_Point_to_Point( y_HD2%WAMITMesh, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, MeshMapData%u_HD_W_Mesh, SubstructureMotion2HD) !u_HD_W_Mesh and SubStructureMotions contain the displaced positions for load calculations
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+         MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+         MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
+      end if
+      
+      if ( y_HD2%Morison%Mesh%Committed ) then
+            ! we're mapping loads, so we also need the sibling meshes' displacements:
+         CALL Transfer_Point_to_Point( y_HD2%Morison%Mesh, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, MeshMapData%u_HD_M_Mesh, SubStructureMotion2HD) !u_HD_W_Mesh and SubStructureMotions contain the displaced positions for load calculations
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+         MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+         MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
+      end if
+      
+      U_Resid( 1: 3) = u_in( 1: 3) - MeshMapData%SubstructureLoads_Tmp%Force(:,1) / p_FAST%UJacSclFact
+      U_Resid( 4: 6) = u_in( 4: 6) - MeshMapData%SubstructureLoads_Tmp%Moment(:,1) / p_FAST%UJacSclFact
+      
+      ! note that PlatformMotions is the same as SubstructureMotion and SubstructureMotion2HD in this simplified option 1 solve:
       U_Resid( 7: 9) = u_in( 7: 9) - PlatformMotions%TranslationAcc(:,1)
       U_Resid(10:12) = u_in(10:12) - PlatformMotions%RotationAcc(:,1)
       
@@ -2134,7 +1999,7 @@ CONTAINS
          CALL HydroDyn_DestroyInput( u_HD_perturb, ErrStat3, ErrMsg3 )
             IF (ErrStat3 /= ErrID_None) CALL WrScr(RoutineName//'/HydroDyn_DestroyInput: '//TRIM(ErrMsg3) )
          CALL HydroDyn_DestroyOutput(y_HD_perturb, ErrStat3, ErrMsg3 )
-            IF (ErrStat3 /= ErrID_None) CALL WrScr(RoutineName//'/HydroDyn_DestroyOutput: '//TRIM(ErrMsg3) )                        
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(RoutineName//'/HydroDyn_DestroyOutput: '//TRIM(ErrMsg3) )
       END IF
       
    
@@ -2200,7 +2065,7 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(SD_OtherStateType)           , INTENT(IN   ) :: OtherSt_SD                !< Other states
    TYPE(SD_ParameterType)            , INTENT(IN   ) :: p_SD                      !< Parameters
    TYPE(SD_InputType)                , INTENT(INOUT) :: u_SD                      !< System inputs
-   TYPE(SD_OutputType)               , INTENT(INOUT) :: y_SD                      !< System outputs
+   TYPE(SD_OutputType), TARGET       , INTENT(INOUT) :: y_SD                      !< System outputs
    TYPE(SD_MiscVarType)              , INTENT(INOUT) :: m_SD                      !< misc/optimization variables
           
       !ExtPtfm:                                                                    
@@ -2248,7 +2113,7 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(SrvD_OutputType),             INTENT(IN   )  :: y_SrvD                    !< SrvD outputs  
    TYPE(SrvD_InputType),              INTENT(INOUT)  :: u_SrvD                    !< SrvD inputs (INOUT just because I don't want to use another tempoarary mesh and we'll overwrite this later)
       
-   TYPE(FAST_ModuleMapType)          , INTENT(INOUT) :: MeshMapData               !< data for mapping meshes between modules
+   TYPE(FAST_ModuleMapType), TARGET  , INTENT(INOUT) :: MeshMapData               !< data for mapping meshes between modules
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat                   !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                    !< Error message if ErrStat /= ErrID_None
    LOGICAL                           , INTENT(IN   ) :: WriteThisStep             !< Will we print the WriteOutput values this step?
@@ -2286,7 +2151,9 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    INTEGER(IntKi)                                    :: ErrStat2                  ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                              :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
    
-   TYPE(MeshType), POINTER                           :: PlatformMotionMesh
+   TYPE(MeshType), POINTER                           :: PlatformMotionMesh_1
+   TYPE(MeshType), POINTER                           :: SubStructureMotionMesh_1
+   TYPE(MeshType), POINTER                           :: SubStructureMotionMesh2HD_1
    
 #ifdef OUTPUT_ADDEDMASS   
    REAL(ReKi)                                        :: AddedMassMatrix(6,6)
@@ -2379,7 +2246,7 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
          call MeshCopy( u_BD(nb)%RootMotion, MeshMapData%u_BD_RootMotion(nb), MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
       END DO
-      
+
       CALL Create_FullOpt1_UVector(u, u_ED%PlatformPtMesh, u_SD%TPMesh, u_SD%LMesh,  &
                u_HD%Morison%Mesh, u_HD%WAMITMesh, u_ED%HubPtLoad, MeshMapData%u_BD_RootMotion, u_Orca%PtfmMesh, &
                u_ExtPtfm%PtfmMesh, p_FAST )
@@ -2798,7 +2665,15 @@ END IF
       ! This is effectively doing option 2, where we set the input velocities and displacements based on the outputs we just calculated
       !...............................................
       
-      PlatformMotionMesh => y_ED%PlatformPtMesh
+      PlatformMotionMesh_1 => y_ED%PlatformPtMesh
+      if (p_FAST%CompSub == MODULE_SD) then
+         SubStructureMotionMesh_1 => y_SD%y3Mesh
+         SubStructureMotionMesh2HD_1 => y_SD%y2Mesh
+         
+      else
+         SubStructureMotionMesh_1 => y_ED%PlatformPtMesh
+         SubStructureMotionMesh2HD_1 => y_ED%PlatformPtMesh
+      end if
       
       
       ! BD motion inputs: (from ED)
@@ -2837,26 +2712,13 @@ END IF
              MeshMapData%u_HD_W_Mesh%TranslationAcc          = u_HD%WAMITMesh%TranslationAcc
          ENDIF
 
-            ! transfer the output data to inputs
-            
-         IF ( p_FAST%CompSub == Module_SD ) THEN
-               ! Map SD outputs to HD inputs (keeping the accelerations we just calculated)
-         
-            CALL Transfer_SD_to_HD( y_SD, u_HD%WAMITMesh, u_HD%Morison%Mesh, MeshMapData, ErrStat2, ErrMsg2 )      
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+            ! transfer the output data from ED and/or SD to inputs
+         CALL Transfer_Point_to_Point( PlatformMotionMesh_1, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                
-            ! Map ED outputs to HD inputs (keeping the accelerations we just calculated):
+         CALL Transfer_SubStructureMotion_to_HD( SubStructureMotionMesh2HD_1, u_HD%WAMITMesh, u_HD%Morison%Mesh, MeshMapData, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
-                ! Transfer the ED outputs of the platform motions to the HD input of which represents the same data
-            CALL Transfer_Point_to_Point( PlatformMotionMesh, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName )
-                                             
-         ELSE
-            
-            CALL Transfer_PlatformMotion_to_HD( PlatformMotionMesh, u_HD, MeshMapData, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
-         
-         END IF
 
          
          ! put the acceleration data (calucluted in this routine) back         
@@ -2866,8 +2728,8 @@ END IF
          ENDIF
         
          IF (MeshMapData%u_HD_W_Mesh%Committed) THEN
-             u_HD%WAMITMesh%RotationAcc                   = MeshMapData%u_HD_W_Mesh%RotationAcc    
-             u_HD%WAMITMesh%TranslationAcc                = MeshMapData%u_HD_W_Mesh%TranslationAcc 
+             u_HD%WAMITMesh%RotationAcc        = MeshMapData%u_HD_W_Mesh%RotationAcc    
+             u_HD%WAMITMesh%TranslationAcc     = MeshMapData%u_HD_W_Mesh%TranslationAcc 
          ENDIF
          
          !......
@@ -2883,7 +2745,7 @@ END IF
          MeshMapData%u_SD_TPMesh%RotationAcc    = u_SD%TPMesh%RotationAcc   
          MeshMapData%u_SD_TPMesh%TranslationAcc = u_SD%TPMesh%TranslationAcc
          
-         CALL Transfer_Point_to_Point( PlatformMotionMesh, u_SD%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
+         CALL Transfer_Point_to_Point( PlatformMotionMesh_1, u_SD%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                   
                
@@ -2899,7 +2761,7 @@ END IF
          MeshMapData%u_ExtPtfm_PtfmMesh%RotationAcc    = u_ExtPtfm%PtfmMesh%RotationAcc   
          MeshMapData%u_ExtPtfm_PtfmMesh%TranslationAcc = u_ExtPtfm%PtfmMesh%TranslationAcc
          
-         CALL Transfer_Point_to_Point( PlatformMotionMesh, u_ExtPtfm%PtfmMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
+         CALL Transfer_Point_to_Point( PlatformMotionMesh_1, u_ExtPtfm%PtfmMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                                  
          u_ExtPtfm%PtfmMesh%RotationAcc    = MeshMapData%u_ExtPtfm_PtfmMesh%RotationAcc    
@@ -2916,7 +2778,7 @@ END IF
          MeshMapData%u_Orca_PtfmMesh%RotationAcc    = u_Orca%PtfmMesh%RotationAcc   
          MeshMapData%u_Orca_PtfmMesh%TranslationAcc = u_Orca%PtfmMesh%TranslationAcc
          
-         CALL Transfer_Point_to_Point( PlatformMotionMesh, u_Orca%PtfmMesh, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 ) 
+         CALL Transfer_Point_to_Point( PlatformMotionMesh_1, u_Orca%PtfmMesh, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 ) 
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                                  
          u_Orca%PtfmMesh%RotationAcc    = MeshMapData%u_Orca_PtfmMesh%RotationAcc    
@@ -2947,14 +2809,24 @@ CONTAINS
    INTEGER(IntKi)                                    :: k                      ! counter for SrvD TMD instances
    TYPE(MeshType), POINTER                           :: PlatformMotions
    TYPE(MeshType), POINTER                           :: SubstructureMotion
+   TYPE(MeshType), POINTER                           :: SubstructureMotion2HD
    
-   PlatformMotions => y_ED2%PlatformPtMesh
+   TYPE(MeshType), POINTER                           :: SD_LMesh
+   TYPE(MeshType), POINTER                           :: ED_PtfmPtMesh
+
+   TYPE(MeshType), TARGET                            :: BlankMesh
    
-   IF (p_FAST%CompSub == Module_SD) then
-      SubstructureMotion => y_SD2%y3Mesh
-   ELSE
-      SubstructureMotion => y_ED2%PlatformPtMesh
-   END IF   
+      PlatformMotions => y_ED2%PlatformPtMesh
+   
+      IF (p_FAST%CompSub == Module_SD) then
+         SubstructureMotion => y_SD2%y3Mesh
+         SubstructureMotion2HD => y_SD2%y2Mesh
+         SD_LMesh => MeshMapData%SubstructureLoads_Tmp
+      ELSE
+         SubstructureMotion => y_ED2%PlatformPtMesh
+         SubstructureMotion2HD => y_ED2%PlatformPtMesh
+         SD_LMesh => BlankMesh
+      END IF   
    
    !..................
    ! Set mooring line and ice inputs (which don't have acceleration fields and aren't used elsewhere in this routine, thus we're using the actual inputs (not a copy) 
@@ -2994,14 +2866,14 @@ CONTAINS
       
       IF ( p_FAST%CompIce == Module_IceF ) THEN
          
-         CALL IceFloe_InputSolve(  u_IceF, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL IceFloe_InputSolve(  u_IceF, SubstructureMotion, MeshMapData, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)       
                                  
       ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
          
          DO i=1,p_FAST%numIceLegs
             
-            CALL IceD_InputSolve(  u_IceD(i), y_SD2, MeshMapData, i, ErrStat2, ErrMsg2 )
+            CALL IceD_InputSolve(  u_IceD(i), SubstructureMotion, MeshMapData, i, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
                
          END DO
@@ -3013,12 +2885,15 @@ CONTAINS
    ! Set motions for the ServoDyn Structural control for platform inputs (this has accelerations, but we assume the loads generated are small)
    ! Note that these values get overwritten at the completion of this routine.)
    !..................
-      IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub == Module_SD ) THEN
-         call Transfer_SD_to_SStC( u_SrvD, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
+      IF ( p_FAST%CompServo == Module_SrvD ) THEN
+         call Transfer_Substructure_to_SStC( u_SrvD, SubstructureMotion, MeshMapData, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ENDIF
 
 
+      MeshMapData%u_ED_HubPtLoad%Force  = 0.0_ReKi
+      MeshMapData%u_ED_HubPtLoad%Moment = 0.0_ReKi
+      
       IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
          
          ! Transfer ED motions to BD inputs:
@@ -3027,8 +2902,6 @@ CONTAINS
             
          ! Transfer BD loads to ED hub input:
          ! we're mapping loads, so we also need the sibling meshes' displacements:
-         MeshMapData%u_ED_HubPtLoad%Force  = 0.0_ReKi
-         MeshMapData%u_ED_HubPtLoad%Moment = 0.0_ReKi
          do i=1,p_FAST%nBeams            
             CALL Transfer_Point_to_Point( y_BD2(i)%ReactionForce, MeshMapData%u_ED_HubPtLoad_2, MeshMapData%BD_P_2_ED_P(i), ErrStat2, ErrMsg2, MeshMapData%u_BD_RootMotion(i), y_ED2%HubPtMotion) !u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3039,98 +2912,100 @@ CONTAINS
       END IF
             
       
-      IF ( p_FAST%CompSub == Module_SD ) THEN
+      MeshMapData%SubstructureLoads_Tmp%Force  = 0.0_ReKi
+      MeshMapData%SubstructureLoads_Tmp%Moment = 0.0_ReKi
       
-         IF ( p_FAST%CompHydro == Module_HD ) THEN
+      IF ( p_FAST%CompHydro == Module_HD ) THEN
             
-            ! initialize these SD loads inputs here in case HD is used  (note from initialiazation that these meshes don't exist if HD isn't used)
-            MeshMapData%u_SD_LMesh%Force  = 0.0_ReKi
-            MeshMapData%u_SD_LMesh%Moment = 0.0_ReKi
-
-            
-      !..................
-      ! Get HD inputs on Morison%Mesh and WAMITMesh
-      !..................
+         !..................
+         ! Get HD inputs on Morison%Mesh and WAMITMesh
+         !..................
    
-               ! SD motions to HD:
-            CALL Transfer_SD_to_HD( y_SD2, MeshMapData%u_HD_W_Mesh, MeshMapData%u_HD_M_Mesh, MeshMapData, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)       
+            ! SD or ED motions to HD:
+         CALL Transfer_SubStructureMotion_to_HD( SubstructureMotion2HD, MeshMapData%u_HD_W_Mesh, MeshMapData%u_HD_M_Mesh, MeshMapData, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)       
       
                
-      !..................
-      ! Get SD loads inputs (MeshMapData%u_HD_W_Mesh and MeshMapData%u_HD_M_Mesh meshes must be set first)
-      !..................
+         !..................
+         ! Get Substructure loads inputs (MeshMapData%u_HD_W_Mesh and MeshMapData%u_HD_M_Mesh meshes must be set first)
+         !..................
          
-            ! Loads (outputs) from HD meshes transfered to SD LMesh (zero them out first because they get summed in Transfer_HD_to_SD)
+         ! Loads (outputs) from HD meshes transfered to SD LMesh (zero them out first because they get summed in Transfer_HD_to_SD)
+         IF ( y_HD2%WAMITMesh%Committed ) THEN      
+            ! we're mapping loads, so we also need the sibling meshes' displacements:
+            CALL Transfer_Point_to_Point( y_HD2%WAMITMesh, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, MeshMapData%u_HD_W_Mesh, SubStructureMotion2HD )   
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
          
-            CALL Transfer_HD_to_SD( MeshMapData%u_SD_LMesh_2, MeshMapData%u_SD_LMesh, y_SD2%Y2Mesh, y_HD2, MeshMapData%u_HD_W_Mesh, MeshMapData%u_HD_M_Mesh, MeshMapData, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
+            MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+            MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment     
          
+         END IF   
+      
+         IF ( y_HD2%Morison%Mesh%Committed ) THEN      
+            ! we're mapping loads, so we also need the sibling meshes' displacements:
+            CALL Transfer_Point_to_Point( y_HD2%Morison%Mesh, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, MeshMapData%u_HD_M_Mesh, SubStructureMotion2HD )   
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         
+            MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+            MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment     
+         
+         END IF
 
-            IF ( p_FAST%CompIce == Module_IceF ) THEN
+         IF ( p_FAST%CompIce == Module_IceF ) THEN
                
-               ! SD loads from IceFloe:
-               IF ( y_IceF%iceMesh%Committed ) THEN      
+            ! SD loads from IceFloe:
+            IF ( y_IceF%iceMesh%Committed ) THEN      
+               ! we're mapping loads, so we also need the sibling meshes' displacements:
+               CALL Transfer_Point_to_Point( y_IceF%iceMesh, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%IceF_P_2_SD_P, ErrStat2, ErrMsg2, u_IceF%iceMesh, SubStructureMotion )   
+                  CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+               MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+               MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment    
+                  
+                                    
+            END IF !Module_IceF
+               
+         ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
+               
+               ! SD loads from IceDyn:
+            DO i=1,p_FAST%numIceLegs
+                  
+               IF ( y_IceD(i)%PointMesh%Committed ) THEN      
                   ! we're mapping loads, so we also need the sibling meshes' displacements:
-                  CALL Transfer_Point_to_Point( y_IceF%iceMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%IceF_P_2_SD_P, ErrStat2, ErrMsg2, u_IceF%iceMesh, y_SD2%Y3Mesh )   
+                  CALL Transfer_Point_to_Point( y_IceD(i)%PointMesh, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%IceD_P_2_SD_P(i), ErrStat2, ErrMsg2, u_IceD(i)%PointMesh, SubStructureMotion )   
                      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-                  MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
-                  MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment    
-                  
-!...          
-#ifdef DEBUG_MESH_TRANSFER_ICE
-   if (.not. calcJacobian) then
-         CALL WrScr('********************************************************')
-         CALL WrScr('****   IceF to SD point-to-point                   *****')
-         CALL WrScr('********************************************************')
-         CALL WriteMappingTransferToFile(MeshMapData%u_SD_LMesh_2, y_SD2%Y3Mesh, u_IceF%iceMesh, y_IceF%iceMesh,&
-               MeshMapData%SDy3_P_2_IceF_P, MeshMapData%IceF_P_2_SD_P, &
-               'SD_y2_IceF_Meshes_t'//TRIM(Num2LStr(this_time))//'.I.bin' )
-         !print *
-         !pause         
-   end IF         
-#endif                
-                                    
-               END IF !Module_IceF
-               
-            ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
-               
-                ! SD loads from IceDyn:
-               DO i=1,p_FAST%numIceLegs
-                  
-                  IF ( y_IceD(i)%PointMesh%Committed ) THEN      
-                     ! we're mapping loads, so we also need the sibling meshes' displacements:
-                     CALL Transfer_Point_to_Point( y_IceD(i)%PointMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%IceD_P_2_SD_P(i), ErrStat2, ErrMsg2, u_IceD(i)%PointMesh, y_SD2%Y3Mesh )   
-                        CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-                     MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
-                     MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment    
+                  MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+                  MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment    
                      
-                  END IF
+               END IF
                   
-               END DO
+            END DO
                
-            END IF   ! Ice loading
+         END IF   ! Ice loading
          
-         END IF ! HD is used (IceFloe/IceDyn can't be used unless HydroDyn is used)
+      END IF ! HD is used (IceFloe/IceDyn can't be used unless HydroDyn is used)
                
+      
       !..................
-      ! Get SD loads inputs from ServoDyn Structural control 
+      ! Get Substructure (SD or ED) loads inputs from ServoDyn Structural control 
       !..................
+      IF ( p_FAST%CompServo == Module_SrvD .and. allocated(y_SrvD%SStCLoadMesh) ) THEN
+         do k=1,size(y_SrvD%SStCLoadMesh)
+            IF (y_SrvD%SStCLoadMesh(k)%Committed) THEN      ! size 1 only for SStC
+               CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(k), MeshMapData%SubstructureLoads_Tmp2, MeshMapData%SStC_P_P_2_SubStructure(k), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(k), SubStructureMotion )
+                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
+               MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+               MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
+            ENDIF
+         enddo
+      ENDIF
 
-         IF ( p_FAST%CompServo == Module_SrvD .and. allocated(y_SrvD%SStCLoadMesh) ) THEN
-            do k=1,size(y_SrvD%SStCLoadMesh)
-               IF (y_SrvD%SStCLoadMesh(k)%Committed) THEN      ! size 1 only for SStC
-                  CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(k), MeshMapData%u_SD_LMesh_2, MeshMapData%SStC_P_P_2_SubStructure(k), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(k), y_SD2%Y3Mesh )
-                     CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
-                  MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
-                  MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment    
-               ENDIF        
-            enddo
-         ENDIF
 
 
+      IF ( p_FAST%CompSub == Module_SD ) THEN
          
       !..................
       ! Get SD motions input
@@ -3141,12 +3016,12 @@ CONTAINS
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
       !..................
-      ! Get ED loads input (from SD and possibly HD)
+      ! Get ED platform loads input
       !..................
             
          ! Loads (outputs) on the SD transition piece transfered to ED input location/mesh:
             ! we're mapping loads, so we also need the sibling meshes' displacements:
-         CALL Transfer_Point_to_Point( y_SD2%Y1Mesh, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%SD_TP_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_SD_TPMesh, PlatformMotions ) !MeshMapData%u_SD_TPMesh contains the orientations needed for moment calculations
+         CALL Transfer_Point_to_Point( y_SD2%Y1Mesh, MeshMapData%PlatformLoads_Tmp, MeshMapData%SD_TP_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_SD_TPMesh, PlatformMotions ) !MeshMapData%u_SD_TPMesh contains the orientations needed for moment calculations
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                             
             
@@ -3161,150 +3036,80 @@ CONTAINS
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          !..................
-         ! Get ED loads input (from SD and possibly HD)
+         ! Get ED platform loads input 
          !..................
             
             ! Loads (outputs) on the ExtPtfm platform mesh transfered to ED input location/mesh:
                ! we're mapping loads, so we also need the sibling meshes' displacements:
-            CALL Transfer_Point_to_Point( y_ExtPtfm2%PtfmMesh, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%SD_TP_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_ExtPtfm_PtfmMesh, PlatformMotions )
+            CALL Transfer_Point_to_Point( y_ExtPtfm2%PtfmMesh, MeshMapData%PlatformLoads_Tmp, MeshMapData%SD_TP_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_ExtPtfm_PtfmMesh, PlatformMotions )
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         
-      ELSE IF ( p_FAST%CompHydro == Module_HD ) THEN 
-
-      ! Rigid Substructure case
- 
-      !..................
-      ! Get HD inputs on 3 meshes
-      !..................
-         
-         ! Map ED motion outputs to HD inputs:
-         ! basically, we want to call Transfer_PlatformMotion_to_HD, except we have the meshes in a different data structure (not a copy of u_HD)
-         ! CALL Transfer_PlatformMotion_to_HD( y_ED2%PlatformPtMesh, u_HD, MeshMapData, ErrStat2, ErrMsg2 ) 
-         ! so, here are the transfers, again.
-         
-         ! Motions from ED to HD for mesh mapping
-               
-         ! These are the motions for the lumped point loads associated the WAMIT body:
-         if (MeshMapData%u_HD_W_Mesh%Committed) then
-            CALL Transfer_Point_to_Point( PlatformMotions, MeshMapData%u_HD_W_Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         endif
-         
-         ! These are the motions for the lumped point loads associated viscous drag on the WAMIT body and/or filled/flooded lumped forces of the WAMIT body
-         if (MeshMapData%u_HD_M_Mesh%Committed) then
-             CALL Transfer_Point_to_Point( PlatformMotions, MeshMapData%u_HD_M_Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
-                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         endif
-                  
-        
-            
-      !..................
-      ! Get ED loads input (from HD only)
-      !..................
-         MeshMapData%u_ED_PlatformPtMesh%Force  = 0.0_ReKi         
-         MeshMapData%u_ED_PlatformPtMesh%Moment = 0.0_ReKi
-         
-            ! we're mapping loads, so we also need the sibling meshes' displacements:
-         if ( y_HD2%WAMITMesh%Committed) then 
-            CALL Transfer_Point_to_Point( y_HD2%WAMITMesh, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, MeshMapData%u_HD_W_Mesh, PlatformMotions) !u_HD and u_mapped_positions contain the displaced positions for load calculations
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end if
-         
-         if ( y_HD2%Morison%Mesh%Committed ) then  
-            CALL Transfer_Point_to_Point( y_HD2%Morison%Mesh, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, MeshMapData%u_HD_M_Mesh, PlatformMotions ) !u_MAP and y_ED contain the displacements needed for moment calculations
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
-            
-            MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-            MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
-         end if
          
       ELSE
-         
-            ! When using OrcaFlex, we need to zero this out
-         MeshMapData%u_ED_PlatformPtMesh%Force  = 0.0_ReKi
-         MeshMapData%u_ED_PlatformPtMesh%Moment = 0.0_ReKi
+      
+         MeshMapData%PlatformLoads_Tmp%Force  = 0.0_ReKi
+         MeshMapData%PlatformLoads_Tmp%Moment = 0.0_ReKi
          
       END IF
       
+                                                   
    !..................
-   ! Get remaining portion of ED loads input on MeshMapData%u_ED_PlatformPtMesh (must do this after MeshMapData%u_SD_TPMesh and MeshMapData%u_HD_W_Mesh are set)
-   !   at this point, MeshMapData%u_ED_PlatformPtMesh contains the portion of loads from SD and/or HD
+   ! Get remaining portion of substructure (ED or SD) loads input on MeshMapData%SubstructureLoads_Tmp (must do this after all input motion meshes are set)
+   !   at this point, MeshMapData%PlatformLoads_Tmp contains the portion of loads from SD and/or HD
    !..................
   
          
          ! Get the loads for ED/SD from a mooring module and add them:
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
-         if ( p_FAST%CompSub == Module_SD ) then
-            CALL Transfer_Point_to_Point( y_MAP%PtFairleadLoad, MeshMapData%u_SD_LMesh_2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MAP%PtFairDisplacement, SubStructureMotion ) !u_MAP and y_SD contain the displacements needed for moment calculations
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
+         CALL Transfer_Point_to_Point( y_MAP%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MAP%PtFairDisplacement, SubStructureMotion ) !u_MAP and y_SD contain the displacements needed for moment calculations
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
             
-            MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
-            MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment 
-         else
-            CALL Transfer_Point_to_Point( y_MAP%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MAP%PtFairDisplacement, SubStructureMotion ) !u_MAP and y_ED contain the displacements needed for moment calculations
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
-            
-            MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-            MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
-         end if   
+         MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+         MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
          
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-         if ( p_FAST%CompSub == Module_SD ) then
-            CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%u_SD_LMesh_2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, SubStructureMotion ) !u_MD and y_SD contain the displacements needed for moment calculations
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
+         CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, SubStructureMotion ) !u_MD and y_SD contain the displacements needed for moment calculations
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
             
-            MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
-            MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment 
-         else
-            CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, SubStructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
-            
-            MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-            MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment            
-         end if
-         
+         MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+         MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
+
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
-         if ( p_FAST%CompSub == Module_SD ) then
-            CALL Transfer_Point_to_Point( y_FEAM%PtFairleadLoad, MeshMapData%u_SD_LMesh_2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_FEAM%PtFairleadDisplacement, SubStructureMotion ) !u_FEAM and y_SD contain the displacements needed for moment calculations
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
+         CALL Transfer_Point_to_Point( y_FEAM%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_FEAM%PtFairleadDisplacement, SubStructureMotion ) !u_FEAM and y_SD contain the displacements needed for moment calculations
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
             
-            MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
-            MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment 
-         else
-            CALL Transfer_Point_to_Point( y_FEAM%PtFairleadLoad, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_FEAM%PtFairleadDisplacement, SubStructureMotion ) !u_FEAM and y_ED contain the displacements needed for moment calculations
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
-            
-            MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-            MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment            
-         end if
+         MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
+         MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
          
       ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
          !NOTE: ORCAFLEX INTERFACE COUPLES WITH **PlatformMotions** AND NOT **SubStructureMotion** LIKE THE OTHER MOORING MODULES DO
-         CALL Transfer_Point_to_Point( y_Orca2%PtfmMesh, MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, MeshMapData%u_Orca_PtfmMesh, PlatformMotions ) !u_Orca_PtfmMesh and y_ED contain the displacements needed for moment calculations
+      
+         ! BECAUSE ORCAFLEX INTERFACE CANNOT BE USED WITH SUBDYN, THE SUBSTRUCTURELOADS DATA STRUCTURES POINT TO ELASTODYN (MORE LIKE PLATFORM MESH)
+         CALL Transfer_Point_to_Point( y_Orca2%PtfmMesh, MeshMapData%PlatformLoads_Tmp2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, MeshMapData%u_Orca_PtfmMesh, PlatformMotions ) !u_Orca_PtfmMesh and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
             
-         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment            
+         MeshMapData%PlatformLoads_Tmp%Force  = MeshMapData%PlatformLoads_Tmp%Force  + MeshMapData%PlatformLoads_Tmp2%Force
+         MeshMapData%PlatformLoads_Tmp%Moment = MeshMapData%PlatformLoads_Tmp%Moment + MeshMapData%PlatformLoads_Tmp2%Moment
       END IF
-                                                   
+      
 
-         ! Map the forces from the platform mounted TMD (from ServoDyn) to the platform reference point
-      IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD .and. allocated(y_SrvD%SStCLoadMesh)) THEN
-         do k=1,size(y_SrvD%SStCLoadMesh)
-            IF (y_SrvD%SStCLoadMesh(k)%Committed) THEN      ! size 1 only for SStC
-               CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(k), MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%SStC_P_P_2_SubStructure(k), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(k), PlatformMotions )
-                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
-               MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
-               MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
-            ENDIF
-         enddo
-      ENDIF
 
    !..................
    ! Calculate the residual with these new inputs:
    !..................                  
+   ! Make sure that the substructure loads get mapped with the platform loads when SD is not used:
+      IF (p_FAST%CompSub /= MODULE_SD) THEN
+         ! In this case, the substructure and platform are the same mesh:
+         ED_PtfmPtMesh => MeshMapData%PlatformLoads_Tmp
+         SD_LMesh      => BlankMesh
          
-      CALL Create_FullOpt1_UVector(U_Resid, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%u_SD_TPMesh, MeshMapData%u_SD_LMesh, &
+         ED_PtfmPtMesh%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%PlatformLoads_Tmp%Force
+         ED_PtfmPtMesh%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%PlatformLoads_Tmp%Moment
+      ELSE
+         ED_PtfmPtMesh => MeshMapData%PlatformLoads_Tmp
+         SD_LMesh      => MeshMapData%SubstructureLoads_Tmp
+      ENDIF
+      
+      CALL Create_FullOpt1_UVector(U_Resid, ED_PtfmPtMesh, MeshMapData%u_SD_TPMesh, SD_LMesh, &
                                    MeshMapData%u_HD_M_Mesh, MeshMapData%u_HD_W_Mesh, &
                                    MeshMapData%u_ED_HubPtLoad, MeshMapData%u_BD_RootMotion, MeshMapData%u_Orca_PtfmMesh, &
                                    MeshMapData%u_ExtPtfm_PtfmMesh, p_FAST ) 
@@ -4807,12 +4612,18 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
       CALL MeshCopy ( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_HubPtLoad' )                 
             
-      CALL MeshCopy ( PlatformLoads, MeshMapData%u_ED_PlatformPtMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh' )                 
+      CALL MeshCopy ( SubStructureLoads, MeshMapData%SubstructureLoads_Tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SubstructureLoads_Tmp' )
 
-      CALL MeshCopy ( PlatformLoads, MeshMapData%u_ED_PlatformPtMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_2' )                 
+      CALL MeshCopy ( SubStructureLoads, MeshMapData%SubstructureLoads_Tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SubstructureLoads_Tmp2' )
+         
+      CALL MeshCopy ( PlatformLoads, MeshMapData%PlatformLoads_Tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':PlatformLoads_Tmp' )                 
 
+      CALL MeshCopy ( PlatformLoads, MeshMapData%PlatformLoads_Tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':PlatformLoads_Tmp2' )                 
+         
              
       IF ( p_FAST%CompElast == Module_BD ) THEN
       
@@ -4836,18 +4647,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
          
       IF ( p_FAST%CompSub == Module_SD ) THEN
          
-         CALL MeshCopy ( SD%Input(1)%TPMesh, MeshMapData%u_SD_TPMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_TPMesh' )                 
-               
-         IF ( p_FAST%CompHydro == Module_HD ) THEN
-               
-            CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh' )                 
-
-            CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh_2' )
-                              
-         END IF
+         CALL MeshCopy ( SD%Input(1)%TPMesh, MeshMapData%u_SD_TPMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_TPMesh' )
 
       ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
          
@@ -4878,10 +4679,11 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
       END IF
       
       
-   ELSEIF ( p_FAST%CompSub /= Module_SD ) THEN     ! Platform loads from SrvD Structural control (TMDs) if not SD
+   ELSEIF ( p_FAST%CompSub /= Module_SD ) THEN     ! Platform loads from SrvD Structural control (TMDs) to ED in Full Option2 solve
+   
       IF ( ALLOCATED(SrvD%Input(1)%SStCMotionMesh) ) THEN ! Platform TMD loads
-         CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh' )
+         CALL MeshCopy ( SubstructureLoads, MeshMapData%SubstructureLoads_Tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SubstructureLoads_Tmp' )
       ENDIF
 
    END IF
@@ -5005,7 +4807,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          
          ! transfer SD outputs to other modules that use it for inputs in option 1:
-      call Transfer_SD_to_HD( SD%y, HD%Input(1)%WAMITMesh, HD%Input(1)%Morison%Mesh, MeshMapData, ErrStat2, ErrMsg2 )
+      call Transfer_SubStructureMotion_to_HD( SD%y%y2Mesh, HD%Input(1)%WAMITMesh, HD%Input(1)%Morison%Mesh, MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       IF ( p_FAST%CompMooring == Module_MAP ) THEN         
@@ -5086,32 +4888,28 @@ END SUBROUTINE CalcOutputs_And_SolveForInputs
 !! platform reference point. Also in solve option 1 are the BD-ED blade root coupling.
 SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, SrvD, MeshMapData, ErrStat, ErrMsg, WriteThisStep )
 !...............................................................................................................................
-   REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
-   INTEGER(IntKi)          , intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
-   LOGICAL                 , intent(in   ) :: calcJacobian        !< Should we calculate Jacobians in Option 1?
+   REAL(DbKi)              ,         intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
+   INTEGER(IntKi)          ,         intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
+   LOGICAL                 ,         intent(in   ) :: calcJacobian        !< Should we calculate Jacobians in Option 1?
+   TYPE(FAST_ParameterType),         INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
+   TYPE(ElastoDyn_Data), TARGET,     INTENT(INOUT) :: ED                  !< ElastoDyn data
+   TYPE(BeamDyn_Data),               INTENT(INOUT) :: BD                  !< BeamDyn data
+   TYPE(ServoDyn_Data),              INTENT(INOUT) :: SrvD                ! ServoDyn data
+   !TYPE(AeroDyn14_Data),             INTENT(INOUT) :: AD14                ! AeroDyn14 data
+   TYPE(HydroDyn_Data),              INTENT(INOUT) :: HD                  !< HydroDyn data
+   TYPE(SubDyn_Data),    TARGET,     INTENT(INOUT) :: SD                  !< SubDyn data
+   TYPE(ExtPtfm_Data),               INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
+   TYPE(MAP_Data),                   INTENT(INOUT) :: MAPp                !< MAP data
+   TYPE(FEAMooring_Data),            INTENT(INOUT) :: FEAM                !< FEAMooring data
+   TYPE(MoorDyn_Data),               INTENT(INOUT) :: MD                  !< MoorDyn data
+   TYPE(OrcaFlex_Data),              INTENT(INOUT) :: Orca                !< OrcaFlex interface data
+   TYPE(IceFloe_Data),               INTENT(INOUT) :: IceF                !< IceFloe data
+   TYPE(IceDyn_Data),                INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
+   TYPE(FAST_ModuleMapType),         INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
 
-   TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
-
-   TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  !< ElastoDyn data
-   TYPE(BeamDyn_Data),       INTENT(INOUT) :: BD                  !< BeamDyn data
-   TYPE(ServoDyn_Data),      INTENT(INOUT) :: SrvD                ! ServoDyn data
-   !TYPE(AeroDyn14_Data),     INTENT(INOUT) :: AD14                ! AeroDyn14 data
-   TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
-   TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
-   TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
-   TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
-   TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< MoorDyn data
-   TYPE(OrcaFlex_Data),      INTENT(INOUT) :: Orca                !< OrcaFlex interface data
-   TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
-   TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
-
-   TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
-   
-   
-   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
-   CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
-   LOGICAL                 , INTENT(IN   ) :: WriteThisStep       !< Will we print the WriteOutput values this step?
+   INTEGER(IntKi),                   INTENT(  OUT) :: ErrStat             !< Error status of the operation
+   CHARACTER(*),                     INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
+   LOGICAL,                          INTENT(IN   ) :: WriteThisStep       !< Will we print the WriteOutput values this step?
    
 
    INTEGER                                 :: i                   ! loop counter
@@ -5119,6 +4917,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SolveOption1'       
+   TYPE(MeshType), POINTER                 :: SubstructureMotion
    
    !............................................................................................................................   
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -5128,6 +4927,12 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
                
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
+   IF (p_FAST%CompSub == Module_SD) then
+      SubstructureMotion => SD%y%y3Mesh
+   ELSE
+      SubstructureMotion => ED%y%PlatformPtMesh
+   END IF   
    
    ! Because MAP, FEAM, MoorDyn, IceDyn, and IceFloe do not contain acceleration inputs, we do this outside the DO loop in the ED{_SD}_HD_InputOutput solves.       
    IF ( p_FAST%CompMooring == Module_MAP ) THEN
@@ -5217,48 +5022,33 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    IF ( p_FAST%CompMooring == Module_MAP ) THEN
          
       ! note: MAP_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)   
-      if ( p_FAST%CompSub == Module_SD ) then
-            CALL Transfer_Point_to_Point( SD%y%y3Mesh, MAPp%Input(1)%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      else
-         CALL Transfer_Point_to_Point( ED%y%PlatformPtMesh, MAPp%Input(1)%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      end if
+      CALL Transfer_Point_to_Point( SubstructureMotion, MAPp%Input(1)%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                                  
    ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
          
       ! note: MD_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)
-      if ( p_FAST%CompSub == Module_SD ) then
-            CALL Transfer_Point_to_Point( SD%y%y3Mesh, MD%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      else
-         CALL Transfer_Point_to_Point( ED%y%PlatformPtMesh, MD%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      endif
+         CALL Transfer_Point_to_Point( SubstructureMotion, MD%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
          
-      ! note: FEAM_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)
-      if ( p_FAST%CompSub == Module_SD ) then
-            CALL Transfer_Point_to_Point( SD%y%y3Mesh, FEAM%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      else
-         CALL Transfer_Point_to_Point( ED%y%PlatformPtMesh, FEAM%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      end if
-                        
-   END IF        
+   ! note: FEAM_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)
+         CALL Transfer_Point_to_Point( SubstructureMotion, FEAM%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   END IF
       
    IF ( p_FAST%CompIce == Module_IceF ) THEN
          
-      CALL IceFloe_InputSolve(  IceF%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+      CALL IceFloe_InputSolve(  IceF%Input(1), SubstructureMotion, MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                                  
    ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
          
       DO i=1,p_FAST%numIceLegs
             
-         CALL IceD_InputSolve(  IceD%Input(1,i), SD%y, MeshMapData, i, ErrStat2, ErrMsg2 )
+         CALL IceD_InputSolve(  IceD%Input(1,i), SubstructureMotion, MeshMapData, i, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':IceD_InputSolve' )
                
       END DO
@@ -5268,13 +5058,8 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
 
       ! Map motions for ServodDyn Structural control (TMD) if used.
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
-      IF ( p_FAST%CompSub /= Module_SD ) THEN
-         call Transfer_ED_to_SStC( SrvD%Input(1), ED%y, MeshMapData, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      ELSEIF ( p_FAST%CompSub == Module_SD ) THEN
-         call Transfer_SD_to_SStC( SrvD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      ENDIF
+      call Transfer_Substructure_to_SStC( SrvD%Input(1), SubstructureMotion, MeshMapData, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    END IF
 
       
@@ -5290,11 +5075,6 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
       CALL WriteMappingTransferToFile(SD%Input(1)%LMesh, SD%y%Y2Mesh, HD%Input(1)%Morison%Mesh, HD%y%Morison%Mesh,&
             MeshMapData%SubStructure_2_HD_M_P, MeshMapData%HD_M_P_2_SubStructure, &
             'SD_y2_HD_M_L_Meshes_t'//TRIM(Num2LStr(0))//'.PHL.bin' )
-      
-         
-         
-      !print *
-      !pause         
 #endif         
                   
 END SUBROUTINE SolveOption1
