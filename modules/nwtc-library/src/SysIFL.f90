@@ -518,6 +518,9 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
       END FUNCTION
 
    END INTERFACE
+   
+   ErrStat = ErrID_None
+   ErrMsg = ''
 
    ! Close the library:
 

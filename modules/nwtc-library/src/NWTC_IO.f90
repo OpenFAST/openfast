@@ -2252,7 +2252,7 @@ END SUBROUTINE CheckR16Var
    INTEGER(IntKi), INTENT(IN) :: ErrID          !< error status/level
 
       ! Function delcaration
-   CHARACTER(13)              :: GetErrStr      !< description of the ErrID level
+   CHARACTER(25)              :: GetErrStr      !< description of the ErrID level
 
       SELECT CASE ( ErrID )
          CASE ( ErrID_None )
@@ -2266,7 +2266,7 @@ END SUBROUTINE CheckR16Var
          CASE ( ErrID_Fatal )
             GetErrStr = 'FATAL ERROR'
          CASE DEFAULT
-            GetErrStr = 'Unknown ErrID'
+            GetErrStr = 'Unknown ErrID '//TRIM(Num2LStr(ErrID))
       END SELECT
 
 
@@ -6795,7 +6795,6 @@ END SUBROUTINE CheckR16Var
 
    CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
-
 
    READ (Word,*,IOSTAT=IOS)  Var
 
