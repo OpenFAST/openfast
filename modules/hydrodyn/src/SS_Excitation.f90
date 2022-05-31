@@ -101,7 +101,7 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
       
       call SS_Exc_Input_ExtrapInterp(u_in, t_in, u_out, time, ErrStat, ErrMsg )
       do iBody = 1, p%NBody  
-         GetWaveElevation(:) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveElev1, p%SeaSt_interp_p, ErrStat, ErrMsg )
+         GetWaveElevation(:) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveElev1, p%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat, ErrMsg ) ! note only the last error message would get returned
       end do
         ! call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
    end if

@@ -109,6 +109,7 @@ typedef   ^                            ^                             SS_Exc_Outp
 typedef   ^                            ^                             Conv_Rdtn_MiscVarType    Conv_Rdtn                       -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_InputType      Conv_Rdtn_u                     -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_OutputType     Conv_Rdtn_y                     -              -         -         ""   -
+typedef   ^                            ^                             SeaSt_Interp_MiscVarType SeaSt_Interp_m                  -              -         -         "misc var information from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

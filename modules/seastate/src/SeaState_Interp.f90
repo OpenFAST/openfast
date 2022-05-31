@@ -89,8 +89,8 @@ SUBROUTINE SeaSt_Interp_Init(InitInp, p, ErrStat, ErrMsg)
       ! Copy things from the InitData to the ParamData.  
       !-------------------------------------------------------------------------------------------------
    p%n     = InitInp%n        ! number of points on the evenly-spaced grid (in each direction)
-   p%delta = InitInp%delta    ! distance between consecutive grid points in each direction
-   p%pZero = InitInp%pZero    ! fixed location of first XYZ grid point (i.e., XYZ coordinates of m%V(:,1,1,1,:))
+   p%delta = InitInp%delta    ! distance between consecutive grid points in each direction (s,m,m,m)
+   p%pZero = InitInp%pZero    ! fixed location of first time-XYZ grid point (i.e., XYZ coordinates of m%V(:,1,1,1,:))
    p%Z_Depth = InitInp%Z_Depth
 
 
@@ -107,7 +107,7 @@ END SUBROUTINE SeaSt_Interp_Init
 !====================================================================================================
 
 
-subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, ErrMsg)
+subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, FirstWarn, ErrStat, ErrMsg)
    REAL(ReKi),                                  INTENT(IN   )  :: p              !<
    REAL(ReKi),                                  INTENT(IN   )  :: pZero
    REAL(ReKi),                                  INTENT(IN   )  :: delta
@@ -115,6 +115,7 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, E
    INTEGER(IntKi),                              intent(inout)  :: Indx_Lo
    INTEGER(IntKi),                              intent(inout)  :: Indx_Hi
    real(SiKi),                                  intent(inout)  :: isopc
+   logical,                                     intent(inout)  :: FirstWarn
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -135,7 +136,10 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, E
    if ( Indx_Lo < 1 ) then
       Indx_Lo = 1
       isopc = -1.0
-      call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary',ErrStat,ErrMsg,'SetCartesianXYIndex') !error out if time is outside the lower bounds
+      if (FirstWarn) then
+         call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianXYIndex') !error out if time is outside the lower bounds
+         FirstWarn = .false.
+   end if
    end if
    
    Indx_Hi = min( Indx_Lo + 1, nMax )     ! make sure it's a valid index, zero-based
@@ -144,7 +148,10 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, E
       ! Need to clamp to grid boundary
       Indx_Lo = Indx_Hi - 1
       isopc = 1.0
-      call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary',ErrStat,ErrMsg,'SetCartesianXYIndex') !error out if time is outside the lower bounds
+      if (FirstWarn) then
+         call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianXYIndex') !error out if time is outside the lower bounds
+         FirstWarn = .false.
+   end if
    end if
    
    
@@ -158,7 +165,7 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, E
    
 end subroutine SetCartesianXYIndex
 
-subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, ErrMsg)
+subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, FirstWarn, ErrStat, ErrMsg)
    REAL(ReKi),                                  INTENT(IN   )  :: p              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: z_depth
    REAL(ReKi),                                  INTENT(IN   )  :: delta
@@ -166,6 +173,7 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
    INTEGER(IntKi),                              intent(inout)  :: Indx_Lo
    INTEGER(IntKi),                              intent(inout)  :: Indx_Hi
    real(SiKi),                                  intent(inout)  :: isopc
+   logical,                                     intent(inout)  :: FirstWarn
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -188,7 +196,10 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
    if ( Indx_Lo < 1 ) then
       Indx_Lo = 1
       isopc = -1.0
-      call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary',ErrStat,ErrMsg,'SetCartesianIndex') !error out if time is outside the lower bounds
+      if (FirstWarn) then
+         call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianZIndex') !error out if time is outside the lower bounds
+         FirstWarn = .false.
+   end if
    end if
    
    Indx_Hi = min( Indx_Lo + 1, nMax )     ! make sure it's a valid index, one-based
@@ -197,7 +208,10 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
       ! Need to clamp to grid boundary
       Indx_Lo = Indx_Hi - 1
       isopc = 1.0
-      call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary',ErrStat,ErrMsg,'SetCartesianIndex') !error out if time is outside the lower bounds
+      if (FirstWarn) then
+         call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianZIndex') !error out if time is outside the lower bounds
+         FirstWarn = .false.
+   end if
    end if
    
    
@@ -297,8 +311,8 @@ subroutine SeaSt_Interp_Setup( Time, Position, p, m, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! Find the bounding indices for XY position
    !-------------------------------------------------------------------------------------------------
-   do i=2,3    
-      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+   do i=2,3  ! x and y components
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !warning if x,y is outside the  bounds
    enddo
    
@@ -308,8 +322,8 @@ subroutine SeaSt_Interp_Setup( Time, Position, p, m, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! Find the bounding indices for Z position
    !-------------------------------------------------------------------------------------------------
-   i=4
-   call SetCartesianZIndex(Position(i-1), p%Z_Depth, p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+   i=4 ! z component
+   call SetCartesianZIndex(Position(i-1), p%Z_Depth, p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !warning if z is outside the  bounds
    if (ErrStat >= AbortErrLev ) return   
             
@@ -346,7 +360,7 @@ FUNCTION SeaSt_Interp_4D( pKinXX, m, ErrStat, ErrMsg )
       ! I/O variables
 
    real(SiKi),                                  intent(in   )  :: pKinXX(0:,:,:,:)
-   TYPE(SeaSt_Interp_MiscVarType),           INTENT(IN   )  :: m                 !< Parameters
+   TYPE(SeaSt_Interp_MiscVarType),              INTENT(IN   )  :: m                 !< Parameters
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -439,13 +453,14 @@ END FUNCTION SeaSt_Interp_4D_Vec
  !====================================================================================================
 !> This routine interpolates a 3-d dataset with index 1 = time (zero-based indexing), 2 = x-coordinate (1-based indexing), 3 = y-coordinate (1-based indexing)
 !! This method is described here: http://rjwagner49.com/Mathematics/Interpolation.pdf
-FUNCTION SeaSt_Interp_3D( Time, Position, pKinXX, p, ErrStat, ErrMsg )
+FUNCTION SeaSt_Interp_3D( Time, Position, pKinXX, p, FirstWarn_Clamp, ErrStat, ErrMsg )
 
       ! I/O variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: Position(2)       !< Array of XYZ coordinates, 3
    real(SiKi),                                  intent(in   )  :: pKinXX(0:,:,:)     !< 3D Wave elevation data (SiKi for storage space reasons)
-   TYPE(SeaSt_Interp_ParameterType),         INTENT(IN   )  :: p                 !< Parameters
+   TYPE(SeaSt_Interp_ParameterType),            INTENT(IN   )  :: p                 !< Parameters
+   logical,                                     INTENT(INOUT)  :: FirstWarn_Clamp   !< first warning
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -477,7 +492,7 @@ FUNCTION SeaSt_Interp_3D( Time, Position, pKinXX, p, ErrStat, ErrMsg )
    ! Find the bounding indices for XY position
    !-------------------------------------------------------------------------------------------------
    do i=2,3
-      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), FirstWarn_Clamp, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !warning if x,y is outside the bounds
    end do
       if (ErrStat >= AbortErrLev ) return
@@ -511,12 +526,13 @@ FUNCTION SeaSt_Interp_3D( Time, Position, pKinXX, p, ErrStat, ErrMsg )
 
 END FUNCTION SeaSt_Interp_3D    
 
-FUNCTION SeaSt_Interp_3D_VEC ( Time, Position, pKinXX, p, ErrStat, ErrMsg )    
+FUNCTION SeaSt_Interp_3D_VEC ( Time, Position, pKinXX, p, FirstWarn_Clamp, ErrStat, ErrMsg )    
     ! I/O variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: Position(2)       !< Array of XYZ coordinates, 3
    real(SiKi),                                  INTENT(in   )  :: pKinXX(0:,:,:,:)  !< 3D Wave excitation data (SiKi for storage space reasons)
    TYPE(SeaSt_Interp_ParameterType),            INTENT(IN   )  :: p                 !< Parameters
+   LOGICAL,                                     INTENT(INOUT)  :: FirstWarn_Clamp   !< first warning
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -548,7 +564,7 @@ FUNCTION SeaSt_Interp_3D_VEC ( Time, Position, pKinXX, p, ErrStat, ErrMsg )
    ! Find the bounding indices for XY position
    !-------------------------------------------------------------------------------------------------
    do i=2,3
-      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), FirstWarn_Clamp, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !warning if x,y is outside the bounds
    end do
       if (ErrStat >= AbortErrLev ) return
@@ -582,12 +598,13 @@ FUNCTION SeaSt_Interp_3D_VEC ( Time, Position, pKinXX, p, ErrStat, ErrMsg )
    end do
 END FUNCTION SeaSt_Interp_3D_VEC    
 
-FUNCTION SeaSt_Interp_3D_VEC6 ( Time, Position, pKinXX, p, ErrStat, ErrMsg )    
+FUNCTION SeaSt_Interp_3D_VEC6 ( Time, Position, pKinXX, p, FirstWarn_Clamp, ErrStat, ErrMsg )    
     ! I/O variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: Position(2)       !< Array of XYZ coordinates, 3
    real(SiKi),                                  INTENT(in   )  :: pKinXX(0:,:,:,:)  !< 3D Wave excitation data (SiKi for storage space reasons)
    TYPE(SeaSt_Interp_ParameterType),            INTENT(IN   )  :: p                 !< Parameters
+   LOGICAL,                                     INTENT(INOUT)  :: FirstWarn_Clamp   !< first warning
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -619,7 +636,7 @@ FUNCTION SeaSt_Interp_3D_VEC6 ( Time, Position, pKinXX, p, ErrStat, ErrMsg )
    ! Find the bounding indices for XY position
    !-------------------------------------------------------------------------------------------------
    do i=2,3
-      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), ErrStat2, ErrMsg2)
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), Indx_Lo(i), Indx_Hi(i), isopc(i), FirstWarn_Clamp, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) !warning if x,y is outside the bounds
    end do
       if (ErrStat >= AbortErrLev ) return

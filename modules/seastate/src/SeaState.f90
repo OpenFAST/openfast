@@ -334,6 +334,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       x%UnusedStates = 0.0
       xd%UnusedStates = 0.0
       OtherState%UnusedStates = 0.0
+      m%SeaSt_Interp_m%FirstWarn_Clamp = .true.
+
       
 #ifdef BETA_BUILD
    CALL DispBetaNotice( "This is a beta version of SeaState and is for testing purposes only."//NewLine//"This version includes user waves, WaveMod=6 and the ability to write example user waves." )
@@ -624,7 +626,23 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveKinxi = InputFileData%WaveKinxi
       p%WaveKinyi = InputFileData%WaveKinyi
       p%WaveKinzi = InputFileData%WaveKinzi
-
+            
+      ! add some warnings about requesting WriteOutput outside the SeaState domain:
+      do i=1,p%NWaveKin
+         if (abs(p%WaveKinxi(i)) > p%X_HalfWidth) then
+            CALL SetErrStat(ErrID_Warn,'Requested WaveKinxi is outside the SeaState spatial domain.', ErrStat, ErrMsg, RoutineName)
+            exit
+         end if
+         if (abs(p%WaveKinyi(i)) > p%Y_HalfWidth) then
+            CALL SetErrStat(ErrID_Warn,'Requested WaveKinyi is outside the SeaState spatial domain.', ErrStat, ErrMsg, RoutineName)
+            exit
+         end if
+         !if (p%WaveKinzi(i) < 0.0_ReKi .or. p%WaveKinzi(i) > p%Z_Depth) then
+         !   CALL SetErrStat(ErrID_Warn,'Requested WaveKinzi is outside the SeaState spatial domain.', ErrStat, ErrMsg, RoutineName)
+         !   exit
+         !end if
+      end do
+      
       m%LastIndWave = 1
 
       
@@ -1062,9 +1080,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Setup the 4D grid information for the Interpolatin Module
       SeaSt_Interp_InitInp%n        = (/p%NStepWave,p%nGrid(1),p%nGrid(2),p%nGrid(3)/)
       SeaSt_Interp_InitInp%delta    = (/real(p%WaveDT,ReKi),p%deltaGrid(1),p%deltaGrid(2),p%deltaGrid(3)/)
+      SeaSt_Interp_InitInp%pZero(1) = 0.0  !Time
       SeaSt_Interp_InitInp%pZero(2) = -InputFileData%X_HalfWidth
       SeaSt_Interp_InitInp%pZero(3) = -InputFileData%Y_HalfWidth
-      SeaSt_Interp_InitInp%pZero(1) = 0.0  !Time
       SeaSt_Interp_InitInp%pZero(4) = -InputFileData%Z_Depth  ! zi
       SeaSt_Interp_InitInp%Z_Depth  = InputFileData%Z_Depth
       call SeaSt_Interp_Init(SeaSt_Interp_InitInp, p%seast_interp_p,  ErrStat2, ErrMsg2)
@@ -1332,10 +1350,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          positionXYZ = (/p%WaveKinxi(i),p%WaveKinyi(i),p%WaveKinzi(i)/)
          IF (p%WaveStMod > 0) THEN ! Wave stretching enabled
             positionXY = (/p%WaveKinxi(i),p%WaveKinyi(i)/)
-            zeta1 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
+            zeta1 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             IF (associated(p%WaveElev2)) THEN
-               zeta2 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
+               zeta2 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                zeta =  zeta1 + zeta2
             ELSE
@@ -1367,11 +1385,11 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      IF (p%WaveStMod == 2) THEN ! extrapolation stretching
                         ! Extrapolate
-                        WaveVel(:,i) = WaveVel(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
+                        WaveVel(:,i) = WaveVel(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                        WaveAcc(:,i) = WaveAcc(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
+                        WaveAcc(:,i) = WaveAcc(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                        WaveDynP(i)  = WaveDynP(i)  + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
+                        WaveDynP(i)  = WaveDynP(i)  + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      END IF            
                   END IF
@@ -1422,11 +1440,11 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       do i = 1, p%NWaveElev
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
 
-         WaveElev1(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
+         WaveElev1(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         
          if (associated(p%WaveElev2)) then
-            WaveElev2(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
+            WaveElev2(i) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             WaveElev(i) =  WaveElev1(i) + WaveElev2(i)
          else

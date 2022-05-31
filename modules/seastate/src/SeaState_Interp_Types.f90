@@ -35,9 +35,9 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  SeaSt_Interp_InitInputType  =======
   TYPE, PUBLIC :: SeaSt_Interp_InitInputType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of grid points in the x, y, z, and t directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
-    REAL(ReKi) , DIMENSION(1:4)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of grid points in the t, x, y, and z directions [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction (time, x, y, z) [s,m,m,m]
+    REAL(ReKi) , DIMENSION(1:4)  :: pZero      !< fixed position of the time-X-Y-Z grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(ReKi)  :: Z_Depth      !< grid depth [m]
   END TYPE SeaSt_Interp_InitInputType
 ! =======================
@@ -52,6 +52,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(1:16)  :: N4D      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
     INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Lo      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
     INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Hi      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
+    LOGICAL  :: FirstWarn_Clamp = .true.      !< used to avoid too many 'Position has been clamped to the grid boundary' warning messages  [-]
   END TYPE SeaSt_Interp_MiscVarType
 ! =======================
 ! =========  SeaSt_Interp_ParameterType  =======
@@ -479,6 +480,7 @@ CONTAINS
     DstMiscData%N4D = SrcMiscData%N4D
     DstMiscData%Indx_Lo = SrcMiscData%Indx_Lo
     DstMiscData%Indx_Hi = SrcMiscData%Indx_Hi
+    DstMiscData%FirstWarn_Clamp = SrcMiscData%FirstWarn_Clamp
  END SUBROUTINE SeaSt_Interp_CopyMisc
 
  SUBROUTINE SeaSt_Interp_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -543,6 +545,7 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + SIZE(InData%N4D)  ! N4D
       Int_BufSz  = Int_BufSz  + SIZE(InData%Indx_Lo)  ! Indx_Lo
       Int_BufSz  = Int_BufSz  + SIZE(InData%Indx_Hi)  ! Indx_Hi
+      Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_Clamp
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -586,6 +589,8 @@ CONTAINS
       IntKiBuf(Int_Xferred) = InData%Indx_Hi(i1)
       Int_Xferred = Int_Xferred + 1
     END DO
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%FirstWarn_Clamp, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SeaSt_Interp_PackMisc
 
  SUBROUTINE SeaSt_Interp_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -639,6 +644,8 @@ CONTAINS
       OutData%Indx_Hi(i1) = IntKiBuf(Int_Xferred)
       Int_Xferred = Int_Xferred + 1
     END DO
+    OutData%FirstWarn_Clamp = TRANSFER(IntKiBuf(Int_Xferred), OutData%FirstWarn_Clamp)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SeaSt_Interp_UnPackMisc
 
  SUBROUTINE SeaSt_Interp_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
