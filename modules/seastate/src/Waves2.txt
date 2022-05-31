@@ -83,7 +83,3 @@ typedef     ^                 ParameterType     INTEGER              NWaveElev  
 typedef     ^                 ParameterType     INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ParameterType     INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 
-#typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
-#typedef     ^                 ^                 SiKi                 WaveElev2D        {:}{:}{:}   -        -     "Instantaneous 2nd-order sum frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (m)
-#typedef     ^                 ^                 SiKi                 WaveElev2S        {:}{:}{:}   -        -     "Instantaneous 2nd-order sum frequency correction for the elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (m)
-

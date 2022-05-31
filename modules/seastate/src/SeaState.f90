@@ -298,10 +298,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
       INTEGER                                :: I                                   ! Generic counters
       REAL(SiKi)                             :: WaveNmbr                            ! Wavenumber of the current frequency component (1/meter)
-         ! These are dummy variables to satisfy the framework, but are not used 
-         
-      TYPE(Waves_ParameterType)              :: Waves_p                             ! Waves module parameters
-      TYPE(Waves_MiscVarType)                :: Waves_m                             ! Waves module misc/optimization data 
 
 
          ! Wave Stretching Data
@@ -567,7 +563,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
  !     END IF  ! Wave Stretching data Init     
 !==========================================================================     
           
-      CALL Waves_Init(InputFileData%Waves, Waves_p, Waves_m, Interval, Waves_InitOut, ErrStat2, ErrMsg2 )
+      CALL Waves_Init(InputFileData%Waves, Interval, Waves_InitOut, ErrStat2, ErrMsg2 )
       
       ! Copy Waves_InitOut pointer information before calling cleanup (to avoid memory problems):
       p%WaveTime   => Waves_InitOut%WaveTime
@@ -1150,11 +1146,7 @@ CONTAINS
       CALL Waves2_DestroyInitOutput(  Waves2_InitOut,  ErrStat2, ErrMsg2, DEALLOCATEpointers = .FALSE. ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
       CALL Current_DestroyInitOutput( Current_InitOut, ErrStat2, ErrMsg2);CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
    
-      
-         ! These are dummy variables to satisfy the framework, but are not used again:
-      
-      CALL Waves_DestroyParam(       Waves_p,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
+                  
       if (allocated(tmpWaveKinzi ))    deallocate(tmpWaveKinzi )
       if (allocated(tmpWaveElevxi))    deallocate(tmpWaveElevxi)
       if (allocated(tmpWaveElevyi))    deallocate(tmpWaveElevyi)

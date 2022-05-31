@@ -2440,14 +2440,11 @@ END SUBROUTINE VariousWaves_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
-!! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE Waves_Init( InitInp, p, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Waves_Init( InitInp, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(Waves_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine !NOTE: We are making this INOUT so that we can overwrite the WaveKinzi with zeros for wave stretching calculations
-      TYPE(Waves_ParameterType),       INTENT(  OUT)  :: p           !< Parameters
-      TYPE(Waves_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables
       REAL(DbKi),                      INTENT(IN   )  :: Interval    !< Coupling interval in seconds: the rate that
                                                                      !!   (1) Waves_UpdateStates() is called in loose coupling &
                                                                      !!   (2) Waves_UpdateDiscState() is called in tight coupling.
@@ -2609,9 +2606,6 @@ SUBROUTINE Waves_Init( InitInp, p, m, Interval, InitOut, ErrStat, ErrMsg )
       ENDSELECT
 
    InitOut%WaveMultiDir = InitInp%WaveMultiDir
-   p%DT = Interval
-   p%WaveMultiDir = InitInp%WaveMultiDir     ! Flag to indicate multidirectional waves
-   m%DummyMiscVar = 0
 
 END SUBROUTINE Waves_Init
 
