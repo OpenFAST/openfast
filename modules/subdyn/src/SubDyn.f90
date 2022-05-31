@@ -2229,7 +2229,7 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(u%TPMesh, u_op, idx, FieldMask=FieldMask)
+      call PackMotionMesh(u%TPMesh, u_op, idx, FieldMask=FieldMask, UseSmlAngle=.true.)
       call PackLoadMesh(u%LMesh, u_op, idx)
    END IF
    IF ( PRESENT( y_op ) ) THEN
@@ -2246,8 +2246,8 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask)
-      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask)
+      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask, UseSmlAngle=.true.)
+      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask, UseSmlAngle=.true.)
       idx = idx - 1
       do i=1,p%NumOuts
          y_op(i+idx) = y%WriteOutput(i)
