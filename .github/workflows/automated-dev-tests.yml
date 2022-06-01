@@ -109,12 +109,14 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
 
+        # SubDyn has only regression tests
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
       # - name: Run AeroDyn tests
       #   uses: ./.github/actions/tests-module-aerodyn
       #   with:
       #     test-target: regression
+        # HydroDyn has only regression tests
       - name: Run HydroDyn tests
         uses: ./.github/actions/tests-module-hydrodyn
       - name: Run InflowWind tests
@@ -333,8 +335,12 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
 
+         # NWTC Library has only unit tests
       - name: Run NWTC Library tests
         uses: ./.github/actions/tests-module-nwtclibrary
+         # VersionInfo has only unit tests
+      - name: Run VersionInfo tests
+        uses: ./.github/actions/tests-module-version
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
         with:
