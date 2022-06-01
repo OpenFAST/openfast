@@ -2,31 +2,11 @@ module test_VersionInfo_CheckArgs
 
     use pFUnit_mod
     use VersionInfo
-!   use nwtc_library_test_tools 
-! bjj: I haven't figured out how to get the unit tests to consistently find the file 
-! containing nwtc_library_test_tools.F90 in nwtc-library, so I'm copying it here.
+    use versioninfo_test_tools 
     
     implicit none
 
-#ifdef _WIN32
-    character(9), parameter :: nullfile="NUL"
-    character(11), parameter :: terminal="CON"
-#else
-    character(9), parameter :: nullfile="/dev/null"
-    character(11), parameter :: terminal="/dev/stdout"
-#endif
-integer, parameter :: stdout=CU
-    
-contains
-
-
-    subroutine hide_terminal_output()
-        open(unit=stdout, file=trim(nullfile))
-    end subroutine
-
-    subroutine show_terminal_output()
-        open(unit=stdout, file=terminal, status="old")
-    end subroutine
+    contains
     
     ! PASSING CASES
 
@@ -394,5 +374,5 @@ contains
         @assertEqual( "RESTART", flag )
         deallocate(argument_array)
     end subroutine
-    
+
 end module

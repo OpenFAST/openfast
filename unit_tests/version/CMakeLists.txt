@@ -30,7 +30,8 @@ include_directories(
   ${build_testdirectory}/${module_directory}
 )
 
-set(testlist 
+set(testlist
+    VersionInfo_test_tools
     test_VersionInfo_CheckArgs
 )
 foreach(test ${testlist})
@@ -43,7 +44,7 @@ foreach(test ${testlist})
     set(test_sources ${test_sources} ${build_testdirectory}/${module_directory}/${test}.F90)
     file(APPEND ${build_testdirectory}/${module_directory}/testSuites.inc "ADD_TEST_SUITE(${test}_suite)\n")
 endforeach()
-  
+
 add_executable(
     ${module_name}_utest
     ${pfunit_directory}/include/driver.F90
