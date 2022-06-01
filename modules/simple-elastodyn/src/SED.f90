@@ -129,14 +129,14 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Set Meshes
    call Init_Mesh(ErrStat2,ErrMsg2);      if (Failed())  return
 
-   ! Set inputs
-   call Init_U(ErrStat2,ErrMsg2);         if (Failed())  return
-
    ! Set miscvars (mesh mappings in here)
    call Init_Misc(ErrStat2,ErrMsg2);      if (Failed())  return
 
    ! Set outputs
    call Init_Y(ErrStat2,ErrMsg2);         if (Failed())  return
+
+   ! Set inputs
+   call Init_U(ErrStat2,ErrMsg2);         if (Failed())  return
 
    ! Set InitOutputs
    call Init_InitY(ErrStat2,ErrMsg2);     if (Failed())  return
@@ -414,13 +414,23 @@ contains
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
 
-      u%AeroTrq   = 0.0_ReKi
       u%GenTrq    = 0.0_ReKi
       call AllocAry( u%BlPitchCom, p%NumBl, 'u%BlPitchCom', ErrStat3, ErrMsg3 ); if (errStat3 >= AbortErrLev) return
       u%BlPitchCom= InputFileData%BlPitch
-      u%Yaw       = InputFileData%NacYaw
-      u%YawRate   = 0.0_ReKi
+      u%YawPosCom = InputFileData%NacYaw
+      u%YawRateCom= 0.0_ReKi
 
+      ! set hub load input mesh
+      call MeshCopy ( SrcMesh  = y%HubPtMotion   &
+                    , DestMesh = u%HubPtLoad    &
+                    , CtrlCode = MESH_SIBLING    &
+                    , IOS      = COMPONENT_INPUT &
+                    ,Force     = .TRUE.          &
+                    ,Moment    = .TRUE.          &
+                    , ErrStat  = ErrStat3        &
+                    , ErrMess  = ErrMsg3         )
+      if (ErrStat3 >= AbortErrLev) return
+ 
       return
    end subroutine Init_U
 
@@ -772,6 +782,7 @@ subroutine FixHSSBrTq ( Integrator, u, p, x, OtherState, m, ErrStat, ErrMsg )
    real(ReKi)                                      :: RqdQD2Az                ! The required QD2T(DOF_Az) to cause the HSS to stop rotating.
    real(ReKi)                                      :: GenTrqLSS               ! Generator torque, expressed on LSS
    real(ReKi)                                      :: BrkTrqLSS               ! HSS brake torque, expressed on LSS
+   real(ReKi)                                      :: AeroTrq                 ! AeroDynamic torque -- passed in on HubPt
    integer                                         :: I                       ! Loops through all DOFs.
    integer(IntKi)                                  :: ErrStat2
    character(ErrMsgLen)                            :: ErrMsg2
@@ -827,7 +838,8 @@ subroutine FixHSSBrTq ( Integrator, u, p, x, OtherState, m, ErrStat, ErrMsg )
    !   motion using the new accelerations:
    GenTrqLSS = abs(p%GBoxRatio) * u%GenTrq
    BrkTrqLSS = abs(p%GBoxRatio) * OtherState%HSSBrTrqC
-   RqdFrcAz = RqdQD2Az * p%J_DT - u%AeroTrq + GenTrqLSS + BrkTrqLSS
+   AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
+   RqdFrcAz = RqdQD2Az * p%J_DT - AeroTrq + GenTrqLSS + BrkTrqLSS
 
    ! Find the HSSBrTrq necessary to bring about this force:
    OtherState%HSSBrTrq = OtherState%HSSBrTrqC - RqdFrcAz/ABS(p%GBoxRatio)
@@ -886,10 +898,12 @@ function SignLSSTrq( u, p, m )
    real(ReKi)                             :: MomLPRot          ! The total moment on the low-speed shaft at point P caused by the rotor.
    real(ReKi)                             :: GenTrqLSS         ! Generator torque, expressed on LSS
    real(ReKi)                             :: BrkTrqLSS         ! HSS brake torque, expressed on LSS
+   real(ReKi)                             :: AeroTrq           ! AeroDynamic torque -- passed in on HubPt
 
    GenTrqLSS = abs(p%GBoxRatio) * u%GenTrq
    BrkTrqLSS = abs(p%GBoxRatio) * u%HSSBrTrqC
-   MomLPRot  = u%AeroTrq - GenTrqLSS - BrkTrqLSS
+   AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
+   MomLPRot  = AeroTrq - GenTrqLSS - BrkTrqLSS
 
       ! MomLProt has now been found.  Now dot this with e1 to get the
       !   low-speed shaft torque and take the SIGN of the result:
@@ -1196,8 +1210,8 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    y%NacelleMotion%TranslationDisp(1:3,1) = y%TowerLn2Mesh%TranslationDisp(1:3,2)
 
    if (p%YawDOF) then
-      YawAng = u%Yaw
-      YawRotVel = (/ 0.0_ReKi, 0.0_ReKi, u%YawRate /)    ! Nacelle coordinate frame
+      YawAng = u%YawPosCom
+      YawRotVel = (/ 0.0_ReKi, 0.0_ReKi, u%YawRateCom /)    ! Nacelle coordinate frame
    else
       YawAng = p%InitYaw
       YawRotVel = (/ 0.0_ReKi, 0.0_ReKi, 0.0_Reki /)
@@ -1222,6 +1236,7 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    ! Rodrigues formula for rotation about a vector
    Orient = Orient + sin(real(x%QT(DOF_Az),R8Ki)) * R33 + (1-cos(real(x%QT(DOF_Az),R8Ki))) * matmul(R33,R33)
    y%HubPtMotion%Orientation(1:3,1:3,1)   = matmul(y%HubPtMotion%Orientation(1:3,1:3,1),transpose(Orient))
+   m%HubPt_X = real(y%HubPtMotion%Orientation(1,1:3,1),ReKi)     ! Bit of hack, but storing this for use in FixHSSBrTq
 
    ! Now include the velocity terms from rotor rotation
    AzRotVel = (/ real(x%QDT(DOF_Az),ReKi), 0.0_ReKi, 0.0_ReKi /)     ! Hub coordinate frame
@@ -1251,7 +1266,12 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    call Zero2TwoPi(y%LSSTipPxa)  ! Modulo
    y%RotSpeed  = x%QDT(DOF_Az)
    y%HSS_Spd   = x%QDT(DOF_Az)    * p%GBoxRatio
+   y%RotTrq    = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
+   y%RotPwr    = x%QDT(DOF_Az)    * y%RotTrq 
 
+   ! Simply pass the yaw cammend through as the current yaw
+   y%Yaw     = u%YawPosCom
+   y%YawRate = u%YawRateCom
 
    !---------------------------------------------------------------------------
    ! Compute outputs:
@@ -1300,6 +1320,7 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    character(*), parameter                         :: RoutineName = 'SED_CalcContStateDeriv'
    real(ReKi)                                      :: GenTrqLSS   ! Generator torque, expressed on LSS
    real(ReKi)                                      :: BrkTrqLSS   ! HSS brake torque, expressed on LSS
+   real(ReKi)                                      :: AeroTrq     ! AeroDynamic torque -- passed in on HubPt
 
       ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -1322,7 +1343,6 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    ! First derivative of azimuth is rotor speed, so copy over
    dxdt%QT( DOF_Az)  = x%QDT(DOF_Az)
 
-!TODO: double check if absolute values are needed on the GBoxRatio in this calculation
    !> rotor acceleration -- only if Generator DOF is on
    !!
    !! \f$ \ddot{\psi} = \frac{1}{J_\text{DT}} \left( Q_a - Q_g - Q_b \right) \f$
@@ -1335,7 +1355,8 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    if (p%GenDOF) then
       GenTrqLSS = abs(p%GBoxRatio) * u%GenTrq
       BrkTrqLSS = abs(p%GBoxRatio) * OtherState%HSSBrTrq
-      dxdt%QDT(DOF_Az)  = real((u%AeroTrq - GenTrqLSS - BrkTrqLSS)/p%J_DT, R8Ki)
+      AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
+      dxdt%QDT(DOF_Az)  = real((AeroTrq - GenTrqLSS - BrkTrqLSS)/p%J_DT, R8Ki)
    else
       dxdt%QDT(DOF_Az)  = 0.0_R8Ki
    endif

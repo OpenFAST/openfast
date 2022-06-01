@@ -68,14 +68,14 @@ typedef  ^        InitOutputType    LOGICAL              GenDOF            -  - 
 
 
 # ..... Inputs ....................................................................................................................
-# inputs on meshes: NONE
+# inputs on meshes:
+typedef  ^        InputType         MeshType             HubPtLoad         -  - -   "AeroDisk maps load to hub" -
 # inputs not on meshes:
-typedef  ^        InputType         ReKi                 AeroTrq           -  - -   "Aerodynamic torque"             N-m
 typedef  ^        InputType         ReKi                 HSSBrTrqC         -  - -   "Commanded HSS brake torque"     N-m
 typedef  ^        InputType         ReKi                 GenTrq            -  - -   "Electrical generator torque"    N-m
 typedef  ^        InputType         ReKi                 BlPitchCom       {:} - 2pi "Commanded blade pitch angles"   radians
-typedef  ^        InputType         ReKi                 Yaw               -  - -   "Yaw angle"                      rad
-typedef  ^        InputType         ReKi                 YawRate           -  - -   "Yaw rate"                       rad/s
+typedef  ^        InputType         ReKi                 YawPosCom         -  - -   "Yaw angle commanded"            rad
+typedef  ^        InputType         ReKi                 YawRateCom        -  - -   "Yaw rate  commanded"            rad/s
 
 
 # ..... Outputs ...................................................................................................................
@@ -89,7 +89,12 @@ typedef  ^        OutputType        MeshType             PlatformPtMesh    -  - 
 # outputs not on meshes:
 typedef  ^        OutputType        ReKi                 LSSTipPxa         -  - 2pi "Rotor azimuth angle (position)"   radians
 typedef  ^        OutputType        ReKi                 RotSpeed          -  - -   "Rotor azimuth angular speed"   rad/s
+typedef  ^        OutputType        ReKi                 RotPwr            -  - -   "Rotor power"  W 
+typedef  ^        OutputType        ReKi                 RotTrq            -  - -   "Rotor torque" N-m
 typedef  ^        OutputType        ReKi                 HSS_Spd           -  - -   "High-speed shaft (HSS) speed"   rad/s
+# This is a feed through -- SrvD requires knowledge of current actual yaw
+typedef  ^        OutputType        ReKi                 Yaw               -  - -   "Yaw angle"                      rad
+typedef  ^        OutputType        ReKi                 YawRate           -  - -   "Yaw rate"                       rad/s
 typedef  ^        OutputType        ReKi                 WriteOutput      {:} - -   "Data to be written to an output file: see WriteOutputHdr for names of each variable"   "see WriteOutputUnt"
 
 
@@ -151,4 +156,5 @@ typedef  ^        MiscVarType          ReKi              AllOuts          {:} - 
 typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
 typedef  ^        MiscVarType          MeshMapType       mapHub2Root      {:} - -   "Mesh mapping from Hub to BladeRootMotion" -
 typedef  ^        MiscVarType          R8Ki              QD2T             {:} - -   "Current estimate of first derivative of QD (acceleration matrix) for each degree of freedom"
+typedef  ^        MiscVarType          ReKi              HubPt_X          {3} - -   "X orientation of hub calculated in CalcOutput -- saving so we don't recalculate a bunch of things to get it in UpdateStates"
 

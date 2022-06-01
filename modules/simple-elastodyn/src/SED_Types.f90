@@ -90,12 +90,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  SED_InputType  =======
   TYPE, PUBLIC :: SED_InputType
-    REAL(ReKi)  :: AeroTrq      !< Aerodynamic torque [N-m]
+    TYPE(MeshType)  :: HubPtLoad      !< AeroDisk maps load to hub [-]
     REAL(ReKi)  :: HSSBrTrqC      !< Commanded HSS brake torque [N-m]
     REAL(ReKi)  :: GenTrq      !< Electrical generator torque [N-m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitchCom      !< Commanded blade pitch angles [radians]
-    REAL(ReKi)  :: Yaw      !< Yaw angle [rad]
-    REAL(ReKi)  :: YawRate      !< Yaw rate [rad/s]
+    REAL(ReKi)  :: YawPosCom      !< Yaw angle commanded [rad]
+    REAL(ReKi)  :: YawRateCom      !< Yaw rate  commanded [rad/s]
   END TYPE SED_InputType
 ! =======================
 ! =========  SED_OutputType  =======
@@ -107,7 +107,11 @@ IMPLICIT NONE
     TYPE(MeshType)  :: PlatformPtMesh      !< Platform reference point positions/orientations/velocities/accelerations [-]
     REAL(ReKi)  :: LSSTipPxa      !< Rotor azimuth angle (position) [radians]
     REAL(ReKi)  :: RotSpeed      !< Rotor azimuth angular speed [rad/s]
+    REAL(ReKi)  :: RotPwr      !< Rotor power [W]
+    REAL(ReKi)  :: RotTrq      !< Rotor torque [N-m]
     REAL(ReKi)  :: HSS_Spd      !< High-speed shaft (HSS) speed [rad/s]
+    REAL(ReKi)  :: Yaw      !< Yaw angle [rad]
+    REAL(ReKi)  :: YawRate      !< Yaw rate [rad/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE SED_OutputType
 ! =======================
@@ -174,6 +178,7 @@ IMPLICIT NONE
     TYPE(MeshMapType)  :: mapNac2Hub      !< Mesh mapping from Nacelle to Hub [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: mapHub2Root      !< Mesh mapping from Hub to BladeRootMotion [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Current estimate of first derivative of QD (acceleration matrix) for each degree of freedom [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: HubPt_X      !< X orientation of hub calculated in CalcOutput -- saving so we don't recalculate a bunch of things to get it in UpdateStates [-]
   END TYPE SED_MiscVarType
 ! =======================
 CONTAINS
@@ -1173,7 +1178,7 @@ ENDIF
  END SUBROUTINE SED_UnPackInitOutput
 
  SUBROUTINE SED_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SED_InputType), INTENT(IN) :: SrcInputData
+   TYPE(SED_InputType), INTENT(INOUT) :: SrcInputData
    TYPE(SED_InputType), INTENT(INOUT) :: DstInputData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
@@ -1187,7 +1192,9 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstInputData%AeroTrq = SrcInputData%AeroTrq
+      CALL MeshCopy( SrcInputData%HubPtLoad, DstInputData%HubPtLoad, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
     DstInputData%HSSBrTrqC = SrcInputData%HSSBrTrqC
     DstInputData%GenTrq = SrcInputData%GenTrq
 IF (ALLOCATED(SrcInputData%BlPitchCom)) THEN
@@ -1202,8 +1209,8 @@ IF (ALLOCATED(SrcInputData%BlPitchCom)) THEN
   END IF
     DstInputData%BlPitchCom = SrcInputData%BlPitchCom
 ENDIF
-    DstInputData%Yaw = SrcInputData%Yaw
-    DstInputData%YawRate = SrcInputData%YawRate
+    DstInputData%YawPosCom = SrcInputData%YawPosCom
+    DstInputData%YawRateCom = SrcInputData%YawRateCom
  END SUBROUTINE SED_CopyInput
 
  SUBROUTINE SED_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -1215,6 +1222,7 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+  CALL MeshDestroy( InputData%HubPtLoad, ErrStat, ErrMsg )
 IF (ALLOCATED(InputData%BlPitchCom)) THEN
   DEALLOCATE(InputData%BlPitchCom)
 ENDIF
@@ -1255,7 +1263,24 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! AeroTrq
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+      Int_BufSz   = Int_BufSz + 3  ! HubPtLoad: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%HubPtLoad, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! HubPtLoad 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! HubPtLoad
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! HubPtLoad
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! HubPtLoad
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
       Re_BufSz   = Re_BufSz   + 1  ! HSSBrTrqC
       Re_BufSz   = Re_BufSz   + 1  ! GenTrq
   Int_BufSz   = Int_BufSz   + 1     ! BlPitchCom allocated yes/no
@@ -1263,8 +1288,8 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! BlPitchCom upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlPitchCom)  ! BlPitchCom
   END IF
-      Re_BufSz   = Re_BufSz   + 1  ! Yaw
-      Re_BufSz   = Re_BufSz   + 1  ! YawRate
+      Re_BufSz   = Re_BufSz   + 1  ! YawPosCom
+      Re_BufSz   = Re_BufSz   + 1  ! YawRateCom
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1292,8 +1317,34 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    ReKiBuf(Re_Xferred) = InData%AeroTrq
-    Re_Xferred = Re_Xferred + 1
+      CALL MeshPack( InData%HubPtLoad, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! HubPtLoad 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
     ReKiBuf(Re_Xferred) = InData%HSSBrTrqC
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%GenTrq
@@ -1313,9 +1364,9 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-    ReKiBuf(Re_Xferred) = InData%Yaw
+    ReKiBuf(Re_Xferred) = InData%YawPosCom
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%YawRate
+    ReKiBuf(Re_Xferred) = InData%YawRateCom
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SED_PackInput
 
@@ -1346,8 +1397,46 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%AeroTrq = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%HubPtLoad, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! HubPtLoad 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%HSSBrTrqC = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%GenTrq = ReKiBuf(Re_Xferred)
@@ -1370,9 +1459,9 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-    OutData%Yaw = ReKiBuf(Re_Xferred)
+    OutData%YawPosCom = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%YawRate = ReKiBuf(Re_Xferred)
+    OutData%YawRateCom = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SED_UnPackInput
 
@@ -1421,7 +1510,11 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstOutputData%LSSTipPxa = SrcOutputData%LSSTipPxa
     DstOutputData%RotSpeed = SrcOutputData%RotSpeed
+    DstOutputData%RotPwr = SrcOutputData%RotPwr
+    DstOutputData%RotTrq = SrcOutputData%RotTrq
     DstOutputData%HSS_Spd = SrcOutputData%HSS_Spd
+    DstOutputData%Yaw = SrcOutputData%Yaw
+    DstOutputData%YawRate = SrcOutputData%YawRate
 IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
   i1_l = LBOUND(SrcOutputData%WriteOutput,1)
   i1_u = UBOUND(SrcOutputData%WriteOutput,1)
@@ -1589,7 +1682,11 @@ ENDIF
       END IF
       Re_BufSz   = Re_BufSz   + 1  ! LSSTipPxa
       Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
+      Re_BufSz   = Re_BufSz   + 1  ! RotPwr
+      Re_BufSz   = Re_BufSz   + 1  ! RotTrq
       Re_BufSz   = Re_BufSz   + 1  ! HSS_Spd
+      Re_BufSz   = Re_BufSz   + 1  ! Yaw
+      Re_BufSz   = Re_BufSz   + 1  ! YawRate
   Int_BufSz   = Int_BufSz   + 1     ! WriteOutput allocated yes/no
   IF ( ALLOCATED(InData%WriteOutput) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
@@ -1779,7 +1876,15 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RotSpeed
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RotPwr
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RotTrq
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%HSS_Spd
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Yaw
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%YawRate
     Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WriteOutput) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2045,7 +2150,15 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%RotSpeed = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%RotPwr = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%RotTrq = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%HSS_Spd = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Yaw = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%YawRate = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3291,6 +3404,7 @@ IF (ALLOCATED(SrcMiscData%QD2T)) THEN
   END IF
     DstMiscData%QD2T = SrcMiscData%QD2T
 ENDIF
+    DstMiscData%HubPt_X = SrcMiscData%HubPt_X
  END SUBROUTINE SED_CopyMisc
 
  SUBROUTINE SED_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -3403,6 +3517,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! QD2T upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%QD2T)  ! QD2T
   END IF
+      Re_BufSz   = Re_BufSz   + SIZE(InData%HubPt_X)  ! HubPt_X
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3529,6 +3644,10 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+    DO i1 = LBOUND(InData%HubPt_X,1), UBOUND(InData%HubPt_X,1)
+      ReKiBuf(Re_Xferred) = InData%HubPt_X(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE SED_PackMisc
 
  SUBROUTINE SED_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3690,6 +3809,12 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
   END IF
+    i1_l = LBOUND(OutData%HubPt_X,1)
+    i1_u = UBOUND(OutData%HubPt_X,1)
+    DO i1 = LBOUND(OutData%HubPt_X,1), UBOUND(OutData%HubPt_X,1)
+      OutData%HubPt_X(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE SED_UnPackMisc
 
 
@@ -3709,7 +3834,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SED_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(SED_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(SED_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -3756,8 +3881,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(SED_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
- TYPE(SED_InputType), INTENT(IN)  :: u2    ! Input at t2 
+ TYPE(SED_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
+ TYPE(SED_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(SED_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -3787,8 +3912,8 @@ ENDIF
    END IF
 
    ScaleFactor = t_out / t(2)
-  b = -(u1%AeroTrq - u2%AeroTrq)
-  u_out%AeroTrq = u1%AeroTrq + b * ScaleFactor
+      CALL MeshExtrapInterp1(u1%HubPtLoad, u2%HubPtLoad, tin, u_out%HubPtLoad, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
   b = -(u1%HSSBrTrqC - u2%HSSBrTrqC)
   u_out%HSSBrTrqC = u1%HSSBrTrqC + b * ScaleFactor
   b = -(u1%GenTrq - u2%GenTrq)
@@ -3798,10 +3923,10 @@ IF (ALLOCATED(u_out%BlPitchCom) .AND. ALLOCATED(u1%BlPitchCom)) THEN
     CALL Angles_ExtrapInterp( u1%BlPitchCom(i1), u2%BlPitchCom(i1), tin, u_out%BlPitchCom(i1), tin_out )
   END DO
 END IF ! check if allocated
-  b = -(u1%Yaw - u2%Yaw)
-  u_out%Yaw = u1%Yaw + b * ScaleFactor
-  b = -(u1%YawRate - u2%YawRate)
-  u_out%YawRate = u1%YawRate + b * ScaleFactor
+  b = -(u1%YawPosCom - u2%YawPosCom)
+  u_out%YawPosCom = u1%YawPosCom + b * ScaleFactor
+  b = -(u1%YawRateCom - u2%YawRateCom)
+  u_out%YawRateCom = u1%YawRateCom + b * ScaleFactor
  END SUBROUTINE SED_Input_ExtrapInterp1
 
 
@@ -3819,9 +3944,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(SED_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
- TYPE(SED_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
- TYPE(SED_InputType), INTENT(IN)  :: u3      ! Input at t3
+ TYPE(SED_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(SED_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
+ TYPE(SED_InputType), INTENT(INOUT)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(SED_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -3859,9 +3984,8 @@ END IF ! check if allocated
    END IF
 
    ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-  b = (t(3)**2*(u1%AeroTrq - u2%AeroTrq) + t(2)**2*(-u1%AeroTrq + u3%AeroTrq))* scaleFactor
-  c = ( (t(2)-t(3))*u1%AeroTrq + t(3)*u2%AeroTrq - t(2)*u3%AeroTrq ) * scaleFactor
-  u_out%AeroTrq = u1%AeroTrq + b  + c * t_out
+      CALL MeshExtrapInterp2(u1%HubPtLoad, u2%HubPtLoad, u3%HubPtLoad, tin, u_out%HubPtLoad, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
   b = (t(3)**2*(u1%HSSBrTrqC - u2%HSSBrTrqC) + t(2)**2*(-u1%HSSBrTrqC + u3%HSSBrTrqC))* scaleFactor
   c = ( (t(2)-t(3))*u1%HSSBrTrqC + t(3)*u2%HSSBrTrqC - t(2)*u3%HSSBrTrqC ) * scaleFactor
   u_out%HSSBrTrqC = u1%HSSBrTrqC + b  + c * t_out
@@ -3873,12 +3997,12 @@ IF (ALLOCATED(u_out%BlPitchCom) .AND. ALLOCATED(u1%BlPitchCom)) THEN
     CALL Angles_ExtrapInterp( u1%BlPitchCom(i1), u2%BlPitchCom(i1), u3%BlPitchCom(i1), tin, u_out%BlPitchCom(i1), tin_out )
   END DO
 END IF ! check if allocated
-  b = (t(3)**2*(u1%Yaw - u2%Yaw) + t(2)**2*(-u1%Yaw + u3%Yaw))* scaleFactor
-  c = ( (t(2)-t(3))*u1%Yaw + t(3)*u2%Yaw - t(2)*u3%Yaw ) * scaleFactor
-  u_out%Yaw = u1%Yaw + b  + c * t_out
-  b = (t(3)**2*(u1%YawRate - u2%YawRate) + t(2)**2*(-u1%YawRate + u3%YawRate))* scaleFactor
-  c = ( (t(2)-t(3))*u1%YawRate + t(3)*u2%YawRate - t(2)*u3%YawRate ) * scaleFactor
-  u_out%YawRate = u1%YawRate + b  + c * t_out
+  b = (t(3)**2*(u1%YawPosCom - u2%YawPosCom) + t(2)**2*(-u1%YawPosCom + u3%YawPosCom))* scaleFactor
+  c = ( (t(2)-t(3))*u1%YawPosCom + t(3)*u2%YawPosCom - t(2)*u3%YawPosCom ) * scaleFactor
+  u_out%YawPosCom = u1%YawPosCom + b  + c * t_out
+  b = (t(3)**2*(u1%YawRateCom - u2%YawRateCom) + t(2)**2*(-u1%YawRateCom + u3%YawRateCom))* scaleFactor
+  c = ( (t(2)-t(3))*u1%YawRateCom + t(3)*u2%YawRateCom - t(2)*u3%YawRateCom ) * scaleFactor
+  u_out%YawRateCom = u1%YawRateCom + b  + c * t_out
  END SUBROUTINE SED_Input_ExtrapInterp2
 
 
@@ -3993,8 +4117,16 @@ END IF ! check if allocated
   CALL Angles_ExtrapInterp( y1%LSSTipPxa, y2%LSSTipPxa, tin, y_out%LSSTipPxa, tin_out )
   b = -(y1%RotSpeed - y2%RotSpeed)
   y_out%RotSpeed = y1%RotSpeed + b * ScaleFactor
+  b = -(y1%RotPwr - y2%RotPwr)
+  y_out%RotPwr = y1%RotPwr + b * ScaleFactor
+  b = -(y1%RotTrq - y2%RotTrq)
+  y_out%RotTrq = y1%RotTrq + b * ScaleFactor
   b = -(y1%HSS_Spd - y2%HSS_Spd)
   y_out%HSS_Spd = y1%HSS_Spd + b * ScaleFactor
+  b = -(y1%Yaw - y2%Yaw)
+  y_out%Yaw = y1%Yaw + b * ScaleFactor
+  b = -(y1%YawRate - y2%YawRate)
+  y_out%YawRate = y1%YawRate + b * ScaleFactor
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
@@ -4076,9 +4208,21 @@ END IF ! check if allocated
   b = (t(3)**2*(y1%RotSpeed - y2%RotSpeed) + t(2)**2*(-y1%RotSpeed + y3%RotSpeed))* scaleFactor
   c = ( (t(2)-t(3))*y1%RotSpeed + t(3)*y2%RotSpeed - t(2)*y3%RotSpeed ) * scaleFactor
   y_out%RotSpeed = y1%RotSpeed + b  + c * t_out
+  b = (t(3)**2*(y1%RotPwr - y2%RotPwr) + t(2)**2*(-y1%RotPwr + y3%RotPwr))* scaleFactor
+  c = ( (t(2)-t(3))*y1%RotPwr + t(3)*y2%RotPwr - t(2)*y3%RotPwr ) * scaleFactor
+  y_out%RotPwr = y1%RotPwr + b  + c * t_out
+  b = (t(3)**2*(y1%RotTrq - y2%RotTrq) + t(2)**2*(-y1%RotTrq + y3%RotTrq))* scaleFactor
+  c = ( (t(2)-t(3))*y1%RotTrq + t(3)*y2%RotTrq - t(2)*y3%RotTrq ) * scaleFactor
+  y_out%RotTrq = y1%RotTrq + b  + c * t_out
   b = (t(3)**2*(y1%HSS_Spd - y2%HSS_Spd) + t(2)**2*(-y1%HSS_Spd + y3%HSS_Spd))* scaleFactor
   c = ( (t(2)-t(3))*y1%HSS_Spd + t(3)*y2%HSS_Spd - t(2)*y3%HSS_Spd ) * scaleFactor
   y_out%HSS_Spd = y1%HSS_Spd + b  + c * t_out
+  b = (t(3)**2*(y1%Yaw - y2%Yaw) + t(2)**2*(-y1%Yaw + y3%Yaw))* scaleFactor
+  c = ( (t(2)-t(3))*y1%Yaw + t(3)*y2%Yaw - t(2)*y3%Yaw ) * scaleFactor
+  y_out%Yaw = y1%Yaw + b  + c * t_out
+  b = (t(3)**2*(y1%YawRate - y2%YawRate) + t(2)**2*(-y1%YawRate + y3%YawRate))* scaleFactor
+  c = ( (t(2)-t(3))*y1%YawRate + t(3)*y2%YawRate - t(2)*y3%YawRate ) * scaleFactor
+  y_out%YawRate = y1%YawRate + b  + c * t_out
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
