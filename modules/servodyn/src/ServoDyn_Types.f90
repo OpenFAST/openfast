@@ -529,6 +529,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitchCom      !< Commanded blade pitch angles [radians]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlAirfoilCom      !< Commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables) [-]
     REAL(ReKi)  :: YawMom      !< Torque transmitted through the yaw bearing [N-m]
+    REAL(ReKi)  :: YawPosCom      !< Yaw command from controller (for SED module) [rad]
+    REAL(ReKi)  :: YawRateCom      !< Yaw rate command from controller (for SED module) [rad/s]
     REAL(ReKi)  :: GenTrq      !< Electrical generator torque [N-m]
     REAL(ReKi)  :: HSSBrTrqC      !< Commanded HSS brake torque [N-m]
     REAL(ReKi)  :: ElecPwr      !< Electrical power [W]
@@ -16118,6 +16120,8 @@ IF (ALLOCATED(SrcOutputData%BlAirfoilCom)) THEN
     DstOutputData%BlAirfoilCom = SrcOutputData%BlAirfoilCom
 ENDIF
     DstOutputData%YawMom = SrcOutputData%YawMom
+    DstOutputData%YawPosCom = SrcOutputData%YawPosCom
+    DstOutputData%YawRateCom = SrcOutputData%YawRateCom
     DstOutputData%GenTrq = SrcOutputData%GenTrq
     DstOutputData%HSSBrTrqC = SrcOutputData%HSSBrTrqC
     DstOutputData%ElecPwr = SrcOutputData%ElecPwr
@@ -16363,6 +16367,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlAirfoilCom)  ! BlAirfoilCom
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! YawMom
+      Re_BufSz   = Re_BufSz   + 1  ! YawPosCom
+      Re_BufSz   = Re_BufSz   + 1  ! YawRateCom
       Re_BufSz   = Re_BufSz   + 1  ! GenTrq
       Re_BufSz   = Re_BufSz   + 1  ! HSSBrTrqC
       Re_BufSz   = Re_BufSz   + 1  ! ElecPwr
@@ -16559,6 +16565,10 @@ ENDIF
       END DO
   END IF
     ReKiBuf(Re_Xferred) = InData%YawMom
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%YawPosCom
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%YawRateCom
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%GenTrq
     Re_Xferred = Re_Xferred + 1
@@ -16895,6 +16905,10 @@ ENDIF
       END DO
   END IF
     OutData%YawMom = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%YawPosCom = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%YawRateCom = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%GenTrq = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -17799,6 +17813,10 @@ IF (ALLOCATED(y_out%BlAirfoilCom) .AND. ALLOCATED(y1%BlAirfoilCom)) THEN
 END IF ! check if allocated
   b = -(y1%YawMom - y2%YawMom)
   y_out%YawMom = y1%YawMom + b * ScaleFactor
+  b = -(y1%YawPosCom - y2%YawPosCom)
+  y_out%YawPosCom = y1%YawPosCom + b * ScaleFactor
+  b = -(y1%YawRateCom - y2%YawRateCom)
+  y_out%YawRateCom = y1%YawRateCom + b * ScaleFactor
   b = -(y1%GenTrq - y2%GenTrq)
   y_out%GenTrq = y1%GenTrq + b * ScaleFactor
   b = -(y1%HSSBrTrqC - y2%HSSBrTrqC)
@@ -17942,6 +17960,12 @@ END IF ! check if allocated
   b = (t(3)**2*(y1%YawMom - y2%YawMom) + t(2)**2*(-y1%YawMom + y3%YawMom))* scaleFactor
   c = ( (t(2)-t(3))*y1%YawMom + t(3)*y2%YawMom - t(2)*y3%YawMom ) * scaleFactor
   y_out%YawMom = y1%YawMom + b  + c * t_out
+  b = (t(3)**2*(y1%YawPosCom - y2%YawPosCom) + t(2)**2*(-y1%YawPosCom + y3%YawPosCom))* scaleFactor
+  c = ( (t(2)-t(3))*y1%YawPosCom + t(3)*y2%YawPosCom - t(2)*y3%YawPosCom ) * scaleFactor
+  y_out%YawPosCom = y1%YawPosCom + b  + c * t_out
+  b = (t(3)**2*(y1%YawRateCom - y2%YawRateCom) + t(2)**2*(-y1%YawRateCom + y3%YawRateCom))* scaleFactor
+  c = ( (t(2)-t(3))*y1%YawRateCom + t(3)*y2%YawRateCom - t(2)*y3%YawRateCom ) * scaleFactor
+  y_out%YawRateCom = y1%YawRateCom + b  + c * t_out
   b = (t(3)**2*(y1%GenTrq - y2%GenTrq) + t(2)**2*(-y1%GenTrq + y3%GenTrq))* scaleFactor
   c = ( (t(2)-t(3))*y1%GenTrq + t(3)*y2%GenTrq - t(2)*y3%GenTrq ) * scaleFactor
   y_out%GenTrq = y1%GenTrq + b  + c * t_out
