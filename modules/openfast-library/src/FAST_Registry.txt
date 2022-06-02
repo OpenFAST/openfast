@@ -654,7 +654,9 @@ typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn
 typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BD_L	{:}	-	-	"Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_L_B	{:}	-	-	"Map Simplified-ElastoDyn BladeRooth point meshes to rigid AeroDyn BladeMotion line2 meshes"
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_L_B	{:}	-	-	"Map Simplified-ElastoDyn BladeRoot point meshes to rigid AeroDyn BladeMotion line2 meshes"
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_R	{:}	-	-	"Map Simplified-ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
+typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_SED_P	{:}	-	-	"Map AeroDyn blade load output mesh to Simplified-ElastoDyn Hub point mesh"
 # ED <-> AD (nacelle, tower, hub, blade root)
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
@@ -667,8 +669,7 @@ typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_ED_P_H	-	-	-	"Map AeroDisk poi
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_ADsk_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
 # SED <-> AD (nacelle, tower, hub, blade root)
 typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_N	-	-	-	"Map Simplified-ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_SED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to Simplified-ElastoDyn nacelle point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_R	{:}	-	-	"Map Simplified-ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_L_2_AD_L_T	-	-	-	"Map Simplified-ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn TowerMotion line2 mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_H	-	-	-	"Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
 # SED <-> ADsk (hub)
 typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_SED_P_H	-	-	-	"Map AeroDisk point load mesh to Simplfied-ElastoDyn hub point load mesh"
@@ -703,6 +704,7 @@ typedef	^	FAST_ModuleMapType	MeshType	y_BD_BldMotion_4Loads	{:}	-	-	"BD blade mo
 typedef	^	FAST_ModuleMapType	MeshType	u_BD_Distrload	{:}	-	-	"copy of BD DistrLoad input meshes"
 typedef	^	FAST_ModuleMapType	MeshType	u_Orca_PtfmMesh	-	-	-	"copy of Orca PtfmMesh input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ExtPtfm_PtfmMesh	-	-	-	"copy of ExtPtfm_MCKF PtfmMesh input mesh"
+typedef	^	FAST_ModuleMapType	MeshType	u_SED_HubPtLoad	-	-	-	"copy of  SED input mesh"
 # ..... FAST_ExternalInput data .......................................................................................................
 typedef	FAST	FAST_ExternInputType	ReKi	GenTrq	-	-	-	"generator torque input from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric power input from Simulink/Labview"
